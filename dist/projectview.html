@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project View</title>
+    <link rel="stylesheet" href="/styles.css">
+<style>
+        /* General Styling */
+/* General Styling */
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #f4f4f9;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+/* Container Styling */
+.container {
+    width: 100%;
+    max-width: 1200px;
+    background: #ffffff;
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    font-family: 'Poppins', sans-serif;
+    margin: auto;
+}
+
+ /* Header */
+ .project-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #007BFF;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .project-header h2 {
+        margin: 0;
+        font-size: 24px;
+        color: #007BFF;
+    }
+
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        background-color: orange;
+        color: white;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 14px;
+    }
+
+/* Project Info Grid */
+.project-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+        padding: 15px 0;
+    }
+
+    .project-info-item {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+
+    h6{
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+        border: 1px solid #ccc;
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 14px;
+        padding: 25px;
+        
+        
+    }
+
+    /* Color Box */
+    .color-box {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+    }
+
+    /* Description */
+    .project-description {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 10px;
+    }
+    
+    .project-description h3 {
+        margin-top: 0;
+        font-size: 18px;
+    }
+
+/* Table Styling */
+
+.line-items-container {
+        background: rgb(255, 255, 255);
+        padding: 10px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        margin-top: 20px;
+        width: auto;
+       
+    } 
+
+
+    
+    .table {
+        width: 380px;
+        border-collapse: collapse;
+        border-radius: 8px;
+        overflow: hidden;
+        background: white
+        
+    }
+
+th, td {
+    justify-content:space-between;
+    display: flex;
+    padding: 20px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    border-radius: 4px;
+    width: 1100px;
+    
+}
+
+
+
+th {
+    background-color: #007BFF;
+    color: white;
+    text-transform: uppercase;
+}
+
+tr:hover {
+    background-color: #f1f1f1;
+}
+
+td {
+    color: #333;
+}
+ 
+tr{
+   width: 100%; 
+  margin-top: 60px;
+  
+}
+
+
+/* Status Labels */
+.status-label {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 12px;
+        font-weight: bold;
+        text-transform: capitalize;
+    }
+
+.in-progress {
+    background-color: orange;
+    color: white;
+}
+
+.completed {
+    background-color: green;
+    color: white;
+}
+
+
+
+/* Total Amount Styling */
+.total-amount-box {
+        text-align: right;
+        font-size: 18px;
+        font-weight: bold;
+        margin-top: 10px;
+        padding: 10px;
+        background: #007BFF;
+        color: white;
+        border-radius: 5px;
+    }
+
+.complete-btn {
+    background-color: green;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.in-progress-btn {
+    background-color: orange;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.complete-btn:hover, .in-progress-btn:hover {
+    opacity: 0.8;
+}
+
+/* photo css  */
+.photo-container {
+    position: relative;
+    width: 90%;
+    overflow: hidden;
+    max-width: 180px; /* Ensures proper width */
+    border-radius: 8px;
+}
+
+.photo-preview {
+        height: 175px;
+        
+        align-items: center;
+    }
+
+.photo-container img {
+        width: 60px;
+        height: 60px;
+        border-radius: 8px;
+        object-fit: cover;
+        transition: transform 0.3s ease-in-out;
+    }
+    
+    .photo-container img:hover {
+        transform: scale(1.1);
+    }
+
+    
+
+.photo-wrapper {
+    display: flex;
+    transition: transform 0.5s ease-in-out;
+    width: 100%;
+}
+
+.photo-slide {
+    min-width: 100%;
+    text-align: center;
+    position: relative;
+}
+
+.photo-slide img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+}
+
+/* ✅ Dots Indicator */
+.photo-dots {
+    display: flex;
+    justify-content: center;
+    margin-top: 5px;
+}
+
+.photo-dots span {
+    width: 6px;
+    height: 6px;
+    margin: 0 3px;
+    background-color: #bbb;
+    border-radius: 50%;
+    display: inline-block;
+    transition: background-color 0.3s ease;
+}
+
+.photo-dots .active {
+    background-color: #007bff;
+}
+
+
+/* ✅ Upload Button */
+.upload-btn {
+    display: block;
+    margin-top: 5px;
+    background: #007bff;
+    color: white;
+    border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.upload-btn input {
+    display: none;
+}
+
+button, .upload-btn {
+        font-size: 14px;
+        padding: 8px 12px;
+        border-radius: 6px;
+    }
+
+
+/* ✅ Delete Button */
+.delete-photo {
+    position: absolute;
+    top: 0px;
+    right: 7px;
+    background: none;
+    color: rgb(255, 2, 2);
+    border: none;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    text-align: center;
+    line-height: 20px;
+}
+
+.delete-photo:hover {
+    background: none;
+}
+
+
+/* ✅ Fullscreen Photo Viewer */
+.photo-modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.8);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.photo-modal img {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 5px;
+}
+
+.close-photo {
+    position: absolute;
+    top: 15px; right: 25px;
+    color: white;
+    font-size: 30px;
+    cursor: pointer;
+}
+
+#prev-photo, #next-photo {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.7);
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 24px;
+    border-radius: 5px;
+}
+
+#prev-photo { left: 20px; }
+#next-photo { right: 20px; }
+
+#prev-photo:hover, #next-photo:hover {
+    background: white;
+}
+
+
+
+/* ✅ General Mobile & Tablet Styles */
+@media (max-width: 1024px) {
+    /* Container Adjustments */
+    .container {
+        width: 95%;
+        padding: 15px;
+    }
+
+    /* ✅ Adjust Table for Smaller Screens */
+    table {
+        width: 100%;
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    th, td {
+        padding: 8px;
+        font-size: 14px;
+    }
+    tr{
+        width: auto;
+    }
+
+    td {
+        display:flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 14px;
+        font-weight:normal;
+        width: 900px;
+    }
+
+
+
+    /* ✅ Make Buttons More Tap-Friendly */
+    button, .upload-btn {
+        font-size: 14px;
+        padding: 8px 12px;
+        border-radius: 6px;
+    }
+
+    /* ✅ Adjust Photo Upload Section */
+    .photo-preview {
+        display: flex;
+        
+        align-items: center;
+    }
+
+    .photo-section {
+        width: 100%;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    .upload-btn {
+        width: 10px;
+        height: 10px;
+        font-size: 18px;
+    }
+
+    /* ✅ Fix Image Size in Photo Slider */
+    .photo-container {
+        max-width: 100px;
+        overflow: hidden;
+        border-radius: 8px;
+       
+    }
+
+    .photo-wrapper {
+        display: flex;
+        width: 100%;
+        transition: transform 0.5s ease-in-out;
+    }
+
+    .photo-wrapper img {
+        width: 100%;
+        height: auto;
+        object-fit: cover;
+    }
+
+    /* ✅ Dots Indicator Styling for Mobile */
+    .photo-dots {
+        margin-top: 5px;
+    }
+
+    .photo-dots span {
+        width: 8px;
+        height: 8px;
+    }
+
+    /* ✅ Total Amount Box */
+    .total-amount-box {
+        font-size: 16px;
+        padding: 8px;
+        text-align: center;
+    }
+
+    .delete-photo {
+    position: absolute;
+    top: -10px;
+    right: 0px;
+    background: none;
+    color: rgb(253, 2, 2);
+    border: none;
+    border-radius: 50%;
+    font-size: 14px;
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    text-align: center;
+    line-height: 20px;
+}
+}
+
+/* ✅ Mobile-Specific Adjustments (Phones < 768px) */
+@media (max-width: 768px) {
+    /* ✅ Stack Table Rows for Better Mobile View */
+    table {
+        display: block;
+        width: auto;
+        
+    }
+
+    
+h2{
+    font-size: 25px;
+}
+
+    tr {
+        display: block;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 13px;
+        
+    
+
+    }
+
+
+    td {
+        display:flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 14px;
+        font-weight:normal;
+        width: 610px;
+    }
+
+
+    
+
+    /* ✅ Photo Preview for Smaller Screens */
+    .photo-preview {
+        flex-direction: inline;
+    }
+
+    .photo-container {
+        max-width: 90px;
+display: inline-block;
+    }
+
+    /* ✅ Adjust Buttons for Mobile */
+    button {
+        font-size: 12px;
+        padding: 6px 10px;
+    }
+
+    .upload-btn {
+        width: 12px;
+        height: 12px;
+        font-size: 25px;
+    }
+
+    /* ✅ Adjust Photo Slider Size */
+    .photo-wrapper img {
+        max-width: 100%;
+        height: auto;
+    }
+
+    /* ✅ Center Align Elements */
+    .photo-section, .status-label, .toggle-status-btn {
+        text-align: center;
+    }
+
+    .delete-photo {
+    position: absolute;
+    top: 0px;
+    right: 10px;
+    background: none;
+    color: rgb(253, 2, 2);
+    border: none;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    text-align: center;
+    line-height: 20px;
+}
+
+    
+}
+
+/* ✅ Mobile-Specific Adjustments (Phones < 768px) */
+@media (max-width: 610px) {
+    /* ✅ Stack Table Rows for Better Mobile View */
+    table {
+        display: inline;
+        width: auto;
+    }
+
+
+
+    .line-items-container{
+    background: white;
+    padding: 0px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+    width:auto ;
+    
+}
+
+td {
+        display:flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 14px;
+        font-weight:normal;
+        width: 485px;
+        padding: 0px;
+        margin: 0px;
+    }
+
+}
+
+
+/* ✅ Mobile-Specific Adjustments (Phones < 768px) */
+@media (max-width: 480px) {
+    /* ✅ Stack Table Rows for Better Mobile View */
+    table {
+        display: inline;
+        width: auto;
+    }
+
+
+
+    .line-items-container{
+    background: white;
+    padding: 0px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+    width:auto ;
+    
+}
+
+td {
+        display:flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 14px;
+        font-weight:normal;
+        width: 335px;
+        padding: 0px;
+        margin: 0px;
+    }
+
+}
+
+
+ </style>
+</head>
+<body>
+    
+    <div class="container">
+        <header>
+            <a href="/Subcontractor%20page.html" class="back-button">&lt; Back to Dashboard</a>
+            <h1 id="project-name">Loading Project...</h1>
+        </header>
+       
+    </a>
+<!-- Project Information -->
+<section id="project-details" class="project-details-container">
+    <div class="project-header">
+        <h2 id="project-name">Project Name</h2>
+        <div class="status-badge" id="project-status">Status</div>
+    </div>
+
+    <div class="project-info-grid">
+        <div class="project-info-item">
+            <strong>Project Code:</strong> <span id="project-code">####</span>
+        </div>
+        <div class="project-info-item">
+            <strong>Type:</strong> <span id="project-type">Type</span>
+        </div>
+        <div class="project-info-item">
+            <strong>Address:</strong> 
+            <p id="project-address">Address will be here</p>
+        </div>
+        <div class="project-info-item">
+            <strong>Color:</strong>
+            <span id="project-color" class="color-box"></span>
+        </div>
+    </div>
+
+    <div class="project-description">
+        <h3>Description</h3>
+        <p id="project-description">Project description goes here...</p>
+    </div>
+</section>
+       <!-- Line Items Section -->
+<!-- Line Items Section -->
+<div class="line-items-container">
+    <h2>Line Items</h2>
+    <div class="table-wrapper">
+        <table>
+ 
+            <tbody id="line-items-list">
+                <!-- Items will be inserted dynamically here -->
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Grand Total Display -->
+    <div id="total-amount" class="total-amount-box"></div>
+</div>
+
+
+</div>
+
+     <!-- ✅ Fullscreen Photo Viewer Modal -->
+     <div id="photo-viewer" class="photo-modal">
+        <span class="close-photo" onclick="closePhotoViewer()">✖</span>
+        <button id="prev-photo" onclick="changePhotoViewer(-1)">❮</button>
+        <img id="viewer-image" src="" alt="Expanded Photo">
+        <button id="next-photo" onclick="changePhotoViewer(1)">❯</button>
+    </div>
+    
+</body>
+</html>
+
+ <script> 
+
+document.addEventListener("DOMContentLoaded", async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectId = urlParams.get("projectId");
+    const vendorId = localStorage.getItem("vendorId");
+
+    if (!vendorId || !projectId) {
+        alert("Invalid project or vendor data.");
+        window.location.href = "/Subcontractor%20page.html";
+        return;
+    }
+
+    console.log("📌 Fetching Project & Items for Project ID:", projectId);
+    
+    await fetchProjectDetails(projectId);
+    await fetchAssignedItems(vendorId, projectId);
+
+
+    // ✅ Fix: Initialize swipe using event delegation
+    enableGlobalSwipeEvents();
+});
+
+// ✅ Enable Swipe Gesture (Supports Touch & Mouse Drag)
+function enableGlobalSwipeEvents() {
+    let startX = 0;
+    let currentIndex = 0;
+    let wrapper = null;
+    let photos = [];
+    let isMouseDown = false;
+
+    document.body.addEventListener("touchstart", startSwipe);
+    document.body.addEventListener("touchmove", moveSwipe);
+    document.body.addEventListener("touchend", endSwipe);
+
+    document.body.addEventListener("mousedown", (e) => {
+        isMouseDown = true;
+        startSwipe(e);
+    });
+
+    document.body.addEventListener("mousemove", (e) => {
+        if (isMouseDown) moveSwipe(e);
+    });
+
+    document.body.addEventListener("mouseup", (e) => {
+        if (isMouseDown) {
+            endSwipe(e);
+            isMouseDown = false;
+        }
+    });
+
+    function startSwipe(e) {
+        const event = e.touches ? e.touches[0] : e;
+        const target = event.target.closest(".photo-wrapper");
+        if (!target) return;
+
+        wrapper = target;
+        photos = JSON.parse(wrapper.getAttribute("data-photos"));
+        currentIndex = parseInt(wrapper.getAttribute("data-index"), 10) || 0;
+
+        startX = event.clientX;
+        wrapper.style.transition = "none";
+    }
+
+    function moveSwipe(e) {
+        if (!wrapper) return;
+        const event = e.touches ? e.touches[0] : e;
+        let moveX = event.clientX - startX;
+        wrapper.style.transform = `translateX(calc(${-currentIndex * 100}% + ${moveX}px))`;
+    }
+
+    function endSwipe(e) {
+        if (!wrapper) return;
+        const event = e.changedTouches ? e.changedTouches[0] : e;
+        let endX = event.clientX;
+        let distance = startX - endX;
+
+        wrapper.style.transition = "transform 0.4s ease";
+        if (Math.abs(distance) > 50) {
+            currentIndex = (distance > 0) 
+                ? (currentIndex + 1) % photos.length 
+                : (currentIndex - 1 + photos.length) % photos.length;
+        }
+
+        wrapper.style.transform = `translateX(-${currentIndex * 100}%)`;
+        wrapper.setAttribute("data-index", currentIndex);
+
+        updateDots(wrapper.id, currentIndex);
+        wrapper = null;
+    }
+}
+
+
+// ✅ Fix Dot Indicators (Now Correctly Updates)
+function updateDots(wrapperId, activeIndex) {
+    const parts = wrapperId.split("-");
+    if (parts.length < 3) return;
+
+    const type = parts[1];
+    const itemId = parts[2];
+    const dotsContainer = document.getElementById(`dots-${type}-${itemId}`);
+
+    if (!dotsContainer) return;
+
+    dotsContainer.querySelectorAll("span").forEach((dot, index) => {
+        dot.classList.toggle("active", index === activeIndex);
+    });
+}
+
+// ✅ Fetch Project Details
+async function fetchProjectDetails(projectId) {
+    try {
+        const response = await fetch(`/api/details/projects/${projectId}?t=${Date.now()}`);
+        if (!response.ok) throw new Error("Failed to fetch project details.");
+
+        const data = await response.json();
+        console.log("📌 Project Details Response:", data);
+
+        if (!data || !data.project) {
+            throw new Error("Project data is missing.");
+        }
+
+        displayProjectDetails(data.project);
+    } catch (error) {
+        console.error("❌ Error fetching project details:", error);
+        document.getElementById("project-name").innerText = "Failed to load project details.";
+    }
+}
+
+// ✅ Fetch Assigned Items (Ensures Swipe Works After Refresh)
+async function fetchAssignedItems(vendorId, projectId) {
+    try {
+        const response = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
+        if (!response.ok) throw new Error("Failed to fetch assigned items.");
+
+        const data = await response.json();
+        console.log("📌 Assigned Items Response:", data.items);
+
+        if (!data.items || data.items.length === 0) {
+            document.getElementById("line-items-container").innerHTML = "<p>No line items assigned.</p>";
+            return;
+        }
+
+        data.items.forEach(item => {
+            if (!item.photos) {
+                item.photos = { before: [], after: [] };
+            }
+        });
+
+        displayAssignedItems(data.items);
+
+
+    } catch (error) {
+        console.error("❌ Error fetching assigned items:", error);
+        document.getElementById("line-items-container").innerHTML = `<p style="color:red;">Failed to load line items.</p>`;
+    }
+}
+
+
+
+
+// ✅ Render Project Details
+function displayProjectDetails(project) {
+    document.getElementById("project-name").innerText = project.name || "Unnamed Project";
+    document.getElementById("project-status").innerText = project.status || "Unknown";
+    document.getElementById("project-color").style.backgroundColor = project.color || "#ccc"; // Display color
+    document.getElementById("project-type").innerText = project.type || "N/A";
+    document.getElementById("project-code").innerText = project.code || "N/A";
+    document.getElementById("project-description").innerText = project.description || "No description available.";
+
+    // Full Address
+    document.getElementById("project-address").innerText = 
+        `${project.address?.addressLine1 || "N/A"}, ${project.address?.addressLine2 || ""}, 
+         ${project.address?.city || "N/A"}, ${project.address?.state || "N/A"}, 
+         ${project.address?.zip || "N/A"}`.replace(/, ,/g, ',').trim();
+}
+
+
+// ✅ Function to Calculate Grand Total
+function calculateTotal(items) {
+    let totalAmount = items.reduce((sum, item) => sum + (item.total || 0), 0);
+    return totalAmount.toFixed(2);
+}
+async function toggleItemStatus(vendorId, itemId, currentStatus) {
+    try {
+        const newStatus = currentStatus === "completed" ? "in-progress" : "completed";
+        console.log(`📌 Changing Status for Item ${itemId}: ${currentStatus} → ${newStatus}`);
+
+        const response = await fetch(`/api/vendors/${vendorId}/update-item-status`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ itemId, status: newStatus })
+        });
+
+        if (!response.ok) {
+            const errorMessage = await response.text();
+            console.error(`❌ Failed to update item status: ${errorMessage}`);
+            return;
+        }
+
+        // ✅ Update UI immediately
+        const statusElement = document.getElementById(`status-${itemId}`);
+        const button = document.querySelector(`button[data-item-id="${itemId}"]`);
+
+        if (statusElement) {
+            statusElement.innerText = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+            statusElement.classList.remove("completed", "in-progress");
+            statusElement.classList.add(newStatus);
+        }
+
+        if (button) {
+            button.setAttribute("data-current-status", newStatus);
+            button.innerText = newStatus === "completed" ? "Mark as In Progress" : "Mark as Completed";
+        }
+
+        console.log(`✅ Status updated to: ${newStatus}`);
+    } catch (error) {
+        console.error("❌ Error updating item status:", error);
+    }
+}
+
+
+
+// ✅ Generate Photo Preview (Click to Open Fullscreen)
+function generatePhotoPreview(photos, itemId, type) {
+    if (!photos || photos.length === 0) {
+        return `<p class="placeholder">No photos</p>`;
+    }
+
+    const dots = photos.map((_, index) => 
+        `<span class="${index === 0 ? 'active' : ''}" data-index="${index}" onclick="jumpToPhoto('${itemId}', '${type}', ${index})"></span>`
+    ).join("");
+
+    return `
+        <div class="photo-container">
+            <div class="photo-wrapper" id="photo-wrapper-${type}-${itemId}" data-index="0" data-photos='${JSON.stringify(photos)}'>
+                ${photos.map((photo, index) => `
+                    <div class="photo-slide">
+                        <img src="${photo}" draggable="false" onclick="openPhotoViewer('${itemId}', '${type}', ${index})">
+                        <button class="delete-photo" onclick="deletePhoto('${itemId}', '${photo}', '${type}')">✖</button>
+                    </div>
+                `).join("")}
+            </div>
+        </div>
+        <div class="photo-dots" id="dots-${type}-${itemId}">${dots}</div>
+    `;
+}
+
+
+// ✅ Open Fullscreen Photo Viewer
+function openPhotoViewer(itemId, type, index) {
+    const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
+    if (!wrapper) return;
+
+    const photos = JSON.parse(wrapper.getAttribute("data-photos"));
+    if (!photos || photos.length === 0) return;
+
+    // Set current photo index
+    document.getElementById("photo-viewer").setAttribute("data-current-index", index);
+    document.getElementById("photo-viewer").setAttribute("data-item-id", itemId);
+    document.getElementById("photo-viewer").setAttribute("data-type", type);
+
+    updatePhotoViewer(photos, index);
+    document.getElementById("photo-viewer").style.display = "flex";
+}
+
+// ✅ Update the Photo Viewer with the Selected Image
+function updatePhotoViewer(photos, index) {
+    const viewerImage = document.getElementById("viewer-image");
+    const prevButton = document.getElementById("prev-photo");
+    const nextButton = document.getElementById("next-photo");
+
+    viewerImage.src = photos[index];
+
+    // Show/hide navigation buttons
+    prevButton.style.display = index === 0 ? "none" : "block";
+    nextButton.style.display = index === photos.length - 1 ? "none" : "block";
+}
+
+// ✅ Navigate Photos in Viewer
+function changePhotoViewer(step) {
+    const viewer = document.getElementById("photo-viewer");
+    const itemId = viewer.getAttribute("data-item-id");
+    const type = viewer.getAttribute("data-type");
+    let currentIndex = parseInt(viewer.getAttribute("data-current-index"), 10);
+
+    const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
+    if (!wrapper) return;
+
+    const photos = JSON.parse(wrapper.getAttribute("data-photos"));
+    if (!photos || photos.length === 0) return;
+
+    let newIndex = currentIndex + step;
+    if (newIndex < 0 || newIndex >= photos.length) return;
+
+    viewer.setAttribute("data-current-index", newIndex);
+    updatePhotoViewer(photos, newIndex);
+}
+
+// ✅ Close Photo Viewer
+function closePhotoViewer() {
+    document.getElementById("photo-viewer").style.display = "none";
+}
+
+// ✅ Close Modal on ESC Key
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closePhotoViewer();
+});
+
+
+// ✅ Enable Swipe Gesture (Fixed)
+function enableSwipe(itemId, type) {
+    const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
+    if (!wrapper) return;
+
+    let startX = 0;
+    let currentIndex = parseInt(wrapper.getAttribute("data-index"), 10) || 0;
+    const photos = JSON.parse(wrapper.getAttribute("data-photos"));
+
+    function resetTransform() {
+        wrapper.style.transition = "transform 0.4s ease";
+        wrapper.style.transform = `translateX(-${currentIndex * 100}%)`;
+    }
+
+    
+    wrapper.addEventListener("touchstart", (e) => {
+        startX = e.touches[0].clientX;
+        wrapper.style.transition = "none";
+    });
+
+    wrapper.addEventListener("touchmove", (e) => {
+        let moveX = e.touches[0].clientX - startX;
+        wrapper.style.transform = `translateX(calc(${-currentIndex * 100}% + ${moveX}px))`;
+    });
+
+    wrapper.addEventListener("touchend", (e) => {
+        let endX = e.changedTouches[0].clientX;
+        let distance = startX - endX;
+
+        if (Math.abs(distance) > 50) {
+            currentIndex = (distance > 0) 
+                ? (currentIndex + 1) % photos.length 
+                : (currentIndex - 1 + photos.length) % photos.length;
+        }
+
+        resetTransform();
+        wrapper.setAttribute("data-index", currentIndex);
+        updateDots(itemId, type, currentIndex);
+    });
+
+    resetTransform(); // Ensure it resets correctly on page refresh
+}
+
+
+// ✅ FIX: Auto-Slide Photos (Ensures Continuous Slideshow)
+function autoSlidePhotos(itemId, type) {
+    const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
+    if (!wrapper) return;
+
+    const photos = JSON.parse(wrapper.getAttribute("data-photos"));
+    let currentIndex = parseInt(wrapper.getAttribute("data-index"), 10);
+
+    currentIndex = (currentIndex + 1) % photos.length;
+    wrapper.style.transition = "transform 0.5s ease";
+    wrapper.style.transform = `translateX(-${currentIndex * 100}%)`;
+    wrapper.setAttribute("data-index", currentIndex);
+
+    updateDots(wrapper.id, currentIndex);
+}
+
+
+
+// ✅ FIX: Jump to Specific Photo when Dot is Clicked
+function jumpToPhoto(itemId, type, index) {
+    const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
+    if (!wrapper) return;
+
+    wrapper.style.transition = "transform 0.5s ease";
+    wrapper.style.transform = `translateX(-${index * 100}%)`;
+    wrapper.setAttribute("data-index", index);
+
+    updateDots(wrapper.id, index);
+}
+
+
+
+// ✅ Upload Photos & Ensure Swiping Works
+async function uploadPhoto(event, itemId, type) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const formData = new FormData();
+    for (let file of files) {
+        formData.append("photos", file);
+    }
+    formData.append("itemId", itemId);
+    formData.append("type", type);
+
+    try {
+        const response = await fetch("/api/upload-photos", { method: "POST", body: formData });
+        const result = await response.json();
+
+        if (!response.ok) throw new Error(result.message || "Upload failed.");
+
+        alert(`✅ ${files.length} Photo(s) uploaded successfully!`);
+        updatePhotoSection(itemId, type);
+    } catch (error) {
+        console.error("❌ Photo Upload Error:", error);
+        alert("Failed to upload photos.");
+    }
+}
+
+// ✅ Delete Photo & Ensure Swiping Remains
+async function deletePhoto(itemId, photoUrl, type) {
+    try {
+        const response = await fetch(`/api/delete-photo/${localStorage.getItem("vendorId")}/${itemId}/${encodeURIComponent(photoUrl)}`, { method: "DELETE" });
+
+        if (!response.ok) throw new Error("Failed to delete photo.");
+
+        alert("✅ Photo deleted successfully!");
+        updatePhotoSection(itemId, type);
+    } catch (error) {
+        console.error("❌ Error deleting photo:", error);
+        alert("Failed to delete photo.");
+    }
+}
+
+
+// ✅ Fetch & Render Assigned Items with Photo Upload & Slideshow
+function displayAssignedItems(items) {
+    const container = document.getElementById("line-items-list");
+    const totalContainer = document.getElementById("total-amount");
+
+    if (!container || !totalContainer) {
+        console.error("❌ Error: Elements missing in DOM.");
+        return;
+    }
+
+    container.innerHTML = ""; 
+
+    items.forEach((item) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <h6>${item.name || "Unnamed Item"}
+              <span class="status-label ${item.status === 'completed' ? 'completed' : 'in-progress'}" id="status-${item.itemId}">
+                 ${item.status || "In Progress"}
+                </span> 
+                 </h6>
+            <h6>${item.description || "N/A"}</h6>
+            <td>Qty: ${item.quantity || "0"}       <h4>  Unit Price: $${(item.unitPrice || 0).toFixed(2)}</h4></td>
+           
+
+            
+           
+            <td>
+                <div class="photo-preview">
+                    <div class="photo-section">
+                        <h5>Before</h5>
+                        <div id="before-photos-${item.itemId}">
+                            ${generatePhotoPreview(item.photos.before, item.itemId, "before")}
+                        </div>
+                        <label class="upload-btn">
+                            <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${item.itemId}', 'before')">
+                            +
+                        </label>
+                    </div>
+                    <div class="photo-section">
+                        <h5>After</h5>
+                        <div id="after-photos-${item.itemId}">
+                            ${generatePhotoPreview(item.photos.after, item.itemId, "after")}
+                        </div>
+                        <label class="upload-btn">
+                            <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${item.itemId}', 'after')">
+                            +
+                        </label>
+                    </div>
+                </div>
+            </td>
+
+
+            <td>
+                <button class="toggle-status-btn" data-item-id="${item.itemId}" data-current-status="${item.status}">
+                    ${item.status === 'completed' ? "Mark as In Progress" : "Mark as Completed"}
+                </button>
+                 <h4>Total: $${(item.total || 0).toFixed(2)}</h4>
+            </td>
+
+
+            
+        `;
+        container.appendChild(row);
+    });
+
+  // 🔹 Ensure Swipe and Dot Indicators Work Correctly
+  enableGlobalSwipeEvents();
+
+    document.querySelectorAll(".toggle-status-btn").forEach(button => {
+        button.addEventListener("click", function () {
+            const itemId = this.getAttribute("data-item-id");
+            const currentStatus = this.getAttribute("data-current-status");
+            toggleItemStatus(localStorage.getItem("vendorId"), itemId, currentStatus);
+        });
+    });
+
+
+    // 🔹 Calculate and Display Grand Total
+    const grandTotal = calculateTotal(items);
+    totalContainer.innerHTML = `<strong>Grand Total: </strong> $${grandTotal}`;
+
+    console.log("✅ Items Rendered Successfully! Grand Total: $" + grandTotal);
+}
+
+// ✅ Fix Swiping & Dots After Uploading Photos
+async function updatePhotoSection(itemId, type) {
+    try {
+        const vendorId = localStorage.getItem("vendorId");
+        const projectId = new URLSearchParams(window.location.search).get("projectId");
+
+        const response = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
+        if (!response.ok) throw new Error("Failed to fetch updated photos.");
+
+        const data = await response.json();
+        const item = data.items.find(i => i.itemId === itemId);
+        if (!item) return;
+
+        document.getElementById(`${type}-photos-${itemId}`).innerHTML = generatePhotoPreview(item.photos[type], itemId, type);
+        
+        // ✅ Reinitialize Swipe & Dots After Update
+        enableGlobalSwipeEvents();
+    } catch (error) {
+        console.error("❌ Error updating photo section:", error);
+    }
+}
+
+
+// ✅ FIX: Initialize Auto-Sliding for All Sliders
+function initializeAutoSliding() {
+    document.querySelectorAll(".photo-wrapper").forEach(wrapper => {
+        const itemId = wrapper.id.split("-")[2];
+        const type = wrapper.id.split("-")[1];
+
+        if (!wrapper.hasAttribute("data-auto-slide")) {
+            wrapper.setAttribute("data-auto-slide", "true");
+            setInterval(() => autoSlidePhotos(itemId, type), 4000);
+        }
+    });
+}
+
+// ✅ Ensure Swipe & Auto-Sliding Works After Loading
+document.addEventListener("DOMContentLoaded", async () => {
+    setTimeout(() => {
+        enableGlobalSwipeEvents();
+        initializeAutoSliding();
+    }, 1500);
+});
+
+ </script>
+

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Besf Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="logo">
+      <img src="https://i.ibb.co/VJszKrg/logo.png" alt="BESF Logo">
+    </div>
+    <nav>
+      <ul>
+        <li><a href="#" class="active"><i class="fas fa-home"></i> Home</a></li>
+        <li>
+          <!-- Create New Dropdown -->
+          <div class="dropdown">
+            <button class="dropdown-button">Create New</button>
+            <div class="dropdown-content">
+              <a href="add-client.html">Add Client</a>
+            
+              <a href="add-project.html">Add New Project</a> <!-- New Option -->
+            </div>
+          </div>
+        </li>
+        <li><a href="#"><i class="fas fa-folder-open"></i> File and Photos</a></li>
+        <li><a href="#"><i class="fas fa-calendar-alt"></i> Schedule</a></li>
+        <li><a href="#"><i class="fas fa-tasks"></i> Tasks</a></li>
+        <li><a href="#"><i class="fas fa-list-alt"></i> Selection Boards</a></li>
+        <li><a href="#"><i class="fas fa-sync-alt"></i> Daily Updates</a></li>
+        <li><a href="#"><i class="fas fa-chart-line"></i> Reports</a></li>
+      </ul>
+    </nav>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header>
+      <h1>Welcome Bluerain Group</h1>
+      <div class="tab-container">
+        <button class="tab" id=!!"ready-schedule-tab">Ready to Schedule</button>
+        <button class="tab" id="projects-tab">Projects</button>
+        <button class="tab" id="punch-list-tab">Punch List</button>
+      </div>
+    
+      <div class="columns-container">
+        <!-- Ready to Schedule Column -->
+        <div class="column" id="ready-schedule-column">
+          <h3>Ready to Schedule</h3>
+          <div class="item" onclick="navigateToDetails('ready-to-schedule', 1)">
+            <p>Item 1</p>
+            <small>Location: Example City</small>
+          </div>
+          <div class="item" onclick="navigateToDetails('ready-to-schedule', 2)">
+            <p>Item 2</p>
+            <small>Location: Example City</small>
+          </div>
+        </div>
+    
+        <!-- Projects Column -->
+        <div class="column" id="projects-column">
+          <h3>Projects</h3>
+          <div id="projects-list"></div>
+         
+          <!-- Dynamic content will be loaded here -->
+          
+        </div>
+        </div>
+    
+        <!-- Punch List Column -->
+        <div class="column" id="punch-list-column">
+          <h3>Punch List</h3>
+          <div class="item" onclick="navigateToDetails('punch-list', 1)">
+            <p>Punch Item 1</p>
+          </div>
+          <div class="item" onclick="navigateToDetails('punch-list', 2)">
+            <p>Punch Item 2</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- Script -->
+  <script src="./script.js"></script>
+</body>
+
+</html>
+

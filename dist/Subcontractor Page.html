@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subcontractor Dashboard</title>
+  
+  <style>
+/* General Styles */
+/* General Styles */
+body {
+    font-family: "Poppins", sans-serif;
+    background-color: #f4f4f9;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 20px auto;
+}
+
+/* Header */
+header {
+    background-color: #0f4c75;
+    color: white;
+    text-align: center;
+    padding: 15px;
+    font-size: 24px;
+    font-weight: bold;
+    border-radius: 8px;
+}
+
+/* Section Styling */
+section {
+    margin-top: 20px;
+}
+
+h2 {
+    color: #0f4c75;
+    font-size: 22px;
+    border-bottom: 2px solid #0f4c75;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+/* Horizontal Scrollable Sections */
+.scroll-container {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 20px;
+    padding-bottom: 10px;
+    scrollbar-width: none; /* Hides scrollbar in Firefox */
+    -ms-overflow-style: none; /* Hides scrollbar in Internet Explorer */
+}
+
+/* Hide scrollbar for Chrome, Safari, Edge */
+.scroll-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* Project & Task Cards */
+.project-card,
+.item-card {
+    background-color: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    min-width: 320px; /* Ensures proper width in horizontal layout */
+    flex-shrink: 0;
+    scroll-snap-align: start;
+    transition: transform 0.2s ease-in-out, box-shadow 0.3s;
+}
+
+.project-card:hover,
+.item-card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+}
+
+.project-card h3,
+.item-card h4 {
+    color: #1b262c;
+    margin-bottom: 10px;
+}
+
+.project-card p,
+.item-card p {
+    font-size: 14px;
+    color: #555;
+    margin: 5px 0;
+}
+
+/* Buttons */
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s ease-in-out;
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        width: 95%;
+    }
+
+    header {
+        font-size: 20px;
+    }
+}
+
+
+
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>Subcontractor Dashboard</h1>
+    <button class="logout-button" onclick="logout()">Logout</button>
+  </header>
+
+  <main class="container">
+    <section id="new-jobs">
+        <h2>New Jobs</h2>
+        <div id="new-jobs-container" class="scroll-container"></div>
+      </section>
+      
+      <section id="in-progress">
+        <h2>In Progress</h2>
+        <div id="in-progress-container" class="scroll-container"></div>
+      </section>
+      
+      <section id="completed">
+        <h2>Completed Jobs</h2>
+        <div id="completed-container" class="scroll-container"></div>
+      </section>
+      
+  </main>
+</body>
+</html>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", async () => {
+    const vendorId = localStorage.getItem("vendorId");
+
+    if (!vendorId) {
+        alert("Vendor not authenticated.");
+        window.location.href = "/sign-inpage.html"; // Redirect to sign-in page
+        return;
+    }
+
+    await fetchAssignedProjects(vendorId);
+});
+
+// ✅ Fetch Assigned Projects
+async function fetchAssignedProjects(vendorId) {
+    try {
+        const response = await fetch(`/api/vendors/${vendorId}/assigned-projects?t=${new Date().getTime()}`);
+        if (!response.ok) throw new Error("Failed to fetch assigned projects.");
+
+        const data = await response.json();
+        displayAssignedProjects(data.newJobs, "new-jobs-container");
+        displayAssignedProjects(data.inProgress, "in-progress-container");
+        displayAssignedProjects(data.completed, "completed-container");
+    } catch (error) {
+        console.error("Error fetching assigned projects:", error);
+    }
+}
+
+// ✅ Display Projects
+
+function displayAssignedProjects(projects, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = "";
+
+    if (!projects || projects.length === 0) {
+        container.innerHTML = "<p>No projects available.</p>";
+        return;
+    }
+
+    projects.forEach((project) => {
+        const { projectId } = project;
+        if (!projectId) return; // Skip if projectId is missing
+
+        const projectCard = document.createElement("div");
+        projectCard.classList.add("project-card");
+
+        projectCard.innerHTML = `
+            <h3>${projectId.name || "Unnamed Project"}</h3>
+            <p><strong>Status:</strong> ${project.status || "N/A"}</p>
+            <p><strong>Type:</strong> ${projectId.type || "N/A"}</p>
+            <p><strong>Address:</strong> 
+                ${projectId.address?.addressLine1 || ""}, 
+                ${projectId.address?.city || ""}, 
+                ${projectId.address?.state || ""}
+            </p>
+            <button onclick="viewProject('${projectId._id}')">View Project</button>
+            ${
+                project.status === "new"
+                    ? `<button onclick="startProject('${projectId._id}')">Start Project</button>`
+                    : project.status === "in-progress"
+                    ? `<button onclick="completeProject('${projectId._id}')">Mark as Completed</button>`
+                    : ""
+            }
+        `;
+
+        container.appendChild(projectCard);
+    });
+}
+
+
+// ✅ View Project (Redirects to project details page)
+function viewProject(projectId) {
+    window.location.href = `/projectview.html?projectId=${projectId}`;
+}
+
+// ✅ Start a Project
+async function startProject(projectId) {
+    try {
+        const response = await fetch('/api/vendor/update-project-status', {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ vendorId: localStorage.getItem("vendorId"), projectId, status: "in-progress" }),
+        });
+
+        if (!response.ok) throw new Error("Failed to start project.");
+
+        alert("Project moved to In Progress.");
+        fetchAssignedProjects(localStorage.getItem("vendorId"));
+    } catch (error) {
+        console.error("Error starting project:", error);
+    }
+}
+
+// Mark Project as Completed (Checking Vendor's Assigned Items)
+async function completeProject(projectId) {
+    const vendorId = localStorage.getItem("vendorId");
+
+    try {
+        // Step 1: Fetch the assigned items for the vendor and project
+        const response = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
+        if (!response.ok) throw new Error("Failed to fetch assigned items.");
+
+        const data = await response.json();
+        const assignedItems = data.items;
+
+        // Step 2: Check if all assigned items are completed
+        const allCompleted = assignedItems.every(item => item.status === 'completed');
+
+        if (!allCompleted) {
+            alert("Cannot mark project as completed. Please ensure all assigned items are completed.");
+            return;  // Stop if not all items are completed
+        }
+
+        // Step 3: Mark the project as completed if all items are done
+        const completeResponse = await fetch('/api/vendor/update-project-status', {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ vendorId, projectId, status: "completed" }),
+        });
+
+        if (!completeResponse.ok) throw new Error("Failed to mark project as completed.");
+
+        alert("Project marked as Completed!");
+        window.location.href = "/Subcontractor%20page.html";  // Redirect to dashboard
+    } catch (error) {
+        console.error("Error completing project:", error);
+    }
+}
+
+
+// ✅ Logout functionality
+function logout() {
+    localStorage.removeItem('vendorId');
+    window.location.href = '/sign-inpage.html';
+}
+
+
+</script>

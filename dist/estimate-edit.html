@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estimate Edit</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="./estimate-edit.js" defer></script>
+  <style>
+    /* Global Styles */
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f5f7;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+    }
+
+/* Container Styling */
+#project-details {
+  background: #ffffff;
+  padding: 24px;
+  margin: 20px 0;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  transition: all 0.3s ease-in-out;
+}
+
+#project-details:hover {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  transform: translateY(-5px);
+}
+
+/* Title Styling */
+#project-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #0b2ff8; /* Indigo line under title */
+  padding-bottom: 8px;
+  display: inline-block;
+}
+
+/* Project Metadata Styling */
+#project-code,
+#project-status,
+#project-type,
+#project-description,
+#project-address {
+  font-size: 1rem;
+  margin: 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #4B5563; /* Neutral gray */
+}
+
+/* Label Emphasis */
+#project-code span,
+#project-status span,
+#project-type span,
+#project-description span,
+#project-address span {
+  font-weight: 600;
+  color: #1F2937;
+  min-width: 120px;
+}
+
+/* Status Highlight */
+#project-status {
+  font-weight: 600;
+  color: #1067b9; /* Emerald green */
+}
+
+/* Subtle Italics for Type */
+#project-type {
+  font-style: italic;
+  color: #6B7280;
+}
+
+/* Description Block */
+#project-description {
+  font-size: 1rem;
+  line-height: 1.6;
+  background-color: #F9FAFB;
+  padding: 12px;
+  border-radius: 8px;
+  border-left: 4px solid #0c36f2; /* Indigo accent */
+}
+
+/* Address Styling */
+#project-address {
+  font-weight: 500;
+  color: #374151;
+  display: block;
+}
+
+/* Responsive Styling */
+@media (max-width: 768px) {
+  #project-details {
+    padding: 18px;
+    border-radius: 12px;
+  }
+
+  #project-title {
+    font-size: 1.5rem;
+  }
+
+  #project-code,
+  #project-status,
+  #project-type,
+  #project-description,
+  #project-address {
+    font-size: 0.95rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+
+    /* Header */
+    .estimate-header {
+      text-align: center;
+      margin-bottom: 30px;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 15px;
+    }
+
+    .estimate-header h1 {
+      font-size: 2rem;
+      margin: 0;
+      color: #0056b3;
+    }
+
+    .estimate-header p {
+      margin: 5px 0;
+      font-size: 1rem;
+      color: #555;
+    }
+
+    /* Line Items Section */
+    #estimate-section h2 {
+      font-size: 1.5rem;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .add-line-item-button {
+      display: inline-block;
+      margin-bottom: 15px;
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      font-size: 1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .add-line-item-button:hover {
+      background: #0056b3;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    th {
+      background-color: #f7f9fc;
+      color: #333;
+    }
+
+    .line-item-actions button {
+      background: #ff4d4d;
+      color: white;
+      font-size: 0.85rem;
+      border: none;
+      border-radius: 4px;
+      padding: 5px 10px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .line-item-actions button:hover {
+      background: #cc0000;
+    }
+
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 0.9rem;
+      box-sizing: border-box;
+    }
+
+    input[type="number"] {
+      max-width: 100px;
+    }
+
+    /* Summary Section */
+    #estimate-summary {
+      padding: 20px;
+      background: #f9fafb;
+      border-radius: 10px;
+      border: 1px solid #e0e0e0;
+      margin-top: 20px;
+    }
+
+    #estimate-summary h3 {
+      margin-top: 0;
+      font-size: 1.4rem;
+      color: #333;
+    }
+
+    #estimate-summary p {
+      font-size: 1rem;
+      margin: 8px 0;
+    }
+
+    #tax-input {
+      width: 100px;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 1rem;
+    }
+
+    /* Vendor Assign Section */
+    .vendor-assign-section {
+      margin-top: 20px;
+      padding: 20px;
+      background: #eef7ff;
+      border-radius: 10px;
+      border: 1px solid #cce0ff;
+    }
+
+    .vendor-assign-section h3 {
+      font-size: 1.3rem;
+      color: #0056b3;
+      margin-bottom: 10px;
+    }
+
+    .vendor-assign-section select {
+      margin: 10px 0;
+    }
+
+    /* Action Buttons */
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .btn-primary {
+      padding: 12px 20px;
+      background: #007bff;
+      color: white;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .btn-primary:hover {
+      background: #0056b3;
+    }
+
+    .btn-secondary {
+      padding: 12px 20px;
+      background: #f4f4f4;
+      color: #333;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .btn-secondary:hover {
+      background: #d6d6d6;
+    }
+
+
+
+/* Category Header Styling */
+.category-header .category-title {
+  font-weight: bold;
+  font-size: 1.2rem;
+  background-color: #f5f5f5;  /* Light gray background */
+  padding: 10px 15px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Editable Category Name */
+.category-header .category-title span {
+  flex-grow: 1;
+  outline: none;
+  cursor: text;
+}
+
+/* "+" Add Line Item Button */
+.category-header .add-line-item {
+ 
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+  transition: background-color 0.3s ease;
+}
+
+
+
+/* "×" Remove Category Button */
+.category-header .remove-category {
+
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease;
+}
+
+
+
+
+
+/* General Button Styles */
+.btn {
+  background: linear-gradient(145deg, #4b4b4b, #8e8e8e);
+  border: none;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 6px 15px rgba(3, 129, 255, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Delete Button Style */
+.delete-line-item {
+  background: linear-gradient(145deg, #4b4b4b, #8e8e8e);
+}
+
+.delete-line-item:hover {
+  background: linear-gradient(145deg, #ff1e22, #a31e20);
+}
+
+/* Unassign Button Style */
+.unassign-item {
+  background: linear-gradient(145deg, #4b4b4b, #8e8e8e);
+}
+
+.unassign-item:hover {
+  background: linear-gradient(145deg, #ffa726, #d4881e);
+}
+
+/* Add Line Item Button */
+.add-line-item-button , .add-category-header-button {
+  background: linear-gradient(145deg, #1f98f4, #01397e);
+  padding: 10px 18px;
+  border-radius: 10px;
+  color: white;
+  font-weight: bold;
+  border: none;
+  margin-bottom: 15px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+.add-line-item-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.add-category-header-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+ 
+
+/* Inputs Styling */
+input[type="text"], textarea, input[type="number"] {
+  border: 1px solid #d9e2ec;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
+  border-color: #112dcb;
+  outline: none;
+} 
+
+    
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+      .container {
+        padding: 15px;
+      }
+
+      .estimate-header {
+        text-align: left;
+      }
+
+      table th, table td {
+        font-size: 0.85rem;
+        padding: 8px;
+      }
+
+      .form-actions {
+        flex-direction: column;
+        gap: 15px;
+      }
+    }
+</style> 
+</head>
+<body>
+  <div class="container">
+    <header class="estimate-header">
+      <div id="project-details">
+        <h2 id="project-title"></h2>
+        <p id="project-code"></p>
+        <p id="project-status"></p>        <!-- New: Display project status -->
+        <p id="project-type"></p>          <!-- New: Display project type -->
+        <p id="project-description"></p>  <!-- New: Display project description -->
+        <p id="project-address"></p>
+      </div>
+    </header>
+
+    <section id="estimate-section">
+      <h2>Line Items</h2>
+      <button class="add-line-item-button" id="add-line-item">+ Add Line Item</button>
+      <button class="add-category-header-button" id="add-category-header">+ Add Category</button>
+      <table id="line-items-table">
+        <thead>
+          <tr>
+            <th>Select</th>
+            <th>Item</th>
+            <th>Description</th>
+            <th>Quantity</th>
+            <th>Unit Price</th>
+            <th>Total</th>
+            <th>Vendor</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="line-items-body">
+          <!-- Line items will be dynamically added here -->
+        </tbody>
+      </table>
+
+      <div id="estimate-summary">
+        <h3>Summary</h3>
+        <p><strong>Subtotal:</strong> $<span id="subtotal">0.00</span></p>
+        <label for="tax-input"><strong>Tax (%):</strong></label>
+        <input type="number" id="tax-input" placeholder="Enter %" min="0" max="100">
+        <p><strong>Total:</strong> $<span id="total">0.00</span></p>
+      </div>
+
+      <div class="vendor-assign-section">
+        <h3>Assign Selected Items to a Vendor</h3>
+        <select id="vendor-select">
+          <option value="">Select a Vendor</option>
+          <!-- Vendor options will be dynamically loaded -->
+        </select>
+        <button id="assign-items-button" class="btn-primary">Assign Items</button>
+      </div>
+
+      <div class="form-actions">
+        <button id="save-estimate" class="btn-primary">Save Estimate</button>
+        <button id="cancel-estimate" class="btn-secondary" onclick="window.history.back()">Cancel</button>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

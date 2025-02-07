@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Estimate</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="form-container">
+    <form id="add-estimate-form">
+      <h2>Add New Estimate</h2>
+
+      <label for="estimate-name">Estimate Name (Required):</label>
+      <input type="text" id="estimate-name" name="name" placeholder="Enter estimate name" required />
+
+      <label for="estimate-amount">Estimate Amount (Required):</label>
+      <input type="number" id="estimate-amount" name="amount" placeholder="Enter estimate amount" required />
+
+      <label for="estimate-description">Description:</label>
+      <textarea id="estimate-description" name="description" placeholder="Add details"></textarea>
+
+      <button type="submit" class="btn-primary">Submit</button>
+    </form>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

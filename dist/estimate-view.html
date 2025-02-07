@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>View Estimate</title>
+ 
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+/* General Styles */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f4f7fa;
+  margin: 0;
+  padding: 0;
+  color: #333;
+}
+
+
+
+.container {
+  max-width: 900px;
+  margin: 40px auto;
+  background: #fff;
+  padding: 30px 40px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  border: 1px solid #e0e6ed;
+}
+
+/* Header Section */
+.estimate-header {
+  border-bottom: 2px solid #e0e6ed;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+}
+
+.estimate-header h2 {
+  font-size: 28px;
+  margin-bottom: 5px;
+  color: #2a2a2a;
+}
+
+.estimate-header p {
+  margin: 4px 0;
+  font-size: 16px;
+  color: #555;
+}
+
+/* Table Styles */
+.line-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.line-items-table th, 
+.line-items-table td {
+  border: 1px solid #e0e6ed;
+  padding: 12px 15px;
+  text-align: left;
+}
+
+.line-items-table th {
+  background-color: #f0f4f8;
+  font-size: 16px;
+  color: #2a2a2a;
+  text-transform: uppercase;
+}
+
+.line-items-table tr:nth-child(even) {
+  background-color: #f9fbfd;
+}
+
+.line-items-table td {
+  font-size: 15px;
+  color: #333;
+}
+
+/* Summary Section */
+.estimate-summary {
+  margin-top: 30px;
+  padding: 20px;
+  background: #f9fbfd;
+  border-radius: 10px;
+  border: 1px solid #e0e6ed;
+}
+
+.estimate-summary h2 {
+  font-size: 24px;
+  color: #2a2a2a;
+  margin-bottom: 15px;
+}
+
+.estimate-summary p {
+  font-size: 18px;
+  margin: 8px 0;
+  color: #444;
+}
+
+.estimate-summary strong {
+  color: #2a2a2a;
+}
+
+/* Footer Buttons */
+.estimate-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 30px;
+}
+
+.btn-primary, .btn-secondary {
+  padding: 12px 25px;
+  font-size: 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.btn-primary {
+  background-color: #007bff;
+  color: #fff;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
+  box-shadow: 0 6px 12px rgba(0, 123, 255, 0.4);
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: #fff;
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+.btn-secondary:hover {
+  background-color: #495057;
+  box-shadow: 0 6px 12px rgba(108, 117, 125, 0.4);
+}
+
+
+
+/* Print Styles */
+@media print {
+  body {
+    background: none;
+    color: #000;
+  }
+
+  .container {
+    box-shadow: none;
+    border: none;
+  }
+
+  .estimate-actions {
+    display: none;
+  }
+
+  .line-items-table th, .line-items-table td {
+    border: 1px solid #000;
+  }
+} 
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .container {
+    padding: 20px;
+  }
+
+  .estimate-actions {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .btn-primary, .btn-secondary {
+    width: 100%;
+  }
+} 
+
+/* Enhancements */
+.line-items-table td input[type="text"],
+.line-items-table td input[type="number"] {
+  border: none;
+  background: transparent;
+  width: 100%;
+  color: #333;
+  font-size: 15px;
+}
+
+.line-items-table td input[disabled] {
+  color: #555;
+}
+
+.line-items-table td input:focus {
+  outline: none;
+  border-bottom: 1px solid #007bff;
+}
+
+/* Add subtle hover effect */
+.line-items-table tr:hover {
+  background-color: #eef4fc;
+}
+
+/* Header Logo Placeholder */
+.estimate-header::before {
+  content: 'BESF';
+  font-size: 24px;
+  font-weight: bold;
+  color: #007bff;
+  display: block;
+  margin-bottom: 10px;
+} 
+
+/* Highlight Total */
+#total {
+  color: #007bff;
+  font-weight: bold;
+  font-size: 20px;
+} 
+
+/* Icons Styling */
+.fas {
+  margin-right: 8px;
+}
+
+/* Loading Text Styling */
+.loading {
+  text-align: center;
+  font-style: italic;
+  color: #888;
+} 
+
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header Section -->
+    <header class="estimate-header">
+      <div id="estimate-header">
+        <h2 id="project-name">Project: Loading...</h2>
+        <p id="project-address">Address: Loading...</p>
+        <p id="invoice-number">Invoice #: Loading...</p>
+        <p id="total-amount">Total: Loading...</p> 
+      </div>
+    </header>
+
+    <!-- Estimate Details -->
+    <section class="estimate-details">
+      <h2>Line Items</h2>
+      <table class="line-items-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Description</th>
+            <th>Quantity</th>
+            <th>Unit Price</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Assigned</th>
+          </tr>
+        </thead>
+        <tbody id="line-items-body">
+          <!-- Line items will be dynamically loaded here -->
+          <tr>
+            <td colspan="5" class="loading">Loading items...</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Summary Section -->
+    <section class="estimate-summary">
+      <h2>Summary</h2>
+      <p><strong>Subtotal:</strong> $<span id="subtotal">0.00</span></p>
+      <p><strong>Tax:</strong> $<span id="tax">0.00</span></p>
+      <p><strong>Total:</strong> $<span id="total">0.00</span></p>
+    </section>
+
+    <!-- Footer Actions -->
+    <footer class="estimate-actions">
+      <button id="print-estimate" class="btn-primary"><i class="fas fa-print"></i> Print</button>
+      <button id="delete-estimate" class="btn-secondary"><i class="fas fa-trash"></i> Delete</button>
+      <button id="back-to-project" class="btn-secondary"><i class="fas fa-arrow-left"></i> Back to Project</button>
+    </footer>
+  </div>
+
+  <script src="./estimate-view.js"></script>
+</body>
+</html>

@@ -1,0 +1,1737 @@
+/* General Styles */
+body {
+  font-family: "Poppins", sans-serif;
+  background-color: #f4f4f4;
+  margin: 0;
+  display: flex;
+}
+
+.container {
+  
+  max-width: 1200px;
+  margin: 0px auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding-left: 210px; /* Matches the sidebar width to push content */
+  padding-top: 0px; /* Adjust for the upper bar height */
+  transition: padding-left 0.3s ease, padding-top 0.3s ease; /* Smooth adjustment for toggle */
+}
+
+
+.layout .container {
+  margin-left: 200px; /* Adjust margin to match sidebar width */
+}
+
+
+h1, h2 {
+  color: #0f4c75;
+  font-weight: bold;
+  margin: 10px;
+  
+}
+
+p {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.6;
+}
+
+/* ----------------------------------- */
+/* project Dropdown Section */
+/* ----------------------------------- */
+/* Dropdown Title Styling */
+/* Project Title - Clickable Tag with Dropdown Icon */
+.project-tag {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: rgba(15, 76, 117, 0.8); /* Semi-transparent */
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  padding: 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.project-tag:hover {
+  background-color: rgba(15, 76, 117, 1); /* Full opacity on hover */
+  transform: scale(1.02); /* Slight enlargement */
+}
+
+/* Dropdown Icon */
+.dropdown-icon {
+  font-size: 20px;
+  margin-left: 10px;
+  transition: transform 0.3s ease;
+}
+
+.dropdown-icon.rotated {
+  transform: rotate(180deg);
+}
+
+/* Project Details Content */
+.project-details-content {
+  display: none; /* Hidden by default */
+  background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent */
+  border-radius: 8px;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  margin-top: 10px;
+  transition: max-height 0.5s ease, opacity 0.5s ease;
+}
+
+.project-details-content.open {
+  display: block; /* Show when opened */
+}
+
+/* Paragraph Styles */
+.project-details-content p {
+  margin: 10px 0;
+  font-size: 16px;
+  color: #333333;
+}
+
+.project-details-content strong {
+  color: #0f4c75;
+}
+
+/* Color Indicator */
+.project-details-content span[style*="background-color"] {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+
+/* project esdit button  */
+#project-details-content #edit-project-button {
+  display: inline-block;
+  padding: 10px 15px;
+  background-color: #0f4c75; /* Primary color */
+  color: white; /* Text color */
+  border: none; /* Remove border */
+  border-radius: 5px; /* Rounded corners */
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 15px; /* Add spacing above */
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+#edit-project-button:hover {
+  background-color: #0056b3; /* Darker color on hover */
+  transform: scale(1.05); /* Slight enlargement on hover */
+}
+
+
+/* ----------------------------------- */
+/* Sidebar Styles */
+/* ----------------------------------- */
+
+
+.sidebar {
+  width: 200px;
+  min-width: 150px;
+  background-color: rgba(15, 76, 117, 0.9); /* Semi-transparent */
+  color: white;
+  position: fixed;
+  height: 100vh;
+  top: 0;
+  left: 0;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  transition: transform 0.3s ease-in-out;
+  border-radius: 0 10px 10px 0; /* Rounded right corners for the sidebar */
+}
+
+
+/* Sidebar closed state */
+.sidebar.closed {
+  transform: translateX(-100%); /* Hide the sidebar offscreen */
+}
+
+/* Sidebar open state */
+.sidebar.open {
+  transform: translateX(0); /* Show the sidebar */
+}
+
+.sidebar-header {
+  padding: 20px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+
+
+.sidebar-header a {
+  color: white;
+  text-decoration: none;
+  font-size: 18px;
+  display: inline-block;
+  margin: 0 auto;
+  background-color: rgba(255, 255, 255, 0.1); /* Background for the Home button */
+  padding: 10px 15px;
+  border-radius: 10px; /* Add rounded corners to the Home button */
+  transition: transform 0.2s, background-color 0.3s ease-in-out, box-shadow 0.3s;
+}
+
+.sidebar-header a:hover {
+  transform: scale(1.05); /* Slightly enlarge the Home button */
+  background-color: rgba(255, 255, 255, 0.2); /* Brighter background on hover */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Add shadow for the hover effect */
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: calc(6 * 50px); /* Display 6 projects at a time, assuming 50px height per item */
+  overflow-y: auto; /* Enable scrolling for the project list */
+}
+
+.sidebar ul li {
+  padding: 15px 20px;
+  margin: 10px 10px; /* Add some spacing between items */
+  border-radius: 8px; /* Rounded corners for each project item */
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.3s ease-in-out, box-shadow 0.3s; /* Smooth transitions */
+  background-color: rgba(255, 255, 255, 0.1); /* Default background for project items */
+}
+
+.sidebar ul li a {
+  color: #d1e8f2;
+  text-decoration: none;
+  font-size: 16px;
+  display: block; /* Ensures the hover effect spans the entire list item */
+}
+
+.sidebar ul li:hover {
+  transform: scale(1.05); /* Slightly enlarge the project item */
+  background-color: rgba(255, 255, 255, 0.2); /* Brighter background on hover */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Add shadow for hover effect */
+}
+
+.sidebar ul li a:hover {
+  color: white;
+  background-color: transparent; /* Ensure link hover doesn’t override the item’s hover effect */
+}
+
+/* Hide the scrollbar for modern browsers */
+.sidebar ul::-webkit-scrollbar {
+  display: none;
+}
+
+.sidebar ul {
+  -ms-overflow-style: none; /* For Internet Explorer and Edge */
+  scrollbar-width: none; /* For Firefox */
+}
+
+/* ----------------------------------- */
+/* Sidebar Toggle Button */
+/* ----------------------------------- */
+.sidebar-toggle {
+  background-color: #0f4c75;
+  color: white;
+  font-size: 20px;
+  border: none;
+  padding: 10px 15px;
+  cursor: pointer;
+  position: fixed;
+  top: 27px;
+  left: 5px;
+  z-index: 1100;
+  border-radius: 5px;
+}
+
+.sidebar-toggle:hover {
+  background-color: #0056b3;
+}
+
+/* ----------------------------------- */
+/* Details Section Styling */
+/* ----------------------------------- */
+
+.details-section {
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+  
+}
+
+.details-section:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Section Headers */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px; /* Add spacing only inside the header */
+  background-color: #f8f9fa;
+}
+
+
+
+.add-button, .create-schedule-button, .upload-button, .selection-button {
+  background-color: #0f4c75;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+}
+
+.add-button:hover, .create-schedule-button:hover, .upload-button:hover, .selection-button:hover {
+  background-color: #0056b3;
+}
+
+
+/* ----------------------------------- */
+/* Task Section Styling */
+/* ----------------------------------- */
+#tasks-section {
+  padding: 0;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(6, 6, 6, 0.1);
+  width: 100%; /* Ensure the section spans the full width */
+  margin: 0; /* Remove any margins around the section */
+}
+
+#task-count {
+  font-size: 16px;
+  font-weight: normal;
+  color: #555;
+  margin-left: 10px;
+}
+
+
+/* ----------------------------------- */
+/* Task List */
+/* ----------------------------------- */
+
+#task-list {
+  position: relative; /* Set relative positioning for this container */
+  margin: 0;
+  padding: 0;
+}
+
+
+
+#task-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fcfbfb;
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  width: 95%;
+}
+
+
+#task-list li:hover {
+  background-color: #c7eaf7;
+  box-shadow: 0 2px 4px rgba(145, 161, 171, 0.1);
+}
+
+.task-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+
+.task-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  border-bottom: 1px solid #ddd; /* Separate tasks with a thin border */
+  background-color: #ffffff;
+  transition: box-shadow 0.3s ease;
+  width: 100%; /* Ensure task item spans full width */
+}
+
+.task-item:hover {
+  background-color: #eef7ff;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.task-item:last-child {
+  border-bottom: none; /* Remove border for the last item */
+}
+
+.task-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px; /* Add spacing between task title and initials */
+}
+
+.task-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Task Actions */
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+
+.task-info .delete-icon {
+  color: red;
+  font-size: 14px;
+  cursor: pointer;
+  display: none; /* Hidden by default */
+  margin-left: 10px; /* Add spacing */
+  transition: transform 0.2s, color 0.2s;
+}
+
+.task-item:hover .delete-icon {
+  display: inline-block; /* Make the button visible */
+}
+
+.task-info .delete-icon:hover {
+  color: darkred;
+  transform: scale(1.2);
+}
+
+
+.edit-task-button {
+  background-color: #3282b8;
+  color: white;
+  border: none;
+  padding: 5px 9px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  display: none; /* Hidden by default */
+  transform: translateY(3px);
+  opacity: 0;
+}
+
+.task-item:hover .edit-task-button {
+  background-color: #0056b3;
+  display: inline-block; /* Make the button visible */
+  opacity: 1;
+  transform: translateY(0);
+}
+
+
+
+/* ----------------------------------- */
+/* Estimates Options */
+/* ----------------------------------- */
+.estimates-options {
+  display: flex;
+  gap: 10px;
+}
+
+.estimate-option {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  border: 1px dashed #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  background-color: #f8f9fa;
+  transition: all 0.3s;
+}
+
+.estimate-option:hover {
+  background-color: #eef7ff;
+}
+
+/* ----------------------------------- */
+/* Upload Box */
+/* ----------------------------------- */
+.upload-box {
+  text-align: center;
+  padding: 10px;
+  border: 1px dashed #ddd;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+}
+
+
+/* ----------------------------------- */
+/* Responsiveness */
+/* ----------------------------------- */
+/* project detail for tablet  */
+@media (max-width: 1024px) {
+  .container {
+    padding-left: 200px; /* Adjust padding for smaller sidebar width */
+  }
+  
+
+  .sidebar {
+    width: 200px;
+  }
+
+  .upper-bar {
+    left: 200px;
+    width: calc(100% - 200px);
+  }
+
+  .sidebar.closed + .upper-bar {
+    left: 0;
+    width: 100%;
+  }
+
+  .details-section {
+    padding: 15px;
+  }
+
+  .details-section h2 {
+    font-size: 18px;
+  }
+
+  .details-section button {
+    padding: 8px 12px;
+  }
+
+  #project-details p {
+    font-size: 14px;
+  }
+
+
+  .sidebar-toggle {
+    top: 10px;
+    left: 10px;
+    font-size: 18px;
+  }
+
+}
+
+.sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebar.closed {
+  transform: translateX(-100%);
+}
+
+
+/* project detail for mobile  */
+@media (max-width: 768px) {
+  .container {
+    margin: 10px;
+    padding-left: 0;
+    padding-top: 70px;
+  }
+  
+  .sidebar {
+    position:flex ;
+    width: 200px;
+    transform: translateX(-100%);
+    left: 0;
+    top: 0;
+    
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar.closed {
+    transform: translateX(-100%);
+  }
+
+  .upper-bar {
+    left: 0;
+    width: 100%;
+  }
+
+
+  .sidebar-toggle {
+    position: fixed;
+    top: 30px;
+    left: 10px;
+    font-size: 18px;
+  }
+
+  h1, h2 {
+    font-size: 18px;
+  }
+
+  p {
+    font-size: 12px;
+  }
+
+  #tasks-section {
+    margin: 0;
+    padding: 0;
+  }
+
+
+  .upper-bar {
+    position: static;
+    top: 0px;
+    left: 256px; /* Matches the sidebar width */ 
+  }
+
+  
+}
+
+
+
+
+
+/* project detail for smaller divices  */
+@media (max-width: 480px) {
+  .container {
+    margin: 0px;
+    padding-left: 5px;
+    padding-top: 70px;
+  }
+
+  .sidebar {
+    width: 100%;
+    transform: translateX(-100%);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar.closed {
+    transform: translateX(-100%);
+  }
+
+  .upper-bar {
+    width: 100%;
+  }
+
+
+  .task-meta {
+    font-size: 12px;
+  }
+
+  .task-status {
+    font-size: 10px;
+  }
+
+  .task-item {
+    padding: 8px;
+  }
+
+
+  .upper-bar {
+    position: static;
+    top: 5px;
+    left: 10px; /* Matches the sidebar width */
+    width: calc(100% - 250px); /* Adjust for sidebar width */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px; /* Add consistent spacing */
+    z-index: 1000; /* Keep it above other elements */
+    width: 400px;
+    height: 40px;
+  }
+}
+
+
+
+
+
+
+
+/* Assign To and Add Due Date buttons */
+.task-extra-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.assign-to-button,
+.add-due-date-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+  background-color: #f9f9f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.assign-to-button:hover,
+.add-due-date-button:hover {
+  background-color: #eef7ff;
+  transform: scale(1.1);
+}
+
+.assign-to-button i,
+.add-due-date-button i {
+  font-size: 18px;
+  color: #0f4c75;
+}
+
+.task-due-date {
+  font-size: 12px;
+  color: #555;
+}
+
+
+
+/* Task Details Section */
+#task-details {
+  position: fixed;
+  top: 10%;
+  right: 0;
+  width: 350px;
+  max-height: 80%;
+  overflow-y: auto;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: none; /* Ensure it’s hidden initially */
+  z-index: 100;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.task-details-section.show {
+  display: block;
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.task-details-section.hide {
+  display: block;
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.task-details-section h3 {
+  margin-top: 0;
+  font-size: 18px;
+  color: #0f4c75;
+}
+
+#task-info p {
+  margin: 10px 0;
+  font-size: 14px;
+  color: #555;
+}
+
+#edit-task-btn, #delete-task-btn {
+  background-color: #0f4c75;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  margin-top: 15px;
+  width: 100%;
+  font-size: 14px;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+#edit-task-btn:hover, #delete-task-btn:hover {
+  background-color: #0056b3;
+  transform: scale(1.05);
+}
+
+/* Close Button Customization */
+#task-details .close-task-details {
+  background-color: #ff6b6b;
+  color: white;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+#task-details .close-task-details:hover {
+  background-color: #ff4c4c;
+}
+
+
+
+
+/* ----------------------------------- */
+/* Tassign to  */
+/* ----------------------------------- */
+/* General Styling for Task Assignment */
+.task-item .task-info .task-assigned-to {
+  display: inline-block;
+  margin-left: 10px; /* Moves initials to the left of the status */
+  cursor: pointer;
+  position: relative; /* Allows for tooltip and hover effects */
+}
+
+.task-item .task-info .task-assigned-circle {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #07aef6; /* Default background color for assigned tasks */
+  color: white; /* Default text color for initials */
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+  line-height: 32px;
+  transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+.task-item .task-info .task-assigned-to:hover .task-assigned-circle {
+  transform: scale(1.1); /* Slight enlargement on hover */
+  background-color: #07b2ea; /* Slightly darker color on hover */
+}
+
+/* Tooltip for "Assigned To" */
+.task-item .task-info .task-assigned-to:hover::after {
+  content: attr(title); /* Display the full name using the title attribute */
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 5px 8px;
+  font-size: 12px;
+  border-radius: 5px;
+  white-space: nowrap;
+  z-index: 10;
+  opacity: 0;
+  animation: fadeIn 0.3s forwards;
+}
+
+/* Animation for Tooltip */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Unassigned Task Styling */
+.task-item .task-info .task-assigned-to.unassigned .task-assigned-circle {
+  background-color: #ffc107; /* Yellow background for unassigned tasks */
+  color: black; /* Black text for better contrast */
+}
+
+.task-item .task-info .task-assigned-to.unassigned:hover .task-assigned-circle {
+  transform: scale(1.1); /* Slight enlargement on hover */
+  background-color: #ffca28; /* Slightly darker yellow on hover */
+}
+
+/* Tooltip for Unassigned Tasks */
+.task-item .task-info .task-assigned-to.unassigned:hover::after {
+  content: "Unassigned"; /* Explicitly state it's unassigned */
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 5px 8px;
+  font-size: 12px;
+  border-radius: 5px;
+  white-space: nowrap;
+  z-index: 10;
+  opacity: 0;
+  animation: fadeIn 0.3s forwards;
+}
+
+
+/* assign to and due date on task list */
+.modal-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h3 {
+  margin-bottom: 20px;
+  font-size: 18px;
+  color: #333;
+}
+
+.modal-content input,
+.modal-content select {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.modal-content button {
+  padding: 10px 20px;
+  margin: 5px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.modal-content button:first-of-type {
+  background: #007bff;
+  color: #fff;
+}
+
+.modal-content button:last-of-type {
+  background: #ccc;
+  color: #333;
+}
+
+.modal-content button:hover {
+  opacity: 0.9;
+}
+
+.inline-date-picker {
+  
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  z-index: 10;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 5px;
+  background-color: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+
+
+/* Modal Container */
+#edit-project-modal {
+  display: none; /* Hidden by default */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Dimmed background */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+/* Modal Content */
+#edit-project-modal .modal-content {
+  background: #ffffff;
+  width: 90%; /* Adjusted width for responsiveness */
+  max-width: 500px; /* Maximum width for larger screens */
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  overflow-y: auto; /* Handle long content gracefully */
+  max-height: 90%; /* Prevent modal from exceeding screen height */
+}
+
+/* Modal Header */
+#edit-project-modal .modal-content h3 {
+  font-size: 22px;
+  color: #0f4c75;
+  margin-bottom: 15px;
+  text-align: center;
+  font-weight: bold;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 10px;
+}
+
+/* Form Labels */
+#edit-project-modal .modal-content form label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #333;
+  font-size: 14px;
+}
+
+/* Form Inputs and Textareas */
+#edit-project-modal .modal-content form input,
+#edit-project-modal .modal-content form textarea,
+#edit-project-modal .modal-content form select {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  background: #f9f9f9;
+  box-sizing: border-box;
+}
+
+#edit-project-modal .modal-content form textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Color Input */
+#edit-project-modal .modal-content form input[type="color"] {
+  height: 40px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  margin-top: 5px;
+  display: block;
+}
+
+/* Buttons */
+#edit-project-modal .modal-content form button {
+  width: 48%; /* Evenly spaced buttons */
+  padding: 10px;
+  margin: 5px 1%;
+  border: none;
+  border-radius: 5px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#edit-project-modal .modal-content form button:first-of-type {
+  background-color: #0f4c75;
+  color: #fff;
+}
+
+#edit-project-modal .modal-content form button:first-of-type:hover {
+  background-color: #0056b3;
+}
+
+#edit-project-modal .modal-content form button:last-of-type {
+  background-color: #ddd;
+  color: #333;
+}
+
+#edit-project-modal .modal-content form button:last-of-type:hover {
+  background-color: #bbb;
+}
+
+/* Close Button */
+#edit-project-modal .close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #ff6b6b;
+  color: #fff;
+  font-size: 16px;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#edit-project-modal .close-button:hover {
+  background-color: #ff4c4c;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  #edit-project-modal .modal-content {
+    width: 95%;
+    padding: 15px;
+  }
+
+  #edit-project-modal .modal-content form button {
+    width: 100%; /* Stack buttons on smaller screens */
+    margin: 5px 0;
+  }
+}
+
+
+
+/* Upper Bar Styling */
+/* Upper Bar Styling */
+.upper-bar {
+  position: flex;
+  top: 0px;
+  left: 206px; /* Matches the sidebar width */
+  width: calc(100% - 250px); /* Adjust for sidebar width */
+  background-color: #ffffff; /* Match page background */
+  border-bottom: 1px solid #ddd; /* Subtle separation */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px; /* Add consistent spacing */
+  
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Add shadow for depth */
+  transition: left 0.3s ease, width 0.3s ease; /* Smooth adjustment for sidebar toggle */
+  width: 95%;
+  height: 40px;
+}
+
+/* Adjust for sidebar toggle (collapsed state) */
+.sidebar.closed + .upper-bar {
+  left: 0; /* Align to the left when sidebar is hidden */
+  width: 100%; /* Full width */
+}
+
+/* Project Info (Left Section) */
+.project-info {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Space between icon and name */
+}
+
+.project-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #ff5733;
+  color: #fff;
+  font-size: 18px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.project-name {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333333;
+}
+
+/* Invite Button (Right Section) */
+.invite-btn {
+  background-color: #f8f9fa;
+  color: #333333;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 8px 15px;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.invite-btn i {
+  font-size: 16px;
+}
+
+.invite-btn:hover {
+  background-color: #eef7ff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+
+
+
+
+
+
+
+/* Modal Styling (inherits existing modal styles) */
+.modal-content h3 {
+  font-size: 18px;
+  color: #0f4c75;
+  margin-bottom: 15px;
+}
+
+.modal-content label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  font-size: 14px;
+  color: #555;
+}
+
+.modal-content input,
+.modal-content select {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+.modal-content button {
+  margin-right: 10px;
+}
+
+
+
+
+
+/* Comments Section Styling */
+.task-comments-section {
+  margin-top: 20px;
+  border-top: 1px solid #ddd;
+  padding-top: 15px;
+}
+
+.task-comments-section h4 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: #0f4c75;
+}
+
+#comments-list {
+  max-height: 150px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+
+.comment {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #555;
+}
+
+.comment-author {
+  font-weight: bold;
+  color: #0f3875;
+}
+
+.comment-date {
+  font-size: 12px;
+  color: #999;
+}
+
+.comment-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  resize: none;
+  font-size: 14px;
+}
+
+.comment-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+#add-comment-button {
+  display: block;
+  width: 100%;
+}
+
+
+
+
+
+
+/* Photo Upload Section */
+.photo-section {
+  margin-top: 20px;
+}
+
+.upload-tile {
+  border: 3px solid #007bff;
+  border-radius: 15px;
+  width: 100%;
+  max-width: 70px;
+  height: 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.upload-tile:hover {
+  background-color: #f0f8ff;
+  transform: scale(1.05);
+}
+
+.upload-icon {
+  font-size: 36px;
+  font-weight: bold;
+  color: #007bff;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.photo-preview {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none; /* Hide scrollbar for Firefox */
+  padding: 10px 0;
+}
+
+.photo-preview::-webkit-scrollbar {
+  display: none; /* Hide scrollbar for Chrome, Safari, and Edge */
+}
+
+.photo-item {
+  flex: 0 0 auto;
+  width: 120px;
+  height: 120px;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.photo-item:hover {
+  transform: scale(1.05);
+}
+
+.photo-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.delete-photo-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 25px;
+  height: 25px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.delete-photo-btn:hover {
+  background-color: #ff1a1a;
+}
+
+/*Switch Button State Dynamically*/
+.task-status {
+  margin-left: auto; /* Keep status aligned to the right */
+  display: inline-block;
+  padding: 4px 15px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+
+
+.mark-completed-button {
+  position: absolute;
+  top: 10px; /* Adjust as needed */
+  right: 10px; /* Adjust as needed */
+  padding: 10px 15px;
+  background-color: #f8f9fa;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mark-completed-button:hover {
+  background-color: #e0e0e0; /* Slight hover effect */
+  color: #000;
+}
+
+.mark-completed-button.completed {
+  background-color: #d4edda;
+  color: #155724;
+  font-weight: bold;
+}
+
+.mark-completed-button:not(.completed):hover {
+  background-color: #e0e0e0;
+}
+
+
+.status-completed {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-pending {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+
+/* Assigned To Dropdown */
+#edit-task-assigned-to {
+  width: 100%;
+  padding: 8px;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+  font-size: 14px;
+}
+
+#edit-task-assigned-to:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+
+/* Modal */
+.modal {
+  
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden; /* Prevent scrolling */
+}
+
+.modal-content {
+  max-width: 80%;
+  max-height: 80%;
+  padding: 20px;
+  border-radius: 8px;
+  background: #fff;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  object-fit: contain; /* Ensures the image fits nicely */
+}
+
+
+/* Close Button */
+.close-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background-color: red;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btn-primary {
+  background-color: #0f4c75;
+  color: #fff;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
+}
+
+.btn-secondary {
+  background-color: #ddd;
+  color: #000;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background-color: #ccc;
+}
+
+/* ----------------------------------- */
+/* estimate page */
+/* ----------------------------------- */
+
+#estimates-section {
+  margin-top: 20px;
+}
+
+#estimates-list {
+  margin: 15px 0;
+}
+
+.estimate-item {
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+}
+
+.estimate-item p {
+  margin: 5px 0;
+}
+
+.view-estimate-button ,.edit-estimate-button {
+  margin-top: 10px;
+  padding: 5px 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.view-estimate-button:hover  {
+  background-color: #0056b3;
+}
+
+.edit-estimate-button:hover  {
+  background-color: #0056b3;
+}
+
+.estimates-options {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 20px;
+}
+
+.estimate-option {
+  padding: 10px 20px;
+  background-color: #f4f4f4;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.estimate-option:hover {
+  background-color: #e0e0e0;
+}
+
+/* ----------------------------------- */
+/* delete estimate button */
+/* ----------------------------------- */
+.delete-estimate-button {
+  margin-top: 10px;
+  padding: 5px 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.delete-estimate-button:hover {
+  background-color: #0056b3;
+}
+
+.delete-estimate-button {
+  background-color: #007bff;
+  color: rgb(252, 252, 252);
+}
+
+
+
+
+
+
+
+
+
+
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f9f9f9;
+}
+
+
+
+.estimate-header {
+  border-bottom: 2px solid #eaeaea;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.estimate-header h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #333;
+}
+
+.project-info {
+  margin: 5px 0;
+  font-size: 16px;
+  color: #555;
+}
+
+.estimate-details {
+  margin-bottom: 20px;
+}
+
+.line-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.line-items-table th,
+.line-items-table td {
+  padding: 10px;
+  border: 1px solid #eaeaea;
+  text-align: left;
+}
+
+.line-items-table th {
+  background-color: #f4f4f4;
+}
+
+.estimate-summary {
+  margin-bottom: 20px;
+  background: #f8f8f8;
+  padding: 15px;
+  border-radius: 5px;
+}
+
+.estimate-summary p {
+  margin: 5px 0;
+  font-size: 16px;
+}
+
+.estimate-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 2px solid #eaeaea;
+}
+
+.estimate-actions button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-primary {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
+}
+
+.btn-secondary {
+  background-color: #f8f9fa;
+  color: #333;
+}
+
+.btn-secondary:hover {
+  background-color: #eaeaea;
+}
+
+
+
+
+/* files and photos css   */
+.file-item img {
+  max-width: 50px;
+  max-height: 50px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.file-item {
+  margin-bottom: 10px;
+}
+
+.file-item a i {
+  font-size: 20px;
+  color: #007bff;
+}
+
+.file-item button {
+  margin-top: 5px;
+}

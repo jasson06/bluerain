@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add New Project</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="add-project-form-container">
+    <form id="add-project-form">
+      <h2>Create New Project</h2>
+
+      <label for="project-name">Project Name (Required):</label>
+      <input type="text" id="project-name" name="name" placeholder="Enter project name" required />
+
+      <label for="project-status">Project Status:</label>
+      <select id="project-status" name="status" required>
+        <option value="Open">Open</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+      </select>
+
+      <label for="project-color">Project Color:</label>
+      <div class="color-picker">
+        <input type="radio" name="color" value="orange" id="color-orange" required />
+        <label for="color-orange" class="color-circle" style="background-color: orange;"></label>
+
+        <input type="radio" name="color" value="blue" id="color-blue" required />
+        <label for="color-blue" class="color-circle" style="background-color: blue;"></label>
+      </div>
+
+      <label for="project-type">Project Type:</label>
+      <select id="project-type" name="type" required>
+        <option value="">Select Project Type</option>
+        <option value="Residential">Residential</option>
+        <option value="Commercial">Commercial</option>
+      </select>
+
+      <label for="project-code">Project Code:</label>
+      <input type="text" id="project-code" name="code" placeholder="Enter project code" />
+
+      <label for="project-address-line1">Address Line 1:</label>
+      <input type="text" id="project-address-line1" name="addressLine1" placeholder="Address Line 1" />
+
+      <label for="project-address-line2">Address Line 2:</label>
+      <input type="text" id="project-address-line2" name="addressLine2" placeholder="Address Line 2" />
+
+      <label for="project-city">City (Required):</label>
+      <input type="text" id="project-city" name="city" placeholder="City" required />
+
+      <label for="project-state">State (Required):</label>
+      <input type="text" id="project-state" name="state" placeholder="State" required />
+
+      <label for="project-zip">ZIP Code:</label>
+      <input type="text" id="project-zip" name="zip" placeholder="ZIP Code" />
+
+      <label for="project-description">Additional Info:</label>
+      <textarea id="project-description" name="description" placeholder="Add details such as project scope, description, or notes"></textarea>
+
+      <button type="submit" class="btn-primary">Create Project</button>
+      <button type="button" class="btn-secondary">Cancel</button>
+    </form>
+  </div>
+  
+  <script src="script.js"></script>
+</body>
+</html>

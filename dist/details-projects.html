@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Details</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  
+
+</head>
+<body>
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2 class="home-option"><a href="/dashboard">Home</a></h2>
+    </div>
+    <ul id="sidebar-projects-list">
+      <!-- Projects will be dynamically loaded here -->
+    </ul>
+  </div>
+
+  <!-- Main Container -->
+  <div class="container">
+  
+    <h1 id="project-title">
+      Project Alpha
+      <button id="toggle-details-btn" class="dropdown-toggle">▼</button>
+      <!-- Edit Project Button -->
+    </h1>
+
+    <div class="upper-bar">
+      <div class="project-info">
+        <div class="project-icon" style="background-color: #ff5733;">
+          J
+        </div>
+        <span class="project-name">BlueRain Group</span>
+      </div>
+      <button class="invite-btn" onclick="openInviteModal()">
+        <i class="fas fa-user-plus"></i> Invite Team Member
+      </button>
+    </div>
+
+    <div id="project-details">
+      <div class="project-details-content" style="display: none;">
+        <p><strong>Status:</strong> In Progress</p>
+        <p><strong>Address:</strong> 123 Main St, New York, NY</p>
+        <p><strong>Description:</strong> A description of the project.</p>
+        <p><strong>Project Code:</strong> PA123</p>
+        <p><strong>Type:</strong> Construction</p>
+        <p><strong>Color:</strong>
+          <span style="display: inline-block; background-color: #ff5733; width: 15px; height: 15px; border-radius: 50%; margin-right: 5px;"></span>#ff5733
+        </p>
+        <p><strong>Zip Code:</strong> 10001</p>
+    
+        <!-- Edit Project Button -->
+        <button id="edit-project-button" class="btn-primary" onclick="openEditProjectModal()">Edit Project</button>
+      </div>
+    </div>
+
+    <!-- Tasks Section -->
+    <section id="tasks-section" class="details-section">
+      <div class="section-header">
+        <h2>
+          Tasks <span id="task-count">(0)</span>
+        </h2>
+        <button class="add-button" onclick="createNewTask()">+ Create New Task</button>
+      </div>
+      <ul id="task-list">
+        <!-- Example Task Item -->
+        <li class="task-item" data-task-id="taskIdHere">
+          <div class="task-info">
+            <span class="task-title">Task Name</span>
+          </div>
+          <div class="task-actions">
+            <span class="delete-icon" onclick="deleteTask('taskIdHere')">
+              <i class="fas fa-trash"></i>
+            </span>
+            <button class="edit-task-button" data-task-id="taskIdHere">Edit</button>
+          </div>
+
+          <div class="task-meta">
+            <span class="task-assigned-to" title="Unassigned">NA</span>
+            <span class="task-status status-pending">Pending</span>
+          </div>
+          <div class="task-extra-actions">
+            <button class="assign-to-button" onclick="openAssignModal('taskIdHere')" title="Assign">
+              <i class="fas fa-user-plus"></i>
+            </button>
+            <button class="add-due-date-button" onclick="openDueDatePicker('taskIdHere')" title="Add Due Date">
+              <i class="fas fa-calendar"></i>
+            </button>
+            
+            <span class="task-due-date">Due: Not Set</span>
+          </div>
+        </li>
+      </ul>
+      
+    </section>
+
+    <!-- Task Details Modal/Side Section -->
+    <div id="task-details" class="task-details-section" style="display: none;">
+      <h3>Task Details</h3>
+
+      <!-- Task Status Toggle Button -->
+      <div id="task-status-button" class="task-status">
+        <button id="task-status-toggle" class="mark-completed-button" onclick="toggleTaskStatus()">
+          Mark as Completed
+        </button>
+      </div>
+
+      <div id="task-info">
+        <p><strong>Title:</strong> <span id="task-title"></span></p>
+        <p><strong>Description:</strong> <span id="task-description"></span></p>
+        <p><strong>Due Date:</strong> <span id="task-due-date"></span></p>
+        <p><strong>Assigned To:</strong> <span id="task-assigned-to"></span></p>
+      </div>
+
+
+      <div id="task-comments-section" class="task-comments-section" data-task-id="">
+        <h4>Comments</h4>
+        <div id="comments-list">
+          <p>No comments yet.</p>
+        </div>
+        <textarea
+          id="new-comment"
+          class="comment-input"
+          placeholder="Add a comment..."
+        ></textarea>
+        <button id="add-comment-button" class="btn-primary">Add Comment</button>
+      </div>
+      
+      
+
+
+      <div class="photo-section">
+        <div class="upload-tile" onclick="document.getElementById('before-upload').click();">
+          <div class="upload-icon">+</div>
+          <span>Before</span>
+          <input
+            type="file"
+            id="before-upload"
+            class="hidden-file-input"
+            multiple
+            onchange="handlePhotoUpload(event, 'before')"
+          />
+        </div>
+        <div id="before-photo-preview" class="photo-preview"></div>
+      </div>
+      <div class="photo-section">
+        <div class="upload-tile" onclick="document.getElementById('after-upload').click();">
+          <div class="upload-icon">+</div>
+          <span>After</span>
+          <input
+            type="file"
+            id="after-upload"
+            class="hidden-file-input"
+            multiple
+            onchange="handlePhotoUpload(event, 'after')"
+          />
+        </div>
+        <div id="after-photo-preview" class="photo-preview"></div>
+      </div>
+
+      <button id="edit-task-btn" onclick="openEditTaskModal()">Edit Task</button>
+      <button id="delete-task-btn" onclick="deleteTask()">Delete Task</button>
+      <button class="close-task-details" onclick="closeTaskDetails()">Close</button>
+    </div>
+
+    <!-- Modal for displaying larger images -->
+    <div id="photo-modal" class="modal" style="display: none;">
+      <span id="close-photo-modal" class="close-button" onclick="closePhotoModal()">&times;</span>
+      <img id="photo-modal-img" class="modal-content" alt="Large Photo" />
+    </div>
+
+<!-- Estimates Section -->
+<section id="estimates-section" class="details-section">
+  <h2>Estimates <span id="estimates-count">(0)</span></h2>
+  <div id="estimates-list">
+    <!-- Estimates will be dynamically loaded here -->
+    <p>No estimates found.</p>
+  </div>
+  <div class="estimates-options">
+    <div class="estimate-option" onclick="startFromScratch()">+ Start from Scratch</div>
+    <div class="estimate-option" onclick="importEstimate()">Import Estimate</div>
+    <div class="estimate-option" onclick="useTemplate()">From Templates</div>
+  </div>
+</section>
+
+
+
+<!-- Files Section -->
+<section id="files-section" class="details-section">
+  <h2>Files & Photos</h2>
+  <div class="upload-box">
+    <button class="upload-button" onclick="uploadFiles()">Upload Files ▼</button>
+    <p>Upload images, files, and more to share with your team.</p>
+  </div>
+  
+  <!-- Dedicated container for files -->
+  <div id="uploaded-files-container" class="files-container"></div>
+</section>
+
+
+    <!-- Schedule Section -->
+    <section id="schedule-section" class="details-section">
+      <h2>Schedule</h2>
+      <button class="create-schedule-button" onclick="createSchedule()">Create Schedule</button>
+      <p>Start building out your project schedule.</p>
+    </section>
+
+    <!-- Selection Boards Section -->
+    <section id="selection-boards-section" class="details-section">
+      <h2>Selection Boards</h2>
+      <p>Select which rooms you'd like to design first.</p>
+      <button class="selection-button" onclick="customizeSelection()">Customize Selection Boards</button>
+    </section>
+  </div>
+
+      <!-- Edit Project Modal -->
+<div id="edit-project-modal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <h3>Edit Project</h3>
+    <form id="edit-project-form">
+      <label for="edit-project-name">Name:</label>
+      <input id="edit-project-name" type="text" required />
+      
+      <label for="edit-project-status">Status:</label>
+      <select id="edit-project-status" required>
+        <option value="active">Active</option>
+        <option value="completed">Completed</option>
+        <option value="on-hold">On Hold</option>
+      </select>
+
+      <label for="edit-project-color">Color:</label>
+      <input id="edit-project-color" type="color" />
+
+      <label for="edit-project-type">Type:</label>
+      <input id="edit-project-type" type="text" required />
+
+      <label for="edit-project-code">Project Code:</label>
+      <input id="edit-project-code" type="text" required />
+
+      <label for="edit-project-addressLine1">Address Line 1:</label>
+      <input id="edit-project-addressLine1" type="text" />
+
+      <label for="edit-project-addressLine2">Address Line 2:</label>
+      <input id="edit-project-addressLine2" type="text" />
+
+       <label for="edit-project-city">City:</label>
+       <input id="edit-project-city" type="text" required />
+
+      <label for="edit-project-state">State:</label>
+      <input id="edit-project-state" type="text" required />
+
+      <label for="edit-project-zip">Zip Code:</label>
+      <input id="edit-project-zip" type="text" />
+
+
+      <label for="edit-project-description">Description:</label>
+      <textarea id="edit-project-description"></textarea>
+
+      <div class="modal-buttons">
+        <button type="button" onclick="submitEditProject()">Save</button>
+        <button type="button" onclick="closeEditProjectModal()">Cancel</button>
+        <button type="button" class="delete-button" onclick="deleteProject()">Delete Project</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+  
+
+
+<!-- Invite Modal -->
+<div id="invite-modal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <h3>Invite Team Member</h3>
+    <form id="invite-form">
+      <label for="invite-role">Role:</label>
+      <select id="invite-role" required>
+        <option value="vendor">Vendor</option>
+        <option value="project-manager">Project Manager</option>
+      </select>
+
+      <label for="existing-vendor">Select Existing Vendor:</label>
+      <select id="existing-vendor">
+        <option value="">Select an existing vendor</option>
+        <option value="new">Add New Vendor</option>
+        <!-- Options will be dynamically populated -->
+      </select>
+
+      <label for="invite-email">Email:</label>
+      <input id="invite-email" type="email" placeholder="Enter email" readonly required />
+
+      <button type="button" class="btn-primary" onclick="sendInvite()">Send Invite</button>
+      <button type="button" class="btn-secondary" onclick="closeInviteModal()">Cancel</button>
+    </form>
+  </div>
+</div>
+
+
+  <!-- Edit Task Modal -->
+  <div id="edit-task-modal" class="modal">
+    <div class="modal-content">
+      <h3>Edit Task</h3>
+      <form id="edit-task-form">
+        <div class="form-group">
+          <label for="edit-task-title">Title:</label>
+          <input id="edit-task-title" type="text" required placeholder="Enter task title" />
+        </div>
+
+        <div class="form-group">
+          <label for="edit-task-description">Description:</label>
+          <textarea id="edit-task-description" placeholder="Enter task description" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-task-due-date">Due Date:</label>
+          <input id="edit-task-due-date" type="date" required />
+        </div>
+
+        <div class="form-group">
+          <label for="edit-task-assigned-to">Assigned To:</label>
+          <select id="edit-task-assigned-to" required>
+            <option value="">Select a vendor</option>
+            <!-- Options will be dynamically loaded -->
+          </select>
+        </div>
+
+        
+
+        <div class="form-group">
+          <label for="edit-task-completed">Completed:</label>
+          <input id="edit-task-completed" type="checkbox" />
+        </div>
+
+        <div class="form-actions">
+          <button id="save-task-button" type="button" class="btn-primary" onclick="updateTask()">Save</button>
+          <button type="button" class="btn-secondary" onclick="closeEditTaskModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  
+
+  <script src="/details-project.js"></script>
+
+</body>
+</html>
+
