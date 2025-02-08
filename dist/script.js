@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Function to navigate to the details page
 function navigateToDetails(section, id) {
     const baseURL = window.location.origin; // Automatically detects the current base URL
-    const fullURL = `${baseURL}/details/${section}/${id}`;
+    const fullURL = `${baseURL}/details-projects.html?id=${id}`;
     console.log('Navigating to:', fullURL); // Log the full URL for debugging
     window.location.href = fullURL; // Navigate to the constructed URL
   }
@@ -217,41 +217,7 @@ function navigateToDetails(section, id) {
   }
   
 
-  // Function to load projects
-  async function loadProjects() {
-    const projectsList = document.getElementById('projects-list');
-    projectsList.innerHTML = '<p>Loading...</p>';
-  
-    try {
-      const response = await fetch('http://localhost:5500/api/projects');
-      if (!response.ok) throw new Error('Failed to fetch projects');
-  
-      const data = await response.json();
-      projectsList.innerHTML = '';
-  
-      if (data.projects.length === 0) {
-        projectsList.innerHTML = '<p>No projects found.</p>';
-      } else {
-        data.projects.forEach((project) => {
-          const itemDiv = document.createElement('div');
-          itemDiv.className = 'item';
-  
-          // Attach the navigateToDetails function to the onclick event
-          itemDiv.setAttribute('onclick', `navigateToDetails('projects', '${project._id}')`);
 
-  
-          itemDiv.innerHTML = `
-            <p>${project.name}</p>
-            <small>${project.address.city}, ${project.address.state}</small>
-          `;
-          projectsList.appendChild(itemDiv);
-        });
-      }
-    } catch (error) {
-      console.error('Error loading projects:', error);
-      projectsList.innerHTML = '<p>Error loading projects. Please try again later.</p>';
-    }
-  }
   
   
   // Expose the function globally

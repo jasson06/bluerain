@@ -1,13 +1,14 @@
 // Load environment variables from .env file
+const express = require('express');
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
-const express = require('express');
+
 const mongoose = require('mongoose');
 const cors = require('cors');
 const morgan = require('morgan');
-const path = require('path');
 const multer = require('multer');
-const fs = require('fs');
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
@@ -16,8 +17,10 @@ const nodemailer = require('nodemailer');
 
 
 
+
+
 const app = express();
-const PORT = 5500;
+const PORT = process.env.PORT || 5500;
 const JWT_SECRET = process.env.JWT_SECRET || '1539';
 
 
@@ -28,6 +31,20 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
 
+// Serve static files
+const buildPath = path.join(__dirname, "dist");
+app.use(express.static(buildPath));
+
+
+// Debugging: Log the static directory being served
+console.log("Serving static files from:", buildPath);
+
+
+
+
+
+
+
 // Logger Middleware
 function logger(req, res, next) {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
@@ -35,19 +52,37 @@ function logger(req, res, next) {
 }
 app.use(logger);
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'dist')));
+
+
+
+
+
+
+
+
+
+
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Serve `details-projects.html` for project details page
+app.get("/details/projects/:id", (req, res) => {
+  res.sendFile(path.join(__dirname, "dist", "details-projects.html"));
+});
+
+
 // MongoDB Connection
-const MONGO_URI = 'mongodb://localhost:27017/project-management';
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/project-management";
+
+if (!MONGO_URI) {
+  console.error("❌ MONGO_URI is not set. Please check your environment variables.");
+  process.exit(1);
+}
+
 mongoose
-  .connect(MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log('Connected to MongoDB!'))
-  .catch((err) => console.error('Error connecting to MongoDB:', err));
+  .connect(MONGO_URI)
+  .then(() => console.log("✅ Connected to MongoDB!"))
+  .catch((err) => console.error("❌ Error connecting to MongoDB:", err));
 
 
   // Configure multer
@@ -760,20 +795,6 @@ app.get('/api/projects', async (req, res) => {
   }
 });
 
-// Get Project Details by ID
-app.get('/api/details/projects/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    const project = await Project.findById(id);
-    if (!project) {
-      return res.status(404).json({ success: false, error: 'Project not found' });
-    }
-    res.json({ success: true, project });
-  } catch (error) {
-    console.error('Error fetching project details:', error.message);
-    res.status(500).json({ success: false, error: 'Failed to fetch project details' });
-  }
-});
 
 
 //Route for Editing a Project
@@ -844,18 +865,24 @@ app.get('/details/projects/:id', (req, res) => {
   });
 });
 
-// API Route: Get Project Details by ID
+
+
+
+// Get Project Details by ID
 app.get('/api/details/projects/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const project = await Project.findById(id);
-    if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
+    if (!project) {
+      return res.status(404).json({ success: false, error: 'Project not found' });
+    }
     res.json({ success: true, project });
   } catch (error) {
     console.error('Error fetching project details:', error.message);
     res.status(500).json({ success: false, error: 'Failed to fetch project details' });
   }
 });
+
 
 
 app.delete("/api/projects/:projectId", async (req, res) => {
@@ -1955,7 +1982,15 @@ app.post('/api/invite/accept', async (req, res) => {
 });
 
 
-
+// Debugging route to check server deployment status
+app.get('/api/debug', (req, res) => {
+  res.json({
+    success: true,
+    message: 'API is working on Render!',
+    environment: process.env.NODE_ENV,
+    port: process.env.PORT,
+  });
+});
 
 
 // Root Route
