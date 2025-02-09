@@ -188,7 +188,7 @@ function navigateToDetails(section, id) {
     projectsList.innerHTML = '<p>Loading...</p>';
   
     try {
-      const response = await fetch('http://localhost:5500/api/projects');
+      const response = await fetch('/api/projects');
       if (!response.ok) throw new Error('Failed to fetch projects');
   
       const data = await response.json();
