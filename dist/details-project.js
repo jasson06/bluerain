@@ -1561,6 +1561,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const projectId = getProjectId();
   loadProjectDetails(projectId);
   loadTasks(projectId);
+  loadEstimates(projectId);
   enableDragAndDrop();
   loadSidebarProjects();
 
