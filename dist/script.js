@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 try {
-                    const response = await fetch(`http://localhost:5500/api/update-task/${taskId}`, {
+                    const response = await fetch(`/api/update-task/${taskId}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status: newStatus }),
@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!validatePayload(payload, formId)) return;
 
                 try {
-                    const response = await fetch(`http://localhost:5500${apiEndpoint}`, {
+                    const response = await fetch(`${apiEndpoint}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload),
