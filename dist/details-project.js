@@ -2,9 +2,10 @@ console.log("details-project.js is loaded");
 
 // Helper function to consistently extract projectId from URL
 function getProjectId() {
-  const pathSegments = window.location.pathname.split('/');
-  return pathSegments[pathSegments.length - 1];
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get('id'); // Extract the 'id' parameter from the query string
 }
+
 
 
 // Reload Project Details, Tasks, and Estimates
