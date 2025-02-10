@@ -651,7 +651,7 @@ p {
     align-items: center;
     justify-content: space-between;
     padding: 10px 20px; /* Add consistent spacing */
-    z-index: 1000; /* Keep it above other elements */
+   
     width: 400px;
     height: 40px;
   }
