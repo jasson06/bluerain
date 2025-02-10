@@ -1914,8 +1914,8 @@ app.post("/api/invite", async (req, res) => {
 async function sendInviteEmail(email, role, projectId) {
   const loginURL =
     role === "project-manager"
-      ? "http://localhost:5500/project-manager-auth.html"
-      : "http://localhost:5500/sign-inpage.html";
+      ? "/project-manager-auth.html"
+      : "/sign-inpage.html";
 
   const mailOptions = {
     from: `"BESF Team" <${process.env.EMAIL_USER}>`,
