@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Function to navigate to the details page
 function navigateToDetails(section, id) {
     const baseURL = window.location.origin; // Automatically detects the current base URL
-    const fullURL = `${baseURL}/details-projects.html?id=${id}`;
+    const fullURL = `${baseURL}/details/${section}/${id}`;
     console.log('Navigating to:', fullURL); // Log the full URL for debugging
     window.location.href = fullURL; // Navigate to the constructed URL
   }
