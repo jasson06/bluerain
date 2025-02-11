@@ -1942,13 +1942,13 @@ app.post("/api/invite", async (req, res) => {
 
 // 📩 Send Invitation Email Function
 async function sendInviteEmail(email, role, projectId) {
+  const baseURL = process.env.BASE_URL || 'http://localhost:5500'; // Add a fallback
   const loginURL =
     role === "project-manager"
-    ? `${process.env.BASE_URL}/project-manager-auth.html`
-    : `${process.env.BASE_URL}/sign-inpage.html`;
+      ? `${baseURL}/project-manager-auth.html`
+      : `${baseURL}/sign-inpage.html`;
 
-// Set the activation URL (replace with your actual activation logic)
-const activationURL = `${process.env.BASE_URL}/activate-account?email=${encodeURIComponent(email)}&projectId=${projectId}&role=${encodeURIComponent(role)}`;
+  const activationURL = `${baseURL}/activate-account?email=${encodeURIComponent(email)}&projectId=${projectId}&role=${encodeURIComponent(role)}`;
 
   const mailOptions = {
     from: `"BESF Team" <${process.env.EMAIL_USER}>`,
@@ -1975,6 +1975,7 @@ const activationURL = `${process.env.BASE_URL}/activate-account?email=${encodeUR
     return false;
   }
 }
+
 
 
 
