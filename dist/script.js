@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', () => {
     // Tab Navigation
     const tabs = document.querySelectorAll('.tab');
@@ -69,6 +70,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+
+
+
+
 
     // Form Submissions
     const formConfigurations = [
@@ -174,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     
 
+
 // Function to navigate to the details page
 function navigateToDetails(section, id) {
     const baseURL = window.location.origin; // Automatically detects the current base URL
@@ -219,6 +226,33 @@ function navigateToDetails(section, id) {
 
 
   
+  // Sidebar Toggle with Hamburger
+  const hamburger = document.querySelector('.hamburger');
+  const sidebar = document.querySelector('.sidebar');
+  const dropdownButton = document.querySelector('.dropdown-button');
+  const dropdownContent = document.querySelector('.dropdown-content');
+
+  // Hamburger button functionality
+  hamburger.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+  });
+
+  // Dropdown functionality
+  dropdownButton.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevent closing dropdown when clicking inside it
+    dropdownContent.classList.toggle('show');
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', () => {
+    dropdownContent.classList.remove('show');
+  });
+
+  // Prevent sidebar collapse when clicking inside the dropdown
+  dropdownContent.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+  
   
   // Expose the function globally
   window.navigateToDetails = navigateToDetails;
@@ -226,4 +260,5 @@ function navigateToDetails(section, id) {
       loadProjects();
       
 });
+
 

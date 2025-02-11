@@ -103,6 +103,13 @@
       <button type="button" onclick="handlePasswordResetRequest()">Reset Password</button>
       <p class="toggle-link" onclick="toggleForm('signin')">Back to Sign In</p>
     </form>
+
+    <!-- Activate Account Form (For Invited Users) -->
+    <form id="activate-form">
+      <input type="text" id="activate-name" placeholder="Full Name" required>
+      <input type="password" id="activate-password" placeholder="Password" required>
+      <button type="submit">Activate Account</button>
+    </form>
   </div>
 
   <script>
@@ -110,47 +117,109 @@
       const forms = document.querySelectorAll('form');
       forms.forEach(form => form.classList.remove('active'));
 
-      document.getElementById(`${formType}-form`).classList.add('active');
+      const targetForm = document.getElementById(`${formType}-form`);
+      if (targetForm) {
+        targetForm.classList.add('active');
+      }
 
       const formTitle = {
         signin: 'Sign In',
         signup: 'Sign Up',
-        reset: 'Reset Password'
+        reset: 'Reset Password',
+        activate: 'Activate Account'
       };
 
-      document.getElementById('form-title').textContent = formTitle[formType];
+      if (document.getElementById('form-title')) {
+        document.getElementById('form-title').textContent = formTitle[formType];
+      }
     }
 
-    async function handleSignIn() {
-      const email = document.getElementById('signin-email').value.trim();
-      const password = document.getElementById('signin-password').value.trim();
+    document.addEventListener("DOMContentLoaded", async () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get("token");
 
-      if (!email || !password) {
-        alert('Please fill out all fields.');
+  console.log("Token from URL:", token); // Debug log to confirm token presence
+
+  if (token) {
+    toggleForm("activate"); // Show Activate Account Form
+    document.getElementById("activate-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById("activate-name").value.trim();
+      const password = document.getElementById("activate-password").value.trim();
+
+      if (!name || !password) {
+        alert("All fields are required.");
         return;
       }
 
       try {
-        const response = await fetch('/api/signin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+        console.log("Sending activation request...");
+        const response = await fetch("/api/invite/accept", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, name, password }),
         });
 
-        const data = await response.json();
-        localStorage.setItem('vendorId', data.vendorId); // Save vendor ID
-        if (response.ok) {
-          alert('Sign-in successful!');
-          window.location.href = '/Subcontractor%20page.html';
+        const result = await response.json();
+        console.log("Activation response:", result);
+
+        if (!response.ok) throw new Error(result.message);
+
+        alert("Account activated successfully!");
+
+        // Redirect based on role
+        if (result.role === "project-manager") {
+          window.location.href = "/project-manager-auth.html";
         } else {
-          alert(result.message || 'Sign-in failed!');
+          window.location.href = "/sign-inpage.html";
         }
       } catch (error) {
-        console.error('Error signing in:', error);
-        alert('An error occurred. Please try again.');
+        console.error("Activation Error:", error);
+        alert("Failed to activate account. Please try again.");
       }
-    }
+    });
+  } else {
+    console.warn("No token in URL. Redirecting to Sign In form.");
+    toggleForm("signin");
+  }
+});
 
+
+
+    // Sign In Handler
+    async function handleSignIn() {
+  const email = document.getElementById('signin-email').value.trim();
+  const password = document.getElementById('signin-password').value.trim();
+
+  if (!email || !password) {
+    alert('Please fill out all fields.');
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/signin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+      alert('Sign-in successful!');
+      localStorage.setItem('vendorId', data.vendorId); // Store vendor ID for further use
+      window.location.href = '/Subcontractor%20page.html';
+    } else {
+      alert(data.message || 'Sign-in failed!');
+    }
+  } catch (error) {
+    console.error('Error signing in:', error);
+    alert('An error occurred. Please try again.');
+  }
+}
+
+
+    // Sign Up Handler
     async function handleSignUp() {
       const name = document.getElementById('signup-name').value.trim();
       const email = document.getElementById('signup-email').value.trim();
@@ -181,6 +250,7 @@
       }
     }
 
+    // Reset Password Handler
     async function handlePasswordResetRequest() {
       const email = document.getElementById('reset-email').value.trim();
 
