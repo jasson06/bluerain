@@ -1949,7 +1949,8 @@ async function sendInviteEmail(email, role, projectId) {
     : `${process.env.BASE_URL}/sign-inpage.html`;
 
 // Set the activation URL (replace with your actual activation logic)
-const activationURL = `${process.env.BASE_URL}/activate-account?email=${encodeURIComponent(email)}&projectId=${projectId}&role=${encodeURIComponent(role)}`;
+const activationURL = `${process.env.BASE_URL}/activate-account?token=${token}`;
+
 
   const mailOptions = {
     from: `"BESF Team" <${process.env.EMAIL_USER}>`,
