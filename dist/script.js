@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', () => {
     // Tab Navigation
     const tabs = document.querySelectorAll('.tab');
@@ -50,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 try {
-                    const response = await fetch(`http://localhost:5500/api/update-task/${taskId}`, {
+                    const response = await fetch(`/api/update-task/${taskId}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ status: newStatus }),
@@ -69,6 +70,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+
+
+
+
 
     // Form Submissions
     const formConfigurations = [
@@ -108,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!validatePayload(payload, formId)) return;
 
                 try {
-                    const response = await fetch(`http://localhost:5500${apiEndpoint}`, {
+                    const response = await fetch(`${apiEndpoint}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload),
@@ -174,10 +180,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     
 
+
 // Function to navigate to the details page
 function navigateToDetails(section, id) {
     const baseURL = window.location.origin; // Automatically detects the current base URL
-    const fullURL = `${baseURL}/details-projects.html?id=${id}`;
+    const fullURL = `${baseURL}/details/${section}/${id}`;
     console.log('Navigating to:', fullURL); // Log the full URL for debugging
     window.location.href = fullURL; // Navigate to the constructed URL
   }
@@ -188,7 +195,7 @@ function navigateToDetails(section, id) {
     projectsList.innerHTML = '<p>Loading...</p>';
   
     try {
-      const response = await fetch('http://localhost:5500/api/projects');
+      const response = await fetch('/api/projects');
       if (!response.ok) throw new Error('Failed to fetch projects');
   
       const data = await response.json();
@@ -219,6 +226,33 @@ function navigateToDetails(section, id) {
 
 
   
+  // Sidebar Toggle with Hamburger
+  const hamburger = document.querySelector('.hamburger');
+  const sidebar = document.querySelector('.sidebar');
+  const dropdownButton = document.querySelector('.dropdown-button');
+  const dropdownContent = document.querySelector('.dropdown-content');
+
+  // Hamburger button functionality
+  hamburger.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+  });
+
+  // Dropdown functionality
+  dropdownButton.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevent closing dropdown when clicking inside it
+    dropdownContent.classList.toggle('show');
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', () => {
+    dropdownContent.classList.remove('show');
+  });
+
+  // Prevent sidebar collapse when clicking inside the dropdown
+  dropdownContent.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+  
   
   // Expose the function globally
   window.navigateToDetails = navigateToDetails;
@@ -226,4 +260,5 @@ function navigateToDetails(section, id) {
       loadProjects();
       
 });
+
 

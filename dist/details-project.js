@@ -295,62 +295,45 @@ function closeInviteModal() {
 
 
 
-// Send Invite Functionality
 async function sendInvite() {
-  const email = document.getElementById('invite-email').value.trim();
-  const role = document.getElementById('invite-role').value;
-  const selectedVendor = document.getElementById('existing-vendor').value;
+  const emails = document
+    .getElementById("invite-email")
+    .value.split(",")
+    .map((email) => email.trim())
+    .filter((email) => email.length > 0);
 
-  // Ensure projectId is correctly extracted
-  const pathArray = window.location.pathname.split('/');
+  const role = document.getElementById("invite-role").value;
+
+  const pathArray = window.location.pathname.split("/");
   const urlParams = new URLSearchParams(window.location.search);
-  const projectId = urlParams.get('projectId') || pathArray[pathArray.indexOf('projects') + 1];
+  const projectId = urlParams.get("projectId") || pathArray[pathArray.indexOf("projects") + 1];
 
-  // Validate inputs
-  if (!email || !role || !projectId) {
-    alert('All fields are required.');
+  if (emails.length === 0 || !role || !projectId) {
+    alert("All fields are required.");
     return;
   }
-
-  // Validate email format
-  function isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  }
-
-  if (!isValidEmail(email)) {
-    alert('Invalid email format.');
-    return;
-  }
-
-  // Log data before sending request
-  console.log("📩 Sending invite with details:", { email, role, projectId });
 
   try {
-    const payload = { email, role, projectId };
-
-    // Include vendorId if an existing vendor is selected
-    if (selectedVendor && selectedVendor !== 'new') {
-      payload.vendorId = selectedVendor;
-    }
-
-    const response = await fetch('/api/invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+    const response = await fetch("/api/invite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ emails, role, projectId }),
     });
 
     const result = await response.json();
-    console.log("📩 API Response:", result);
 
     if (!response.ok) {
-      throw new Error(result.message || "Unexpected error occurred.");
+      throw new Error(result.message || "Failed to send invites.");
     }
 
-    alert('✅ Invitation sent successfully!');
+    const message = result.invitedUsers
+      .map((user) => `${user.email}: ${user.status}`)
+      .join("\n");
+    alert(`Invitations sent successfully:\n${message}`);
     closeInviteModal();
   } catch (error) {
-    console.error('❌ Invite Send Error:', error);
-    alert(`❌ Invite Failed: ${error.message || "Something went wrong. Check console logs."}`);
+    console.error("Error sending invites:", error);
+    alert(`Error sending invites: ${error.message}`);
   }
 }
 
@@ -937,10 +920,11 @@ async function displayTaskDetails(taskId) {
 
 // Function to add a comment with manager name and timestamp
 async function addComment(taskId, commentText) {
-  const managerName = localStorage.getItem('managerName');  // Retrieve manager's name from localStorage
+  const managerName = localStorage.getItem('managerName'); // Retrieve the name of the logged-in user
+  const managerId = localStorage.getItem('managerId'); // Retrieve the ID of the logged-in user
 
-  if (!managerName) {
-    alert('Manager name is not available. Please log in again.');
+  if (!managerName || !managerId) {
+    alert('Manager information is not available. Please log in again.');
     return;
   }
 
@@ -948,27 +932,29 @@ async function addComment(taskId, commentText) {
     taskId,
     comment: commentText,
     managerName,
-    timestamp: new Date().toISOString(),  // ISO format timestamp
+    managerId, // Include the user ID
+    timestamp: new Date().toISOString(),
   };
 
   try {
-    const response = await fetch("/api/comments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const response = await fetch('/api/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(commentData),
     });
 
     if (response.ok) {
-      document.getElementById("new-comment").value = ""; // Clear the textarea
-      loadComments(taskId); // Reload comments to display the new one
+      document.getElementById('new-comment').value = ''; // Clear the comment input
+      loadComments(taskId); // Reload comments
     } else {
-      throw new Error("Failed to add comment");
+      throw new Error('Failed to add comment');
     }
   } catch (error) {
-    console.error("Error adding comment:", error);
-    alert("An error occurred while adding the comment.");
+    console.error('Error adding comment:', error);
+    alert('An error occurred while adding the comment.');
   }
 }
+
 
   
 
@@ -1560,6 +1546,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const projectId = getProjectId();
   loadProjectDetails(projectId);
   loadTasks(projectId);
+  loadEstimates(projectId);
   enableDragAndDrop();
   loadSidebarProjects();
 
