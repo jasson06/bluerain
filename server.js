@@ -1982,7 +1982,7 @@ app.get('/activate-account', (req, res) => {
   const filePath = path.join(__dirname, 'dist', 'activate-account.html'); // Adjust the file path if needed
   res.sendFile(filePath, (err) => {
     if (err) {
-      console.error('Error serving activate-account.html:', err);
+      console.error('Error serving sign-inpage.html:', err);
       res.status(500).send('Failed to load the page.');
     }
   });
