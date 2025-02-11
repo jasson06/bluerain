@@ -1942,6 +1942,7 @@ app.post("/api/invite", async (req, res) => {
 
 // 📩 Send Invitation Email Function
 async function sendInviteEmail(email, role, projectId) {
+  const baseURL = process.env.BASE_URL || process.env.CLIENT_URL || 'http://localhost:5500';
   const loginURL =
     role === "project-manager"
     ? `${process.env.BASE_URL}/project-manager-auth.html`
