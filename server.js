@@ -2091,6 +2091,8 @@ app.use((req, res) => {
 });
 
 // Start the server
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}/`);
+const PORT = process.env.PORT || 10000; // Use PORT from Render or default to 10000
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running at http://0.0.0.0:${PORT}/`); // Accessible externally
 });
+
