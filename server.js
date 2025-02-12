@@ -20,7 +20,7 @@ const nodemailer = require('nodemailer');
 
 
 const app = express();
-const PORT = process.env.PORT || 5500;
+const PORT = process.env.PORT || 10000;
 const JWT_SECRET = process.env.JWT_SECRET || '1539';
 
 
