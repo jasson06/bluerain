@@ -400,11 +400,15 @@ const projectSchema = new mongoose.Schema({
 
 const invitationSchema = new mongoose.Schema({
   email: { type: String, required: true },
-  role: { type: String, required: true },
-  projectId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  role: { type: String, required: true, enum: ["vendor", "project-manager"] },
+  projectId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "Project" },
   token: { type: String, required: true },
   invitedAt: { type: Date, default: Date.now },
-  status: { type: String, default: "pending" }, // e.g., pending, accepted, declined
+  status: { type: String, default: "pending", enum: ["pending", "accepted", "declined"] }, // Tracks invitation state
+  expiresAt: { type: Date, default: () => Date.now() + 3600000 }, // Token expires in 1 hour
+  acceptedAt: { type: Date }, // Tracks when the invitation was accepted
+  declinedAt: { type: Date }, // Tracks when the invitation was declined
+  deleted: { type: Boolean, default: false }, // For soft deletion
 });
 
 
