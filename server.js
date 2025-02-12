@@ -1979,6 +1979,14 @@ const activationURL = `${process.env.BASE_URL}/activate-account?email=${encodeUR
 
 
 
+app.get('/sign-inpage', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'sign-inpage.html'), (err) => {
+      if (err) {
+          console.error('Error serving sign-inpage.html:', err);
+          res.status(500).send('Failed to load the activation page.');
+      }
+  });
+});
 
 
 
