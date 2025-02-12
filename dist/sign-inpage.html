@@ -134,7 +134,9 @@
       }
     }
 
- document.addEventListener("DOMContentLoaded", async () => {
+
+    
+document.addEventListener("DOMContentLoaded", async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const token = urlParams.get("token");
 
@@ -161,22 +163,28 @@
           body: JSON.stringify({ token, name, password }),
         });
 
-        const result = await response.json();
+        // Handle empty or non-JSON responses
+        const result = response.ok ? await response.json() : null;
+
+        if (!response.ok || !result) {
+          throw new Error(result?.message || "Failed to activate account.");
+        }
+
         console.log("Activation response:", result);
-
-        if (!response.ok) throw new Error(result.message);
-
         alert("Account activated successfully!");
 
         // Redirect based on role
         if (result.role === "project-manager") {
           window.location.href = "/project-manager-auth.html";
-        } else {
+        } else if (result.role === "vendor") {
           window.location.href = "/sign-inpage.html";
+        } else {
+          alert("Unknown role. Please contact support.");
+          console.error("Unknown role in response:", result.role);
         }
       } catch (error) {
         console.error("Activation Error:", error);
-        alert("Failed to activate account. Please try again.");
+        alert(error.message || "Failed to activate account. Please try again.");
       }
     });
   } else {
