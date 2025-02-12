@@ -157,7 +157,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       try {
         console.log("Sending activation request...");
-        const response = await fetch("/api/invite/accept", {
+        const response = await fetch(`${API_BASE_URL}/api/invite/accept`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token, name, password }),
