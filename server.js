@@ -2002,33 +2002,34 @@ app.get('/sign-inpage.html', (req, res) => {
 
 
 app.post("/api/invite/accept", async (req, res) => {
+  console.log("Request body:", req.body);
+
   const { token, name, password } = req.body;
 
   if (!token || !name || !password) {
+    console.log("Missing required fields:", { token, name, password });
     return res.status(400).json({ success: false, message: "All fields are required." });
   }
 
   try {
-    // Check if the token exists
+    // Find invitation
     const invitation = await Invitation.findOne({ token });
     if (!invitation) {
+      console.log("Invalid or expired token:", token);
       return res.status(404).json({ success: false, message: "Invalid or expired token." });
     }
 
-    // Validate the projectId exists
-    if (!mongoose.Types.ObjectId.isValid(invitation.projectId)) {
-      return res.status(400).json({ success: false, message: "Invalid project ID format." });
-    }
-
+    // Validate projectId
     const projectExists = await Project.findById(invitation.projectId);
     if (!projectExists) {
-      return res.status(404).json({ success: false, message: "Project not found." });
+      console.log("Invalid project ID:", invitation.projectId);
+      return res.status(400).json({ success: false, message: "Invalid project ID." });
     }
 
-    // Hash the password
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create the user based on the role
+    // Save user based on role
     if (invitation.role === "vendor") {
       const newVendor = new Vendor({
         name,
@@ -2046,27 +2047,21 @@ app.post("/api/invite/accept", async (req, res) => {
       });
       await newManager.save();
     } else {
-      console.error("Invalid role specified:", invitation.role);
+      console.log("Invalid role:", invitation.role);
       return res.status(400).json({ success: false, message: "Invalid role specified." });
     }
 
-    // Delete the invitation after successful activation
+    // Remove invitation
     await Invitation.deleteOne({ token });
 
-    res.status(200).json({
-      success: true,
-      message: "Account activated successfully.",
-      role: invitation.role,
-    });
+    console.log("Account activated successfully:", { role: invitation.role });
+    res.status(200).json({ success: true, message: "Account activated successfully.", role: invitation.role });
   } catch (error) {
-    console.error("Error activating account:", {
-      error: error.message,
-      stack: error.stack,
-      input: { token, name, password },
-    });
+    console.error("Error in /api/invite/accept:", error);
     res.status(500).json({ success: false, message: "Failed to activate account." });
   }
 });
+
 
 
 
