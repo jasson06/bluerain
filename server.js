@@ -1992,7 +1992,6 @@ app.get('/sign-inpage.html', (req, res) => {
 
 
 
-// POST /api/invite/accept
 app.post("/api/invite/accept", async (req, res) => {
   const { token, name, password } = req.body;
 
@@ -2008,9 +2007,13 @@ app.post("/api/invite/accept", async (req, res) => {
     }
 
     // Validate the projectId exists
+    if (!mongoose.Types.ObjectId.isValid(invitation.projectId)) {
+      return res.status(400).json({ success: false, message: "Invalid project ID format." });
+    }
+
     const projectExists = await Project.findById(invitation.projectId);
     if (!projectExists) {
-      return res.status(400).json({ success: false, message: "Invalid project ID." });
+      return res.status(404).json({ success: false, message: "Project not found." });
     }
 
     // Hash the password
@@ -2034,18 +2037,28 @@ app.post("/api/invite/accept", async (req, res) => {
       });
       await newManager.save();
     } else {
+      console.error("Invalid role specified:", invitation.role);
       return res.status(400).json({ success: false, message: "Invalid role specified." });
     }
 
     // Delete the invitation after successful activation
     await Invitation.deleteOne({ token });
 
-    res.status(200).json({ success: true, message: "Account activated successfully.", role: invitation.role });
+    res.status(200).json({
+      success: true,
+      message: "Account activated successfully.",
+      role: invitation.role,
+    });
   } catch (error) {
-    console.error("Error activating account:", error);
+    console.error("Error activating account:", {
+      error: error.message,
+      stack: error.stack,
+      input: { token, name, password },
+    });
     res.status(500).json({ success: false, message: "Failed to activate account." });
   }
 });
+
 
 
 // Debugging route to check server deployment status
