@@ -40,14 +40,25 @@ app.use(express.static(buildPath));
 console.log("Serving static files from:", buildPath);
 
 
-// Allow specific domains
+const allowedOrigins = [
+  "https://bluerain.onrender.com",
+  "http://localhost:3000", // Add for local development
+  "http://localhost:5500", // Add if using another local dev port
+];
 app.use(
   cors({
-    origin: "https://bluerain.onrender.com",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: "GET,POST,PUT,DELETE",
     allowedHeaders: "Content-Type,Authorization",
   })
 );
+
 
 
 
