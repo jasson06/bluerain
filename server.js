@@ -41,7 +41,6 @@ console.log("Serving static files from:", buildPath);
 
 
 // Allow specific domains
-const cors = require("cors");
 app.use(
   cors({
     origin: "https://bluerain.onrender.com",
