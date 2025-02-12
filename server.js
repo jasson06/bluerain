@@ -40,9 +40,12 @@ app.use(express.static(buildPath));
 console.log("Serving static files from:", buildPath);
 
 
-
-
-
+// Allow specific domains
+app.use(cors({
+  origin: ["http://localhost:5500", "https://bluerain.onrender.com"], // Add your local and deployed domains
+  methods: ["GET", "POST", "PUT", "DELETE"], // Allow required methods
+  credentials: true, // Allow cookies if needed
+}));
 
 
 // Logger Middleware
