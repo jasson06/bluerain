@@ -1990,6 +1990,8 @@ app.get('/sign-inpage.html', (req, res) => {
   });
 });
 
+const bcrypt = require("bcrypt");
+
 // POST /api/invite/accept
 app.post("/api/invite/accept", async (req, res) => {
   const { token, name, password } = req.body;
@@ -2005,12 +2007,21 @@ app.post("/api/invite/accept", async (req, res) => {
       return res.status(404).json({ success: false, message: "Invalid or expired token." });
     }
 
+    // Validate the projectId exists
+    const projectExists = await Project.findById(invitation.projectId);
+    if (!projectExists) {
+      return res.status(400).json({ success: false, message: "Invalid project ID." });
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     // Create the user based on the role
     if (invitation.role === "vendor") {
       const newVendor = new Vendor({
         name,
         email: invitation.email,
-        password,
+        password: hashedPassword,
         assignedProjects: [{ projectId: invitation.projectId, status: "new" }],
       });
       await newVendor.save();
@@ -2018,10 +2029,12 @@ app.post("/api/invite/accept", async (req, res) => {
       const newManager = new Manager({
         name,
         email: invitation.email,
-        password,
+        password: hashedPassword,
         assignedProjects: [{ projectId: invitation.projectId }],
       });
       await newManager.save();
+    } else {
+      return res.status(400).json({ success: false, message: "Invalid role specified." });
     }
 
     // Delete the invitation after successful activation
@@ -2033,6 +2046,7 @@ app.post("/api/invite/accept", async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to activate account." });
   }
 });
+
 
 // 📧 Invitation Endpoint
 app.post("/api/invite", async (req, res) => {
