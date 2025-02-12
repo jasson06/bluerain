@@ -48,6 +48,16 @@ app.use(cors({
 }));
 
 
+app.use((req, res, next) => {
+  if (req.headers["x-forwarded-proto"] !== "https" && process.env.NODE_ENV === "production") {
+    return res.redirect(`https://${req.headers.host}${req.url}`);
+  }
+  next();
+});
+
+
+
+
 // Logger Middleware
 function logger(req, res, next) {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
