@@ -2005,34 +2005,25 @@ app.get('/sign-inpage.html', (req, res) => {
 
 
 app.post("/api/invite/accept", async (req, res) => {
-  console.log("Request body:", req.body);
-
   const { token, name, password } = req.body;
 
   if (!token || !name || !password) {
-    console.log("Missing required fields:", { token, name, password });
     return res.status(400).json({ success: false, message: "All fields are required." });
   }
 
   try {
-    // Find invitation
     const invitation = await Invitation.findOne({ token });
     if (!invitation) {
-      console.log("Invalid or expired token:", token);
       return res.status(404).json({ success: false, message: "Invalid or expired token." });
     }
 
-    // Validate projectId
     const projectExists = await Project.findById(invitation.projectId);
     if (!projectExists) {
-      console.log("Invalid project ID:", invitation.projectId);
       return res.status(400).json({ success: false, message: "Invalid project ID." });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Save user based on role
     if (invitation.role === "vendor") {
       const newVendor = new Vendor({
         name,
@@ -2049,21 +2040,21 @@ app.post("/api/invite/accept", async (req, res) => {
         assignedProjects: [{ projectId: invitation.projectId }],
       });
       await newManager.save();
-    } else {
-      console.log("Invalid role:", invitation.role);
-      return res.status(400).json({ success: false, message: "Invalid role specified." });
     }
 
-    // Remove invitation
     await Invitation.deleteOne({ token });
 
-    console.log("Account activated successfully:", { role: invitation.role });
-    res.status(200).json({ success: true, message: "Account activated successfully.", role: invitation.role });
+    res.status(200).json({ 
+      success: true, 
+      message: "Account activated successfully.", 
+      role: invitation.role 
+    }); // Proper JSON response
   } catch (error) {
-    console.error("Error in /api/invite/accept:", error);
+    console.error("Error activating account:", error);
     res.status(500).json({ success: false, message: "Failed to activate account." });
   }
 });
+
 
 
 
