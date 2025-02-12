@@ -158,33 +158,35 @@
       try {
         console.log("Sending activation request...");
         const response = await fetch("/api/invite/accept", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ token, name, password }),
-});
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, name, password }),
+        });
 
-if (!response.ok) {
+        const result = await response.json();
+        console.log("Activation response:", result);
+
+        if (!response.ok) {
   throw new Error(`Error: ${response.status} ${response.statusText}`);
 }
+        alert("Account activated successfully!");
 
-try {
-  const result = await response.json();
-  console.log("Activation response:", result);
-
-  if (result.success) {
-    alert("Account activated successfully!");
-    if (result.role === "project-manager") {
-      window.location.href = "/project-manager-auth.html";
-    } else {
-      window.location.href = "/sign-inpage.html";
-    }
+        // Redirect based on role
+        if (result.role === "project-manager") {
+          window.location.href = "/project-manager-auth.html";
+        } else {
+          window.location.href = "/sign-inpage.html";
+        }
+      } catch (error) {
+        console.error("Activation Error:", error);
+        alert("Failed to activate account. Please try again.");
+      }
+    });
   } else {
-    throw new Error(result.message);
+    console.warn("No token in URL. Redirecting to Sign In form.");
+    toggleForm("signin");
   }
-} catch (error) {
-  console.error("Failed to parse JSON response:", error);
-  alert("Failed to activate account. Please try again.");
-}
+});
 
 
 
