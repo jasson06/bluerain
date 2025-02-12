@@ -2048,65 +2048,6 @@ app.post("/api/invite/accept", async (req, res) => {
 });
 
 
-// 📧 Invitation Endpoint
-app.post("/api/invite", async (req, res) => {
-  try {
-    const { emails, role, projectId } = req.body;
-
-    // Validate required fields
-    if (!Array.isArray(emails) || emails.length === 0 || !role || !projectId) {
-      return res.status(400).json({ success: false, message: "Emails, role, and projectId are required." });
-    }
-
-    const invitedUsers = [];
-
-    for (const email of emails) {
-      // Generate a secure token
-      const token = crypto.randomBytes(32).toString("hex");
-
-      // Check if the user already exists (Vendor or Project Manager)
-      let existingUser =
-        role === "vendor" ? await Vendor.findOne({ email }) : await Manager.findOne({ email });
-
-      if (existingUser) {
-        // If the user exists, check if they're already assigned
-        if (role === "vendor") {
-          const isAlreadyAssigned = existingUser.assignedProjects.some(
-            (p) => p.projectId.toString() === projectId
-          );
-          if (!isAlreadyAssigned) {
-            existingUser.assignedProjects.push({ projectId, status: "new" });
-            await existingUser.save();
-          }
-        }
-
-        invitedUsers.push({ email, status: "existing-user" });
-      } else {
-        // Save the invitation for new users
-        const invitation = new Invitation({ email, role, projectId, token });
-        await invitation.save();
-        invitedUsers.push({ email, status: "invited" });
-
-        // Send the invitation email
-        await sendInviteEmail(email, role, projectId, token);
-      }
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Invitations processed successfully.",
-      invitedUsers,
-    });
-  } catch (error) {
-    console.error("Error inviting team members:", error);
-    res.status(500).json({ success: false, message: "Failed to invite team members." });
-  }
-});
-
-
-
-
-
 // Debugging route to check server deployment status
 app.get('/api/debug', (req, res) => {
   res.json({
