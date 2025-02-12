@@ -134,56 +134,69 @@
       }
     }
 
-    document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const token = urlParams.get("token");
 
-  console.log("Token from URL:", token); // Debug log to confirm token presence
-
-  if (token) {
-    toggleForm("activate"); // Show Activate Account Form
-    document.getElementById("activate-form").addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const name = document.getElementById("activate-name").value.trim();
-      const password = document.getElementById("activate-password").value.trim();
-
-      if (!name || !password) {
-        alert("All fields are required.");
-        return;
-      }
-
-      try {
-        console.log("Sending activation request...");
-        const response = await fetch("/api/invite/accept", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, name, password }),
-        });
-
-        const result = await response.json();
-        console.log("Activation response:", result);
-
-        if (!response.ok) throw new Error(result.message);
-
-        alert("Account activated successfully!");
-
-        // Redirect based on role
-        if (result.role === "project-manager") {
-          window.location.href = "/project-manager-auth.html";
-        } else {
-          window.location.href = "/sign-inpage.html";
-        }
-      } catch (error) {
-        console.error("Activation Error:", error);
-        alert("Failed to activate account. Please try again.");
-      }
-    });
-  } else {
-    console.warn("No token in URL. Redirecting to Sign In form.");
-    toggleForm("signin");
+  if (!token) {
+    alert("Activation link is invalid or expired. Redirecting to sign-in.");
+    window.location.href = "/sign-inpage.html";
+    return;
   }
+
+  toggleForm("activate");
+
+  const activateForm = document.getElementById("activate-form");
+  activateForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const name = document.getElementById("activate-name").value.trim();
+    const password = document.getElementById("activate-password").value.trim();
+
+    if (!name || !password) {
+      alert("All fields are required.");
+      return;
+    }
+
+    if (password.length < 6) {
+      alert("Password must be at least 6 characters long.");
+      return;
+    }
+
+    if (!/^[a-zA-Z\s]+$/.test(name)) {
+      alert("Full name should only contain letters and spaces.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/invite/accept", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, name, password }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.message);
+
+      alert("Account activated successfully!");
+
+      // Redirect based on role
+      if (result.role === "project-manager") {
+        window.location.href = "/project-manager-auth.html";
+      } else {
+        window.location.href = "/sign-inpage.html";
+      }
+    } catch (error) {
+      if (error instanceof TypeError) {
+        alert("Network error. Please check your internet connection.");
+      } else {
+        alert(error.message || "Failed to activate account. Please try again.");
+      }
+    }
+  });
 });
+
 
 
 
