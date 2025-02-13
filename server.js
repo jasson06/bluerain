@@ -43,18 +43,11 @@ console.log("Serving static files from:", buildPath);
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: ["http://localhost:5500", "https://bluerain.onrender.com"],
     methods: "GET,POST,PUT,DELETE",
-    allowedHeaders: "Content-Type,Authorization",
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-
 
 
 
