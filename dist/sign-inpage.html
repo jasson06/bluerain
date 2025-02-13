@@ -136,14 +136,14 @@
 
 
     
-document.addEventListener("DOMContentLoaded", async () => {
+    document.addEventListener("DOMContentLoaded", async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const token = urlParams.get("token");
 
   console.log("Token from URL:", token); // Debug log to confirm token presence
 
   if (token) {
-    toggleForm("activate"); // Show the "Activate Account" form
+    toggleForm("activate"); // Show Activate Account Form
     document.getElementById("activate-form").addEventListener("submit", async (e) => {
       e.preventDefault();
 
@@ -163,24 +163,18 @@ document.addEventListener("DOMContentLoaded", async () => {
           body: JSON.stringify({ token, name, password }),
         });
 
-        if (!response.ok) {
-          throw new Error(`Failed to activate account: ${response.status} ${response.statusText}`);
-        }
-
         const result = await response.json();
         console.log("Activation response:", result);
 
-        if (result.success) {
-          alert("Account activated successfully!");
+        if (!response.ok) throw new Error(result.message);
 
-          // Redirect based on role
-          if (result.role === "project-manager") {
-            window.location.href = "/project-manager-auth.html";
-          } else {
-            window.location.href = "/sign-inpage.html";
-          }
+        alert("Account activated successfully!");
+
+        // Redirect based on role
+        if (result.role === "project-manager") {
+          window.location.href = "/project-manager-auth.html";
         } else {
-          alert(result.message || "Failed to activate account.");
+          window.location.href = "/sign-inpage.html";
         }
       } catch (error) {
         console.error("Activation Error:", error);
