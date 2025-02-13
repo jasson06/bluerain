@@ -1823,33 +1823,62 @@ app.post('/api/manager/signup', async (req, res) => {
 app.post('/api/manager/signin', async (req, res) => {
   const { email, password } = req.body;
 
+  // Input validation
   if (!email || !password) {
+    console.log('Missing email or password');
     return res.status(400).json({ success: false, message: 'Email and password are required.' });
   }
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    console.log('Invalid email format:', email);
+    return res.status(400).json({ success: false, message: 'Invalid email format.' });
+  }
+
   try {
-    const manager = await Manager.findOne({ email });
+    // Check database connection
+    if (!mongoose.connection.readyState) {
+      console.error('Database not connected');
+      return res.status(500).json({ success: false, message: 'Database connection error.' });
+    }
+
+    console.log('Email Received:', email);
+
+    // Find manager by email
+    const manager = await Manager.findOne({ email: email.toLowerCase() });
+    console.log('Manager Found:', manager);
+
     if (!manager) {
-      return res.status(404).json({ success: false, message: 'Project Manager not found.' });
+      console.log('No manager found for email:', email);
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
 
+    // Check password
     const isMatch = await bcrypt.compare(password, manager.password);
+    console.log('Password Match:', isMatch);
+
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials.' });
+      console.log('Password mismatch for manager:', email);
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
 
-    const token = jwt.sign({ managerId: manager._id }, JWT_SECRET, { expiresIn: '1h' });
+    // Generate JWT token
+    const token = jwt.sign(
+      { managerId: manager._id }, 
+      JWT_SECRET, 
+      { expiresIn: '1h' } // Token valid for 1 hour
+    );
 
-    // 🔥 Include managerName in the response
-    res.status(200).json({ 
-      success: true, 
-      token, 
-      managerId: manager._id, 
-      managerName: manager.name  // Add this line
+    // Send successful response
+    console.log('Sign-in successful for manager:', manager.email);
+    res.status(200).json({
+      success: true,
+      token,
+      managerId: manager._id,
+      managerName: manager.name,
     });
-
   } catch (error) {
-    console.error('Error signing in project manager:', error);
+    console.error('Error signing in project manager:', error.message);
     res.status(500).json({ success: false, message: 'Failed to sign in.' });
   }
 });
@@ -2024,52 +2053,63 @@ app.get('/sign-inpage.html', (req, res) => {
 
 
 app.post("/api/invite/accept", async (req, res) => {
+  console.log("Request body:", req.body);
+
   const { token, name, password } = req.body;
 
   if (!token || !name || !password) {
+    console.log("Missing required fields:", { token, name, password });
     return res.status(400).json({ success: false, message: "All fields are required." });
   }
 
   try {
+    // Find invitation
     const invitation = await Invitation.findOne({ token });
     if (!invitation) {
+      console.log("Invalid or expired token:", token);
       return res.status(404).json({ success: false, message: "Invalid or expired token." });
     }
 
+    // Validate projectId
     const projectExists = await Project.findById(invitation.projectId);
     if (!projectExists) {
+      console.log("Invalid project ID:", invitation.projectId);
       return res.status(400).json({ success: false, message: "Invalid project ID." });
     }
 
+    // Hash the password only once
     const hashedPassword = await bcrypt.hash(password, 10);
+    console.log("Hashed Password During Invite Acceptance:", hashedPassword);
 
+    // Save user based on role
     if (invitation.role === "vendor") {
       const newVendor = new Vendor({
         name,
-        email: invitation.email,
-        password: hashedPassword,
+        email: invitation.email.toLowerCase(),
+        password: hashedPassword, // Ensure this is the correct hash
         assignedProjects: [{ projectId: invitation.projectId, status: "new" }],
       });
       await newVendor.save();
     } else if (invitation.role === "project-manager") {
       const newManager = new Manager({
         name,
-        email: invitation.email,
-        password: hashedPassword,
+        email: invitation.email.toLowerCase(),
+        password: hashedPassword, // Ensure this is the correct hash
         assignedProjects: [{ projectId: invitation.projectId }],
       });
       await newManager.save();
+    } else {
+      console.log("Invalid role:", invitation.role);
+      return res.status(400).json({ success: false, message: "Invalid role specified." });
     }
 
+    // Remove invitation
     await Invitation.deleteOne({ token });
 
-    res.status(200).json({ 
-      success: true, 
-      message: "Account activated successfully.", 
-      role: invitation.role 
-    }); // Proper JSON response
+    console.log("Account activated successfully:", { role: invitation.role });
+    res.status(200).json({ success: true, message: "Account activated successfully.", role: invitation.role });
   } catch (error) {
-    console.error("Error activating account:", error);
+    console.error("Error in /api/invite/accept:", error);
     res.status(500).json({ success: false, message: "Failed to activate account." });
   }
 });
