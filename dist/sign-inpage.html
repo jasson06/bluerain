@@ -192,8 +192,9 @@
 
 
 
-    // Sign In Handler
-    async function handleSignIn() {
+const BASE_URL = window.location.origin; // Dynamically detect the current domain
+
+async function handleSignIn() {
   const email = document.getElementById('signin-email').value.trim();
   const password = document.getElementById('signin-password').value.trim();
 
@@ -203,25 +204,33 @@
   }
 
   try {
-    const response = await fetch('/api/signin', {
+    const response = await fetch(`${BASE_URL}/api/signin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, password }),
     });
 
     const data = await response.json();
     if (response.ok) {
       alert('Sign-in successful!');
-      localStorage.setItem('vendorId', data.vendorId); // Store vendor ID for further use
-      window.location.href = '/Subcontractor%20page.html';
+      localStorage.setItem('vendorId', data.vendorId); // Store vendor ID
+      console.log('Redirecting to /Subcontractor%20Page.html'); // Debugging log
+      window.location.href = '/Subcontractor%20Page.html'; // Ensure correct file name
     } else {
-      alert(data.message || 'Sign-in failed!');
+      if (response.status === 401) {
+        alert('Invalid email or password.');
+      } else if (response.status === 500) {
+        alert('Server error. Please try again later.');
+      } else {
+        alert(data.message || 'Sign-in failed!');
+      }
     }
   } catch (error) {
     console.error('Error signing in:', error);
     alert('An error occurred. Please try again.');
   }
 }
+
 
 
     // Sign Up Handler
