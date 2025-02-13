@@ -121,38 +121,59 @@
       document.getElementById('form-title').textContent = formTitle[formType];
     }
 
-    async function handleManagerSignIn() {
-      const email = document.getElementById('signin-email').value.trim();
-      const password = document.getElementById('signin-password').value.trim();
+     async function handleManagerSignIn() {
+  const email = document.getElementById('signin-email').value.trim();
+  const password = document.getElementById('signin-password').value.trim();
 
-      if (!email || !password) {
-        alert('Please fill out all fields.');
-        return;
-      }
+  // Input validation
+  if (!email || !password) {
+    alert('Please fill out all fields.');
+    return;
+  }
 
-      try {
-        const response = await fetch('/api/manager/signin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    alert('Please enter a valid email address.');
+    return;
+  }
 
-        const data = await response.json();
+  if (password.length < 6) {
+    alert('Password must be at least 6 characters long.');
+    return;
+  }
 
-        if (response.ok) {
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('managerName', data.managerName);
-          localStorage.setItem('managerId', data.managerId); // Save manager ID
-          alert('Project Manager sign-in successful! Redirecting...');
-          window.location.href = '/index.html';
-        } else {
-          alert(data.message || 'Sign-in failed!');
-        }
-      } catch (error) {
-        console.error('Error signing in:', error);
-        alert('An error occurred. Please try again.');
+  try {
+    const response = await fetch('/api/manager/signin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      // Store data securely
+      localStorage.setItem('token', data.token); // Token for authentication
+      localStorage.setItem('managerName', data.managerName); // Display in UI
+      localStorage.setItem('managerId', data.managerId); // Save manager ID
+      
+      alert('Project Manager sign-in successful! Redirecting...');
+      window.location.href = '/index.html'; // Redirect to home or dashboard
+    } else {
+      // Handle different error statuses
+      if (response.status === 401) {
+        alert('Invalid email or password. Please try again.');
+      } else if (response.status === 500) {
+        alert('Server error. Please try again later.');
+      } else {
+        alert(data.message || 'Sign-in failed!');
       }
     }
+  } catch (error) {
+    console.error('Error signing in:', error);
+    alert('An error occurred. Please try again.');
+  }
+}
 
     async function handleManagerSignUp() {
       const name = document.getElementById('signup-name').value.trim();
