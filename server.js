@@ -374,6 +374,12 @@ vendorSchema.index({ "assignedItems.projectId": 1 });
 // Hash the password before saving the vendor
 vendorSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
+
+  // Prevent rehashing if the password is already hashed
+  if (this.password.startsWith('$2b$')) {
+    return next();
+  }
+
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
@@ -382,6 +388,7 @@ vendorSchema.pre('save', async function (next) {
     next(error);
   }
 });
+
 
 
 
