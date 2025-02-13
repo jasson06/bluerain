@@ -281,7 +281,7 @@ async function completeProject(projectId) {
         if (!completeResponse.ok) throw new Error("Failed to mark project as completed.");
 
         alert("Project marked as Completed!");
-        window.location.href = "/Subcontractor%20page.html";  // Redirect to dashboard
+       const BASE_URL = window.location.href = "/Subcontractor%20page.html";  // Redirect to dashboard
     } catch (error) {
         console.error("Error completing project:", error);
     }
@@ -291,7 +291,7 @@ async function completeProject(projectId) {
 // ✅ Logout functionality
 function logout() {
     localStorage.removeItem('vendorId');
-    window.location.href = '/sign-inpage.html';
+   const BASE_URL = window.location.href = '/sign-inpage.html';
 }
 
 
