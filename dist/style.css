@@ -718,7 +718,7 @@ input, textarea {
 
 /* Main Content */
 .main-content {
-  margin-left: 85px; /* Space for sidebar */
+  margin-left: 73px; /* Space for sidebar */
   transition: margin-left 0.3s ease; /* Smooth layout shift */
 }
 
