@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Estimate Edit</title>
-  <link rel="stylesheet" href="/styles.css">
+ 
   <script src="./estimate-edit.js" defer></script>
   <style>
     /* Global Styles */
@@ -110,6 +110,9 @@
   display: block;
 }
 
+
+
+
 /* Responsive Styling */
 @media (max-width: 768px) {
   #project-details {
@@ -178,38 +181,259 @@
       background: #0056b3;
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-      font-size: 0.9rem;
-    }
+   /* Line Items Cards Layout */
+#line-items-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
 
-    th, td {
-      text-align: left;
-      padding: 12px;
-      border-bottom: 1px solid #e0e0e0;
-    }
+.line-item-card {
+  background: #ffffff;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  transition: box-shadow 0.2s ease;
+}
 
-    th {
-      background-color: #f7f9fc;
-      color: #333;
-    }
+.line-item-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
 
-    .line-item-actions button {
-      background: #ff4d4d;
-      color: white;
-      font-size: 0.85rem;
-      border: none;
-      border-radius: 4px;
-      padding: 5px 10px;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
+/* Card Header */
+.line-item-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
-    .line-item-actions button:hover {
-      background: #cc0000;
-    }
+.line-item-card .card-header .item-name {
+  font-weight: bold;
+  font-size: 1rem;
+  flex-grow: 1;
+  margin-right: 10px;
+}
+
+.line-item-card .card-header button {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.line-item-card .card-header button:hover {
+  background: #0056b3;
+}
+
+/* Card Details */
+.line-item-card .card-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.line-item-card .card-details .detail {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.line-item-card .card-details .detail label {
+  font-size: 0.85rem;
+  color: #555;
+  margin-bottom: 5px;
+}
+
+.line-item-card .card-details .detail input,
+.line-item-card .card-details .detail textarea {
+  padding: 8px;
+  border: 1px solid #d9e2ec;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.line-item-card .card-details .detail input:focus,
+.line-item-card .card-details .detail textarea:focus {
+  border-color: #007bff;
+  outline: none;
+}
+
+/* Card Footer */
+.line-item-card .card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+/* Category Header Styling */
+.category-header {
+  background-color: #f0f4f8;
+  padding: 10px 15px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.category-header .category-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #333;
+  flex-grow: 1;
+  margin-right: 15px;
+}
+
+.category-header button {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.category-header button:hover {
+  background: #0056b3;
+}
+
+
+/* Assign to Status Styling */
+.line-item-card .card-footer .vendor-name {
+  display: inline-block;
+  background: #f0f4f8; /* Light background for unassigned */
+  color: #007bff; /* Neutral text color */
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 12px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Assigned Vendor Styling */
+.line-item-card[data-assigned-to] .card-footer .vendor-name:not(:empty) {
+  background: #007bff; /* Green background for assigned */
+  color: #fefeff; /* Dark green text for assigned */
+}
+
+/* Hover Effect */
+.line-item-card .card-footer .vendor-name:hover {
+  background: #cfe2f3; /* Subtle hover for better interaction */
+  color: #084298; /* Darker blue on hover */
+}
+
+
+/* Assign to Section Styling */
+.vendor-assign-section {
+  margin-top: 20px;
+  padding: 20px;
+  background: #eef7ff;
+  border-radius: 10px;
+  border: 1px solid #cce0ff;
+}
+
+.vendor-assign-section h3 {
+  font-size: 1.3rem;
+  color: #0056b3;
+  margin-bottom: 10px;
+}
+
+.vendor-assign-section select {
+  width: 100%;
+  padding: 10px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.vendor-assign-section button {
+  margin-top: 15px;
+  padding: 10px 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.vendor-assign-section button:hover {
+  background: #0056b3;
+}
+
+/* Summary Section */
+#estimate-summary {
+  padding: 20px;
+  background: #f9fafb;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  margin-top: 20px;
+}
+
+#estimate-summary h3 {
+  font-size: 1.4rem;
+  color: #333;
+}
+
+#estimate-summary p {
+  font-size: 1rem;
+  margin: 8px 0;
+}
+
+#tax-input {
+  width: 120px;
+  padding: 8px;
+  font-size: 1rem;
+  border: 1px solid #d9e2ec;
+  border-radius: 5px;
+}
+
+/* Buttons */
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  background: #d6d6d6;
+  color: #999;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .container {
+    padding: 15px;
+  }
+
+  .line-item-card .card-details {
+    flex-direction: column;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
 
     input[type="text"], input[type="number"], textarea, select {
       width: 100%;
@@ -218,6 +442,7 @@
       border-radius: 5px;
       font-size: 0.9rem;
       box-sizing: border-box;
+
     }
 
     input[type="number"] {
@@ -252,24 +477,7 @@
       font-size: 1rem;
     }
 
-    /* Vendor Assign Section */
-    .vendor-assign-section {
-      margin-top: 20px;
-      padding: 20px;
-      background: #eef7ff;
-      border-radius: 10px;
-      border: 1px solid #cce0ff;
-    }
 
-    .vendor-assign-section h3 {
-      font-size: 1.3rem;
-      color: #0056b3;
-      margin-bottom: 10px;
-    }
-
-    .vendor-assign-section select {
-      margin: 10px 0;
-    }
 
     /* Action Buttons */
     .form-actions {
@@ -316,14 +524,14 @@
 /* Category Header Styling */
 .category-header .category-title {
   font-weight: bold;
-  font-size: 1.2rem;
+  font-size: 1.0rem;
   background-color: #f5f5f5;  /* Light gray background */
-  padding: 10px 15px;
+  padding: 6px 5px;
   border-radius: 8px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 5px;
+  margin-bottom: 10px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
@@ -375,42 +583,13 @@
 
 
 
-/* General Button Styles */
-.btn {
-  background: linear-gradient(145deg, #4b4b4b, #8e8e8e);
-  border: none;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
-  box-shadow: 0 6px 15px rgba(3, 129, 255, 0.1);
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
+
 
 .btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
-/* Delete Button Style */
-.delete-line-item {
-  background: linear-gradient(145deg, #4b4b4b, #8e8e8e);
-}
-
-.delete-line-item:hover {
-  background: linear-gradient(145deg, #ff1e22, #a31e20);
-}
-
-/* Unassign Button Style */
-.unassign-item {
-  background: linear-gradient(145deg, #4b4b4b, #8e8e8e);
-}
-
-.unassign-item:hover {
-  background: linear-gradient(145deg, #ffa726, #d4881e);
-}
 
 /* Add Line Item Button */
 .add-line-item-button , .add-category-header-button {
@@ -471,6 +650,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
         gap: 15px;
       }
     }
+    
 </style> 
 </head>
 <body>
@@ -490,32 +670,19 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
       <h2>Line Items</h2>
       <button class="add-line-item-button" id="add-line-item">+ Add Line Item</button>
       <button class="add-category-header-button" id="add-category-header">+ Add Category</button>
-      <table id="line-items-table">
-        <thead>
-          <tr>
-            <th>Select</th>
-            <th>Item</th>
-            <th>Description</th>
-            <th>Quantity</th>
-            <th>Unit Price</th>
-            <th>Total</th>
-            <th>Vendor</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="line-items-body">
-          <!-- Line items will be dynamically added here -->
-        </tbody>
-      </table>
-
+    
+      <div id="line-items-cards">
+        <!-- Line item cards will be dynamically added here -->
+      </div>
+    
       <div id="estimate-summary">
         <h3>Summary</h3>
-        <p><strong>Subtotal:</strong> $<span id="subtotal">0.00</span></p>
+        <p><strong>Subtotal:</strong> <span id="subtotal">0.00</span></p>
         <label for="tax-input"><strong>Tax (%):</strong></label>
         <input type="number" id="tax-input" placeholder="Enter %" min="0" max="100">
-        <p><strong>Total:</strong> $<span id="total">0.00</span></p>
+        <p><strong>Total:</strong> <span id="total">0.00</span></p>
       </div>
-
+    
       <div class="vendor-assign-section">
         <h3>Assign Selected Items to a Vendor</h3>
         <select id="vendor-select">
@@ -524,12 +691,14 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
         </select>
         <button id="assign-items-button" class="btn-primary">Assign Items</button>
       </div>
-
+    
       <div class="form-actions">
         <button id="save-estimate" class="btn-primary">Save Estimate</button>
         <button id="cancel-estimate" class="btn-secondary" onclick="window.history.back()">Cancel</button>
       </div>
     </section>
+    
   </div>
 </body>
 </html>
+
