@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Estimate Edit</title>
+
  
+  
+  
   <script src="./estimate-edit.js" defer></script>
   <style>
     /* Global Styles */
@@ -110,6 +113,205 @@
   display: block;
 }
 
+
+/*photo styling  */
+/* ✅ Container for Image Slider */
+.photo-container {
+    position: relative;
+    width: 100%;
+    max-width: 150px; /* Adjust as needed */
+    overflow: hidden;
+    border-radius: 10px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ✅ Wrapper for Horizontal Sliding */
+.photo-wrapper {
+    display: flex;
+    flex-wrap: nowrap;
+    width: 100%;
+    white-space: nowrap; /* Prevent stacking */
+    transition: transform 0.5s ease-in-out;
+}
+
+/* ✅ Each Photo Slide */
+.photo-slide {
+    flex: 0 0 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    position: relative;
+}
+
+/* ✅ Image Styling */
+.photo-slide img {
+    width: 100%;
+    height: auto;
+    object-fit: contain; /* Maintain aspect ratio */
+    border-radius: 5px;
+}
+
+/* ✅ Left & Right Navigation Buttons */
+.nav-button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s;
+    z-index: 10;
+}
+
+.nav-button:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.nav-button.left {
+    left: 5px;
+}
+
+.nav-button.right {
+    right: 5px;
+}
+
+/* ✅ Photo Section Layout */
+.photo-section {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    justify-content: flex-start;
+    flex-wrap: wrap; /* Ensures responsiveness */
+}
+
+/* ✅ Individual Photo Preview Container */
+.photo-preview {
+    flex: 1;
+    min-width: 300px;
+}
+
+/* ✅ Fullscreen Photo Viewer */
+.fullscreen-view {
+    display: none; /* Initially hidden */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    flex-direction: column;
+}
+
+/* ✅ Fullscreen Image */
+.fullscreen-view img {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+    object-fit: contain;
+}
+
+/* ✅ Close Button */
+.fullscreen-view .close-btn {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    background: rgba(255, 0, 0, 0.8);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    font-size: 18px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background 0.3s;
+}
+
+.fullscreen-view .close-btn:hover {
+    background: red;
+}
+
+
+
+/* ✅ Delete Button */
+.delete-photo {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(255, 0, 0, 0.8);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s;
+}
+
+.delete-photo:hover {
+    background-color: rgba(255, 0, 0, 1);
+}
+
+/* ✅ Navigation Dots */
+.photo-dots {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.photo-dots span {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin: 3px;
+    background-color: gray;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.photo-dots .active {
+    background-color: blue;
+}
+
+
+
+
+
+/* ✅ Upload Button */
+.upload-btn {
+    display: inline-block;
+    background: #007bff;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+    margin-top: 8px;
+}
+
+.upload-btn:hover {
+    background: #0056b3;
+}
+
+/* ✅ Hide Default File Input */
+.upload-btn input[type="file"] {
+    display: none;
+}
 
 
 
@@ -654,6 +856,21 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 </style> 
 </head>
 <body>
+
+
+  
+<!-- ✅ Fullscreen Photo Viewer -->
+<div id="photo-viewer" class="fullscreen-view" style="display: none;">
+  <button class="close-btn" onclick="closePhotoViewer()">✖</button>
+  <button class="nav-button left" onclick="navigateFullScreen(-1)">&#10094;</button>
+  <img id="full-photo" src="" alt="Full Size Image">
+  <button class="nav-button right" onclick="navigateFullScreen(1)">&#10095;</button>
+</div>
+
+
+
+
+
   <div class="container">
     <header class="estimate-header">
       <div id="project-details">
@@ -699,6 +916,9 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
     </section>
     
   </div>
+
+
+  
 </body>
 </html>
 
