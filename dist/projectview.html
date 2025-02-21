@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project View</title>
+    
     <link rel="stylesheet" href="/styles.css">
 <style>
         /* General Styling */
@@ -1121,14 +1122,41 @@ async function uploadPhoto(event, itemId, type) {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    const formData = new FormData();
-    for (let file of files) {
-        formData.append("photos", file);
+    const vendorId = localStorage.getItem("vendorId"); // Ensure this is retrieved
+    const projectId = new URLSearchParams(window.location.search).get("projectId");
+
+    if (!vendorId || !projectId) {
+        alert("Error: Missing vendorId or projectId.");
+        return;
     }
-    formData.append("itemId", itemId);
-    formData.append("type", type);
 
     try {
+        // 🔍 Fetch vendor details to get the estimateId
+        const vendorResponse = await fetch(`/api/vendors/${vendorId}`);
+        if (!vendorResponse.ok) throw new Error("Failed to fetch vendor data.");
+
+        const vendorData = await vendorResponse.json();
+        const assignedItem = vendorData.assignedItems.find(item => item.itemId === itemId);
+
+        if (!assignedItem || !assignedItem.estimateId) {
+            alert("Error: Missing estimateId.");
+            console.error("❌ Missing estimateId in assigned items:", vendorData);
+            return;
+        }
+
+        const estimateId = assignedItem.estimateId; // Extract estimateId
+
+        // ✅ Prepare Form Data
+        const formData = new FormData();
+        for (let file of files) {
+            formData.append("photos", file);
+        }
+        formData.append("itemId", itemId);
+        formData.append("type", type);
+        formData.append("estimateId", estimateId);
+        formData.append("vendorId", vendorId);
+
+        // ✅ Upload Photos
         const response = await fetch("/api/upload-photos", { method: "POST", body: formData });
         const result = await response.json();
 
@@ -1141,6 +1169,9 @@ async function uploadPhoto(event, itemId, type) {
         alert("Failed to upload photos.");
     }
 }
+
+
+
 
 // ✅ Delete Photo & Ensure Swiping Remains
 async function deletePhoto(itemId, photoUrl, type) {
@@ -1248,12 +1279,24 @@ async function updatePhotoSection(itemId, type) {
         const vendorId = localStorage.getItem("vendorId");
         const projectId = new URLSearchParams(window.location.search).get("projectId");
 
+        console.log(`🔄 Updating photo section for Item ID: ${itemId}, Type: ${type}`);
+        console.log(`📌 Fetching photos from: /api/vendors/${vendorId}/assigned-items/${projectId}`);
+
         const response = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
-        if (!response.ok) throw new Error("Failed to fetch updated photos.");
+        
+        if (!response.ok) {
+            const errorMessage = await response.text();
+            throw new Error(`Failed to fetch updated photos: ${errorMessage}`);
+        }
 
         const data = await response.json();
+        console.log("✅ Updated Items Response:", data);
+
         const item = data.items.find(i => i.itemId === itemId);
-        if (!item) return;
+        if (!item) {
+            console.warn(`⚠️ Item ID ${itemId} not found in vendor's assigned items.`);
+            return;
+        }
 
         document.getElementById(`${type}-photos-${itemId}`).innerHTML = generatePhotoPreview(item.photos[type], itemId, type);
         
@@ -1263,6 +1306,7 @@ async function updatePhotoSection(itemId, type) {
         console.error("❌ Error updating photo section:", error);
     }
 }
+
 
 
 // ✅ FIX: Initialize Auto-Sliding for All Sliders
@@ -1287,4 +1331,5 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
  </script>
+
 
