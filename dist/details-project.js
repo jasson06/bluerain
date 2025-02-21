@@ -1453,7 +1453,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   
     
-// ✅ Display Files Function (Updated for Render)
+// ✅ Display Files Function (Correct URL Format for Render)
 function displayFiles(files) {
     const filesContainer = document.getElementById('uploaded-files-container');
     filesContainer.innerHTML = '';  // Clear previous content
@@ -1470,7 +1470,12 @@ function displayFiles(files) {
         const fileElement = document.createElement('div');
         fileElement.classList.add('file-item');
 
-        // Normalize file path and construct full URL
+        // ✅ Ensure the correct filename format (includes timestamp prefix)
+        if (!file.filename.includes('-')) {
+            console.warn(`⚠️ Filename may not be correctly formatted: ${file.filename}`);
+        }
+
+        // ✅ Construct the correct file URL
         const fileUrl = `${BASE_URL}${encodeURIComponent(file.filename)}`;
 
         if (file.mimetype.startsWith('image/')) {
@@ -1506,6 +1511,7 @@ function displayFiles(files) {
         filesContainer.appendChild(fileElement);
     });
 }
+
 
   
     // Delete File Function
