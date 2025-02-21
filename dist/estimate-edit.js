@@ -18,6 +18,326 @@ document.addEventListener("DOMContentLoaded", async () => {
     assignButton.disabled = false;
     assignButton.title = "";
   }
+  updatePage();
+  
+  function generatePhotoPreview(photos, itemId, type) {
+    if (!photos || photos.length === 0) {
+        return `<p class="placeholder">No photos</p>`;
+    }
+
+    return `
+        <div class="photo-container">
+            <!-- Left Navigation Button -->
+            <button class="nav-button left" onclick="changePhoto('${itemId}', '${type}', -1)">&#10094;</button>
+
+            <!-- Photo Wrapper for Sliding -->
+            <div class="photo-wrapper" id="photo-wrapper-${type}-${itemId}" data-index="0">
+                ${photos.map((photo, index) => `
+                    <div class="photo-slide">
+                        <img src="${photo}" draggable="false" onclick="openPhotoViewer('${photo.replace(/'/g, "\\'")}', ${JSON.stringify(photos).replace(/"/g, '&quot;')})">
+                        <button class="delete-photo" onclick="deletePhoto('${itemId}', '${photo.replace(/'/g, "\\'")}', '${type}')">✖</button>
+                    </div>
+                `).join("")}
+            </div>
+
+            <!-- Right Navigation Button -->
+            <button class="nav-button right" onclick="changePhoto('${itemId}', '${type}', 1)">&#10095;</button>
+
+            <!-- Navigation Dots -->
+            <div class="photo-dots" id="dots-${type}-${itemId}">
+                ${photos.map((_, index) => `
+                    <span data-index="${index}" onclick="jumpToPhoto('${itemId}', '${type}', ${index})"></span>
+                `).join("")}
+            </div>
+        </div>
+    `;
+}
+
+
+
+// ✅ Global Variables
+let fullScreenPhotos = [];
+let fullScreenIndex = 0;
+
+// ✅ Open Full-Screen Viewer
+function openPhotoViewer(photoUrl, photosList) {
+    console.log("🟢 Open Viewer Called - Photo:", photoUrl, " | List:", photosList);
+
+    const viewer = document.getElementById("photo-viewer");
+    const fullPhoto = document.getElementById("full-photo");
+
+    if (!viewer || !fullPhoto) {
+        console.error("❌ Fullscreen viewer elements not found!");
+        return;
+    }
+
+    // ✅ Store the full list of photos and set current index
+    fullScreenPhotos = [...photosList]; // Fresh copy of the array
+    fullScreenIndex = fullScreenPhotos.indexOf(photoUrl);
+
+    if (fullScreenIndex === -1) {
+        console.error("❌ Photo not found in list:", photoUrl);
+        return;
+    }
+
+    // ✅ Display the correct image
+    fullPhoto.src = fullScreenPhotos[fullScreenIndex];
+
+    // ✅ Show the viewer
+    viewer.style.display = "flex";
+}
+
+// ✅ Navigate Fullscreen Viewer
+function navigateFullScreen(direction) {
+    if (!fullScreenPhotos.length) return;
+
+    // ✅ Update Index
+    fullScreenIndex += direction;
+    
+    // ✅ Loop Around if Reaching Ends
+    if (fullScreenIndex < 0) fullScreenIndex = fullScreenPhotos.length - 1;
+    if (fullScreenIndex >= fullScreenPhotos.length) fullScreenIndex = 0;
+
+    // ✅ Update Image
+    document.getElementById("full-photo").src = fullScreenPhotos[fullScreenIndex];
+}
+
+// ✅ Close Full-Screen Viewer
+function closePhotoViewer() {
+    document.getElementById("photo-viewer").style.display = "none";
+}
+
+// ✅ Ensure functions are globally accessible
+window.openPhotoViewer = openPhotoViewer;
+window.navigateFullScreen = navigateFullScreen;
+window.closePhotoViewer = closePhotoViewer;
+
+
+
+
+
+  // ✅ Upload Photo (Supports Before & After)
+  function uploadPhoto(event, itemId, type) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const estimateId = new URLSearchParams(window.location.search).get("estimateId");
+    const vendorId = localStorage.getItem("vendorId"); // This might be null if the item is unassigned
+
+    if (!estimateId) {
+        alert("Estimate ID is missing! Please save the estimate first.");
+        return;
+    }
+
+    const formData = new FormData();
+    for (let file of files) {
+        formData.append("photos", file);
+    }
+    formData.append("estimateId", estimateId);
+    formData.append("itemId", itemId);
+    formData.append("type", type);
+
+    if (vendorId && vendorId !== "null" && vendorId !== "undefined") {
+        formData.append("vendorId", vendorId);
+    }
+
+    fetch("/api/upload-photos", { method: "POST", body: formData })
+        .then(response => response.json())
+        .then(result => {
+            if (!result || !result.photoUrls) {
+                throw new Error(result.message || "Invalid server response.");
+            }
+            
+            console.log(`✅ Uploaded ${files.length} Photo(s):`, result.photoUrls);
+            alert(`✅ ${files.length} Photo(s) uploaded successfully!`);
+
+            // ✅ Immediately refresh the photos
+            setTimeout(() => updatePhotoSection(itemId, type), 500);
+        })
+        .catch(error => {
+            console.error("❌ Photo Upload Error:", error);
+            alert("Failed to upload photos.");
+        });
+}
+
+
+  window.uploadPhoto = uploadPhoto;
+
+  // ✅ Update Photo Section After Upload
+  async function updatePhotoSection(itemId, type) {
+    try {
+        const estimateId = new URLSearchParams(window.location.search).get("estimateId");
+        const vendorId = localStorage.getItem("vendorId"); // Can be null if unassigned
+
+        let response;
+
+        // ✅ First, check the estimate (since photos are stored there if no vendor is assigned)
+        response = await fetch(`/api/estimates/${estimateId}`);
+        if (response.ok) {
+            const { estimate } = await response.json();
+            const item = estimate.lineItems.flatMap(cat => cat.items).find(i => i._id === itemId);
+            if (item && item.photos) {
+                document.getElementById(`${type}-photos-${itemId}`).innerHTML = generatePhotoPreview(item.photos[type], itemId, type);
+                return; // ✅ Exit if found in estimate
+            }
+        }
+
+        // ✅ If the item has a vendor assigned, try fetching from the vendor
+        if (vendorId && vendorId !== "null" && vendorId !== "undefined") {
+            response = await fetch(`/api/vendors/${vendorId}/items/${itemId}/photos`);
+            if (response.ok) {
+                const { photos } = await response.json();
+                document.getElementById(`${type}-photos-${itemId}`).innerHTML = generatePhotoPreview(photos[type], itemId, type);
+                return; // ✅ Exit if found in vendor
+            }
+        }
+
+        console.warn("⚠️ No photos found for item:", itemId);
+    } catch (error) {
+        console.error("❌ Error updating photo section:", error);
+    }
+}
+
+async function updateEstimatePhotoData(itemId, type, newPhotos) {
+  try {
+      const estimateId = new URLSearchParams(window.location.search).get("estimateId");
+      if (!estimateId) return;
+
+      // ✅ Fetch the current estimate data
+      const response = await fetch(`/api/estimates/${estimateId}`);
+      if (!response.ok) throw new Error("Failed to fetch estimate data.");
+      
+      const estimate = await response.json();
+
+      // ✅ Find the item within the estimate and update only the photos
+      let updatedPhotos = null;
+      let itemFound = false;
+
+      estimate.lineItems.forEach(category => {
+          category.items.forEach(item => {
+              if (item._id === itemId) {
+                  if (!item.photos) item.photos = { before: [], after: [] };
+                  item.photos[type] = [...(item.photos[type] || []), ...newPhotos]; // ✅ Merge existing + new photos
+                  updatedPhotos = item.photos; // Store the updated photos
+                  itemFound = true;
+              }
+          });
+      });
+
+      if (!itemFound) {
+          console.error("❌ Item not found in estimate:", itemId);
+          return;
+      }
+
+      // ✅ Instead of sending the entire estimate, only update the photos for this item
+      const saveResponse = await fetch(`/api/estimates/${estimateId}/update-photo`, {
+          method: "PATCH", // ✅ Use PATCH instead of PUT (only update photos, not entire estimate)
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ itemId, type, photos: updatedPhotos }),
+      });
+
+      if (!saveResponse.ok) throw new Error("Failed to update estimate with new photos.");
+      console.log("✅ Estimate photos updated successfully!");
+  } catch (error) {
+      console.error("❌ Error updating estimate photo data:", error);
+  }
+}
+
+
+
+
+
+// ✅ Function to Slide Between Photos
+function changePhoto(itemId, type, direction) {
+  const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
+  const dots = document.querySelectorAll(`#dots-${type}-${itemId} span`);
+
+  if (!wrapper || dots.length === 0) return;
+
+  let index = parseInt(wrapper.getAttribute("data-index")) || 0;
+  const photos = wrapper.querySelectorAll(".photo-slide");
+
+  // Update Index Based on Direction
+  index += direction;
+  if (index < 0) index = photos.length - 1;
+  if (index >= photos.length) index = 0;
+
+  wrapper.setAttribute("data-index", index);
+
+  // ✅ Move Wrapper Horizontally
+  wrapper.style.transform = `translateX(-${index * 100}%)`;
+  wrapper.style.transition = "transform 0.5s ease-in-out"; // Smooth animation
+
+  // ✅ Update Active Dot
+  dots.forEach(dot => dot.classList.remove("active"));
+  dots[index].classList.add("active");
+}
+
+// ✅ Make it Accessible in Global Scope
+window.changePhoto = changePhoto;
+window.jumpToPhoto = changePhoto;
+
+
+// ✅ Jump to a Specific Photo (When Clicking Dots)
+function jumpToPhoto(itemId, type, index) {
+  const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
+  const dots = document.querySelectorAll(`#dots-${type}-${itemId} span`);
+
+  if (!wrapper || !dots.length) return;
+
+  wrapper.style.transform = `translateX(-${index * 100}%)`;
+  wrapper.setAttribute("data-index", index);
+
+  // Update active dot
+  dots.forEach(dot => dot.classList.remove("active"));
+  dots[index].classList.add("active");
+}
+
+
+// ✅ Auto-Initialize Sliding When DOM Loads
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".photo-dots span").forEach(dot => {
+      dot.addEventListener("click", function () {
+          const itemId = this.closest(".photo-dots").id.split("-")[2];
+          const type = this.closest(".photo-dots").id.split("-")[1];
+          const index = parseInt(this.getAttribute("data-index"), 10);
+          jumpToPhoto(itemId, type, index);
+      });
+  });
+});
+
+
+// ✅ Make it Accessible in Global Scope
+window.jumpToPhoto = jumpToPhoto;
+
+
+
+
+
+
+  // ✅ Delete Photo Function
+  async function deletePhoto(itemId, photoUrl, type) {
+    try {
+      const vendorId = localStorage.getItem("vendorId");
+      const response = await fetch(`/api/delete-photo/${vendorId}/${itemId}/${encodeURIComponent(photoUrl)}`, { 
+        method: "DELETE" 
+      });
+  
+      if (!response.ok) throw new Error("Failed to delete photo.");
+  
+      alert("✅ Photo deleted successfully!");
+  
+      // ✅ Force Refresh the UI
+      updatePhotoSection(itemId, type);
+  
+    } catch (error) {
+      console.error("❌ Error deleting photo:", error);
+      alert("Failed to delete photo.");
+    }
+  }
+  
+
+  window.deletePhoto = deletePhoto;
 
   // Load Project Details
   async function loadProjectDetails() {
@@ -37,36 +357,57 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // Load Estimate Details
-  async function loadEstimateDetails() {
-    if (!estimateId) return;
-    try {
+// ✅ Load Estimate Details (Ensure Photos Load)
+async function loadEstimateDetails() {
+  if (!estimateId) return;
+  try {
       const response = await fetch(`/api/estimates/${estimateId}`);
       if (!response.ok) throw new Error("Failed to fetch estimate details.");
       const { estimate } = await response.json();
 
+      console.log("✅ Loaded Estimate:", estimate); // Debugging
+
       refreshLineItems(estimate.lineItems);
       document.getElementById("tax-input").value = estimate.tax || 0;
-      updateSummary();
-    } catch (error) {
-      console.error("Error loading estimate details:", error);
-    }
+
+      // ✅ Ensure photos are displayed correctly
+      estimate.lineItems.forEach(category => {
+          category.items.forEach(item => {
+              updatePhotoSection(item._id, "before");
+              updatePhotoSection(item._id, "after");
+          });
+      });
+
+  } catch (error) {
+      console.error("❌ Error loading estimate details:", error);
   }
+}
 
-  // Refresh Line Items
-  function refreshLineItems(categories) {
-    const lineItemsContainer = document.getElementById("line-items-cards");
-    lineItemsContainer.innerHTML = "";
+// ✅ Refresh Line Items with Photos
+function refreshLineItems(categories) {
+  const lineItemsContainer = document.getElementById("line-items-cards");
+  lineItemsContainer.innerHTML = "";
 
-    categories.forEach((category) => {
+  categories.forEach(category => {
       const categoryHeader = addCategoryHeader(category);
-      if (Array.isArray(category.items)) {
-        category.items.forEach((item) => {
+      category.items.forEach(item => {
           addLineItemCard(item, categoryHeader);
-        });
-      }
-    });
-  }
+
+          // ✅ Debugging: Check if photos exist
+          console.log("📸 Item Photos Debug:", item);
+
+          // ✅ Ensure photos are displayed
+          if (item.photos) {
+              updatePhotoSection(item._id, "before");
+              updatePhotoSection(item._id, "after");
+          }
+      });
+  });
+}
+
+
+
+
 
   // Add Category Header
   function addCategoryHeader(category = { category: "New Category", status: "in-progress", items: [] }) {
@@ -108,31 +449,64 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const assignedTo = item.assignedTo ? getVendorInitials(item.assignedTo) : "Unassigned";
 
+    // Ensure photos object exists
+    if (!item.photos) {
+      item.photos = { before: [], after: [] };
+  }
+
   card.innerHTML = `
-    <div class="card-header">
+  <div class="card-header">
       <input type="checkbox" class="line-item-select" ${item.assignedTo ? "disabled" : ""}>
       <input type="text" class="item-name" value="${item.name || ""}" placeholder="Item Name">
       <button class="btn delete-line-item">Delete</button>
       ${item.assignedTo ? `<button class="btn unassign-item">Unassign</button>` : ""}
     </div>
-    <div class="card-details">
-      <div class="detail">
-        <label>Description</label>
-        <textarea class="item-description" placeholder="Description">${item.description || ""}</textarea>
+
+      <div class="card-details">
+          <div class="detail">
+              <label>Description</label>
+              <textarea class="item-description" placeholder="Description">${item.description || ""}</textarea>
+          </div>
+          <div class="detail">
+              <label>Quantity</label>
+              <input type="number" class="item-quantity" value="${item.quantity || 1}" min="1">
+          </div>
+          <div class="detail">
+              <label>Unit Price</label>
+              <input type="number" class="item-price" value="${item.unitPrice || 0}" min="0" step="0.01">
+          </div>
       </div>
-      <div class="detail">
-        <label>Quantity</label>
-        <input type="number" class="item-quantity" value="${item.quantity || 1}" min="1">
-      </div>
-      <div class="detail">
-        <label>Unit Price</label>
-        <input type="number" class="item-price" value="${item.unitPrice || 0}" min="0" step="0.01">
-      </div>
+
+        <!-- ✅ Wrap Before & After in a Horizontal Container -->
+    <div class="photo-section">
+        <div class="photo-preview">
+            <h5>Before Photos</h5>
+            <div id="before-photos-${card.getAttribute("data-item-id")}">
+                ${generatePhotoPreview(item.photos.before, card.getAttribute("data-item-id"), "before")}
+            </div>
+            <label class="upload-btn">
+                <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'before')">
+                +
+            </label>
+        </div>
+
+        <div class="photo-preview">
+            <h5>After Photos</h5>
+            <div id="after-photos-${card.getAttribute("data-item-id")}">
+                ${generatePhotoPreview(item.photos.after, card.getAttribute("data-item-id"), "after")}
+            </div>
+            <label class="upload-btn">
+                <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'after')">
+                +
+            </label>
+        </div>
     </div>
-    <div class="card-footer">
-      <span>Assigned to: <span class="vendor-name">${assignedTo}</span></span>
-      <span class="item-total">$${((item.quantity || 1) * (item.unitPrice || 0)).toFixed(2)}</span>
-    </div>
+
+
+      <div class="card-footer">
+          <span>Assigned to: <span class="vendor-name">${assignedTo}</span></span>
+          <span class="item-total">$${((item.quantity || 1) * (item.unitPrice || 0)).toFixed(2)}</span>
+      </div>
   `;
 
   // Add functionality for the "Unassign" button
@@ -189,6 +563,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("total").textContent = `$${total.toFixed(2)}`;
   }
   
+
+
+
+
+
+
+
+
+async function deletePhoto(itemId, photoUrl, type) {
+  try {
+      const response = await fetch(`/api/delete-photo/${localStorage.getItem("vendorId")}/${itemId}/${encodeURIComponent(photoUrl)}`, { method: "DELETE" });
+
+      if (!response.ok) throw new Error("Failed to delete photo.");
+
+      alert("✅ Photo deleted successfully!");
+      updatePhotoSection(itemId, type);
+  } catch (error) {
+      console.error("❌ Error deleting photo:", error);
+      alert("Failed to delete photo.");
+  }
+}
+
+
 
 
 
@@ -304,79 +701,121 @@ async function saveEstimate() {
   let currentCategory = null;
 
   document.querySelectorAll("#line-items-cards > div").forEach((element) => {
-    if (element.classList.contains("category-header")) {
-      currentCategory = {
-        _id: element.getAttribute("data-category-id") || undefined,
-        type: "category",
-        category: element.querySelector(".category-title span").textContent.trim(),
-        status: "in-progress",
-        items: [],
-      };
-      lineItems.push(currentCategory);
-    } else if (element.classList.contains("line-item-card")) {
-      const assignedToValue = element.getAttribute("data-assigned-to");
-      const assignedTo =
-        assignedToValue && /^[a-f\d]{24}$/i.test(assignedToValue) ? assignedToValue : null;
+      if (element.classList.contains("category-header")) {
+          currentCategory = {
+              _id: element.getAttribute("data-category-id") || undefined,
+              type: "category",
+              category: element.querySelector(".category-title span").textContent.trim(),
+              status: "in-progress",
+              items: [],
+          };
+          lineItems.push(currentCategory);
+      } else if (element.classList.contains("line-item-card")) {
+          const assignedToValue = element.getAttribute("data-assigned-to");
+          const assignedTo = assignedToValue && /^[a-f\d]{24}$/i.test(assignedToValue) ? assignedToValue : undefined;
 
-      const item = {
-        _id: element.getAttribute("data-item-id") || undefined,
-        type: "item",
-        name: element.querySelector(".item-name").value.trim(),
-        description: element.querySelector(".item-description").value.trim() || "",
-        quantity: parseInt(element.querySelector(".item-quantity").value, 10) || 1,
-        unitPrice: parseFloat(element.querySelector(".item-price").value) || 0,
-        total:
-          (parseInt(element.querySelector(".item-quantity").value, 10) || 1) *
-          (parseFloat(element.querySelector(".item-price").value) || 0),
-        assignedTo, // Preserve assignedTo
-      };
+          let item = {
+              _id: element.getAttribute("data-item-id") || undefined,
+              type: "item",
+              name: element.querySelector(".item-name").value.trim(),
+              description: element.querySelector(".item-description").value.trim() || "",
+              quantity: parseInt(element.querySelector(".item-quantity").value, 10) || 1,
+              unitPrice: parseFloat(element.querySelector(".item-price").value) || 0,
+              total:
+                  (parseInt(element.querySelector(".item-quantity").value, 10) || 1) *
+                  (parseFloat(element.querySelector(".item-price").value) || 0),
+              assignedTo,
+          };
 
-      if (!item._id || item._id.startsWith("item-")) {
-        delete item._id; // Remove temporary IDs for new items
+          const beforePhotos = Array.from(element.querySelectorAll(".photo-before")).map(img => img.src);
+          const afterPhotos = Array.from(element.querySelectorAll(".photo-after")).map(img => img.src);
+
+          // ✅ Only include photos if they exist
+          if (beforePhotos.length > 0 || afterPhotos.length > 0) {
+              item.photos = {
+                  before: beforePhotos.length > 0 ? beforePhotos : undefined,
+                  after: afterPhotos.length > 0 ? afterPhotos : undefined,
+              };
+          }
+
+          if (!item._id || item._id.startsWith("item-")) {
+              delete item._id; // Remove temporary IDs for new items
+          }
+
+          if (currentCategory) {
+              currentCategory.items.push(item);
+          } else {
+              console.error("Item without a category:", item);
+              alert("Item found without a category. Please add a category before saving.");
+          }
       }
-
-      if (currentCategory) {
-        currentCategory.items.push(item);
-      } else {
-        console.error("Item without a category:", item);
-        alert("Item found without a category. Please add a category before saving.");
-      }
-    }
   });
 
   const tax = parseFloat(document.getElementById("tax-input").value) || 0;
-  const estimate = { projectId, lineItems, tax };
 
   try {
-    const method = estimateId ? "PUT" : "POST";
-    const url = estimateId ? `/api/estimates/${estimateId}` : "/api/estimates";
+      let existingEstimate = null;
+      if (estimateId) {
+          // ✅ Fetch existing estimate to merge data (Avoid overwriting)
+          const response = await fetch(`/api/estimates/${estimateId}`);
+          if (!response.ok) throw new Error("Failed to fetch existing estimate.");
+          existingEstimate = await response.json();
+      }
 
-    const response = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(estimate),
-    });
+      // ✅ Ensure previous data is merged instead of overwritten
+      const mergedLineItems = lineItems.map((category) => {
+          const existingCategory = existingEstimate?.lineItems?.find((cat) => cat._id === category._id);
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || `Failed to ${method === "POST" ? "create" : "update"} estimate.`);
-    }
+          return {
+              ...category,
+              items: category.items.map((item) => {
+                  const existingItem = existingCategory?.items?.find((exItem) => exItem._id === item._id);
 
-    const result = await response.json();
-    alert(`Estimate ${method === "POST" ? "created" : "updated"} successfully!`, result);
+                  return {
+                      ...existingItem, // Retain all existing data
+                      ...item, // Overwrite only updated fields
+                      photos: item.photos ?? existingItem?.photos, // ✅ Preserve existing photos if not updated
+                      assignedTo: item.assignedTo || existingItem?.assignedTo, // Prevent null overwrite
+                  };
+              }),
+          };
+      });
 
-    if (!estimateId && result.estimate && result.estimate._id) {
-      estimateId = result.estimate._id;
-      window.history.pushState({}, "", `?projectId=${projectId}&estimateId=${estimateId}`);
-    }
+      const updatedEstimate = { projectId, lineItems: mergedLineItems, tax };
 
-    await loadEstimateDetails();
-    updatePage();
+      // ✅ Send update request
+      const method = estimateId ? "PUT" : "POST";
+      const url = estimateId ? `/api/estimates/${estimateId}` : "/api/estimates";
+
+      const saveResponse = await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updatedEstimate),
+      });
+
+      if (!saveResponse.ok) {
+          const error = await saveResponse.json();
+          throw new Error(error.message || `Failed to ${method === "POST" ? "create" : "update"} estimate.`);
+      }
+
+      console.log("🔍 Saving Estimate Data:", JSON.stringify(updatedEstimate, null, 2));
+
+      const result = await saveResponse.json();
+      alert(`Estimate ${method === "POST" ? "created" : "updated"} successfully!`, result);
+
+      if (!estimateId && result.estimate && result.estimate._id) {
+          estimateId = result.estimate._id;
+          window.history.pushState({}, "", `?projectId=${projectId}&estimateId=${estimateId}`);
+      }
+
+      await loadEstimateDetails();
+      updatePage();
   } catch (error) {
-    console.error("Error saving estimate:", error);
-    alert("Error saving the estimate. Please try again.");
+      console.error("Error saving estimate:", error);
+      alert("Error saving the estimate. Please try again.");
   }
 }
+
 
 
 
@@ -449,4 +888,5 @@ function updatePage() {
   document.getElementById("tax-input").addEventListener("input", updateSummary);
   document.getElementById("save-estimate").addEventListener("click", saveEstimate);
 });
+
 
