@@ -315,29 +315,49 @@ window.jumpToPhoto = jumpToPhoto;
 
 
 
-  // ✅ Delete Photo Function
-  async function deletePhoto(itemId, photoUrl, type) {
+// ✅ Updated Delete Photo Function for Render
+async function deletePhoto(itemId, photoUrl, type) {
     try {
-      const vendorId = localStorage.getItem("vendorId");
-      const response = await fetch(`/api/delete-photo/${vendorId}/${itemId}/${encodeURIComponent(photoUrl)}`, { 
-        method: "DELETE" 
-      });
-  
-      if (!response.ok) throw new Error("Failed to delete photo.");
-  
-      alert("✅ Photo deleted successfully!");
-  
-      // ✅ Force Refresh the UI
-      updatePhotoSection(itemId, type);
-  
-    } catch (error) {
-      console.error("❌ Error deleting photo:", error);
-      alert("Failed to delete photo.");
-    }
-  }
-  
+        // Ensure vendorId is correctly retrieved and not null/undefined
+        const vendorId = localStorage.getItem("vendorId") || "default";
 
-  window.deletePhoto = deletePhoto;
+        if (!itemId || !photoUrl || !type) {
+            alert("❌ Missing required parameters for deleting photo.");
+            return;
+        }
+
+        // Construct absolute URL (Ensure correct Render API path)
+        const apiUrl = `${window.location.origin}/api/delete-photo/${vendorId}/${itemId}/${encodeURIComponent(photoUrl)}`;
+
+        console.log(`🗑️ Deleting photo from: ${apiUrl}`);
+
+        // Send DELETE request
+        const response = await fetch(apiUrl, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            const errorMessage = await response.text();
+            throw new Error(`Failed to delete photo. Server Response: ${errorMessage}`);
+        }
+
+        alert("✅ Photo deleted successfully!");
+
+        // ✅ Force Refresh the UI after deletion
+        updatePhotoSection(itemId, type);
+
+    } catch (error) {
+        console.error("❌ Error deleting photo:", error);
+        alert("Failed to delete photo. Check console for details.");
+    }
+}
+
+// Expose function globally (if used in inline HTML events)
+window.deletePhoto = deletePhoto;
+
 
   // Load Project Details
   async function loadProjectDetails() {
