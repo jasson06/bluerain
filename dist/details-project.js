@@ -1569,6 +1569,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadEstimates(projectId);
   enableDragAndDrop();
   loadSidebarProjects();
+  setupManageTeamModal();
 
   // Sidebar toggle functionality
   const sidebar = document.querySelector('.sidebar');
@@ -1596,3 +1597,133 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+/** 
+ * Setup Manage Team Modal (Ensures correct placement)
+ */
+function setupManageTeamModal() {
+  const modal = document.createElement("div");
+  modal.id = "manageTeamModal";
+  modal.className = "modal-container";
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h2>Manage Team</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="vendorList"></tbody>
+      </table>
+      <button onclick="closeModal()">Close</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  // Add click event to open modal button
+  document.addEventListener("click", function (event) {
+    if (event.target.matches("#manage-team-btn")) {
+      openModal();
+    }
+  });
+
+  // Close modal event listener
+  document.addEventListener("click", function (event) {
+    if (event.target.matches(".modal-container")) {
+      closeModal();
+    }
+  });
+}
+
+/** 
+ * Open Manage Team Modal and Load Vendors
+ */
+function openModal() {
+  const modal = document.getElementById("manageTeamModal");
+  modal.style.display = "block";
+  fetchVendors();
+}
+
+/** 
+ * Close Manage Team Modal
+ */
+function closeModal() {
+  const modal = document.getElementById("manageTeamModal");
+  modal.style.display = "none";
+}
+
+/** 
+ * Fetch Vendors and Populate Table
+ */
+async function fetchVendors() {
+  try {
+    const response = await fetch(`/api/projects/${getProjectId()}/vendors`);
+    const data = await response.json();
+    if (!data.success) throw new Error(data.message);
+
+    const vendorList = document.getElementById("vendorList");
+    vendorList.innerHTML = "";
+
+    data.vendors.forEach((vendor) => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${vendor.name}</td>
+        <td>${vendor.email}</td>
+        <td>${vendor.phone}</td>
+        <td>
+          <button onclick="editVendor('${vendor._id}', '${vendor.name}', '${vendor.email}', '${vendor.phone}')">Edit</button>
+          <button onclick="removeVendor('${vendor._id}')">Remove</button>
+        </td>
+      `;
+      vendorList.appendChild(row);
+    });
+  } catch (error) {
+    console.error("Error fetching vendors:", error);
+  }
+}
+
+/** 
+ * Remove Vendor
+ */
+async function removeVendor(vendorId) {
+  try {
+    await fetch(`/api/projects/${getProjectId()}/vendors/${vendorId}`, { method: "DELETE" });
+    alert("Vendor removed!");
+    fetchVendors();
+  } catch (error) {
+    console.error("Error removing vendor:", error);
+  }
+}
+
+/** 
+ * Edit Vendor
+ */
+function editVendor(vendorId, name, email, phone) {
+  const newName = prompt("Enter new name:", name);
+  const newEmail = prompt("Enter new email:", email);
+  const newPhone = prompt("Enter new phone:", phone);
+
+  if (newName && newEmail && newPhone) {
+    updateVendor(vendorId, newName, newEmail, newPhone);
+  }
+}
+
+/** 
+ * Update Vendor
+ */
+async function updateVendor(vendorId, name, email, phone) {
+  try {
+    await fetch(`/api/vendors/${vendorId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, phone }),
+    });
+    alert("Vendor updated!");
+    fetchVendors();
+  } catch (error) {
+    console.error("Error updating vendor:", error);
+  }
+}
