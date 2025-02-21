@@ -136,14 +136,17 @@ connectToDatabase();
 
 
 
-app.get('/api/check-uploads', (req, res) => {
-    fs.readdir(uploadDir, (err, files) => {
+app.get('/api/list-uploads', (req, res) => {
+    const directoryPath = '/mnt/data/uploads';
+
+    fs.readdir(directoryPath, (err, files) => {
         if (err) {
-            return res.status(500).json({ message: "Error reading uploads directory", error: err });
+            return res.status(500).json({ message: "Unable to read upload directory.", error: err });
         }
-        res.json({ files });
+        res.json({ uploadedFiles: files });
     });
 });
+
 
 
 
