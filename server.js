@@ -39,6 +39,12 @@ app.use(express.static(buildPath));
 // Debugging: Log the static directory being served
 console.log("Serving static files from:", buildPath);
 
+// ✅ Serve static files from "public" and "dist"
+app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "dist")));
+
+console.log("📂 Serving static files from:", path.join(__dirname, "public"));
+console.log("📂 Serving static files from:", path.join(__dirname, "dist"));
 
 
 app.use(
