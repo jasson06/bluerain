@@ -46,25 +46,23 @@ app.use(express.static(path.join(__dirname, "dist")));
 console.log("📂 Serving static files from:", path.join(__dirname, "public"));
 console.log("📂 Serving static files from:", path.join(__dirname, "dist"));
 
-// Configure dynamic upload path
-const uploadDir = process.env.UPLOADS_PATH || "/tmp/uploads";
-
-// Ensure the directory exists
+// Ensure the uploads directory exists
+const uploadDir = '/mnt/data/uploads';
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Configure multer storage
+// ✅ Configure multer for file storage on Render Persistent Disk
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, uploadDir); // Store files in the correct directory
+        cb(null, uploadDir); // Save files to persistent disk
     },
     filename: (req, file, cb) => {
         cb(null, `${Date.now()}-${file.originalname}`);
-    },
+    }
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
 
 app.use(
@@ -99,8 +97,8 @@ app.use(logger);
 
 
 
-// Serve uploaded files dynamically from the correct directory
 app.use('/uploads', express.static(process.env.UPLOADS_PATH || '/tmp/uploads'));
+
 
 
 
