@@ -2397,6 +2397,104 @@ app.post("/api/invite/accept", async (req, res) => {
 });
 
 
+// ✅ Get Assigned Vendors for a Project
+app.get("/api/projects/:projectId/vendors", async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    // Ensure projectId is a valid ObjectId if using MongoDB
+    if (!projectId) {
+      return res.status(400).json({ success: false, message: "Project ID is required." });
+    }
+
+    // Find vendors assigned to this project
+    const vendors = await Vendor.find({ "assignedProjects.projectId": projectId })
+      .select("name email phone assignedProjects")
+      .lean(); // Optimize query
+
+    res.status(200).json({ success: true, vendors: vendors || [] }); // Always return 200 with an array
+  } catch (error) {
+    console.error("❌ Error fetching vendors:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch vendors. Please try again." });
+  }
+});
+
+
+// ✅ Remove Vendor from a Project
+app.delete("/api/projects/:projectId/vendors/:vendorId", async (req, res) => {
+  try {
+    const { projectId, vendorId } = req.params;
+    
+    // Remove project from vendor's assignedProjects
+    const vendor = await Vendor.findByIdAndUpdate(
+      vendorId,
+      { $pull: { assignedProjects: { projectId } } },
+      { new: true }
+    );
+
+    if (!vendor) {
+      return res.status(404).json({ success: false, message: "Vendor not found." });
+    }
+
+    res.status(200).json({ success: true, message: "Vendor removed from project." });
+  } catch (error) {
+    console.error("Error removing vendor:", error);
+    res.status(500).json({ message: "Failed to remove vendor." });
+  }
+});
+
+// ✅ Edit Vendor Information
+
+app.put("/api/vendors/:id", async (req, res) => {
+  try {
+    const { id } = req.params; // Get vendor ID from URL
+    const updateData = req.body; // Get updated fields from request body
+
+    if (!id) {
+      return res.status(400).json({ success: false, message: "Vendor ID is required." });
+    }
+
+    if (!updateData || Object.keys(updateData).length === 0) {
+      return res.status(400).json({ success: false, message: "No update data provided." });
+    }
+
+    // If using MongoDB (Database)
+    if (typeof Vendor !== "undefined") {
+      const updatedVendor = await Vendor.findByIdAndUpdate(id, updateData, { 
+        new: true, 
+        runValidators: true 
+      });
+
+      if (!updatedVendor) {
+        return res.status(404).json({ success: false, message: "Vendor not found." });
+      }
+
+      console.log(`✅ Vendor with ID ${id} updated in DB`);
+      return res.status(200).json({ success: true, message: "Vendor updated successfully!", vendor: updatedVendor });
+    }
+
+    // If using in-memory array (`vendors`)
+    if (typeof vendors !== "undefined" && Array.isArray(vendors)) {
+      const vendorIndex = vendors.findIndex((v) => v.id === id);
+      if (vendorIndex === -1) {
+        return res.status(404).json({ success: false, message: "Vendor not found." });
+      }
+
+      // Update the vendor object in memory
+      vendors[vendorIndex] = { ...vendors[vendorIndex], ...updateData };
+
+      console.log(`✅ Vendor with ID ${id} updated in memory`);
+      return res.status(200).json({ success: true, message: "Vendor updated successfully!", vendor: vendors[vendorIndex] });
+    }
+
+    return res.status(500).json({ success: false, message: "Vendor storage method not recognized." });
+
+  } catch (error) {
+    console.error("❌ Error updating vendor:", error);
+    res.status(500).json({ success: false, message: "Failed to update vendor. Please try again." });
+  }
+});
+
 
 
 
