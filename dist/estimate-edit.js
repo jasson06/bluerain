@@ -573,17 +573,30 @@ function refreshLineItems(categories) {
 
 async function deletePhoto(itemId, photoUrl, type) {
   try {
-      const response = await fetch(`/api/delete-photo/${localStorage.getItem("vendorId")}/${itemId}/${encodeURIComponent(photoUrl)}`, { method: "DELETE" });
+      const vendorId = localStorage.getItem("vendorId");
+      if (!vendorId) throw new Error("Vendor ID is missing from localStorage.");
 
-      if (!response.ok) throw new Error("Failed to delete photo.");
+      const encodedPhotoUrl = encodeURIComponent(photoUrl);
+      const apiUrl = `${process.env.RENDER_API_BASE_URL || ""}/api/delete-photo/${vendorId}/${itemId}/${encodedPhotoUrl}`;
+
+      const response = await fetch(apiUrl, { 
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" }
+      });
+
+      if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to delete photo.");
+      }
 
       alert("✅ Photo deleted successfully!");
       updatePhotoSection(itemId, type);
   } catch (error) {
-      console.error("❌ Error deleting photo:", error);
-      alert("Failed to delete photo.");
+      console.error("❌ Error deleting photo:", error.message || error);
+      alert("Failed to delete photo. Please try again.");
   }
 }
+
 
 
 
