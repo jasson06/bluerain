@@ -99,11 +99,8 @@ app.use(logger);
 
 
 
-
-
-
-
-
+// Serve uploaded files dynamically from the correct directory
+app.use('/uploads', express.static(process.env.UPLOADS_PATH || '/tmp/uploads'));
 
 
 
