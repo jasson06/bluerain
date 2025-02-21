@@ -136,6 +136,14 @@ connectToDatabase();
 
 
 
+app.get('/api/check-uploads', (req, res) => {
+    fs.readdir(uploadDir, (err, files) => {
+        if (err) {
+            return res.status(500).json({ message: "Error reading uploads directory", error: err });
+        }
+        res.json({ files });
+    });
+});
 
 
 
