@@ -39,6 +39,12 @@ app.use(express.static(buildPath));
 // Debugging: Log the static directory being served
 console.log("Serving static files from:", buildPath);
 
+// ✅ Serve static files from "public" and "dist"
+app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "dist")));
+
+console.log("📂 Serving static files from:", path.join(__dirname, "public"));
+console.log("📂 Serving static files from:", path.join(__dirname, "dist"));
 
 
 app.use(
@@ -132,70 +138,83 @@ const upload = multer({ storage: storage });
 // Photo Upload Route
 app.post("/api/upload-photos", upload.array("photos", 10), async (req, res) => {
   try {
-      const { itemId, taskId, type } = req.body;
+      const { itemId, taskId, type, estimateId, vendorId } = req.body;
 
       // 🚨 Validate Required Fields
-      if (!req.files || req.files.length === 0 || (!itemId && !taskId) || !type) {
-          return res.status(400).json({ message: "Missing required fields (photos, itemId/taskId, or type)." });
+      if (!req.files || req.files.length === 0 || (!itemId && !taskId && !estimateId) || !type) {
+          return res.status(400).json({ message: "Missing required fields (photos, itemId/taskId/estimateId, or type)." });
       }
 
       // ✅ Generate File Paths for Uploaded Photos
       const photoUrls = req.files.map(file => `/uploads/${file.filename}`);
+      let updateSuccess = false;
 
-      // ✅ Handle Item Photos (Vendor Assigned Items)
-      if (itemId) {
-          const vendor = await Vendor.findOne({ "assignedItems.itemId": itemId });
-          if (!vendor) return res.status(404).json({ message: "Vendor not found." });
-
-          // Find the Item
-          const item = vendor.assignedItems.find(item => item.itemId.toString() === itemId);
-          if (!item) return res.status(404).json({ message: "Item not found." });
-
-          // Ensure the Photos Object Exists
-          if (!item.photos) {
-              item.photos = { before: [], after: [] };
-          }
-
-          // Store Photos in Correct Array
-          if (type === "before") {
-              item.photos.before.push(...photoUrls);
-          } else if (type === "after") {
-              item.photos.after.push(...photoUrls);
-          } else {
-              return res.status(400).json({ message: "Invalid type. Must be 'before' or 'after'." });
-          }
-
-          await vendor.save();
-          console.log(`✅ ${photoUrls.length} Photo(s) saved for Item: ${itemId} (${type})`);
-          return res.status(200).json({ message: "Photos uploaded successfully!", photoUrls });
-      }
-
-      // ✅ Handle Task Photos (Tasks Collection)
+      // ✅ Handle Task Photos (Stored in Task Collection)
       if (taskId) {
           const task = await Task.findById(taskId);
           if (!task) return res.status(404).json({ message: "Task not found." });
 
-          // Ensure the Photos Object Exists
-          if (!task.photos) {
-              task.photos = { before: [], after: [] };
-          }
-
-          // Store Photos in Correct Array
-          if (type === "before") {
-              task.photos.before.push(...photoUrls);
-          } else if (type === "after") {
-              task.photos.after.push(...photoUrls);
-          } else {
-              return res.status(400).json({ message: "Invalid type. Must be 'before' or 'after'." });
-          }
+          if (!task.photos) task.photos = { before: [], after: [] };
+          task.photos[type].push(...photoUrls);
 
           await task.save();
           console.log(`✅ ${photoUrls.length} Photo(s) saved for Task: ${taskId} (${type})`);
           return res.status(200).json({ message: "Photos uploaded successfully!", photoUrls });
       }
 
-      // 🚨 If Neither itemId Nor taskId is Provided
-      return res.status(400).json({ message: "Invalid request. Must include either itemId or taskId." });
+      // ✅ Handle Photos in Estimate (Always Present in Vendor Side)
+      let estimate = null;
+      let estimateItem = null;
+      if (estimateId) {
+          estimate = await Estimate.findById(estimateId);
+          if (!estimate) return res.status(404).json({ message: "Estimate not found." });
+
+          estimateItem = estimate.lineItems.flatMap(category => category.items)
+              .find(item => item._id.toString() === itemId);
+
+          if (estimateItem) {
+              if (!estimateItem.photos) estimateItem.photos = { before: [], after: [] };
+              estimateItem.photos[type].push(...photoUrls);
+              updateSuccess = true;
+              console.log(`✅ ${photoUrls.length} Photo(s) saved for Estimate: ${estimateId}, Item: ${itemId} (${type})`);
+          } else {
+              console.warn(`⚠️ Item not found in estimate: ${estimateId}`);
+          }
+      }
+
+      // ✅ Handle Photos in Vendor (Ensures Photos Stay in Estimate)
+      if (vendorId && vendorId !== "null" && vendorId !== "undefined") {
+          const vendor = await Vendor.findById(vendorId);
+          if (!vendor) {
+              console.warn(`⚠️ Vendor not found for ID: ${vendorId}. Keeping photos in estimate only.`);
+          } else {
+              const vendorItem = vendor.assignedItems.find(item => item.itemId.toString() === itemId);
+              if (!vendorItem) {
+                  console.warn(`⚠️ Item not found in vendor's assigned list. Keeping photos in estimate only.`);
+              } else {
+                  if (!vendorItem.photos) vendorItem.photos = { before: [], after: [] };
+
+                  // ✅ Prevent duplicate photos in Vendor collection
+                  photoUrls.forEach(photoUrl => {
+                      if (!vendorItem.photos[type].includes(photoUrl)) {
+                          vendorItem.photos[type].push(photoUrl);
+                      }
+                  });
+
+                  await vendor.save();
+                  updateSuccess = true;
+                  console.log(`✅ ${photoUrls.length} Photo(s) saved for Vendor: ${vendorId}, Item: ${itemId} (${type})`);
+              }
+          }
+      }
+
+      // ✅ Save Estimate Changes After Vendor Upload
+      if (updateSuccess && estimate) {
+          await estimate.save();
+          return res.status(200).json({ message: "Photos uploaded successfully!", photoUrls });
+      }
+
+      return res.status(400).json({ message: "Item not found in estimate or vendor." });
 
   } catch (error) {
       console.error("❌ Error uploading photos:", error);
@@ -204,7 +223,56 @@ app.post("/api/upload-photos", upload.array("photos", 10), async (req, res) => {
 });
 
 
+app.post("/api/assign-vendor", async (req, res) => {
+  const { estimateId, vendorId } = req.body;
 
+  if (!estimateId || !vendorId) {
+      return res.status(400).json({ message: "Estimate ID and Vendor ID are required." });
+  }
+
+  try {
+      const estimate = await Estimate.findById(estimateId);
+      if (!estimate) return res.status(404).json({ message: "Estimate not found." });
+
+      const vendor = await Vendor.findById(vendorId);
+      if (!vendor) return res.status(404).json({ message: "Vendor not found." });
+
+      // Loop through all estimate items and transfer photos to vendor
+      estimate.lineItems.forEach(category => {
+          category.items.forEach(item => {
+              const existingItem = vendor.assignedItems.find(vItem => vItem.itemId.toString() === item._id.toString());
+
+              if (existingItem) {
+                  existingItem.photos.before = item.photos.before; // Transfer before photos
+                  existingItem.photos.after = item.photos.after; // Transfer after photos
+              } else {
+                  vendor.assignedItems.push({
+                      itemId: item._id,
+                      projectId: estimate.projectId,
+                      name: item.name,
+                      description: item.description,
+                      quantity: item.quantity,
+                      unitPrice: item.unitPrice,
+                      total: item.total,
+                      status: "new",
+                      photos: {
+                          before: item.photos.before, // Transfer before photos
+                          after: item.photos.after,   // Transfer after photos
+                      }
+                  });
+              }
+          });
+      });
+
+      await vendor.save();
+      console.log(`✅ Photos transferred from Estimate ${estimateId} to Vendor ${vendorId}.`);
+      return res.status(200).json({ message: "Vendor assigned and photos transferred successfully!" });
+
+  } catch (error) {
+      console.error("❌ Error assigning vendor:", error);
+      res.status(500).json({ message: "Failed to assign vendor." });
+  }
+});
 
 // Photo Deletion Route
 app.delete('/api/delete-photo/:id', async (req, res) => {
@@ -305,7 +373,15 @@ const estimateSchema = new mongoose.Schema({
           unitPrice: { type: Number, required: true, min: 0 },
           total: { type: Number, required: true },
           status: { type: String, enum: ['in-progress', 'completed'], default: 'in-progress' },
-          assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' }
+          assignedTo: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Vendor',
+            default: null // Allow null explicitly for unassigned items
+          },
+          photos: {
+            before: [{ type: String }], // Store URLs of "before" photos
+            after: [{ type: String }],  // Store URLs of "after" photos
+          }
         }
       ]
     }
@@ -314,7 +390,6 @@ const estimateSchema = new mongoose.Schema({
   tax: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
-
 
 
 
@@ -587,19 +662,21 @@ app.get('/api/estimates/:id', async (req, res) => {
   try {
     const estimate = await Estimate.findById(id)
       .populate('projectId', 'name address')
-      .populate('lineItems.items.assignedTo', 'name');  // Ensure this matches your schema
+      .populate('lineItems.items.assignedTo', 'name'); // Ensure 'assignedTo' is populated
 
     if (!estimate) {
       return res.status(404).json({ success: false, message: 'Estimate not found.' });
     }
 
+    // 🔍 Debugging: Log the response to check if photos exist
+    console.log("📸 Estimate Photos Debugging:", JSON.stringify(estimate, null, 2));
+
     res.status(200).json({ success: true, estimate });
   } catch (error) {
-    console.error('Error fetching estimate:', error);  // Check this output in your server logs
+    console.error('❌ Error fetching estimate:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch estimate.' });
   }
 });
-
 
 
 
@@ -674,46 +751,87 @@ app.delete('/api/estimates/:id', async (req, res) => {
 
 // Backend route to update the estimate
 // Update estimate with assigned items
-app.put('/api/estimates/:id', async (req, res) => { 
+app.put("/api/estimates/:id", async (req, res) => {
+  try {
+    const estimateId = req.params.id;
+
+    // Fetch the existing document
+    const existingEstimate = await Estimate.findById(estimateId);
+    if (!existingEstimate) {
+      return res.status(404).json({ message: "Estimate not found" });
+    }
+
+    // Create a map of existing items by their `_id`
+    const existingItemsMap = new Map();
+    existingEstimate.lineItems.forEach((lineItem) => {
+      lineItem.items.forEach((item) => {
+        existingItemsMap.set(item._id.toString(), item);
+      });
+    });
+
+    // Merge new items with existing data
+    req.body.lineItems.forEach((lineItem) => {
+      lineItem.items.forEach((item) => {
+        if (item._id && existingItemsMap.has(item._id.toString())) {
+          // Preserve existing photos and assignedTo if they exist
+          const existingItem = existingItemsMap.get(item._id.toString());
+          item.photos = existingItem.photos ?? { before: [], after: [] };
+          item.assignedTo = existingItem.assignedTo ?? null;
+        }
+      });
+    });
+
+    // Update the document with the merged data
+    const updatedEstimate = await Estimate.findByIdAndUpdate(
+      estimateId,
+      { $set: req.body }, // Only update fields present in the request
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json(updatedEstimate);
+  } catch (error) {
+    console.error("Update error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+app.patch('/api/estimates/:id/update-photo', async (req, res) => {
   const { id } = req.params;
+  const { itemId, type, photos } = req.body; // ✅ Only extract the needed fields
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ success: false, message: 'Invalid Estimate ID.' });
   }
 
   try {
-    const estimate = await Estimate.findById(id);
-
+    let estimate = await Estimate.findById(id);
     if (!estimate) {
       return res.status(404).json({ success: false, message: 'Estimate not found.' });
     }
 
-    // Update line items with assignedTo field if provided
-    estimate.lineItems = req.body.lineItems.map(item => {
-      const existingItem = estimate.lineItems.id(item._id);
-      if (existingItem) {
-        return {
-          ...existingItem.toObject(),
-          ...item, // Overwrite existing fields with updated values
-          category: item.category || existingItem.category,  // Ensure category is updated
-          assignedTo: item.assignedTo || existingItem.assignedTo, // Ensure assignedTo is not overwritten if not updated
-        };
-      }
-      return item;
+    let itemFound = false;
+    
+    estimate.lineItems.forEach(category => {
+        category.items.forEach(item => {
+            if (item._id.toString() === itemId) {
+                item.photos[type] = photos; // ✅ Only update photos, nothing else
+                itemFound = true;
+            }
+        });
     });
 
-    estimate.tax = req.body.tax;
-    const updatedEstimate = await estimate.save();
+    if (!itemFound) {
+      return res.status(404).json({ success: false, message: 'Item not found in estimate.' });
+    }
 
+    const updatedEstimate = await estimate.save();
     res.status(200).json({ success: true, estimate: updatedEstimate });
   } catch (error) {
-    console.error('Error updating estimate:', error);
-    res.status(500).json({ success: false, message: 'Failed to update estimate.' });
+    console.error('❌ Error updating estimate photo data:', error);
+    res.status(500).json({ success: false, message: 'Failed to update estimate photo data.' });
   }
 });
-
-
-
 
 
 
@@ -1522,28 +1640,64 @@ app.post("/api/assign-items", async (req, res) => {
   }
 
   try {
-    // ✅ Assign items to the Vendor's assignedItems array
+    // ✅ Find Vendor & Estimate
     const vendor = await Vendor.findById(vendorId);
-    if (!vendor) {
-      return res.status(404).json({ message: "Vendor not found." });
+    const estimate = await Estimate.findById(estimateId);
+
+    if (!vendor) return res.status(404).json({ message: "Vendor not found." });
+    if (!estimate) return res.status(404).json({ message: "Estimate not found." });
+
+    let updatedAssignedItems = [];
+
+    for (const item of items) {
+      // 🔹 Find the item in the estimate
+      const estimateItem = estimate.lineItems.flatMap(cat => cat.items)
+        .find(i => i._id.toString() === item.itemId);
+
+      if (!estimateItem) {
+        console.warn(`⚠️ Item ${item.itemId} not found in estimate.`);
+        continue;
+      }
+
+      // ✅ Check if the item is already assigned to the vendor
+      let vendorItem = vendor.assignedItems.find(i => i.itemId.toString() === item.itemId);
+      
+      if (!vendorItem) {
+        // 🔹 Create a new assigned item in the vendor's list
+        vendorItem = {
+          itemId: item.itemId,
+          projectId,
+          estimateId,
+          name: item.name,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          total: item.total,
+          status: "new",
+          photos: {
+            before: [...(estimateItem.photos?.before || [])], // Copy photos from estimate
+            after: [...(estimateItem.photos?.after || [])]
+          }
+        };
+        vendor.assignedItems.push(vendorItem);
+      } else {
+        // ✅ Update existing assigned item in the vendor's list
+        vendorItem.name = item.name;
+        vendorItem.description = item.description;
+        vendorItem.quantity = item.quantity;
+        vendorItem.unitPrice = item.unitPrice;
+        vendorItem.total = item.total;
+        vendorItem.photos.before = [...(estimateItem.photos?.before || [])];
+        vendorItem.photos.after = [...(estimateItem.photos?.after || [])];
+      }
+
+      updatedAssignedItems.push(vendorItem);
     }
 
-    const assignedItems = items.map(item => ({
-      itemId: item.itemId,
-      projectId,
-      estimateId,
-      name: item.name,
-      description: item.description,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      total: item.total,
-      status: "new"
-    }));
-
-    vendor.assignedItems.push(...assignedItems);
+    // ✅ Save Vendor with Updated Assigned Items
     await vendor.save();
 
-    // ✅ Update the assignedTo field inside the Estimate's nested items
+    // ✅ Update `assignedTo` Field in Estimate
     const updateOperations = items.map(item => ({
       updateOne: {
         filter: { 
@@ -1559,14 +1713,21 @@ app.post("/api/assign-items", async (req, res) => {
         ]
       }
     }));
+
+    if (updateOperations.length > 0) {
+      await Estimate.bulkWrite(updateOperations);
+    }
+
+    console.log("✅ Items assigned successfully & photos copied!");
     
+    // ✅ Return updated assigned items so frontend updates properly
+    res.status(200).json({ 
+      message: "Items assigned successfully!", 
+      assignedItems: vendor.assignedItems 
+    });
 
-    const result = await Estimate.bulkWrite(updateOperations);
-    console.log("Bulk Write Result:", result);
-
-    res.status(200).json({ message: "Items assigned successfully!", assignedItems });
   } catch (error) {
-    console.error("Error assigning items:", error);
+    console.error("❌ Error assigning items:", error);
     res.status(500).json({ message: "Failed to assign items." });
   }
 });
@@ -1583,52 +1744,149 @@ app.post("/api/assign-items", async (req, res) => {
   /* ==========
      📌 Delete Photo
      ========== */
-  app.delete("/api/delete-photo/:vendorId/:itemId/:photoId", async (req, res) => {
-    const { vendorId, itemId, photoId } = req.params;
+ app.delete("/api/delete-photo/:vendorId/:itemId/:photoUrl", async (req, res) => {
+  try {
+      const { vendorId, itemId, photoUrl } = req.params;
+      const decodedPhotoUrl = decodeURIComponent(photoUrl); // Decode the URL to match stored DB paths
+
+      console.log(`🗑️ Deleting Photo: ${decodedPhotoUrl} for Item: ${itemId} under Vendor: ${vendorId}`);
+
+      // ✅ Remove file from server
+      const filePath = `./public${decodedPhotoUrl}`;
+      if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log(`✅ Deleted file from server: ${decodedPhotoUrl}`);
+      } else {
+          console.warn(`⚠️ File not found on server: ${decodedPhotoUrl}`);
+      }
+
+      // ✅ Remove photo from Vendor's assignedItems
+      const vendor = await Vendor.findOneAndUpdate(
+          { _id: vendorId, "assignedItems.itemId": itemId },
+          { 
+              $pull: { 
+                  "assignedItems.$[].photos.before": decodedPhotoUrl,
+                  "assignedItems.$[].photos.after": decodedPhotoUrl 
+              } 
+          },
+          { new: true }
+      );
+
+      // ✅ Remove photo from Estimate's lineItems
+      const estimate = await Estimate.findOneAndUpdate(
+          { "lineItems.items._id": itemId },
+          { 
+              $pull: { 
+                  "lineItems.$[].items.$[].photos.before": decodedPhotoUrl,
+                  "lineItems.$[].items.$[].photos.after": decodedPhotoUrl 
+              } 
+          },
+          { new: true }
+      );
+
+      // ✅ Check if deletion was successful
+      const updateSuccess = vendor || estimate;
+      if (updateSuccess) {
+          console.log(`✅ Photo deleted from database successfully.`);
+          return res.status(200).json({ message: "Photo deleted successfully!" });
+      } else {
+          console.warn(`⚠️ Photo was not found in database.`);
+          return res.status(404).json({ message: "Photo not found in database." });
+      }
+
+  } catch (error) {
+      console.error("❌ Error deleting photo:", error);
+      res.status(500).json({ message: "Failed to delete photo." });
+  }
+});
+
+
   
-    try {
+ app.get("/api/vendors/:vendorId/assigned-items/:projectId", async (req, res) => {
+  try {
+      const { vendorId, projectId } = req.params;
+      console.log(`📌 Fetching assigned items for Vendor: ${vendorId}, Project: ${projectId}`);
+
       const vendor = await Vendor.findById(vendorId);
-      if (!vendor) return res.status(404).json({ success: false, message: "Vendor not found" });
+      if (!vendor) {
+          return res.status(404).json({ message: "Vendor not found." });
+      }
+
+      // ✅ Find items assigned to this vendor for this project
+      const assignedItems = vendor.assignedItems.filter(item => item.projectId.toString() === projectId);
+
+      if (assignedItems.length === 0) {
+          console.warn("⚠️ No assigned items found for this project and vendor.");
+          return res.status(404).json({ message: "No assigned items found." });
+      }
+
+      // ✅ Ensure Photos Exist
+      assignedItems.forEach(item => {
+          if (!item.photos) {
+              item.photos = { before: [], after: [] };
+          }
+      });
+
+      console.log("✅ Assigned Items:", assignedItems);
+
+      res.status(200).json({ items: assignedItems });
+  } catch (error) {
+      console.error("❌ Error fetching assigned items:", error);
+      res.status(500).json({ message: "Failed to fetch assigned items." });
+  }
+});
+
+
   
-      const item = vendor.assignedItems.find((item) => item.itemId.toString() === itemId);
-      if (!item) return res.status(404).json({ success: false, message: "Item not found" });
-  
-      // Remove photo from array
-      item.photos.before = item.photos.before.filter((photo) => !photo.includes(photoId));
-      item.photos.after = item.photos.after.filter((photo) => !photo.includes(photoId));
-  
-      await vendor.save();
-  
-      // Delete the file from storage
-      const filePath = path.join(__dirname, "uploads", photoId);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-  
-      res.status(200).json({ success: true, message: "Photo deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting photo:", error);
-      res.status(500).json({ success: false, message: "Failed to delete photo" });
-    }
-  });
-  
+
   /* ==========
      📌 Fetch Photos for an Item
      ========== */
-  app.get("/api/vendors/:vendorId/items/:itemId/photos", async (req, res) => {
-    const { vendorId, itemId } = req.params;
+     app.get("/api/photos/:itemId", async (req, res) => {
+      const { itemId } = req.params;
   
-    try {
-      const vendor = await Vendor.findById(vendorId);
-      if (!vendor) return res.status(404).json({ success: false, message: "Vendor not found" });
+      try {
+          console.log(`📸 Fetching photos for item: ${itemId}`);
   
-      const item = vendor.assignedItems.find((item) => item.itemId.toString() === itemId);
-      if (!item) return res.status(404).json({ success: false, message: "Item not found" });
+          let photos = { before: [], after: [] };
   
-      res.status(200).json({ success: true, photos: item.photos });
-    } catch (error) {
-      console.error("Error fetching photos:", error);
-      res.status(500).json({ success: false, message: "Failed to fetch photos" });
-    }
+          // 🔍 First, Check if the Item is Assigned to a Vendor
+          const vendor = await Vendor.findOne({ "assignedItems.itemId": itemId });
+          if (vendor) {
+              const item = vendor.assignedItems.find(i => i.itemId.toString() === itemId);
+              if (item && item.photos) {
+                  console.log(`✅ Found item in vendor: ${vendor._id}`);
+                  photos.before = [...new Set([...photos.before, ...(item.photos.before || [])])];
+                  photos.after = [...new Set([...photos.after, ...(item.photos.after || [])])];
+              }
+          }
+  
+          // 🔍 Also Fetch from Estimates (Even if Assigned to Vendor)
+          const estimate = await Estimate.findOne({ "lineItems.items._id": itemId });
+          if (estimate) {
+              const item = estimate.lineItems.flatMap(cat => cat.items).find(i => i._id.toString() === itemId);
+              if (item && item.photos) {
+                  console.log(`✅ Found item in estimate: ${estimate._id}`);
+                  photos.before = [...new Set([...photos.before, ...(item.photos.before || [])])];
+                  photos.after = [...new Set([...photos.after, ...(item.photos.after || [])])];
+              }
+          }
+  
+          // 🚨 If No Photos Found in Both Sources
+          if (photos.before.length === 0 && photos.after.length === 0) {
+              console.warn(`⚠️ No photos found for item: ${itemId}`);
+              return res.status(404).json({ success: false, message: "No photos found for item." });
+          }
+  
+          // ✅ Return Merged Photos from Both Sources
+          return res.status(200).json({ success: true, photos });
+  
+      } catch (error) {
+          console.error("❌ Error fetching photos:", error);
+          res.status(500).json({ success: false, message: "Failed to fetch photos" });
+      }
   });
+  
 
 
 // Fetch Assigned Items for a Vendor by Project
