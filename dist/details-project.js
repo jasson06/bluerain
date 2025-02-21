@@ -1452,52 +1452,61 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   
-    // Display Files Function
-    function displayFiles(files) {
-      const filesContainer = document.getElementById('uploaded-files-container');
-      filesContainer.innerHTML = '';  // Clear previous content
-      
-      if (!Array.isArray(files)) {
+    
+// ✅ Display Files Function (Updated for Render)
+function displayFiles(files) {
+    const filesContainer = document.getElementById('uploaded-files-container');
+    filesContainer.innerHTML = '';  // Clear previous content
+
+    if (!Array.isArray(files)) {
         console.error('Expected an array but got:', files);
         return;
-      }
-      
-      files.forEach(file => {
+    }
+
+    // ✅ Base URL for uploaded files on Render
+    const BASE_URL = "https://node-mongodb-api-1h93.onrender.com/uploads/";
+
+    files.forEach(file => {
         const fileElement = document.createElement('div');
         fileElement.classList.add('file-item');
-        
-        const fileUrl = file.path.replace(/\\/g, '/');  // Normalize path
-        
+
+        // Normalize file path and construct full URL
+        const fileUrl = `${BASE_URL}${encodeURIComponent(file.filename)}`;
+
         if (file.mimetype.startsWith('image/')) {
-          const img = document.createElement('img');
-          img.src = `/${fileUrl}`;
-          img.style.width = '150px';
-          img.style.cursor = 'pointer';
-          img.addEventListener('click', () => window.open(`/${fileUrl}`, '_blank'));
-          fileElement.appendChild(img);
+            // ✅ Display Image
+            const img = document.createElement('img');
+            img.src = fileUrl;
+            img.style.width = '150px';
+            img.style.cursor = 'pointer';
+            img.addEventListener('click', () => window.open(fileUrl, '_blank'));
+            fileElement.appendChild(img);
         } else {
-          const fileLink = document.createElement('a');
-          fileLink.href = `/${fileUrl}`;
-          fileLink.target = '_blank';
-          fileLink.textContent = file.filename;
-          
-          const fileIcon = document.createElement('i');
-          fileIcon.className = 'fas fa-file-alt';
-          fileLink.prepend(fileIcon);
-          
-          fileElement.appendChild(fileLink);
+            // ✅ Display Other Files as Links
+            const fileLink = document.createElement('a');
+            fileLink.href = fileUrl;
+            fileLink.target = '_blank';
+            fileLink.textContent = file.filename;
+
+            const fileIcon = document.createElement('i');
+            fileIcon.className = 'fas fa-file-alt'; // FontAwesome file icon
+            fileLink.prepend(fileIcon);
+
+            fileElement.appendChild(fileLink);
         }
-        
+
+        // ✅ Add Delete Icon
         const removeIcon = document.createElement('i');
-        removeIcon.className = 'fas fa-times';  // FontAwesome "x" icon
+        removeIcon.className = 'fas fa-times'; // FontAwesome "x" icon
         removeIcon.style.cursor = 'pointer';
         removeIcon.style.marginLeft = '10px';
         removeIcon.addEventListener('click', () => deleteFile(file._id, fileElement));
-        
+
         fileElement.appendChild(removeIcon);
         filesContainer.appendChild(fileElement);
-      });
-    }
+    });
+}
+
   
     // Delete File Function
     async function deleteFile(fileId, fileElement) {
