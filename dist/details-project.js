@@ -1453,7 +1453,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   
     
-// ✅ Display Files Function (Correct URL Format for Render)
+
+// ✅ Display Files Function (Ensures Correct URL Format for Render)
 function displayFiles(files) {
     const filesContainer = document.getElementById('uploaded-files-container');
     filesContainer.innerHTML = '';  // Clear previous content
@@ -1470,13 +1471,15 @@ function displayFiles(files) {
         const fileElement = document.createElement('div');
         fileElement.classList.add('file-item');
 
-        // ✅ Ensure the correct filename format (includes timestamp prefix)
-        if (!file.filename.includes('-')) {
-            console.warn(`⚠️ Filename may not be correctly formatted: ${file.filename}`);
+        // ✅ Ensure the correct filename format (with timestamp prefix)
+        let correctFilename = file.path.split('/').pop();  // Extracts full filename with timestamp
+
+        if (!correctFilename.includes('-')) {
+            console.warn(`⚠️ Potentially incorrect filename format: ${correctFilename}`);
         }
 
         // ✅ Construct the correct file URL
-        const fileUrl = `${BASE_URL}${encodeURIComponent(file.filename)}`;
+        const fileUrl = `${BASE_URL}${encodeURIComponent(correctFilename)}`;
 
         if (file.mimetype.startsWith('image/')) {
             // ✅ Display Image
@@ -1491,7 +1494,7 @@ function displayFiles(files) {
             const fileLink = document.createElement('a');
             fileLink.href = fileUrl;
             fileLink.target = '_blank';
-            fileLink.textContent = file.filename;
+            fileLink.textContent = correctFilename;
 
             const fileIcon = document.createElement('i');
             fileIcon.className = 'fas fa-file-alt'; // FontAwesome file icon
@@ -1511,6 +1514,7 @@ function displayFiles(files) {
         filesContainer.appendChild(fileElement);
     });
 }
+
 
 
   
