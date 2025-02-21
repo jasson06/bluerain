@@ -367,7 +367,7 @@ window.deletePhoto = deletePhoto;
       const { project } = await response.json();
 
       document.getElementById("project-title").textContent = `Project Name: ${project.name}`;
-      document.getElementById("project-code").textContent = `Project Code: ${project.code}`;
+      document.getElementById("project-code").textContent = `Lockbox Code: ${project.code}`;
       document.getElementById("project-status").textContent = `Status: ${project.status || "N/A"}`;
       document.getElementById("project-type").textContent = `Type: ${project.type || "N/A"}`;
       document.getElementById("project-description").textContent = `Description: ${project.description || "No description provided."}`;
