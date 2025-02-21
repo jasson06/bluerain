@@ -46,6 +46,26 @@ app.use(express.static(path.join(__dirname, "dist")));
 console.log("📂 Serving static files from:", path.join(__dirname, "public"));
 console.log("📂 Serving static files from:", path.join(__dirname, "dist"));
 
+// Configure dynamic upload path
+const uploadDir = process.env.UPLOADS_PATH || "/tmp/uploads";
+
+// Ensure the directory exists
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Configure multer storage
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadDir); // Store files in the correct directory
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    },
+});
+
+const upload = multer({ storage: storage });
+
 
 app.use(
   cors({
@@ -85,7 +105,7 @@ app.use(logger);
 
 
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 // Serve `details-projects.html` for project details page
 app.get("/details/projects/:id", (req, res) => {
@@ -118,17 +138,7 @@ connectToDatabase();
 
   
 
-// Configure multer
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // Directory to store files
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  },
-});
 
-const upload = multer({ storage: storage });
 
 
 
