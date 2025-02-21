@@ -97,7 +97,8 @@ app.use(logger);
 
 
 
-app.use('/uploads', express.static(process.env.UPLOADS_PATH || '/tmp/uploads'));
+// Serve uploaded files
+app.use('/uploads', express.static('/mnt/data/uploads'));
 
 
 
