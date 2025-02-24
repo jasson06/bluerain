@@ -369,7 +369,7 @@ const clientSchema = new mongoose.Schema({
   phone: { type: String, trim: true },
 });
 
-const estimateSchema = new mongoose.Schema({
+const estimateSchema = new mongoose.Schema({ 
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
   invoiceNumber: { type: String, required: true, unique: true },
   lineItems: [
@@ -398,7 +398,9 @@ const estimateSchema = new mongoose.Schema({
           photos: {
             before: [{ type: String }], // Store URLs of "before" photos
             after: [{ type: String }],  // Store URLs of "after" photos
-          }
+          },
+          startDate: { type: Date, default: null }, // ✅ Add Start Date
+          endDate: { type: Date, default: null } // ✅ Add End Date
         }
       ]
     }
@@ -2495,6 +2497,79 @@ app.put("/api/vendors/:id", async (req, res) => {
   }
 });
 
+
+
+
+// Endpoint to get the current project ID
+app.get('/api/projects/current', async (req, res) => { 
+  try {
+      // Dynamically determine project ID based on user session or database query
+      const projectId = req.session.currentProjectId || req.query.projectId; 
+
+      if (!projectId) {
+          return res.status(404).json({ message: "No active project found." });
+      }
+
+      res.status(200).json({ projectId });
+  } catch (error) {
+      console.error("Error fetching current project:", error);
+      res.status(500).json({ message: "Failed to fetch project." });
+  }
+});
+
+
+
+// Endpoint to fetch line items by project ID
+app.get('/api/estimates/:projectId/line-items', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({ message: 'Invalid project ID' });
+    }
+    const estimate = await Estimate.findOne({ projectId }).populate('lineItems.items.assignedTo');
+    if (!estimate) {
+      return res.status(404).json({ message: 'Estimate not found' });
+    }
+    res.json(estimate.lineItems);
+  } catch (error) {
+    console.error('Error fetching line items:', error);
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
+
+// Endpoint to update a line item
+app.put('/api/estimates/line-items/:lineItemId', async (req, res) => {
+  try {
+    const { lineItemId } = req.params;
+    const updates = req.body;
+
+    const estimate = await Estimate.findOneAndUpdate(
+      { 'lineItems.items._id': lineItemId },
+      {
+        $set: {
+
+          'lineItems.$[].items.$[item].status': updates.status,
+          'lineItems.$[].items.$[item].startDate': updates.startDate, // ✅ Now supports startDate
+          'lineItems.$[].items.$[item].endDate': updates.endDate // ✅ Now supports endDate
+        }
+      },
+      {
+        arrayFilters: [{ 'item._id': lineItemId }],
+        new: true
+      }
+    );
+
+    if (!estimate) {
+      return res.status(404).json({ message: 'Line item not found' });
+    }
+
+    res.json({ message: 'Line item updated successfully', estimate });
+  } catch (error) {
+    console.error('Error updating line item:', error);
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
 
 
 
