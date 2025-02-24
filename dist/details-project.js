@@ -76,6 +76,25 @@ async function loadProjectDetails(id) {
   }
 }
 
+
+document.addEventListener("DOMContentLoaded", function() {
+  function extractProjectIdFromUrl() {
+      const urlParts = window.location.pathname.split('/');
+      const projectIndex = urlParts.indexOf("projects");
+      return projectIndex !== -1 ? urlParts[projectIndex + 1] : null;
+  }
+
+  const projectId = extractProjectIdFromUrl();
+
+  if (projectId) {
+      localStorage.setItem("currentProjectId", projectId);
+      console.log("Stored Project ID:", projectId);
+  } else {
+      console.warn("Project ID not found in URL.");
+  }
+});
+
+
 // Open Edit Project Modal
 function openEditProjectModal() {
   const modal = document.getElementById('edit-project-modal');
