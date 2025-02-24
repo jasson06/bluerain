@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Construction Project Schedule</title>
+  <!-- Include Chart.js for Dashboard Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Global Light Theme with Modern Effects */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f8f9fa;
+      color: #343a40;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      font-weight: 500;
+      color: #007bff;
+      margin-bottom: 20px;
+    }
+    /* Notification Styles */
+    #notification {
+      padding: 10px 15px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      display: none;
+      width: 90%;
+      max-width: 1200px;
+      text-align: center;
+      font-size: 0.95rem;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    #notification.success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    #notification.error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    /* Form & Filter Styles */
+    .task-form,
+    #listViewFilters {
+      width: 90%;
+      max-width: 1200px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    .task-form input, .task-form select,
+    #listViewFilters input, #listViewFilters select {
+      margin-right: 10px;
+      margin-bottom: 10px;
+      padding: 8px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #fff;
+      color: #343a40;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    .task-form input:focus, .task-form select:focus,
+    #listViewFilters input:focus, #listViewFilters select:focus {
+      border-color: #007bff;
+    }
+    /* Modern Date Input Styles */
+    input[type="date"] {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 8px;
+      font-size: 1rem;
+      color: #343a40;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      outline: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+    }
+    input[type="date"]:focus {
+      border-color: #007bff;
+      box-shadow: 0 0 5px rgba(0,123,255,0.5);
+    }
+    /* Style for table select elements */
+    table select {
+      padding: 8px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #fff;
+      color: #343a40;
+      transition: border-color 0.3s;
+      outline: none;
+    }
+    table select:focus {
+      border-color: #007bff;
+    }
+    .task-form button, .view-buttons button, #calendarNav button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      color: #fff;
+      background-color: #007bff;
+      transition: background-color 0.3s ease, transform 0.2s;
+    }
+    .task-form button:hover, .view-buttons button:hover, #calendarNav button:hover {
+      background-color: #0056b3;
+      transform: translateY(-1px);
+    }
+    /* View Buttons */
+    .view-buttons {
+      margin-bottom: 20px;
+      width: 90%;
+      max-width: 1200px;
+      text-align: center;
+    }
+    .view-buttons button {
+      margin-right: 10px;
+    }
+    /* Action Buttons: Print & Export */
+    .action-buttons {
+      margin-bottom: 20px;
+      width: 90%;
+      max-width: 1200px;
+      text-align: right;
+    }
+    .action-buttons button {
+      padding: 8px 15px;
+      font-size: 0.9rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      color: #fff;
+      background-color: #28a745;
+      transition: background-color 0.3s ease;
+      margin-left: 10px;
+    }
+    .action-buttons button:hover {
+      background-color: #218838;
+    }
+    /* Table Styles */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background-color: #fff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 15px;
+      text-align: left;
+    }
+    th {
+      background-color: #007bff;
+      color: #fff;
+      font-weight: 500;
+      cursor: pointer;
+      position: relative;
+    }
+    th .sort-indicator {
+      margin-left: 5px;
+      font-size: 0.8rem;
+    }
+    td {
+      border-bottom: 1px solid #a8b1ce;
+    }
+    tr:nth-child(even) {
+      background-color: #f7f7f7;
+    }
+    tr:hover {
+      background-color: #bcd1e9 !important;
+    }
+    /* Lighter status colors */
+    .completed { background-color: #d4edda !important; color: #343a40 !important; }
+    .in-progress { background-color: #fff3cd !important; color: #343a40 !important; }
+    .not-started { background-color: #f8d7da !important; color: #343a40 !important; }
+    /* Grid View Styles */
+    .grid-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 90%;
+      max-width: 1200px;
+    }
+    .grid-item {
+      border: 1px solid #ccc;
+      padding: 20px;
+      margin: 10px;
+      width: calc(33.333% - -30px);
+      box-sizing: border-box;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .grid-item:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    .grid-item h3 {
+      margin-top: 0;
+      font-weight: 500;
+      color: #007bff;
+    }
+    .grid-details p {
+      margin: 5px 0;
+      font-size: 0.9rem;
+      color: #555;
+    }
+    /* Calendar View Styles */
+    #calendarNav {
+      margin-bottom: 10px;
+      width: 90%;
+      max-width: 1200px;
+      text-align: center;
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+      width: 90%;
+      max-width: 1200px;
+      margin-bottom: 20px;
+    }
+    .calendar-date {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .calendar-date:hover {
+      background-color: #e6f2ff;
+    }
+    .calendar-date span.task {
+      display: block;
+      font-size: 0.75rem;
+      margin-top: 5px;
+      background: #007bff;
+      color: #fff;
+      border-radius: 3px;
+      padding: 2px 4px;
+    }
+    /* Gantt Chart Styles */
+    .gantt-chart-container {
+      width: 90%;
+      max-width: 1200px;
+    }
+    .gantt-timeline-header {
+      display: flex;
+      border-bottom: 1px solid #ccc;
+      margin-bottom: 10px;
+    }
+    .gantt-date-label {
+      flex: 1;
+      font-size: 0.8rem;
+      text-align: center;
+      border-right: 1px solid #eee;
+      padding: 2px;
+      color: #555;
+    }
+    .gantt-task-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .gantt-task-label {
+      width: 150px;
+      font-size: 0.9rem;
+      padding-right: 10px;
+      color: #555;
+    }
+    .gantt-bar-container {
+      position: relative;
+      flex: 1;
+      height: 20px;
+      background-color: #f1f1f1;
+    }
+    .gantt-task-bar {
+      position: absolute;
+      height: 100%;
+      border-radius: 3px;
+    }
+    /* Dashboard Canvas Sizing */
+    #statusChart, #timelineChart {
+      width: 100% !important;
+      height: 300px !important;
+    }
+    /* Modal Styles */
+    #modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+    }
+    #modal .modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      position: relative;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+      color: #343a40;
+    }
+    #modal .modal-content input, 
+    #modal .modal-content select, 
+    #modal .modal-content textarea {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0 15px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #f8f9fa;
+      color: #343a40;
+      font-size: 1rem;
+    }
+    #modal .modal-content button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background-color: #007bff;
+      color: #fff;
+      transition: background-color 0.3s ease;
+    }
+    #modal .modal-content button:hover {
+      background-color: #0056b3;
+    }
+    #modal .close {
+      position: absolute;
+      right: 15px;
+      top: 15px;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #007bff;
+    }
+    /* Pagination Styles */
+    #paginationControls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    #paginationControls button {
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    #paginationControls button:hover {
+      background-color: #0056b3;
+    }
+    #paginationControls span {
+      font-size: 1rem;
+      font-weight: 500;
+      color: #343a40;
+    }
+
+/* Inline Comment Textarea in Table */
+table textarea {
+  resize: vertical;
+  padding: 8px;
+  font-size: 0.9rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background: #fff;
+  color: #343a40;
+  width: 100%;
+  transition: border-color 0.3s;
+}
+table textarea:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0,123,255,0.5);
+}
+
+
+    /* Responsive Table Card Layout for Mobile */
+    @media (max-width: 768px) {
+      #scheduleTable thead { display: none; }
+      #scheduleTable tr {
+        display: block;
+        margin-bottom: 15px;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      }
+      #scheduleTable td {
+        display: block;
+        text-align: right;
+        font-size: 0.9rem;
+        border: none;
+        position: relative;
+        padding-left: 45%;
+        margin-bottom: 5px;
+      }
+      #scheduleTable td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 15px;
+        width: 40%;
+        text-align: left;
+        font-weight: bold;
+        color: #007bff;
+      }
+    }
+    /* Additional Responsive Breakpoints for Grid and Calendar */
+    @media (max-width: 768px) {
+      .grid-item {
+        width: 100%;
+        max-width: 600px;
+      }
+      .calendar {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (max-width: 480px) {
+      .calendar {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Construction Project Schedule</h1>
+  
+  <!-- Notification Area -->
+  <div id="notification"></div>
+  
+  <!-- View Buttons -->
+  <div class="view-buttons">
+    <button id="dashboardViewBtn">Dashboard</button>
+    <button id="listViewBtn">List View</button>
+    <button id="gridViewBtn">Grid View</button>
+    <button id="calendarViewBtn">Calendar View</button>
+    <button id="ganttViewBtn">Gantt Chart View</button>
+  </div>
+  
+  <!-- Action Buttons: Print & Export -->
+  <div class="action-buttons">
+    <button id="printBtn">Print</button>
+    <button id="exportBtn">Export CSV</button>
+  </div>
+  
+  <!-- Dashboard View -->
+  <div id="dashboardView" class="view" style="display: none;">
+    <div style="width:90%; max-width:1200px; margin-bottom:20px;">
+      <canvas id="statusChart"></canvas>
+    </div>
+    <div style="width:90%; max-width:1200px;">
+      <canvas id="timelineChart"></canvas>
+    </div>
+  </div>
+  
+  <!-- List View with Filters -->
+  <div id="listView" class="view">
+    <div id="listViewFilters">
+      <input type="text" id="listSearch" placeholder="Search by Task Name" />
+      <select id="statusFilter">
+        <option value="">All Status</option>
+        <option value="Not Started">Not Started</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+      </select>
+      <input type="text" id="categoryFilter" placeholder="Filter by Category" />
+      <input type="date" id="startDateFrom" />
+      <input type="date" id="startDateTo" />
+    </div>
+    <div style="overflow-x: auto; width: 100%; max-width: 1200px;">
+      <table id="scheduleTable">
+        <thead>
+          <tr>
+            <th data-sort="category">Category<span class="sort-indicator"></span></th>
+            <th data-sort="name">Task<span class="sort-indicator"></span></th>
+            <th data-sort="startDate">Start Date<span class="sort-indicator"></span></th>
+            <th data-sort="endDate">End Date<span class="sort-indicator"></span></th>
+            <th data-sort="status">Status<span class="sort-indicator"></span></th>
+            <th>Comments</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Rows populated by JavaScript -->
+        </tbody>
+      </table>
+      <!-- Pagination Controls -->
+      <div id="paginationControls">
+        <button id="prevPageBtn">Prev</button>
+        <span id="pageIndicator"></span>
+        <button id="nextPageBtn">Next</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Grid View -->
+  <div id="gridView" class="view" style="display: none;">
+    <div class="grid-container">
+      <!-- Grid items populated by JavaScript -->
+    </div>
+  </div>
+  
+  <!-- Calendar View -->
+  <div id="calendarView" class="view" style="display: none;">
+    <div id="calendarNav">
+      <button id="prevMonthBtn">Prev Month</button>
+      <span id="currentMonthYear"></span>
+      <button id="nextMonthBtn">Next Month</button>
+    </div>
+    <div class="calendar">
+      <!-- Calendar dates populated by JavaScript -->
+    </div>
+  </div>
+  
+  <!-- Gantt Chart View -->
+  <div id="ganttView" class="view" style="display: none;">
+    <!-- Gantt chart rendered by JavaScript -->
+  </div>
+  
+  <!-- Modal for Editing/View Details -->
+  <div id="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <div id="modalBody">
+        <!-- Dynamic modal content -->
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    document.addEventListener("DOMContentLoaded", async function() {
+      /* --------------------- Utility Functions --------------------- */
+      function showNotification(message, type = "success") {
+        const notification = document.getElementById("notification");
+        notification.textContent = message;
+        notification.className = type;
+        notification.style.display = "block";
+        setTimeout(() => (notification.style.display = "none"), 3000);
+      }
+      
+      function debounce(func, delay) {
+        let timer;
+        return function(...args) {
+          clearTimeout(timer);
+          timer = setTimeout(() => func.apply(this, args), delay);
+        };
+      }
+      
+      /* --------------------- Modal Functions --------------------- */
+      const modal = document.getElementById("modal");
+      const modalBody = document.getElementById("modalBody");
+      const closeModalBtn = modal.querySelector(".close");
+      
+      function openModal(contentHTML) {
+        modalBody.innerHTML = contentHTML;
+        modal.style.display = "flex";
+      }
+      
+      function closeModal() {
+        modal.style.display = "none";
+      }
+      
+      closeModalBtn.addEventListener("click", closeModal);
+      window.addEventListener("click", function(e) {
+        if (e.target === modal) closeModal();
+      });
+      
+      /* --------------------- API Functions --------------------- */
+      async function getCurrentProjectId() {
+        try {
+          let projectId = localStorage.getItem("currentProjectId");
+          if (!projectId) {
+            const response = await fetch('/api/projects/current');
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            projectId = data.projectId;
+            localStorage.setItem("currentProjectId", projectId);
+          }
+          return projectId;
+        } catch (error) {
+          console.error("Error fetching project ID:", error);
+          showNotification("Error fetching project ID", "error");
+          return null;
+        }
+      }
+      
+      async function fetchLineItems(projectId) {
+        try {
+          const response = await fetch(`/api/estimates/${projectId}/line-items`);
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          const data = await response.json();
+          return data.lineItems ? data.lineItems : data;
+        } catch (error) {
+          console.error("Error fetching tasks:", error);
+          showNotification("Error fetching tasks", "error");
+          return [];
+        }
+      }
+      
+      async function updateLineItem(lineItemId, updates) {
+        try {
+          const response = await fetch(`/api/estimates/line-items/${lineItemId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updates),
+          });
+          if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+          showNotification("Task updated successfully");
+          return await response.json();
+        } catch (error) {
+          console.error("Error updating task:", error);
+          showNotification("Error updating task", "error");
+        }
+      }
+      
+      /* --------------------- Data & State --------------------- */
+      let currentLineItems = [];
+      let flatTasks = [];
+      let sortField = "name";
+      let sortDirection = "asc";
+      let currentPage = 1;
+      const itemsPerPage = 10;
+      
+      let currentCalendarDate = new Date();
+      let gridTasksOrder = null;
+      
+      // Attach category to each task.
+      function getAllTasks(lineItems) {
+        if (lineItems.length && lineItems[0].items) {
+          return lineItems.reduce((acc, categoryGroup) => {
+            const tasksWithCategory = categoryGroup.items.map(task => ({
+              ...task,
+              category: categoryGroup.category || "Uncategorized"
+            }));
+            return acc.concat(tasksWithCategory);
+          }, []);
+        } else {
+          return lineItems.map(task => ({
+            ...task,
+            category: task.category || "Uncategorized"
+          }));
+        }
+      }
+      
+      /* --------------------- Render Functions --------------------- */
+      function renderTable(lineItems) {
+        flatTasks = getAllTasks(lineItems);
+        const searchQuery = document.getElementById("listSearch").value.toLowerCase();
+        const statusFilter = document.getElementById("statusFilter").value;
+        const categoryFilter = document.getElementById("categoryFilter").value.toLowerCase();
+        const startDateFrom = document.getElementById("startDateFrom").value;
+        const startDateTo = document.getElementById("startDateTo").value;
+        
+        let filteredTasks = flatTasks.filter(task => {
+          const matchesSearch = task.name.toLowerCase().includes(searchQuery);
+          const matchesStatus = statusFilter ? task.status === statusFilter : true;
+          const matchesCategory = categoryFilter ? task.category.toLowerCase().includes(categoryFilter) : true;
+          let matchesStartDate = true;
+          if (startDateFrom) {
+            matchesStartDate = task.startDate && new Date(task.startDate) >= new Date(startDateFrom);
+          }
+          if (matchesStartDate && startDateTo) {
+            matchesStartDate = task.startDate && new Date(task.startDate) <= new Date(startDateTo);
+          }
+          return matchesSearch && matchesStatus && matchesCategory && matchesStartDate;
+        });
+        
+        filteredTasks.sort((a, b) => {
+          let valA = a[sortField] || "";
+          let valB = b[sortField] || "";
+          if (sortField.includes("Date")) {
+            valA = new Date(valA);
+            valB = new Date(valB);
+          }
+          if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+          if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+          return 0;
+        });
+        
+        const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
+        if (currentPage > totalPages) currentPage = totalPages;
+        const startIdx = (currentPage - 1) * itemsPerPage;
+        const paginatedTasks = filteredTasks.slice(startIdx, startIdx + itemsPerPage);
+        
+        document.getElementById("pageIndicator").textContent = `Page ${currentPage} of ${totalPages || 1}`;
+        
+        const tbody = document.querySelector("#scheduleTable tbody");
+        tbody.innerHTML = "";
+        paginatedTasks.forEach(task => {
+          const row = document.createElement("tr");
+          row.className = task.status.toLowerCase().replace(" ", "-");
+          
+          const categoryCell = document.createElement("td");
+          categoryCell.textContent = task.category || "Uncategorized";
+          categoryCell.setAttribute("data-label", "Category");
+          row.appendChild(categoryCell);
+          
+          const nameCell = document.createElement("td");
+          nameCell.textContent = task.name;
+          nameCell.style.cursor = "pointer";
+          nameCell.setAttribute("data-label", "Task");
+          nameCell.addEventListener("click", () => {
+            const modalContent = `
+              <h2>Edit Task</h2>
+              <label>Task Name: <input type="text" id="editName" value="${task.name}" readonly /></label><br/><br/>
+              <label>Start Date: <input type="date" id="editStart" value="${task.startDate ? new Date(task.startDate).toISOString().split("T")[0] : ''}" /></label><br/><br/>
+              <label>End Date: <input type="date" id="editEnd" value="${task.endDate ? new Date(task.endDate).toISOString().split("T")[0] : ''}" /></label><br/><br/>
+              <label>Status: 
+                <select id="editStatus">
+                  <option value="Not Started" ${task.status==="Not Started"?"selected":""}>Not Started</option>
+                  <option value="In Progress" ${task.status==="In Progress"?"selected":""}>In Progress</option>
+                  <option value="Completed" ${task.status==="Completed"?"selected":""}>Completed</option>
+                </select>
+              </label><br/><br/>
+              <label>Comments: <textarea id="editComments">${task.description || ''}</textarea></label><br/><br/>
+              <button id="saveEditBtn">Save</button>
+            `;
+            openModal(modalContent);
+            document.getElementById("saveEditBtn").addEventListener("click", async function() {
+              const updatedTask = {
+                name: task.name,
+                startDate: document.getElementById("editStart").value,
+                endDate: document.getElementById("editEnd").value,
+                status: document.getElementById("editStatus").value,
+                description: document.getElementById("editComments").value
+              };
+              await updateLineItem(task._id, updatedTask);
+              closeModal();
+              loadView("listView");
+            });
+          });
+          row.appendChild(nameCell);
+          
+          const startCell = document.createElement("td");
+          startCell.setAttribute("data-label", "Start Date");
+          const startInput = document.createElement("input");
+          startInput.type = "date";
+          startInput.value = task.startDate ? new Date(task.startDate).toISOString().split("T")[0] : "";
+          startInput.addEventListener("change", debounce(function() {
+            updateLineItem(task._id, { startDate: this.value });
+          }, 500));
+          startCell.appendChild(startInput);
+          row.appendChild(startCell);
+          
+          const endCell = document.createElement("td");
+          endCell.setAttribute("data-label", "End Date");
+          const endInput = document.createElement("input");
+          endInput.type = "date";
+          endInput.value = task.endDate ? new Date(task.endDate).toISOString().split("T")[0] : "";
+          endInput.addEventListener("change", debounce(function() {
+            updateLineItem(task._id, { endDate: this.value });
+          }, 500));
+          endCell.appendChild(endInput);
+          row.appendChild(endCell);
+          
+          const statusCell = document.createElement("td");
+          statusCell.setAttribute("data-label", "Status");
+          const statusSelect = document.createElement("select");
+          statusSelect.innerHTML = `
+            <option value="Not Started" ${task.status==="Not Started"?"selected":""}>Not Started</option>
+            <option value="In Progress" ${task.status==="In Progress"?"selected":""}>In Progress</option>
+            <option value="Completed" ${task.status==="Completed"?"selected":""}>Completed</option>
+          `;
+          statusSelect.addEventListener("change", debounce(function() {
+            updateLineItem(task._id, { status: statusSelect.value });
+          }, 500));
+          statusCell.appendChild(statusSelect);
+          row.appendChild(statusCell);
+          
+          const commentsCell = document.createElement("td");
+          commentsCell.setAttribute("data-label", "Comments");
+          // Create a textarea for inline comment editing.
+          const commentsInput = document.createElement("textarea");
+          commentsInput.style.resize = "vertical";
+          commentsInput.style.width = "90%";
+          commentsInput.value = task.description || "";
+          commentsInput.addEventListener("change", debounce(function() {
+            updateLineItem(task._id, { description: commentsInput.value });
+          }, 500));
+          commentsCell.appendChild(commentsInput);
+          row.appendChild(commentsCell);
+          
+          tbody.appendChild(row);
+        });
+      }
+      
+      function renderGridView(lineItems) {
+        if (!gridTasksOrder) {
+          gridTasksOrder = getAllTasks(lineItems);
+        }
+        const gridContainer = document.querySelector("#gridView .grid-container");
+        gridContainer.innerHTML = "";
+        gridTasksOrder.forEach((task, index) => {
+          const gridItem = document.createElement("div");
+          gridItem.className = `grid-item ${task.status.toLowerCase().replace(" ", "-")}`;
+          gridItem.setAttribute("draggable", "true");
+          gridItem.innerHTML = `
+            <h3>${task.name}</h3>
+            <div class="grid-details">
+              <p><strong>Category:</strong> ${task.category || "Uncategorized"}</p>
+              <p><strong>Start:</strong> ${task.startDate ? new Date(task.startDate).toLocaleDateString() : ''}</p>
+              <p><strong>End:</strong> ${task.endDate ? new Date(task.endDate).toLocaleDateString() : ''}</p>
+              <p><strong>Status:</strong> ${task.status}</p>
+              <p><strong>Comments:</strong> ${task.description ? (task.description.length > 50 ? task.description.substring(0,50) + "..." : task.description) : ''}</p>
+            </div>
+          `;
+          gridItem.addEventListener("dragstart", function(e) {
+            e.dataTransfer.setData("text/plain", index);
+          });
+          gridItem.addEventListener("dragover", function(e) {
+            e.preventDefault();
+          });
+          gridItem.addEventListener("drop", function(e) {
+            e.preventDefault();
+            const sourceIndex = e.dataTransfer.getData("text/plain");
+            const targetIndex = index;
+            if (sourceIndex !== targetIndex) {
+              const temp = gridTasksOrder[sourceIndex];
+              gridTasksOrder[sourceIndex] = gridTasksOrder[targetIndex];
+              gridTasksOrder[targetIndex] = temp;
+              renderGridView({});
+            }
+          });
+          gridItem.addEventListener("click", () => {
+            const modalContent = `
+              <h2>Edit Task</h2>
+              <label>Task Name: <input type="text" id="editName" value="${task.name}" readonly /></label><br/><br/>
+              <label>Start Date: <input type="date" id="editStart" value="${task.startDate ? new Date(task.startDate).toISOString().split("T")[0] : ''}" /></label><br/><br/>
+              <label>End Date: <input type="date" id="editEnd" value="${task.endDate ? new Date(task.endDate).toISOString().split("T")[0] : ''}" /></label><br/><br/>
+              <label>Status: 
+                <select id="editStatus">
+                  <option value="Not Started" ${task.status==="Not Started"?"selected":""}>Not Started</option>
+                  <option value="In Progress" ${task.status==="In Progress"?"selected":""}>In Progress</option>
+                  <option value="Completed" ${task.status==="Completed"?"selected":""}>Completed</option>
+                </select>
+              </label><br/><br/>
+              <label>Comments: <textarea id="editComments">${task.description || ''}</textarea></label><br/><br/>
+              <button id="saveEditBtn">Save</button>
+            `;
+            openModal(modalContent);
+            document.getElementById("saveEditBtn").addEventListener("click", async function() {
+              const updatedTask = {
+                name: task.name,
+                startDate: document.getElementById("editStart").value,
+                endDate: document.getElementById("editEnd").value,
+                status: document.getElementById("editStatus").value,
+                description: document.getElementById("editComments").value
+              };
+              await updateLineItem(task._id, updatedTask);
+              closeModal();
+              loadView("gridView");
+            });
+          });
+          gridContainer.appendChild(gridItem);
+        });
+      }
+      
+      function renderCalendarView(lineItems) {
+        const calendarContainer = document.querySelector("#calendarView .calendar");
+        calendarContainer.innerHTML = "";
+        const currentMonthYear = document.getElementById("currentMonthYear");
+        const year = currentCalendarDate.getFullYear();
+        const month = currentCalendarDate.getMonth();
+        currentMonthYear.textContent = currentCalendarDate.toLocaleString("default", { month: "long", year: "numeric" });
+        const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        daysOfWeek.forEach(day => {
+          const dayHeader = document.createElement("div");
+          dayHeader.className = "calendar-date";
+          dayHeader.style.fontWeight = "bold";
+          dayHeader.textContent = day;
+          calendarContainer.appendChild(dayHeader);
+        });
+        const firstDayIndex = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        for (let i = 0; i < firstDayIndex; i++) {
+          const emptyCell = document.createElement("div");
+          calendarContainer.appendChild(emptyCell);
+        }
+        for (let i = 1; i <= daysInMonth; i++) {
+          const dateCell = document.createElement("div");
+          dateCell.className = "calendar-date";
+          dateCell.textContent = i;
+          const cellDateStr = new Date(year, month, i).toISOString().split("T")[0];
+          dateCell.dataset.date = cellDateStr;
+          const tasksForDay = getAllTasks(lineItems).filter(task => {
+            return task.startDate && task.startDate.split("T")[0] === cellDateStr;
+          });
+          tasksForDay.forEach(task => {
+            const taskSpan = document.createElement("span");
+            taskSpan.className = "task";
+            taskSpan.textContent = `${task.name} (${task.category || "Uncategorized"})`;
+            dateCell.appendChild(taskSpan);
+          });
+          dateCell.addEventListener("click", () => {
+            if (tasksForDay.length > 0) {
+              let modalHTML = `<h2>Tasks on ${cellDateStr}</h2><ul>`;
+              tasksForDay.forEach(task => {
+                modalHTML += `<li>${task.name} (${task.category || "Uncategorized"}) - ${task.status}</li>`;
+              });
+              modalHTML += `</ul>`;
+              openModal(modalHTML);
+            }
+          });
+          calendarContainer.appendChild(dateCell);
+        }
+      }
+      
+      function renderGanttChartView(lineItems) {
+        const tasks = getAllTasks(lineItems);
+        const ganttContainer = document.createElement("div");
+        ganttContainer.className = "gantt-chart-container";
+        if (tasks.length === 0) {
+          ganttContainer.textContent = "No tasks available";
+          document.getElementById("ganttView").innerHTML = "";
+          document.getElementById("ganttView").appendChild(ganttContainer);
+          return;
+        }
+        const startTimes = tasks.filter(t => t.startDate).map(t => new Date(t.startDate).getTime());
+        const endTimes = tasks.filter(t => t.endDate).map(t => new Date(t.endDate).getTime());
+        let minTime = Math.min(...startTimes);
+        let maxTime = Math.max(...endTimes);
+        const oneDay = 1000 * 3600 * 24;
+        minTime -= oneDay;
+        maxTime += oneDay;
+        const totalDuration = (maxTime - minTime) / oneDay;
+        const timelineHeader = document.createElement("div");
+        timelineHeader.className = "gantt-timeline-header";
+        for (let i = 0; i <= totalDuration; i++) {
+          let currentDate = new Date(minTime + i * oneDay);
+          let dateLabel = document.createElement("div");
+          dateLabel.className = "gantt-date-label";
+          dateLabel.textContent = currentDate.toISOString().split("T")[0];
+          timelineHeader.appendChild(dateLabel);
+        }
+        ganttContainer.appendChild(timelineHeader);
+        tasks.forEach(task => {
+          const taskRow = document.createElement("div");
+          taskRow.className = "gantt-task-row";
+          const taskLabel = document.createElement("div");
+          taskLabel.className = "gantt-task-label";
+          taskLabel.textContent = `${task.name} (${task.category || "Uncategorized"})`;
+          taskRow.appendChild(taskLabel);
+          const barContainer = document.createElement("div");
+          barContainer.className = "gantt-bar-container";
+          const taskStart = new Date(task.startDate);
+          const taskEnd = new Date(task.endDate);
+          const offsetDays = (taskStart.getTime() - minTime) / oneDay;
+          const durationDays = (taskEnd.getTime() - taskStart.getTime()) / oneDay;
+          const leftPercent = (offsetDays / totalDuration) * 100;
+          const widthPercent = (durationDays / totalDuration) * 100;
+          const taskBar = document.createElement("div");
+          taskBar.className = "gantt-task-bar";
+          taskBar.style.left = leftPercent + "%";
+          taskBar.style.width = widthPercent + "%";
+          taskBar.title = `Start: ${task.startDate}\nEnd: ${task.endDate}\nStatus: ${task.status}`;
+          if (task.status === "Completed") {
+            taskBar.style.backgroundColor = "#28a745";
+          } else if (task.status === "In Progress") {
+            taskBar.style.backgroundColor = "#ffc107";
+          } else if (task.status === "Not Started") {
+            taskBar.style.backgroundColor = "#dc3545";
+          }
+          barContainer.appendChild(taskBar);
+          taskRow.appendChild(barContainer);
+          ganttContainer.appendChild(taskRow);
+        });
+        const ganttView = document.getElementById("ganttView");
+        ganttView.innerHTML = "";
+        ganttView.appendChild(ganttContainer);
+      }
+      
+      /* --------------------- Dashboard Rendering --------------------- */
+      function renderDashboardView(lineItems) {
+        const tasks = getAllTasks(lineItems);
+        // Pie Chart: Status Distribution
+        const statusCounts = { "Not Started": 0, "In Progress": 0, "Completed": 0 };
+        tasks.forEach(task => {
+          if (statusCounts[task.status] !== undefined) {
+            statusCounts[task.status]++;
+          }
+        });
+        const ctxStatus = document.getElementById("statusChart").getContext("2d");
+        if(window.statusChartInstance) window.statusChartInstance.destroy();
+        window.statusChartInstance = new Chart(ctxStatus, {
+          type: "pie",
+          data: {
+            labels: Object.keys(statusCounts),
+            datasets: [{
+              data: Object.values(statusCounts),
+              backgroundColor: ["#f8d7da", "#fff3cd", "#d4edda"],
+              borderColor: ["#dc3545", "#ffc107", "#28a745"],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { position: "bottom" } }
+          }
+        });
+        // Bar Chart: Tasks per Month (based on startDate)
+        const monthCounts = {};
+        tasks.forEach(task => {
+          if (task.startDate) {
+            const month = new Date(task.startDate).toLocaleString("default", { month: "short", year: "numeric" });
+            monthCounts[month] = (monthCounts[month] || 0) + 1;
+          }
+        });
+        const ctxTimeline = document.getElementById("timelineChart").getContext("2d");
+        if(window.timelineChartInstance) window.timelineChartInstance.destroy();
+        window.timelineChartInstance = new Chart(ctxTimeline, {
+          type: "bar",
+          data: {
+            labels: Object.keys(monthCounts),
+            datasets: [{
+              label: "Tasks per Month",
+              data: Object.values(monthCounts),
+              backgroundColor: "#007bff",
+              borderColor: "#0056b3",
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+      }
+      
+      /* --------------------- View Handlers --------------------- */
+      async function loadView(view) {
+        ["dashboardView", "listView", "gridView", "calendarView", "ganttView"].forEach(v => {
+          document.getElementById(v).style.display = "none";
+        });
+        document.getElementById(view).style.display = "block";
+        const projectId = await getCurrentProjectId();
+        if (projectId) {
+          currentLineItems = await fetchLineItems(projectId);
+          if (view === "gridView") gridTasksOrder = getAllTasks(currentLineItems);
+          if (view === "listView") renderTable(currentLineItems);
+          else if (view === "gridView") renderGridView(currentLineItems);
+          else if (view === "calendarView") renderCalendarView(currentLineItems);
+          else if (view === "ganttView") renderGanttChartView(currentLineItems);
+          else if (view === "dashboardView") {
+            setTimeout(() => {
+              renderDashboardView(currentLineItems);
+            }, 500);
+          }
+        }
+      }
+      
+      /* --------------------- Pagination Controls --------------------- */
+      document.getElementById("prevPageBtn").addEventListener("click", function() {
+        if (currentPage > 1) {
+          currentPage--;
+          renderTable(currentLineItems);
+        }
+      });
+      document.getElementById("nextPageBtn").addEventListener("click", function() {
+        const totalPages = Math.ceil(getAllTasks(currentLineItems).filter(task => {
+          const searchQuery = document.getElementById("listSearch").value.toLowerCase();
+          const statusFilter = document.getElementById("statusFilter").value;
+          const categoryFilter = document.getElementById("categoryFilter").value.toLowerCase();
+          const startDateFrom = document.getElementById("startDateFrom").value;
+          const startDateTo = document.getElementById("startDateTo").value;
+          const matchesSearch = task.name.toLowerCase().includes(searchQuery);
+          const matchesStatus = statusFilter ? task.status === statusFilter : true;
+          const matchesCategory = categoryFilter ? task.category.toLowerCase().includes(categoryFilter) : true;
+          let matchesStartDate = true;
+          if (startDateFrom) {
+            matchesStartDate = task.startDate && new Date(task.startDate) >= new Date(startDateFrom);
+          }
+          if (matchesStartDate && startDateTo) {
+            matchesStartDate = task.startDate && new Date(task.startDate) <= new Date(startDateTo);
+          }
+          return matchesSearch && matchesStatus && matchesCategory && matchesStartDate;
+        }).length / itemsPerPage);
+        if (currentPage < totalPages) {
+          currentPage++;
+          renderTable(currentLineItems);
+        }
+      });
+      
+      /* --------------------- Filter Listeners --------------------- */
+      document.getElementById("listSearch").addEventListener("input", () => {
+        currentPage = 1;
+        renderTable(currentLineItems);
+      });
+      document.getElementById("statusFilter").addEventListener("change", () => {
+        currentPage = 1;
+        renderTable(currentLineItems);
+      });
+      document.getElementById("categoryFilter").addEventListener("input", () => {
+        currentPage = 1;
+        renderTable(currentLineItems);
+      });
+      document.getElementById("startDateFrom").addEventListener("change", () => {
+        currentPage = 1;
+        renderTable(currentLineItems);
+      });
+      document.getElementById("startDateTo").addEventListener("change", () => {
+        currentPage = 1;
+        renderTable(currentLineItems);
+      });
+      
+      /* --------------------- Sort Header Listeners --------------------- */
+      document.querySelectorAll("#scheduleTable th[data-sort]").forEach(header => {
+        header.addEventListener("click", function() {
+          const field = this.dataset.sort;
+          if (sortField === field) {
+            sortDirection = sortDirection === "asc" ? "desc" : "asc";
+          } else {
+            sortField = field;
+            sortDirection = "asc";
+          }
+          renderTable(currentLineItems);
+        });
+      });
+      
+      /* --------------------- Calendar Navigation --------------------- */
+      document.getElementById("prevMonthBtn").addEventListener("click", function() {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+        renderCalendarView(currentLineItems);
+      });
+      document.getElementById("nextMonthBtn").addEventListener("click", function() {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+        renderCalendarView(currentLineItems);
+      });
+      
+      /* --------------------- View Buttons --------------------- */
+      document.getElementById("dashboardViewBtn").addEventListener("click", () => loadView("dashboardView"));
+      document.getElementById("listViewBtn").addEventListener("click", () => loadView("listView"));
+      document.getElementById("gridViewBtn").addEventListener("click", () => loadView("gridView"));
+      document.getElementById("calendarViewBtn").addEventListener("click", () => loadView("calendarView"));
+      document.getElementById("ganttViewBtn").addEventListener("click", () => loadView("ganttView"));
+      
+      /* --------------------- Action Buttons --------------------- */
+      document.getElementById("printBtn").addEventListener("click", () => window.print());
+      document.getElementById("exportBtn").addEventListener("click", exportCSV);
+      
+      function exportCSV() {
+        let csvContent = "data:text/csv;charset=utf-8,Category,Task,Start Date,End Date,Status,Comments\n";
+        flatTasks.forEach(task => {
+          const row = [
+            task.category || "Uncategorized",
+            task.name,
+            task.startDate ? new Date(task.startDate).toLocaleDateString() : "",
+            task.endDate ? new Date(task.endDate).toLocaleDateString() : "",
+            task.status,
+            task.description ? task.description.replace(/,/g, " ") : ""
+          ];
+          csvContent += row.join(",") + "\n";
+        });
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "schedule.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      
+      /* --------------------- Initial Load --------------------- */
+      const projectId = await getCurrentProjectId();
+      if (projectId) {
+        currentLineItems = await fetchLineItems(projectId);
+        flatTasks = getAllTasks(currentLineItems);
+        renderTable(currentLineItems);
+      }
+    });
+  </script>
+</body>
+</html>
+
