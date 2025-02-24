@@ -1263,7 +1263,8 @@ async function loadSidebarProjects() {
 
   
   function createSchedule() {
-    alert('Redirect to create schedule page.');
+   
+    window.location.href = `/schedule.html`;
   }
   
  
