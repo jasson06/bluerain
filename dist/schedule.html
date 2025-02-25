@@ -202,7 +202,10 @@
     tr:hover {
       background-color: #ededed !important;
     }
-   
+       /* Overdue style: turns red if task is overdue and not completed */
+       .overdue {
+      background-color: #ffe5e5 !important;
+    }
     
     /* Status label classes for grid view */
     .status-label {
@@ -810,6 +813,10 @@
         paginatedTasks.forEach(task => {
           const row = document.createElement("tr");
           row.className = task.status.toLowerCase().replace(" ", "-");
+          // If task is overdue and not completed, add the overdue style.
+          if (task.endDate && new Date() > new Date(task.endDate) && task.status !== "completed") {
+            row.classList.add("overdue");
+          }
           
           const categoryCell = document.createElement("td");
           categoryCell.textContent = task.category || "Uncategorized";
@@ -913,6 +920,9 @@
         gridTasksOrder.forEach((task, index) => {
           const gridItem = document.createElement("div");
           gridItem.className = `grid-item ${task.status.toLowerCase().replace(" ", "-")}`;
+          if (task.endDate && new Date() > new Date(task.endDate) && task.status !== "completed") {
+            gridItem.classList.add("overdue");
+          }
           gridItem.setAttribute("draggable", "true");
           gridItem.innerHTML = `
             <h3>${task.name}</h3>
@@ -1308,4 +1318,3 @@
   </script>
 </body>
 </html>
-
