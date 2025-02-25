@@ -7,6 +7,44 @@
   <!-- Include Chart.js for Dashboard Charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
+    /* Top Bar with Header and Action Buttons */
+    .top-bar {
+      width: 100%;
+      max-width: 1200px;
+      background: linear-gradient(90deg, #007bff, #009dff);
+      color: #fff;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .top-bar h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    .top-bar .action-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    .top-bar .action-buttons button {
+      padding: 8px 15px;
+      font-size: 0.9rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background-color: #696a69;
+      color: #fff;
+      transition: background-color 0.3s ease;
+    }
+    .top-bar .action-buttons button:hover {
+      background-color: #4186da;
+    }
+    
     /* Global Light Theme with Modern Effects */
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -18,11 +56,7 @@
       flex-direction: column;
       align-items: center;
     }
-    h1 {
-      font-weight: 500;
-      color: #007bff;
-      margin-bottom: 20px;
-    }
+    
     /* Notification Styles */
     #notification {
       padding: 10px 15px;
@@ -44,10 +78,11 @@
       background-color: #f8d7da;
       color: #721c24;
     }
+    
     /* Form & Filter Styles */
     .task-form,
     #listViewFilters {
-      width: 90%;
+      width: 96%;
       max-width: 1200px;
       background: rgba(255, 255, 255, 0.95);
       padding: 15px;
@@ -72,6 +107,7 @@
     #listViewFilters input:focus, #listViewFilters select:focus {
       border-color: #007bff;
     }
+    
     /* Modern Date Input Styles */
     input[type="date"] {
       background: #fff;
@@ -90,6 +126,7 @@
       border-color: #007bff;
       box-shadow: 0 0 5px rgba(0,123,255,0.5);
     }
+    
     /* Style for table select elements */
     table select {
       padding: 8px;
@@ -104,6 +141,7 @@
     table select:focus {
       border-color: #007bff;
     }
+    
     .task-form button, .view-buttons button, #calendarNav button {
       padding: 10px 20px;
       font-size: 1rem;
@@ -118,6 +156,7 @@
       background-color: #0056b3;
       transform: translateY(-1px);
     }
+    
     /* View Buttons */
     .view-buttons {
       margin-bottom: 20px;
@@ -128,27 +167,7 @@
     .view-buttons button {
       margin-right: 10px;
     }
-    /* Action Buttons: Print & Export */
-    .action-buttons {
-      margin-bottom: 20px;
-      width: 90%;
-      max-width: 1200px;
-      text-align: right;
-    }
-    .action-buttons button {
-      padding: 8px 15px;
-      font-size: 0.9rem;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      color: #fff;
-      background-color: #28a745;
-      transition: background-color 0.3s ease;
-      margin-left: 10px;
-    }
-    .action-buttons button:hover {
-      background-color: #218838;
-    }
+    
     /* Table Styles */
     table {
       width: 100%;
@@ -181,12 +200,30 @@
       background-color: #f7f7f7;
     }
     tr:hover {
-      background-color: #bcd1e9 !important;
+      background-color: #ededed !important;
     }
-    /* Lighter status colors */
-    .completed { background-color: #d4edda !important; color: #343a40 !important; }
-    .in-progress { background-color: #fff3cd !important; color: #343a40 !important; }
-    .not-started { background-color: #f8d7da !important; color: #343a40 !important; }
+   
+    
+    /* Status label classes for grid view */
+    .status-label {
+      padding: 8px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #fff;
+      color: #343a40;
+      display: inline-block;
+      transition: border-color 0.3s;
+    }
+    .status-label.in-progress {
+      background-color: #cea624;
+      color: #fffefd;
+    }
+    .status-label.completed {
+      background-color: #068424;
+      color: #ffffff;
+    }
+    
     /* Grid View Styles */
     .grid-container {
       display: flex;
@@ -199,7 +236,7 @@
       border: 1px solid #ccc;
       padding: 20px;
       margin: 10px;
-      width: calc(33.333% - -30px);
+      width: calc(33.333% - 40px);
       box-sizing: border-box;
       border-radius: 10px;
       background: #fff;
@@ -221,6 +258,7 @@
       font-size: 0.9rem;
       color: #555;
     }
+    
     /* Calendar View Styles */
     #calendarNav {
       margin-bottom: 10px;
@@ -258,6 +296,7 @@
       border-radius: 3px;
       padding: 2px 4px;
     }
+    
     /* Gantt Chart Styles */
     .gantt-chart-container {
       width: 90%;
@@ -298,11 +337,13 @@
       height: 100%;
       border-radius: 3px;
     }
+    
     /* Dashboard Canvas Sizing */
     #statusChart, #timelineChart {
       width: 100% !important;
       height: 300px !important;
     }
+    
     /* Modal Styles */
     #modal {
       display: none;
@@ -360,6 +401,7 @@
       cursor: pointer;
       color: #007bff;
     }
+    
     /* Pagination Styles */
     #paginationControls {
       display: flex;
@@ -385,25 +427,24 @@
       font-weight: 500;
       color: #343a40;
     }
-
-/* Inline Comment Textarea in Table */
-table textarea {
-  resize: vertical;
-  padding: 8px;
-  font-size: 0.9rem;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  background: #fff;
-  color: #343a40;
-  width: 100%;
-  transition: border-color 0.3s;
-}
-table textarea:focus {
-  border-color: #007bff;
-  box-shadow: 0 0 5px rgba(0,123,255,0.5);
-}
-
-
+    
+    /* Inline Comment Textarea in Table */
+    table textarea {
+      resize: vertical;
+      padding: 8px;
+      font-size: 0.9rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #fff;
+      color: #343a40;
+      width: 90%;
+      transition: border-color 0.3s;
+    }
+    table textarea:focus {
+      border-color: #007bff;
+      box-shadow: 0 0 5px rgba(0,123,255,0.5);
+    }
+    
     /* Responsive Table Card Layout for Mobile */
     @media (max-width: 768px) {
       #scheduleTable thead { display: none; }
@@ -448,13 +489,37 @@ table textarea:focus {
         grid-template-columns: 1fr;
       }
     }
+    
+    /* Mobile adjustments for view buttons */
+    @media (max-width: 768px) {
+      .view-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+      }
+      .view-buttons button {
+        flex: 1 1 45%;
+        max-width: 45%;
+      }
+    }
+    @media (max-width: 480px) {
+      .view-buttons button {
+        flex: 1 1 100%;
+        max-width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>Construction Project Schedule</h1>
-  
-  <!-- Notification Area -->
-  <div id="notification"></div>
+  <!-- Top Bar with Header and Action Buttons -->
+  <header class="top-bar">
+    <h1>CONSTRUCTION PROJECT SCHEDULE</h1>
+    <div class="action-buttons">
+      <button id="printBtn">Print</button>
+      <button id="exportBtn">Export CSV</button>
+    </div>
+  </header>
   
   <!-- View Buttons -->
   <div class="view-buttons">
@@ -465,14 +530,10 @@ table textarea:focus {
     <button id="ganttViewBtn">Gantt Chart View</button>
   </div>
   
-  <!-- Action Buttons: Print & Export -->
-  <div class="action-buttons">
-    <button id="printBtn">Print</button>
-    <button id="exportBtn">Export CSV</button>
-  </div>
-  
   <!-- Dashboard View -->
   <div id="dashboardView" class="view" style="display: none;">
+    <!-- Projected Completion Date Display -->
+    <div id="projectedCompletionDate" style="text-align:center; font-size:1.2rem; margin-bottom:15px;"></div>
     <div style="width:90%; max-width:1200px; margin-bottom:20px;">
       <canvas id="statusChart"></canvas>
     </div>
@@ -487,9 +548,8 @@ table textarea:focus {
       <input type="text" id="listSearch" placeholder="Search by Task Name" />
       <select id="statusFilter">
         <option value="">All Status</option>
-        <option value="Not Started">Not Started</option>
-        <option value="In Progress">In Progress</option>
-        <option value="Completed">Completed</option>
+        <option value="in-progress">In Progress</option>
+        <option value="completed">Completed</option>
       </select>
       <input type="text" id="categoryFilter" placeholder="Filter by Category" />
       <input type="date" id="startDateFrom" />
@@ -554,15 +614,42 @@ table textarea:focus {
     </div>
   </div>
   
+  <!-- Notification Area (ensure it exists) -->
+  <div id="notification"></div>
+  
   <script>
+    // Helper functions for status styling
+    function getStatusStyle(status) {
+      if (status === "in-progress") {
+        return "background-color: #cea624; color: #fff; padding: -1px 5px; border-radius: 4px;";
+      } else if (status === "completed") {
+        return "background-color:#068424; color: #fff; padding: -1px 5px; border-radius: 4px;";
+      }
+      return "";
+    }
+    
+    function updateStatusDropdownStyle(selectElement) {
+      selectElement.style.cssText = getStatusStyle(selectElement.value);
+    }
+    
+    // Helper for grid view: return CSS class based on status (if needed)
+    function getStatusClass(status) {
+      if (status === "in-progress") return "in-progress";
+      if (status === "completed") return "completed";
+      return "";
+    }
+    
     document.addEventListener("DOMContentLoaded", async function() {
       /* --------------------- Utility Functions --------------------- */
       function showNotification(message, type = "success") {
         const notification = document.getElementById("notification");
+        if (!notification) return;
         notification.textContent = message;
         notification.className = type;
         notification.style.display = "block";
-        setTimeout(() => (notification.style.display = "none"), 3000);
+        setTimeout(() => {
+          notification.style.display = "none";
+        }, 3000);
       }
       
       function debounce(func, delay) {
@@ -581,6 +668,13 @@ table textarea:focus {
       function openModal(contentHTML) {
         modalBody.innerHTML = contentHTML;
         modal.style.display = "flex";
+        const modalStatusSelect = document.getElementById("editStatus");
+        if (modalStatusSelect) {
+          updateStatusDropdownStyle(modalStatusSelect);
+          modalStatusSelect.addEventListener("change", function() {
+            updateStatusDropdownStyle(modalStatusSelect);
+          });
+        }
       }
       
       function closeModal() {
@@ -734,9 +828,8 @@ table textarea:focus {
               <label>End Date: <input type="date" id="editEnd" value="${task.endDate ? new Date(task.endDate).toISOString().split("T")[0] : ''}" /></label><br/><br/>
               <label>Status: 
                 <select id="editStatus">
-                  <option value="Not Started" ${task.status==="Not Started"?"selected":""}>Not Started</option>
-                  <option value="In Progress" ${task.status==="In Progress"?"selected":""}>In Progress</option>
-                  <option value="Completed" ${task.status==="Completed"?"selected":""}>Completed</option>
+                  <option value="in-progress" ${task.status==="in-progress"?"selected":""}>In Progress</option>
+                  <option value="completed" ${task.status==="completed"?"selected":""}>Completed</option>
                 </select>
               </label><br/><br/>
               <label>Comments: <textarea id="editComments">${task.description || ''}</textarea></label><br/><br/>
@@ -784,11 +877,12 @@ table textarea:focus {
           statusCell.setAttribute("data-label", "Status");
           const statusSelect = document.createElement("select");
           statusSelect.innerHTML = `
-            <option value="Not Started" ${task.status==="Not Started"?"selected":""}>Not Started</option>
-            <option value="In Progress" ${task.status==="In Progress"?"selected":""}>In Progress</option>
-            <option value="Completed" ${task.status==="Completed"?"selected":""}>Completed</option>
+            <option value="in-progress" ${task.status==="in-progress"?"selected":""}>In Progress</option>
+            <option value="completed" ${task.status==="completed"?"selected":""}>Completed</option>
           `;
+          updateStatusDropdownStyle(statusSelect);
           statusSelect.addEventListener("change", debounce(function() {
+            updateStatusDropdownStyle(statusSelect);
             updateLineItem(task._id, { status: statusSelect.value });
           }, 500));
           statusCell.appendChild(statusSelect);
@@ -796,12 +890,11 @@ table textarea:focus {
           
           const commentsCell = document.createElement("td");
           commentsCell.setAttribute("data-label", "Comments");
-          // Create a textarea for inline comment editing.
           const commentsInput = document.createElement("textarea");
           commentsInput.style.resize = "vertical";
           commentsInput.style.width = "90%";
           commentsInput.value = task.description || "";
-          commentsInput.addEventListener("change", debounce(function() {
+          commentsInput.addEventListener("input", debounce(function() {
             updateLineItem(task._id, { description: commentsInput.value });
           }, 500));
           commentsCell.appendChild(commentsInput);
@@ -827,7 +920,7 @@ table textarea:focus {
               <p><strong>Category:</strong> ${task.category || "Uncategorized"}</p>
               <p><strong>Start:</strong> ${task.startDate ? new Date(task.startDate).toLocaleDateString() : ''}</p>
               <p><strong>End:</strong> ${task.endDate ? new Date(task.endDate).toLocaleDateString() : ''}</p>
-              <p><strong>Status:</strong> ${task.status}</p>
+              <p><strong>Status:</strong> <span class="status-label ${getStatusClass(task.status)}">${task.status}</span></p>
               <p><strong>Comments:</strong> ${task.description ? (task.description.length > 50 ? task.description.substring(0,50) + "..." : task.description) : ''}</p>
             </div>
           `;
@@ -856,9 +949,8 @@ table textarea:focus {
               <label>End Date: <input type="date" id="editEnd" value="${task.endDate ? new Date(task.endDate).toISOString().split("T")[0] : ''}" /></label><br/><br/>
               <label>Status: 
                 <select id="editStatus">
-                  <option value="Not Started" ${task.status==="Not Started"?"selected":""}>Not Started</option>
-                  <option value="In Progress" ${task.status==="In Progress"?"selected":""}>In Progress</option>
-                  <option value="Completed" ${task.status==="Completed"?"selected":""}>Completed</option>
+                  <option value="in-progress" ${task.status==="in-progress"?"selected":""}>In Progress</option>
+                  <option value="completed" ${task.status==="completed"?"selected":""}>Completed</option>
                 </select>
               </label><br/><br/>
               <label>Comments: <textarea id="editComments">${task.description || ''}</textarea></label><br/><br/>
@@ -980,11 +1072,11 @@ table textarea:focus {
           taskBar.style.left = leftPercent + "%";
           taskBar.style.width = widthPercent + "%";
           taskBar.title = `Start: ${task.startDate}\nEnd: ${task.endDate}\nStatus: ${task.status}`;
-          if (task.status === "Completed") {
+          if (task.status === "completed") {
             taskBar.style.backgroundColor = "#28a745";
-          } else if (task.status === "In Progress") {
+          } else if (task.status === "in-progress") {
             taskBar.style.backgroundColor = "#ffc107";
-          } else if (task.status === "Not Started") {
+          } else if (task.status === "not-started") {
             taskBar.style.backgroundColor = "#dc3545";
           }
           barContainer.appendChild(taskBar);
@@ -999,8 +1091,26 @@ table textarea:focus {
       /* --------------------- Dashboard Rendering --------------------- */
       function renderDashboardView(lineItems) {
         const tasks = getAllTasks(lineItems);
+        // Calculate Projected Completion Date from the maximum endDate.
+        const endTimes = tasks.filter(t => t.endDate).map(t => new Date(t.endDate).getTime());
+        let projectedCompletionDate = endTimes.length > 0 ? new Date(Math.max(...endTimes)) : null;
+        let completionDiv = document.getElementById("projectedCompletionDate");
+        if (!completionDiv) {
+          completionDiv = document.createElement("div");
+          completionDiv.id = "projectedCompletionDate";
+          completionDiv.style.textAlign = "center";
+          completionDiv.style.fontSize = "1.2rem";
+          completionDiv.style.marginBottom = "15px";
+          document.getElementById("dashboardView").insertAdjacentElement('afterbegin', completionDiv);
+        }
+        if (projectedCompletionDate) {
+          completionDiv.textContent = "Projected Completion Date: " + projectedCompletionDate.toLocaleDateString();
+        } else {
+          completionDiv.textContent = "Projected Completion Date: N/A";
+        }
+        
         // Pie Chart: Status Distribution
-        const statusCounts = { "Not Started": 0, "In Progress": 0, "Completed": 0 };
+        const statusCounts = { "in-progress": 0, "completed": 0 };
         tasks.forEach(task => {
           if (statusCounts[task.status] !== undefined) {
             statusCounts[task.status]++;
@@ -1014,8 +1124,8 @@ table textarea:focus {
             labels: Object.keys(statusCounts),
             datasets: [{
               data: Object.values(statusCounts),
-              backgroundColor: ["#f8d7da", "#fff3cd", "#d4edda"],
-              borderColor: ["#dc3545", "#ffc107", "#28a745"],
+              backgroundColor: ["#f8d7da", "#d4edda"],
+              borderColor: ["#dc3545", "#28a745"],
               borderWidth: 1
             }]
           },
