@@ -769,10 +769,20 @@ app.delete('/api/estimates/:id', async (req, res) => {
 });
 
 // Backend route to update the estimate
-// Update estimate with assigned items
 app.put("/api/estimates/:id", async (req, res) => {
   try {
     const estimateId = req.params.id;
+    const updatesPayload = req.body;
+
+    // Helper function to normalize status values.
+    function normalizeStatus(status) {
+      if (typeof status !== "string") return status;
+      status = status.trim();
+      // Map "Not Started" to "in-progress"
+      if (status.toLowerCase() === "not started") return "in-progress";
+      // Otherwise, replace spaces with hyphens and lowercase
+      return status.toLowerCase().replace(/\s+/g, "-");
+    }
 
     // Fetch the existing document
     const existingEstimate = await Estimate.findById(estimateId);
@@ -780,7 +790,7 @@ app.put("/api/estimates/:id", async (req, res) => {
       return res.status(404).json({ message: "Estimate not found" });
     }
 
-    // Create a map of existing items by their `_id`
+    // Create a map of existing items by their _id.
     const existingItemsMap = new Map();
     existingEstimate.lineItems.forEach((lineItem) => {
       lineItem.items.forEach((item) => {
@@ -788,14 +798,37 @@ app.put("/api/estimates/:id", async (req, res) => {
       });
     });
 
-    // Merge new items with existing data
-    req.body.lineItems.forEach((lineItem) => {
+    // Merge new items with existing data.
+    updatesPayload.lineItems.forEach((lineItem) => {
       lineItem.items.forEach((item) => {
+        // If a status is provided, normalize it.
+        if (item.status && item.status.trim() !== "") {
+          item.status = normalizeStatus(item.status);
+        }
+
+        // If the item exists in the database, preserve its fields if not provided.
         if (item._id && existingItemsMap.has(item._id.toString())) {
-          // Preserve existing photos and assignedTo if they exist
           const existingItem = existingItemsMap.get(item._id.toString());
+          // Preserve existing photos and assignedTo
           item.photos = existingItem.photos ?? { before: [], after: [] };
           item.assignedTo = existingItem.assignedTo ?? null;
+          // Preserve existing startDate if not provided
+          if (item.startDate === undefined || item.startDate === null || item.startDate === "") {
+            item.startDate = existingItem.startDate;
+          }
+          // Preserve existing endDate if not provided
+          if (item.endDate === undefined || item.endDate === null || item.endDate === "") {
+            item.endDate = existingItem.endDate;
+          }
+          // Even if the incoming item.status is empty, force normalization on the existing value.
+          if (!item.status || item.status.trim() === "") {
+            item.status = normalizeStatus(existingItem.status);
+          }
+        } else {
+          // For new items, if status is not provided or is empty, default to "in-progress"
+          if (!item.status || item.status.trim() === "") {
+            item.status = "in-progress";
+          }
         }
       });
     });
@@ -803,16 +836,17 @@ app.put("/api/estimates/:id", async (req, res) => {
     // Update the document with the merged data
     const updatedEstimate = await Estimate.findByIdAndUpdate(
       estimateId,
-      { $set: req.body }, // Only update fields present in the request
+      { $set: updatesPayload },
       { new: true, runValidators: true }
     );
 
     res.status(200).json(updatedEstimate);
   } catch (error) {
     console.error("Update error:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error });
   }
 });
+
 
 
 app.patch('/api/estimates/:id/update-photo', async (req, res) => {
