@@ -2577,17 +2577,25 @@ app.put('/api/estimates/line-items/:lineItemId', async (req, res) => {
   try {
     const { lineItemId } = req.params;
     const updates = req.body;
+    // Build an update object dynamically based on the provided fields.
+    const updateObj = {};
+
+    if (updates.status !== undefined) {
+      updateObj['lineItems.$[].items.$[item].status'] = updates.status;
+    }
+    if (updates.startDate !== undefined) {
+      updateObj['lineItems.$[].items.$[item].startDate'] = updates.startDate;
+    }
+    if (updates.endDate !== undefined) {
+      updateObj['lineItems.$[].items.$[item].endDate'] = updates.endDate;
+    }
+    if (updates.description !== undefined) {
+      updateObj['lineItems.$[].items.$[item].description'] = updates.description;
+    }
 
     const estimate = await Estimate.findOneAndUpdate(
       { 'lineItems.items._id': lineItemId },
-      {
-        $set: {
-
-          'lineItems.$[].items.$[item].status': updates.status,
-          'lineItems.$[].items.$[item].startDate': updates.startDate, // ✅ Now supports startDate
-          'lineItems.$[].items.$[item].endDate': updates.endDate // ✅ Now supports endDate
-        }
-      },
+      { $set: updateObj },
       {
         arrayFilters: [{ 'item._id': lineItemId }],
         new: true
