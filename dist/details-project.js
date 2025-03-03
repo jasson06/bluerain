@@ -366,6 +366,114 @@ function closeInviteModal() {
 }
 
 
+// ✅ Assign Task and Send Email Notification
+async function assignTask(taskId, assigneeId, assignedToModel) {
+  try {
+      if (!taskId) {
+          console.error("❌ Task ID is undefined. Cannot assign task.");
+          return;
+      }
+
+      console.log(`🔹 Assigning Task ID: ${taskId} to ${assigneeId} (Model: ${assignedToModel})`);
+
+      const response = await fetch(`/api/task/${taskId}/assign`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assignedTo: assigneeId, assignedToModel })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+          throw new Error(data.message || 'Failed to assign task.');
+      }
+
+      console.log("✅ Task assigned successfully. Calling sendTaskAssignmentEmail...");
+
+      // ✅ Ensure Task ID is correctly passed
+      await sendTaskAssignmentEmail(taskId);
+
+  } catch (error) {
+      console.error("❌ Error assigning task:", error);
+  }
+}
+
+
+
+
+
+// ✅ Function to Send Email Notification
+async function sendTaskAssignmentEmail(taskId) {
+  try {
+    if (!taskId) {
+      console.error("❌ Task ID is missing. Cannot fetch task details.");
+      return;
+    }
+
+    console.log("📩 Fetching task details for Task ID:", taskId);
+
+    const taskResponse = await fetch(`/api/task/${taskId}`);
+    if (!taskResponse.ok) {
+      throw new Error("Failed to fetch task details.");
+    }
+
+    const { task } = await taskResponse.json();
+    if (!task || !task.assignedTo || !task.assignedTo.email || !task.projectId || !task.assignedToModel) {
+      console.error("❌ Missing email parameters:", {
+        assigneeEmail: task?.assignedTo?.email,
+        taskTitle: task?.title,
+        projectId: task?.projectId,
+        assignedToModel: task?.assignedToModel
+      });
+      return;
+    }
+
+    console.log("🏗️ Fetching project details for Project ID:", task.projectId);
+
+    // Fetch project details to get the project name and address
+    const projectResponse = await fetch(`/api/details/projects/${task.projectId}`);
+    if (!projectResponse.ok) {
+      throw new Error("Failed to fetch project details.");
+    }
+
+    const { project } = await projectResponse.json();
+    if (!project || !project.address) {
+      console.error("❌ Missing project details:", project);
+      return;
+    }
+
+    const projectAddress = `${project.address.addressLine1 || ''}, ${project.address.city}, ${project.address.state} ${project.address.zip || ''}`.trim();
+
+    // ✅ Corrected: Assign the right sign-in URL based on the assignee's role
+    const isVendor = task.assignedToModel.toLowerCase() === "vendor"; // Ensure case-insensitive check
+    const signInLink = isVendor
+      ? `https://node-mongodb-api-1h93.onrender.com/sign-inpage.html` // Vendor Login
+      : `https://node-mongodb-api-1h93.onrender.com/project-manager-auth.html`; // Manager Login
+
+    console.log(`📨 Sending email to: ${task.assignedTo.email} | Role: ${task.assignedToModel} | Sign-in URL: ${signInLink}`);
+
+    const emailResponse = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: task.assignedTo.email,
+        subject: `New Task Assigned: ${task.title}`,
+        text: `You have been assigned a new task: "${task.title}" in the project: "${project.name}" (${projectAddress}).
+
+Please check your dashboard for more details.
+
+🔗 Sign in here: ${signInLink}`
+      })
+    });
+
+    if (!emailResponse.ok) throw new Error("Failed to send email notification.");
+    console.log("✅ Email notification sent successfully.");
+
+  } catch (error) {
+    console.error("❌ Error sending email notification:", error);
+  }
+}
+
+
 // Function to load tasks and display their statuses
 async function loadTasks(projectId) {
   const taskList = document.getElementById('task-list');
@@ -494,10 +602,10 @@ async function openAssignModal(taskId) {
     modal.innerHTML = `
       <div class="modal-content">
         <h3>Assign Task</h3>
-        <select id="vendor-select">
+        <select id="assignee-select">
           <option value="">Loading...</option>
         </select>
-        <button id="assign-vendor-btn">Assign</button>
+        <button id="assign-btn">Assign</button>
         <button id="close-assign-modal">Cancel</button>
       </div>`;
     document.body.appendChild(modal);
@@ -505,26 +613,57 @@ async function openAssignModal(taskId) {
 
   modal.style.display = 'flex';
 
-  // Fetch vendors from the API
-  const vendorSelect = document.getElementById('vendor-select');
+  // Fetch vendors and managers from the API
+  const assigneeSelect = document.getElementById('assignee-select');
   try {
-    const response = await fetch('/api/vendors');
-    if (!response.ok) throw new Error('Failed to fetch vendors');
+    const [vendorsResponse, managersResponse] = await Promise.all([
+      fetch('/api/vendors'),
+      fetch('/api/managers')
+    ]);
 
-    const vendors = await response.json();
-    vendorSelect.innerHTML = vendors
-      .map((vendor) => `<option value="${vendor._id}">${vendor.name}</option>`)
-      .join('');
+    if (!vendorsResponse.ok || !managersResponse.ok) throw new Error('Failed to fetch data');
+
+    const vendors = await vendorsResponse.json();
+    const managers = await managersResponse.json();
+
+    // Populate dropdown
+    assigneeSelect.innerHTML = '<option value="">Select an assignee</option>';
+
+    // Add Vendors
+    if (vendors.length) {
+      const vendorGroup = document.createElement('optgroup');
+      vendorGroup.label = 'Vendors';
+      vendors.forEach((vendor) => {
+        const option = document.createElement('option');
+        option.value = vendor._id;
+        option.textContent = vendor.name;
+        vendorGroup.appendChild(option);
+      });
+      assigneeSelect.appendChild(vendorGroup);
+    }
+
+    // Add Managers
+    if (managers.length) {
+      const managerGroup = document.createElement('optgroup');
+      managerGroup.label = 'Managers';
+      managers.forEach((manager) => {
+        const option = document.createElement('option');
+        option.value = manager._id;
+        option.textContent = manager.name;
+        managerGroup.appendChild(option);
+      });
+      assigneeSelect.appendChild(managerGroup);
+    }
   } catch (error) {
-    console.error('Error fetching vendors:', error);
-    vendorSelect.innerHTML = '<option value="">Failed to load vendors</option>';
+    console.error('Error fetching data:', error);
+    assigneeSelect.innerHTML = '<option value="">Failed to load assignees</option>';
   }
 
-  // Add click event to assign vendor
-  document.getElementById('assign-vendor-btn').onclick = async () => {
-    const vendorId = vendorSelect.value;
-    if (!vendorId) {
-      alert('Please select a vendor.');
+  // Add click event to assign vendor/manager
+  document.getElementById('assign-btn').onclick = async () => {
+    const assigneeId = assigneeSelect.value;
+    if (!assigneeId) {
+      alert('Please select an assignee.');
       return;
     }
 
@@ -532,20 +671,21 @@ async function openAssignModal(taskId) {
       const response = await fetch(`/api/task/${taskId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assignedTo: vendorId }),
+        body: JSON.stringify({ assignedTo: assigneeId }),
       });
 
       const data = await response.json();
       if (data.success) {
-        alert('Vendor assigned successfully!');
+         // Send email notification
+         sendTaskAssignmentEmail(taskId);  
         modal.style.display = 'none'; // Close the modal
         loadTasks(window.location.pathname.split('/').pop()); // Reload tasks
       } else {
-        throw new Error(data.error || 'Failed to assign vendor');
+        throw new Error(data.error || 'Failed to assign task');
       }
     } catch (error) {
-      console.error('Error assigning vendor:', error);
-      alert('An error occurred while assigning the vendor.');
+      console.error('Error assigning task:', error);
+      alert('An error occurred while assigning the task.');
     }
   };
 
@@ -708,7 +848,7 @@ function closeEditTaskModal() {
 // Function to delete task
 async function deleteTask(taskId) {
   if (!taskId) {
-    console.error("Task ID is missing.");
+    console.error("❌ Error: Task ID is missing.");
     alert("Task ID is missing. Please try again.");
     return;
   }
@@ -721,24 +861,30 @@ async function deleteTask(taskId) {
     // Perform the API call to delete the task
     const response = await fetch(`/api/task/${taskId}`, { method: "DELETE" });
 
+    // Handle different response cases
     if (!response.ok) {
-      throw new Error("Failed to delete the task.");
-    }
-
-    const result = await response.json();
-
-    if (result.success) {
-      alert("Task deleted successfully.");
-      const projectId = getProjectId();
-
-      // Reload tasks to update the UI
-      loadTasks(projectId);
+      if (response.status === 404) {
+       
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete task.");
+      }
     } else {
-      throw new Error(result.message || "Failed to delete the task.");
+      const result = await response.json();
+
+      if (result.success) {
+        
+        const projectId = getProjectId();
+
+        // Reload tasks to update the UI
+        loadTasks(projectId);
+      } else {
+        throw new Error(result.message || "Failed to delete the task.");
+      }
     }
   } catch (error) {
-    console.error("Error deleting task:", error);
-    alert("An error occurred while deleting the task. Please try again.");
+    console.error("❌ Error deleting task:", error);
+    alert(`An error occurred while deleting the task: ${error.message}`);
   }
 }
 
@@ -813,14 +959,14 @@ async function deletePhoto(photoId, type) {
   // Extract filename if the photoId includes a path
   const filename = photoId.includes('/uploads/') ? photoId.split('/uploads/')[1] : photoId;
 
-  if (!confirm('Are you sure you want to delete this photo?')) return;
+ 
 
   try {
     const response = await fetch(`/api/delete-photo/${filename}`, { method: 'DELETE' });
 
     if (!response.ok) throw new Error('Failed to delete photo');
 
-    alert('Photo deleted successfully');
+    
 
     // Reload task details to reflect changes
     const taskId = document.getElementById('task-details').dataset.taskId;
@@ -1137,19 +1283,44 @@ async function populateVendorsDropdown() {
   dropdown.innerHTML = '<option value="">Select a vendor</option>'; // Reset options
 
   try {
-    const response = await fetch('/api/vendors');
-    if (!response.ok) throw new Error('Failed to fetch vendors');
+    const [vendorsResponse, managersResponse] = await Promise.all([
+      fetch('/api/vendors'),
+      fetch('/api/managers')
+    ]);
 
-    const vendors = await response.json();
-    vendors.forEach((vendor) => {
-      const option = document.createElement('option');
-      option.value = vendor._id; // Ensure this matches the vendor ID key from your API
-      option.textContent = vendor.name; // Ensure this matches the vendor name key
-      dropdown.appendChild(option);
-    });
+    if (!vendorsResponse.ok || !managersResponse.ok) throw new Error('Failed to fetch data');
+
+    const vendors = await vendorsResponse.json();
+    const managers = await managersResponse.json();
+
+    // Add Vendors to Dropdown
+    if (vendors.length) {
+      const vendorGroup = document.createElement('optgroup');
+      vendorGroup.label = 'Vendors';
+      vendors.forEach(vendor => {
+        const option = document.createElement('option');
+        option.value = vendor._id;
+        option.textContent = vendor.name;
+        vendorGroup.appendChild(option);
+      });
+      dropdown.appendChild(vendorGroup);
+    }
+
+    // Add Managers to Dropdown
+    if (managers.length) {
+      const managerGroup = document.createElement('optgroup');
+      managerGroup.label = 'Managers';
+      managers.forEach(manager => {
+        const option = document.createElement('option');
+        option.value = manager._id;
+        option.textContent = manager.name;
+        managerGroup.appendChild(option);
+      });
+      dropdown.appendChild(managerGroup);
+    }
   } catch (error) {
-    console.error('Error populating vendors dropdown:', error);
-    dropdown.innerHTML = '<option value="">Error loading vendors</option>';
+    console.error('Error populating dropdown:', error);
+    dropdown.innerHTML = '<option value="">Error loading data</option>';
   }
 }
 
