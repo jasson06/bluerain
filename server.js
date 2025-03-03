@@ -974,6 +974,43 @@ app.delete('/api/vendors/:id', (req, res) => {
   res.status(204).send();
 });
 
+
+
+app.get('/api/managers', async (req, res) => {
+  try {
+    const managers = await Manager.find(); // Fetch all managers from the database
+    res.status(200).json(managers); // Send managers as a response
+  } catch (error) {
+    console.error('Error fetching managers:', error.message);
+    res.status(500).json({ success: false, error: 'Failed to fetch managers' });
+  }
+});
+
+
+
+
+app.get('/api/managers/:id', async (req, res) => {
+  const { id } = req.params;
+
+  // Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ error: 'Invalid manager ID.' });
+  }
+
+  try {
+    const manager = await Manager.findById(id);
+    if (!manager) {
+      return res.status(404).json({ error: 'Manager not found.' });
+    }
+
+    res.status(200).json(manager);
+  } catch (error) {
+    console.error('Error fetching manager:', error.message);
+    res.status(500).json({ error: 'Failed to fetch manager.' });
+  }
+});
+
+
 // API Endpoint to update an existing vendor
 app.put('/api/vendors/:id', (req, res) => {
   const { name } = req.body;
