@@ -337,7 +337,8 @@ const taskSchema = new mongoose.Schema({
   total: { type: Number, required: false }, // Optional, for items assigned
   dueDate: { type: Date },
   completed: { type: Boolean, default: false },
-  assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' },
+  assignedTo: { type: mongoose.Schema.Types.ObjectId, refPath: 'assignedToModel', default: null },
+  assignedToModel: { type: String, enum: ['Vendor', 'Manager'], default: null }, // No longer required
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
   photos: {
     before: [{ type: String }], // Array of strings for photo paths
@@ -1135,7 +1136,22 @@ app.get('/api/tasks', async (req, res) => {
   }
 
   try {
-    const tasks = await Task.find({ projectId }).populate('assignedTo', 'name');
+    // Fetch tasks first, then determine the correct population
+    const tasks = await Task.find({ projectId });
+
+    // Populate assignedTo based on assignedToModel
+    for (let task of tasks) {
+      if (task.assignedTo) {
+        if (task.assignedToModel === 'Vendor') {
+          task.assignedTo = await Vendor.findById(task.assignedTo).select('name');
+        } else if (task.assignedToModel === 'Manager') {
+          task.assignedTo = await Manager.findById(task.assignedTo).select('name');
+        }
+      }
+    }
+
+    console.log("✅ Retrieved Tasks with Correct Population:", tasks);
+
     res.json({ success: true, tasks });
   } catch (error) {
     console.error('Error fetching tasks:', error.message);
@@ -1148,19 +1164,27 @@ app.get('/api/tasks', async (req, res) => {
 // Get Task Details Endpoint
 app.get('/api/task/:id', async (req, res) => {
   const { id } = req.params;
-
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ success: false, message: 'Invalid Task ID.' });
   }
 
   try {
-    const task = await Task.findById(id)
-      .populate('assignedTo', 'name') // Populate the assignedTo field
-      .select('title description dueDate completed assignedTo photos comments'); // Select the required fields
+    let task = await Task.findById(id).select('title description dueDate completed assignedTo photos comments assignedToModel projectId');
 
     if (!task) {
       return res.status(404).json({ success: false, message: 'Task not found' });
     }
+
+    // ✅ Populate assignedTo with Email
+    if (task.assignedTo) {
+      if (task.assignedToModel === 'Vendor') {
+        task.assignedTo = await Vendor.findById(task.assignedTo).select('name email');
+      } else if (task.assignedToModel === 'Manager') {
+        task.assignedTo = await Manager.findById(task.assignedTo).select('name email');
+      }
+    }
+
+    console.log("✅ Task Details Retrieved with Email:", task);
 
     res.status(200).json({
       success: true,
@@ -1170,13 +1194,13 @@ app.get('/api/task/:id', async (req, res) => {
         description: task.description,
         dueDate: task.dueDate,
         completed: task.completed,
-        assignedTo: task.assignedTo,
-        photos: task.photos,
-        comments: task.comments || [], // Include comments in the response
+        assignedTo: task.assignedTo, // ✅ Ensures email is included
+        assignedToModel: task.assignedToModel,
+        projectId: task.projectId
       },
     });
   } catch (error) {
-    console.error('Error fetching task:', error);
+    console.error('❌ Error fetching task:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch task details' });
   }
 });
@@ -1188,11 +1212,23 @@ app.put('/api/task/:id/assign', async (req, res) => {
 
   try {
     const task = await Task.findByIdAndUpdate(id, { assignedTo }, { new: true });
-    const vendor = await Vendor.findById(assignedTo);
 
-    await sendNotificationEmail(vendor.email, 'Task Assignment', `You have been assigned to task: ${task.title}`);
+    // Ensure that the assigned user exists and has an email
+    let assignedUser = null;
+    if (task.assignedToModel === 'Vendor') {
+      assignedUser = await Vendor.findById(assignedTo).select('email');
+    } else if (task.assignedToModel === 'Manager') {
+      assignedUser = await Manager.findById(assignedTo).select('email');
+    }
+
+    if (!assignedUser || !assignedUser.email) {
+      return res.status(400).json({ success: false, message: "Invalid assignee or missing email." });
+    }
+
+    await sendTaskAssignmentEmail(id);
     res.json({ success: true, message: 'Task assigned and notification sent.', task });
   } catch (error) {
+    console.error("❌ Error assigning task:", error);
     res.status(500).json({ success: false, message: 'Failed to assign task.' });
   }
 });
@@ -1205,9 +1241,52 @@ app.put('/api/task/:id/assign', async (req, res) => {
 // Create Task (Backend)
 app.post('/api/tasks', async (req, res) => {
   try {
-    const newTask = new Task(req.body);
+    const { title, description, dueDate, completed, assignedTo, projectId } = req.body;
+
+    // Validate required fields
+    if (!title || !projectId) {
+      return res.status(400).json({ success: false, error: 'Title and Project ID are required.' });
+    }
+
+    let assignedToModel = null;
+
+    // Only set assignedToModel if assignedTo is provided
+    if (assignedTo) {
+      const vendor = await Vendor.findById(assignedTo);
+      if (vendor) {
+        assignedToModel = 'Vendor';
+      } else {
+        const manager = await Manager.findById(assignedTo);
+        if (manager) {
+          assignedToModel = 'Manager';
+        }
+      }
+
+      // If assignedTo is provided but does not match a valid user, return an error
+      if (!assignedToModel) {
+        return res.status(400).json({ success: false, error: 'Invalid assignee ID' });
+      }
+    }
+
+    // Create new task (assignedTo & assignedToModel are optional)
+    const newTask = new Task({
+      title,
+      description,
+      dueDate,
+      completed: completed || false,
+      assignedTo: assignedTo || null, // Will remain null if not provided
+      assignedToModel: assignedToModel || null, // Will remain null if not provided
+      projectId,
+      photos: { before: [], after: [] },
+      comments: [],
+    });
+
+    // Save task to database
     await newTask.save();
+
+    console.log("✅ New Task Created:", newTask);
     res.status(201).json({ success: true, task: newTask });
+
   } catch (error) {
     console.error('Error adding task:', error.message);
     res.status(500).json({ success: false, error: 'Failed to add task' });
@@ -1217,13 +1296,23 @@ app.post('/api/tasks', async (req, res) => {
 // Delete Task (Backend)
 app.delete('/api/task/:id', async (req, res) => {
   const { id } = req.params;
+
   try {
-    const task = await Task.findByIdAndDelete(id);
-    if (!task) return res.status(404).json({ success: false, error: 'Task not found' });
-    res.json({ success: true, message: 'Task deleted successfully' });
+    // Check if task exists before attempting deletion
+    const task = await Task.findById(id);
+    if (!task) {
+      return res.status(404).json({ success: false, error: 'Task not found.' });
+    }
+
+    // Delete task
+    await Task.findByIdAndDelete(id);
+
+    console.log(`✅ Task ${id} deleted successfully.`);
+    res.json({ success: true, message: 'Task deleted successfully.' });
+
   } catch (error) {
-    console.error('Error deleting task:', error);
-    res.status(500).json({ success: false, error: 'Failed to delete task' });
+    console.error('Error deleting task:', error.message);
+    res.status(500).json({ success: false, error: 'Failed to delete task.' });
   }
 });
 
@@ -1279,7 +1368,8 @@ app.post('/api/comments', async (req, res) => {
 
 
 
-// Update Task Endpoint
+
+// Update Task Endpoint with Strict Role Detection
 app.put('/api/task/:id', async (req, res) => {
   const { id } = req.params;
   const { title, description, dueDate, completed, assignedTo } = req.body;
@@ -1291,16 +1381,54 @@ app.put('/api/task/:id', async (req, res) => {
     if (title) updateFields.title = title;
     if (description) updateFields.description = description;
     if (dueDate) updateFields.dueDate = dueDate;
-    if (typeof completed !== 'undefined') updateFields.completed = completed; // Handle boolean
-    if (assignedTo) updateFields.assignedTo = assignedTo;
+    if (typeof completed !== 'undefined') updateFields.completed = completed;
 
-    const task = await Task.findByIdAndUpdate(id, updateFields, { new: true });
+    let assignedToModel = null;
+
+    // Check if assignedTo exists
+    if (assignedTo) {
+      console.log("Checking Vendor First...");
+      const vendor = await Vendor.findById(assignedTo);
+      
+      if (vendor) {
+        assignedToModel = 'Vendor';
+        console.log("✅ Assigned to Vendor:", vendor.name);
+      } else {
+        console.log("Checking Manager...");
+        const manager = await Manager.findById(assignedTo);
+        
+        if (manager) {
+          assignedToModel = 'Manager';
+          console.log("✅ Assigned to Manager:", manager.name);
+        }
+      }
+
+      if (!assignedToModel) {
+        console.log("❌ Invalid Assignee ID:", assignedTo);
+        return res.status(400).json({ success: false, error: 'Invalid assignee ID' });
+      }
+
+      // Add assignedTo and assignedToModel to updateFields
+      updateFields.assignedTo = assignedTo;
+      updateFields.assignedToModel = assignedToModel;
+    }
+
+    console.log("Final AssignedToModel Before Update:", assignedToModel);
+
+    // Update task and enforce correct role
+    const task = await Task.findByIdAndUpdate(
+      id, 
+      { $set: updateFields },  // Explicitly setting the update fields
+      { new: true }
+    );
 
     if (!task) {
       return res.status(404).json({ success: false, error: 'Task not found' });
     }
 
+    console.log("Updated Task:", task);
     res.json({ success: true, task });
+
   } catch (error) {
     console.error('Error updating task:', error);
     res.status(500).json({ success: false, error: 'Failed to update task' });
@@ -2429,6 +2557,32 @@ app.post("/api/invite/accept", async (req, res) => {
   } catch (error) {
     console.error("Error in /api/invite/accept:", error);
     res.status(500).json({ success: false, message: "Failed to activate account." });
+  }
+});
+
+
+// ✅ API to Send Task Assignment Email
+app.post('/api/send-email', async (req, res) => {
+  const { to, subject, text } = req.body;
+
+  if (!to || !subject || !text) {
+      console.error("❌ Missing email parameters:", { to, subject, text });
+      return res.status(400).json({ success: false, message: "Missing email parameters" });
+  }
+
+  try {
+      await transporter.sendMail({
+          from: `"BESF Team" <${process.env.EMAIL_USER}>`,
+          to,
+          subject,
+          text,
+      });
+
+      console.log(`✅ Email Sent to ${to}: ${subject}`);
+      res.json({ success: true, message: "Email sent successfully" });
+  } catch (error) {
+      console.error("❌ Error sending email:", error);
+      res.status(500).json({ success: false, message: "Failed to send email" });
   }
 });
 
