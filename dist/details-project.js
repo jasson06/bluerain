@@ -474,6 +474,12 @@ Please check your dashboard for more details.
 }
 
 
+
+
+
+
+
+
 // Function to load tasks and display their statuses
 async function loadTasks(projectId) {
   const taskList = document.getElementById('task-list');
@@ -698,6 +704,7 @@ async function openAssignModal(taskId) {
 
 
 
+
 // Function to open the "Add Due Date" modal
 function openDueDatePicker(taskId, buttonElement) {
   console.log(`openDueDatePicker called for taskId: ${taskId}`); // Debugging log
@@ -892,6 +899,7 @@ async function deleteTask(taskId) {
 
 
 
+
 // Toggle task completion status
 async function toggleTaskStatus() {
   const taskId = document.getElementById('task-details').dataset.taskId; // Get task ID
@@ -932,6 +940,10 @@ async function toggleTaskStatus() {
 }
 
 
+
+
+
+
 // Add photo to the preview section
 function addPhotoToPreview(photoUrl, photoId, type) {
   const previewContainer =
@@ -959,7 +971,7 @@ async function deletePhoto(photoId, type) {
   // Extract filename if the photoId includes a path
   const filename = photoId.includes('/uploads/') ? photoId.split('/uploads/')[1] : photoId;
 
- 
+  
 
   try {
     const response = await fetch(`/api/delete-photo/${filename}`, { method: 'DELETE' });
@@ -1058,6 +1070,7 @@ async function displayTaskDetails(taskId) {
         console.error("Error updating task status:", error);
       }
     };
+
 
 
     
