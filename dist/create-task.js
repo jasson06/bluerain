@@ -2,6 +2,21 @@
 document.getElementById('create-task-form').addEventListener('submit', async (event) => {
   event.preventDefault(); // Prevent default form submission
 
+
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.style.display = 'block';
+    toast.style.opacity = '1';
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => { toast.style.display = 'none'; }, 500); // Hide completely after fade-out
+    }, 3000); // Hide after 3 seconds
+}
+
+
+
   // Get project ID from URL
   const urlParams = new URLSearchParams(window.location.search);
   const projectId = urlParams.get('projectId');
@@ -36,7 +51,7 @@ document.getElementById('create-task-form').addEventListener('submit', async (ev
     const data = await response.json();
 
     if (data.success) {
-      alert('Task created successfully!');
+      showToast('Task created successfully!');
       // Redirect back to project details page
       window.location.href = `/details/projects/${projectId}`;
     } else {
@@ -47,6 +62,9 @@ document.getElementById('create-task-form').addEventListener('submit', async (ev
     alert('An error occurred while creating the task.');
   }
 });
+
+
+
 
 // Populate project title in the page
 async function loadProjectTitle() {
@@ -72,3 +90,4 @@ async function loadProjectTitle() {
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', loadProjectTitle);
+
