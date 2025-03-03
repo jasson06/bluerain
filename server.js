@@ -1232,7 +1232,9 @@ app.get('/api/task/:id', async (req, res) => {
         dueDate: task.dueDate,
         completed: task.completed,
         assignedTo: task.assignedTo, // ✅ Ensures email is included
-        assignedToModel: task.assignedToModel,
+        assignedToModel: task.assignedToModel,               
+        photos: task.photos,
+        comments: task.comments || [], // Include comments in the response
         projectId: task.projectId
       },
     });
