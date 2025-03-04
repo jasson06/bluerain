@@ -46,18 +46,57 @@ document.addEventListener("DOMContentLoaded", async () => {
             <!-- Navigation Dots -->
             <div class="photo-dots" id="dots-${type}-${itemId}">
                 ${photos.map((_, index) => `
-                    <span data-index="${index}" onclick="jumpToPhoto('${itemId}', '${type}', ${index})"></span>
+                    <span class="dot" data-index="${index}" onclick="jumpToPhoto('${itemId}', '${type}', ${index})"></span>
                 `).join("")}
             </div>
         </div>
     `;
 }
 
+/* ✅ Change Photo Function */
+function changePhoto(itemId, type, direction) {
+    const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
+    const dotsContainer = document.getElementById(`dots-${type}-${itemId}`);
+    const slides = wrapper.children;
+    const totalSlides = slides.length;
 
+    let currentIndex = parseInt(wrapper.dataset.index, 10);
+    currentIndex += direction;
 
-// ✅ Global Variables
-let fullScreenPhotos = [];
-let fullScreenIndex = 0;
+    // ✅ Loop back around
+    if (currentIndex < 0) {
+        currentIndex = totalSlides - 1;
+    } else if (currentIndex >= totalSlides) {
+        currentIndex = 0;
+    }
+
+    // ✅ Apply smooth transition
+    wrapper.style.transform = `translateX(-${currentIndex * 100}%)`;
+    wrapper.dataset.index = currentIndex;
+
+    // ✅ Update active dot
+    updateActiveDot(dotsContainer, currentIndex);
+}
+
+/* ✅ Jump to Specific Photo */
+function jumpToPhoto(itemId, type, index) {
+    const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
+    const dotsContainer = document.getElementById(`dots-${type}-${itemId}`);
+
+    wrapper.style.transform = `translateX(-${index * 100}%)`;
+    wrapper.dataset.index = index;
+
+    // ✅ Update active dot
+    updateActiveDot(dotsContainer, index);
+}
+
+/* ✅ Update Active Navigation Dot */
+function updateActiveDot(dotsContainer, activeIndex) {
+    if (!dotsContainer) return;
+    Array.from(dotsContainer.children).forEach((dot, index) => {
+        dot.classList.toggle("active", index === activeIndex);
+    });
+}
 
 // ✅ Open Full-Screen Viewer
 function openPhotoViewer(photoUrl, photosList) {
@@ -111,6 +150,7 @@ function closePhotoViewer() {
 window.openPhotoViewer = openPhotoViewer;
 window.navigateFullScreen = navigateFullScreen;
 window.closePhotoViewer = closePhotoViewer;
+
 
 
 
