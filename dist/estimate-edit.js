@@ -129,54 +129,86 @@ function enableSwipe(itemId, type) {
   console.log(`✅ Swipe enabled for ${type}-${itemId}`);
 }
 
-// ✅ Open Full-Screen Viewer
+// ✅ Open Full-Screen Viewer with Swipe Support
 function openPhotoViewer(photoUrl, photosList) {
-    console.log("🟢 Open Viewer Called - Photo:", photoUrl, " | List:", photosList);
+  console.log("🟢 Open Viewer Called - Photo:", photoUrl, " | List:", photosList);
 
-    const viewer = document.getElementById("photo-viewer");
-    const fullPhoto = document.getElementById("full-photo");
+  const viewer = document.getElementById("photo-viewer");
+  const fullPhoto = document.getElementById("full-photo");
 
-    if (!viewer || !fullPhoto) {
-        console.error("❌ Fullscreen viewer elements not found!");
-        return;
-    }
+  if (!viewer || !fullPhoto) {
+      console.error("❌ Fullscreen viewer elements not found!");
+      return;
+  }
 
-    // ✅ Store the full list of photos and set current index
-    fullScreenPhotos = [...photosList]; // Fresh copy of the array
-    fullScreenIndex = fullScreenPhotos.indexOf(photoUrl);
+  // ✅ Store the full list of photos and set current index
+  fullScreenPhotos = [...photosList]; // Fresh copy of the array
+  fullScreenIndex = fullScreenPhotos.indexOf(photoUrl);
 
-    if (fullScreenIndex === -1) {
-        console.error("❌ Photo not found in list:", photoUrl);
-        return;
-    }
+  if (fullScreenIndex === -1) {
+      console.error("❌ Photo not found in list:", photoUrl);
+      return;
+  }
 
-    // ✅ Display the correct image
-    fullPhoto.src = fullScreenPhotos[fullScreenIndex];
+  // ✅ Display the correct image
+  fullPhoto.src = fullScreenPhotos[fullScreenIndex];
 
-    // ✅ Show the viewer
-    viewer.style.display = "flex";
+  // ✅ Show the viewer
+  viewer.style.display = "flex";
+
+  // ✅ Enable Swipe Support for Full-Screen Viewer
+  enableFullScreenSwipe();
 }
 
 // ✅ Navigate Fullscreen Viewer
 function navigateFullScreen(direction) {
-    if (!fullScreenPhotos.length) return;
+  if (!fullScreenPhotos.length) return;
 
-    // ✅ Update Index
-    fullScreenIndex += direction;
-    
-    // ✅ Loop Around if Reaching Ends
-    if (fullScreenIndex < 0) fullScreenIndex = fullScreenPhotos.length - 1;
-    if (fullScreenIndex >= fullScreenPhotos.length) fullScreenIndex = 0;
+  // ✅ Update Index
+  fullScreenIndex += direction;
 
-    // ✅ Update Image
-    document.getElementById("full-photo").src = fullScreenPhotos[fullScreenIndex];
+  // ✅ Loop Around if Reaching Ends
+  if (fullScreenIndex < 0) fullScreenIndex = fullScreenPhotos.length - 1;
+  if (fullScreenIndex >= fullScreenPhotos.length) fullScreenIndex = 0;
+
+  // ✅ Update Image
+  document.getElementById("full-photo").src = fullScreenPhotos[fullScreenIndex];
 }
 
 // ✅ Close Full-Screen Viewer
 function closePhotoViewer() {
-    document.getElementById("photo-viewer").style.display = "none";
+  document.getElementById("photo-viewer").style.display = "none";
 }
 
+// ✅ Enable Swipe Support for Full-Screen Viewer
+function enableFullScreenSwipe() {
+  const viewer = document.getElementById("photo-viewer");
+  let startX = 0;
+  let endX = 0;
+
+  if (!viewer) return;
+
+  viewer.addEventListener("touchstart", (e) => {
+      startX = e.touches[0].clientX;
+  });
+
+  viewer.addEventListener("touchmove", (e) => {
+      endX = e.touches[0].clientX;
+  });
+
+  viewer.addEventListener("touchend", () => {
+      let diff = startX - endX;
+      if (diff > 50) {
+          navigateFullScreen(1); // Swipe Left (Next)
+      } else if (diff < -50) {
+          navigateFullScreen(-1); // Swipe Right (Previous)
+      }
+  });
+
+  console.log("✅ Swipe enabled for full-screen viewer");
+}
+
+  
 // ✅ Ensure functions are globally accessible
 window.openPhotoViewer = openPhotoViewer;
 window.navigateFullScreen = navigateFullScreen;
