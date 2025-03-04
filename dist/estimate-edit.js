@@ -227,7 +227,7 @@ window.closePhotoViewer = closePhotoViewer;
 
   window.uploadPhoto = uploadPhoto;
 
-  // ✅ Update Photo Section After Upload
+ // ✅ Update Photo Section After Upload
   async function updatePhotoSection(itemId, type) {
     try {
         const estimateId = new URLSearchParams(window.location.search).get("estimateId");
@@ -242,6 +242,8 @@ window.closePhotoViewer = closePhotoViewer;
             const item = estimate.lineItems.flatMap(cat => cat.items).find(i => i._id === itemId);
             if (item && item.photos) {
                 document.getElementById(`${type}-photos-${itemId}`).innerHTML = generatePhotoPreview(item.photos[type], itemId, type);
+                 // ✅ Enable swipe support after rendering the photos
+                 enableSwipe(itemId, type);
                 return; // ✅ Exit if found in estimate
             }
         }
@@ -252,6 +254,8 @@ window.closePhotoViewer = closePhotoViewer;
             if (response.ok) {
                 const { photos } = await response.json();
                 document.getElementById(`${type}-photos-${itemId}`).innerHTML = generatePhotoPreview(photos[type], itemId, type);
+                 // ✅ Enable swipe support after rendering the photos
+                 enableSwipe(itemId, type);
                 return; // ✅ Exit if found in vendor
             }
         }
