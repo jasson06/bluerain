@@ -288,7 +288,7 @@ window.closePhotoViewer = closePhotoViewer;
   window.uploadPhoto = uploadPhoto;
 
  // ✅ Update Photo Section After Upload
-  async function updatePhotoSection(itemId, type) {
+async function updatePhotoSection(itemId, type) {
     try {
         const estimateId = new URLSearchParams(window.location.search).get("estimateId");
         const vendorId = localStorage.getItem("vendorId");
@@ -303,14 +303,8 @@ window.closePhotoViewer = closePhotoViewer;
             if (item && item.photos) {
                 document.getElementById(`${type}-photos-${itemId}`).innerHTML = generatePhotoPreview(item.photos[type], itemId, type);
 
-                // ✅ Wait for the DOM to update, then check if the wrapper exists
-                setTimeout(() => {
-                    if (document.getElementById(`photo-wrapper-${type}-${itemId}`)) {
-                        enableSwipe(itemId, type);
-                    } else {
-                        console.warn(`⚠️ Swipe not enabled: Element missing for ${type}-${itemId}`);
-                    }
-                }, 100); // Slight delay to ensure the element is rendered
+                // ✅ Ensure Swipe is Enabled After Photos Are Rendered
+                setTimeout(() => enableSwipe(itemId, type), 100);
                 return;
             }
         }
@@ -322,14 +316,8 @@ window.closePhotoViewer = closePhotoViewer;
                 const { photos } = await response.json();
                 document.getElementById(`${type}-photos-${itemId}`).innerHTML = generatePhotoPreview(photos[type], itemId, type);
 
-                // ✅ Wait for the DOM to update before enabling swipe
-                setTimeout(() => {
-                    if (document.getElementById(`photo-wrapper-${type}-${itemId}`)) {
-                        enableSwipe(itemId, type);
-                    } else {
-                        console.warn(`⚠️ Swipe not enabled: Element missing for ${type}-${itemId}`);
-                    }
-                }, 100);
+                // ✅ Ensure Swipe is Enabled After Photos Are Rendered
+                setTimeout(() => enableSwipe(itemId, type), 100);
                 return;
             }
         }
@@ -339,6 +327,7 @@ window.closePhotoViewer = closePhotoViewer;
         console.error("❌ Error updating photo section:", error);
     }
 }
+
 
 
 
@@ -542,6 +531,13 @@ async function loadEstimateDetails() {
           category.items.forEach(item => {
               updatePhotoSection(item._id, "before");
               updatePhotoSection(item._id, "after");
+
+
+        // ✅ Enable Swipe for All Photos on Load
+           setTimeout(() => {
+            enableSwipe(item._id, "before");
+            enableSwipe(item._id, "after");
+            }, 100);
           });
       });
 
@@ -567,6 +563,11 @@ function refreshLineItems(categories) {
           if (item.photos) {
               updatePhotoSection(item._id, "before");
               updatePhotoSection(item._id, "after");
+
+
+            // ✅ Ensure swipe is enabled for all items
+              enableSwipe(item._id, "before");
+              enableSwipe(item._id, "after");
           }
       });
   });
@@ -676,6 +677,13 @@ function refreshLineItems(categories) {
       </div>
   `;
 
+
+    // ✅ Enable swipe gestures for newly added items
+    setTimeout(() => {
+        enableSwipe(card.getAttribute("data-item-id"), "before");
+        enableSwipe(card.getAttribute("data-item-id"), "after");
+    }, 100);
+   
   // Add functionality for the "Unassign" button
   const unassignButton = card.querySelector(".unassign-item");
   if (unassignButton) {
