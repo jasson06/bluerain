@@ -412,7 +412,7 @@ async function deletePhoto(itemId, photoUrl, type) {
             throw new Error(`Failed to delete photo. Server Response: ${errorMessage}`);
         }
 
-        alert("✅ Photo deleted successfully!");
+       
 
         // ✅ Force Refresh the UI after deletion
         updatePhotoSection(itemId, type);
@@ -651,33 +651,6 @@ function refreshLineItems(categories) {
     document.getElementById("total").textContent = `$${total.toFixed(2)}`;
   }
   
-
-
-
-
-
-
-
-
-
-async function deletePhoto(itemId, photoUrl, type) {
-  try {
-      const response = await fetch(`/api/delete-photo/${localStorage.getItem("vendorId")}/${itemId}/${encodeURIComponent(photoUrl)}`, { method: "DELETE" });
-
-      if (!response.ok) throw new Error("Failed to delete photo.");
-
-      alert("✅ Photo deleted successfully!");
-      updatePhotoSection(itemId, type);
-  } catch (error) {
-      console.error("❌ Error deleting photo:", error);
-      alert("Failed to delete photo.");
-  }
-}
-
-
-
-
-
 
 
 
