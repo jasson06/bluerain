@@ -100,34 +100,43 @@ function updateActiveDot(dotsContainer, activeIndex) {
 
 /* ✅ Enable Swipe Support (Mobile) */
 function enableSwipe(itemId, type) {
-  const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
-  if (!wrapper) {
-      console.warn(`⚠️ Swipe not enabled: Wrapper element not found for ${type}-${itemId}`);
-      return; // ✅ Prevents calling addEventListener on a null element
-  }
+    const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
+    if (!wrapper) {
+        console.warn(`⚠️ Swipe not enabled: Wrapper element not found for ${type}-${itemId}`);
+        return; // ✅ Prevents calling addEventListener on a null element
+    }
 
-  let startX = 0;
-  let endX = 0;
+    let startX = 0;
+    let moveX = 0;
+    let isSwiping = false;
 
-  wrapper.addEventListener("touchstart", (e) => {
-      startX = e.touches[0].clientX;
-  });
+    wrapper.addEventListener("touchstart", (e) => {
+        startX = e.touches[0].clientX;
+        isSwiping = true;
+    });
 
-  wrapper.addEventListener("touchmove", (e) => {
-      endX = e.touches[0].clientX;
-  });
+    wrapper.addEventListener("touchmove", (e) => {
+        if (!isSwiping) return; // ✅ Prevents ghost swipes
+        moveX = e.touches[0].clientX;
+    });
 
-  wrapper.addEventListener("touchend", () => {
-      let diff = startX - endX;
-      if (diff > 50) {
-          changePhoto(itemId, type, 1); // Swipe Left (Next)
-      } else if (diff < -50) {
-          changePhoto(itemId, type, -1); // Swipe Right (Previous)
-      }
-  });
+    wrapper.addEventListener("touchend", () => {
+        if (!isSwiping) return; // ✅ Ensures valid swipe only
+        let diff = startX - moveX;
+        isSwiping = false; // ✅ Reset for next swipe
 
-  console.log(`✅ Swipe enabled for ${type}-${itemId}`);
+        if (Math.abs(diff) > 50) { // ✅ Ensures a proper swipe length
+            if (diff > 0) {
+                changePhoto(itemId, type, 1); // Swipe Left (Next)
+            } else {
+                changePhoto(itemId, type, -1); // Swipe Right (Previous)
+            }
+        }
+    });
+
+    console.log(`✅ Swipe enabled for ${type}-${itemId}`);
 }
+
 
 // ✅ Open Full-Screen Viewer with Swipe Support
 function openPhotoViewer(photoUrl, photosList) {
