@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   updatePage();
   
-  function generatePhotoPreview(photos, itemId, type) {
+ function generatePhotoPreview(photos, itemId, type) {
     if (!photos || photos.length === 0) {
         return `<p class="placeholder">No photos</p>`;
     }
@@ -95,6 +95,30 @@ function updateActiveDot(dotsContainer, activeIndex) {
     if (!dotsContainer) return;
     Array.from(dotsContainer.children).forEach((dot, index) => {
         dot.classList.toggle("active", index === activeIndex);
+    });
+}
+
+/* ✅ Enable Swipe Support (Mobile) */
+function enableSwipe(itemId, type) {
+    const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
+    let startX = 0;
+    let endX = 0;
+
+    wrapper.addEventListener("touchstart", (e) => {
+        startX = e.touches[0].clientX;
+    });
+
+    wrapper.addEventListener("touchmove", (e) => {
+        endX = e.touches[0].clientX;
+    });
+
+    wrapper.addEventListener("touchend", () => {
+        let diff = startX - endX;
+        if (diff > 50) {
+            changePhoto(itemId, type, 1); // Swipe Left (Next)
+        } else if (diff < -50) {
+            changePhoto(itemId, type, -1); // Swipe Right (Previous)
+        }
     });
 }
 
