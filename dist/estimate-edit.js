@@ -101,52 +101,59 @@ function updateActiveDot(dotsContainer, activeIndex) {
 
 /* ✅ Enable Swipe Support (Mobile) */
 function enableSwipe(itemId, type) {
-    const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
-    if (!wrapper) {
-        console.warn(`⚠️ Swipe not enabled: Wrapper element not found for ${type}-${itemId}`);
-        return;
-    }
+  const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
+  if (!wrapper) {
+      console.warn(`⚠️ Swipe not enabled: Wrapper element not found for ${type}-${itemId}`);
+      return;
+  }
 
-    let startX = 0;
-    let moveX = 0;
-    let isSwiping = false;
+  let startX = 0;
+  let moveX = 0;
+  let isSwiping = false;
 
-    // ✅ Remove existing event listeners before adding new ones
-    wrapper.removeEventListener("touchstart", handleTouchStart);
-    wrapper.removeEventListener("touchmove", handleTouchMove);
-    wrapper.removeEventListener("touchend", handleTouchEnd);
+  // ✅ Remove previous event listeners to prevent duplication
+  wrapper.removeEventListener("touchstart", handleTouchStart);
+  wrapper.removeEventListener("touchmove", handleTouchMove);
+  wrapper.removeEventListener("touchend", handleTouchEnd);
 
-    function handleTouchStart(e) {
-        startX = e.touches[0].clientX;
-        isSwiping = true;
-    }
+  function handleTouchStart(e) {
+      // ✅ Prevent swipe if touching a button
+      if (e.target.closest(".nav-button")) {
+          return;
+      }
 
-    function handleTouchMove(e) {
-        if (!isSwiping) return;
-        moveX = e.touches[0].clientX;
-    }
+      startX = e.touches[0].clientX;
+      isSwiping = true;
+  }
 
-    function handleTouchEnd() {
-        if (!isSwiping) return;
-        let diff = startX - moveX;
-        isSwiping = false;
+  function handleTouchMove(e) {
+      if (!isSwiping) return;
+      moveX = e.touches[0].clientX;
+  }
 
-        if (Math.abs(diff) > 50) {
-            if (diff > 0) {
-                changePhoto(itemId, type, 1); // Swipe Left (Next)
-            } else {
-                changePhoto(itemId, type, -1); // Swipe Right (Previous)
-            }
-        }
-    }
+  function handleTouchEnd() {
+      if (!isSwiping) return;
+      let diff = startX - moveX;
+      isSwiping = false;
 
-    // ✅ Attach the new event listeners
-    wrapper.addEventListener("touchstart", handleTouchStart);
-    wrapper.addEventListener("touchmove", handleTouchMove);
-    wrapper.addEventListener("touchend", handleTouchEnd);
+      // ✅ Ensure a proper swipe length
+      if (Math.abs(diff) > 50) {
+          if (diff > 0) {
+              changePhoto(itemId, type, 1); // Swipe Left (Next)
+          } else {
+              changePhoto(itemId, type, -1); // Swipe Right (Previous)
+          }
+      }
+  }
 
-    console.log(`✅ Swipe enabled for ${type}-${itemId}`);
+  // ✅ Attach event listeners
+  wrapper.addEventListener("touchstart", handleTouchStart);
+  wrapper.addEventListener("touchmove", handleTouchMove);
+  wrapper.addEventListener("touchend", handleTouchEnd);
+
+  console.log(`✅ Swipe enabled for ${type}-${itemId}`);
 }
+
 
 
 
@@ -226,6 +233,16 @@ function enableFullScreenSwipe() {
       }
   });
 
+      // ✅ Remove previous listeners before adding new ones
+      viewer.removeEventListener("touchstart", handleTouchStart);
+      viewer.removeEventListener("touchmove", handleTouchMove);
+      viewer.removeEventListener("touchend", handleTouchEnd);
+  
+      // ✅ Attach event listeners
+      viewer.addEventListener("touchstart", handleTouchStart);
+      viewer.addEventListener("touchmove", handleTouchMove);
+      viewer.addEventListener("touchend", handleTouchEnd);
+  
   console.log("✅ Swipe enabled for full-screen viewer");
 }
 
