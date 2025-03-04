@@ -98,44 +98,56 @@ function updateActiveDot(dotsContainer, activeIndex) {
     });
 }
 
+
 /* ✅ Enable Swipe Support (Mobile) */
 function enableSwipe(itemId, type) {
     const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
     if (!wrapper) {
         console.warn(`⚠️ Swipe not enabled: Wrapper element not found for ${type}-${itemId}`);
-        return; // ✅ Prevents calling addEventListener on a null element
+        return;
     }
 
     let startX = 0;
     let moveX = 0;
     let isSwiping = false;
 
-    wrapper.addEventListener("touchstart", (e) => {
+    // ✅ Remove existing event listeners before adding new ones
+    wrapper.removeEventListener("touchstart", handleTouchStart);
+    wrapper.removeEventListener("touchmove", handleTouchMove);
+    wrapper.removeEventListener("touchend", handleTouchEnd);
+
+    function handleTouchStart(e) {
         startX = e.touches[0].clientX;
         isSwiping = true;
-    });
+    }
 
-    wrapper.addEventListener("touchmove", (e) => {
-        if (!isSwiping) return; // ✅ Prevents ghost swipes
+    function handleTouchMove(e) {
+        if (!isSwiping) return;
         moveX = e.touches[0].clientX;
-    });
+    }
 
-    wrapper.addEventListener("touchend", () => {
-        if (!isSwiping) return; // ✅ Ensures valid swipe only
+    function handleTouchEnd() {
+        if (!isSwiping) return;
         let diff = startX - moveX;
-        isSwiping = false; // ✅ Reset for next swipe
+        isSwiping = false;
 
-        if (Math.abs(diff) > 50) { // ✅ Ensures a proper swipe length
+        if (Math.abs(diff) > 50) {
             if (diff > 0) {
                 changePhoto(itemId, type, 1); // Swipe Left (Next)
             } else {
                 changePhoto(itemId, type, -1); // Swipe Right (Previous)
             }
         }
-    });
+    }
+
+    // ✅ Attach the new event listeners
+    wrapper.addEventListener("touchstart", handleTouchStart);
+    wrapper.addEventListener("touchmove", handleTouchMove);
+    wrapper.addEventListener("touchend", handleTouchEnd);
 
     console.log(`✅ Swipe enabled for ${type}-${itemId}`);
 }
+
 
 
 // ✅ Open Full-Screen Viewer with Swipe Support
