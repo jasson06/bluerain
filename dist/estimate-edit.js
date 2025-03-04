@@ -100,26 +100,33 @@ function updateActiveDot(dotsContainer, activeIndex) {
 
 /* ✅ Enable Swipe Support (Mobile) */
 function enableSwipe(itemId, type) {
-    const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
-    let startX = 0;
-    let endX = 0;
+  const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
+  if (!wrapper) {
+      console.warn(`⚠️ Swipe not enabled: Wrapper element not found for ${type}-${itemId}`);
+      return; // ✅ Prevents calling addEventListener on a null element
+  }
 
-    wrapper.addEventListener("touchstart", (e) => {
-        startX = e.touches[0].clientX;
-    });
+  let startX = 0;
+  let endX = 0;
 
-    wrapper.addEventListener("touchmove", (e) => {
-        endX = e.touches[0].clientX;
-    });
+  wrapper.addEventListener("touchstart", (e) => {
+      startX = e.touches[0].clientX;
+  });
 
-    wrapper.addEventListener("touchend", () => {
-        let diff = startX - endX;
-        if (diff > 50) {
-            changePhoto(itemId, type, 1); // Swipe Left (Next)
-        } else if (diff < -50) {
-            changePhoto(itemId, type, -1); // Swipe Right (Previous)
-        }
-    });
+  wrapper.addEventListener("touchmove", (e) => {
+      endX = e.touches[0].clientX;
+  });
+
+  wrapper.addEventListener("touchend", () => {
+      let diff = startX - endX;
+      if (diff > 50) {
+          changePhoto(itemId, type, 1); // Swipe Left (Next)
+      } else if (diff < -50) {
+          changePhoto(itemId, type, -1); // Swipe Right (Previous)
+      }
+  });
+
+  console.log(`✅ Swipe enabled for ${type}-${itemId}`);
 }
 
 // ✅ Open Full-Screen Viewer
@@ -231,32 +238,46 @@ window.closePhotoViewer = closePhotoViewer;
   async function updatePhotoSection(itemId, type) {
     try {
         const estimateId = new URLSearchParams(window.location.search).get("estimateId");
-        const vendorId = localStorage.getItem("vendorId"); // Can be null if unassigned
+        const vendorId = localStorage.getItem("vendorId");
 
         let response;
 
-        // ✅ First, check the estimate (since photos are stored there if no vendor is assigned)
+        // ✅ First, check the estimate for photos
         response = await fetch(`/api/estimates/${estimateId}`);
         if (response.ok) {
             const { estimate } = await response.json();
             const item = estimate.lineItems.flatMap(cat => cat.items).find(i => i._id === itemId);
             if (item && item.photos) {
                 document.getElementById(`${type}-photos-${itemId}`).innerHTML = generatePhotoPreview(item.photos[type], itemId, type);
-                 // ✅ Enable swipe support after rendering the photos
-                 enableSwipe(itemId, type);
-                return; // ✅ Exit if found in estimate
+
+                // ✅ Wait for the DOM to update, then check if the wrapper exists
+                setTimeout(() => {
+                    if (document.getElementById(`photo-wrapper-${type}-${itemId}`)) {
+                        enableSwipe(itemId, type);
+                    } else {
+                        console.warn(`⚠️ Swipe not enabled: Element missing for ${type}-${itemId}`);
+                    }
+                }, 100); // Slight delay to ensure the element is rendered
+                return;
             }
         }
 
-        // ✅ If the item has a vendor assigned, try fetching from the vendor
+        // ✅ If vendor has photos, check vendor API
         if (vendorId && vendorId !== "null" && vendorId !== "undefined") {
             response = await fetch(`/api/vendors/${vendorId}/items/${itemId}/photos`);
             if (response.ok) {
                 const { photos } = await response.json();
                 document.getElementById(`${type}-photos-${itemId}`).innerHTML = generatePhotoPreview(photos[type], itemId, type);
-                 // ✅ Enable swipe support after rendering the photos
-                 enableSwipe(itemId, type);
-                return; // ✅ Exit if found in vendor
+
+                // ✅ Wait for the DOM to update before enabling swipe
+                setTimeout(() => {
+                    if (document.getElementById(`photo-wrapper-${type}-${itemId}`)) {
+                        enableSwipe(itemId, type);
+                    } else {
+                        console.warn(`⚠️ Swipe not enabled: Element missing for ${type}-${itemId}`);
+                    }
+                }, 100);
+                return;
             }
         }
 
@@ -265,6 +286,11 @@ window.closePhotoViewer = closePhotoViewer;
         console.error("❌ Error updating photo section:", error);
     }
 }
+
+
+
+
+  
 
 async function updateEstimatePhotoData(itemId, type, newPhotos) {
   try {
