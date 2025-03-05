@@ -2421,7 +2421,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-
+// 📌 API: Invite Team Members (Vendors or Project Managers)
 app.post("/api/invite", async (req, res) => {
   try {
     const { emails, role, projectId } = req.body;
@@ -2433,37 +2433,39 @@ app.post("/api/invite", async (req, res) => {
     const invitedUsers = [];
 
     for (const email of emails) {
-      try {
-        let existingUser =
-          role === "vendor" ? await Vendor.findOne({ email }) : await Manager.findOne({ email });
+      let existingUser =
+        role === "vendor" ? await Vendor.findOne({ email }) : await Manager.findOne({ email });
+
+      if (existingUser) {
+        // Ensure assignedProjects exists before using .some()
+        const isAlreadyAssigned = existingUser.assignedProjects?.some(
+          (p) => p.projectId.toString() === projectId
+        );
+
+        if (!isAlreadyAssigned) {
+          // Only add project assignment if the role is 'vendor'
+          if (role === "vendor") {
+            if (!existingUser.assignedProjects) {
+              existingUser.assignedProjects = []; // Ensure it's an array before pushing
+            }
+            existingUser.assignedProjects.push({ projectId, status: "new" });
+            await existingUser.save();
+          }
+        }
+
+        invitedUsers.push({ email, status: "existing-user" });
+
+        // Send email without token, just a login link
+        await sendExistingUserEmail(email, role, projectId);
+      } else {
         let token = crypto.randomBytes(32).toString("hex");
 
-        if (existingUser) {
-          if (role === "vendor") {
-            const isAlreadyAssigned = existingUser.assignedProjects.some(
-              (p) => p.projectId.toString() === projectId
-            );
-            if (!isAlreadyAssigned) {
-              existingUser.assignedProjects.push({ projectId, status: "new" });
-              await existingUser.save();
-            }
-          }
+        const invitation = new Invitation({ email, role, projectId, token });
+        await invitation.save();
 
-          // Save the token even for existing users
-          const invitation = new Invitation({ email, role, projectId, token });
-          await invitation.save();
+        invitedUsers.push({ email, status: "invited" });
 
-          invitedUsers.push({ email, status: "existing-user" });
-          await sendInviteEmail(email, role, projectId, token);
-        } else {
-          const invitation = new Invitation({ email, role, projectId, token });
-          await invitation.save();
-          invitedUsers.push({ email, status: "invited" });
-          await sendInviteEmail(email, role, projectId, token);
-        }
-      } catch (error) {
-        console.error(`Error processing invitation for ${email}:`, error);
-        invitedUsers.push({ email, status: "error" });
+        await sendNewUserInviteEmail(email, role, projectId, token);
       }
     }
 
@@ -2478,21 +2480,40 @@ app.post("/api/invite", async (req, res) => {
   }
 });
 
-
-
-
-
-
-
-
-// 📩 Send Invitation Email Function
-async function sendInviteEmail(email, role, projectId, token) {
-  const loginURL =
+// 📩 Send Email for Existing Users
+async function sendExistingUserEmail(email, role, projectId) {
+  const signInURL =
     role === "project-manager"
       ? `${process.env.BASE_URL}/project-manager-auth.html`
       : `${process.env.BASE_URL}/sign-inpage.html`;
 
-  // Set the activation URL with the token
+  const mailOptions = {
+    from: `"BESF Team" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: "Project Assignment Notification",
+    html: `
+      <h3>New Project Assigned</h3>
+      <p>Hello,</p>
+      <p>You have been assigned as a <strong>${role}</strong> for project <strong>${projectId}</strong>.</p>
+      <p>You can sign in to view your projects:</p>
+      <a href="${signInURL}" style="padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px;">Sign In</a>
+      <p>Best Regards,</p>
+      <p><strong>BESF Team</strong></p>
+    `,
+  };
+
+  try {
+    let info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Notification email sent to existing user ${email}! Message ID: ${info.messageId}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Error sending email to existing user:`, error);
+    return false;
+  }
+}
+
+// 📩 Send Invitation Email for New Users
+async function sendNewUserInviteEmail(email, role, projectId, token) {
   const activationURL = `${process.env.BASE_URL}/sign-inpage.html?email=${encodeURIComponent(
     email
   )}&projectId=${encodeURIComponent(projectId)}&role=${encodeURIComponent(
@@ -2517,13 +2538,14 @@ async function sendInviteEmail(email, role, projectId, token) {
 
   try {
     let info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Invitation email sent to ${email}! Message ID: ${info.messageId}`);
+    console.log(`✅ Invitation email sent to new user ${email}! Message ID: ${info.messageId}`);
     return true;
   } catch (error) {
     console.error(`❌ Error sending invitation email:`, error);
     return false;
   }
 }
+
 
 // Serve the activation page
 app.get('/sign-inpage.html', (req, res) => {
