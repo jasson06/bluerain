@@ -1556,8 +1556,124 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 // Placeholder for importing an estimate
-function importEstimate() {
-  alert("Import Estimate functionality coming soon!");
+async function importEstimate() {
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = ".xlsx, .xls"; // ✅ Accept Excel files
+
+  fileInput.addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async function (e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+
+        // ✅ Extract data from the first sheet
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+
+        // ✅ Convert sheet data to JSON
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        console.log("✅ Imported Estimate Data:", jsonData); // Debugging
+
+        // ✅ Validate extracted data
+        if (!jsonData.length || !jsonData[0].Category || !jsonData[0].Name) {
+          alert("Invalid Excel file. Please ensure it follows the correct format.");
+          return;
+        }
+
+        // ✅ Convert extracted Excel data into the required format
+        const formattedEstimate = formatEstimateFromExcel(jsonData);
+
+        // ✅ Get the current project ID
+        const projectId = getProjectId();
+        if (!projectId) {
+          alert("Error: No project ID found.");
+          return;
+        }
+
+        // ✅ Create a new estimate with extracted data
+        const newEstimate = {
+          projectId,
+          lineItems: formattedEstimate.lineItems,
+          tax: formattedEstimate.tax || 0,
+        };
+        console.log("🛠️ Sending Data to Backend:", JSON.stringify(newEstimate, null, 2));
+        const response = await fetch("/api/estimates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newEstimate),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to import estimate.");
+        }
+
+        const result = await response.json();
+        console.log("✅ Created New Estimate:", result);
+
+        alert("Estimate imported and created successfully!");
+
+        // ✅ Update the UI with the new estimate
+        loadEstimates(projectId);
+        updateSummary();
+
+        // ✅ Redirect to the newly created estimate for editing
+        if (result.estimate && result.estimate._id) {
+          window.location.href = `/estimate-edit.html?projectId=${projectId}&estimateId=${result.estimate._id}`;
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    } catch (error) {
+      console.error("❌ Error importing estimate:", error);
+      alert("Error importing estimate. Please check the file and try again.");
+    }
+  });
+
+  fileInput.click(); // ✅ Open file dialog
+}
+
+// ✅ Convert Excel JSON into required estimate format
+function formatEstimateFromExcel(data) {
+  const lineItemsMap = new Map();
+
+  data.forEach((row) => {
+    if (!row.Category || !row.Name || !row.Quantity || !row["Unit Price"]) {
+      console.error("⚠️ Skipping row due to missing required fields:", row);
+      return; // Skip invalid rows
+    }
+
+    const categoryName = row.Category.trim();
+    const item = {
+      name: row.Name.trim(),
+      description: row.Description ? row.Description.trim() : "",
+      quantity: parseInt(row.Quantity, 10) || 1,
+      unitPrice: parseFloat(row["Unit Price"]) || 0,
+      total: (parseInt(row.Quantity, 10) || 1) * (parseFloat(row["Unit Price"]) || 0)
+    };
+
+    if (!lineItemsMap.has(categoryName)) {
+      lineItemsMap.set(categoryName, {
+        type: "category", // ✅ Backend expects this
+        category: categoryName,
+        status: "in-progress", // ✅ Backend expects this
+        items: []
+      });
+    }
+
+    lineItemsMap.get(categoryName).items.push(item);
+  });
+
+  const lineItems = Array.from(lineItemsMap.values()).filter(category => category.items.length > 0);
+
+  return {
+    lineItems,
+    tax: 0 // Default tax to 0 if not provided
+  };
 }
 
 // Placeholder for using a template
