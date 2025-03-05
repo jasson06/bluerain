@@ -834,10 +834,20 @@ app.put("/api/estimates/:id", async (req, res) => {
       });
     });
 
+        // ✅ Recalculate the estimate total
+        let newTotal = 0;
+        updatesPayload.lineItems.forEach((lineItem) => {
+          lineItem.items.forEach((item) => {
+            newTotal += (item.quantity || 1) * (item.unitPrice || 0);
+          });
+        });
+
     // Update the document with the merged data
     const updatedEstimate = await Estimate.findByIdAndUpdate(
       estimateId,
-      { $set: updatesPayload },
+      { 
+        $set: { ...updatesPayload, total: newTotal } // ✅ Update total
+      },
       { new: true, runValidators: true }
     );
 
