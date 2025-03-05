@@ -558,6 +558,10 @@ async function loadEstimateDetails() {
           });
       });
 
+
+    // ✅ Update the summary to reflect the latest totals
+           updateSummary();
+
   } catch (error) {
       console.error("❌ Error loading estimate details:", error);
   }
