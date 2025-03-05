@@ -215,92 +215,93 @@ function openInviteModal() {
 }
 
 
-// Open Invite Modal and Populate Vendors
+// Open Invite Modal and Populate Vendors and Managers
 function openInviteModal() {
   const modal = document.getElementById('invite-modal');
   modal.style.display = 'flex';
 
   const vendorDropdown = document.getElementById('existing-vendor');
-  vendorDropdown.innerHTML = '';  // Clear existing options
+  const managerDropdown = document.getElementById('existing-manager'); // New dropdown for managers
+  vendorDropdown.innerHTML = '';
+  managerDropdown.innerHTML = '';
 
-  // Add "Select Existing Vendor" and "Add New Vendor" options
-  const selectOption = document.createElement('option');
-  selectOption.value = '';
-  selectOption.textContent = 'Select an existing vendor';
-  vendorDropdown.appendChild(selectOption);
+  // Common function to populate dropdowns
+  function populateDropdown(dropdown, data, role) {
+    // Add "Select Existing" and "Add New" options
+    const selectOption = document.createElement('option');
+    selectOption.value = '';
+    selectOption.textContent = `Select an existing ${role}`;
+    dropdown.appendChild(selectOption);
 
-  const newVendorOption = document.createElement('option');
-  newVendorOption.value = 'new';
-  newVendorOption.textContent = 'Add New Vendor';
-  vendorDropdown.appendChild(newVendorOption);
+    const newOption = document.createElement('option');
+    newOption.value = 'new';
+    newOption.textContent = `Add New ${role}`;
+    dropdown.appendChild(newOption);
 
-  // Fetch all vendors and populate the dropdown
-  fetch('/api/vendors')
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error('Failed to fetch vendors');
-      }
-      return response.json();
-    })
-    .then((vendors) => {
-      if (vendors.length === 0) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = 'No vendors available';
-        option.disabled = true;
-        vendorDropdown.appendChild(option);
-      } else {
-        vendors.forEach((vendor) => {
-          const option = document.createElement('option');
-          option.value = vendor._id;  // Ensure you're using the correct vendor ID
-          option.textContent = `${vendor.name} (${vendor.email})`;
-          vendorDropdown.appendChild(option);
-        });
-      }
-    })
-    .catch((error) => {
-      console.error('Error fetching vendors:', error);
+    // Populate the dropdown with fetched data
+    if (data.length === 0) {
       const option = document.createElement('option');
       option.value = '';
-      option.textContent = 'Error loading vendors';
+      option.textContent = `No ${role}s available`;
       option.disabled = true;
-      vendorDropdown.appendChild(option);
+      dropdown.appendChild(option);
+    } else {
+      data.forEach((user) => {
+        const option = document.createElement('option');
+        option.value = user._id;
+        option.textContent = `${user.name} (${user.email})`;
+        dropdown.appendChild(option);
+      });
+    }
+  }
+
+  // Fetch vendors
+  fetch('/api/vendors')
+    .then((response) => response.json())
+    .then((vendors) => populateDropdown(vendorDropdown, vendors, 'vendor'))
+    .catch((error) => {
+      console.error('Error fetching vendors:', error);
+      vendorDropdown.innerHTML = '<option value="">Error loading vendors</option>';
     });
 
-  // Autofill email when an existing vendor is selected
-  vendorDropdown.addEventListener('change', (event) => {
+  // Fetch managers
+  fetch('/api/managers')
+    .then((response) => response.json())
+    .then((managers) => populateDropdown(managerDropdown, managers, 'manager'))
+    .catch((error) => {
+      console.error('Error fetching managers:', error);
+      managerDropdown.innerHTML = '<option value="">Error loading managers</option>';
+    });
+
+  // Autofill email when an existing vendor or manager is selected
+  function handleDropdownChange(event, role) {
     const selectedValue = event.target.value;
     const emailInput = document.getElementById('invite-email');
-  
+
     if (selectedValue === 'new') {
-      // Allow manual input when "Add New Vendor" is selected
       emailInput.value = '';
       emailInput.readOnly = false;
     } else if (selectedValue) {
-      // Autofill email for existing vendors and make it readonly
-      fetch(`/api/vendors/${selectedValue}`)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error('Failed to fetch vendor details');
-          }
-          return response.json();
-        })
-        .then((vendor) => {
-          emailInput.value = vendor.email || '';
+      fetch(`/api/${role}s/${selectedValue}`)
+        .then((response) => response.json())
+        .then((user) => {
+          emailInput.value = user.email || '';
           emailInput.readOnly = true;
         })
         .catch((error) => {
-          console.error('Error fetching vendor:', error);
+          console.error(`Error fetching ${role}:`, error);
           emailInput.value = '';
-          alert('Error fetching vendor details. Please try again.');
+          alert(`Error fetching ${role} details. Please try again.`);
         });
     } else {
-      // No selection made, clear and allow manual input
       emailInput.value = '';
       emailInput.readOnly = true;
     }
-  });
-  
+  }
+
+  // Event listeners for both dropdowns
+  vendorDropdown.addEventListener('change', (event) => handleDropdownChange(event, 'vendor'));
+  managerDropdown.addEventListener('change', (event) => handleDropdownChange(event, 'manager'));
 }
 
 // Close the modal (optional additional functionality)
@@ -308,11 +309,10 @@ function closeInviteModal() {
   const modal = document.getElementById('invite-modal');
   modal.style.display = 'none';
 
-  // Clear form fields and dropdown
   document.getElementById('existing-vendor').innerHTML = '<option value="">Select an existing vendor</option>';
+  document.getElementById('existing-manager').innerHTML = '<option value="">Select an existing manager</option>'; // Clear manager dropdown
   document.getElementById('invite-email').value = '';
 }
-
 
 
 async function sendInvite() {
