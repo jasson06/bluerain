@@ -1055,9 +1055,14 @@ app.post('/api/add-project', async (req, res) => {
 
 
 // Get All Projects
+// Get All Projects (Exclude "open" and "on-hold")
 app.get('/api/projects', async (req, res) => {
   try {
-    const projects = await Project.find();
+    // ✅ Fetch only projects that are NOT "open" or "on-hold"
+    const projects = await Project.find({
+      status: { $nin: ["Open", "on-hold", "completed"] } // $nin = Not In
+    });
+
     res.json({ success: true, projects });
   } catch (error) {
     console.error('Error fetching projects:', error);
@@ -2838,6 +2843,35 @@ app.put('/api/estimates/line-items/:lineItemId', async (req, res) => {
   }
 });
 
+
+// ✅ Get all upcoming and on-hold projects
+app.get("/api/upcoming-projects", async (req, res) => {
+  try {
+    // ✅ Fetch projects that have "upcoming" or "on hold" status
+    const projects = await Project.find({
+      status: { $in: ["upcoming", "on-hold", "Open"] } // Matches either "upcoming" or "on hold"
+    });
+
+    res.status(200).json({ success: true, projects }); // ✅ Corrected variable name
+  } catch (error) {
+    console.error("Error fetching upcoming projects:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch upcoming projects." });
+  }
+});
+
+
+// ✅ API Endpoint to Fetch Completed Projects
+app.get('/api/completed-projects', async (req, res) => {
+  try {
+      // Fetch only projects with status "completed"
+      const completedProjects = await Project.find({ status: "completed" });
+
+      res.status(200).json({ success: true, projects: completedProjects });
+  } catch (error) {
+      console.error('❌ Error fetching completed projects:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch completed projects.' });
+  }
+});
 
 
 // Debugging route to check server deployment status
