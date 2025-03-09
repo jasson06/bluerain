@@ -896,10 +896,15 @@ input, textarea {
   border-radius: 10px;
 }
 
-/* Responsive Design */
+#map {
+  touch-action: none; /* Prevents double-tap zoom */
+}
+
+
 @media (max-width: 768px) {
   #map {
-      height: 350px; /* Adjust height for smaller screens */
+      height: 300px; /* Adjust map height on mobile */
+      width: 100%; /* Ensure full width */
   }
 }
 
