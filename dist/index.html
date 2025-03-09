@@ -49,51 +49,35 @@
     <header>
       <h1>Welcome BlueRain</h1>
       <div class="tab-container">
-        <button class="tab" id=!!"ready-schedule-tab">Ready to Schedule</button>
-        <button class="tab" id="projects-tab">Projects</button>
-        <button class="tab" id="punch-list-tab">Punch List</button>
+        <button class="tab" id=!!"ready-schedule-tab">Upcoming Projects</button>
+        <button class="tab" id="projects-tab">In Progress</button>
+        <button class="tab" id="punch-list-tab">Completed</button>
+        
       </div>
     
       <div class="columns-container">
-        <!-- Ready to Schedule Column -->
-        <div class="column" id="ready-schedule-column">
-          <h3>Ready to Schedule</h3>
-          <div class="item" onclick="navigateToDetails('ready-to-schedule', 1)">
-            <p>Item 1</p>
-            <small>Location: Example City</small>
-          </div>
-          <div class="item" onclick="navigateToDetails('ready-to-schedule', 2)">
-            <p>Item 2</p>
-            <small>Location: Example City</small>
-          </div>
+        <div class="column" id="Upcoming-projects-column">
+            <h3>Upcoming Projects</h3>
+            <div id="Upcoming-projects-list"></div>
         </div>
     
-        <!-- Projects Column -->
         <div class="column" id="projects-column">
-          <h3>Projects</h3>
-          <div id="projects-list"></div>
-         
-          <!-- Dynamic content will be loaded here -->
-          
-        </div>
+            <h3>In Progress</h3>
+            <div id="projects-list"></div>
         </div>
     
-        <!-- Punch List Column -->
-        <div class="column" id="punch-list-column">
-          <h3>Punch List</h3>
-          <div class="item" onclick="navigateToDetails('punch-list', 1)">
-            <p>Punch Item 1</p>
-          </div>
-          <div class="item" onclick="navigateToDetails('punch-list', 2)">
-            <p>Punch Item 2</p>
-          </div>
+        <div class="column" id="completed-projects-column">
+            <h3>Completed</h3>
+            <div id="completed-projects-list"></div>
         </div>
-      </div>
     </div>
+    
 
   <!-- Script -->
   <script src="./script.js"></script>
 </body>
 
 </html>
+
+
 
