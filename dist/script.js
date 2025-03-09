@@ -212,7 +212,7 @@ function navigateToDetails(section, id) {
           itemDiv.addEventListener('click', () => navigateToDetails('projects', project._id));
           itemDiv.innerHTML = `
             <p>${project.name}</p>
-            <small>${project.address.city}, ${project.address.state}</small>
+            <small>${project.address.addressLine1}, ${project.address.city}, ${project.address.state}, ${project.address.zip} </small>
           `;
           projectsList.appendChild(itemDiv);
         });
@@ -223,6 +223,101 @@ function navigateToDetails(section, id) {
     }
   }
   
+
+
+
+  
+// ✅ Function to load upcoming and on-hold projects dynamically
+async function loadUpcomingProjects() {
+    const projectsList = document.getElementById("Upcoming-projects-list");
+    projectsList.innerHTML = "<p>Loading...</p>"; // Placeholder text
+  
+    try {
+      // ✅ Fetch upcoming and on-hold projects
+      const response = await fetch("/api/upcoming-projects");
+      if (!response.ok) throw new Error("Failed to fetch upcoming projects");
+  
+      const { projects } = await response.json();
+      projectsList.innerHTML = ""; // Clear loading message
+  
+      if (!projects || projects.length === 0) {
+        projectsList.innerHTML = "<p>No upcoming or on-hold projects found.</p>";
+        return;
+      }
+  
+      // ✅ Generate project items dynamically (matching loadProjects style)
+      projects.forEach((project) => {
+        const itemDiv = document.createElement("div");
+        itemDiv.className = "item"; // Keep the same class as loadProjects
+  
+        // 🔹 Determine status display: If "Open" or "on-hold", show "Upcoming"
+        const displayedStatus = ["Open", "on-hold"].includes(project.status) ? "Upcoming" : project.status;
+  
+        // 🔹 Full Address Formatting
+        const fullAddress = `${project.address.addressLine1 || ""} ${project.address.addressLine2 || ""}, ${project.address.city}, ${project.address.state} ${project.address.zip || ""}`;
+  
+        // Attach the navigateToDetails function to the onclick event
+        itemDiv.addEventListener("click", () => navigateToDetails("projects", project._id));
+  
+        // ✅ Include modified status label and full address
+        itemDiv.innerHTML = `
+          <p>${project.name}</p>
+          <small>${fullAddress}</small>
+        `;
+  
+        projectsList.appendChild(itemDiv);
+      });
+    } catch (error) {
+      console.error("❌ Error loading upcoming projects:", error);
+      projectsList.innerHTML = "<p>Error loading upcoming projects. Please try again later.</p>";
+    }
+  }
+  
+
+
+
+  // ✅ Function to Load Completed Projects Dynamically
+async function loadCompletedProjects() {
+    const projectsList = document.getElementById("completed-projects-list");
+    projectsList.innerHTML = "<p>Loading...</p>"; // Show loading message
+
+    try {
+        const response = await fetch("/api/completed-projects");
+        if (!response.ok) throw new Error("Failed to fetch completed projects");
+
+        const data = await response.json();
+        projectsList.innerHTML = ""; // Clear loading message
+
+        if (data.projects.length === 0) {
+            projectsList.innerHTML = "<p>No completed projects found.</p>";
+        } else {
+            data.projects.forEach((project) => {
+                const itemDiv = document.createElement("div");
+                itemDiv.className = "item";
+
+                // Attach the navigateToDetails function to the onclick event
+                itemDiv.addEventListener("click", () => navigateToDetails("projects", project._id));
+
+                itemDiv.innerHTML = `
+                    <p>${project.name}</p>
+                    <small>${project.address.addressLine1}, ${project.address.city}, ${project.address.state}, ${project.address.zip}</small>
+                    <span class="status">✔ Completed</span>
+                `;
+
+                projectsList.appendChild(itemDiv);
+            });
+        }
+    } catch (error) {
+        console.error("❌ Error loading completed projects:", error);
+        projectsList.innerHTML = "<p>Error loading completed projects. Please try again later.</p>";
+    }
+}
+
+// ✅ Call function on page load
+document.addEventListener("DOMContentLoaded", () => {
+    loadCompletedProjects();
+});
+
 
 
   
@@ -258,7 +353,10 @@ function navigateToDetails(section, id) {
   window.navigateToDetails = navigateToDetails;
       // Call loadProjects to populate the Projects column on page load
       loadProjects();
+      loadUpcomingProjects();
+      loadCompletedProjects();
       
 });
+ 
 
 
