@@ -908,4 +908,11 @@ input, textarea {
   }
 }
 
+/* Small devices (Phones, 480px and below) */
+@media (max-width: 480px) {
+  #map-section {
+     margin-left: -17px;
+     width: 105%; /* Ensure full width */
+  }
 
+}
