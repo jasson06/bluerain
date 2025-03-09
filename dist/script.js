@@ -327,20 +327,20 @@ let map;
 
 function initMap() {
     map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: 29.4241, lng: -98.4936 }, // Default location (San Antonio)
+        center: { lat: 29.4241, lng: -98.4936 }, // Default to San Antonio
         zoom: 10,
     });
 
-    
-
-    loadProjectLocations(); // Load markers dynamically
+    loadProjectLocations(); // Load markers
 }
-// ✅ Ensure `initMap` is attached to `window` to be recognized globally
+
+// ✅ Make initMap globally accessible
 window.initMap = initMap;
 
+// ✅ Load project locations
 async function loadProjectLocations() {
     try {
-        const response = await fetch("/api/projects"); // Fetch projects with addresses
+        const response = await fetch("/api/projects");
         if (!response.ok) throw new Error("Failed to fetch project locations");
 
         const data = await response.json();
@@ -364,7 +364,7 @@ async function loadProjectLocations() {
                     const { lat, lng } = geoData.results[0].geometry.location;
                     addMarker(lat, lng, project.name);
                 } else {
-                    console.warn(`Geocoding failed for ${project.name}:`, geoData.status);
+                    console.warn(`Skipping ${project.name}: No coordinates available.`);
                 }
             } catch (geoError) {
                 console.error("Error geocoding address:", geoError);
@@ -375,27 +375,26 @@ async function loadProjectLocations() {
     }
 }
 
+// ✅ Add Markers & Open Google Maps Navigation
 function addMarker(lat, lng, title) {
-    new google.maps.Marker({
+    const marker = new google.maps.Marker({
         position: { lat, lng },
         map,
         title,
     });
 
-
-    // ✅ Make the marker clickable to open Google Maps navigation
+    // Open Google Maps navigation when marker is clicked
     marker.addListener("click", () => {
-        const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
-        window.open(mapsUrl, "_blank"); // Open in new tab
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
     });
-    
 }
+
+
 
 // Ensure `initMap` is called when the page loads
 document.addEventListener("DOMContentLoaded", () => {
     initMap();
 });
-
     
   
   // Sidebar Toggle with Hamburger
