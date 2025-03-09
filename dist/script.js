@@ -326,9 +326,13 @@ document.addEventListener("DOMContentLoaded", () => {
 let map;
 
 function initMap() {
-    map = new google.maps.Map(document.getElementById("map"), {
+ map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 29.4241, lng: -98.4936 }, // Default to San Antonio
         zoom: 10,
+        gestureHandling: "greedy", // Enables better pinch-to-zoom
+        zoomControl: true, // Ensures zoom control buttons are available
+        streetViewControl: false, // Hides Street View button for a cleaner UI
+        fullscreenControl: false, // Hides full-screen option on mobile
     });
 
     loadProjectLocations(); // Load markers
