@@ -320,6 +320,83 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
+
+
+    
+let map;
+
+function initMap() {
+    map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 29.4241, lng: -98.4936 }, // Default location (San Antonio)
+        zoom: 10,
+    });
+
+    
+
+    loadProjectLocations(); // Load markers dynamically
+}
+// ✅ Ensure `initMap` is attached to `window` to be recognized globally
+window.initMap = initMap;
+
+async function loadProjectLocations() {
+    try {
+        const response = await fetch("/api/projects"); // Fetch projects with addresses
+        if (!response.ok) throw new Error("Failed to fetch project locations");
+
+        const data = await response.json();
+        if (!data.projects || data.projects.length === 0) {
+            console.warn("No project locations found.");
+            return;
+        }
+
+        data.projects.forEach(async (project) => {
+            if (!project.address || !project.address.addressLine1) return;
+
+            const fullAddress = `${project.address.addressLine1}, ${project.address.city}, ${project.address.state} ${project.address.zip}`;
+
+            try {
+                const geoResponse = await fetch(
+                    `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=AIzaSyCvzkKpCkAY2PHwU8I8zZiM_FLMzMj1bbg`
+                );
+                const geoData = await geoResponse.json();
+
+                if (geoData.status === "OK") {
+                    const { lat, lng } = geoData.results[0].geometry.location;
+                    addMarker(lat, lng, project.name);
+                } else {
+                    console.warn(`Geocoding failed for ${project.name}:`, geoData.status);
+                }
+            } catch (geoError) {
+                console.error("Error geocoding address:", geoError);
+            }
+        });
+    } catch (error) {
+        console.error("Error loading project locations:", error);
+    }
+}
+
+function addMarker(lat, lng, title) {
+    new google.maps.Marker({
+        position: { lat, lng },
+        map,
+        title,
+    });
+
+
+    // ✅ Make the marker clickable to open Google Maps navigation
+    marker.addListener("click", () => {
+        const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+        window.open(mapsUrl, "_blank"); // Open in new tab
+    });
+    
+}
+
+// Ensure `initMap` is called when the page loads
+document.addEventListener("DOMContentLoaded", () => {
+    initMap();
+});
+
+    
   
   // Sidebar Toggle with Hamburger
   const hamburger = document.querySelector('.hamburger');
@@ -355,7 +432,7 @@ document.addEventListener("DOMContentLoaded", () => {
       loadProjects();
       loadUpcomingProjects();
       loadCompletedProjects();
-      
+      initMap();
 });
  
 
