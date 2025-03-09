@@ -417,10 +417,20 @@ function addMarker(lat, lng, title) {
     infoWindow.open(map, marker);
 
     
-    // Open Google Maps navigation when marker is clicked
-    marker.addListener("click", () => {
-        window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
-    });
+// Open Apple Maps on iOS, Google Maps on others
+marker.addListener("click", () => {
+    const destination = `${lat},${lng}`;
+    const isAppleDevice = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent);
+
+    if (isAppleDevice) {
+        // Open in Apple Maps
+        window.open(`https://maps.apple.com/?daddr=${destination}`, "_blank");
+    } else {
+        // Open in Google Maps
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}`, "_blank");
+    }
+});
+
 }
 
 
