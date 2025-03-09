@@ -383,6 +383,40 @@ function addMarker(lat, lng, title) {
         title,
     });
 
+
+    const infoWindow = new google.maps.InfoWindow({
+        content: `
+            <div style="
+                font-size: 11px;
+                font-weight: bold;
+                color: #ffffff;
+                background: #0f4c75; 
+                padding: 3px 8px;
+                border-radius: 4px;
+                text-align: center;
+                white-space: nowrap;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+                max-width: 120px;
+                max-height: 40px;
+                overflow: hidden;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            ">
+                📍 ${title}
+            </div>
+        `,
+        maxWidth: 120,  // Controls the white box width
+        maxHeight: 50,  // Controls the white box height
+    });
+    
+
+
+
+    // Open label by default (so it's always visible)
+    infoWindow.open(map, marker);
+
+    
     // Open Google Maps navigation when marker is clicked
     marker.addListener("click", () => {
         window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
