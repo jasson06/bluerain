@@ -815,7 +815,7 @@ input, textarea {
 .hamburger {
   position: fixed;
   top: 20px;
-  left: 390px;
+  left: 380px;
   background: var(--primary-color);
   color: white;
   border: none;
