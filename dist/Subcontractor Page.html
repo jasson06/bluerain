@@ -242,7 +242,7 @@ async function startProject(projectId) {
 
         if (!response.ok) throw new Error("Failed to start project.");
 
-        alert("Project moved to In Progress.");
+        
         fetchAssignedProjects(localStorage.getItem("vendorId"));
     } catch (error) {
         console.error("Error starting project:", error);
@@ -280,8 +280,7 @@ async function completeProject(projectId) {
 
         if (!completeResponse.ok) throw new Error("Failed to mark project as completed.");
 
-        alert("Project marked as Completed!");
-       const BASE_URL = window.location.href = "/Subcontractor%20page.html";  // Redirect to dashboard
+      window.location.href = '/Subcontractor%20page.html';  // Redirect to dashboard
     } catch (error) {
         console.error("Error completing project:", error);
     }
