@@ -815,7 +815,7 @@ input, textarea {
 .hamburger {
   position: fixed;
   top: 20px;
-  left: 10px;
+  left: 390px;
   background: var(--primary-color);
   color: white;
   border: none;
@@ -845,7 +845,7 @@ input, textarea {
 
 
 .sidebar.open + .main-content {
-  margin-left: 250px;
+  margin-left: 160px;
 }
 
 /* Tabs */
