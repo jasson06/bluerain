@@ -77,22 +77,44 @@
        margin-bottom: 10px;
      }
 
-        /* ✅ Modern Toastify Custom Styles */
+    /* ✅ Modern Toastify Custom Styles */
 .toastify {
     display: flex;
     align-items: center;
-    gap: 15px;
-    padding: 14px 18px;
+    gap: 12px;
+    padding: 14px 16px;
     border-radius: 10px;
     font-size: 14px;
     font-weight: 500;
     box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
     background-color: rgb(255, 255, 255);
     color: #333;
-    width: 320px; /* Fixed width */
-    max-width: 90%;
+    width: auto;
+    max-width: 350px; /* Default max width */
+    min-width: 250px;
     position: relative;
     background: #f4f4f9;
+}
+
+
+/* ✅ Responsive for Mobile Screens */
+@media (max-width: 480px) {
+    .toastify {
+        max-width: 90%; /* Adjust width for smaller screens */
+        padding: 12px;
+    }
+
+    .toast-text {
+        font-size: 13px; /* Reduce text size on small screens */
+    }
+
+    .toast-title {
+        font-size: 14px;
+    }
+
+    .toast-icon {
+        font-size: 18px;
+    }
 }
 
 /* ✅ Left Status Indicator Bar */
@@ -121,6 +143,9 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
+    word-wrap: break-word; /* Allow long words to break */
+    white-space: normal; /* Ensure text wraps correctly */
 }
 
 /* ✅ Icon Styling */
@@ -136,6 +161,7 @@
     display: flex;
     flex-direction: column;
     gap: 3px;
+    flex: 1; /* Ensure text takes remaining space */
 }
 
 .toast-title {
