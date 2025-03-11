@@ -4,7 +4,12 @@
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <title>Vendor Authentication</title>
+      <!-- Toastify CSS & JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
    <style>
+    
      body {
        font-family: Arial, sans-serif;
        background-color: #f4f5f7;
@@ -71,6 +76,100 @@
        margin-top: -5px;
        margin-bottom: 10px;
      }
+
+        /* ✅ Modern Toastify Custom Styles */
+.toastify {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 14px 18px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
+    background-color: rgb(255, 255, 255);
+    color: #333;
+    width: 320px; /* Fixed width */
+    max-width: 90%;
+    position: relative;
+    background: #f4f4f9;
+}
+
+/* ✅ Left Status Indicator Bar */
+.toastify::before {
+    content: "";
+    width: 8px;
+    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    border-radius: 10px 0 0 10px;
+}
+
+/* ✅ Success Theme */
+.toastify-success::before {
+    background: linear-gradient(to bottom, #34d399, #059669); /* Green gradient */
+}
+
+/* ✅ Error Theme */
+.toastify-error::before {
+    background: linear-gradient(to bottom, #ef4444, #b91c1c); /* Red gradient */
+}
+
+/* ✅ Toast Content Layout */
+.toast-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ✅ Icon Styling */
+.toast-icon {
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ✅ Text Styling */
+.toast-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.toast-title {
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.toast-message {
+    font-size: 13px;
+    color: #555;
+}
+
+.toast-close{
+    color: #040404;
+    margin-top: 65px;
+    margin-left: -345px;
+
+}
+
+.toast-close:hover {
+    background-color: #d40505;
+}
+
+/* ✅ Smooth Fade Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
    </style>
  </head>
  <body>
@@ -113,6 +212,22 @@
    </div>
  
    <script>
+
+/// ✅ Helper Function to Show Modern Toast Messages
+function showToast(message, type = "success") {
+    const icon = type === "success" ? "✔️" : "❌"; // Emoji Icons
+    Toastify({
+        text: `${icon} ${message}`, // Add icon before message
+        duration: type === "success" ? 3000 : -1, // Auto-close for success, persistent for errors
+        close: type === "error", // Close button for errors
+        gravity: "top",
+        position: "center",
+        className: type === "success" ? "toastify toastify-success" : "toastify toastify-error", // Apply custom styles
+        stopOnFocus: true, // Prevent auto-dismiss on hover
+    }).showToast();
+}
+
+    
      function toggleForm(formType) {
        const forms = document.querySelectorAll('form');
        forms.forEach(form => form.classList.remove('active'));
@@ -151,7 +266,7 @@
        const password = document.getElementById("activate-password").value.trim();
  
        if (!name || !password) {
-         alert("All fields are required.");
+         showToast("All fields are required.");
          return;
        }
  
@@ -168,7 +283,7 @@
  
          if (!response.ok) throw new Error(result.message);
  
-         alert("Account activated successfully!");
+         showToast("Account activated successfully!");
  
          // Redirect based on role
          if (result.role === "project-manager") {
@@ -178,7 +293,7 @@
          }
        } catch (error) {
          console.error("Activation Error:", error);
-         alert("Failed to activate account. Please try again.");
+         showToast("Failed to activate account. Please try again.");
        }
      });
    } else {
@@ -199,7 +314,7 @@
    const password = document.getElementById('signin-password').value.trim();
  
    if (!email || !password) {
-     alert('Please fill out all fields.');
+     showToast('Please fill out all fields.');
      return;
    }
  
@@ -212,23 +327,23 @@
  
      const data = await response.json();
      if (response.ok) {
-       alert('Sign-in successful!');
+       showToast('Sign-in successful!');
        
        localStorage.setItem('vendorId', data.vendorId); // Store vendor ID
        console.log('Redirecting to /Subcontractor%20Page.html'); // Debugging log
        window.location.href = '/Subcontractor%20Page.html'; // Ensure correct file name
      } else {
        if (response.status === 401) {
-         alert('Invalid email or password.');
+         showToast('Invalid email or password.');
        } else if (response.status === 500) {
-         alert('Server error. Please try again later.');
+         showToast('Server error. Please try again later.');
        } else {
-         alert(data.message || 'Sign-in failed!');
+         showToast(data.message || 'Sign-in failed!');
        }
      }
    } catch (error) {
      console.error('Error signing in:', error);
-     alert('An error occurred. Please try again.');
+     showToast('An error occurred. Please try again.');
    }
  }
  
@@ -241,7 +356,7 @@
        const password = document.getElementById('signup-password').value.trim();
  
        if (!name || !email || !password) {
-         alert('Please fill out all fields.');
+         showToast('Please fill out all fields.');
          return;
        }
  
@@ -254,14 +369,14 @@
  
          const result = await response.json();
          if (response.ok) {
-           alert('Sign-up successful! You can now sign in.');
+           showToast('Sign-up successful! You can now sign in.');
            toggleForm('signin');
          } else {
-           alert(result.message || 'Sign-up failed!');
+           showToast(result.message || 'Sign-up failed!');
          }
        } catch (error) {
          console.error('Error signing up:', error);
-         alert('An error occurred. Please try again.');
+         showToast('An error occurred. Please try again.');
        }
      }
  
@@ -270,7 +385,7 @@
        const email = document.getElementById('reset-email').value.trim();
  
        if (!email) {
-         alert('Please enter your email.');
+         showToast('Please enter your email.');
          return;
        }
  
@@ -283,14 +398,14 @@
  
          const result = await response.json();
          if (response.ok) {
-           alert('Password reset link sent to your email.');
+           showToast('Password reset link sent to your email.');
            toggleForm('signin');
          } else {
-           alert(result.message || 'Failed to send password reset link.');
+           showToast(result.message || 'Failed to send password reset link.');
          }
        } catch (error) {
          console.error('Error resetting password:', error);
-         alert('An error occurred. Please try again.');
+         showToast('An error occurred. Please try again.');
        }
      }
    </script>
