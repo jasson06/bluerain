@@ -1,397 +1,298 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vendor Authentication</title>
-    <!-- Toastify CSS & JS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
-<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f5f7;
-      margin: 0;
-      padding: 0;
-    }
-    .container {
-      max-width: 400px;
-      margin: 50px auto;
-      background: white;
-      padding: 20px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-      border-radius: 8px;
-    }
-    .form-header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .form-header h2 {
-      margin: 0;
-    }
-    form {
-      display: none;
-    }
-    form.active {
-      display: block;
-    }
-    input[type="email"],
-    input[type="password"],
-    input[type="text"] {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    button {
-      width: 100%;
-      padding: 10px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    .toggle-link {
-      color: #007bff;
-      cursor: pointer;
-      display: block;
-      text-align: center;
-      margin-top: 10px;
-      text-decoration: none;
-    }
-    .toggle-link:hover {
-      text-decoration: underline;
-    }
-    .error-message {
-      color: red;
-      font-size: 14px;
-      margin-top: -5px;
-      margin-bottom: 10px;
-    }
-
-
-    /* ✅ Modern Toastify Custom Styles */
-.toastify {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 14px 18px;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 500;
-    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
-    background-color: rgb(255, 255, 255);
-    color: #333;
-    width: 320px; /* Fixed width */
-    max-width: 90%;
-    position: relative;
-    background: #f4f4f9;
-}
-
-/* ✅ Left Status Indicator Bar */
-.toastify::before {
-    content: "";
-    width: 8px;
-    height: 100%;
-    position: absolute;
-    left: 0;
-    top: 0;
-    border-radius: 10px 0 0 10px;
-}
-
-/* ✅ Success Theme */
-.toastify-success::before {
-    background: linear-gradient(to bottom, #34d399, #059669); /* Green gradient */
-}
-
-/* ✅ Error Theme */
-.toastify-error::before {
-    background: linear-gradient(to bottom, #ef4444, #b91c1c); /* Red gradient */
-}
-
-/* ✅ Toast Content Layout */
-.toast-content {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-/* ✅ Icon Styling */
-.toast-icon {
-    font-size: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* ✅ Text Styling */
-.toast-text {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.toast-title {
-    font-weight: bold;
-    font-size: 15px;
-}
-
-.toast-message {
-    font-size: 13px;
-    color: #555;
-}
-
-.toast-close{
-    color: #040404;
-    margin-top: 65px;
-    margin-left: -345px;
-
-}
-
-.toast-close:hover {
-    background-color: #d40505;
-}
-
-/* ✅ Smooth Fade Animation */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="form-header">
-      <h2 id="form-title">Sign In</h2>
-    </div>
-
-    <!-- Sign In Form -->
-    <form id="signin-form" class="active">
-      <input type="email" id="signin-email" placeholder="Email" required>
-      <input type="password" id="signin-password" placeholder="Password" required>
-      <button type="button" onclick="handleSignIn()">Sign In</button>
-      <p class="toggle-link" onclick="toggleForm('reset')">Forgot Password?</p>
-      <p class="toggle-link" onclick="toggleForm('signup')">Don't have an account? Sign Up</p>
-    </form>
-
-    <!-- Sign Up Form -->
-    <form id="signup-form">
-      <input type="text" id="signup-name" placeholder="Full Name" required>
-      <input type="email" id="signup-email" placeholder="Email" required>
-      <input type="password" id="signup-password" placeholder="Password" required>
-      <button type="button" onclick="handleSignUp()">Sign Up</button>
-      <p class="toggle-link" onclick="toggleForm('signin')">Already have an account? Sign In</p>
-    </form>
-
-    <!-- Reset Password Form -->
-    <form id="reset-request-form">
-      <input type="email" id="reset-email" placeholder="Enter your email" required>
-      <button type="button" onclick="handlePasswordResetRequest()">Reset Password</button>
-      <p class="toggle-link" onclick="toggleForm('signin')">Back to Sign In</p>
-    </form>
-
-    <!-- Activate Account Form (For Invited Users) -->
-    <form id="activate-form">
-      <input type="text" id="activate-name" placeholder="Full Name" required>
-      <input type="password" id="activate-password" placeholder="Password" required>
-      <button type="submit">Activate Account</button>
-    </form>
-  </div>
-
-  <script>
-
-/// ✅ Helper Function to Show Modern Toast Messages
-function showToast(message, type = "success") {
-    const icon = type === "success" ? "✔️" : "❌"; // Emoji Icons
-    Toastify({
-        text: `${icon} ${message}`, // Add icon before message
-        duration: type === "success" ? 3000 : -1, // Auto-close for success, persistent for errors
-        close: type === "error", // Close button for errors
-        gravity: "top",
-        position: "center",
-        className: type === "success" ? "toastify toastify-success" : "toastify toastify-error", // Apply custom styles
-        stopOnFocus: true, // Prevent auto-dismiss on hover
-    }).showToast();
-}
-
-    function toggleForm(formType) {
-      const forms = document.querySelectorAll('form');
-      forms.forEach(form => form.classList.remove('active'));
-
-      const targetForm = document.getElementById(`${formType}-form`);
-      if (targetForm) {
-        targetForm.classList.add('active');
-      }
-
-      const formTitle = {
-        signin: 'Sign In',
-        signup: 'Sign Up',
-        reset: 'Reset Password',
-        activate: 'Activate Account'
-      };
-
-      if (document.getElementById('form-title')) {
-        document.getElementById('form-title').textContent = formTitle[formType];
-      }
-    }
-
-    document.addEventListener("DOMContentLoaded", async () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const token = urlParams.get("token");
-
-  console.log("Token from URL:", token); // Debug log to confirm token presence
-
-  if (token) {
-    toggleForm("activate"); // Show Activate Account Form
-    document.getElementById("activate-form").addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const name = document.getElementById("activate-name").value.trim();
-      const password = document.getElementById("activate-password").value.trim();
-
-      if (!name || !password) {
-        showToast("All fields are required.");
-        return;
-      }
-
-      try {
-        console.log("Sending activation request...");
-        const response = await fetch("/api/invite/accept", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, name, password }),
-        });
-
-        const result = await response.json();
-        console.log("Activation response:", result);
-
-        if (!response.ok) throw new Error(result.message);
-
-        showToast("Account activated successfully!");
-
-        // Redirect based on role
-        if (result.role === "project-manager") {
-          window.location.href = "/project-manager-auth.html";
-        } else {
-          window.location.href = "/sign-inpage.html";
-        }
-      } catch (error) {
-        console.error("Activation Error:", error);
-        showToast("Failed to activate account. Please try again.");
-      }
-    });
-  } else {
-    console.warn("No token in URL. Redirecting to Sign In form.");
-    toggleForm("signin");
-  }
-});
-
-
-
-    // Sign In Handler
-    async function handleSignIn() {
-  const email = document.getElementById('signin-email').value.trim();
-  const password = document.getElementById('signin-password').value.trim();
-
-  if (!email || !password) {
-    showToast('Please fill out all fields.');
-    return;
-  }
-
-  try {
-    const response = await fetch('/api/signin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-
-    const data = await response.json();
-    if (response.ok) {
-      showToast('Sign-in successful!');
-      localStorage.setItem('vendorId', data.vendorId); // Store vendor ID for further use
-      window.location.href = '/Subcontractor%20page.html';
-    } else {
-      showToast(data.message || 'Sign-in failed!');
-    }
-  } catch (error) {
-    console.error('Error signing in:', error);
-    showToast('An error occurred. Please try again.');
-  }
-}
-
-
-    // Sign Up Handler
-    async function handleSignUp() {
-      const name = document.getElementById('signup-name').value.trim();
-      const email = document.getElementById('signup-email').value.trim();
-      const password = document.getElementById('signup-password').value.trim();
-
-      if (!name || !email || !password) {
-        showToast('Please fill out all fields.');
-        return;
-      }
-
-      try {
-        const response = await fetch('/api/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, password })
-        });
-
-        const result = await response.json();
-        if (response.ok) {
-          showToast('Sign-up successful! You can now sign in.');
-          toggleForm('signin');
-        } else {
-          alert(result.message || 'Sign-up failed!');
-        }
-      } catch (error) {
-        console.error('Error signing up:', error);
-        showToast('An error occurred. Please try again.');
-      }
-    }
-
-    // Reset Password Handler
-    async function handlePasswordResetRequest() {
-      const email = document.getElementById('reset-email').value.trim();
-
-      if (!email) {
-        showToast('Please enter your email.');
-        return;
-      }
-
-      try {
-        const response = await fetch('/api/reset-password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email })
-        });
-
-        const result = await response.json();
-        if (response.ok) {
-          showToast('Password reset link sent to your email.');
-          toggleForm('signin');
-        } else {
-          showToast(result.message || 'Failed to send password reset link.');
-        }
-      } catch (error) {
-        console.error('Error resetting password:', error);
-        showToast('An error occurred. Please try again.');
-      }
-    }
-  </script>
-</body>
-</html>
+ <html lang="en">
+ <head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Vendor Authentication</title>
+   <style>
+     body {
+       font-family: Arial, sans-serif;
+       background-color: #f4f5f7;
+       margin: 0;
+       padding: 0;
+     }
+     .container {
+       max-width: 400px;
+       margin: 50px auto;
+       background: white;
+       padding: 20px;
+       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+       border-radius: 8px;
+     }
+     .form-header {
+       text-align: center;
+       margin-bottom: 20px;
+     }
+     .form-header h2 {
+       margin: 0;
+     }
+     form {
+       display: none;
+     }
+     form.active {
+       display: block;
+     }
+     input[type="email"],
+     input[type="password"],
+     input[type="text"] {
+       width: 100%;
+       padding: 10px;
+       margin: 10px 0;
+       border: 1px solid #ccc;
+       border-radius: 4px;
+     }
+     button {
+       width: 100%;
+       padding: 10px;
+       background-color: #007bff;
+       color: white;
+       border: none;
+       border-radius: 4px;
+       cursor: pointer;
+       font-size: 16px;
+     }
+     button:hover {
+       background-color: #0056b3;
+     }
+     .toggle-link {
+       color: #007bff;
+       cursor: pointer;
+       display: block;
+       text-align: center;
+       margin-top: 10px;
+       text-decoration: none;
+     }
+     .toggle-link:hover {
+       text-decoration: underline;
+     }
+     .error-message {
+       color: red;
+       font-size: 14px;
+       margin-top: -5px;
+       margin-bottom: 10px;
+     }
+   </style>
+ </head>
+ <body>
+   <div class="container">
+     <div class="form-header">
+       <h2 id="form-title">Sign In</h2>
+     </div>
+ 
+     <!-- Sign In Form -->
+     <form id="signin-form" class="active">
+       <input type="email" id="signin-email" placeholder="Email" required>
+       <input type="password" id="signin-password" placeholder="Password" required>
+       <button type="button" onclick="handleSignIn()">Sign In</button>
+       <p class="toggle-link" onclick="toggleForm('reset')">Forgot Password?</p>
+       <p class="toggle-link" onclick="toggleForm('signup')">Don't have an account? Sign Up</p>
+     </form>
+ 
+     <!-- Sign Up Form -->
+     <form id="signup-form">
+       <input type="text" id="signup-name" placeholder="Full Name" required>
+       <input type="email" id="signup-email" placeholder="Email" required>
+       <input type="password" id="signup-password" placeholder="Password" required>
+       <button type="button" onclick="handleSignUp()">Sign Up</button>
+       <p class="toggle-link" onclick="toggleForm('signin')">Already have an account? Sign In</p>
+     </form>
+ 
+     <!-- Reset Password Form -->
+     <form id="reset-request-form">
+       <input type="email" id="reset-email" placeholder="Enter your email" required>
+       <button type="button" onclick="handlePasswordResetRequest()">Reset Password</button>
+       <p class="toggle-link" onclick="toggleForm('signin')">Back to Sign In</p>
+     </form>
+ 
+     <!-- Activate Account Form (For Invited Users) -->
+     <form id="activate-form">
+       <input type="text" id="activate-name" placeholder="Full Name" required>
+       <input type="password" id="activate-password" placeholder="Password" required>
+       <button type="submit">Activate Account</button>
+     </form>
+   </div>
+ 
+   <script>
+     function toggleForm(formType) {
+       const forms = document.querySelectorAll('form');
+       forms.forEach(form => form.classList.remove('active'));
+ 
+       const targetForm = document.getElementById(`${formType}-form`);
+       if (targetForm) {
+         targetForm.classList.add('active');
+       }
+ 
+       const formTitle = {
+         signin: 'Sign In',
+         signup: 'Sign Up',
+         reset: 'Reset Password',
+         activate: 'Activate Account'
+       };
+ 
+       if (document.getElementById('form-title')) {
+         document.getElementById('form-title').textContent = formTitle[formType];
+       }
+     }
+ 
+ 
+ 
+     document.addEventListener("DOMContentLoaded", async () => {
+   const urlParams = new URLSearchParams(window.location.search);
+   const token = urlParams.get("token");
+ 
+   console.log("Token from URL:", token); // Debug log to confirm token presence
+ 
+   if (token) {
+     toggleForm("activate"); // Show Activate Account Form
+     document.getElementById("activate-form").addEventListener("submit", async (e) => {
+       e.preventDefault();
+ 
+       const name = document.getElementById("activate-name").value.trim();
+       const password = document.getElementById("activate-password").value.trim();
+ 
+       if (!name || !password) {
+         alert("All fields are required.");
+         return;
+       }
+ 
+       try {
+         console.log("Sending activation request...");
+         const response = await fetch("/api/invite/accept", {
+           method: "POST",
+           headers: { "Content-Type": "application/json" },
+           body: JSON.stringify({ token, name, password }),
+         });
+ 
+         const result = await response.json();
+         console.log("Activation response:", result);
+ 
+         if (!response.ok) throw new Error(result.message);
+ 
+         alert("Account activated successfully!");
+ 
+         // Redirect based on role
+         if (result.role === "project-manager") {
+           window.location.href = "/project-manager-auth.html";
+         } else {
+           window.location.href = "/sign-inpage.html";
+         }
+       } catch (error) {
+         console.error("Activation Error:", error);
+         alert("Failed to activate account. Please try again.");
+       }
+     });
+   } else {
+     console.warn("No token in URL. Redirecting to Sign In form.");
+     toggleForm("signin");
+   }
+ });
+ 
+ 
+ 
+ 
+ 
+ 
+ const BASE_URL = window.location.origin; // Dynamically detect the current domain
+ 
+ async function handleSignIn() {
+   const email = document.getElementById('signin-email').value.trim();
+   const password = document.getElementById('signin-password').value.trim();
+ 
+   if (!email || !password) {
+     alert('Please fill out all fields.');
+     return;
+   }
+ 
+   try {
+     const response = await fetch(`${BASE_URL}/api/signin`, {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ email, password }),
+     });
+ 
+     const data = await response.json();
+     if (response.ok) {
+       alert('Sign-in successful!');
+       
+       localStorage.setItem('vendorId', data.vendorId); // Store vendor ID
+       console.log('Redirecting to /Subcontractor%20Page.html'); // Debugging log
+       window.location.href = '/Subcontractor%20Page.html'; // Ensure correct file name
+     } else {
+       if (response.status === 401) {
+         alert('Invalid email or password.');
+       } else if (response.status === 500) {
+         alert('Server error. Please try again later.');
+       } else {
+         alert(data.message || 'Sign-in failed!');
+       }
+     }
+   } catch (error) {
+     console.error('Error signing in:', error);
+     alert('An error occurred. Please try again.');
+   }
+ }
+ 
+ 
+ 
+     // Sign Up Handler
+     async function handleSignUp() {
+       const name = document.getElementById('signup-name').value.trim();
+       const email = document.getElementById('signup-email').value.trim();
+       const password = document.getElementById('signup-password').value.trim();
+ 
+       if (!name || !email || !password) {
+         alert('Please fill out all fields.');
+         return;
+       }
+ 
+       try {
+         const response = await fetch('/api/signup', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ name, email, password })
+         });
+ 
+         const result = await response.json();
+         if (response.ok) {
+           alert('Sign-up successful! You can now sign in.');
+           toggleForm('signin');
+         } else {
+           alert(result.message || 'Sign-up failed!');
+         }
+       } catch (error) {
+         console.error('Error signing up:', error);
+         alert('An error occurred. Please try again.');
+       }
+     }
+ 
+     // Reset Password Handler
+     async function handlePasswordResetRequest() {
+       const email = document.getElementById('reset-email').value.trim();
+ 
+       if (!email) {
+         alert('Please enter your email.');
+         return;
+       }
+ 
+       try {
+         const response = await fetch('/api/reset-password', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ email })
+         });
+ 
+         const result = await response.json();
+         if (response.ok) {
+           alert('Password reset link sent to your email.');
+           toggleForm('signin');
+         } else {
+           alert(result.message || 'Failed to send password reset link.');
+         }
+       } catch (error) {
+         console.error('Error resetting password:', error);
+         alert('An error occurred. Please try again.');
+       }
+     }
+   </script>
+ </body>
+ </html>
