@@ -638,6 +638,12 @@ function refreshLineItems(categories) {
 
   const assignedTo = item.assignedTo ? getVendorInitials(item.assignedTo) : "Unassigned";
 
+
+         // ✅ Define possible statuses
+      const status = item.status || "new"; // Default status if none is provided
+      const statusClass = getStatusClass(status);
+
+   
     // Ensure photos object exists
     if (!item.photos) {
       item.photos = { before: [], after: [] };
@@ -691,6 +697,10 @@ function refreshLineItems(categories) {
         </div>
     </div>
 
+                        <!-- ✅ Line Item Status -->
+        <div class="status-container">
+        <span>Status:<span class="item-status ${statusClass}">${status.toUpperCase()}</span></span>
+        </div>
 
       <div class="card-footer">
           <span>Assigned to: <span class="vendor-name">${assignedTo}</span></span>
