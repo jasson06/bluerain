@@ -4,9 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Subcontractor Dashboard</title>
-  
+  <!-- Toastify CSS & JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
   <style>
-/* General Styles */
 /* General Styles */
 body {
     font-family: "Poppins", sans-serif;
@@ -123,6 +125,114 @@ button:hover {
     }
 }
 
+/* Status Color Styling */
+.status-new {
+    color: #ff0000; /* Blue */
+    font-weight: bold;
+}
+.status-in-progress {
+    color: #ffc107; /* Amber/Yellow */
+    font-weight: bold;
+}
+.status-completed {
+    color: #28a745; /* Green */
+    font-weight: bold;
+}
+
+
+/* ✅ Modern Toastify Custom Styles */
+.toastify {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 14px 18px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
+    background-color: rgb(255, 255, 255);
+    color: #333;
+    width: 320px; /* Fixed width */
+    max-width: 90%;
+    position: relative;
+    background: #f4f4f9;
+}
+
+/* ✅ Left Status Indicator Bar */
+.toastify::before {
+    content: "";
+    width: 8px;
+    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    border-radius: 10px 0 0 10px;
+}
+
+/* ✅ Success Theme */
+.toastify-success::before {
+    background: linear-gradient(to bottom, #34d399, #059669); /* Green gradient */
+}
+
+/* ✅ Error Theme */
+.toastify-error::before {
+    background: linear-gradient(to bottom, #ef4444, #b91c1c); /* Red gradient */
+}
+
+/* ✅ Toast Content Layout */
+.toast-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ✅ Icon Styling */
+.toast-icon {
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ✅ Text Styling */
+.toast-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.toast-title {
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.toast-message {
+    font-size: 13px;
+    color: #555;
+}
+
+.toast-close{
+    color: #040404;
+    margin-top: 65px;
+    margin-left: -345px;
+
+}
+
+.toast-close:hover {
+    background-color: #d40505;
+}
+
+/* ✅ Smooth Fade Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
 
   </style>
@@ -150,11 +260,8 @@ button:hover {
       </section>
       
   </main>
-</body>
-</html>
 
-<script>
-
+  <script>
 document.addEventListener("DOMContentLoaded", async () => {
     const vendorId = localStorage.getItem("vendorId");
 
@@ -166,6 +273,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     await fetchAssignedProjects(vendorId);
 });
+
+// Helper function to return a CSS class based on status
+function getStatusClass(status) {
+    if (status === "new") return "status-new";
+    if (status === "in-progress") return "status-in-progress";
+    if (status === "completed") return "status-completed";
+    return "";
+}
 
 // ✅ Fetch Assigned Projects
 async function fetchAssignedProjects(vendorId) {
@@ -182,8 +297,24 @@ async function fetchAssignedProjects(vendorId) {
     }
 }
 
-// ✅ Display Projects
 
+/// ✅ Helper Function to Show Modern Toast Messages
+function showToast(message, type = "success") {
+    const icon = type === "success" ? "✔️" : "❌"; // Emoji Icons
+    Toastify({
+        text: `${icon} ${message}`, // Add icon before message
+        duration: type === "success" ? 3000 : -1, // Auto-close for success, persistent for errors
+        close: type === "error", // Close button for errors
+        gravity: "top",
+        position: "center",
+        className: type === "success" ? "toastify toastify-success" : "toastify toastify-error", // Apply custom styles
+        stopOnFocus: true, // Prevent auto-dismiss on hover
+    }).showToast();
+}
+
+
+
+// ✅ Display Projects
 function displayAssignedProjects(projects, containerId) {
     const container = document.getElementById(containerId);
     container.innerHTML = "";
@@ -202,18 +333,21 @@ function displayAssignedProjects(projects, containerId) {
 
         projectCard.innerHTML = `
             <h3>${projectId.name || "Unnamed Project"}</h3>
-            <p><strong>Status:</strong> ${project.status || "N/A"}</p>
+            <p><strong>Status:</strong> <span class="${getStatusClass(project.status)}">${project.status || "N/A"}</span></p>
             <p><strong>Type:</strong> ${projectId.type || "N/A"}</p>
             <p><strong>Address:</strong> 
                 ${projectId.address?.addressLine1 || ""}, 
                 ${projectId.address?.city || ""}, 
                 ${projectId.address?.state || ""}
             </p>
-            <button onclick="viewProject('${projectId._id}')">View Project</button>
             ${
                 project.status === "new"
                     ? `<button onclick="startProject('${projectId._id}')">Start Project</button>`
-                    : project.status === "in-progress"
+                    : ""
+            }
+            <button onclick="viewProject('${projectId._id}', '${project.status}')">View Project</button>
+            ${
+                project.status === "in-progress"
                     ? `<button onclick="completeProject('${projectId._id}')">Mark as Completed</button>`
                     : ""
             }
@@ -223,9 +357,12 @@ function displayAssignedProjects(projects, containerId) {
     });
 }
 
-
-// ✅ View Project (Redirects to project details page)
-function viewProject(projectId) {
+// ✅ Updated View Project function with condition
+function viewProject(projectId, status) {
+    if (status === "new") {
+        showToast("You need to start the project before you can view it.", "error");
+        return;
+    }
     window.location.href = `/projectview.html?projectId=${projectId}`;
 }
 
@@ -242,34 +379,35 @@ async function startProject(projectId) {
 
         if (!response.ok) throw new Error("Failed to start project.");
 
-        
+        showToast("Project has been started. You can now view it.", "success");
         fetchAssignedProjects(localStorage.getItem("vendorId"));
     } catch (error) {
+        showToast("Error starting project.", "error");
         console.error("Error starting project:", error);
     }
 }
 
-// Mark Project as Completed (Checking Vendor's Assigned Items)
+
+// ✅ Mark Project as Completed
 async function completeProject(projectId) {
     const vendorId = localStorage.getItem("vendorId");
 
     try {
-        // Step 1: Fetch the assigned items for the vendor and project
         const response = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
         if (!response.ok) throw new Error("Failed to fetch assigned items.");
 
         const data = await response.json();
         const assignedItems = data.items;
 
-        // Step 2: Check if all assigned items are completed
+        // Check if all assigned items are completed
         const allCompleted = assignedItems.every(item => item.status === 'completed');
 
         if (!allCompleted) {
-            alert("Cannot mark project as completed. Please ensure all assigned items are completed.");
-            return;  // Stop if not all items are completed
+            showToast("Cannot mark project as completed. Please ensure all assigned items are completed.", "error");
+            return;
         }
 
-        // Step 3: Mark the project as completed if all items are done
+        // Mark project as completed
         const completeResponse = await fetch('/api/vendor/update-project-status', {
             method: "PUT",
             headers: {
@@ -280,20 +418,26 @@ async function completeProject(projectId) {
 
         if (!completeResponse.ok) throw new Error("Failed to mark project as completed.");
 
-              // Step 4: Refresh the page after successful completion
+        showToast("Project marked as completed!", "success");
+
+        // Refresh the page after successful completion
         window.location.reload();
       
     } catch (error) {
+        showToast("Error completing project.", "error");
         console.error("Error completing project:", error);
     }
 }
 
-
-// ✅ Logout functionality
+// ✅ Logout Function
 function logout() {
     localStorage.removeItem('vendorId');
-   const BASE_URL = window.location.href = '/sign-inpage.html';
+    showToast("You have been logged out.", "success");
+    setTimeout(() => {
+        window.location.href = '/sign-inpage.html';
+    }, 1500);
 }
+  </script>
+</body>
+</html>
 
-
-</script>
