@@ -837,6 +837,27 @@ function refreshLineItems(categories) {
     }
   }
 
+
+
+  function getStatusClass(status) {
+    switch (status.toLowerCase()) {
+        case "pending":
+            return "status-pending"; // Gray
+        case "in-progress":
+            return "status-in-progress"; // Yellow
+        case "completed":
+            return "status-completed"; // Green
+        case "on-hold":
+            return "status-on-hold"; // Orange
+        case "cancelled":
+            return "status-new"; // Red
+        default:
+            return "status-pending"; // Default to pending
+    }
+}
+
+
+
   
   function unassignItem(card) {
     const itemId = card.getAttribute("data-item-id");
