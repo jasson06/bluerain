@@ -326,7 +326,7 @@ async function fetchAssignedProjects(vendorId) {
 
 /// ✅ Helper Function to Show Modern Toast Messages
 function showToast(message, type = "success") {
-    const icon = type === "success" ? "✔️" : "❌"; // Emoji Icons
+    const icon = type === "success" ? "✅" : "❌"; // Emoji Icons
     Toastify({
         text: `${icon} ${message}`, // Add icon before message
         duration: type === "success" ? 3000 : -1, // Auto-close for success, persistent for errors
