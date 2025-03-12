@@ -94,6 +94,7 @@ button, input, textarea {
   padding: 20px;
   width: 100%;
   transition: margin-left 0.3s ease;
+  margin-top: 65px;
 }
 
 .sidebar.open + .main-content {
@@ -724,8 +725,8 @@ input, textarea {
 
 
 .main-content {
-  margin-top: 10px;
-  margin-left: 40px;
+  margin-top: 55px;
+  margin-left: 20px;
 }
 
   .columns-container {
@@ -762,7 +763,7 @@ input, textarea {
 /* Sidebar */
 .sidebar {
   position: fixed;
-  top: 0;
+  top: 0px;
   left: 0;
   width: 150px;
   height: 100vh;
@@ -814,7 +815,7 @@ input, textarea {
 /* Hamburger Button */
 .hamburger {
   position: fixed;
-  top: 20px;
+  top: 4px;
   left: 380px;
   background: var(--primary-color);
   color: white;
@@ -878,6 +879,7 @@ input, textarea {
 
 
 
+
 /* Map Section */
 #map-section {
   width: 100%;
@@ -885,9 +887,10 @@ input, textarea {
   margin: 20px auto;
   background-color: #fff;
   border-radius: 10px;
-  padding: 20px;
+  padding: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   text-align: center;
+ 
 }
 
 #map {
@@ -905,6 +908,7 @@ input, textarea {
   #map {
       height: 300px; /* Adjust map height on mobile */
       width: 100%; /* Ensure full width */
+      
   }
 }
 
@@ -914,5 +918,58 @@ input, textarea {
      margin-left: -17px;
      width: 105%; /* Ensure full width */
   }
+
+}
+
+
+
+/* 🔹 Logo Section with Avatar */
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  background: #3174c6; /* Custom color (change as needed) */
+  color: rgb(255, 255, 255);
+  font-size: 18px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  text-transform: uppercase;
+  margin-top: -80px;
+  margin-left: -30px;
+}
+
+.header-logo h1 {
+  font-size: 20px;
+  font-weight: bold;
+  color: #222;
+  margin: 0;
+  margin-top: -85px;
+  border-bottom: 2px solid #a9d2ee;
+  
+  background: #ffffff; /* Clean white background */
+  width: 88%;
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 1000;
+}
+
+
+@media (max-width: 480px) {
+  .top-bar {
+      padding: 10px 15px;
+      left: 0px;
+  }
+
 
 }
