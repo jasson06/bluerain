@@ -473,6 +473,39 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   
   
+  async function updateProjectCounts() {
+    try {
+        // ✅ Fetch Upcoming and On-Hold Projects
+        const upcomingResponse = await fetch("/api/upcoming-projects");
+        if (!upcomingResponse.ok) throw new Error("Failed to fetch upcoming projects");
+        const upcomingData = await upcomingResponse.json();
+        const upcomingCount = upcomingData.projects.length || 0;
+
+        // ✅ Fetch In-Progress Projects
+        const inProgressResponse = await fetch("/api/projects");
+        if (!inProgressResponse.ok) throw new Error("Failed to fetch in-progress projects");
+        const inProgressData = await inProgressResponse.json();
+        const inProgressCount = inProgressData.projects.length || 0;
+
+        // ✅ Fetch Completed Projects
+        const completedResponse = await fetch("/api/completed-projects");
+        if (!completedResponse.ok) throw new Error("Failed to fetch completed projects");
+        const completedData = await completedResponse.json();
+        const completedCount = completedData.projects.length || 0;
+
+        // ✅ Update UI Counts
+        document.getElementById("upcoming-count").textContent = upcomingCount;
+        document.getElementById("in-progress-count").textContent = inProgressCount;
+        document.getElementById("completed-count").textContent = completedCount;
+
+    } catch (error) {
+        console.error("❌ Error updating project counts:", error);
+    }
+}
+
+
+
+
   // Expose the function globally
   window.navigateToDetails = navigateToDetails;
       // Call loadProjects to populate the Projects column on page load
@@ -480,7 +513,9 @@ document.addEventListener("DOMContentLoaded", () => {
       loadUpcomingProjects();
       loadCompletedProjects();
       initMap();
+      updateProjectCounts();
 });
+ 
  
 
 
