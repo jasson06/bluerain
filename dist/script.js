@@ -1,5 +1,9 @@
 
 document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+        updateProjectCounts(); // Give time for API responses
+    }, 500);
+    
     // Tab Navigation
     const tabs = document.querySelectorAll('.tab');
     const columns = document.querySelectorAll('.column');
@@ -475,28 +479,38 @@ document.addEventListener("DOMContentLoaded", () => {
   
   async function updateProjectCounts() {
     try {
+        console.log("Fetching project counts..."); // Debugging
+
+        const timestamp = new Date().getTime(); // Prevent caching
+
         // ✅ Fetch Upcoming and On-Hold Projects
-        const upcomingResponse = await fetch("/api/upcoming-projects");
+        const upcomingResponse = await fetch(`/api/upcoming-projects?t=${timestamp}`);
         if (!upcomingResponse.ok) throw new Error("Failed to fetch upcoming projects");
         const upcomingData = await upcomingResponse.json();
         const upcomingCount = upcomingData.projects.length || 0;
 
         // ✅ Fetch In-Progress Projects
-        const inProgressResponse = await fetch("/api/projects");
+        const inProgressResponse = await fetch(`/api/projects?t=${timestamp}`);
         if (!inProgressResponse.ok) throw new Error("Failed to fetch in-progress projects");
         const inProgressData = await inProgressResponse.json();
         const inProgressCount = inProgressData.projects.length || 0;
 
         // ✅ Fetch Completed Projects
-        const completedResponse = await fetch("/api/completed-projects");
+        const completedResponse = await fetch(`/api/completed-projects?t=${timestamp}`);
         if (!completedResponse.ok) throw new Error("Failed to fetch completed projects");
         const completedData = await completedResponse.json();
         const completedCount = completedData.projects.length || 0;
 
-        // ✅ Update UI Counts
-        document.getElementById("upcoming-count").textContent = upcomingCount;
-        document.getElementById("in-progress-count").textContent = inProgressCount;
-        document.getElementById("completed-count").textContent = completedCount;
+        console.log("✅ Counts:", { upcomingCount, inProgressCount, completedCount }); // Debugging
+
+        // ✅ Ensure Elements Exist Before Updating UI
+        const upcomingElement = document.getElementById("upcoming-count");
+        const inProgressElement = document.getElementById("in-progress-count");
+        const completedElement = document.getElementById("completed-count");
+
+        if (upcomingElement) upcomingElement.textContent = upcomingCount;
+        if (inProgressElement) inProgressElement.textContent = inProgressCount;
+        if (completedElement) completedElement.textContent = completedCount;
 
     } catch (error) {
         console.error("❌ Error updating project counts:", error);
