@@ -912,17 +912,7 @@ app.get('/estimate-view.html', (req, res) => {
 
 
 
-// Add Task
-app.post('/api/add-task', async (req, res) => {
-  try {
-    const newTask = new Task(req.body);
-    await newTask.save();
-    res.status(201).json({ success: true, message: 'Task added successfully', task: newTask });
-  } catch (error) {
-    console.error('Error adding task:', error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+
 
 // Add Vendor
 app.post('/api/add-vendor', async (req, res) => {
