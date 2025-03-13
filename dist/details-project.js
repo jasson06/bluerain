@@ -44,7 +44,7 @@ async function loadProjectDetails(id) {
         <p><strong>Status:</strong> ${project.status || 'N/A'}</p>
         <p><strong>Address:</strong> ${project.address.addressLine1 || ''}, ${project.address.city || 'N/A'}, ${project.address.state || 'N/A'}</p>
         <p><strong>Description:</strong> ${project.description || 'No description available.'}</p>
-        <p><strong>Project Code:</strong> ${project.code || 'N/A'}</p>
+        <p><strong>Lockbox Code:</strong> ${project.code || 'N/A'}</p>
         <p><strong>Type:</strong> ${project.type || 'N/A'}</p>
         <p><strong>Color:</strong> 
           <span style="background-color: ${project.color || '#ccc'};"></span>${project.color || 'N/A'}
