@@ -217,6 +217,7 @@ function navigateToDetails(section, id) {
           itemDiv.innerHTML = `
             <p>${project.name}</p>
             <small>${project.address.addressLine1}, ${project.address.city}, ${project.address.state}, ${project.address.zip} </small>
+            <small>Lockbox Code: ${project.code || 'N/A'}</small></p>
           `;
           projectsList.appendChild(itemDiv);
         });
@@ -267,6 +268,7 @@ async function loadUpcomingProjects() {
         itemDiv.innerHTML = `
           <p>${project.name}</p>
           <small>${fullAddress}</small>
+          <small>Lockbox Code: ${project.code || 'N/A'}</small></p>
         `;
   
         projectsList.appendChild(itemDiv);
@@ -305,6 +307,7 @@ async function loadCompletedProjects() {
                 itemDiv.innerHTML = `
                     <p>${project.name}</p>
                     <small>${project.address.addressLine1}, ${project.address.city}, ${project.address.state}, ${project.address.zip}</small>
+                    <small>Lockbox Code: ${project.code || 'N/A'}</small></p>
                     <span class="status">✔ Completed</span>
                 `;
 
