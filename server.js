@@ -24,6 +24,26 @@ const PORT = process.env.PORT || 5500;
 const JWT_SECRET = process.env.JWT_SECRET || '1539';
 
 
+async function logDailyUpdate(projectId, text, author = "System") {
+  try {
+    const project = await Project.findById(projectId).select("name"); // Fetch actual project name
+    
+    const logUpdate = new DailyUpdate({
+      projectId,
+      projectName: project ? project.name : "Unknown Project", // ✅ Use actual name or fallback
+      author,
+      text,
+      timestamp: new Date(),
+    });
+
+    await logUpdate.save(); // ✅ Save the update log
+    console.log("✅ Daily Update Logged:", logUpdate);
+  } catch (error) {
+    console.error("❌ Error logging daily update:", error);
+  }
+}
+
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -165,6 +185,8 @@ app.post("/api/upload-photos", upload.array("photos", 10), async (req, res) => {
       // ✅ Generate File Paths for Uploaded Photos
       const photoUrls = req.files.map(file => `/uploads/${file.filename}`);
       let updateSuccess = false;
+      let projectId = null;
+      let updateText = "";
 
       // ✅ Handle Task Photos (Stored in Task Collection)
       if (taskId) {
@@ -173,9 +195,13 @@ app.post("/api/upload-photos", upload.array("photos", 10), async (req, res) => {
 
           if (!task.photos) task.photos = { before: [], after: [] };
           task.photos[type].push(...photoUrls);
-
           await task.save();
+
+          projectId = task.projectId;
+          updateText = `📸 ${photoUrls.length} photo(s) uploaded for task "${task.title}" (${type}).`;
+          
           console.log(`✅ ${photoUrls.length} Photo(s) saved for Task: ${taskId} (${type})`);
+          await logDailyUpdate(projectId, updateText);
           return res.status(200).json({ message: "Photos uploaded successfully!", photoUrls });
       }
 
@@ -193,6 +219,9 @@ app.post("/api/upload-photos", upload.array("photos", 10), async (req, res) => {
               if (!estimateItem.photos) estimateItem.photos = { before: [], after: [] };
               estimateItem.photos[type].push(...photoUrls);
               updateSuccess = true;
+              projectId = estimate.projectId;
+              updateText = `📸 ${photoUrls.length} photo(s) uploaded for estimate item "${estimateItem.name}" (${type}).`;
+              
               console.log(`✅ ${photoUrls.length} Photo(s) saved for Estimate: ${estimateId}, Item: ${itemId} (${type})`);
           } else {
               console.warn(`⚠️ Item not found in estimate: ${estimateId}`);
@@ -220,6 +249,9 @@ app.post("/api/upload-photos", upload.array("photos", 10), async (req, res) => {
 
                   await vendor.save();
                   updateSuccess = true;
+                  projectId = vendorItem.projectId;
+                  updateText = `📸 ${photoUrls.length} photo(s) uploaded for vendor item "${vendorItem.name}" (${type}).`;
+
                   console.log(`✅ ${photoUrls.length} Photo(s) saved for Vendor: ${vendorId}, Item: ${itemId} (${type})`);
               }
           }
@@ -228,6 +260,7 @@ app.post("/api/upload-photos", upload.array("photos", 10), async (req, res) => {
       // ✅ Save Estimate Changes After Vendor Upload
       if (updateSuccess && estimate) {
           await estimate.save();
+          await logDailyUpdate(projectId, updateText);
           return res.status(200).json({ message: "Photos uploaded successfully!", photoUrls });
       }
 
@@ -555,6 +588,15 @@ managerSchema.pre('save', async function (next) {
 });
 
 
+// ✅ Ensure DailyUpdate model is defined
+const DailyUpdateSchema = new mongoose.Schema({
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project", required: true },
+  projectName: { type: String, required: true },
+  author: { type: String, required: true },
+  text: { type: String, required: true },
+  images: [{ type: String }],
+  timestamp: { type: Date, default: Date.now }
+});
 
 
 const Task = mongoose.model('Task', taskSchema);
@@ -565,6 +607,7 @@ const Vendor = mongoose.model('Vendor', vendorSchema);
 const Project = mongoose.model('Project', projectSchema);
 const Manager = mongoose.model('Manager', managerSchema);
 const Invitation = mongoose.model("Invitation", invitationSchema);
+const DailyUpdate = mongoose.model("DailyUpdate", DailyUpdateSchema);
 
 module.exports = {
   Task,
@@ -660,6 +703,10 @@ app.post('/api/estimates', async (req, res) => {
     });
 
     await newEstimate.save();
+
+ // ✅ Log the estimate creation in daily logs
+ await logDailyUpdate(projectId, `A new estimate (${invoiceNumber}) was created.`);
+      
     res.status(201).json({ success: true, estimate: newEstimate });
 
   } catch (error) {
@@ -850,6 +897,9 @@ app.put("/api/estimates/:id", async (req, res) => {
       },
       { new: true, runValidators: true }
     );
+
+    // ✅ Log the estimate update in daily logs
+    await logDailyUpdate(updatedEstimate.projectId, `Estimate ${updatedEstimate.invoiceNumber} was updated.`);
 
     res.status(200).json(updatedEstimate);
   } catch (error) {
@@ -1106,6 +1156,9 @@ app.put('/api/projects/:id', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Project not found.' });
     }
 
+        // ✅ Log the project update in daily logs
+        await logDailyUpdate(id, `Project "${name}" was updated.`);
+      
     res.status(200).json({
       success: true,
       message: 'Project updated successfully.',
@@ -1328,6 +1381,9 @@ app.post('/api/tasks', async (req, res) => {
     // Save task to database
     await newTask.save();
 
+        // ✅ Log the new task creation in daily logs
+    await logDailyUpdate(projectId, `New task "${title}" was created.`);
+
     console.log("✅ New Task Created:", newTask);
     res.status(201).json({ success: true, task: newTask });
 
@@ -1337,7 +1393,7 @@ app.post('/api/tasks', async (req, res) => {
   }
 });
 
-// Delete Task (Backend)
+// Delete Task Endpoint
 app.delete('/api/task/:id', async (req, res) => {
   const { id } = req.params;
 
@@ -1350,6 +1406,10 @@ app.delete('/api/task/:id', async (req, res) => {
 
     // Delete task
     await Task.findByIdAndDelete(id);
+   
+    // ✅ Log the deletion in daily updates
+    await logDailyUpdate(task.projectId, `Task "${task.title}" was deleted.`, "System");
+
 
     console.log(`✅ Task ${id} deleted successfully.`);
     res.json({ success: true, message: 'Task deleted successfully.' });
@@ -1359,7 +1419,6 @@ app.delete('/api/task/:id', async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to delete task.' });
   }
 });
-
 
 // Get comments for a specific task
 app.get('/api/comments', async (req, res) => {
@@ -1384,7 +1443,7 @@ res.status(200).json({ success: true, comments });
 
 
 
-// Add a new comment to a task
+// ✅ Add a new comment to a task and log it
 app.post('/api/comments', async (req, res) => {
   const { taskId, comment, managerName, timestamp } = req.body;
 
@@ -1393,6 +1452,13 @@ app.post('/api/comments', async (req, res) => {
   }
 
   try {
+    // ✅ Fetch the task to get project details
+    const task = await Task.findById(taskId).select("title projectId");
+    if (!task) {
+      return res.status(404).json({ message: "Task not found." });
+    }
+
+    // ✅ Save the new comment
     const newComment = new Comment({
       taskId,
       text: comment,
@@ -1402,13 +1468,17 @@ app.post('/api/comments', async (req, res) => {
 
     await newComment.save();
 
-    res.status(201).json({ message: 'Comment added successfully.', comment: newComment });
+    // ✅ Log the comment in daily updates
+    await logDailyUpdate(task.projectId, `New comment on task "${task.title}": "${comment}"`, managerName);
+
+    console.log(`✅ Comment added to task "${task.title}".`);
+    res.status(201).json({ message: "Comment added successfully.", comment: newComment });
+
   } catch (error) {
-    console.error('Error saving comment:', error);
-    res.status(500).json({ message: 'Failed to save comment.' });
+    console.error("❌ Error saving comment:", error);
+    res.status(500).json({ message: "Failed to save comment." });
   }
 });
-
 
 
 
@@ -1471,6 +1541,11 @@ app.put('/api/task/:id', async (req, res) => {
     }
 
     console.log("Updated Task:", task);
+
+        // ✅ Log the Update in Daily Updates
+        await logDailyUpdate(task.projectId, `Task "${task.title}" was updated.`);
+
+
     res.json({ success: true, task });
 
   } catch (error) {
@@ -1649,14 +1724,22 @@ app.put('/api/vendors/:vendorId/update-item-status', async (req, res) => {
   }
 
   try {
+    // ✅ Find Vendor
     const vendor = await Vendor.findById(vendorId);
     if (!vendor) {
       return res.status(404).json({ message: "Vendor not found." });
     }
 
+    // ✅ Find the assigned item
     const item = vendor.assignedItems.find(item => item.itemId.toString() === itemId);
     if (!item) {
       return res.status(404).json({ message: "Item not found." });
+    }
+
+    // ✅ Find the project
+    const project = await Project.findById(item.projectId).select("name");
+    if (!project) {
+      return res.status(404).json({ message: "Project not found." });
     }
 
     // ✅ Update status in Vendor assignedItems
@@ -1664,7 +1747,7 @@ app.put('/api/vendors/:vendorId/update-item-status', async (req, res) => {
     await vendor.save();
     console.log("✅ Vendor Item Status Updated Successfully:", item);
 
-    // ✅ Now, update the corresponding item status in the Estimate
+    // ✅ Update the corresponding item status in the Estimate
     const estimateUpdateResult = await Estimate.updateOne(
       { "lineItems.items._id": itemId },
       {
@@ -1678,6 +1761,12 @@ app.put('/api/vendors/:vendorId/update-item-status', async (req, res) => {
     );
 
     console.log("📊 Estimate Update Result:", estimateUpdateResult);
+
+    // ✅ Log the status update in Daily Updates
+    await logDailyUpdate(
+      item.projectId,
+      `Item "${item.name}" status updated to "${status}" by Vendor "${vendor.name}" for Project "${project.name}".`
+    );
 
     res.status(200).json({ message: "Item status updated successfully in both vendor and estimate.", item });
 
@@ -1805,22 +1894,38 @@ app.put('/api/vendor/update-project-status', async (req, res) => {
           return res.status(400).json({ error: "Vendor ID, Project ID, and Status are required." });
       }
 
+      // ✅ Find vendor
       const vendor = await Vendor.findById(vendorId);
       if (!vendor) {
           return res.status(404).json({ error: "Vendor not found." });
       }
 
+      // ✅ Check if project is assigned to vendor
       const projectIndex = vendor.assignedProjects.findIndex(p => p.projectId.toString() === projectId);
       if (projectIndex === -1) {
           return res.status(404).json({ error: "Project not assigned to vendor." });
       }
 
+      // ✅ Update status
       vendor.assignedProjects[projectIndex].status = status;
       await vendor.save();
 
+      // ✅ Fetch project name for logging
+      const project = await Project.findById(projectId).select("name");
+      const projectName = project ? project.name : "Unknown Project";
+
+      // ✅ Log project status update in daily updates
+      await logDailyUpdate(
+          projectId,
+          `Vendor "${vendor.name}" updated project status to "${status}".`
+      );
+
+      console.log(`🔄 Vendor "${vendor.name}" updated status for project "${projectName}" to "${status}".`);
+      
       res.status(200).json({ success: true, message: "Project status updated successfully." });
+
   } catch (error) {
-      console.error("Error updating project status:", error);
+      console.error("❌ Error updating project status:", error);
       res.status(500).json({ error: "Failed to update project status." });
   }
 });
@@ -1868,9 +1973,11 @@ app.post("/api/assign-items", async (req, res) => {
     // ✅ Find Vendor & Estimate
     const vendor = await Vendor.findById(vendorId);
     const estimate = await Estimate.findById(estimateId);
+    const project = await Project.findById(projectId).select("name");
 
     if (!vendor) return res.status(404).json({ message: "Vendor not found." });
     if (!estimate) return res.status(404).json({ message: "Estimate not found." });
+    if (!project) return res.status(404).json({ message: "Project not found." });
 
     let updatedAssignedItems = [];
 
@@ -1917,6 +2024,12 @@ app.post("/api/assign-items", async (req, res) => {
       }
 
       updatedAssignedItems.push(vendorItem);
+
+      // ✅ Log the assignment in Daily Updates
+      await logDailyUpdate(
+        projectId,
+        `Item "${item.name}" was assigned to Vendor "${vendor.name}" for Project "${project.name}".`
+      );
     }
 
     // ✅ Save Vendor with Updated Assigned Items
@@ -1944,7 +2057,7 @@ app.post("/api/assign-items", async (req, res) => {
     }
 
     console.log("✅ Items assigned successfully & photos copied!");
-    
+
     // ✅ Return updated assigned items so frontend updates properly
     res.status(200).json({ 
       message: "Items assigned successfully!", 
@@ -2222,6 +2335,10 @@ app.post('/api/projects/:projectId/files', upload.array('files'), async (req, re
     project.files.push(...files);
     await project.save();
 
+  // ✅ Log the file upload in daily updates
+  const fileNames = files.map(f => f.filename).join(", ");
+  await logDailyUpdate(projectId, `Files uploaded: ${fileNames}`);
+
     res.status(200).json({ message: 'Files uploaded successfully', files });
   } catch (error) {
     console.error('Error uploading files:', error);
@@ -2273,6 +2390,9 @@ app.delete('/api/projects/:projectId/files/:fileId', async (req, res) => {
     project.files.splice(fileIndex, 1); // Remove from database
     await project.save();
 
+        // ✅ Log file deletion in daily updates
+        await logDailyUpdate(projectId, `File deleted`);
+      
     res.status(200).json({ message: 'File deleted successfully' });
   } catch (error) {
     console.error('Error deleting file:', error);
@@ -2797,8 +2917,7 @@ app.put('/api/estimates/line-items/:lineItemId', async (req, res) => {
   try {
     const { lineItemId } = req.params;
     const updates = req.body;
-    // Build an update object dynamically based on the provided fields.
-    const updateObj = {};
+    const updateObj = {}; // Build an update object dynamically
 
     if (updates.status !== undefined) {
       updateObj['lineItems.$[].items.$[item].status'] = updates.status;
@@ -2813,6 +2932,7 @@ app.put('/api/estimates/line-items/:lineItemId', async (req, res) => {
       updateObj['lineItems.$[].items.$[item].description'] = updates.description;
     }
 
+    // ✅ Find and update the estimate
     const estimate = await Estimate.findOneAndUpdate(
       { 'lineItems.items._id': lineItemId },
       { $set: updateObj },
@@ -2826,9 +2946,27 @@ app.put('/api/estimates/line-items/:lineItemId', async (req, res) => {
       return res.status(404).json({ message: 'Line item not found' });
     }
 
+    // ✅ Extract projectId for logging
+    const projectId = estimate.projectId;
+    const lineItem = estimate.lineItems.find(li =>
+      li.items.some(item => item._id.toString() === lineItemId)
+    );
+
+    const item = lineItem.items.find(item => item._id.toString() === lineItemId);
+    const updatedField = Object.keys(updates).map(key => `${key}: ${updates[key]}`).join(', ');
+
+    // ✅ Log line item update in daily updates
+    await logDailyUpdate(
+      projectId,
+      `Line item "${item?.description || 'Unknown'}" was updated (${updatedField}).`
+    );
+
+    console.log(`✏️ Line item "${item?.description || 'Unknown'}" updated successfully.`);
+    
     res.json({ message: 'Line item updated successfully', estimate });
+
   } catch (error) {
-    console.error('Error updating line item:', error);
+    console.error('❌ Error updating line item:', error);
     res.status(500).json({ message: 'Server error', error });
   }
 });
@@ -2860,6 +2998,101 @@ app.get('/api/completed-projects', async (req, res) => {
   } catch (error) {
       console.error('❌ Error fetching completed projects:', error);
       res.status(500).json({ success: false, message: 'Failed to fetch completed projects.' });
+  }
+});
+
+
+// ✅ GET /api/daily-updates → Fetch all daily updates (Filtered by Date)
+app.get("/api/daily-updates", async (req, res) => {
+  try {
+      let { date } = req.query;
+
+      if (!date) {
+          return res.status(400).json({ success: false, message: "Date is required." });
+      }
+
+      // ✅ Convert to Date Object & Extract YYYY-MM-DD
+      let selectedDate = new Date(date);
+      let selectedDateISO = selectedDate.toISOString().split("T")[0]; // Extract YYYY-MM-DD
+
+      console.log(`📅 Fetching updates for strict date: ${selectedDateISO}`);
+
+      // ✅ Query for documents where the timestamp's date matches selectedDateISO
+      const updates = await DailyUpdate.find({
+          timestamp: { 
+              $gte: new Date(`${selectedDateISO}T00:00:00.000Z`), 
+              $lte: new Date(`${selectedDateISO}T23:59:59.999Z`)
+          }
+      }).sort({ timestamp: -1 });
+
+      if (updates.length === 0) {
+          return res.json({ success: true, message: "No updates found for this date.", updates: [] });
+      }
+
+      res.json({ success: true, updates });
+
+  } catch (error) {
+      console.error("❌ Error fetching daily updates:", error);
+      res.status(500).json({ success: false, message: "Failed to fetch daily updates." });
+  }
+});
+
+// ✅ POST /api/daily-updates → Add a new update (WITH Manager ID)
+app.post("/api/daily-updates", async (req, res) => {
+  try {
+      const { projectId, text, images, managerId } = req.body;
+
+      // ✅ Ensure required fields exist
+      if (!projectId || !text || !managerId) {
+          return res.status(400).json({ success: false, message: "Missing required fields (Project ID, Text, Manager ID)." });
+      }
+
+      // ✅ Validate Manager ID
+      const manager = await Manager.findById(managerId).select("name");
+      if (!manager) {
+          return res.status(404).json({ success: false, message: "Invalid Manager ID." });
+      }
+
+      // ✅ Fetch Project Name from Database
+      const project = await Project.findById(projectId).select("name"); // Only fetch name field
+      if (!project) {
+          return res.status(404).json({ success: false, message: "Project not found." });
+      }
+
+      // ✅ Create New Daily Update Entry
+      const newUpdate = new DailyUpdate({
+          projectId,
+          projectName: project.name,  // ✅ Store project name directly
+          author: manager.name,  // ✅ Store the actual Manager's name
+          text,
+          images: images || [],
+          timestamp: new Date(),
+      });
+
+      await newUpdate.save();
+
+      console.log(`✅ New daily update added by Manager: ${manager.name}`);
+
+      res.json({ success: true, message: "Update added successfully!", update: newUpdate });
+
+  } catch (error) {
+      console.error("❌ Error adding daily update:", error);
+      res.status(500).json({ success: false, message: "Failed to add daily update." });
+  }
+});
+
+
+
+// ✅ GET /api/notifications → Fetch recent notifications
+app.get("/api/notifications", async (req, res) => {
+  try {
+      const notifications = await Notification.find()
+          .sort({ timestamp: -1 })
+          .limit(20);
+      res.json({ success: true, notifications });
+  } catch (error) {
+      console.error("❌ Error fetching notifications:", error);
+      res.status(500).json({ success: false, message: "Failed to fetch notifications." });
   }
 });
 
