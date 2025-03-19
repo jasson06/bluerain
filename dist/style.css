@@ -1066,7 +1066,17 @@ input, textarea {
 /* ✅ Responsive Design */
 @media (max-width: 768px) {
   #daily-updates-panel {
-      max-width: 100%;
+      max-width: 106%;
+      margin-left: 0px;
+  }
+}
+
+
+/* ✅ Responsive Design */
+@media (max-width: 480px) {
+  #daily-updates-panel {
+      max-width: 106%;
+      margin-left: -15px;
   }
 }
 
