@@ -1,13 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // ✅ Check if managerId is in localStorage, if not, redirect to login page
-    const managerId = localStorage.getItem("managerId");
-    if (!managerId) {
-        console.warn("❌ No Manager ID found. Redirecting to login...");
-        window.location.href = "/project-manager-auth.html"; // Redirect to login page
-        return;
-    }
 
-    console.log(`✅ Manager ID Found: ${managerId}`); // Debugging
 
 
 
