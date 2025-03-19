@@ -976,6 +976,7 @@ async function saveEstimate() {
                   return {
                       ...existingItem, // Retain all existing data
                       ...item, // Overwrite only updated fields
+                    total: item.quantity * item.unitPrice, // ✅ Ensure recalculated total is used
                       photos: item.photos ?? existingItem?.photos, // ✅ Preserve existing photos if not updated
                       assignedTo: item.assignedTo || existingItem?.assignedTo, // Prevent null overwrite
                   };
