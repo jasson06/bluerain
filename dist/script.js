@@ -623,7 +623,7 @@ document.addEventListener("DOMContentLoaded", () => {
 setInterval(() => {
     const today = new Date().toISOString().split("T")[0];
     loadTeamDailyUpdates(today);
-}, 90000);
+}, 300000);
 
 
   // Expose the function globally
