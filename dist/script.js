@@ -1,3 +1,15 @@
+document.addEventListener('DOMContentLoaded', () => {
+    // ✅ Check if managerId is in localStorage, if not, redirect to login page
+    const managerId = localStorage.getItem("managerId");
+    if (!managerId) {
+        console.warn("❌ No Manager ID found. Redirecting to login...");
+        window.location.href = "/project-manager-auth.html"; // Redirect to login page
+        return;
+    }
+
+    console.log(`✅ Manager ID Found: ${managerId}`); // Debugging
+
+
 
 document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
@@ -521,6 +533,97 @@ document.addEventListener("DOMContentLoaded", () => {
 }
 
 
+        
+// ✅ Function to Load Daily Updates from Multiple Projects (with Manager ID)
+async function loadTeamDailyUpdates(selectedDate = null) {
+    const updatesFeed = document.getElementById("daily-updates-feed");
+    updatesFeed.innerHTML = "<p>Loading updates...</p>";
+
+    try {
+        const managerId = localStorage.getItem("managerId"); // ✅ Retrieve Manager ID
+        if (!managerId) {
+            console.error("❌ No Manager ID found in localStorage.");
+            updatesFeed.innerHTML = "<p>Error: Manager ID is required to fetch updates.</p>";
+            return;
+        }
+
+        let formattedDate = selectedDate || new Date().toISOString().split("T")[0]; // Default to today
+
+        // ✅ Fetch updates with managerId included
+        let response = await fetch(`/api/daily-updates?date=${formattedDate}&managerId=${managerId}`);
+        if (!response.ok) throw new Error("Failed to fetch daily updates");
+
+        const { updates } = await response.json();
+        updatesFeed.innerHTML = "";
+
+        if (!updates || updates.length === 0) {
+            updatesFeed.innerHTML = `<p>No updates for ${formattedDate}.</p>`;
+            return;
+        }
+
+        // ✅ Sort updates by latest timestamp
+        updates.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        // ✅ Display updates with corrected local time
+        updates.forEach((update) => {
+            const updateItem = document.createElement("div");
+            updateItem.classList.add("daily-update-item");
+
+            // ✅ Convert UTC timestamp to Local Time
+            let localTime = new Date(update.timestamp).toLocaleString();
+
+            // ✅ Ensure 'update.timestamp' is properly defined
+            const formattedDate = update.timestamp ? new Date(update.timestamp).toLocaleString() : "Unknown Date";
+
+            // ✅ Ensure project name is properly formatted
+            const projectName = update.projectName ? update.projectName : "Unknown Project";
+            
+            // ✅ Fix the author display issue
+            const authorName = update.author && update.author.trim() !== "" ? update.author : "System Update"; 
+
+            updateItem.innerHTML = `
+            <div class="update-card">
+
+                <p class="update-text">📌 ${update.text}</p>
+                <p class="update-project">
+                    🔗 <strong>Project:</strong> 
+                    <a href="/details/projects/${update.projectId}" class="project-link">${projectName}</a>
+                </p>
+                <p class="update-timestamp">🕒 ${formattedDate}</p>
+            </div>
+        `;
+        
+
+            updatesFeed.appendChild(updateItem);
+        });
+
+    } catch (error) {
+        console.error("❌ Error loading team updates:", error);
+        updatesFeed.innerHTML = "<p>Error loading updates.</p>";
+    }
+}
+
+
+
+// ✅ Event Listener for Date Picker
+document.getElementById("date-picker").addEventListener("change", function() {
+    const selectedDate = this.value; // Get selected date from input (YYYY-MM-DD)
+    console.log(`📅 Fetching updates for date: ${selectedDate}`);
+    loadTeamDailyUpdates(selectedDate); // Fetch updates for selected date
+});
+
+// ✅ Load Updates on Page Load (Default: Today)
+document.addEventListener("DOMContentLoaded", () => {
+    const today = new Date().toISOString().split("T")[0]; // Get YYYY-MM-DD
+    loadTeamDailyUpdates(today);
+});
+
+
+// ✅ Refresh Updates Periodically Every 90 Seconds (Only for Today's Date)
+setInterval(() => {
+    const today = new Date().toISOString().split("T")[0];
+    loadTeamDailyUpdates(today);
+}, 90000);
 
 
   // Expose the function globally
