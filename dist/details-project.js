@@ -1862,7 +1862,7 @@ function displayFiles(files) {
   
   
   function customizeSelection() {
-    alert('Customize Selection Boards modal will appear.');
+    window.location.href = `/Selection-Board.html`;
   }
   
   
