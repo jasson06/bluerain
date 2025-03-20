@@ -588,6 +588,29 @@ managerSchema.pre('save', async function (next) {
 });
 
 
+const selectionBoardSchema = new mongoose.Schema({
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
+  room: { type: String, required: true },
+  selections: [
+    {
+      name: { type: String, required: true },
+      description: { type: String, required: true },
+      price: { type: Number, required: true },
+      link: { type: String, required: true },
+      photo: { type: String }  // Optionally store product photo.
+    }
+  ]
+}, { timestamps: true });
+
+const productSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  description: { type: String, required: true },
+  price: { type: Number, required: true },
+  link: { type: String, required: true },
+  photo: { type: String }  // Stores the extracted photo URL.
+}, { timestamps: true });
+
+
 // ✅ Ensure DailyUpdate model is defined
 const DailyUpdateSchema = new mongoose.Schema({
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project", required: true },
@@ -607,6 +630,8 @@ const Vendor = mongoose.model('Vendor', vendorSchema);
 const Project = mongoose.model('Project', projectSchema);
 const Manager = mongoose.model('Manager', managerSchema);
 const Invitation = mongoose.model("Invitation", invitationSchema);
+const SelectionBoard = mongoose.model('SelectionBoard', selectionBoardSchema);
+const Product = mongoose.model('Product', productSchema);
 const DailyUpdate = mongoose.model("DailyUpdate", DailyUpdateSchema);
 
 module.exports = {
@@ -2971,6 +2996,136 @@ app.put('/api/estimates/line-items/:lineItemId', async (req, res) => {
   }
 });
 
+
+// ──────────────────────────────────────────────
+// Products API Endpoints
+// ──────────────────────────────────────────────
+
+
+
+// GET /api/products - Return all products
+app.get('/api/products', async (req, res) => {
+  try {
+    const products = await Product.find().sort({ createdAt: -1 });
+    res.json(products);
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/products - Add a new product
+app.post('/api/products', async (req, res) => {
+  try {
+    const { name, description, price, link, photo } = req.body;
+    if (!name || !description || !price || !link) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const newProduct = new Product({ name, description, price, link, photo });
+    await newProduct.save();
+    res.status(201).json(newProduct);
+  } catch (error) {
+    console.error("Error saving product:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+
+
+
+// Endpoint to create or update a selection board
+app.post('/api/selection-board', async (req, res) => {
+  try {
+    const { projectId, room, selections } = req.body;
+    if (!projectId || !room || !selections || !Array.isArray(selections)) {
+      return res.status(400).json({ message: "projectId, room, and selections (as an array) are required." });
+    }
+    
+    // Ensure each selection object has a photo property.
+    const sanitizedSelections = selections.map(s => ({
+      name: s.name,
+      description: s.description,
+      price: s.price,
+      link: s.link,
+      photo: s.photo || ""
+    }));
+    
+    // Check if a selection board already exists for this project and room.
+    let board = await SelectionBoard.findOne({ projectId, room });
+    if (board) {
+      board.selections = sanitizedSelections;
+      // If you're using Mongoose timestamps, updatedAt is handled automatically.
+      await board.save();
+      return res.status(200).json({  board });
+    } else {
+      board = new SelectionBoard({ projectId, room, selections: sanitizedSelections });
+      await board.save();
+      return res.status(201).json({ message: "Selection board created successfully", board });
+    }
+  } catch (error) {
+    console.error("Error saving selection board:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+
+// GET /api/selection-boards?projectId=...
+app.get('/api/selection-boards', async (req, res) => {
+  try {
+    const { projectId } = req.query;
+    if (!projectId) {
+      return res.status(400).json({ message: "Project ID is required" });
+    }
+    const boards = await SelectionBoard.find({ projectId });
+    // Instead of a 404, return an empty array if none found:
+    res.status(200).json(boards);
+  } catch (error) {
+    console.error("Error fetching selection boards:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+
+
+
+// --------------------- Endpoint: Proxy for External URL --------------------- //
+app.get('/api/product-details', async (req, res) => {
+  const { url } = req.query;
+  if (!url) {
+    return res.status(400).json({ error: 'Missing url parameter' });
+  }
+  try {
+    // Replace 'YOUR_API_KEY' with your actual Microlink API key or set it in an environment variable.
+    const apiKey = process.env.MICROLINK_API_KEY || 'YOUR_API_KEY';
+    const apiUrl = `https://api.microlink.io/?url=${encodeURIComponent(url)}&api_key=${apiKey}`;
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+      return res.status(500).json({ error: 'Error fetching data from Microlink' });
+    }
+    const data = await response.json();
+    // Microlink returns data under a "data" key
+    res.json(data.data);
+  } catch (error) {
+    console.error("Error fetching product details:", error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/products/:id – Delete a product by ID.
+app.delete('/api/products/:id', async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const deletedProduct = await Product.findByIdAndDelete(productId);
+    if (!deletedProduct) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    res.status(200).json({ message: "Product deleted successfully", product: deletedProduct });
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 // ✅ Get all upcoming and on-hold projects
 app.get("/api/upcoming-projects", async (req, res) => {
