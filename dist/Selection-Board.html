@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Selection Board Dashboard</title>
+  <!-- Import Google Font "Roboto" -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" />
+  <style>
+    /* Base Styles */
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f0f2f5;
+    }
+    header {
+      text-align: center;
+      padding: 15px;
+      background: linear-gradient(135deg, #43464f, #6b7073);
+      color: white;
+      font-size: 24px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    
+    main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding: 20px;
+    }
+    section {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 20px;
+      width: 90%;
+      max-width: 800px;
+      transition: transform 0.3s ease;
+    }
+    section:hover {
+      transform: translateY(-3px);
+    }
+    /* Dashboard Section */
+    #dashboard-section h2 {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .dashboard-top {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .room-selection {
+      flex: 1 1 300px;
+      padding: 15px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    .room-selection h3 {
+      margin-top: 0;
+      color: #333;
+    }
+    .room-selection select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    .room-selection button {
+      width: 100%;
+      padding: 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+    }
+    .room-selection button:hover {
+      background-color: #0056b3;
+    }
+    .dashboard-bottom {
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 15px;
+      background: #fafafa;
+    }
+    .dashboard-bottom h3 {
+      margin-top: 0;
+      color: #333;
+    }
+    /* Saved Boards Container */
+    #saved-boards-container .saved-board {
+      border: 1px solid #e0e0e0;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 8px;
+      background: #fff;
+    }
+    #saved-boards-container .saved-board h4 {
+      margin: 0 0 10px 0;
+      font-size: 18px;
+      color: #007bff;
+    }
+    #saved-boards-container .saved-board ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #saved-boards-container .saved-board li {
+      margin-bottom: 8px;
+      border-bottom: 1px solid #f0f0f0;
+      padding-bottom: 8px;
+      position: relative;
+      font-size: 14px;
+    }
+    /* Delete icon for saved board items */
+    .saved-delete {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      background: rgba(255, 0, 0, 0.8);
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      text-align: center;
+      line-height: 18px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    /* Product Listing Section - Available Fixtures */
+    #product-list {
+      width: 90%;
+      max-width: 800px;
+      overflow-x: auto;
+    }
+    #product-list h2 {
+      text-align: center;
+      margin-bottom: 15px;
+      color: #007bff;
+    }
+    #products-container {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 15px;
+      padding-bottom: 10px;
+    }
+    .product-card {
+      flex: 0 0 calc((100% - 45px) / 4);
+      position: relative;
+      border: 1px solid #e0e0e0;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      background-color: #fff;
+      cursor: pointer;
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .product-card:hover {
+      transform: scale(1.03);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .product-card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      margin-bottom: 10px;
+      border-radius: 4px;
+    }
+    .product-card h3 {
+      font-size: 16px;
+      margin: 5px 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #333;
+    }
+    .product-card p {
+      margin: 5px 0;
+      font-weight: bold;
+      color: #555;
+    }
+    .remove-icon {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: rgba(255, 0, 0, 0.8);
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      text-align: center;
+      line-height: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    /* Updated Like Icon Styling */
+    .like-icon {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      font-size: 30px;
+      color: #aaa;
+      cursor: pointer;
+      transition: color 0.3s ease, transform 0.3s ease;
+      z-index: 2;
+    }
+    .like-icon:hover {
+      transform: scale(1.2);
+    }
+    .like-icon.liked {
+      color: #e74c3c;
+    }
+    /* Create Product List Section */
+    #create-product-list {
+      width: 90%;
+      max-width: 800px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+    #create-product-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    #create-product-form input,
+    #create-product-form textarea {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    #create-product-form label {
+      font-weight: 500;
+      color: #333;
+    }
+    #product-image-preview {
+      max-width: 25%;
+      margin-top: 10px;
+      margin: auto;
+      border-radius: 4px;
+    }
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 100;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.5);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 10% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 600px;
+      border-radius: 8px;
+      position: relative;
+      animation: slideIn 0.5s ease;
+    }
+    @keyframes slideIn {
+      from { transform: translateY(-50px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .close-modal {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      color: #aaa;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: color 0.3s ease;
+    }
+    .close-modal:hover {
+      color: #333;
+    }
+    /* Button Styling for "Add" and "Add Product" */
+    .product-card button,
+    #create-product-form button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+    .product-card button:hover,
+    #create-product-form button:hover {
+      background-color: #0353a9;
+      transform: scale(1.03);
+    }
+
+    /* Loading indicator for product details */
+    #loading-indicator {
+      text-align: center;
+      padding: 10px;
+      color: #007bff;
+      font-weight: bold;
+      display: none;
+    }
+
+ /* Toast Notification Styles */
+ #toast {
+      visibility: hidden;
+      min-width: 250px;
+      background-color: #28a745;
+      color: #fff;
+      text-align: center;
+      border-radius: 4px;
+      padding: 16px;
+      position: fixed;
+      z-index: 200;
+      left: 50%;
+      bottom: 30px;
+      transform: translateX(-50%);
+      font-size: 16px;
+    }
+    #toast.show {
+      visibility: visible;
+      animation: fadein 0.5s, fadeout 0.5s 2.5s;
+    }
+    @keyframes fadein {
+      from { bottom: 0; opacity: 0; }
+      to { bottom: 30px; opacity: 1; }
+    }
+    @keyframes fadeout {
+      from { bottom: 30px; opacity: 1; }
+      to { bottom: 0; opacity: 0; }
+    }
+
+     /* Responsive Styles */
+     @media (max-width: 768px) {
+      #products-container {
+        flex-wrap: nowrap;
+      }
+      .product-card {
+        flex: 0 0 calc((100% - 30px) / 3); /* 3 products at a time */
+      }
+      section {
+        width: 90%;
+      }
+      .dashboard-top {
+        flex-direction: column;
+      }
+      .modal-content {
+        width: 90%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Selection Board Dashboard</h1>
+  </header>
+  
+  <!-- Toast Notification -->
+  <div id="toast"></div>
+
+  <main>
+    <!-- Dashboard Section (only Room Selection and Saved Board) -->
+    <section id="dashboard-section">
+      <h2>Dashboard</h2>
+      <div class="dashboard-top">
+        <div class="room-selection">
+          <h3>Select a Room</h3>
+          <select id="room-dropdown">
+            <option value="living-room">Living Room</option>
+            <option value="kitchen">Kitchen</option>
+            <option value="bathroom">Bathroom</option>
+            <option value="bedroom">Bedroom</option>
+          </select>
+          <div class="dashboard-bottom">
+            <h3>Saved Selection Board for This Room</h3>
+            <div id="saved-boards-container">
+              <!-- Saved board for the current room will be displayed here -->
+            </div>
+          <button id="add-new-room">Add New Room</button>
+        </div>
+      </div>
+      </div>
+    </section>
+    
+    <!-- Product Listing Section -->
+    <section id="product-list">
+      <h2>Available Fixtures</h2>
+      <div id="products-container">
+        <!-- Dynamic products will be inserted here -->
+      </div>
+    </section>
+
+
+    <!-- Create Product List Section -->
+    <section id="create-product-list">
+      <h2>Create Product List</h2>
+      <form id="create-product-form">
+        <div>
+          <label for="product-name">Name:</label>
+          <input type="text" id="product-name" required />
+        </div>
+        <div>
+          <label for="product-details">Details:</label>
+          <textarea id="product-details" required></textarea>
+        </div>
+        <div>
+          <label for="product-price">Price:</label>
+          <input type="number" id="product-price" required />
+        </div>
+        <div>
+          <label for="product-link">Link:</label>
+          <input type="url" id="product-link" required />
+        </div>
+        <!-- Loading indicator for product details -->
+        <div id="loading-indicator">Loading product details...</div>
+        <!-- Hidden input for storing the extracted photo URL -->
+        <input type="hidden" id="product-photo" />
+        <button type="submit">Add Product</button>
+      </form>
+    </section>
+  </main>
+    
+
+  </main>
+  
+  <!-- Full Details Modal -->
+  <div id="full-details-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal" id="close-modal">&times;</span>
+      <h2 id="modal-product-name"></h2>
+      <img id="modal-product-image" src="" alt="" style="max-width:100%; display:block; margin:10px 0;" />
+      <p id="modal-product-price" style="font-weight:bold;"></p>
+      <p id="modal-product-description"></p>
+      <a id="modal-product-link" href="" target="_blank">View Product Page</a>
+    </div>
+  </div>
+  
+  <script>
+    // Helper function to show toast notifications.
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.className = "show";
+      setTimeout(() => {
+        toast.className = toast.className.replace("show", "");
+      }, 3000);
+    }
+    
+    // Helper functions to get/set liked products using product link.
+    function getLikedProducts() {
+      return JSON.parse(localStorage.getItem("likedProducts") || "[]");
+    }
+    function setLikedProducts(likedProducts) {
+      localStorage.setItem("likedProducts", JSON.stringify(likedProducts));
+    }
+    
+    // Persist additional rooms in localStorage.
+    function saveRoomToLocalStorage(roomObj) {
+      const stored = JSON.parse(localStorage.getItem("additionalRooms") || "[]");
+      if (!stored.some(r => r.value === roomObj.value)) {
+        stored.push(roomObj);
+        localStorage.setItem("additionalRooms", JSON.stringify(stored));
+      }
+    }
+    function loadAdditionalRooms() {
+      const roomDropdown = document.getElementById("room-dropdown");
+      const stored = JSON.parse(localStorage.getItem("additionalRooms") || "[]");
+      stored.forEach(roomObj => {
+        if (!Array.from(roomDropdown.options).some(opt => opt.value === roomObj.value)) {
+          const option = document.createElement("option");
+          option.value = roomObj.value;
+          option.textContent = roomObj.text;
+          roomDropdown.appendChild(option);
+        }
+      });
+    }
+    
+    document.addEventListener("DOMContentLoaded", () => {
+      loadAdditionalRooms();
+      
+      /* --------------------- Modal Event Listeners --------------------- */
+      const modal = document.getElementById("full-details-modal");
+      const closeModalButton = document.getElementById("close-modal");
+      
+      function openModal(product) {
+        document.getElementById("modal-product-name").textContent = product.name;
+        document.getElementById("modal-product-image").src = product.photo || "";
+        document.getElementById("modal-product-price").textContent = `$${product.price}`;
+        document.getElementById("modal-product-description").textContent = product.description;
+        document.getElementById("modal-product-link").href = product.link;
+        modal.style.display = "block";
+      }
+      function closeModal() {
+        modal.style.display = "none";
+      }
+      
+      closeModalButton.addEventListener("click", closeModal);
+      window.addEventListener("click", (event) => {
+        if (event.target === modal) {
+          closeModal();
+        }
+      });
+      
+      /* --------------------- API Functions --------------------- */
+      async function getCurrentProjectId() {
+        try {
+          let projectId = localStorage.getItem("currentProjectId");
+          if (!projectId) {
+            const response = await fetch('/api/projects/current');
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            projectId = data.projectId;
+            localStorage.setItem("currentProjectId", projectId);
+          }
+          return projectId;
+        } catch (error) {
+          console.error("Error fetching project ID:", error);
+          return null;
+        }
+      }
+      
+      /* --------------------- Product Data & Functions --------------------- */
+      const products = [];
+      
+      function renderProducts() {
+        const container = document.getElementById("products-container");
+        container.innerHTML = "";
+        const likedProducts = getLikedProducts();
+        products.forEach(product => {
+          const prodId = product._id.toString();
+          const productCard = document.createElement("div");
+          productCard.className = "product-card";
+          productCard.setAttribute("data-id", prodId);
+          
+          // Like Icon.
+          const likeIcon = document.createElement("span");
+          likeIcon.className = "like-icon";
+          if (likedProducts.includes(product.link)) {
+            likeIcon.innerHTML = "&#9829;"; // filled heart
+            likeIcon.classList.add("liked");
+          } else {
+            likeIcon.innerHTML = "&#9825;"; // empty heart
+          }
+          likeIcon.addEventListener("click", (e) => {
+            e.stopPropagation();
+            toggleLike(product.link, likeIcon);
+          });
+          productCard.appendChild(likeIcon);
+          
+          // Remove icon.
+          const removeIcon = document.createElement("span");
+          removeIcon.className = "remove-icon";
+          removeIcon.textContent = "×";
+          removeIcon.addEventListener("click", (e) => {
+            e.stopPropagation();
+            removeProduct(prodId);
+          });
+          productCard.appendChild(removeIcon);
+          
+          // Product photo.
+          if (product.photo) {
+            const img = document.createElement("img");
+            img.src = product.photo;
+            img.alt = product.name;
+            productCard.appendChild(img);
+          }
+          
+          // Product name.
+          const nameEl = document.createElement("h3");
+          nameEl.textContent = product.name;
+          productCard.appendChild(nameEl);
+          
+          // Product price.
+          const priceEl = document.createElement("p");
+          priceEl.innerHTML = `<strong>$${product.price}</strong>`;
+          productCard.appendChild(priceEl);
+          
+          // "Add" button to add product to the board.
+          const addBtn = document.createElement("button");
+          addBtn.textContent = "Add";
+          addBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            addToBoard(prodId);
+          });
+          productCard.appendChild(addBtn);
+          
+          // Clicking the card (outside "Add") opens modal.
+          productCard.addEventListener("click", () => {
+            openModal(product);
+          });
+          
+          container.appendChild(productCard);
+        });
+      }
+      
+      async function loadProducts() {
+        try {
+          const response = await fetch('/api/products');
+          console.log("Load products response status:", response.status);
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Error loading products: ${response.status} - ${errorText}`);
+          }
+          const data = await response.json();
+          products.length = 0;
+          data.forEach(product => {
+            products.push(product);
+          });
+          renderProducts();
+        } catch (error) {
+          console.error("Error loading products:", error);
+        }
+      }
+      
+      async function addProductToList(name, details, price, link, photo) {
+        try {
+          const payload = { name, description: details, price, link, photo };
+          const response = await fetch('/api/products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          console.log("Add product response status:", response.status);
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Error adding product: ${response.status} - ${errorText}`);
+          }
+          const newProduct = await response.json();
+          products.push(newProduct);
+          renderProducts();
+        } catch (error) {
+          console.error("Error adding product:", error);
+        }
+      }
+      
+      async function removeProduct(productId) {
+        if (!confirm("Are you sure you want to remove this product?")) return;
+        try {
+          const response = await fetch(`/api/products/${productId}`, { method: 'DELETE' });
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Error removing product: ${response.status} - ${errorText}`);
+          }
+          const index = products.findIndex(p => p._id.toString() === productId);
+          if (index > -1) {
+            products.splice(index, 1);
+          }
+          renderProducts();
+        } catch (error) {
+          console.error("Error removing product:", error);
+          alert("Failed to remove product.");
+        }
+      }
+      
+      // Toggle like state using product link as unique identifier.
+      function toggleLike(productLink, iconElement) {
+        let likedProducts = getLikedProducts();
+        const index = likedProducts.indexOf(productLink);
+        if(index === -1) {
+          likedProducts.push(productLink);
+          iconElement.innerHTML = "&#9829;"; // filled heart
+          iconElement.classList.add("liked");
+        } else {
+          likedProducts.splice(index, 1);
+          iconElement.innerHTML = "&#9825;"; // empty heart
+          iconElement.classList.remove("liked");
+        }
+        setLikedProducts(likedProducts);
+      }
+      
+      /* --------------------- Extraction of Product Information from URL --------------------- */
+      document.getElementById("product-link").addEventListener("blur", async function() {
+        const url = this.value.trim();
+        if (url) {
+          const loadingIndicator = document.getElementById("loading-indicator");
+          loadingIndicator.style.display = "block";
+          try {
+            const response = await fetch(`/api/product-details?url=${encodeURIComponent(url)}`);
+            if (!response.ok) {
+              console.error("Error fetching product details:", response.status);
+              loadingIndicator.style.display = "none";
+              return;
+            }
+            const data = await response.json();
+            if (data.title && !document.getElementById("product-name").value) {
+              document.getElementById("product-name").value = data.title;
+            }
+            if (data.description && !document.getElementById("product-details").value) {
+              document.getElementById("product-details").value = data.description;
+            }
+            if (data.image && data.image.url) {
+              document.getElementById("product-photo").value = data.image.url;
+              let imgPreview = document.getElementById("product-image-preview");
+              if (!imgPreview) {
+                imgPreview = document.createElement("img");
+                imgPreview.id = "product-image-preview";
+                document.getElementById("create-product-form").appendChild(imgPreview);
+              }
+              imgPreview.src = data.image.url;
+            }
+          } catch (error) {
+            console.error("Error extracting product data:", error);
+          } finally {
+            loadingIndicator.style.display = "none";
+          }
+        }
+      });
+      
+      /* --------------------- Selection Board Functions --------------------- */
+      async function addToBoard(productId) {
+        const projectId = await getCurrentProjectId();
+        if (!projectId) {
+          alert("Project ID not found.");
+          return;
+        }
+        const room = document.getElementById("room-dropdown").value;
+        const product = products.find(p => p._id.toString() === productId);
+        if (!product) {
+          alert("Product not found.");
+          return;
+        }
+        let board;
+        try {
+          const response = await fetch(`/api/selection-boards?projectId=${projectId}`);
+          if (!response.ok) throw new Error("Error fetching boards");
+          const boards = await response.json();
+          board = boards.find(b => b.room.toLowerCase() === room.toLowerCase());
+        } catch (error) {
+          console.error("Error fetching board:", error);
+          board = null;
+        }
+        let newSelections = [];
+        if (board && Array.isArray(board.selections)) {
+          if (board.selections.some(s => s.link === product.link)) {
+            alert("This product is already in the selection board!");
+            return;
+          }
+          newSelections = board.selections.concat([{
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            link: product.link,
+            photo: product.photo || ""
+          }]);
+        } else {
+          newSelections = [{
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            link: product.link,
+            photo: product.photo || ""
+          }];
+        }
+        const payload = { projectId, room, selections: newSelections };
+        console.log("Payload to save selection board:", payload);
+        try {
+          const postRes = await fetch('/api/selection-board', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!postRes.ok) {
+            const errorText = await postRes.text();
+            throw new Error(`Error updating board: ${postRes.status} - ${errorText}`);
+          }
+          const result = await postRes.json();
+          showToast(result.message || "Selection board updated successfully");
+          loadSavedBoardForRoom();
+        } catch (error) {
+          console.error("Error updating board:", error);
+          alert("Failed to update selection board.");
+        }
+      }
+      
+      async function removeFromBoard(productLink, board) {
+        if (!board || !board.selections) return;
+        const projectId = await getCurrentProjectId();
+        if (!projectId) {
+          alert("Project ID not found.");
+          return;
+        }
+        const room = board.room;
+        const newSelections = board.selections.filter(p => p.link !== productLink);
+        const payload = { projectId, room, selections: newSelections };
+        console.log("Payload to remove product from board:", payload);
+        try {
+          const response = await fetch('/api/selection-board', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Error updating board: ${response.status} - ${errorText}`);
+          }
+          const result = await response.json();
+          showToast(result.message || "Product removed from board successfully");
+          loadSavedBoardForRoom();
+        } catch (error) {
+          console.error("Error removing product from board:", error);
+          alert("Failed to remove product from board.");
+        }
+      }
+      
+      async function loadSavedBoardForRoom() {
+        const projectId = await getCurrentProjectId();
+        if (!projectId) {
+          alert("Project ID not found.");
+          return;
+        }
+        const selectedRoom = document.getElementById("room-dropdown").value;
+        console.log("Loading board for room:", selectedRoom);
+        try {
+          const response = await fetch(`/api/selection-boards?projectId=${projectId}`);
+          console.log("Load saved boards response status:", response.status);
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Error loading saved boards: ${response.status} - ${errorText}`);
+          }
+          const boards = await response.json();
+          console.log("Boards loaded:", boards);
+          const boardForRoom = boards.find(board => board.room.toLowerCase() === selectedRoom.toLowerCase());
+          displaySavedBoard(boardForRoom);
+        } catch (error) {
+          console.error("Error loading saved boards:", error);
+          alert("Failed to load saved boards.");
+        }
+      }
+      
+      function displaySavedBoard(board) {
+        const container = document.getElementById("saved-boards-container");
+        container.innerHTML = "";
+        if (!board || !board.selections || board.selections.length === 0) {
+          container.innerHTML = "<p>No saved board found for this room.</p>";
+          return;
+        }
+        const boardDiv = document.createElement("div");
+        boardDiv.className = "saved-board";
+        const header = document.createElement("h4");
+        header.textContent = `Room: ${board.room}`;
+        boardDiv.appendChild(header);
+        const list = document.createElement("ul");
+        board.selections.forEach(product => {
+          const listItem = document.createElement("li");
+          // Add Like Icon for saved board item.
+          const likeIcon = document.createElement("span");
+          likeIcon.className = "like-icon";
+          if(getLikedProducts().includes(product.link)) {
+            likeIcon.innerHTML = "&#9829;";
+            likeIcon.classList.add("liked");
+          } else {
+            likeIcon.innerHTML = "&#9825;";
+          }
+          likeIcon.addEventListener("click", (e) => {
+            e.stopPropagation();
+            toggleLike(product.link, likeIcon);
+          });
+          listItem.appendChild(likeIcon);
+          // Display product photo.
+          if (product.photo) {
+            const img = document.createElement("img");
+            img.src = product.photo;
+            img.alt = product.name;
+            img.style.maxWidth = "50px";
+            img.style.marginRight = "10px";
+            listItem.appendChild(img);
+          }
+          const infoSpan = document.createElement("span");
+          infoSpan.innerHTML = `<strong>${product.name}</strong> - $${product.price}`;
+          listItem.appendChild(infoSpan);
+          // Delete icon.
+          const deleteIcon = document.createElement("span");
+          deleteIcon.className = "saved-delete";
+          deleteIcon.textContent = "×";
+          deleteIcon.addEventListener("click", (e) => {
+            e.stopPropagation();
+            removeFromBoard(product.link, board);
+          });
+          listItem.appendChild(deleteIcon);
+          // Clicking the list item opens full details modal.
+          listItem.style.cursor = "pointer";
+          listItem.addEventListener("click", () => {
+            openModal(product);
+          });
+          list.appendChild(listItem);
+        });
+        boardDiv.appendChild(list);
+        container.appendChild(boardDiv);
+      }
+      
+      function addNewRoom() {
+        const newRoom = prompt("Enter new room name:");
+        if (newRoom) {
+          const roomDropdown = document.getElementById("room-dropdown");
+          const exists = Array.from(roomDropdown.options).some(option => option.text.toLowerCase() === newRoom.toLowerCase());
+          if (exists) {
+            alert("This room already exists.");
+          } else {
+            const value = newRoom.toLowerCase().replace(/\s+/g, "-");
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = newRoom;
+            roomDropdown.appendChild(option);
+            roomDropdown.value = value;
+            console.log("New room added:", value);
+            saveRoomToLocalStorage({ value, text: newRoom });
+            loadSavedBoardForRoom();
+          }
+        }
+      }
+      
+      document.getElementById("room-dropdown").addEventListener("change", () => {
+        const selected = document.getElementById("room-dropdown").value;
+        console.log("Room changed to:", selected);
+        loadSavedBoardForRoom();
+      });
+      
+      document.getElementById("add-new-room").addEventListener("click", addNewRoom);
+      
+      const createProductForm = document.getElementById("create-product-form");
+      createProductForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const name = document.getElementById("product-name").value.trim();
+        const details = document.getElementById("product-details").value.trim();
+        const price = parseFloat(document.getElementById("product-price").value);
+        const link = document.getElementById("product-link").value.trim();
+        const photo = document.getElementById("product-photo").value.trim();
+        if (!name || !details || isNaN(price) || !link) {
+          alert("Please fill in all fields correctly.");
+          return;
+        }
+        await addProductToList(name, details, price, link, photo);
+        createProductForm.reset();
+      });
+      
+      // Initial load: available fixtures and saved board for current room.
+      loadProducts();
+      (async function() {
+        const projectId = await getCurrentProjectId();
+        if (projectId) {
+          console.log("Current Project ID:", projectId);
+          loadSavedBoardForRoom();
+        }
+      })();
+    });
+  </script>
+</body>
+</html>
