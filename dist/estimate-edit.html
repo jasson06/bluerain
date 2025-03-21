@@ -270,6 +270,15 @@
     height: 50px;
 }
 
+
+    /* Fix for Safari & iOS */
+@supports (-webkit-touch-callout: none) {
+  .round-icon {
+    -webkit-border-radius: 50%; /* Ensure it stays round */
+    -webkit-mask-image: radial-gradient(circle, white 100%, transparent 100%);
+  }
+}
+
 .fullscreen-view .close-btn:hover {
     background: rgb(156, 156, 156);
 }
