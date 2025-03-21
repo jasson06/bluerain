@@ -926,6 +926,46 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
     background: #dc3545;
     color: #fff;
 }
+
+ .vendor-name {
+  position: relative;
+  cursor: pointer;
+  font-weight: bold;
+  color: #333;
+  border-bottom: 1px dashed #999;
+  padding: 2px 4px;
+  transition: color 0.2s ease-in-out;
+}
+
+.vendor-name:hover {
+  color: #0a66c2;
+}
+
+/* Tooltip Styling */
+.vendor-name::after {
+  content: attr(data-fullname);
+  position: absolute;
+  bottom: 125%; /* Position above the text */
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #222;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease-in-out;
+  z-index: 999;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Show tooltip on hover */
+.vendor-name:hover::after {
+  opacity: 1;
+}
+    
 </style> 
 </head>
 <body>
