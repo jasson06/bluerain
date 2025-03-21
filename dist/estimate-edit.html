@@ -941,19 +941,24 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   color: #0a66c2;
 }
 
-/* Custom Tooltip for iPhones */
+
+/* ✨ Custom Tooltip for Mobile & Desktop */
 .custom-tooltip {
   position: absolute;
-  background-color: #222;
+  background: rgba(34, 34, 34, 0.95); /* Slight transparency for a sleek look */
   color: #fff;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
   white-space: nowrap;
   z-index: 999;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   opacity: 1;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
+
 
 
 /* ✅ Hide default hover tooltip on iPhones */
@@ -974,14 +979,14 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 .vendor-name::after {
  content: attr(data-fullname);
   position: absolute;
-  bottom: 125%; /* Position above the text */
+  bottom: -125%; /* Position below the text */
   left: 50%;
   transform: translateX(-50%);
   background-color: #222;
   color: #fff;
   padding: 6px 10px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 14px;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
@@ -994,6 +999,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 .vendor-name:hover::after {
   opacity: 1;
 }
+
 
     
 </style> 
