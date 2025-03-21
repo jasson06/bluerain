@@ -722,6 +722,40 @@ const assignedToInitials = item.assignedTo?.name
 </div>
   `;
 
+// ✅ Enable vendor name 
+  document.querySelectorAll(".vendor-name").forEach((el) => {
+    el.removeAttribute("title"); // ❌ Remove default tooltip behavior
+  
+    el.addEventListener("click", function (e) {
+      const fullName = el.getAttribute("data-fullname");
+  
+      // Remove any existing tooltips
+      document.querySelectorAll(".custom-tooltip").forEach((tooltip) => tooltip.remove());
+  
+      // Create new tooltip
+      const tooltip = document.createElement("div");
+      tooltip.className = "custom-tooltip";
+      tooltip.textContent = fullName;
+  
+      document.body.appendChild(tooltip);
+  
+      // Position the tooltip near the element
+      const rect = el.getBoundingClientRect();
+      tooltip.style.left = `${rect.left + window.scrollX + rect.width / 2}px`;
+      tooltip.style.top = `${rect.bottom + window.scrollY + 8}px`;
+  
+      // Remove tooltip when tapping elsewhere
+      setTimeout(() => tooltip.remove(), 2500); // Auto-hide after 2.5s
+  
+      e.stopPropagation(); // Prevent event bubbling
+    });
+  
+    // Hide tooltip if tapping outside
+    document.addEventListener("click", function () {
+      document.querySelectorAll(".custom-tooltip").forEach((tooltip) => tooltip.remove());
+    });
+  });
+   
 
     // ✅ Enable swipe gestures for newly added items
     setTimeout(() => {
