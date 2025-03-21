@@ -927,7 +927,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
     color: #fff;
 }
 
- .vendor-name {
+.vendor-name {
   position: relative;
   cursor: pointer;
   font-weight: bold;
@@ -941,9 +941,38 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   color: #0a66c2;
 }
 
+/* Custom Tooltip for iPhones */
+.custom-tooltip {
+  position: absolute;
+  background-color: #222;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 999;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  opacity: 1;
+}
+
+
+/* ✅ Hide default hover tooltip on iPhones */
+@media (min-width: 480px) {
+  .custom-tooltip {
+    display: none !important;
+  }
+  
+}
+/* ✅ Hide default hover tooltip on iPhones */
+@media (max-width: 480px) {
+  .vendor-name::after {
+    display: none !important;
+  }
+  
+}
 /* Tooltip Styling */
 .vendor-name::after {
-  content: attr(data-fullname);
+ content: attr(data-fullname);
   position: absolute;
   bottom: 125%; /* Position above the text */
   left: 50%;
@@ -965,6 +994,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 .vendor-name:hover::after {
   opacity: 1;
 }
+
     
 </style> 
 </head>
