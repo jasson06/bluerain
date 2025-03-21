@@ -636,7 +636,14 @@ function refreshLineItems(categories) {
   card.setAttribute("data-item-id", item._id || `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
   card.setAttribute("data-assigned-to", item.assignedTo || "");
 
-  const assignedTo = item.assignedTo ? getVendorInitials(item.assignedTo) : "Unassigned";
+const assignedToName = item.assignedTo?.name || "Unassigned";
+const assignedToInitials = item.assignedTo?.name
+  ? item.assignedTo.name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+  : "NA";
 
 
          // ✅ Define possible statuses
@@ -702,10 +709,17 @@ function refreshLineItems(categories) {
         <span>Status:<span class="item-status ${statusClass}">${status.toUpperCase()}</span></span>
         </div>
 
-      <div class="card-footer">
-          <span>Assigned to: <span class="vendor-name">${assignedTo}</span></span>
-          <span class="item-total">$${((item.quantity || 1) * (item.unitPrice || 0)).toFixed(2)}</span>
-      </div>
+<div class="card-footer">
+  <span>
+    Assigned to:
+    <span class="vendor-name tooltip-click" data-fullname="${assignedToName}">
+      ${assignedToInitials}
+    </span>
+  </span>
+  <span class="item-total">
+    $${((item.quantity || 1) * (item.unitPrice || 0)).toFixed(2)}
+  </span>
+</div>
   `;
 
 
