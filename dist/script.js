@@ -162,9 +162,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (formId === 'add-project-form') {
             if (!payload.name) errors.push('Project name is required.');
-            if (!payload.status) errors.push('Project status is required.');
             if (!payload.type) errors.push('Project type is required.');
-            if (!payload.color) errors.push('Project color is required.');
+        
         }
 
         if (formId === 'add-client-form') {
