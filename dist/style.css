@@ -1080,3 +1080,42 @@ input, textarea {
   }
 }
 
+.project-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.activity-badge {
+  position: relative;
+  background-color: crimson;
+  color: white;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.activity-badge::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%; /* Position above the badge */
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: #fff;
+  font-size: 12px;
+  white-space: nowrap;
+  padding: 5px 8px;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 100;
+}
+
+.activity-badge:hover::after,
+.activity-badge:focus::after,
+.activity-badge.tooltip-visible::after {
+  opacity: 1;
+}
