@@ -1105,18 +1105,34 @@ app.put('/api/vendors/:id', (req, res) => {
   res.status(200).json(vendor);
 });
 
-  ///==================///
+ 
+
+
+///==================///
       // Add Project
 app.post('/api/add-project', async (req, res) => {
   try {
-    const newProject = new Project(req.body);
-    await newProject.save();
-    res.status(201).json({ success: true, message: 'Project added successfully', project: newProject });
+    const payload = req.body;
+
+    // ✅ Default status if not provided
+    if (!payload.status) {
+      payload.status = "Upcoming";
+    }
+
+    // ✅ Create and save the new project
+    const newProject = new Project(payload);
+    const savedProject = await newProject.save();
+
+    // ✅ Log the project creation in daily logs
+    await logDailyUpdate(savedProject._id, `Project "${savedProject.name}" was created.`);
+
+    res.json({ success: true, project: savedProject });
   } catch (error) {
-    console.error('Error adding project:', error.message);
+    console.error('Error adding project:', error);
     res.status(500).json({ success: false, error: 'Failed to add project' });
   }
 });
+
 
 
 // Get All Projects
@@ -1125,7 +1141,7 @@ app.get('/api/projects', async (req, res) => {
   try {
     // ✅ Fetch only projects that are NOT "open" or "on-hold"
     const projects = await Project.find({
-      status: { $nin: ["Open", "on-hold", "completed"] } // $nin = Not In
+      status: { $nin: ["Upcoming", "completed"] } // $nin = Not In
     });
 
     res.json({ success: true, projects });
@@ -3132,7 +3148,7 @@ app.get("/api/upcoming-projects", async (req, res) => {
   try {
     // ✅ Fetch projects that have "upcoming" or "on hold" status
     const projects = await Project.find({
-      status: { $in: ["upcoming", "on-hold", "Open"] } // Matches either "upcoming" or "on hold"
+      status: { $in: ["Upcoming", "on-hold", "Open"] } // Matches either "upcoming" or "on hold"
     });
 
     res.status(200).json({ success: true, projects }); // ✅ Corrected variable name
