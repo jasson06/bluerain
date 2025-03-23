@@ -204,33 +204,73 @@ function navigateToDetails(section, id) {
     window.location.href = fullURL; // Navigate to the constructed URL
   }
   
-  // Function to load projects dynamically
-  async function loadProjects() {
+   // Function to load projects dynamically
+async function loadProjects() {
     const projectsList = document.getElementById('projects-list');
     projectsList.innerHTML = '<p>Loading...</p>';
   
-    try {
-      const response = await fetch('/api/projects');
-      if (!response.ok) throw new Error('Failed to fetch projects');
+    // 📅 Get today's date in YYYY-MM-DD
+    const today = new Date().toISOString().split("T")[0];
   
-      const data = await response.json();
+    try {
+      // Fetch both projects and today's updates
+      const [projectsRes, updatesRes] = await Promise.all([
+        fetch('/api/projects'),
+        fetch(`/api/daily-updates?date=${today}`)
+      ]);
+  
+      if (!projectsRes.ok || !updatesRes.ok) throw new Error('Failed to fetch data');
+  
+      const projectsData = await projectsRes.json();
+      const updatesData = await updatesRes.json();
+  
+      // 🧮 Count updates by projectId
+      const updateCounts = {};
+      updatesData.updates.forEach(update => {
+        const id = update.projectId;
+        updateCounts[id] = (updateCounts[id] || 0) + 1;
+      });
+  
       projectsList.innerHTML = '';
   
-      if (data.projects.length === 0) {
+      if (projectsData.projects.length === 0) {
         projectsList.innerHTML = '<p>No projects found.</p>';
       } else {
-        data.projects.forEach((project) => {
+        projectsData.projects.forEach((project) => {
+          const count = updateCounts[project._id] || 0;
+  
           const itemDiv = document.createElement('div');
           itemDiv.className = 'item';
-  
-          // Attach the navigateToDetails function to the onclick event
           itemDiv.addEventListener('click', () => navigateToDetails('projects', project._id));
+  
           itemDiv.innerHTML = `
-            <p>${project.name}</p>
-            <small>${project.address.addressLine1}, ${project.address.city}, ${project.address.state}, ${project.address.zip} </small>
-            <small>Lockbox Code: ${project.code || 'N/A'}</small></p>
+            <div class="project-item-header">
+              <p>${project.name}</p>
+              ${count > 0 ? `
+                <span class="activity-badge" data-tooltip="${count} update${count > 1 ? 's' : ''} today">
+                  ${count}
+                </span>` : ''
+              }
+            </div>
+            <small>${project.address.addressLine1}, ${project.address.city}, ${project.address.state}, ${project.address.zip}</small>
+            <small>Lockbox Code: ${project.code || 'N/A'}</small>
           `;
           projectsList.appendChild(itemDiv);
+        });
+  
+        // ✅ Enable mobile tap support for tooltips
+        document.addEventListener('click', (e) => {
+          const allBadges = document.querySelectorAll('.activity-badge');
+          allBadges.forEach(badge => badge.classList.remove('tooltip-visible'));
+  
+          const isBadge = e.target.classList.contains('activity-badge');
+          if (isBadge) {
+            e.stopPropagation(); // ✅ Prevent triggering project click
+            e.target.classList.add('tooltip-visible');
+            setTimeout(() => {
+              e.target.classList.remove('tooltip-visible');
+            }, 2000);
+          }
         });
       }
     } catch (error) {
