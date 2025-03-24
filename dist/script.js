@@ -286,90 +286,159 @@ async function loadProjects() {
 // ✅ Function to load upcoming and on-hold projects dynamically
 async function loadUpcomingProjects() {
     const projectsList = document.getElementById("Upcoming-projects-list");
-    projectsList.innerHTML = "<p>Loading...</p>"; // Placeholder text
+    projectsList.innerHTML = "<p>Loading...</p>";
+  
+    const today = new Date().toISOString().split("T")[0];
   
     try {
-      // ✅ Fetch upcoming and on-hold projects
-      const response = await fetch("/api/upcoming-projects");
-      if (!response.ok) throw new Error("Failed to fetch upcoming projects");
+      // Fetch upcoming projects and today's updates
+      const [projectsRes, updatesRes] = await Promise.all([
+        fetch("/api/upcoming-projects"),
+        fetch(`/api/daily-updates?date=${today}`)
+      ]);
   
-      const { projects } = await response.json();
-      projectsList.innerHTML = ""; // Clear loading message
+      if (!projectsRes.ok || !updatesRes.ok) throw new Error("Failed to fetch data");
+  
+      const { projects } = await projectsRes.json();
+      const { updates } = await updatesRes.json();
+  
+      // Count updates by projectId
+      const updateCounts = {};
+      updates.forEach(update => {
+        const id = update.projectId;
+        updateCounts[id] = (updateCounts[id] || 0) + 1;
+      });
+  
+      projectsList.innerHTML = "";
   
       if (!projects || projects.length === 0) {
         projectsList.innerHTML = "<p>No upcoming or on-hold projects found.</p>";
         return;
       }
   
-      // ✅ Generate project items dynamically (matching loadProjects style)
       projects.forEach((project) => {
+        const count = updateCounts[project._id] || 0;
+  
         const itemDiv = document.createElement("div");
-        itemDiv.className = "item"; // Keep the same class as loadProjects
-  
-        // 🔹 Determine status display: If "Open" or "on-hold", show "Upcoming"
-        const displayedStatus = ["Open", "on-hold"].includes(project.status) ? "Upcoming" : project.status;
-  
-        // 🔹 Full Address Formatting
-        const fullAddress = `${project.address.addressLine1 || ""} ${project.address.addressLine2 || ""}, ${project.address.city}, ${project.address.state} ${project.address.zip || ""}`;
-  
-        // Attach the navigateToDetails function to the onclick event
+        itemDiv.className = "item";
         itemDiv.addEventListener("click", () => navigateToDetails("projects", project._id));
   
-        // ✅ Include modified status label and full address
+        const fullAddress = `${project.address.addressLine1 || ""} ${project.address.addressLine2 || ""}, ${project.address.city}, ${project.address.state} ${project.address.zip || ""}`;
+  
         itemDiv.innerHTML = `
-          <p>${project.name}</p>
+          <div class="project-item-header">
+            <p>${project.name}</p>
+            ${count > 0 ? `
+              <span class="activity-badge" data-tooltip="${count} update${count > 1 ? 's' : ''} today">
+                ${count}
+              </span>` : ''
+            }
+          </div>
           <small>${fullAddress}</small>
-          <small>Lockbox Code: ${project.code || 'N/A'}</small></p>
+          <small>Lockbox Code: ${project.code || 'N/A'}</small>
         `;
   
         projectsList.appendChild(itemDiv);
       });
+  
+      // Reuse tooltip tap support
+      document.addEventListener("click", (e) => {
+        const allBadges = document.querySelectorAll(".activity-badge");
+        allBadges.forEach(badge => badge.classList.remove("tooltip-visible"));
+  
+        if (e.target.classList.contains("activity-badge")) {
+          e.stopPropagation();
+          e.target.classList.add("tooltip-visible");
+          setTimeout(() => {
+            e.target.classList.remove("tooltip-visible");
+          }, 2000);
+        }
+      });
+  
     } catch (error) {
       console.error("❌ Error loading upcoming projects:", error);
       projectsList.innerHTML = "<p>Error loading upcoming projects. Please try again later.</p>";
     }
   }
   
+  
 
 
 
   // ✅ Function to Load Completed Projects Dynamically
-async function loadCompletedProjects() {
+  async function loadCompletedProjects() {
     const projectsList = document.getElementById("completed-projects-list");
     projectsList.innerHTML = "<p>Loading...</p>"; // Show loading message
-
+  
+    const today = new Date().toISOString().split("T")[0];
+  
     try {
-        const response = await fetch("/api/completed-projects");
-        if (!response.ok) throw new Error("Failed to fetch completed projects");
-
-        const data = await response.json();
-        projectsList.innerHTML = ""; // Clear loading message
-
-        if (data.projects.length === 0) {
-            projectsList.innerHTML = "<p>No completed projects found.</p>";
-        } else {
-            data.projects.forEach((project) => {
-                const itemDiv = document.createElement("div");
-                itemDiv.className = "item";
-
-                // Attach the navigateToDetails function to the onclick event
-                itemDiv.addEventListener("click", () => navigateToDetails("projects", project._id));
-
-                itemDiv.innerHTML = `
-                    <p>${project.name}</p>
-                    <small>${project.address.addressLine1}, ${project.address.city}, ${project.address.state}, ${project.address.zip}</small>
-                    <small>Lockbox Code: ${project.code || 'N/A'}</small></p>
-                    <span class="status">✔ Completed</span>
-                `;
-
-                projectsList.appendChild(itemDiv);
-            });
-        }
+      // Fetch completed projects and today's updates
+      const [projectsRes, updatesRes] = await Promise.all([
+        fetch("/api/completed-projects"),
+        fetch(`/api/daily-updates?date=${today}`)
+      ]);
+  
+      if (!projectsRes.ok || !updatesRes.ok) throw new Error("Failed to fetch data");
+  
+      const { projects } = await projectsRes.json();
+      const { updates } = await updatesRes.json();
+  
+      // Count updates by projectId
+      const updateCounts = {};
+      updates.forEach(update => {
+        const id = update.projectId;
+        updateCounts[id] = (updateCounts[id] || 0) + 1;
+      });
+  
+      projectsList.innerHTML = "";
+  
+      if (!projects || projects.length === 0) {
+        projectsList.innerHTML = "<p>No completed projects found.</p>";
+      } else {
+        projects.forEach((project) => {
+          const count = updateCounts[project._id] || 0;
+  
+          const itemDiv = document.createElement("div");
+          itemDiv.className = "item";
+          itemDiv.addEventListener("click", () => navigateToDetails("projects", project._id));
+  
+          itemDiv.innerHTML = `
+            <div class="project-item-header">
+              <p>${project.name}</p>
+              ${count > 0 ? `
+                <span class="activity-badge" data-tooltip="${count} update${count > 1 ? 's' : ''} today">
+                  ${count}
+                </span>` : ''
+              }
+            </div>
+            <small>${project.address.addressLine1}, ${project.address.city}, ${project.address.state}, ${project.address.zip}</small>
+            <small>Lockbox Code: ${project.code || 'N/A'}</small>
+            <span class="status">✔ Completed</span>
+          `;
+  
+          projectsList.appendChild(itemDiv);
+        });
+  
+        // Enable mobile tap support for tooltips
+        document.addEventListener("click", (e) => {
+          const allBadges = document.querySelectorAll(".activity-badge");
+          allBadges.forEach(badge => badge.classList.remove("tooltip-visible"));
+  
+          if (e.target.classList.contains("activity-badge")) {
+            e.stopPropagation();
+            e.target.classList.add("tooltip-visible");
+            setTimeout(() => {
+              e.target.classList.remove("tooltip-visible");
+            }, 2000);
+          }
+        });
+      }
     } catch (error) {
-        console.error("❌ Error loading completed projects:", error);
-        projectsList.innerHTML = "<p>Error loading completed projects. Please try again later.</p>";
+      console.error("❌ Error loading completed projects:", error);
+      projectsList.innerHTML = "<p>Error loading completed projects. Please try again later.</p>";
     }
-}
+  }
 
 // ✅ Call function on page load
 document.addEventListener("DOMContentLoaded", () => {
