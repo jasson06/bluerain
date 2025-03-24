@@ -518,21 +518,21 @@ function addMarker(lat, lng, title) {
     const infoWindow = new google.maps.InfoWindow({
         content: `
             <div style="
-                font-size: 11px;
+                font-size: 9px;
                 font-weight: bold;
                 color: #ffffff;
                 background: #0f4c75; 
-                padding: 3px 8px;
+                padding: 6px 35px;
                 border-radius: 4px;
                 text-align: center;
                 white-space: nowrap;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-                max-width: 120px;
-                max-height: 40px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                max-height: 30px;
                 overflow: hidden;
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                backdrop-filter: blur(3px); /* Frosted glass effect */
             ">
                 📍 ${title}
             </div>
