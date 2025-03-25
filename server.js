@@ -3159,6 +3159,19 @@ app.get("/api/upcoming-projects", async (req, res) => {
 });
 
 
+// ✅ Get all "On Market" projects
+app.get("/api/on-market-projects", async (req, res) => {
+  try {
+    const projects = await Project.find({ status: "On Market" });
+
+    res.status(200).json({ success: true, projects });
+  } catch (error) {
+    console.error("Error fetching 'On Market' projects:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch 'On Market' projects." });
+  }
+});
+
+
 // ✅ API Endpoint to Fetch Completed Projects
 app.get('/api/completed-projects', async (req, res) => {
   try {
