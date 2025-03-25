@@ -296,6 +296,58 @@ h3 {
   color: #555;
 }
 
+
+/* On Market Projects List Container */
+#on-market-projects-list {
+  max-height: 450px;
+  overflow-y: scroll;
+  padding: 15px;
+  background-color: #fbfcfd;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Hide the scrollbar */
+#on-market-projects-list::-webkit-scrollbar {
+  display: none;
+}
+#on-market-projects-list {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* On Market Project Item Styling */
+#on-market-projects-list .item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 15px;
+  padding: 20px;
+  background-color: #f9f6f6;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+  cursor: pointer;
+}
+
+#on-market-projects-list .item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+#on-market-projects-list .item p {
+  font-size: 18px;
+  font-weight: bold;
+  margin: 0;
+  color: #333;
+}
+
+#on-market-projects-list .item small {
+  font-size: 14px;
+  color: #555;
+}
+
+
 /* Completed Projects List */
 #completed-projects-list {
   max-height: 450px;
