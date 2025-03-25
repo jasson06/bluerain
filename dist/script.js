@@ -361,8 +361,82 @@ async function loadUpcomingProjects() {
     }
   }
   
+  // ✅ Function to Load on market Projects Dynamically
+ async function loadOnMarketProjects() {
+    const projectsList = document.getElementById("on-market-projects-list");
+    projectsList.innerHTML = "<p>Loading...</p>";
   
-
+    const today = new Date().toISOString().split("T")[0];
+  
+    try {
+      const [projectsRes, updatesRes] = await Promise.all([
+        fetch("/api/on-market-projects"),
+        fetch(`/api/daily-updates?date=${today}`)
+      ]);
+  
+      if (!projectsRes.ok || !updatesRes.ok) throw new Error("Failed to fetch data");
+  
+      const { projects } = await projectsRes.json();
+      const { updates } = await updatesRes.json();
+  
+      // Count updates by projectId
+      const updateCounts = {};
+      updates.forEach(update => {
+        const id = update.projectId;
+        updateCounts[id] = (updateCounts[id] || 0) + 1;
+      });
+  
+      projectsList.innerHTML = "";
+  
+      if (!projects || projects.length === 0) {
+        projectsList.innerHTML = "<p>No 'On Market' projects found.</p>";
+        return;
+      }
+  
+      projects.forEach((project) => {
+        const count = updateCounts[project._id] || 0;
+  
+        const itemDiv = document.createElement("div");
+        itemDiv.className = "item";
+        itemDiv.addEventListener("click", () => navigateToDetails("projects", project._id));
+  
+        const fullAddress = `${project.address.addressLine1 || ""} ${project.address.addressLine2 || ""}, ${project.address.city}, ${project.address.state} ${project.address.zip || ""}`;
+  
+        itemDiv.innerHTML = `
+          <div class="project-item-header">
+            <p>${project.name}</p>
+            ${count > 0 ? `
+              <span class="activity-badge" data-tooltip="${count} update${count > 1 ? 's' : ''} today">
+                ${count}
+              </span>` : ''
+            }
+          </div>
+          <small>${fullAddress}</small>
+          <small>Lockbox Code: ${project.code || 'N/A'}</small>
+        `;
+  
+        projectsList.appendChild(itemDiv);
+      });
+  
+      // Tooltip tap support
+      document.addEventListener("click", (e) => {
+        const allBadges = document.querySelectorAll(".activity-badge");
+        allBadges.forEach(badge => badge.classList.remove("tooltip-visible"));
+  
+        if (e.target.classList.contains("activity-badge")) {
+          e.stopPropagation();
+          e.target.classList.add("tooltip-visible");
+          setTimeout(() => {
+            e.target.classList.remove("tooltip-visible");
+          }, 2000);
+        }
+      });
+  
+    } catch (error) {
+      console.error("❌ Error loading 'On Market' projects:", error);
+      projectsList.innerHTML = "<p>Error loading 'On Market' projects. Please try again later.</p>";
+    }
+  }
 
 
   // ✅ Function to Load Completed Projects Dynamically
@@ -471,40 +545,62 @@ window.initMap = initMap;
 // ✅ Load project locations
 async function loadProjectLocations() {
     try {
-        const response = await fetch("/api/projects");
-        if (!response.ok) throw new Error("Failed to fetch project locations");
-
-        const data = await response.json();
-        if (!data.projects || data.projects.length === 0) {
-            console.warn("No project locations found.");
-            return;
+      // Fetch all project sets in parallel
+      const [activeRes, upcomingRes, completedRes, onMarketRes] = await Promise.all([
+        fetch("/api/projects"),
+        fetch("/api/upcoming-projects"),
+        fetch("/api/completed-projects"),
+        fetch("/api/on-market-projects")
+      ]);
+  
+      if (!activeRes.ok || !upcomingRes.ok || !completedRes.ok || !onMarketRes.ok) {
+        throw new Error("Failed to fetch project locations");
+      }
+  
+      const [activeData, upcomingData, completedData, onMarketData] = await Promise.all([
+        activeRes.json(),
+        upcomingRes.json(),
+        completedRes.json(),
+        onMarketRes.json()
+      ]);
+  
+      const allProjects = [
+        ...activeData.projects.map(p => ({ ...p, markerType: "active" })),
+        ...upcomingData.projects.map(p => ({ ...p, markerType: "upcoming" })),
+        ...completedData.projects.map(p => ({ ...p, markerType: "completed" })),
+        ...onMarketData.projects.map(p => ({ ...p, markerType: "onMarket" }))
+      ];
+  
+      if (allProjects.length === 0) {
+        console.warn("No project locations found.");
+        return;
+      }
+  
+      for (const project of allProjects) {
+        if (!project.address || !project.address.addressLine1) continue;
+  
+        const fullAddress = `${project.address.addressLine1}, ${project.address.city}, ${project.address.state} ${project.address.zip}`;
+  
+        try {
+          const geoResponse = await fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=AIzaSyCvzkKpCkAY2PHwU8I8zZiM_FLMzMj1bbg`
+          );
+          const geoData = await geoResponse.json();
+  
+          if (geoData.status === "OK") {
+            const { lat, lng } = geoData.results[0].geometry.location;
+            addMarker(lat, lng, project.name, project.markerType);
+          } else {
+            console.warn(`Skipping ${project.name}: No coordinates found.`);
+          }
+        } catch (geoError) {
+          console.error("Geocoding error:", geoError);
         }
-
-        data.projects.forEach(async (project) => {
-            if (!project.address || !project.address.addressLine1) return;
-
-            const fullAddress = `${project.address.addressLine1}, ${project.address.city}, ${project.address.state} ${project.address.zip}`;
-
-            try {
-                const geoResponse = await fetch(
-                    `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=AIzaSyCvzkKpCkAY2PHwU8I8zZiM_FLMzMj1bbg`
-                );
-                const geoData = await geoResponse.json();
-
-                if (geoData.status === "OK") {
-                    const { lat, lng } = geoData.results[0].geometry.location;
-                    addMarker(lat, lng, project.name);
-                } else {
-                    console.warn(`Skipping ${project.name}: No coordinates available.`);
-                }
-            } catch (geoError) {
-                console.error("Error geocoding address:", geoError);
-            }
-        });
+      }
     } catch (error) {
-        console.error("Error loading project locations:", error);
+      console.error("Error loading project locations:", error);
     }
-}
+  }
 
 // ✅ Add Markers & Open Google Maps Navigation
 function addMarker(lat, lng, title) {
@@ -602,43 +698,56 @@ document.addEventListener("DOMContentLoaded", () => {
   
   async function updateProjectCounts() {
     try {
-        console.log("Fetching project counts..."); // Debugging
-
-        const timestamp = new Date().getTime(); // Prevent caching
-
-        // ✅ Fetch Upcoming and On-Hold Projects
-        const upcomingResponse = await fetch(`/api/upcoming-projects?t=${timestamp}`);
-        if (!upcomingResponse.ok) throw new Error("Failed to fetch upcoming projects");
-        const upcomingData = await upcomingResponse.json();
-        const upcomingCount = upcomingData.projects.length || 0;
-
-        // ✅ Fetch In-Progress Projects
-        const inProgressResponse = await fetch(`/api/projects?t=${timestamp}`);
-        if (!inProgressResponse.ok) throw new Error("Failed to fetch in-progress projects");
-        const inProgressData = await inProgressResponse.json();
-        const inProgressCount = inProgressData.projects.length || 0;
-
-        // ✅ Fetch Completed Projects
-        const completedResponse = await fetch(`/api/completed-projects?t=${timestamp}`);
-        if (!completedResponse.ok) throw new Error("Failed to fetch completed projects");
-        const completedData = await completedResponse.json();
-        const completedCount = completedData.projects.length || 0;
-
-        console.log("✅ Counts:", { upcomingCount, inProgressCount, completedCount }); // Debugging
-
-        // ✅ Ensure Elements Exist Before Updating UI
-        const upcomingElement = document.getElementById("upcoming-count");
-        const inProgressElement = document.getElementById("in-progress-count");
-        const completedElement = document.getElementById("completed-count");
-
-        if (upcomingElement) upcomingElement.textContent = upcomingCount;
-        if (inProgressElement) inProgressElement.textContent = inProgressCount;
-        if (completedElement) completedElement.textContent = completedCount;
-
+      console.log("Fetching project counts...");
+  
+      const timestamp = new Date().getTime(); // Prevent caching
+  
+      // ✅ Fetch Upcoming and On-Hold Projects
+      const upcomingResponse = await fetch(`/api/upcoming-projects?t=${timestamp}`);
+      if (!upcomingResponse.ok) throw new Error("Failed to fetch upcoming projects");
+      const upcomingData = await upcomingResponse.json();
+      const upcomingCount = upcomingData.projects.length || 0;
+  
+      // ✅ Fetch In-Progress Projects
+      const inProgressResponse = await fetch(`/api/projects?t=${timestamp}`);
+      if (!inProgressResponse.ok) throw new Error("Failed to fetch in-progress projects");
+      const inProgressData = await inProgressResponse.json();
+      const inProgressCount = inProgressData.projects.length || 0;
+  
+      // ✅ Fetch Completed Projects
+      const completedResponse = await fetch(`/api/completed-projects?t=${timestamp}`);
+      if (!completedResponse.ok) throw new Error("Failed to fetch completed projects");
+      const completedData = await completedResponse.json();
+      const completedCount = completedData.projects.length || 0;
+  
+      // ✅ Fetch On Market Projects
+      const onMarketResponse = await fetch(`/api/on-market-projects?t=${timestamp}`);
+      if (!onMarketResponse.ok) throw new Error("Failed to fetch on-market projects");
+      const onMarketData = await onMarketResponse.json();
+      const onMarketCount = onMarketData.projects.length || 0;
+  
+      console.log("✅ Counts:", { 
+        upcomingCount, 
+        inProgressCount, 
+        completedCount, 
+        onMarketCount 
+      });
+  
+      // ✅ Update DOM Elements
+      const upcomingElement = document.getElementById("upcoming-count");
+      const inProgressElement = document.getElementById("in-progress-count");
+      const completedElement = document.getElementById("completed-count");
+      const onMarketElement = document.getElementById("on-market-count");
+  
+      if (upcomingElement) upcomingElement.textContent = upcomingCount;
+      if (inProgressElement) inProgressElement.textContent = inProgressCount;
+      if (completedElement) completedElement.textContent = completedCount;
+      if (onMarketElement) onMarketElement.textContent = onMarketCount;
+  
     } catch (error) {
-        console.error("❌ Error updating project counts:", error);
+      console.error("❌ Error updating project counts:", error);
     }
-}
+  }
 
 
         
@@ -739,6 +848,7 @@ setInterval(() => {
       // Call loadProjects to populate the Projects column on page load
       loadProjects();
       loadUpcomingProjects();
+      loadOnMarketProjects();
       loadCompletedProjects();
       initMap();
       updateProjectCounts();
