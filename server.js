@@ -1141,7 +1141,7 @@ app.get('/api/projects', async (req, res) => {
   try {
     // ✅ Fetch only projects that are NOT "open" or "on-hold"
     const projects = await Project.find({
-      status: { $nin: ["Upcoming", "completed"] } // $nin = Not In
+      status: { $nin: ["Upcoming", "On Market", "completed"] } // $nin = Not In
     });
 
     res.json({ success: true, projects });
