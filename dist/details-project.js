@@ -1472,6 +1472,7 @@ async function loadEstimates(projectId) {
       estimatesList.innerHTML = estimates
         .map((estimate) => `
           <div class="estimate-item">
+          ${estimate.title ? `<h3 class="estimate-title">${estimate.title}</h3>` : ""}
             <p><strong>Invoice #:</strong> ${estimate.invoiceNumber}</p>
             <p><strong>Total:</strong> $${estimate.total.toFixed(2)}</p>
 
