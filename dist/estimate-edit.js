@@ -542,6 +542,7 @@ async function loadEstimateDetails() {
 
       refreshLineItems(estimate.lineItems);
       document.getElementById("tax-input").value = estimate.tax || 0;
+      document.getElementById("estimate-title").value = estimate.title || "";
 
       // ✅ Ensure photos are displayed correctly
       estimate.lineItems.forEach(category => {
@@ -1032,7 +1033,8 @@ async function saveEstimate() {
           };
       });
 
-      const updatedEstimate = { projectId, lineItems: mergedLineItems, tax };
+       const title = document.getElementById("estimate-title").value.trim();
+       const updatedEstimate = { projectId, title, lineItems: mergedLineItems, tax };
 
       // ✅ Send update request
       const method = estimateId ? "PUT" : "POST";
