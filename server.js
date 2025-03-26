@@ -406,6 +406,7 @@ const clientSchema = new mongoose.Schema({
 const estimateSchema = new mongoose.Schema({ 
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
   invoiceNumber: { type: String, required: true, unique: true },
+  title: { type: String, default: '' },
   lineItems: [
     {
       type: {
@@ -666,7 +667,7 @@ app.post('/api/estimates', async (req, res) => {
   try {
     console.log('Request Body:', req.body);
 
-    const { projectId, lineItems, tax } = req.body;
+    const { projectId, lineItems, tax, title } = req.body;
 
     // Validate Input
     if (!projectId || !lineItems || lineItems.length === 0) {
@@ -722,6 +723,7 @@ app.post('/api/estimates', async (req, res) => {
     const newEstimate = new Estimate({
       projectId,
       invoiceNumber,
+      title: title || '', 
       lineItems: structuredLineItems,
       total,
       tax
@@ -730,8 +732,11 @@ app.post('/api/estimates', async (req, res) => {
     await newEstimate.save();
 
  // ✅ Log the estimate creation in daily logs
- await logDailyUpdate(projectId, `A new estimate (${invoiceNumber}) was created.`);
-      
+ await logDailyUpdate(
+  projectId,
+  `A new estimate (${invoiceNumber}) was created${title ? `: "${title}"` : ""}.`
+);
+
     res.status(201).json({ success: true, estimate: newEstimate });
 
   } catch (error) {
@@ -841,11 +846,17 @@ app.delete('/api/estimates/:id', async (req, res) => {
   }
 });
 
+
 // Backend route to update the estimate
 app.put("/api/estimates/:id", async (req, res) => {
   try {
     const estimateId = req.params.id;
     const updatesPayload = req.body;
+
+            // Defensive: Ensure title is a string
+        if (typeof updatesPayload.title !== "string") {
+          updatesPayload.title = "";
+        }
 
     // Helper function to normalize status values.
     function normalizeStatus(status) {
@@ -924,7 +935,10 @@ app.put("/api/estimates/:id", async (req, res) => {
     );
 
     // ✅ Log the estimate update in daily logs
-    await logDailyUpdate(updatedEstimate.projectId, `Estimate ${updatedEstimate.invoiceNumber} was updated.`);
+        await logDailyUpdate(
+      updatedEstimate.projectId,
+      `Estimate ${updatedEstimate.invoiceNumber} was updated${updatedEstimate.title ? `: "${updatedEstimate.title}"` : ""}.`
+    );
 
     res.status(200).json(updatedEstimate);
   } catch (error) {
