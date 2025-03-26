@@ -1002,7 +1002,37 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   opacity: 1;
 }
 
+.estimate-title-wrapper {
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+}
 
+.estimate-title-wrapper label {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #333;
+}
+
+#estimate-title {
+  width: 100%;
+  max-width: 600px;
+  padding: 12px 16px;
+  font-size: 16px;
+  background-color: #fdfdfd;
+  color: #333;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#estimate-title:focus {
+  border-color: #3b82f6; /* blue-500 */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); /* focus ring */
+  outline: none;
+}
     
 </style> 
 </head>
@@ -1033,6 +1063,12 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
         <p id="project-address"></p>
       </div>
     </header>
+
+        <div class="estimate-title-wrapper">
+      <label for="estimate-title"><strong>Estimate Title:</strong></label>
+      <input type="text" id="estimate-title" placeholder="e.g., Kitchen Remodel Estimate" />
+    </div>
+    
 
     <section id="estimate-section">
       <h2>Line Items</h2>
