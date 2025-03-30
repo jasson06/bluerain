@@ -1581,8 +1581,14 @@ async function importEstimate() {
         console.log("✅ Imported Estimate Data:", jsonData); // Debugging
 
         // ✅ Validate extracted data
-        if (!jsonData.length || !jsonData[0].Category || !jsonData[0].Name) {
-          alert("Invalid Excel file. Please ensure it follows the correct format.");
+        const requiredFields = ["Category", "Name", "Quantity",];
+        const firstRow = jsonData[0] || {};
+        const missingFields = requiredFields.filter(
+          (field) => !(field in firstRow) || !firstRow[field]
+        );
+        
+        if (missingFields.length) {
+          alert(`Invalid Excel file. Missing required fields: ${missingFields.join(", ")}`);
           return;
         }
 
@@ -1643,10 +1649,18 @@ function formatEstimateFromExcel(data) {
   const lineItemsMap = new Map();
 
   data.forEach((row) => {
-    if (!row.Category || !row.Name || !row.Quantity || !row["Unit Price"]) {
-      console.error("⚠️ Skipping row due to missing required fields:", row);
-      return; // Skip invalid rows
-    }
+    const hasAllRequiredFields =
+    typeof row.Category === "string" &&
+    typeof row.Name === "string" &&
+    row.Category.trim() !== "" &&
+    row.Name.trim() !== "" &&
+    (row.Quantity !== undefined && row.Quantity !== null) &&
+    (row["Unit Price"] !== undefined && row["Unit Price"] !== null);
+  
+  if (!hasAllRequiredFields) {
+    console.warn("⚠️ Skipping row due to missing required fields:", row);
+    return;
+  }
 
     const categoryName = row.Category.trim();
     const item = {
@@ -1677,10 +1691,6 @@ function formatEstimateFromExcel(data) {
   };
 }
 
-// Placeholder for using a template
-function useTemplate() {
-  alert("Template Estimate functionality coming soon!");
-}
 
 // Initialize the Estimates Section
 document.addEventListener("DOMContentLoaded", () => {
