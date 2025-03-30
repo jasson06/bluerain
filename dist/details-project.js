@@ -1704,9 +1704,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   
-  function useTemplate() {
-    alert('Choose a template for estimates.');
-  }
+  // Placeholder for using a template
+function downloadTemplate() {
+  const link = document.createElement("a");
+  link.href = "/files/EstimateTemplate.xlsx"; // Adjust this path based on your server setup
+  link.download = "EstimateTemplate.xlsx";
+  document.body.appendChild(link); // Needed for Firefox
+  link.click();
+  document.body.removeChild(link);
+}
+
 
   document.addEventListener("DOMContentLoaded", () => { 
     const pathSegments = window.location.pathname.split('/');
