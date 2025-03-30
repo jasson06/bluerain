@@ -756,73 +756,80 @@ button:disabled {
 
 
 
-/* Category Header Styling */
+/* CATEGORY HEADER CONTAINER */
 .category-header .category-title {
-  font-weight: bold;
-  font-size: 1.0rem;
-  background-color: #f5f5f5;  /* Light gray background */
-  padding: 6px 5px;
-  border-radius: 8px;
-  display: inline-flex;
+  font-size: 1.1rem;
+  font-weight: 600;
+  background: linear-gradient(to right, #ffffff, #f9f9f9);
+  
+  border-radius: 14px;
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin-bottom: 16px;
+  border: 1px solid #283efd;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
 }
 
-/* Editable Category Name */
+.category-header .category-title:hover {
+  box-shadow: 0 8px 20px rgba(0, 21, 255, 0.138);
+  transform: translateY(-1px);
+}
+
+/* EDITABLE CATEGORY TITLE */
 .category-header .category-title span {
   flex-grow: 1;
+  font-size: 1.05rem;
+  color: #212529;
   outline: none;
   cursor: text;
+  padding-left: 8px;
+  transition: color 0.3s ease;
 }
 
-/* "+" Add Line Item Button */
-.category-header .add-line-item {
- 
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 30px;
-  height: 30px;
-  font-size: 1.5rem;
-  line-height: 1.2;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 10px;
-  transition: background-color 0.3s ease;
+.category-header .category-title span:focus {
+  color: #1d4ed8;
 }
 
-
-
-/* "×" Remove Category Button */
+/* SHARED BUTTON STYLE (ADD + REMOVE) */
+.category-header .add-line-item,
 .category-header .remove-category {
-
-  color: white;
+  margin: 1%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.3rem;
   border: none;
   border-radius: 50%;
-  width: 30px;
-  height: 30px;
-  font-size: 1.5rem;
-  line-height: 1.2;
-  cursor: pointer;
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.3s ease;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  background: linear-gradient(145deg, #007bff, #3b82f6);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.25);
 }
 
+.category-header .add-line-item:hover,
+.category-header .remove-category:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.35);
+}
 
+.category-header .add-line-item:active,
+.category-header .remove-category:active {
+  transform: scale(0.95);
+}
 
+/* REMOVE BUTTON - DIFFERENT COLOR */
+.category-header .remove-category {
+  background: linear-gradient(145deg, #007bff, #007bff);
+  box-shadow: 0 4px 10px rgba(128, 172, 249, 0.25);
+}
 
-
-
-
-.btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+.category-header .remove-category:hover {
+  box-shadow: 0 6px 18px rgba(128, 172, 249, 0.25);
 }
 
 
