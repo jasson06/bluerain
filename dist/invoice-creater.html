@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create Invoice</title>
+  <style>
+    :root {
+      --primary: #007bff;
+      --secondary: #6c757d;
+      --bg: #f5f7fa;
+      --white: #fff;
+      --text: #333;
+      --border: #ddd;
+      --radius: 10px;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      margin: 0;
+      padding: 20px;
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: var(--white);
+      padding: 20px;
+      border-radius: var(--radius);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    input,
+select,
+button {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 16px;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #333;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  outline: none;
+  
+  box-sizing: border-box;
+}
+
+
+
+    h2, h3 {
+      color: var(--primary);
+      margin-bottom: 10px;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin: 15px 0 5px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    input[type="date"],
+    select {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background-color: #fefefe;
+      transition: border 0.3s ease;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .line-item-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .line-item-row input {
+      flex: 1 1 20%;
+      min-width: 150px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 12px;
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+
+    th[data-sort] {
+      cursor: pointer;
+    }
+
+    .sort-indicator {
+      margin-left: 5px;
+      color: var(--primary);
+    }
+
+    .btn {
+      background: var(--primary);
+      color: var(--white);
+      padding: 10px 20px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      margin: 10px 5px 0 0;
+      transition: background 0.3s ease;
+    }
+
+    .btn:hover {
+      background: #0056b3;
+    }
+
+    .secondary-btn {
+      background: var(--secondary);
+    }
+
+    .secondary-btn:hover {
+      background: #5a6268;
+    }
+
+    .history {
+      margin-top: 40px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #333;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 5px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 9999;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.4);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .modal-content {
+      background: var(--white);
+      width: 90%;
+      max-width: 800px;
+      padding: 30px;
+      border-radius: var(--radius);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .close-modal {
+      font-size: 28px;
+      cursor: pointer;
+      color: var(--secondary);
+    }
+
+    .dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--text-dark);
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  z-index: 10;
+  min-width: 120px;
+}
+
+.dropdown-content a {
+  display: block;
+  padding: 10px 14px;
+  text-decoration: none;
+  color: var(--text-dark);
+  font-size: 14px;
+}
+
+.dropdown-content a:hover {
+  background-color: #f0f0f0;
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+
+    @media (max-width: 768px) {
+      .invoice-info {
+        flex-direction: column;
+      }
+
+      .line-item-row input {
+        flex: 1 1 100%;
+      }
+
+      .modal-content {
+        padding: 20px;
+      }
+    }
+
+    /* Modal Inner Content */
+#invoiceModal .modal-content {
+  background: #fff;
+  max-width: 800px;
+  width: 80%;
+  
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  #invoiceModal .modal-content {
+    padding: 20px;
+  }
+
+  #invoiceModal .modal-content h2,
+  #invoiceModal .modal-content h3 {
+    font-size: 20px;
+  }
+
+  #invoiceModal table th,
+  #invoiceModal table td {
+    font-size: 14px;
+    padding: 8px;
+  }
+
+  #invoiceModal .modal-content p {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  #invoiceModal .modal-content {
+    padding: 15px;
+  }
+
+  #invoiceModal .modal-content h2,
+  #invoiceModal .modal-content h3 {
+    font-size: 18px;
+  }
+
+  #invoiceModal table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  #invoiceModal table th,
+  #invoiceModal table td {
+    font-size: 13px;
+  }
+}
+
+#invoiceModal {
+  scroll-behavior: smooth;
+}
+
+  </style>
+</head>
+<body>
+
+  <header style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background-color: #007bff; color: white; border-radius: 6px; margin-bottom: 20px;">
+    <h2 style="margin: 0; color: white;">🧾 Create Invoice</h2>
+    <button onclick="window.location.href = '/Subcontractor Page.html';"
+      style="background: white; color: #007bff; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: background 0.3s;">
+      ⬅️ Back to Dashboard
+    </button>
+  </header>
+  
+<!-- FROM Section -->
+<label style="font-weight: bold; margin-top: 20px; display: block;">FROM</label>
+
+<h2><input type="text" id="companyName" placeholder="Company Name" /></h2>
+<input type="text" id="companyAddress" placeholder="Street Address" />
+<input type="text" id="companyCityZip" placeholder="City, ST ZIP Code" />
+<input type="text" id="companyPhoneFax" placeholder="Phone: (xxx) xxx-xxxx | Fax: (xxx) xxx-xxxx" />
+
+
+<!-- TO Section -->
+<label style="font-weight: bold; margin-top: 20px; display: block;">TO</label>
+<input type="text" id="recipientCompany" placeholder="Company Name" />
+
+
+
+
+<!-- Invoice Meta -->
+<label for="invoiceDate"><strong>Invoice Date:</strong></label>
+<input type="date" id="invoiceDate" />
+
+
+
+
+<div class="container">
+  <h2>Create Invoice</h2>
+
+  <!-- Step 1: Project Selection -->
+  <label for="projectSelect"><strong>Select Project:</strong></label>
+  <select id="projectSelect" style="width: 100%; padding: 10px; margin-bottom: 15px;">
+    <option value="">-- Loading Projects --</option>
+  </select>
+
+  <!-- Step 2: Estimate Selection (populated based on selected project) -->
+  <label for="estimateSelect"><strong>Select Estimate:</strong></label>
+  <select id="estimateSelect" style="width: 100%; padding: 10px; margin-bottom: 15px;">
+    <option value="">-- Select Estimate --</option>
+  </select>
+
+  <!-- Step 3: Line Items -->
+  <label for="lineItemSelect"><strong>Import Line Items:</strong></label>
+  <select id="lineItemSelect" multiple size="5" style="width: 100%; padding: 10px; margin-bottom: 15px;"></select>
+
+  <button onclick="importLineItems()" class="btn">Import Selected Items</button>
+</div>
+
+
+    <h3>Manual Line Item Entry</h3>
+    <div class="line-item-row">
+      <input type="text" id="itemName" placeholder="Item Name">
+      <input type="text" id="itemDesc" placeholder="Description">
+      <input type="number" id="itemQty" placeholder="Quantity">
+      <input type="number" id="itemPrice" placeholder="Unit Price">
+      <button class="btn" onclick="addManualItem()">Add</button>
+    </div>
+
+    <h3>Line Items</h3>
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Description</th><th>Qty</th><th>Unit Price</th><th>Total</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="lineItemsTable"></tbody>
+    </table>
+
+<!-- Hidden Email Field -->
+<input type="email" id="invoiceEmail" value="jleonel3915@gmail.com" style="display: none;" />
+
+
+    <button class="btn" onclick="openInvoicePreview()">Preview Invoice</button>
+    <button class="btn" onclick="submitInvoice()">Submit Invoice</button>
+
+    <div class="history">
+      <h3>Invoice History</h3>
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="invoiceNumber">Invoice # <span class="sort-indicator"></span></th>
+            <th data-sort="project">Project <span class="sort-indicator"></span></th>
+            <th data-sort="date">Date <span class="sort-indicator"></span></th>
+            <th data-sort="total">Total <span class="sort-indicator"></span></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        
+        <tbody id="invoiceHistoryTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <div id="invoiceModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Invoice</h3>
+        <span class="close-modal" onclick="closeInvoicePreview()">&times;</span>
+      </div>
+      <div id="invoicePreviewContent"></div>
+    </div>
+  </div>
+
+
+  <!-- Modal Structure -->
+<div id="invoiceModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Invoice Preview</h3>
+      <span class="close-modal" onclick="closeInvoicePreview()">&times;</span>
+    </div>
+    <div id="invoicePreviewContent"></div>
+    <button onclick="printInvoice()" id="printBtn">Print</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <script>
+
+window.onload = async () => {
+  const vendorId = localStorage.getItem("vendorId");
+
+  if (!vendorId) {
+    showToast("Missing vendor ID");
+    return;
+  }
+
+  document.getElementById('recipientCompany').value = 'BESF LLC'; // ✅ Default value
+
+  // Load vendor-specific data
+  await fetchVendorName();
+  await fetchAssignedProjects(vendorId);
+  await fetchInvoiceHistory();
+  await fetchVendorNameAndAutofill();
+};
+
+
+
+    let lineItems = [];
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    async function fetchProjectDetails(projectId) {
+  try {
+    const res = await fetch(`/api/details/projects/${projectId}`);
+    const { project } = await res.json();
+    console.log("Project Details:", project);
+    // You can do something with it here...
+  } catch (err) {
+    console.error("Error loading project details:", err);
+  }
+}
+
+
+async function fetchAssignedProjects(vendorId) {
+  try {
+    const res = await fetch(`/api/vendors/${vendorId}/assigned-projects?t=${Date.now()}`);
+    if (!res.ok) throw new Error("Failed to fetch assigned projects.");
+
+    const data = await res.json();
+    console.log("📦 Assigned Projects Response:", data);
+
+    // ✅ Combine all job types into one array
+    const projects = [
+      ...(data.newJobs || []),
+      ...(data.inProgress || []),
+      ...(data.completed || [])
+    ];
+
+    const projectSelect = document.getElementById('projectSelect');
+    projectSelect.innerHTML = `<option value="">-- Select Project --</option>`;
+
+    projects.forEach(p => {
+      const project = p.projectId || p; // in case structure is { projectId: {...} }
+      if (project?._id && project?.name) {
+        const option = document.createElement("option");
+        option.value = project._id;
+        option.textContent = project.name;
+         // ✅ Add full address as data-address
+    option.dataset.address = `${project.address?.addressLine1 || ''}, ${project.address?.city || ''}, ${project.address?.state || ''}, ${project.address?.zip || ''}`.replace(/, ,/g, ',').trim();
+        projectSelect.appendChild(option);
+      }
+    });
+
+    // 📌 Hook up estimate selection after selecting a project
+    projectSelect.addEventListener("change", function () {
+      const projectId = this.value;
+      if (projectId) fetchEstimatesForProject(vendorId, projectId);
+    });
+
+  } catch (err) {
+    console.error("❌ Error loading assigned projects:", err);
+    showToast("❌ Failed to load assigned projects.");
+  }
+}
+
+
+
+async function fetchEstimatesForProject(vendorId, projectId) {
+  try {
+    const estimateSelect = document.getElementById('estimateSelect');
+    const lineItemSelect = document.getElementById('lineItemSelect');
+    estimateSelect.innerHTML = `<option value="">-- Select Estimate --</option>`;
+    lineItemSelect.innerHTML = '';
+
+    // 1. Fetch assigned items
+    const itemsRes = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
+    let items = [];
+
+    if (itemsRes.status === 404) {
+      console.warn("⚠️ No assigned items found. Continuing with empty list.");
+    } else if (!itemsRes.ok) {
+      throw new Error("Failed to fetch assigned items.");
+    } else {
+      const data = await itemsRes.json();
+      items = data.items || [];
+    }
+
+    // 2. Group items by estimateId
+    const estimateMap = new Map();
+    items.forEach(item => {
+      if (item.estimateId) {
+        if (!estimateMap.has(item.estimateId)) {
+          estimateMap.set(item.estimateId, []);
+        }
+        estimateMap.get(item.estimateId).push(item);
+      }
+    });
+
+    if (estimateMap.size === 0) {
+      estimateSelect.innerHTML = `<option value="">-- No Assigned Estimates --</option>`;
+      showToast("⚠️ No estimates with assigned items found.");
+      return;
+    }
+
+    // 3. Fetch estimates for project
+    const estRes = await fetch(`/api/estimates?projectId=${projectId}`);
+    if (!estRes.ok) throw new Error("Failed to fetch estimates.");
+    const { estimates } = await estRes.json();
+
+    let matchedEstimates = 0;
+
+    estimates.forEach(est => {
+      if (estimateMap.has(est._id)) {
+        const option = document.createElement("option");
+        const label = est.title || `Estimate #${est.invoiceNumber}`;
+        option.value = est._id;
+        option.textContent = label;
+        option.setAttribute("data-invoice-number", est.invoiceNumber || `EST-${Math.floor(Math.random() * 10000)}`);
+        estimateSelect.appendChild(option);
+        matchedEstimates++;
+      }
+    });
+
+    if (matchedEstimates === 0) {
+      estimateSelect.innerHTML = `<option value="">-- No Assigned Estimates Found --</option>`;
+      showToast("⚠️ No estimates assigned to you in this project.");
+      return;
+    }
+
+    // 4. Replace old estimate dropdown with new one to reset listeners
+    const newEstimateSelect = estimateSelect.cloneNode(true);
+    estimateSelect.parentNode.replaceChild(newEstimateSelect, estimateSelect);
+
+    // 5. Handle estimate selection
+    newEstimateSelect.addEventListener("change", function () {
+      const estimateId = this.value;
+      const selectedOption = this.options[this.selectedIndex];
+      const invoiceNumber = selectedOption.getAttribute("data-invoice-number");
+
+
+
+      if (estimateId) {
+        const assignedItems = estimateMap.get(estimateId) || [];
+        displayLineItems(assignedItems);
+      } else {
+        lineItemSelect.innerHTML = '';
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Error fetching estimates:", err);
+    showToast("❌ Could not fetch estimates.");
+  }
+}
+
+
+
+function displayLineItems(items) {
+  const lineItemSelect = document.getElementById('lineItemSelect');
+  lineItemSelect.innerHTML = '';
+  items.forEach((item, idx) => {
+    const option = document.createElement("option");
+    option.value = idx;
+    option.textContent = `${item.name || 'Unnamed'} - ${item.description || 'No description'}`;
+    option.dataset.details = JSON.stringify(item);
+    lineItemSelect.appendChild(option);
+  });
+}
+
+
+
+
+
+
+
+    function importLineItems() {
+      const selected = Array.from(document.getElementById('lineItemSelect').selectedOptions);
+      selected.forEach(opt => {
+        const item = JSON.parse(opt.dataset.details);
+        addItemToTable(item);
+      });
+      showToast('Imported selected line items.');
+    }
+
+    function addManualItem() {
+      const item = {
+        name: document.getElementById('itemName').value,
+        description: document.getElementById('itemDesc').value,
+        quantity: Number(document.getElementById('itemQty').value),
+        unitPrice: Number(document.getElementById('itemPrice').value),
+      };
+      addItemToTable(item);
+      document.getElementById('itemName').value = '';
+      document.getElementById('itemDesc').value = '';
+      document.getElementById('itemQty').value = '';
+      document.getElementById('itemPrice').value = '';
+      showToast('Added manual line item.');
+    }
+
+    function addItemToTable(item) {
+      lineItems.push(item);
+      renderLineItems();
+    }
+
+    function renderLineItems() {
+      const tbody = document.getElementById('lineItemsTable');
+      tbody.innerHTML = '';
+      lineItems.forEach((item, index) => {
+        const total = (item.quantity * item.unitPrice).toFixed(2);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+      <td>${item.name}</td>
+      <td>${item.description}</td>
+      <td>${item.quantity}</td>
+      <td>$${item.unitPrice.toFixed(2)}</td>
+      <td>$${total}</td>
+      <td>
+        <div class="dropdown">
+          <button class="dropdown-btn">⋮</button>
+          <div class="dropdown-content">
+            <a href="#" onclick="editItem(${index})">Edit</a>
+            <a href="#" onclick="deleteItem(${index})">Delete</a>
+          </div>
+        </div>
+      </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function editItem(index) {
+      const item = lineItems[index];
+      document.getElementById('itemName').value = item.name;
+      document.getElementById('itemDesc').value = item.description;
+      document.getElementById('itemQty').value = item.quantity;
+      document.getElementById('itemPrice').value = item.unitPrice;
+      deleteItem(index);
+      showToast('Editing item — re-enter details.');
+    }
+
+    function deleteItem(index) {
+      lineItems.splice(index, 1);
+      renderLineItems();
+      showToast('Deleted item.');
+    }
+
+
+    async function fetchVendorName() {
+  const vendorId = localStorage.getItem("vendorId");
+  if (!vendorId) return;
+
+  try {
+    const res = await fetch(`/api/vendors/${vendorId}`);
+    if (!res.ok) throw new Error("Failed to fetch vendor");
+
+    const vendor = await res.json();
+    vendorName = vendor.name || "Unnamed Vendor";
+  } catch (err) {
+    console.error("❌ Error fetching vendor name:", err);
+  }
+}
+
+function getSelectedProjectAddress() {
+  const projectSelect = document.getElementById("projectSelect");
+  const selectedOption = projectSelect.options[projectSelect.selectedIndex];
+  return selectedOption?.dataset?.address || "N/A";
+}
+
+
+function openInvoicePreview() {
+  const projectAddress = getSelectedProjectAddress();
+  const manualServiceAddress = document.getElementById('recipientAddress')?.value || 'N/A';
+  const finalServiceAddress = projectAddress === 'N/A' ? manualServiceAddress : projectAddress;
+
+  const projectName = document.getElementById('projectSelect').selectedOptions[0]?.text || 'Project Name';
+  const email = document.getElementById('invoiceEmail').value || 'example@email.com';
+  const invoiceNumber = document.getElementById('invoiceNumber')?.value || 'N/A';
+
+  const total = lineItems.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
+  const tax = 0;
+  const grandTotal = total + tax;
+
+  const preview = document.getElementById('invoicePreviewContent');
+
+  preview.innerHTML = `
+    <div style="font-family: 'Segoe UI', sans-serif; padding: 30px;">
+      <h2 style="color: #007bff; margin: 0;"><strong>Name:</strong> ${vendorName}</h2>
+      <p><strong>Service Address:</strong> ${finalServiceAddress}</p>
+      <p><strong>Invoice #:</strong> ${invoiceNumber}</p>
+      <hr style="margin: 20px 0; border-color: #ccc;" />
+
+      <h3>Line Items</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+        <thead>
+          <tr style="background: #f0f4f8;">
+            <th style="border: 1px solid #ccc; padding: 10px;">ITEM</th>
+            <th style="border: 1px solid #ccc; padding: 10px;">DESCRIPTION</th>
+            <th style="border: 1px solid #ccc; padding: 10px;">QUANTITY</th>
+            <th style="border: 1px solid #ccc; padding: 10px;">UNIT PRICE</th>
+            <th style="border: 1px solid #ccc; padding: 10px;">TOTAL</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${lineItems.map(item => `
+            <tr>
+              <td style="border: 1px solid #ccc; padding: 8px;">${item.name}</td>
+              <td style="border: 1px solid #ccc; padding: 8px;">${item.description}</td>
+              <td style="border: 1px solid #ccc; padding: 8px;">${item.quantity}</td>
+              <td style="border: 1px solid #ccc; padding: 8px;">$${item.unitPrice.toFixed(2)}</td>
+              <td style="border: 1px solid #ccc; padding: 8px;">$${(item.unitPrice * item.quantity).toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div style="margin-top: 30px; border: 1px solid #ccc; border-radius: 10px; padding: 20px; background: #f9fbfd;">
+        <h3>Summary</h3>
+        <p><strong>Subtotal:</strong> $${total.toFixed(2)}</p>
+        <p><strong>Tax:</strong> $${tax.toFixed(2)}</p>
+        <p><strong style="font-size: 18px;">Total:</strong> <span style="color: #007bff; font-weight: bold;">$${grandTotal.toFixed(2)}</span></p>
+      </div>
+    </div>
+
+
+  `;
+
+  document.getElementById('invoiceModal').style.display = 'flex';
+}
+
+
+
+function closeInvoicePreview() {
+  document.getElementById('invoiceModal').style.display = 'none';
+}
+
+function printInvoice() {
+  const modalContent = document.querySelector('#invoiceModal .modal-content');
+
+  // Clone the modal content so we can safely manipulate it
+  const clonedContent = modalContent.cloneNode(true);
+
+  // Remove close modal button if present
+  const closeBtn = clonedContent.querySelector('.close-modal');
+  if (closeBtn) closeBtn.remove();
+
+  // Remove any print buttons with the "no-print" class
+  const printBtns = clonedContent.querySelectorAll('.no-print, #printBtn');
+  printBtns.forEach(btn => btn.remove());
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Invoice</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+          th { background-color: #f0f0f0; }
+          h2, h3, p { margin: 5px 0; }
+        </style>
+      </head>
+      <body>
+        ${clonedContent.innerHTML}
+      </body>
+    </html>
+  `);
+
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+}
+
+
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  const dateInput = document.getElementById("invoiceDate");
+  if (dateInput && !dateInput.value) {
+    const today = new Date().toISOString().split("T")[0];
+    dateInput.value = today;
+  }
+});
+
+
+
+
+
+function generateInvoiceNumber() {
+  const randomNum = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
+  const today = new Date();
+  const dateSuffix = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+  return `INV-${randomNum}-${dateSuffix}`; // Result: INV-3842-20250327
+}
+
+
+
+async function submitInvoice() {
+  const vendorId = localStorage.getItem('vendorId');
+
+  const inputDate = document.getElementById('invoiceDate').value;
+  const todayISO = new Date().toISOString();
+  const invoiceDate = inputDate || todayISO;
+
+  const invoiceData = {
+    vendorId,
+    projectId: document.getElementById('projectSelect').value,
+    email: document.getElementById('invoiceEmail').value || "jleonel3915@gmail.com",
+    invoiceNumber: generateInvoiceNumber(),
+    date: invoiceDate,
+    lineItems,
+    total: lineItems.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0),
+    from: {
+      company: document.getElementById('companyName').value,
+      address: document.getElementById('companyAddress').value,
+      cityZip: document.getElementById('companyCityZip').value,
+      phoneFax: document.getElementById('companyPhoneFax').value,
+    },
+    to: {
+      company: document.getElementById('recipientCompany').value
+    }
+  };
+
+  if (!invoiceData.projectId || !lineItems.length) {
+    showToast('❌ Please select a project and add at least one line item.');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(invoiceData)
+    });
+
+    if (!res.ok) throw new Error('Failed to save invoice');
+    const savedInvoice = await res.json();
+    console.log("✅ Saved Invoice:", savedInvoice);
+
+    const sendRes = await fetch('/api/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        invoiceId: savedInvoice._id,
+        email: invoiceData.email
+      })
+    });
+
+    if (!sendRes.ok) throw new Error('Failed to send invoice');
+
+    showToast('✅ Invoice submitted!');
+    displayInvoiceHistory(invoiceData);
+    lineItems = [];
+    renderLineItems();
+    closeInvoicePreview();
+  } catch (err) {
+    showToast('❌ Error submitting invoice.');
+    console.error(err);
+  }
+}
+
+
+
+
+
+    async function fetchInvoiceHistory() {
+      try {
+        const res = await fetch('/history');
+        const data = await res.json();
+        data.forEach(displayInvoiceHistory);
+      } catch (err) {
+        console.error('Error loading history:', err);
+      }
+    }
+
+
+
+    async function displayInvoiceHistory(invoice) {
+  const row = document.createElement('tr');
+
+  let projectAddress = 'N/A';
+
+  if (typeof invoice.projectId === 'object' && invoice.projectId.address) {
+    const a = invoice.projectId.address;
+    projectAddress = `${a.addressLine1 || ''}, ${a.city || ''}, ${a.state || ''}, ${a.zip || ''}`;
+  } else if (typeof invoice.projectId === 'string') {
+    try {
+      const res = await fetch(`/api/projects/${invoice.projectId}`);
+      if (res.ok) {
+        const { project } = await res.json();
+        const a = project.address || {};
+        projectAddress = `${a.addressLine1 || ''}, ${a.city || ''}, ${a.state || ''}, ${a.zip || ''}`;
+      }
+    } catch (err) {
+      console.error('❌ Failed to fetch project:', err);
+    }
+  }
+
+  const formattedDate = invoice.date
+    ? new Date(invoice.date).toLocaleDateString()
+    : 'N/A';
+
+  row.innerHTML = `
+    <td>
+      <a href="#" onclick="openSavedInvoiceModal('${invoice.invoiceNumber}')" style="color: #007bff; text-decoration: underline;">
+        ${invoice.invoiceNumber || 'N/A'}
+      </a>
+    </td>
+    <td>${projectAddress}</td>
+    <td>${formattedDate}</td>
+    <td>$${invoice.total.toFixed(2)}</td>
+    <td>
+      <div class="dropdown">
+        <button class="dropdown-btn">⋮</button>
+        <div class="dropdown-content">
+          <a href="#" onclick="openSavedInvoiceModal('${invoice.invoiceNumber}')">View</a>
+          <a href="#" onclick="deleteInvoice('${invoice._id}', this)">Delete</a>
+        </div>
+      </div>
+    </td>
+  `;
+
+  document.getElementById('invoiceHistoryTable').prepend(row);
+}
+
+
+
+
+
+
+let currentSort = { column: null, direction: 1 };
+
+document.querySelectorAll('th[data-sort]').forEach(header => {
+  header.addEventListener('click', () => {
+    const column = header.getAttribute('data-sort');
+    const rows = Array.from(document.querySelectorAll('#invoiceHistoryTable tr'));
+
+    // Toggle sort direction
+    if (currentSort.column === column) {
+      currentSort.direction *= -1;
+    } else {
+      currentSort.column = column;
+      currentSort.direction = 1;
+    }
+
+    // Determine column index
+    const colIndex = Array.from(header.parentElement.children).indexOf(header);
+
+    // Sort rows
+    rows.sort((a, b) => {
+      const cellA = a.children[colIndex].textContent.trim();
+      const cellB = b.children[colIndex].textContent.trim();
+
+      // Try numeric sort first
+      const numA = parseFloat(cellA.replace(/[^0-9.]/g, ''));
+      const numB = parseFloat(cellB.replace(/[^0-9.]/g, ''));
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return (numA - numB) * currentSort.direction;
+      }
+
+      // Fallback: string sort
+      return cellA.localeCompare(cellB) * currentSort.direction;
+    });
+
+    // Re-append sorted rows
+    const tbody = document.getElementById('invoiceHistoryTable');
+    rows.forEach(row => tbody.appendChild(row));
+
+    // Visual indicator (optional)
+    document.querySelectorAll('.sort-indicator').forEach(i => i.textContent = '');
+    header.querySelector('.sort-indicator').textContent = currentSort.direction === 1 ? '▲' : '▼';
+  });
+});
+
+
+async function openSavedInvoiceModal(invoiceNumber) {
+  const preview = document.getElementById('invoicePreviewContent');
+
+  try {
+    const res = await fetch(`/api/invoices/by-number/${invoiceNumber}`);
+    if (!res.ok) throw new Error("Failed to fetch invoice");
+    const { invoice } = await res.json();
+
+    // Fetch project address
+    let projectAddress = 'N/A';
+    if (invoice.projectId) {
+      const projectRes = await fetch(`/api/projects/${invoice.projectId}`);
+      if (projectRes.ok) {
+        const { project } = await projectRes.json();
+        const a = project.address || {};
+        projectAddress = `${a.addressLine1 || ''}, ${a.city || ''}, ${a.state || ''}, ${a.zip || ''}`;
+      }
+    }
+
+    // Fetch vendor name
+    let vendorName = "Vendor";
+    if (invoice.vendorId) {
+      const vendorRes = await fetch(`/api/vendors/${invoice.vendorId}`);
+      if (vendorRes.ok) {
+        const vendorData = await vendorRes.json();
+        vendorName = vendorData.name || vendorData.vendor?.name || "Vendor";
+      }
+    }
+
+    // Format date
+    const displayDate = invoice.date 
+      ? new Date(invoice.date).toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }) 
+      : "N/A";
+
+    const total = invoice.total.toFixed(2);
+    const tax = 0;
+    const grandTotal = (invoice.total + tax).toFixed(2);
+
+    preview.innerHTML = `
+      <div style="font-family: 'Segoe UI', sans-serif; padding: 10px;">
+        <h2 style="color: #007bff; margin: 0;"><strong>Name:</strong> ${vendorName}</h2>
+        <p><strong>Service Address:</strong> ${projectAddress}</p>
+        <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
+        <p><strong>Date:</strong> ${displayDate}</p>
+        <hr style="margin: 5px 0; border-color: #ccc;" />
+
+        <h3>Line Items</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr style="background: #f0f4f8;">
+              <th style="border: 1px solid #ccc; padding: 10px;">ITEM</th>
+              <th style="border: 1px solid #ccc; padding: 10px;">DESCRIPTION</th>
+              <th style="border: 1px solid #ccc; padding: 10px;">QUANTITY</th>
+              <th style="border: 1px solid #ccc; padding: 10px;">UNIT PRICE</th>
+              <th style="border: 1px solid #ccc; padding: 10px;">TOTAL</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${invoice.lineItems.map(item => `
+              <tr>
+                <td style="border: 1px solid #ccc; padding: 8px;">${item.name}</td>
+                <td style="border: 1px solid #ccc; padding: 8px;">${item.description}</td>
+                <td style="border: 1px solid #ccc; padding: 8px;">${item.quantity}</td>
+                <td style="border: 1px solid #ccc; padding: 8px;">$${item.unitPrice.toFixed(2)}</td>
+                <td style="border: 1px solid #ccc; padding: 8px;">$${(item.unitPrice * item.quantity).toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div style="margin-top: 30px; border: 1px solid #ccc; border-radius: 10px; padding: 20px; background: #f9fbfd;">
+          <h3>Summary</h3>
+          <p><strong>Subtotal:</strong> $${total}</p>
+          <p><strong>Tax:</strong> $${tax.toFixed(2)}</p>
+          <p><strong style="font-size: 18px;">Total:</strong> <span style="color: #007bff; font-weight: bold;">$${grandTotal}</span></p>
+        </div>
+      </div>
+
+      <div class="modal-footer no-print" style="text-align: right; margin-top: 20px;">
+        <button class="btn" onclick="printInvoice()">🖨️ Print Invoice</button>
+        <button class="btn" onclick="shareInvoice('${invoice.invoiceNumber}')">🔗 Share</button>
+      </div>
+    `;
+
+    document.getElementById('invoiceModal').style.display = 'flex';
+
+  } catch (err) {
+    console.error("❌ Error displaying saved invoice:", err);
+    preview.innerHTML = "<p style='color:red;'>Failed to load invoice.</p>";
+  }
+}
+
+
+
+async function shareInvoice(invoiceNumber) {
+  const invoiceContent = document.querySelector('#invoicePreviewContent');
+
+  if (!invoiceContent) {
+    showToast("Invoice content not found");
+    return;
+  }
+
+  try {
+    const opt = {
+      margin: 0.5,
+      filename: `${invoiceNumber}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    // Generate the PDF blob
+    const pdfBlob = await html2pdf().from(invoiceContent).set(opt).outputPdf('blob');
+
+    const file = new File([pdfBlob], `${invoiceNumber}.pdf`, {
+      type: 'application/pdf'
+    });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        title: 'Invoice PDF',
+        text: `Invoice: ${invoiceNumber}`,
+        files: [file]
+      });
+      showToast("✅ Invoice shared as PDF");
+    } else {
+      // Fallback: download PDF
+      html2pdf().from(invoiceContent).set(opt).save();
+      showToast("📄 Invoice downloaded (file sharing not supported)");
+    }
+
+  } catch (err) {
+    console.error("❌ Error sharing invoice:", err);
+    showToast("❌ Could not share invoice");
+  }
+}
+
+
+
+
+
+
+function closeInvoicePreview() {
+  document.getElementById('invoiceModal').style.display = 'none';
+}
+
+async function fetchVendorNameAndAutofill() {
+  const vendorId = localStorage.getItem("vendorId");
+  if (!vendorId) return;
+
+  try {
+    const res = await fetch(`/api/vendors/${vendorId}`);
+    if (!res.ok) throw new Error("Failed to fetch vendor info");
+
+    const data = await res.json();
+    console.log("👤 Vendor Response:", data);
+
+    const vendor = data.vendor || data; // fallback in case it returns vendor directly
+    document.getElementById("companyName").value = vendor.name || "Vendor";
+
+  } catch (err) {
+    console.error("❌ Error fetching vendor:", err);
+  }
+}
+
+
+async function deleteInvoice(invoiceId, element) {
+  if (!confirm("Are you sure you want to delete this invoice?")) return;
+
+  try {
+    const res = await fetch(`/api/invoices/${invoiceId}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) throw new Error("Failed to delete");
+
+    // Remove row from table
+    const row = element.closest("tr");
+    row.remove();
+
+    showToast("✅ Invoice deleted.");
+  } catch (err) {
+    console.error("Error deleting invoice:", err);
+    showToast("❌ Failed to delete invoice.");
+  }
+}
+
+
+
+  </script>
+</body>
+</html>
