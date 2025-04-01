@@ -795,66 +795,54 @@ function printInvoice() {
   const modalContent = document.querySelector('#invoiceModal .modal-content');
   const clonedContent = modalContent.cloneNode(true);
 
-  // Remove unwanted elements (close buttons, print/share buttons)
+  // Remove buttons and close modal icons
   const toRemove = clonedContent.querySelectorAll('.no-print, .close-modal, #printBtn');
   toRemove.forEach(el => el.remove());
 
-  // Create a new printable window or iframe (iframe improves iOS support)
-  const printFrame = document.createElement('iframe');
-  printFrame.style.position = 'fixed';
-  printFrame.style.right = '0';
-  printFrame.style.bottom = '0';
-  printFrame.style.width = '0';
-  printFrame.style.height = '0';
-  printFrame.style.border = 'none';
-  document.body.appendChild(printFrame);
+  // Create a hidden printable container
+  let printContainer = document.getElementById('print-container');
+  if (!printContainer) {
+    printContainer = document.createElement('div');
+    printContainer.id = 'print-container';
+    document.body.appendChild(printContainer);
+  }
 
-  const doc = printFrame.contentWindow.document;
-  doc.open();
-  doc.write(`
-    <html>
-      <head>
-        <title>Invoice</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            margin: 0;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-          }
-          th, td {
-            border: 1px solid #ccc;
-            padding: 10px;
-            text-align: left;
-          }
-          th {
-            background-color: #f0f0f0;
-          }
-          h2, h3, p {
-            margin: 5px 0;
-          }
-        </style>
-      </head>
-      <body>
-        ${clonedContent.innerHTML}
-      </body>
-    </html>
-  `);
-  doc.close();
+  printContainer.innerHTML = '';
+  printContainer.appendChild(clonedContent);
 
-  // Give it a moment to render before printing
-  printFrame.onload = () => {
-    printFrame.contentWindow.focus();
-    printFrame.contentWindow.print();
+  // Apply styles directly
+  const style = document.createElement('style');
+  style.textContent = `
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #print-container, #print-container * {
+        visibility: visible;
+      }
+      #print-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 20px;
+        background: white;
+        z-index: 9999;
+      }
+    }
+  `;
+  document.head.appendChild(style);
 
-    // Remove iframe after printing
-    setTimeout(() => document.body.removeChild(printFrame), 1000);
-  };
+  // Trigger print with a user gesture
+  window.print();
+
+  // Cleanup after printing
+  setTimeout(() => {
+    document.head.removeChild(style);
+    printContainer.remove();
+  }, 1000);
 }
+
 
 
 
@@ -1169,13 +1157,18 @@ async function shareInvoice(invoiceNumber) {
     return;
   }
 
-  // Show modal in case it's hidden
+  // Ensure modal is visible
   invoiceModal.style.display = 'flex';
 
-  // Temporarily hide buttons
+  // Hide print/share buttons
   buttonsToHide.forEach(el => el.style.display = 'none');
 
-  // Allow DOM to update
+  // Force repaint and scroll to top before rendering (helps iOS/Safari)
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  invoiceContent.scrollTop = 0;
+  window.scrollTo(0, 0);
+
+  // Extra delay to allow layout recalculation
   await new Promise(resolve => setTimeout(resolve, 300));
 
   try {
@@ -1183,7 +1176,14 @@ async function shareInvoice(invoiceNumber) {
       margin: 0.5,
       filename: `${invoiceNumber}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        scrollY: 0,
+        scrollX: 0,
+        windowWidth: document.body.scrollWidth,
+        windowHeight: document.body.scrollHeight
+      },
       jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
 
@@ -1201,15 +1201,15 @@ async function shareInvoice(invoiceNumber) {
       html2pdf().from(invoiceContent).set(opt).save();
       showToast("📄 Invoice downloaded (file sharing not supported)");
     }
-
   } catch (err) {
     console.error("❌ Error sharing invoice:", err);
     showToast("❌ Could not share invoice");
   } finally {
-    // Restore buttons
+    // Restore hidden buttons
     buttonsToHide.forEach(el => el.style.display = 'block');
   }
 }
+
 
 
 
