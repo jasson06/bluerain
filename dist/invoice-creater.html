@@ -255,7 +255,7 @@ button {
   background: #fff;
   max-width: 800px;
   width: 90%;
-  margin-left: -50px;
+  margin-left: -47px;
   margin-top: -55px;
   border-radius: 12px;
   padding: 30px;
@@ -742,7 +742,7 @@ function openInvoicePreview() {
 
   preview.innerHTML = `
     <div style="font-family: 'Segoe UI', sans-serif; padding: 30px;">
-      <h2 style="color: #007bff; margin: 0;"><strong>Name:</strong> ${vendorName}</h2>
+      <h2 style="color: #007bff; margin: 0;"><strong>Subcontractor Name:</strong> ${vendorName}</h2>
       <p><strong>Service Address:</strong> ${finalServiceAddress}</p>
       <p><strong>Invoice #:</strong> ${invoiceNumber}</p>
       <hr style="margin: 20px 0; border-color: #ccc;" />
@@ -1104,7 +1104,7 @@ async function openSavedInvoiceModal(invoiceNumber) {
 
     preview.innerHTML = `
       <div style="font-family: 'Segoe UI', sans-serif; padding: 10px;">
-        <h2 style="color: #007bff; margin: 0;"><strong>Name:</strong> ${vendorName}</h2>
+        <h2 style="color: #007bff; margin: 0;"><strong>Subcontractor Name:</strong> ${vendorName}</h2>
         <p><strong>Service Address:</strong> ${projectAddress}</p>
         <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
         <p><strong>Date:</strong> ${displayDate}</p>
