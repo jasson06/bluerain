@@ -21,7 +21,7 @@ const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 5500;
-const JWT_SECRET = process.env.JWT_SECRET || '1539';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 
 async function logDailyUpdate(projectId, text, author = "System") {
@@ -622,6 +622,37 @@ const DailyUpdateSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now }
 });
 
+const invoiceSchema = new mongoose.Schema({
+  projectId: String,
+  vendorId: String,
+  email: String,
+  header: {
+    companyName: String,
+    street: String,
+    city: String,
+    phoneFax: String
+  },
+  recipient: {
+    name: String,
+    company: String,
+    street: String,
+    city: String,
+    phone: String
+  },
+  invoiceNumber: String,
+  date: String,
+  lineItems: [
+    {
+      name: String,
+      description: String,
+      quantity: Number,
+      unitPrice: Number
+    }
+  ],
+  total: Number,
+  createdAt: { type: Date, default: Date.now }
+});
+
 
 const Task = mongoose.model('Task', taskSchema);
 const Comment = mongoose.model("Comment", commentSchema);
@@ -634,6 +665,7 @@ const Invitation = mongoose.model("Invitation", invitationSchema);
 const SelectionBoard = mongoose.model('SelectionBoard', selectionBoardSchema);
 const Product = mongoose.model('Product', productSchema);
 const DailyUpdate = mongoose.model("DailyUpdate", DailyUpdateSchema);
+const Invoice = mongoose.model('Invoice', invoiceSchema);
 
 module.exports = {
   Task,
@@ -3279,7 +3311,122 @@ app.post("/api/daily-updates", async (req, res) => {
   }
 });
 
+// Create a new invoice
+app.post('/api/create', async (req, res) => {
+  try {
+    const {
+      projectId,
+      email,
+      invoiceNumber,
+      date,
+      lineItems,
+      total,
+      from,
+      to,
+      vendorId // ✅ expecting this from frontend (set it in the body or headers)
+    } = req.body;
 
+    if (!projectId || !invoiceNumber || !lineItems?.length) {
+      return res.status(400).json({ message: 'Missing required invoice fields.' });
+    }
+
+    const invoice = new Invoice({
+      vendorId: vendorId ? new mongoose.Types.ObjectId(vendorId) : undefined,
+      projectId: new mongoose.Types.ObjectId(projectId),
+      email,
+      invoiceNumber,
+      date,
+      from,
+      to,
+      lineItems,
+      total
+    });
+
+    const savedInvoice = await invoice.save();
+    res.status(201).json(savedInvoice);
+  } catch (err) {
+    console.error('❌ Error saving invoice:', err);
+    res.status(500).json({ message: 'Failed to create invoice', error: err.message });
+  }
+});
+
+
+// DELETE invoice by ID
+app.delete('/api/invoices/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const deletedInvoice = await Invoice.findByIdAndDelete(id);
+    if (!deletedInvoice) {
+      return res.status(404).json({ message: 'Invoice not found' });
+    }
+
+    res.json({ message: 'Invoice deleted successfully', deletedInvoice });
+  } catch (err) {
+    console.error('❌ Error deleting invoice:', err);
+    res.status(500).json({ message: 'Failed to delete invoice', error: err.message });
+  }
+});
+
+
+// ✅ Get a single invoice by ID
+app.get('/api/invoices/by-number/:invoiceNumber', async (req, res) => {
+  try {
+    const invoice = await Invoice.findOne({ invoiceNumber: req.params.invoiceNumber })
+      .populate('projectId'); // populate project if needed
+
+    if (!invoice) {
+      return res.status(404).json({ message: 'Invoice not found' });
+    }
+
+    res.json({ invoice });
+  } catch (err) {
+    console.error('❌ Error fetching invoice:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.get('/api/projects/:projectId', async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.projectId);
+    if (!project) return res.status(404).json({ message: "Project not found" });
+    res.json({ project });
+  } catch (err) {
+    console.error("❌ Error fetching project:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+
+
+// Get invoice history
+app.get('/history', async (req, res) => {
+  try {
+    const invoices = await Invoice.find().sort({ createdAt: -1 });
+    res.json(invoices);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch invoice history', error: err });
+  }
+});
+
+// ✅ Send invoice via email (uses default email if not provided)
+app.post('/api/send', async (req, res) => {
+  const { email = "jleonel3915@gmail.com", invoiceId } = req.body;
+
+  try {
+    const invoice = await Invoice.findById(invoiceId);
+    if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
+
+    // Simulated sending logic
+    console.log(`📧 Sending invoice #${invoice.invoiceNumber} to ${email}`);
+
+    res.json({ message: `Invoice sent to ${email}` });
+  } catch (err) {
+    console.error('❌ Error sending invoice:', err);
+    res.status(500).json({ message: 'Failed to send invoice', error: err.message });
+  }
+});
 
 // ✅ GET /api/notifications → Fetch recent notifications
 app.get("/api/notifications", async (req, res) => {
