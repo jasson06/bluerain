@@ -254,8 +254,9 @@ button {
 #invoiceModal .modal-content {
   background: #fff;
   max-width: 800px;
-  width: 80%;
-  
+  width: 90%;
+  margin-left: -50px;
+  margin-top: -55px;
   border-radius: 12px;
   padding: 30px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
@@ -792,29 +793,50 @@ function closeInvoicePreview() {
 
 function printInvoice() {
   const modalContent = document.querySelector('#invoiceModal .modal-content');
-
-  // Clone the modal content so we can safely manipulate it
   const clonedContent = modalContent.cloneNode(true);
 
-  // Remove close modal button if present
-  const closeBtn = clonedContent.querySelector('.close-modal');
-  if (closeBtn) closeBtn.remove();
+  // Remove unwanted elements (close buttons, print/share buttons)
+  const toRemove = clonedContent.querySelectorAll('.no-print, .close-modal, #printBtn');
+  toRemove.forEach(el => el.remove());
 
-  // Remove any print buttons with the "no-print" class
-  const printBtns = clonedContent.querySelectorAll('.no-print, #printBtn');
-  printBtns.forEach(btn => btn.remove());
+  // Create a new printable window or iframe (iframe improves iOS support)
+  const printFrame = document.createElement('iframe');
+  printFrame.style.position = 'fixed';
+  printFrame.style.right = '0';
+  printFrame.style.bottom = '0';
+  printFrame.style.width = '0';
+  printFrame.style.height = '0';
+  printFrame.style.border = 'none';
+  document.body.appendChild(printFrame);
 
-  const printWindow = window.open('', '_blank');
-  printWindow.document.write(`
+  const doc = printFrame.contentWindow.document;
+  doc.open();
+  doc.write(`
     <html>
       <head>
         <title>Invoice</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
-          th { background-color: #f0f0f0; }
-          h2, h3, p { margin: 5px 0; }
+          body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            margin: 0;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+          }
+          th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+          }
+          th {
+            background-color: #f0f0f0;
+          }
+          h2, h3, p {
+            margin: 5px 0;
+          }
         </style>
       </head>
       <body>
@@ -822,11 +844,18 @@ function printInvoice() {
       </body>
     </html>
   `);
+  doc.close();
 
-  printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
+  // Give it a moment to render before printing
+  printFrame.onload = () => {
+    printFrame.contentWindow.focus();
+    printFrame.contentWindow.print();
+
+    // Remove iframe after printing
+    setTimeout(() => document.body.removeChild(printFrame), 1000);
+  };
 }
+
 
 
 
@@ -1130,38 +1159,44 @@ async function openSavedInvoiceModal(invoiceNumber) {
 
 
 async function shareInvoice(invoiceNumber) {
+  const invoiceModal = document.getElementById('invoiceModal');
   const invoiceContent = document.querySelector('#invoicePreviewContent');
+  const buttonsToHide = invoiceContent.querySelectorAll('.no-print');
 
   if (!invoiceContent) {
-    showToast("Invoice content not found");
+    showToast("❌ Invoice content not found");
     return;
   }
+
+  // Show modal in case it's hidden
+  invoiceModal.style.display = 'flex';
+
+  // Temporarily hide buttons
+  buttonsToHide.forEach(el => el.style.display = 'none');
+
+  // Allow DOM to update
+  await new Promise(resolve => setTimeout(resolve, 300));
 
   try {
     const opt = {
       margin: 0.5,
       filename: `${invoiceNumber}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
+      html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
 
-    // Generate the PDF blob
     const pdfBlob = await html2pdf().from(invoiceContent).set(opt).outputPdf('blob');
-
-    const file = new File([pdfBlob], `${invoiceNumber}.pdf`, {
-      type: 'application/pdf'
-    });
+    const file = new File([pdfBlob], `${invoiceNumber}.pdf`, { type: 'application/pdf' });
 
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
-        title: 'Invoice PDF',
-        text: `Invoice: ${invoiceNumber}`,
+        title: `Invoice: ${invoiceNumber}`,
+        text: `Please find attached invoice ${invoiceNumber}`,
         files: [file]
       });
       showToast("✅ Invoice shared as PDF");
     } else {
-      // Fallback: download PDF
       html2pdf().from(invoiceContent).set(opt).save();
       showToast("📄 Invoice downloaded (file sharing not supported)");
     }
@@ -1169,6 +1204,9 @@ async function shareInvoice(invoiceNumber) {
   } catch (err) {
     console.error("❌ Error sharing invoice:", err);
     showToast("❌ Could not share invoice");
+  } finally {
+    // Restore buttons
+    buttonsToHide.forEach(el => el.style.display = 'block');
   }
 }
 
