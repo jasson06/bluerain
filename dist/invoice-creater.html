@@ -256,7 +256,7 @@ button {
   max-width: 800px;
   width: 90%;
   margin-left: -47px;
-  margin-top: -55px;
+  margin-top: -41px;
   border-radius: 12px;
   padding: 30px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
@@ -415,7 +415,7 @@ button {
   <div id="invoiceModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Invoice</h3>
+        
         <span class="close-modal" onclick="closeInvoicePreview()">&times;</span>
       </div>
       <div id="invoicePreviewContent"></div>
@@ -1103,7 +1103,8 @@ async function openSavedInvoiceModal(invoiceNumber) {
     const grandTotal = (invoice.total + tax).toFixed(2);
 
     preview.innerHTML = `
-      <div style="font-family: 'Segoe UI', sans-serif; padding: 10px;">
+      <div style="font-family: 'Segoe UI', sans-serif; padding: 0px;">
+        <h2 style="color: #007bff; margin-bottom: 30px;">Invoice</h2>
         <h2 style="color: #007bff; margin: 0;"><strong>Subcontractor Name:</strong> ${vendorName}</h2>
         <p><strong>Service Address:</strong> ${projectAddress}</p>
         <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
@@ -1209,6 +1210,8 @@ async function shareInvoice(invoiceNumber) {
     buttonsToHide.forEach(el => el.style.display = 'block');
   }
 }
+
+
 
 
 
