@@ -264,10 +264,13 @@ button:hover {
   </style>
 </head>
 <body>
-  <header class="header">
-    <h1>Subcontractor Dashboard</h1>
-    <button class="logout-button" onclick="logout()">Logout</button>
-  </header>
+    <header class="header">
+        <h1>Subcontractor Dashboard</h1>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button class="btn" onclick="goToInvoicePage()">Create Invoice</button>
+          <button class="logout-button" onclick="logout()">Logout</button>
+        </div>
+      </header>
 
   <main class="container">
     <section id="new-jobs">
@@ -383,6 +386,12 @@ function displayAssignedProjects(projects, containerId) {
     });
 }
 
+
+    function goToInvoicePage() {
+  window.location.href = '/invoice-creater.html';
+}
+
+    
 // ✅ Updated View Project function with condition
 function viewProject(projectId, status) {
     if (status === "new") {
