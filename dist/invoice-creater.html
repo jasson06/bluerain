@@ -452,7 +452,7 @@ window.onload = async () => {
   // Load vendor-specific data
   await fetchVendorName();
   await fetchAssignedProjects(vendorId);
-  await fetchInvoiceHistory();
+  await fetchInvoiceHistory(vendorId);
   await fetchVendorNameAndAutofill();
 };
 
@@ -938,15 +938,15 @@ async function submitInvoice() {
 
 
 
-    async function fetchInvoiceHistory() {
-      try {
-        const res = await fetch('/history');
-        const data = await res.json();
-        data.forEach(displayInvoiceHistory);
-      } catch (err) {
-        console.error('Error loading history:', err);
-      }
-    }
+async function fetchInvoiceHistory(vendorId) {
+  try {
+    const res = await fetch(`/history?vendorId=${vendorId}`);
+    const data = await res.json();
+    data.forEach(displayInvoiceHistory);
+  } catch (err) {
+    console.error('Error loading history:', err);
+  }
+}
 
 
 
