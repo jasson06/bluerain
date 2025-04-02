@@ -3402,13 +3402,17 @@ app.get('/api/projects/:projectId', async (req, res) => {
 
 // Get invoice history
 app.get('/history', async (req, res) => {
+  const { vendorId } = req.query;
+
   try {
-    const invoices = await Invoice.find().sort({ createdAt: -1 });
+    const query = vendorId ? { vendorId } : {}; // Filter if vendorId is passed
+    const invoices = await Invoice.find(query).sort({ createdAt: -1 });
     res.json(invoices);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch invoice history', error: err });
   }
 });
+
 
 // ✅ Send invoice via email (uses default email if not provided)
 app.post('/api/send', async (req, res) => {
