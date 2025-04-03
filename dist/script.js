@@ -167,9 +167,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (formId === 'add-client-form') {
-            if (!payload.name) errors.push('Client name is required.');
-            if (!payload.email) errors.push('Client email is required.');
-        }
+          payload.address = payload.address || '';
+      
+          if (!payload.name) errors.push('Client name is required.');
+          if (!payload.email) errors.push('Client email is required.');
+          if (!payload.phone) errors.push('Client phone is required.');
+          if (!payload.address) errors.push('Client address is required.');
+      }
 
         if (formId === 'add-estimate-form') {
             if (!payload.name) errors.push('Estimate name is required.');
