@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create Quote</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f9f9f9;
+      color: #333;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      color: #007bff;
+      margin-bottom: 20px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background: #f0f4f8;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      margin-top: 20px;
+      margin-right: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: white;
+      min-width: 150px;
+      box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.15);
+      border-radius: 8px;
+      z-index: 10000;
+      right: 0;
+      top: 100%;
+      overflow: hidden;
+      font-size: 14px;
+    }
+
+    .dropdown-content a {
+      display: block;
+      padding: 10px 16px;
+      color: #333;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+
+    .dropdown-content a:hover {
+      background-color: #f0f0f0;
+    }
+
+    .dropdown:hover .dropdown-content,
+    .dropdown:focus-within .dropdown-content {
+      display: block;
+    }
+
+    .dropdown-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .summary-box {
+      margin-top: 30px;
+      padding: 20px;
+      background: #f5faff;
+      border-radius: 10px;
+    }
+
+    .summary-box p {
+      margin: 5px 0;
+    }
+
+    .modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  justify-content: center;
+  align-items: flex-start;
+  z-index: 9999;
+  overflow: auto;
+  padding: 40px 20px;
+  box-sizing: border-box;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  width: 100%;
+  max-width: 800px;
+  box-sizing: border-box;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+    }
+
+    .close-modal {
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    .modal-footer {
+      margin-top: 20px;
+      text-align: right;
+    }
+
+    .signature-block {
+      margin-top: 40px;
+      border-top: 1px solid #ccc;
+      padding-top: 20px;
+    }
+
+    .signature-block label {
+      font-weight: normal;
+    }
+
+    .payment-terms {
+      margin-top: 30px;
+      font-size: 14px;
+      color: #555;
+      background: #f8f8f8;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 5px solid #007bff;
+    }
+
+    .line-item-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 10px;
+  justify-content: space-between;
+}
+
+.line-item-row input {
+  
+  max-width: 200px;
+}
+
+
+    @media (max-width: 600px) {
+  .line-item-row input {
+    width: 100%;
+  }
+
+  .line-item-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .line-item-row input,
+  .line-item-row button {
+    width: 100%;
+    max-width: 100%;
+  }
+
+}
+
+
+    @media (max-width: 480px) {
+      .line-item-row,
+      .modal-content {
+        flex-direction: column;
+        padding: 15px;
+      }
+
+      .btn {
+        width: 100%;
+        margin-top: 10px;
+      }
+
+      table, th, td {
+        font-size: 0.9rem;
+      }
+
+      .container {
+        padding: 15px;
+      }
+
+      h1 {
+        font-size: 1.4rem;
+      }
+    }
+
+    @media screen and (max-width: 600px) {
+      .container {
+        padding: 15px;
+      }
+
+      h1 {
+        font-size: 1.4rem;
+      }
+
+      .btn {
+        width: 100%;
+        margin: 10px 0 0;
+      }
+
+      .modal-content {
+        padding: 15px;
+        max-height: 95vh;
+      }
+
+      table, th, td {
+        font-size: 0.9rem;
+      }
+    }
+
+
+    @media (max-width: 600px) {
+        .line-item-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+
+  .line-item-row input,
+  .line-item-row button {
+    width: 100%;
+    max-width: 100%;
+    height: 40px; /* Important fix */
+    font-size: 14px;
+    padding: 8px 10px;
+    box-sizing: border-box;
+  }
+  
+  .line-item-row {
+    gap: 8px;
+  }
+
+  .btn {
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  table, th, td {
+    font-size: 0.9rem;
+  }
+
+  .container {
+    padding: 15px;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+  }
+}
+
+#quoteHistoryList li {
+    margin-bottom: 12px;
+    padding: 12px 16px;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  #quoteHistoryList li:hover {
+    background-color: #e9f0ff;
+    transform: translateY(-2px);
+  }
+
+  .quote-link {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 1rem;
+  }
+
+  .quote-meta {
+    font-size: 0.85rem;
+    color: #666;
+    margin-left: 10px;
+  }
+
+  .history-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 10px 0 20px;
+      gap: 10px;
+    }
+
+    .history-controls input,
+    .history-controls select {
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .pagination {
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    .pagination button {
+      margin: 0 4px;
+      padding: 6px 12px;
+      background: #eee;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .pagination button.active {
+      background: #007bff;
+      color: white;
+    }
+
+    .sticky-header {
+  position: sticky;
+  top: 0;
+  background-color: #fff;
+  z-index: 1000;
+  padding: 15px 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title {
+  font-size: 30px;
+  font-weight: bold;
+  color: #007bff;
+}
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  background-color: white;
+  min-width: 180px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+  border-radius: 8px;
+  overflow: hidden;
+  z-index: 1001;
+}
+
+.dropdown-content a {
+  color: #333;
+  padding: 12px 16px;
+  display: block;
+  text-decoration: none;
+  font-size: 15px;
+}
+
+.dropdown-content a:hover {
+  background-color: #f0f0f0;
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.dropdown-toggle {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    margin-left: 10px;
+  }
+  .dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 30px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    z-index: 1000;
+  }
+  .dropdown-menu button {
+    display: block;
+    padding: 8px 12px;
+    width: 100%;
+    border: none;
+    background: white;
+    text-align: left;
+    cursor: pointer;
+  }
+  .dropdown-menu button:hover {
+    background-color: #f0f0f0;
+  }
+  .action-dropdown {
+    position: relative;
+    display: inline-block;
+    float: right;
+  }
+  .action-dropdown .dots {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .action-dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+  }
+  .action-dropdown-content button {
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+  }
+  .action-dropdown-content button:hover {
+    background-color: #f0f0f0;
+  }
+
+  @keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* By default, show full table on desktop */
+.table-responsive-sm {
+  overflow: visible;
+}
+
+/* On screens smaller than 768px, make it scrollable */
+@media screen and (max-width: 768px) {
+  .table-responsive-sm {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 6px;
+    margin-top: 10px;
+  }
+
+  .table-responsive-sm table {
+    width: 700px; /* triggers scroll */
+    min-width: 600px;
+    border-collapse: collapse;
+  }
+
+  .table-responsive-sm th,
+  .table-responsive-sm td {
+    white-space: nowrap;
+  }
+}
+
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    
+
+    <div class="sticky-header">
+      <div class="header-title">BESF</div>
+      <div class="dropdown">
+        <button class="dropdown-btn">⋮ Actions</button>
+        <div class="dropdown-content">
+          <a href="#" onclick="openQuotePreview()">📄 Preview Quote</a>
+          <a href="#" onclick="generatePDF()">🧾 Generate PDF</a>
+          <a href="#" onclick="saveQuote()">💾 Save Quote</a>
+          <a href="#" onclick="openQuoteHistory()">📜 Quote History</a>
+          <a href="#" onclick="openLaborCostModal()">📜 Labor cost list</a>
+        </div>
+      </div>
+    </div>
+    
+
+    <div class="section">
+      <h3>Quote From</h3>
+      <input id="fromName" placeholder="Company Name" />
+      <input id="fromAddress" placeholder="Address" />
+      <input id="fromEmail" placeholder="Email" />
+      <input id="fromPhone" placeholder="Phone Number" />
+    </div>
+
+    <div class="section">
+      <h3>Quote To</h3>
+      <input id="toName" placeholder="Customer Name" oninput="showClientSuggestions()" />
+<div id="clientSuggestionBox" style="position: absolute; background: white; border: 1px solid #ccc; border-radius: 6px; z-index: 1000; display: none; max-height: 150px; overflow-y: auto;"></div>
+      <input id="toAddress" placeholder="Address" />
+      <input id="toEmail" placeholder="Email" />
+      <input id="toPhone" placeholder="Phone Number" />
+    </div>
+
+    <div class="section">
+      <label>Quote Number:</label>
+      <input id="quoteNumber" placeholder="e.g. Q-20250401" readonly />
+
+      <label>Date:</label>
+      <input type="date" id="quoteDate" />
+
+      <label>Valid Till:</label>
+      <input type="date" id="validTill" />
+    </div>
+
+    <div class="section">
+      <h3>Line Items</h3>
+      <div class="line-item-row">
+        <input id="itemName" placeholder="Item Name" />
+        <div id="suggestionBox" style="position: absolute; background: #fff; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000; display: none; max-height: 150px; overflow-y: auto;"></div>
+        <input id="itemDesc" placeholder="Description" />
+        <input id="itemRate" type="number" placeholder="Rate" />
+        <input id="itemQty" type="number" placeholder="Quantity" />
+        <button class="btn" onclick="addLineItem()">Add</button>
+      </div>
+
+      <div class="table-responsive-sm">
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Description</th>
+              <th>Rate</th>
+              <th>Quantity</th>
+              <th>Total</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="lineItemsTable"></tbody>
+        </table>
+      </div>
+      
+      
+
+    <div class="section">
+      <label>Notes:</label>
+      <textarea id="quoteNotes" rows="4"></textarea>
+    </div>
+
+    <div class="section">
+      <label>Discount ($):</label>
+      <input type="number" id="inputDiscount" value="0" min="0" step="0.01" onchange="renderTable()" />
+
+      <label>Tax Rate (%):</label>
+      <input type="number" id="inputTax" value="0" min="0" step="0.01" onchange="renderTable()" />
+    </div>
+
+    <div class="summary-box">
+      <p><strong>Subtotal:</strong> $<span id="subtotal">0.00</span></p>
+      <p><strong>Discount:</strong> $<span id="discount">0.00</span></p>
+      <p><strong>Tax:</strong> $<span id="tax">0.00</span></p>
+      <p><strong>Total:</strong> $<span id="grandTotal">0.00</span></p>
+    </div>
+
+    <div class="payment-terms">
+      <strong>Payment Terms:</strong> Payment is due within 15 days of acceptance of this quote unless otherwise agreed in writing.
+    </div>
+
+    <div class="signature-block">
+      <h3>Agreement</h3>
+      <p>If you accept this quote, please sign and return.</p>
+      <label>Client Name:</label>
+      <input type="text" placeholder="Client Full Name" />
+      <label>Signature:</label>
+      <input type="text" placeholder="Client Signature" />
+      <label>Date:</label>
+      <input type="date" />
+    </div>
+  </div>
+
+  <div id="quoteModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Quote Preview</h3>
+        <span class="close-modal" onclick="closeQuotePreview()">&times;</span>
+      </div>
+      <div id="quotePreviewContent"></div>
+      <div class="modal-footer">
+        <button class="btn no-print" onclick="printQuotePreview()">🖨️ Print</button>
+        <button class="btn no-print" onclick="shareQuotePreview()">🔗 Share</button>
+      </div>
+    </div>
+  </div>
+
+<!-- Quote History Modal -->
+<div id="quoteHistoryModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="margin: 0; font-size: 1.2rem;">📜 Quote History</h3>
+      <span class="close-modal" onclick="closeQuoteHistory()" style="font-size: 24px; cursor: pointer;">&times;</span>
+    </div>
+
+    <div class="history-controls" style="margin: 15px 0; display: flex; gap: 10px; flex-wrap: wrap;">
+      <input type="text" id="searchInput" placeholder="Search by name or number..." oninput="renderQuoteHistory()" style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+      <select id="filterSelect" onchange="renderQuoteHistory()" style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+        <option value="all">All</option>
+        <option value="today">Today</option>
+        <option value="week">This Week</option>
+        <option value="month">This Month</option>
+      </select>
+    </div>
+
+    <ul id="quoteHistoryList" style="list-style: none; padding: 0; margin-top: 15px;">
+      <!-- Dynamically filled -->
+    </ul>
+
+    <div class="pagination" id="paginationControls" style="margin-top: 20px; display: flex; justify-content: center; gap: 10px;"></div>
+  </div>
+</div>
+
+
+  <!-- Quote Detail Modal -->
+  <div id="quoteDetailModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Quote Details</h3>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <div class="dropdown">
+            <button class="dropdown-btn">⋯</button>
+            <div class="dropdown-content">
+              <a href="#" onclick="printQuoteDetail()">🖨️ Print</a>
+              <a href="#" onclick="shareQuoteDetail()">🔗 Share</a>
+              <a href="#" onclick="deleteQuoteDetail()">🗑️ Delete</a>
+            </div>
+          </div>
+          <span class="close-modal" onclick="closeQuoteDetail()">&times;</span>
+        </div>
+      </div>
+      <div id="quoteDetailContent"></div>
+    </div>
+  </div>
+
+<!-- Suggested Labor Cost List Modal -->
+<div id="laborCostModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <h3>Labor Cost Suggestions</h3>
+      <span class="close-modal" onclick="closeLaborCostModal()" style="font-size: 24px; cursor: pointer;">&times;</span>
+    </div>
+    <input type="text" id="laborSearchInput" placeholder="Search labor task..." oninput="renderLaborSuggestions()" style="width: 100%; padding: 8px; margin: 10px 0;">
+    <ul id="laborSuggestionList" style="list-style: none; padding: 0; max-height: 400px; overflow-y: auto;"></ul>
+    <div style="margin-top: 10px;">
+      <input id="newLaborName" placeholder="Task Name" style="width: 100%; padding: 8px; margin-top: 10px;" />
+      <input id="newLaborDesc" placeholder="Description" style="width: 100%; padding: 8px; margin-top: 10px;" />
+      <input id="newLaborRate" type="number" placeholder="Rate ($)" style="width: 100%; padding: 8px; margin-top: 10px;" />
+      <button onclick="addLaborItem()" style="margin-top: 10px;" class="btn">Add Labor Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" style="
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #007bff;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 6px;
+  display: none;
+  z-index: 9999;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+"></div>
+
+
+<!-- Loader Spinner -->
+<div id="loader" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.7); z-index: 9999; display: none; justify-content: center; align-items: center;">
+  <div style="border: 6px solid #f3f3f3; border-top: 6px solid #007bff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
+</div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script>
+
+    window.onload = () => {
+      document.getElementById("fromName").value = "BESF LLC";
+      document.getElementById("fromAddress").value = "7 CYPRESS POINT CT";
+      document.getElementById("fromEmail").value = "besfllc@gmail.com";
+      document.getElementById("fromPhone").value = "7252603319";
+
+      const today = new Date();
+      const yyyyMMdd = today.toISOString().split('T')[0];
+      document.getElementById("quoteDate").value = yyyyMMdd;
+
+      const datePart = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+      const randomPart = Math.floor(1000 + Math.random() * 9000);
+      const quoteNumber = `Q-${randomPart}-${datePart}`;
+      document.getElementById("quoteNumber").value = quoteNumber;
+
+      loadQuoteHistory();
+      fetchLaborSuggestions()
+      fetchClients();
+
+
+        // Enable suggestions on item name input
+  document.getElementById('itemName').addEventListener('input', showLaborSuggestions);
+    };
+
+    document.getElementById('itemName').addEventListener('input', showLaborSuggestions);
+
+function showLaborSuggestions() {
+  const input = document.getElementById('itemName');
+  const value = input.value.toLowerCase();
+  const box = document.getElementById('suggestionBox');
+  box.innerHTML = '';
+  
+  if (!value) return box.style.display = 'none';
+
+  const matches = laborCostList.filter(item =>
+    item.name.toLowerCase().includes(value)
+  );
+
+  if (matches.length === 0) return box.style.display = 'none';
+
+  matches.forEach(item => {
+    const option = document.createElement('div');
+    option.textContent = item.name;
+    option.style.padding = '8px';
+    option.style.cursor = 'pointer';
+    option.onmouseenter = () => option.style.background = '#f0f0f0';
+    option.onmouseleave = () => option.style.background = '#fff';
+    option.onclick = () => {
+      document.getElementById('itemName').value = item.name;
+      document.getElementById('itemDesc').value = item.description;
+      document.getElementById('itemRate').value = item.rate;
+      box.style.display = 'none';
+    };
+    box.appendChild(option);
+  });
+
+  // Position it below the input
+  const rect = input.getBoundingClientRect();
+  box.style.top = `${input.offsetTop + input.offsetHeight}px`;
+  box.style.left = `${input.offsetLeft}px`;
+  box.style.width = `${input.offsetWidth}px`;
+  box.style.display = 'block';
+}
+
+
+
+// Hide box when clicking outside
+document.addEventListener('click', e => {
+  if (!document.getElementById('suggestionBox').contains(e.target) &&
+      e.target !== document.getElementById('itemName')) {
+    document.getElementById('suggestionBox').style.display = 'none';
+  }
+});
+
+
+
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.style.display = 'block';
+  setTimeout(() => { toast.style.display = 'none'; }, 2500);
+}
+
+function showLoader() {
+  document.getElementById('loader').style.display = 'flex';
+}
+
+function hideLoader() {
+  document.getElementById('loader').style.display = 'none';
+}
+
+
+let clientList = [];
+
+async function fetchClients() {
+  try {
+    const res = await fetch('/api/clients');
+    clientList = await res.json();
+  } catch (err) {
+    console.error('Failed to fetch clients:', err);
+  }
+}
+
+function showClientSuggestions() {
+  const input = document.getElementById('toName');
+  const box = document.getElementById('clientSuggestionBox');
+  const value = input.value.toLowerCase();
+  box.innerHTML = '';
+
+  if (!value) return box.style.display = 'none';
+
+  const matches = clientList.filter(client => client.name.toLowerCase().includes(value));
+
+  if (matches.length === 0) return box.style.display = 'none';
+
+  matches.forEach(client => {
+    const option = document.createElement('div');
+    option.textContent = client.name;
+    option.style.padding = '8px';
+    option.style.cursor = 'pointer';
+    option.onmouseenter = () => option.style.background = '#f0f0f0';
+    option.onmouseleave = () => option.style.background = '#fff';
+    option.onclick = () => {
+      document.getElementById('toName').value = client.name;
+      document.getElementById('toAddress').value = client.address;
+      document.getElementById('toEmail').value = client.email;
+      document.getElementById('toPhone').value = client.phone;
+      box.style.display = 'none';
+    };
+    box.appendChild(option);
+  });
+
+  const rect = input.getBoundingClientRect();
+  box.style.top = `${input.offsetTop + input.offsetHeight}px`;
+  box.style.left = `${input.offsetLeft}px`;
+  box.style.width = `${input.offsetWidth}px`;
+  box.style.display = 'block';
+}
+
+document.addEventListener('click', e => {
+  if (!document.getElementById('clientSuggestionBox').contains(e.target) &&
+      e.target !== document.getElementById('toName')) {
+    document.getElementById('clientSuggestionBox').style.display = 'none';
+  }
+});
+
+
+
+
+    let lineItems = [];
+
+    function addLineItem() {
+  const name = document.getElementById('itemName');
+  const description = document.getElementById('itemDesc');
+  const rate = parseFloat(document.getElementById('itemRate').value);
+  const qty = parseInt(document.getElementById('itemQty').value);
+
+  if (!name.value || isNaN(rate) || isNaN(qty)) {
+    [name, document.getElementById('itemRate'), document.getElementById('itemQty')].forEach(el => {
+      el.style.borderColor = !el.value ? 'red' : '#ccc';
+    });
+    showToast('Please fill all fields');
+    return;
+  }
+
+  lineItems.push({ name: name.value, description: description.value, rate, qty });
+
+  renderTable();
+  showToast('Line item added');
+
+  name.value = '';
+  description.value = '';
+  document.getElementById('itemRate').value = '';
+  document.getElementById('itemQty').value = '';
+  [name, document.getElementById('itemRate'), document.getElementById('itemQty')].forEach(el => el.style.borderColor = '#ccc');
+}
+
+// Live total preview
+['itemRate', 'itemQty'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    const rate = parseFloat(document.getElementById('itemRate').value) || 0;
+    const qty = parseInt(document.getElementById('itemQty').value) || 0;
+    const total = rate * qty;
+    let totalPreview = document.getElementById('lineTotalPreview');
+    if (!totalPreview) {
+      totalPreview = document.createElement('div');
+      totalPreview.id = 'lineTotalPreview';
+      totalPreview.style.marginTop = '6px';
+      totalPreview.style.fontSize = '14px';
+      document.querySelector('.line-item-row').appendChild(totalPreview);
+    }
+    totalPreview.textContent = `Total: $${total.toFixed(2)}`;
+  });
+});
+
+    function renderTable() {
+      const table = document.getElementById('lineItemsTable');
+      table.innerHTML = '';
+      let subtotal = 0;
+
+      lineItems.forEach((item, index) => {
+        const total = item.rate * item.qty;
+        subtotal += total;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.name}</td>
+          <td>${item.description}</td>
+          <td>$${item.rate.toFixed(2)}</td>
+          <td>${item.qty}</td>
+          <td>$${total.toFixed(2)}</td>
+          <td>
+           <div class="action-dropdown" style="position: relative;">
+      <button class="dots" onclick="toggleLineItemMenu(event, ${index})">⋯</button>
+      <div class="action-dropdown-content" id="lineitem-menu-${index}" style="display: none; position: absolute; right: 0; background: white; border: 1px solid #ccc; border-radius: 5px; box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2); z-index: 1000;">
+        <button onclick="editLineItem(${index})">✏️ Edit</button>
+        <button onclick="deleteLineItem(${index})" style="color: red;">🗑️ Delete</button>
+      </div>
+    </div>
+  </td>
+        `;
+        table.appendChild(row);
+      });
+
+      const discount = parseFloat(document.getElementById('inputDiscount').value || 0);
+      const taxRate = parseFloat(document.getElementById('inputTax').value || 0);
+      const tax = (subtotal - discount) * (taxRate / 100);
+      const total = subtotal - discount + tax;
+
+      document.getElementById('subtotal').textContent = subtotal.toFixed(2);
+      document.getElementById('discount').textContent = discount.toFixed(2);
+      document.getElementById('tax').textContent = tax.toFixed(2);
+      document.getElementById('grandTotal').textContent = total.toFixed(2);
+    }
+
+    
+    function toggleLineItemMenu(event, index) {
+  event.stopPropagation();
+  const menu = document.getElementById(`lineitem-menu-${index}`);
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+
+  // Close on outside click
+  document.addEventListener('click', () => {
+    menu.style.display = 'none';
+  }, { once: true });
+}
+
+
+    function editLineItem(index) {
+      const item = lineItems[index];
+      document.getElementById('itemName').value = item.name;
+      document.getElementById('itemDesc').value = item.desc;
+      document.getElementById('itemRate').value = item.rate;
+      document.getElementById('itemQty').value = item.qty;
+      deleteLineItem(index);
+    }
+
+    function deleteLineItem(index) {
+      lineItems.splice(index, 1);
+      renderTable();
+    }
+
+
+    function printQuotePreview() {
+      const previewContent = document.getElementById("quotePreviewContent");
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html><head><title>Print Quote</title></head><body>
+        ${previewContent.innerHTML}
+        </body></html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
+
+    async function shareQuotePreview() {
+      const previewContent = document.getElementById("quotePreviewContent");
+      const blob = new Blob([previewContent.innerHTML], { type: 'text/html' });
+      const file = new File([blob], 'quote-preview.html', { type: 'text/html' });
+
+      try {
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'Quote Preview',
+            text: 'Here is the quote preview.',
+            files: [file]
+          });
+        } else {
+          showToast('Sharing not supported on this device.');
+        }
+      } catch (err) {
+        console.error('Share error:', err);
+        showToast('Error sharing quote preview.');
+      }
+    }
+
+    function openQuotePreview() {
+  const fromName = document.getElementById("fromName").value;
+  const fromAddress = document.getElementById("fromAddress").value;
+  const fromEmail = document.getElementById("fromEmail").value;
+  const fromPhone = document.getElementById("fromPhone").value;
+  const toName = document.getElementById("toName").value;
+  const toAddress = document.getElementById("toAddress").value;
+  const toEmail = document.getElementById("toEmail").value;
+  const toPhone = document.getElementById("toPhone").value;
+  const quoteNumber = document.getElementById("quoteNumber").value;
+  const quoteDate = document.getElementById("quoteDate").value;
+  const expirationDate = document.getElementById("validTill").value;
+
+  const lineItemRows = lineItems.map(item => `
+    <tr>
+      <td>${item.name}</td>
+      <td>${item.desc}</td>
+      <td>$${item.rate.toFixed(2)}</td>
+      <td>${item.qty}</td>
+      <td>$${(item.rate * item.qty).toFixed(2)}</td>
+    </tr>
+  `).join("");
+
+  const subtotal = lineItems.reduce((sum, i) => sum + i.rate * i.qty, 0);
+  const tax = 0;
+  const total = subtotal + tax;
+
+  document.getElementById("quotePreviewContent").innerHTML = `
+    <h2 style="color: #007bff;">BESF LLC</h2>
+    <p><strong>Quote #:</strong> ${quoteNumber}</p>
+    <p><strong>Date:</strong> ${quoteDate}</p>
+    <p><strong>Valid till:</strong> ${expirationDate}</p>
+    <hr>
+
+    <div style="display: flex; justify-content: space-between;">
+      <div>
+        <h4>Quote From</h4>
+        <p>${fromName}<br>${fromAddress}<br>${fromEmail}<br>${fromPhone}</p>
+      </div>
+      <div>
+        <h4>Quote To</h4>
+        <p>${toName}<br>${toAddress}<br>${toEmail}<br>${toPhone}</p>
+      </div>
+    </div>
+
+    <h3 style="margin-top: 20px;">Line Items</h3>
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="background-color: #f0f0f0;">
+          <th>Item</th><th>Description</th><th>Rate</th><th>Qty</th><th>Total</th>
+        </tr>
+      </thead>
+      <tbody>${lineItemRows}</tbody>
+    </table>
+
+    <div style="margin-top: 20px; text-align: right;">
+      <p><strong>Subtotal:</strong> $${subtotal.toFixed(2)}</p>
+      <p><strong>Tax:</strong> $${tax.toFixed(2)}</p>
+      <p><strong style="font-size: 18px;">Total:</strong> <span style="color: #007bff;">$${total.toFixed(2)}</span></p>
+    </div>
+
+    <div style="margin-top: 30px;">
+      <h3>Payment Terms</h3>
+      <p>Payment is due within 15 days of acceptance. Late payments may be subject to additional fees unless otherwise agreed upon in writing.</p>
+    </div>
+
+    <div style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px;">
+      <h3>Agreement</h3>
+      <p>If you accept this quote, please sign and return.</p>
+      <p><strong>Client Name:</strong> ____________________________</p>
+      <p><strong>Signature:</strong> ____________________________</p>
+      <p><strong>Date:</strong> ____________________________</p>
+    </div>
+  `;
+
+  document.getElementById("quoteModal").style.display = "flex";
+}
+
+    function closeQuotePreview() {
+      document.getElementById("quoteModal").style.display = "none";
+    }
+
+    function generatePDF() {
+      html2pdf().from(document.body).save('quote.pdf');
+    }
+
+    function shareQuote() {
+      alert('Sharing quote (this will work once backend/API is connected).');
+    }
+
+    function saveQuote() {
+  const quote = {
+    from: {
+      name: document.getElementById('fromName').value,
+      address: document.getElementById('fromAddress').value,
+      email: document.getElementById('fromEmail').value,
+      phone: document.getElementById('fromPhone').value
+    },
+    to: {
+      name: document.getElementById('toName').value,
+      address: document.getElementById('toAddress').value,
+      email: document.getElementById('toEmail').value,
+      phone: document.getElementById('toPhone').value
+    },
+    quoteNumber: document.getElementById('quoteNumber').value,
+    date: document.getElementById('quoteDate').value,
+    validTill: document.getElementById('validTill').value,
+    notes: document.getElementById('quoteNotes').value,
+    lineItems,
+    totals: {
+      subtotal: document.getElementById('subtotal').textContent,
+      discount: document.getElementById('discount').textContent,
+      tax: document.getElementById('tax').textContent,
+      total: document.getElementById('grandTotal').textContent
+    }
+  };
+
+  fetch('/api/quotes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(quote)
+  })
+    .then(res => res.json())
+    .then(data => {
+      console.log('Quote saved:', data);
+      showToast('✅ Quote saved ');
+      setTimeout(() => location.reload(), 1500); // Reload after 1.5s
+    })
+    .catch(err => {
+      console.error('Error saving quote:', err);
+      showToast('❌ Failed to save quote');
+    });
+}
+
+
+function deleteLineItem(index) {
+  lineItems.splice(index, 1);
+  renderTable();
+}
+
+
+    function openQuoteHistory() {
+      document.getElementById('quoteHistoryModal').style.display = 'flex';
+    }
+
+    function closeQuoteHistory() {
+      document.getElementById('quoteHistoryModal').style.display = 'none';
+    }
+
+    function closeQuoteDetail() {
+      document.getElementById('quoteDetailModal').style.display = 'none';
+    }
+
+
+    let allQuotes = [];
+let currentPage = 1;
+const itemsPerPage = 5;
+
+async function loadQuoteHistory() {
+  try {
+    const res = await fetch('/api/quotes');
+    allQuotes = await res.json();
+    renderQuoteHistory();
+  } catch (err) {
+    console.error('Failed to load quote history:', err);
+  }
+}
+
+function renderQuoteHistory() {
+  const list = document.getElementById('quoteHistoryList');
+  if (!list) return;
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const filter = document.getElementById('filterSelect').value;
+
+  let filtered = allQuotes.filter(q =>
+    q.quoteNumber.toLowerCase().includes(search) ||
+    (q.to?.name && q.to.name.toLowerCase().includes(search))
+  );
+
+  if (filter !== 'all') {
+    const now = new Date();
+    filtered = filtered.filter(q => {
+      const quoteDate = new Date(q.date);
+      if (filter === 'today') {
+        return quoteDate.toDateString() === now.toDateString();
+      } else if (filter === 'week') {
+        const weekAgo = new Date();
+        weekAgo.setDate(now.getDate() - 7);
+        return quoteDate >= weekAgo;
+      } else if (filter === 'month') {
+        return quoteDate.getMonth() === now.getMonth() && quoteDate.getFullYear() === now.getFullYear();
+      }
+    });
+  }
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  if (currentPage > totalPages) currentPage = 1;
+  const start = (currentPage - 1) * itemsPerPage;
+  const paginated = filtered.slice(start, start + itemsPerPage);
+
+  list.innerHTML = paginated.map(q => `
+    <li>
+      <a href="#" onclick="showQuoteDetail('${q._id}')">${q.quoteNumber}</a> - ${q.to?.name || ''} (${new Date(q.date).toLocaleDateString()})
+    </li>
+  `).join('');
+
+  const pagination = document.getElementById('paginationControls');
+  pagination.innerHTML = '';
+  for (let i = 1; i <= totalPages; i++) {
+    const btn = document.createElement('button');
+    btn.textContent = i;
+    if (i === currentPage) btn.classList.add('active');
+    btn.onclick = () => {
+      currentPage = i;
+      renderQuoteHistory();
+    };
+    pagination.appendChild(btn);
+  }
+}
+async function showQuoteDetail(id) {
+      try {
+        const res = await fetch(`/api/quotes/${id}`);
+        const q = await res.json();
+        const detail = document.getElementById('quoteDetailContent');
+        detail.setAttribute('data-id', q._id);
+
+        const lineItems = q.lineItems.map(item => `
+          <tr>
+            <td>${item.name}</td>
+            <td>${item.description}</td>
+            <td>$${item.rate.toFixed(2)}</td>
+            <td>${item.qty}</td>
+            <td>$${(item.rate * item.qty).toFixed(2)}</td>
+          </tr>`).join('');
+
+        detail.innerHTML = `
+          <h2 style="color: #007bff;">BESF LLC</h2>
+          <p><strong>Quote #:</strong> ${q.quoteNumber}</p>
+          <p><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</p>
+          <p><strong>Valid till:</strong> ${new Date(q.validTill).toLocaleDateString()}</p>
+          <hr>
+
+          <div style="display: flex; justify-content: space-between;">
+            <div>
+              <h4>Quote From</h4>
+              <p>${q.from.name}<br>${q.from.address}<br>${q.from.email}<br>${q.from.phone}</p>
+            </div>
+            <div>
+              <h4>Quote To</h4>
+              <p>${q.to.name}<br>${q.to.address}<br>${q.to.email}<br>${q.to.phone}</p>
+            </div>
+          </div>
+
+          <h3 style="margin-top: 20px;">Line Items</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background-color: #f0f0f0;">
+                <th>Item</th><th>Description</th><th>Rate</th><th>Qty</th><th>Total</th>
+              </tr>
+            </thead>
+            <tbody>${lineItems}</tbody>
+          </table>
+
+          <div style="margin-top: 20px; text-align: right;">
+            <p><strong>Subtotal:</strong> $${q.totals.subtotal}</p>
+            <p><strong>Discount:</strong> $${q.totals.discount}</p>
+            <p><strong>Tax:</strong> $${q.totals.tax}</p>
+             <p><strong style="font-size: 18px;">Total:</strong> 
+              <span style="color: #007bff;">$${parseFloat(q.totals.total).toFixed(2)}</span>
+              </p>
+          </div>
+
+          <div style="margin-top: 30px;">
+            <h3>Notes</h3>
+            <p>${q.notes || 'N/A'}</p>
+          </div>
+
+
+                    <div style="margin-top: 30px;">
+            <h3>Payment Terms</h3>
+            <p>Payment is due within 15 days of acceptance. Late payments may be subject to additional fees unless otherwise agreed upon in writing.</p>
+          </div>
+
+          <div style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px;">
+            <h3>Agreement</h3>
+            <p>If you accept this quote, please sign and return.</p>
+            <p><strong>Client Name:</strong> ____________________________</p>
+            <p><strong>Signature:</strong> ____________________________</p>
+            <p><strong>Date:</strong> ____________________________</p>
+          </div>
+        `;
+
+        document.getElementById('quoteDetailModal').style.display = 'flex';
+      } catch (err) {
+        console.error('Failed to fetch quote details:', err);
+      }
+    }
+
+    function printQuoteDetail() {
+      const detailContent = document.getElementById("quoteDetailContent");
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html><head><title>Print Quote</title></head><body>
+        ${detailContent.innerHTML}
+        </body></html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
+
+    async function shareQuoteDetail() {
+      const detail = document.getElementById('quoteDetailContent');
+      if (!detail) return alert('No quote loaded.');
+
+      const blob = new Blob([detail.innerHTML], { type: 'text/html' });
+      const file = new File([blob], 'quote.html', { type: 'text/html' });
+
+      try {
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'Quote Details',
+            text: 'Sharing the quote details with you.',
+            files: [file]
+          });
+        } else {
+          showToast('Sharing not supported on this device.');
+        }
+      } catch (err) {
+        console.error('Error sharing quote:', err);
+        showToast('Failed to share quote.');
+      }
+    }
+
+    async function deleteQuoteDetail() {
+      const detail = document.getElementById('quoteDetailContent');
+      const id = detail.getAttribute('data-id');
+      if (!id || !confirm('Are you sure you want to delete this quote?')) return;
+      try {
+        const res = await fetch(`/api/quotes/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast('Quote deleted.');
+          closeQuoteDetail();
+          loadQuoteHistory();
+        } else {
+          showToast('Failed to delete quote.');
+        }
+      } catch (err) {
+        console.error('Delete error:', err);
+      }
+    }
+
+
+    let laborCostList = [];
+
+  function openLaborCostModal() {
+    document.getElementById('laborCostModal').style.display = 'flex';
+    fetchLaborSuggestions();
+  }
+
+  function closeLaborCostModal() {
+    document.getElementById('laborCostModal').style.display = 'none';
+  }
+
+  async function fetchLaborSuggestions() {
+    try {
+      const res = await fetch('/api/labor-costs');
+      laborCostList = await res.json();
+      renderLaborSuggestions();
+    } catch (err) {
+      console.error('Failed to load labor suggestions:', err);
+    }
+  }
+
+  function renderLaborSuggestions() {
+    const query = document.getElementById('laborSearchInput').value.toLowerCase();
+    const list = document.getElementById('laborSuggestionList');
+    list.innerHTML = '';
+
+    const filtered = laborCostList.filter(item =>
+      item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)
+    );
+
+    filtered.forEach((item, index) => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 8px; border-radius: 8px; background: #f9f9f9;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div onclick="useSuggestedLabor(${index})">
+              <strong>${item.name}</strong><br>
+              <small>${item.description}</small><br>
+              <span style="color: #007bff; font-weight: bold;">$${item.rate.toFixed(2)}</span>
+            </div>
+            <div class="action-dropdown">
+              <button class="dots" onclick="toggleActionDropdown(event, ${index})">⋯</button>
+              <div class="action-dropdown-content" id="action-menu-${index}">
+                <button onclick="useSuggestedLabor(${index})">Use</button>
+                <button onclick="editLaborItem(${index})">Edit</button>
+                <button onclick="deleteLaborItem(${index})">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      list.appendChild(li);
+    });
+  }
+
+  function toggleActionDropdown(event, index) {
+    event.stopPropagation();
+    const menu = document.getElementById(`action-menu-${index}`);
+    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+    document.addEventListener('click', () => (menu.style.display = 'none'), { once: true });
+  }
+
+  async function addLaborItem() {
+    const name = document.getElementById('newLaborName').value;
+    const description = document.getElementById('newLaborDesc').value;
+    const rate = parseFloat(document.getElementById('newLaborRate').value);
+
+    if (!name || !description || isNaN(rate)) return alert('Please fill all fields correctly.');
+
+    try {
+      const res = await fetch('/api/labor-costs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description, rate })
+      });
+      const newItem = await res.json();
+      laborCostList.unshift(newItem);
+      renderLaborSuggestions();
+    } catch (err) {
+      console.error('Error adding labor item:', err);
+    }
+
+    document.getElementById('newLaborName').value = '';
+    document.getElementById('newLaborDesc').value = '';
+    document.getElementById('newLaborRate').value = '';
+  }
+
+  async function editLaborItem(index) {
+    const item = laborCostList[index];
+    const name = prompt('Edit task name:', item.name);
+    const description = prompt('Edit description:', item.description);
+    const rate = parseFloat(prompt('Edit rate:', item.rate));
+
+    if (!name || !description || isNaN(rate)) return;
+
+    try {
+      const res = await fetch(`/api/labor-costs/${item._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description, rate })
+      });
+      const updated = await res.json();
+      laborCostList[index] = updated;
+      renderLaborSuggestions();
+    } catch (err) {
+      console.error('Error updating labor item:', err);
+    }
+  }
+
+  async function deleteLaborItem(index) {
+    const item = laborCostList[index];
+    if (!confirm('Are you sure you want to delete this item?')) return;
+
+    try {
+      await fetch(`/api/labor-costs/${item._id}`, { method: 'DELETE' });
+      laborCostList.splice(index, 1);
+      renderLaborSuggestions();
+    } catch (err) {
+      console.error('Error deleting labor item:', err);
+    }
+  }
+
+  function useSuggestedLabor(index) {
+    const item = laborCostList[index];
+    document.getElementById('itemName').value = item.name;
+    document.getElementById('itemDesc').value = item.description;
+    document.getElementById('itemRate').value = item.rate;
+    closeLaborCostModal();
+  }
+
+  
+  </script>
+</body>
+</html>
