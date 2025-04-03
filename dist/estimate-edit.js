@@ -1197,7 +1197,7 @@ function updatePage() {
   // Add Event Listeners
   document.getElementById("add-line-item").addEventListener("click", () => addLineItemCard());
   document.getElementById("add-category-header").addEventListener("click", () => {
-    const categoryName = prompt("Enter the category name:");
+    const categoryName = prompt("Enter Room/Area Name:");
     if (categoryName) addCategoryHeader({ category: categoryName });
   });
   document.getElementById("assign-items-button").addEventListener("click", assignItemsToVendor);
