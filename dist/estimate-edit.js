@@ -19,6 +19,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     assignButton.title = "";
   }
   updatePage();
+
+
+ let laborCostList = [];
+
+async function fetchLaborCostList() {
+  try {
+    const res = await fetch("/api/labor-costs");
+    laborCostList = await res.json();
+  } catch (error) {
+    console.error("Failed to fetch labor cost suggestions", error);
+  }
+}
+  
   
  function generatePhotoPreview(photos, itemId, type) {
     if (!photos || photos.length === 0) {
@@ -661,6 +674,8 @@ const assignedToInitials = item.assignedTo?.name
   <div class="card-header">
       <input type="checkbox" class="line-item-select" ${item.assignedTo ? "disabled" : ""}>
       <input type="text" class="item-name" value="${item.name || ""}" placeholder="Item Name">
+      <div class="suggestion-box" style="display:none; position:absolute; background:#fff; border:1px solid #ccc; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1); max-height:150px; overflow-y:auto; z-index:1000;"></div>
+
       <button class="btn delete-line-item">Delete</button>
       ${item.assignedTo ? `<button class="btn unassign-item">Unassign</button>` : ""}
     </div>
@@ -723,6 +738,53 @@ const assignedToInitials = item.assignedTo?.name
 </div>
   `;
 
+
+ const itemNameInput = card.querySelector(".item-name");
+const suggestionBox = card.querySelector(".suggestion-box");
+
+itemNameInput.addEventListener("input", () => {
+  const value = itemNameInput.value.toLowerCase();
+  suggestionBox.innerHTML = "";
+
+  if (!value) return (suggestionBox.style.display = "none");
+
+  const matches = laborCostList.filter(item =>
+    item.name.toLowerCase().includes(value)
+  );
+
+  if (matches.length === 0) return (suggestionBox.style.display = "none");
+
+  matches.forEach(match => {
+    const option = document.createElement("div");
+    option.textContent = match.name;
+    option.style.padding = "8px";
+    option.style.cursor = "pointer";
+    option.onmouseenter = () => (option.style.background = "#f0f0f0");
+    option.onmouseleave = () => (option.style.background = "#fff");
+    option.onclick = () => {
+      itemNameInput.value = match.name;
+      card.querySelector(".item-description").value = match.description;
+      card.querySelector(".item-price").value = match.rate;
+      suggestionBox.style.display = "none";
+    };
+    suggestionBox.appendChild(option);
+  });
+
+  const rect = itemNameInput.getBoundingClientRect();
+  suggestionBox.style.top = `${itemNameInput.offsetTop + itemNameInput.offsetHeight}px`;
+  suggestionBox.style.left = `${itemNameInput.offsetLeft}px`;
+  suggestionBox.style.width = `${itemNameInput.offsetWidth}px`;
+  suggestionBox.style.display = "block";
+});
+
+// Hide on outside click
+document.addEventListener("click", (e) => {
+  if (!card.contains(e.target)) {
+    suggestionBox.style.display = "none";
+  }
+});
+   
+   
 // ✅ Enable vendor name 
   document.querySelectorAll(".vendor-name").forEach((el) => {
     el.removeAttribute("title"); // ❌ Remove default tooltip behavior
@@ -1129,6 +1191,7 @@ function updatePage() {
   await loadProjectDetails();
   await loadVendors();
   await loadEstimateDetails();
+   await fetchLaborCostList();
   
 
   // Add Event Listeners
