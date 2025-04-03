@@ -399,8 +399,9 @@ const commentSchema = new mongoose.Schema({
 
 const clientSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
+  address: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, trim: true },
-  phone: { type: String, trim: true },
+  phone: { type: String, required: true, trim: true },
 });
 
 const estimateSchema = new mongoose.Schema({ 
@@ -654,6 +655,43 @@ const invoiceSchema = new mongoose.Schema({
 });
 
 
+const quoteSchema = new mongoose.Schema({
+  from: {
+    name: String,
+    address: String,
+    email: String,
+    phone: String
+  },
+  to: {
+    name: String,
+    address: String,
+    email: String,
+    phone: String
+  },
+  quoteNumber: String,
+  date: Date,
+  validTill: Date,
+  notes: String,
+  lineItems: [{
+    name: String,
+    description: String,
+    rate: Number,
+    qty: Number
+  }],
+  totals: {
+    subtotal: Number,
+    discount: Number,
+    tax: Number,
+    total: Number
+  }
+}, { timestamps: true });
+
+const laborCostSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  description: { type: String },
+  rate: { type: Number, required: true }
+}, { timestamps: true });
+
 const Task = mongoose.model('Task', taskSchema);
 const Comment = mongoose.model("Comment", commentSchema);
 const Client = mongoose.model('Client', clientSchema);
@@ -666,6 +704,9 @@ const SelectionBoard = mongoose.model('SelectionBoard', selectionBoardSchema);
 const Product = mongoose.model('Product', productSchema);
 const DailyUpdate = mongoose.model("DailyUpdate", DailyUpdateSchema);
 const Invoice = mongoose.model('Invoice', invoiceSchema);
+const Quote = mongoose.model('Quote', quoteSchema);
+const LaborCost = mongoose.model('LaborCost', laborCostSchema);
+
 
 module.exports = {
   Task,
@@ -676,6 +717,7 @@ module.exports = {
   Project,
   Manager,
   Invitation,
+  Quote,
 };
 
 
@@ -690,6 +732,17 @@ app.post('/api/add-client', async (req, res) => {
   } catch (error) {
     console.error('Error adding client:', error.message);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/clients - Get all clients
+app.get('/api/clients', async (req, res) => {
+  try {
+    const clients = await Client.find().sort({ name: 1 }); // optional sort by name
+    res.json(clients);
+  } catch (err) {
+    console.error('Error fetching clients:', err);
+    res.status(500).json({ error: 'Server error while fetching clients' });
   }
 });
 
@@ -3442,6 +3495,101 @@ app.get("/api/notifications", async (req, res) => {
   } catch (error) {
       console.error("❌ Error fetching notifications:", error);
       res.status(500).json({ success: false, message: "Failed to fetch notifications." });
+  }
+});
+
+// Create a new quote
+app.post('/api/quotes', async (req, res) => {
+  try {
+    const newQuote = new Quote(req.body);
+    const savedQuote = await newQuote.save();
+    res.status(201).json(savedQuote);
+  } catch (err) {
+    console.error('Error saving quote:', err);
+    res.status(500).json({ error: 'Failed to save quote' });
+  }
+});
+
+// Get all quotes
+app.get('/api/quotes', async (req, res) => {
+  try {
+    const quotes = await Quote.find().sort({ createdAt: -1 });
+    res.json(quotes);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch quotes' });
+  }
+});
+
+// Get quote by ID
+app.get('/api/quotes/:id', async (req, res) => {
+  try {
+    const quote = await Quote.findById(req.params.id);
+    if (!quote) return res.status(404).json({ error: 'Quote not found' });
+    res.json(quote);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch quote' });
+  }
+});
+
+// Delete a quote by ID
+app.delete('/api/quotes/:id', async (req, res) => {
+  try {
+    const deletedQuote = await Quote.findByIdAndDelete(req.params.id);
+    if (!deletedQuote) {
+      return res.status(404).json({ error: 'Quote not found' });
+    }
+    res.status(200).json({ message: 'Quote deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting quote:', err);
+    res.status(500).json({ error: 'Failed to delete quote' });
+  }
+});
+
+
+// Get all labor cost suggestions
+app.get('/api/labor-costs', async (req, res) => {
+  try {
+    const items = await LaborCost.find().sort({ createdAt: -1 });
+    res.json(items);
+  } catch (err) {
+    console.error('Error fetching labor costs:', err);
+    res.status(500).json({ error: 'Failed to fetch labor costs' });
+  }
+});
+
+// Create a new labor item
+app.post('/api/labor-costs', async (req, res) => {
+  try {
+    const newItem = new LaborCost(req.body);
+    const saved = await newItem.save();
+    res.status(201).json(saved);
+  } catch (err) {
+    console.error('Error saving labor cost:', err);
+    res.status(500).json({ error: 'Failed to save labor cost' });
+  }
+});
+
+// Update a labor item
+app.put('/api/labor-costs/:id', async (req, res) => {
+  try {
+    const updated = await LaborCost.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!updated) return res.status(404).json({ error: 'Labor item not found' });
+    res.json(updated);
+  } catch (err) {
+    console.error('Error updating labor cost:', err);
+    res.status(500).json({ error: 'Failed to update labor cost' });
+  }
+});
+
+// Delete a labor item
+app.delete('/api/labor-costs/:id', async (req, res) => {
+  try {
+    const deleted = await LaborCost.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Labor item not found' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error deleting labor cost:', err);
+    res.status(500).json({ error: 'Failed to delete labor cost' });
   }
 });
 
