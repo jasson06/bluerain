@@ -564,7 +564,9 @@
       <input id="fromAddress" placeholder="Address" />
       <input id="fromEmail" placeholder="Email" />
       <input id="fromPhone" placeholder="Phone Number" />
+      <input id="fromLicense" placeholder="License #" />
     </div>
+    
 
     <div class="section">
       <h3>Quote To</h3>
@@ -760,6 +762,8 @@
       document.getElementById("fromAddress").value = "7 CYPRESS POINT CT";
       document.getElementById("fromEmail").value = "besfllc@gmail.com";
       document.getElementById("fromPhone").value = "7252603319";
+      document.getElementById("fromLicense").value = "RBC-2400049";
+
 
       const today = new Date();
       const yyyyMMdd = today.toISOString().split('T')[0];
@@ -1057,6 +1061,7 @@ document.addEventListener('click', e => {
   const fromAddress = document.getElementById("fromAddress").value;
   const fromEmail = document.getElementById("fromEmail").value;
   const fromPhone = document.getElementById("fromPhone").value;
+  const fromLicense = document.getElementById("fromLicense").value || "RBC-2400049"; //
   const toName = document.getElementById("toName").value;
   const toAddress = document.getElementById("toAddress").value;
   const toEmail = document.getElementById("toEmail").value;
@@ -1089,7 +1094,13 @@ document.addEventListener('click', e => {
     <div style="display: flex; justify-content: space-between;">
       <div>
         <h4>Quote From</h4>
-        <p>${fromName}<br>${fromAddress}<br>${fromEmail}<br>${fromPhone}</p>
+                <p>
+          ${fromName}<br>
+          ${fromAddress}<br>
+          ${fromEmail}<br>
+          ${fromPhone}<br>
+          <strong>License:</strong> ${fromLicense} <!-- ✅ Show license here -->
+        </p>
       </div>
       <div>
         <h4>Quote To</h4>
@@ -1145,11 +1156,13 @@ document.addEventListener('click', e => {
     function saveQuote() {
   const quote = {
     from: {
-      name: document.getElementById('fromName').value,
-      address: document.getElementById('fromAddress').value,
-      email: document.getElementById('fromEmail').value,
-      phone: document.getElementById('fromPhone').value
-    },
+  name: document.getElementById('fromName').value,
+  address: document.getElementById('fromAddress').value,
+  email: document.getElementById('fromEmail').value,
+  phone: document.getElementById('fromPhone').value,
+  license: document.getElementById('fromLicense').value  // ✅ Add this
+},
+
     to: {
       name: document.getElementById('toName').value,
       address: document.getElementById('toAddress').value,
@@ -1272,83 +1285,91 @@ function renderQuoteHistory() {
   }
 }
 async function showQuoteDetail(id) {
-      try {
-        const res = await fetch(`/api/quotes/${id}`);
-        const q = await res.json();
-        const detail = document.getElementById('quoteDetailContent');
-        detail.setAttribute('data-id', q._id);
+  try {
+    const res = await fetch(`/api/quotes/${id}`);
+    const q = await res.json();
+    const detail = document.getElementById('quoteDetailContent');
+    detail.setAttribute('data-id', q._id);
 
-        const lineItems = q.lineItems.map(item => `
-          <tr>
-            <td>${item.name}</td>
-            <td>${item.description}</td>
-            <td>$${item.rate.toFixed(2)}</td>
-            <td>${item.qty}</td>
-            <td>$${(item.rate * item.qty).toFixed(2)}</td>
-          </tr>`).join('');
+    const lineItems = q.lineItems.map(item => `
+      <tr>
+        <td>${item.name}</td>
+        <td>${item.description}</td>
+        <td>$${item.rate.toFixed(2)}</td>
+        <td>${item.qty}</td>
+        <td>$${(item.rate * item.qty).toFixed(2)}</td>
+      </tr>`).join('');
 
-        detail.innerHTML = `
-          <h2 style="color: #007bff;">BESF LLC</h2>
-          <p><strong>Quote #:</strong> ${q.quoteNumber}</p>
-          <p><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</p>
-          <p><strong>Valid till:</strong> ${new Date(q.validTill).toLocaleDateString()}</p>
-          <hr>
+    const licenseNumber = q.from.license || "RBC-2400049"; // ✅ Default fallback
 
-          <div style="display: flex; justify-content: space-between;">
-            <div>
-              <h4>Quote From</h4>
-              <p>${q.from.name}<br>${q.from.address}<br>${q.from.email}<br>${q.from.phone}</p>
-            </div>
-            <div>
-              <h4>Quote To</h4>
-              <p>${q.to.name}<br>${q.to.address}<br>${q.to.email}<br>${q.to.phone}</p>
-            </div>
-          </div>
+    detail.innerHTML = `
+      <h2 style="color: #007bff;">${q.from.name}</h2>
+      <p><strong>Quote #:</strong> ${q.quoteNumber}</p>
+      <p><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</p>
+      <p><strong>Valid till:</strong> ${new Date(q.validTill).toLocaleDateString()}</p>
+      <hr>
 
-          <h3 style="margin-top: 20px;">Line Items</h3>
-          <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr style="background-color: #f0f0f0;">
-                <th>Item</th><th>Description</th><th>Rate</th><th>Qty</th><th>Total</th>
-              </tr>
-            </thead>
-            <tbody>${lineItems}</tbody>
-          </table>
+      <div style="display: flex; justify-content: space-between;">
+        <div>
+          <h4>Quote From</h4>
+          <p>
+            ${q.from.name}<br>
+            ${q.from.address}<br>
+            ${q.from.email}<br>
+            ${q.from.phone}<br>
+            <strong>License:</strong> ${licenseNumber}
+          </p>
+        </div>
+        <div>
+          <h4>Quote To</h4>
+          <p>${q.to.name}<br>${q.to.address}<br>${q.to.email}<br>${q.to.phone}</p>
+        </div>
+      </div>
 
-          <div style="margin-top: 20px; text-align: right;">
-            <p><strong>Subtotal:</strong> $${q.totals.subtotal}</p>
-            <p><strong>Discount:</strong> $${q.totals.discount}</p>
-            <p><strong>Tax:</strong> $${q.totals.tax}</p>
-             <p><strong style="font-size: 18px;">Total:</strong> 
-              <span style="color: #007bff;">$${parseFloat(q.totals.total).toFixed(2)}</span>
-              </p>
-          </div>
+      <h3 style="margin-top: 20px;">Line Items</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background-color: #f0f0f0;">
+            <th>Item</th><th>Description</th><th>Rate</th><th>Qty</th><th>Total</th>
+          </tr>
+        </thead>
+        <tbody>${lineItems}</tbody>
+      </table>
 
-          <div style="margin-top: 30px;">
-            <h3>Notes</h3>
-            <p>${q.notes || 'N/A'}</p>
-          </div>
+      <div style="margin-top: 20px; text-align: right;">
+        <p><strong>Subtotal:</strong> $${parseFloat(q.totals.subtotal).toFixed(2)}</p>
+        <p><strong>Discount:</strong> $${parseFloat(q.totals.discount).toFixed(2)}</p>
+        <p><strong>Tax:</strong> $${parseFloat(q.totals.tax).toFixed(2)}</p>
+        <p><strong style="font-size: 18px;">Total:</strong> 
+          <span style="color: #007bff;">$${parseFloat(q.totals.total).toFixed(2)}</span>
+        </p>
+      </div>
 
+      <div style="margin-top: 30px;">
+        <h3>Notes</h3>
+        <p>${q.notes || 'N/A'}</p>
+      </div>
 
-                    <div style="margin-top: 30px;">
-            <h3>Payment Terms</h3>
-            <p>Payment is due within 15 days of acceptance. Late payments may be subject to additional fees unless otherwise agreed upon in writing.</p>
-          </div>
+      <div style="margin-top: 30px;">
+        <h3>Payment Terms</h3>
+        <p>Payment is due within 15 days of acceptance. Late payments may be subject to additional fees unless otherwise agreed upon in writing.</p>
+      </div>
 
-          <div style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px;">
-            <h3>Agreement</h3>
-            <p>If you accept this quote, please sign and return.</p>
-            <p><strong>Client Name:</strong> ____________________________</p>
-            <p><strong>Signature:</strong> ____________________________</p>
-            <p><strong>Date:</strong> ____________________________</p>
-          </div>
-        `;
+      <div style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px;">
+        <h3>Agreement</h3>
+        <p>If you accept this quote, please sign and return.</p>
+        <p><strong>Client Name:</strong> ____________________________</p>
+        <p><strong>Signature:</strong> ____________________________</p>
+        <p><strong>Date:</strong> ____________________________</p>
+      </div>
+    `;
 
-        document.getElementById('quoteDetailModal').style.display = 'flex';
-      } catch (err) {
-        console.error('Failed to fetch quote details:', err);
-      }
-    }
+    document.getElementById('quoteDetailModal').style.display = 'flex';
+  } catch (err) {
+    console.error('Failed to fetch quote details:', err);
+  }
+}
+
 
     function printQuoteDetail() {
       const detailContent = document.getElementById("quoteDetailContent");
