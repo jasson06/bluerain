@@ -660,7 +660,8 @@ const quoteSchema = new mongoose.Schema({
     name: String,
     address: String,
     email: String,
-    phone: String
+    phone: String,
+    license: { type: String, default: "RBC-2400049" } // ✅ Added license fiel
   },
   to: {
     name: String,
