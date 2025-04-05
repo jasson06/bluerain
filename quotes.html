@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>All Quotes</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f8fafc;
+      padding: 40px;
+      margin: 0;
+      color: #0f172a;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 30px;
+      color: #0ea5e9;
+    }
+
+    .filter-bar {
+      max-width: 1200px;
+      margin: 0 auto 30px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .filter-bar input {
+      padding: 12px 16px;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      flex: 1;
+      min-width: 200px;
+      background: #ffffff;
+      color: #0f172a;
+      font-size: 1rem;
+    }
+
+    .filter-bar {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+    .quote-list {
+      max-width: 1200px;
+      margin: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+      overflow: visible; /* ✅ important fix */
+      position: relative; /* ensures stacking works */
+    }
+
+    .quote-item {
+      background: #ffffff;
+      padding: 24px;
+      border-radius: 16px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+      cursor: pointer;
+      z-index: 1; /* ensures menu appears above it */
+    }
+
+    .quote-item:hover {
+      transform: scale(1.015);
+      box-shadow: 0 0 30px rgba(14, 165, 233, 0.15);
+    }
+
+    .quote-meta {
+      font-size: 1rem;
+      color: #475569;
+    }
+
+    .quote-meta strong {
+      display: block;
+      font-size: 1.2rem;
+      color: #0ea5e9;
+      margin-bottom: 6px;
+    }
+
+ 
+
+
+
+
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      padding: 30px;
+    }
+
+    .modal-content {
+      background: #ffffff;
+      color: #0f172a;
+      padding: 32px;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.1);
+      position: relative;
+      animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+      0% {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 1.6rem;
+      color: #0f172a;
+    }
+
+    .close-modal {
+      font-size: 30px;
+      cursor: pointer;
+      color: #000000;
+    }
+
+    .modal-content input,
+    .modal-content textarea,
+    .modal-content select {
+      width: 100%;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      background-color: #ffffff;
+      color: #0f172a;
+      font-size: 1rem;
+    }
+
+    .modal-content textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .modal-content input:focus,
+    .modal-content textarea:focus {
+      outline: none;
+      border-color: #0ea5e9;
+      box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.3);
+    }
+
+    .modal-content button {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .modal-content button:hover {
+      background: #059669;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+      background-color: #ffffff;
+      color: #0f172a;
+    }
+
+    th, td {
+      padding: 12px;
+      border: 1px solid #e2e8f0;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #0f172a;
+      text-align: left;
+    }
+
+    @media (max-width: 768px) {
+      .filter-bar {
+        position: sticky;
+        top: 0;
+        background: #f8fafc;
+        z-index: 999;
+        padding: 10px;
+      }
+    }
+
+    .menu-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 20px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #0f172a;
+  z-index: 20;
+}
+
+.quote-menu {
+  position: absolute;
+  top: 36px;
+  right: 16px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 6px 0;
+  display: none;
+  flex-direction: column;
+  min-width: 160px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  z-index: 9999; /* ← Increased from 99 */
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+
+.quote-menu button {
+  background: transparent;
+  border: none;
+  color: #0f172a;
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s ease-in-out;
+}
+
+.quote-menu button:hover {
+  background: #f1f5f9;
+}
+
+#addQuoteBtn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    font-size: 28px;
+    background-color: #0ea5e9;
+    color: white;
+    border: none;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: background 0.2s ease;
+    z-index: 10001;
+  }
+  #addQuoteBtn:hover {
+    background-color: #0284c7;
+  }
+
+  .toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0ea5e9;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+  display: none;
+  z-index: 10001;
+}
+
+.status-dropdown {
+  display: inline-block;
+  top: 16px;
+  left: 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 999px;
+  text-transform: uppercase;
+  cursor: pointer;
+  z-index: 10;
+  appearance: none;
+  transition: background 0.2s ease;
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+
+}
+
+/* Color variants */
+.status-draft {
+  background-color: #64748b; /* slate */
+}
+.status-sent {
+  background-color: #f59e0b; /* amber */
+}
+.status-approved {
+  background-color: #10b981; /* green */
+}
+.status-rejected {
+  background-color: #ef4444; /* red */
+}
+
+
+  </style>
+</head>
+<body>
+  <div id="toast" class="toast"></div>
+  <h1>📄 All Quotes</h1>
+  <div class="filter-bar">
+    <input type="text" id="searchName" placeholder="Search by Client Name...">
+    <input type="text" id="searchNumber" placeholder="Search by Quote #...">
+  </div>
+  <div id="quoteContainer" class="quote-list"></div>
+
+  <div id="quoteModal" class="modal">
+    <div class="modal-content">
+      <div id="quoteModalContent"></div>
+    </div>
+  </div>
+
+  <div id="quoteDetailContent" style="display: none;"></div>
+
+  
+  <button id="addQuoteBtn" onclick="location.href='/createquote.html'" title="New Quote">
+    ＋
+  </button>
+
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <script>
+    function formatDateInput(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toISOString().split('T')[0];
+}
+
+// Global event to close all menus when clicking outside
+document.addEventListener('click', (e) => {
+  document.querySelectorAll('.quote-menu').forEach(menu => {
+    if (!menu.contains(e.target) && !e.target.classList.contains('menu-toggle')) {
+      menu.style.display = 'none';
+    }
+  });
+});
+
+
+function showToast(message, duration = 3000) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.style.display = 'block';
+  setTimeout(() => toast.style.display = 'none', duration);
+}
+
+    let allQuotes = [];
+
+    async function fetchQuotes() {
+      try {
+        const res = await fetch('/api/quotes');
+        allQuotes = await res.json();
+        renderQuotes(allQuotes);
+      } catch (err) {
+        console.error('Error loading quotes:', err);
+      }
+    }
+
+    function renderQuotes(quotes) {
+  const container = document.getElementById('quoteContainer');
+  container.innerHTML = quotes.map(q => {
+    const statusClass = {
+      'Draft': 'status-draft',
+      'Sent': 'status-sent',
+      'Approved': 'status-approved',
+      'Rejected': 'status-rejected'
+    }[q.status] || 'status-draft';
+
+    return `
+      <div class="quote-item" onclick="viewQuote('${q._id}')">
+        <div class="quote-meta">
+          <strong>${q.quoteNumber}</strong>
+          ${q.to?.name || 'Unknown'}<br>
+          <small>${new Date(q.date).toLocaleDateString()}</small>
+        </div>
+
+        <select class="status-dropdown ${statusClass}" onchange="updateQuoteStatus(event, '${q._id}', this.value)" onclick="event.stopPropagation()">
+          ${['Draft', 'Sent', 'Approved', 'Rejected'].map(status => `
+            <option value="${status}" ${q.status === status ? 'selected' : ''}>${status}</option>
+          `).join('')}
+        </select>
+
+        <div class="menu-toggle" onclick="toggleMenu(event, '${q._id}')">⋮</div>
+        <div class="quote-menu" id="menu-${q._id}">
+          <button onclick="viewQuote('${q._id}')">View</button>
+          <button onclick="printQuote('${q._id}')">Print</button>
+          <button onclick="downloadQuoteAsPDF('${q._id}')">Download PDF</button>
+          <button onclick="shareQuote('${q._id}')">Share</button>
+          <button onclick="editQuote('${q._id}')">Edit</button>
+          <button onclick="deleteQuote('${q._id}')">Delete</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+
+async function updateQuoteStatus(event, id, newStatus) {
+  event.stopPropagation(); // Prevent modal opening
+
+  try {
+    // Fetch the full quote first
+    const res = await fetch(`/api/quotes/${id}`);
+    const quote = await res.json();
+
+    if (!quote || !quote._id) {
+      showToast('Failed to load quote data.');
+      return;
+    }
+
+    // Update status in quote object
+    quote.status = newStatus;
+
+    // Send full PUT update with status
+    const updateRes = await fetch(`/api/quotes/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(quote)
+    });
+
+    if (updateRes.ok) {
+      showToast(`Status updated to "${newStatus}"`);
+      fetchQuotes(); // refresh UI
+    } else {
+      showToast('Failed to update status.');
+    }
+  } catch (err) {
+    console.error('Status update failed:', err);
+    showToast('Error updating status.');
+  }
+}
+
+
+
+
+function toggleMenu(event, id) {
+  event.stopPropagation();
+
+  const menu = document.getElementById(`menu-${id}`);
+  const card = menu.closest('.quote-item');
+
+  // Close all menus and reset z-index for all items
+  document.querySelectorAll('.quote-menu').forEach(m => m.style.display = 'none');
+  document.querySelectorAll('.quote-item').forEach(item => item.style.zIndex = '1');
+
+  // Toggle current menu and raise its quote-item
+  const isVisible = menu.style.display === 'flex';
+  menu.style.display = isVisible ? 'none' : 'flex';
+  card.style.zIndex = isVisible ? '1' : '100'; // lift above others
+}
+
+
+
+
+
+    function filterQuotes() {
+      const name = document.getElementById('searchName').value.toLowerCase();
+      const number = document.getElementById('searchNumber').value.toLowerCase();
+      const filtered = allQuotes.filter(q =>
+        (q.to?.name?.toLowerCase().includes(name)) &&
+        (q.quoteNumber?.toLowerCase().includes(number))
+      );
+      renderQuotes(filtered);
+      
+    }
+
+    
+    document.getElementById('searchName').addEventListener('input', filterQuotes);
+    document.getElementById('searchNumber').addEventListener('input', filterQuotes);
+
+    function openModal(contentHTML) {
+      document.getElementById('quoteModalContent').innerHTML = contentHTML;
+      document.getElementById('quoteModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('quoteModal').style.display = 'none';
+    }
+
+    async function viewQuote(id) {
+      try {
+        const res = await fetch(`/api/quotes/${id}`);
+        const q = await res.json();
+
+        const items = q.lineItems.map(item => `
+          <tr>
+            <td>${item.name}</td>
+            <td>${item.description}</td>
+            <td>$${item.rate.toFixed(2)}</td>
+            <td>${item.qty}</td>
+            <td>$${(item.rate * item.qty).toFixed(2)}</td>
+          </tr>`).join('');
+
+        const html = `
+          <div class="modal-header">
+            <h3>Quote Details</h3>
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+          </div>
+          <p><strong>Quote #:</strong> ${q.quoteNumber}</p>
+          <p><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</p>
+          <p><strong>Valid till:</strong> ${new Date(q.validTill).toLocaleDateString()}</p>
+          <hr>
+          <h4>Quote From</h4>
+          <p>${q.from.name}<br>${q.from.address}<br>${q.from.email}<br>${q.from.phone}<br><strong>License #:</strong> ${q.from.license || 'RBC-2400049'}</p>
+          <h4>Quote To</h4>
+          <p>${q.to.name}<br>${q.to.address}<br>${q.to.email}<br>${q.to.phone}</p>
+          <h4>Line Items</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th><th>Description</th><th>Rate</th><th>Qty</th><th>Total</th>
+              </tr>
+            </thead>
+            <tbody>${items}</tbody>
+          </table>
+          <div style="text-align: right; margin-top: 10px;">
+            <p><strong>Subtotal:</strong> $${q.totals.subtotal.toFixed(2)}</p>
+            <p><strong>Discount:</strong> $${q.totals.discount.toFixed(2)}</p>
+            <p><strong>Tax:</strong> $${q.totals.tax.toFixed(2)}</p>
+            <p><strong>Total:</strong> $${q.totals.total.toFixed(2)}</p>
+          </div>
+          <div style="margin-top: 20px;">
+            <strong>Notes:</strong>
+            <p>${q.notes || 'None'}</p>
+          </div>
+        `;
+
+        openModal(html);
+      } catch (err) {
+        console.error('Error fetching quote:', err);
+        showToast('Failed to load quote details.');
+      }
+    }
+
+    async function editQuote(id) {
+  try {
+    const res = await fetch(`/api/quotes/${id}`);
+    const q = await res.json();
+
+    const lineItemsHTML = q.lineItems.map((item, idx) => `
+      <div style="margin-bottom: 10px;">
+        <input type="text" value="${item.name}" placeholder="Item name" id="itemName-${idx}" style="width: 30%;" />
+        <input type="text" value="${item.description}" placeholder="Description" id="itemDesc-${idx}" style="width: 30%;" />
+        <input type="number" value="${item.rate}" placeholder="Rate" id="itemRate-${idx}" style="width: 15%;" />
+        <input type="number" value="${item.qty}" placeholder="Qty" id="itemQty-${idx}" style="width: 15%;" />
+      </div>
+    `).join('');
+
+    const html = `
+      <div class="modal-header">
+        <h3>Edit Quote #${q.quoteNumber}</h3>
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+      </div>
+      <div>
+        <label>Quote Number:</label>
+        <input type="text" id="quoteNumber" value="${q.quoteNumber}" style="width: 100%;" />
+
+        <h4>From (Your Info)</h4>
+        <input type="text" id="fromName" value="${q.from?.name || ''}" placeholder="Name" style="width: 100%;" />
+        <input type="text" id="fromAddress" value="${q.from?.address || ''}" placeholder="Address" style="width: 100%;" />
+        <input type="email" id="fromEmail" value="${q.from?.email || ''}" placeholder="Email" style="width: 100%;" />
+        <input type="tel" id="fromPhone" value="${q.from?.phone || ''}" placeholder="Phone" style="width: 100%;" />
+        <input type="text" id="fromLicense" value="${q.from?.license || ''}" placeholder="License #" style="width: 100%;" />
+
+        <h4>To (Client Info)</h4>
+        <input type="text" id="clientName" value="${q.to?.name || ''}" placeholder="Name" style="width: 100%;" />
+        <input type="text" id="clientAddress" value="${q.to?.address || ''}" placeholder="Address" style="width: 100%;" />
+        <input type="email" id="clientEmail" value="${q.to?.email || ''}" placeholder="Email" style="width: 100%;" />
+        <input type="tel" id="clientPhone" value="${q.to?.phone || ''}" placeholder="Phone" style="width: 100%;" />
+
+        <label>Date:</label>
+       <input type="date" id="quoteDate" value="${formatDateInput(q.date)}" />
+        <label>Valid Till:</label>
+       <input type="date" id="validTill" value="${formatDateInput(q.validTill)}" />
+
+        <h4>Line Items</h4>
+        ${lineItemsHTML}
+
+        <label>Notes:</label>
+        <textarea id="quoteNotes" style="width: 100%; height: 80px;">${q.notes || ''}</textarea>
+
+        <button style="margin-top:20px;" onclick="saveEditedQuote('${id}', ${q.lineItems.length})">Save</button>
+      </div>
+    `;
+
+    openModal(html);
+  } catch (err) {
+    console.error('Failed to load quote for editing', err);
+    showToast('Error loading quote.');
+  }
+}
+
+
+async function saveEditedQuote(id, itemCount) {
+  const updatedQuote = {
+    quoteNumber: document.getElementById('quoteNumber').value,
+    from: {
+      name: document.getElementById('fromName').value,
+      address: document.getElementById('fromAddress').value,
+      email: document.getElementById('fromEmail').value,
+      phone: document.getElementById('fromPhone').value,
+      license: document.getElementById('fromLicense').value
+    },
+    to: {
+      name: document.getElementById('clientName').value,
+      address: document.getElementById('clientAddress').value,
+      email: document.getElementById('clientEmail').value,
+      phone: document.getElementById('clientPhone').value
+    },
+    date: document.getElementById('quoteDate').value,
+    validTill: document.getElementById('validTill').value,
+    notes: document.getElementById('quoteNotes').value,
+    lineItems: []
+  };
+
+  for (let i = 0; i < itemCount; i++) {
+    updatedQuote.lineItems.push({
+      name: document.getElementById(`itemName-${i}`).value,
+      description: document.getElementById(`itemDesc-${i}`).value,
+      rate: parseFloat(document.getElementById(`itemRate-${i}`).value),
+      qty: parseInt(document.getElementById(`itemQty-${i}`).value)
+    });
+  }
+
+  try {
+    const res = await fetch(`/api/quotes/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedQuote)
+    });
+
+    if (res.ok) {
+      showToast('Quote updated successfully.');
+      closeModal();
+      fetchQuotes();
+    } else {
+      showToast('Failed to update quote.');
+    }
+  } catch (err) {
+    console.error('Save error:', err);
+  }
+}
+
+
+async function downloadQuoteAsPDF(id) {
+  try {
+    const res = await fetch(`/api/quotes/${id}`);
+    const q = await res.json();
+
+    const items = q.lineItems.map(item => `
+      <tr>
+        <td>${item.name}</td>
+        <td>${item.description}</td>
+        <td>$${item.rate.toFixed(2)}</td>
+        <td>${item.qty}</td>
+        <td>$${(item.rate * item.qty).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    const htmlContent = `
+      <div style="font-family: 'Segoe UI', sans-serif; padding: 40px; color: #000; max-width: 800px; margin: auto;">
+        <div style="color: #0ea5e9; font-size: 20px; font-weight: bold;">BESF LLC</div>
+        <div style="margin-top: 10px;"><strong>Quote #:</strong> ${q.quoteNumber}</div>
+        <div><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</div>
+        <div><strong>Valid till:</strong> ${new Date(q.validTill).toLocaleDateString()}</div>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+          <div style="width: 48%;">
+            <h4>Quote From</h4>
+            <p>${q.from.name}<br>${q.from.address}<br>${q.from.email}<br>${q.from.phone}<br><strong>License:</strong> ${q.from.license || 'RBC-2400049'}</p>
+          </div>
+          <div style="width: 48%;">
+            <h4>Quote To</h4>
+            <p>${q.to.name}<br>${q.to.address}<br>${q.to.email}<br>${q.to.phone}</p>
+          </div>
+        </div>
+
+<h4 style="margin-top: 30px;">Line Items</h4>
+<table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; background: #ffffff; color: #000;">
+  <thead>
+    <tr>
+      <th style="padding: 8px; border: 1px solid #ddd; background: #ffffff; color: #000; font-weight: bold;">Item</th>
+      <th style="padding: 8px; border: 1px solid #ddd; background: #ffffff; color: #000; font-weight: bold;">Description</th>
+      <th style="padding: 8px; border: 1px solid #ddd; background: #ffffff; color: #000; font-weight: bold;">Rate</th>
+      <th style="padding: 8px; border: 1px solid #ddd; background: #ffffff; color: #000; font-weight: bold;">Qty</th>
+      <th style="padding: 8px; border: 1px solid #ddd; background: #ffffff; color: #000; font-weight: bold;">Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${q.lineItems.map(item => `
+      <tr style="background: #ffffff; color: #000;">
+        <td style="padding: 8px; border: 1px solid #ddd;">${item.name}</td>
+        <td style="padding: 8px; border: 1px solid #ddd;">${item.description}</td>
+        <td style="padding: 8px; border: 1px solid #ddd;">$${item.rate.toFixed(2)}</td>
+        <td style="padding: 8px; border: 1px solid #ddd;">${item.qty}</td>
+        <td style="padding: 8px; border: 1px solid #ddd;">$${(item.rate * item.qty).toFixed(2)}</td>
+      </tr>
+    `).join('')}
+  </tbody>
+</table>
+
+
+
+
+        <div style="margin-top: 20px; text-align: right;">
+          <p>Subtotal: $${q.totals.subtotal.toFixed(2)}</p>
+          <p>Discount: $${q.totals.discount.toFixed(2)}</p>
+          <p>Tax: $${q.totals.tax.toFixed(2)}</p>
+          <p><strong style="color: #0ea5e9;">Total: $${q.totals.total.toFixed(2)}</strong></p>
+        </div>
+
+        <div style="margin-top: 30px;">
+          <h4>Notes</h4>
+          <p>${q.notes || 'N/A'}</p>
+        </div>
+
+        <div style="margin-top: 30px;">
+          <h4>Payment Terms</h4>
+          <p>Payment is due within 15 days of acceptance. Late payments may be subject to additional fees unless otherwise agreed upon in writing.</p>
+        </div>
+
+        <hr style="margin: 40px 0;">
+
+        <div>
+          <h4>Agreement</h4>
+          <p>If you accept this quote, please sign and return.</p>
+          <div style="display: flex; gap: 50px; margin-top: 20px;">
+            <p style="border-top: 1px solid #333; width: 200px; text-align: center; padding-top: 6px;">Client Name</p>
+            <p style="border-top: 1px solid #333; width: 200px; text-align: center; padding-top: 6px;">Signature</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Create a temporary div to render HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlContent;
+    document.body.appendChild(tempDiv);
+
+    const opt = {
+      margin:       0,
+      filename:     `Quote-${q.quoteNumber}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2 },
+      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    await html2pdf().set(opt).from(tempDiv).save();
+
+    tempDiv.remove();
+  } catch (err) {
+    console.error('PDF download error:', err);
+    showToast('Failed to download PDF.');
+  }
+}
+
+
+
+async function printQuote(id) {
+  try {
+    const res = await fetch(`/api/quotes/${id}`);
+    const q = await res.json();
+
+    const items = q.lineItems.map(item => `
+      <tr>
+        <td>${item.name}</td>
+        <td>${item.description}</td>
+        <td>$${item.rate.toFixed(2)}</td>
+        <td>${item.qty}</td>
+        <td>$${(item.rate * item.qty).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    const html = `
+      <html>
+      <head>
+        <title>Print Quote</title>
+        <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            margin: 40px;
+            color: #000;
+            font-size: 14px;
+          }
+
+          h1, h2, h3 {
+            margin: 0;
+            padding: 0;
+          }
+
+          .company {
+            color: #0ea5e9;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+          }
+
+          .info-grid {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            margin-bottom: 20px;
+          }
+
+          .info-section {
+            width: 48%;
+          }
+
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+          }
+
+          thead {
+            background: #f3f4f6;
+          }
+
+          th, td {
+            padding: 8px;
+            text-align: left;
+          }
+
+          tr:not(:last-child) td {
+            border-bottom: 1px solid #ddd;
+          }
+
+          .totals {
+            margin-top: 20px;
+            text-align: right;
+          }
+
+          .totals p {
+            margin: 4px 0;
+          }
+
+          .totals strong {
+            color: #0ea5e9;
+          }
+
+          .section {
+            margin-top: 40px;
+          }
+
+          .signature {
+            margin-top: 60px;
+          }
+
+          .signature-line {
+            display: flex;
+            gap: 50px;
+            margin-top: 20px;
+          }
+
+          .signature-line p {
+            border-top: 1px solid #333;
+            width: 200px;
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 4px;
+          }
+
+          hr {
+            margin: 30px 0;
+            border: none;
+            border-top: 1px solid #ccc;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="company">BESF LLC</div>
+
+        <div class="info-grid">
+          <div class="info-section">
+            <p><strong>Quote #:</strong> ${q.quoteNumber}</p>
+            <p><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</p>
+            <p><strong>Valid till:</strong> ${new Date(q.validTill).toLocaleDateString()}</p>
+          </div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-section">
+            <h4>Quote From</h4>
+            <p>${q.from.name}</p>
+            <p>${q.from.address}</p>
+            <p>${q.from.email}</p>
+            <p>${q.from.phone}</p>
+            <p><strong>License:</strong> ${q.from.license || 'RBC-2400049'}</p>
+          </div>
+          <div class="info-section">
+            <h4>Quote To</h4>
+            <p>${q.to.name}</p>
+            <p>${q.to.address}</p>
+            <p>${q.to.email}</p>
+            <p>${q.to.phone}</p>
+          </div>
+        </div>
+
+        <h4>Line Items</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th><th>Description</th><th>Rate</th><th>Qty</th><th>Total</th>
+            </tr>
+          </thead>
+          <tbody>${items}</tbody>
+        </table>
+
+        <div class="totals">
+          <p>Subtotal: $${q.totals.subtotal.toFixed(2)}</p>
+          <p>Discount: $${q.totals.discount.toFixed(2)}</p>
+          <p>Tax: $${q.totals.tax.toFixed(2)}</p>
+          <p><strong>Total: $${q.totals.total.toFixed(2)}</strong></p>
+        </div>
+
+        <div class="section">
+          <h4>Notes</h4>
+          <p>${q.notes || 'N/A'}</p>
+        </div>
+
+        <div class="section">
+          <h4>Payment Terms</h4>
+          <p>Payment is due within 15 days of acceptance. Late payments may be subject to additional fees unless otherwise agreed upon in writing.</p>
+        </div>
+
+        <hr>
+
+        <div class="section">
+          <h4>Agreement</h4>
+          <p>If you accept this quote, please sign and return.</p>
+
+          <div class="signature-line">
+            <p>Client Name</p>
+            <p>Signature</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  } catch (err) {
+    console.error('Print error:', err);
+    showToast('Unable to print quote.');
+  }
+}
+
+
+
+
+
+
+async function shareQuote(id) {
+  try {
+    const res = await fetch(`/api/quotes/${id}`);
+    const q = await res.json();
+
+    const items = q.lineItems.map(item => `
+      <tr>
+        <td>${item.name}</td>
+        <td>${item.description}</td>
+        <td>$${item.rate.toFixed(2)}</td>
+        <td>${item.qty}</td>
+        <td>$${(item.rate * item.qty).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    const html = `
+      <html>
+      <head>
+        <title>Quote #${q.quoteNumber}</title>
+        <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            margin: 40px;
+            color: #000;
+            font-size: 14px;
+          }
+
+          h1, h2, h3 {
+            margin: 0;
+            padding: 0;
+          }
+
+          .company {
+            color: #0ea5e9;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+          }
+
+          .info-grid {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            margin-bottom: 20px;
+          }
+
+          .info-section {
+            width: 48%;
+          }
+
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+          }
+
+          thead {
+            background: #f3f4f6;
+          }
+
+          th, td {
+            padding: 8px;
+            text-align: left;
+          }
+
+          tr:not(:last-child) td {
+            border-bottom: 1px solid #ddd;
+          }
+
+          .totals {
+            margin-top: 20px;
+            text-align: right;
+          }
+
+          .totals p {
+            margin: 4px 0;
+          }
+
+          .totals strong {
+            color: #0ea5e9;
+          }
+
+          .section {
+            margin-top: 40px;
+          }
+
+          .signature {
+            margin-top: 60px;
+          }
+
+          .signature-line {
+            display: flex;
+            gap: 50px;
+            margin-top: 20px;
+          }
+
+          .signature-line p {
+            border-top: 1px solid #333;
+            width: 200px;
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 4px;
+          }
+
+          hr {
+            margin: 30px 0;
+            border: none;
+            border-top: 1px solid #ccc;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="company">BESF LLC</div>
+
+        <div class="info-grid">
+          <div class="info-section">
+            <p><strong>Quote #:</strong> ${q.quoteNumber}</p>
+            <p><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</p>
+            <p><strong>Valid till:</strong> ${new Date(q.validTill).toLocaleDateString()}</p>
+          </div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-section">
+            <h4>Quote From</h4>
+            <p>${q.from.name}</p>
+            <p>${q.from.address}</p>
+            <p>${q.from.email}</p>
+            <p>${q.from.phone}</p>
+            <p><strong>License:</strong> ${q.from.license || 'RBC-2400049'}</p>
+          </div>
+          <div class="info-section">
+            <h4>Quote To</h4>
+            <p>${q.to.name}</p>
+            <p>${q.to.address}</p>
+            <p>${q.to.email}</p>
+            <p>${q.to.phone}</p>
+          </div>
+        </div>
+
+        <h4>Line Items</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th><th>Description</th><th>Rate</th><th>Qty</th><th>Total</th>
+            </tr>
+          </thead>
+          <tbody>${items}</tbody>
+        </table>
+
+        <div class="totals">
+          <p>Subtotal: $${q.totals.subtotal.toFixed(2)}</p>
+          <p>Discount: $${q.totals.discount.toFixed(2)}</p>
+          <p>Tax: $${q.totals.tax.toFixed(2)}</p>
+          <p><strong>Total: $${q.totals.total.toFixed(2)}</strong></p>
+        </div>
+
+        <div class="section">
+          <h4>Notes</h4>
+          <p>${q.notes || 'N/A'}</p>
+        </div>
+
+        <div class="section">
+          <h4>Payment Terms</h4>
+          <p>Payment is due within 15 days of acceptance. Late payments may be subject to additional fees unless otherwise agreed upon in writing.</p>
+        </div>
+
+        <hr>
+
+        <div class="section">
+          <h4>Agreement</h4>
+          <p>If you accept this quote, please sign and return.</p>
+
+          <div class="signature-line">
+            <p>Client Name</p>
+            <p>Signature</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const file = new File([blob], `quote-${q.quoteNumber}.html`, { type: 'text/html' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        title: `Quote #${q.quoteNumber}`,
+        text: 'Sharing a quote with you.',
+        files: [file]
+      });
+    } else {
+      showToast('Sharing is not supported on this device.');
+    }
+  } catch (err) {
+    console.error('Error sharing quote:', err);
+    showToast('Failed to share quote.');
+  }
+}
+
+
+
+
+
+
+
+    async function deleteQuote(id) {
+      if (!confirm('Are you sure you want to delete this quote?')) return;
+      try {
+        const res = await fetch(`/api/quotes/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast('Quote deleted successfully.');
+          fetchQuotes();
+        } else {
+          showToast('Failed to delete quote.');
+        }
+      } catch (err) {
+        console.error('Error deleting quote:', err);
+      }
+    }
+
+    fetchQuotes();
+  </script>
+</body>
+</html>
