@@ -259,20 +259,35 @@
 }
 
 #addQuoteBtn {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      font-size: 26px;
-      background-color: #0ea5e9;
-      color: white;
-      border: none;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      cursor: pointer;
-      transition: background 0.2s ease;
-      z-index: 10001;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  font-size: 28px;
+  background-color: #0ea5e9;
+  color: white;
+  border: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: background 0.2s ease;
+  z-index: 10001;
+  
+  /* Fix for iOS safe area */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@supports (padding: max(0px)) {
+  #addQuoteBtn {
+    bottom: max(20px, env(safe-area-inset-bottom));
+    right: max(20px, env(safe-area-inset-right));
+  }
+}
+
+
+    #addQuoteBtn:hover {
+      background-color: #0284c7;
     }
 
     #addQuoteBtn:hover {
