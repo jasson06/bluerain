@@ -661,7 +661,7 @@ const quoteSchema = new mongoose.Schema({
     address: String,
     email: String,
     phone: String,
-    license: { type: String, default: "RBC-2400049" } // ✅ Added license fiel
+    license: { type: String, default: "RBC-2400049" } // ✅ Added license field
   },
   to: {
     name: String,
@@ -684,6 +684,11 @@ const quoteSchema = new mongoose.Schema({
     discount: Number,
     tax: Number,
     total: Number
+  },
+  status: {
+    type: String,
+    enum: ['Draft', 'Sent', 'Approved'],
+    default: 'Draft'
   }
 }, { timestamps: true });
 
@@ -3547,6 +3552,63 @@ app.delete('/api/quotes/:id', async (req, res) => {
 });
 
 
+app.put('/api/quotes/:id', async (req, res) => {
+  try {
+    const quoteId = req.params.id;
+    const {
+      to,
+      from,
+      quoteNumber,
+      date,
+      validTill,
+      notes,
+      lineItems,
+      status // ✅ Accept status
+    } = req.body;
+
+    if (!to?.name || !Array.isArray(lineItems) || lineItems.length === 0) {
+      return res.status(400).json({ message: 'Missing required fields: client name or line items' });
+    }
+
+    // Calculate totals
+    const subtotal = lineItems.reduce((acc, item) => acc + (item.rate * item.qty), 0);
+    const discount = 0;
+    const tax = subtotal * 0.1;
+    const total = subtotal - discount + tax;
+
+    // Build update object
+    const updateFields = {
+      to,
+      from,
+      quoteNumber,
+      date,
+      validTill,
+      notes,
+      lineItems,
+      totals: { subtotal, discount, tax, total }
+    };
+
+    // Include status only if provided
+    if (status) updateFields.status = status;
+
+    const updatedQuote = await Quote.findByIdAndUpdate(
+      quoteId,
+      updateFields,
+      { new: true }
+    );
+
+    if (!updatedQuote) {
+      return res.status(404).json({ message: 'Quote not found' });
+    }
+
+    res.json(updatedQuote);
+  } catch (err) {
+    console.error('Error updating quote:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+
 // Get all labor cost suggestions
 app.get('/api/labor-costs', async (req, res) => {
   try {
@@ -3593,6 +3655,8 @@ app.delete('/api/labor-costs/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete labor cost' });
   }
 });
+
+
 
 
 // Debugging route to check server deployment status
