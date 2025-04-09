@@ -514,44 +514,63 @@
 }
 
 .completion-banner {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   text-align: center;
   background: linear-gradient(to right, #007bff, #00c6ff);
   color: white;
-  padding: 12px;
-  border-radius: 12px;
-  margin-bottom: 20px;
+  padding: 10px;
+  border-radius: 10px;
+  margin: 15px auto;
   font-weight: 600;
+  max-width: 95%;
   box-shadow: 0 4px 10px rgba(0,0,0,0.08);
 }
 
 .dashboard-stats {
   display: flex;
-  justify-content: center;
-  gap: 30px;
-  margin-bottom: 30px;
   flex-wrap: wrap;
+  justify-content: center;
+  gap: 15px;
+  margin: 20px auto;
+  max-width: 95%;
 }
 
 .stat-card {
   background: #fff;
-  padding: 15px 20px;
+  padding: 10px 16px;
   border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
   text-align: center;
-  min-width: 120px;
-  font-size: 1rem;
+  flex: 1 1 100px;
+  max-width: 150px;
+  min-width: 100px;
 }
 
 .stat-card strong {
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
 }
 
 .stat-card span {
-  font-size: 0.9rem;
-  color: #666;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+
+/* Responsive Chart Containers */
+#statusChart,
+#timelineChart {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 500px;
+  margin: 0 auto 30px;
+}
+
+/* Responsive Chart Canvas */
+canvas {
+  width: 100% !important;
+  height: auto !important;
 }
 
 
