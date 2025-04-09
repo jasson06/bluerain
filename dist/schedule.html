@@ -506,6 +506,55 @@
       width: 100% !important;
       height: 300px !important;
     }
+
+    #dashboardView canvas {
+  background-color: #fff;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.completion-banner {
+  font-size: 1.2rem;
+  text-align: center;
+  background: linear-gradient(to right, #007bff, #00c6ff);
+  color: white;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.dashboard-stats {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.stat-card {
+  background: #fff;
+  padding: 15px 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  text-align: center;
+  min-width: 120px;
+  font-size: 1rem;
+}
+
+.stat-card strong {
+  font-size: 1.4rem;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.stat-card span {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+
     
     /* Modal Styles */
     #modal {
@@ -1351,79 +1400,139 @@ if (index < tasks.length - 1) {
       
       /* --------------------- Dashboard Rendering --------------------- */
       function renderDashboardView(lineItems) {
-        const tasks = getAllTasks(lineItems);
-        // Calculate Projected Completion Date from the maximum endDate.
-        const endTimes = tasks.filter(t => t.endDate).map(t => new Date(t.endDate).getTime());
-        let projectedCompletionDate = endTimes.length > 0 ? new Date(Math.max(...endTimes)) : null;
-        let completionDiv = document.getElementById("projectedCompletionDate");
-        if (!completionDiv) {
-          completionDiv = document.createElement("div");
-          completionDiv.id = "projectedCompletionDate";
-          completionDiv.style.textAlign = "center";
-          completionDiv.style.fontSize = "1.2rem";
-          completionDiv.style.marginBottom = "15px";
-          document.getElementById("dashboardView").insertAdjacentElement('afterbegin', completionDiv);
+  const tasks = getAllTasks(lineItems);
+
+  // -------------------- Projected Completion Date --------------------
+  const endTimes = tasks.filter(t => t.endDate).map(t => new Date(t.endDate).getTime());
+  const projectedCompletionDate = endTimes.length ? new Date(Math.max(...endTimes)) : null;
+
+  let completionDiv = document.getElementById("projectedCompletionDate");
+  if (!completionDiv) {
+    completionDiv = document.createElement("div");
+    completionDiv.id = "projectedCompletionDate";
+    completionDiv.className = "completion-banner";
+    document.getElementById("dashboardView").insertAdjacentElement("afterbegin", completionDiv);
+  }
+
+  completionDiv.innerHTML = `
+    📅 <strong>Projected Completion:</strong> 
+    ${projectedCompletionDate ? projectedCompletionDate.toLocaleDateString() : "N/A"}
+  `;
+
+  // -------------------- Extra Stats: % Complete + Overdue --------------------
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(t => t.status === "completed").length;
+  const overdueTasks = tasks.filter(t => t.endDate && new Date(t.endDate) < new Date() && t.status !== "completed").length;
+  const percentComplete = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  let statsDiv = document.getElementById("dashboardStats");
+  if (!statsDiv) {
+    statsDiv = document.createElement("div");
+    statsDiv.id = "dashboardStats";
+    statsDiv.className = "dashboard-stats";
+    completionDiv.insertAdjacentElement("afterend", statsDiv);
+  }
+
+  statsDiv.innerHTML = `
+    <div class="stat-card">
+      ✅ <strong>${percentComplete}%</strong><br><span>Complete</span>
+    </div>
+    <div class="stat-card">
+      ⏰ <strong>${overdueTasks}</strong><br><span>Overdue Tasks</span>
+    </div>
+    <div class="stat-card">
+      📋 <strong>${totalTasks}</strong><br><span>Total Tasks</span>
+    </div>
+  `;
+
+  // -------------------- Pie Chart: Task Status --------------------
+  const statusCounts = { "in-progress": 0, "completed": 0 };
+  tasks.forEach(task => {
+    if (statusCounts[task.status] !== undefined) {
+      statusCounts[task.status]++;
+    }
+  });
+
+  const ctxStatus = document.getElementById("statusChart").getContext("2d");
+  if (window.statusChartInstance) window.statusChartInstance.destroy();
+  window.statusChartInstance = new Chart(ctxStatus, {
+    type: "doughnut",
+    data: {
+      labels: ["In Progress", "Completed"],
+      datasets: [{
+        data: Object.values(statusCounts),
+        backgroundColor: ["#f0ad4e", "#28a745"],
+        borderColor: ["#e0a63f", "#218838"],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      animation: {
+        animateScale: true,
+        animateRotate: true
+      },
+      plugins: {
+        legend: { position: "bottom" },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.label}: ${ctx.parsed}`
+          }
         }
-        if (projectedCompletionDate) {
-          completionDiv.textContent = "Projected Completion Date: " + projectedCompletionDate.toLocaleDateString();
-        } else {
-          completionDiv.textContent = "Projected Completion Date: N/A";
+      },
+      cutout: "65%"
+    }
+  });
+
+  // -------------------- Bar Chart: Tasks per Month --------------------
+  const monthCounts = {};
+  tasks.forEach(task => {
+    if (task.startDate) {
+      const month = new Date(task.startDate).toLocaleString("default", { month: "short", year: "numeric" });
+      monthCounts[month] = (monthCounts[month] || 0) + 1;
+    }
+  });
+
+  const ctxTimeline = document.getElementById("timelineChart").getContext("2d");
+  if (window.timelineChartInstance) window.timelineChartInstance.destroy();
+  window.timelineChartInstance = new Chart(ctxTimeline, {
+    type: "bar",
+    data: {
+      labels: Object.keys(monthCounts),
+      datasets: [{
+        label: "Tasks per Month",
+        data: Object.values(monthCounts),
+        backgroundColor: "#007bff",
+        borderColor: "#0056b3",
+        borderWidth: 1,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      animation: {
+        duration: 1000,
+        easing: "easeOutQuart"
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `Tasks: ${ctx.parsed.y}`
+          }
         }
-        
-        // Pie Chart: Status Distribution
-        const statusCounts = { "in-progress": 0, "completed": 0 };
-        tasks.forEach(task => {
-          if (statusCounts[task.status] !== undefined) {
-            statusCounts[task.status]++;
-          }
-        });
-        const ctxStatus = document.getElementById("statusChart").getContext("2d");
-        if(window.statusChartInstance) window.statusChartInstance.destroy();
-        window.statusChartInstance = new Chart(ctxStatus, {
-          type: "pie",
-          data: {
-            labels: Object.keys(statusCounts),
-            datasets: [{
-              data: Object.values(statusCounts),
-              backgroundColor: ["#f8d7da", "#d4edda"],
-              borderColor: ["#dc3545", "#28a745"],
-              borderWidth: 1
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: { legend: { position: "bottom" } }
-          }
-        });
-        // Bar Chart: Tasks per Month (based on startDate)
-        const monthCounts = {};
-        tasks.forEach(task => {
-          if (task.startDate) {
-            const month = new Date(task.startDate).toLocaleString("default", { month: "short", year: "numeric" });
-            monthCounts[month] = (monthCounts[month] || 0) + 1;
-          }
-        });
-        const ctxTimeline = document.getElementById("timelineChart").getContext("2d");
-        if(window.timelineChartInstance) window.timelineChartInstance.destroy();
-        window.timelineChartInstance = new Chart(ctxTimeline, {
-          type: "bar",
-          data: {
-            labels: Object.keys(monthCounts),
-            datasets: [{
-              label: "Tasks per Month",
-              data: Object.values(monthCounts),
-              backgroundColor: "#007bff",
-              borderColor: "#0056b3",
-              borderWidth: 1
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true } }
-          }
-        });
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { stepSize: 1 }
+        }
       }
+    }
+  });
+}
+
+
       
       /* --------------------- View Handlers --------------------- */
       async function loadView(view) {
