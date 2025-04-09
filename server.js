@@ -3043,17 +3043,21 @@ app.get('/api/projects/current', async (req, res) => {
 app.get('/api/estimates/:projectId/line-items', async (req, res) => {
   try {
     const { projectId } = req.params;
-    // Validate ObjectId
+
     if (!mongoose.Types.ObjectId.isValid(projectId)) {
       return res.status(400).json({ message: 'Invalid project ID' });
     }
-    const estimate = await Estimate.findOne({ projectId }).populate('lineItems.items.assignedTo');
-    if (!estimate) {
-      return res.status(404).json({ message: 'Estimate not found' });
+
+    const estimates = await Estimate.find({ projectId }).populate('lineItems.items.assignedTo');
+
+    if (!estimates || estimates.length === 0) {
+      return res.status(404).json({ message: 'No estimates found for this project' });
     }
-    res.json(estimate.lineItems);
+
+    // ✅ Return the full array of estimates (each includes title and lineItems)
+    res.json(estimates);
   } catch (error) {
-    console.error('Error fetching line items:', error);
+    console.error('Error fetching estimates:', error);
     res.status(500).json({ message: 'Server error', error });
   }
 });
