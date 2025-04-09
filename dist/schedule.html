@@ -499,7 +499,29 @@
   z-index: 10;
 }
 
+/* Mobile Adjustments */
+@media screen and (max-width: 480px) {
+  .gantt-task-label {
+    font-size: 0.75rem;
+    width: 100px;
+  }
+  .gantt-date-label {
+    font-size: 0.65rem;
+    padding: 4px;
+  }
+  .gantt-bar-container {
+    height: 50px;
+  }
+  .gantt-task-bar {
+    height: 18px;
+  }
+  .gantt-chart-container {
+  width: 40%;
+  max-width: 950px;
+ 
 
+}
+}
     
     /* Dashboard Canvas Sizing */
     #statusChart, #timelineChart {
