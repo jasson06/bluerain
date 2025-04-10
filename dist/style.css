@@ -34,7 +34,7 @@ button, input, textarea {
   position: fixed;
   top: 0;
   left: 0;
-  width: 130px;
+  width: 158px;
   height: 100vh;
   background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
   color: white;
@@ -90,7 +90,7 @@ button, input, textarea {
 
 /* Main Content */
 .main-content {
-  margin-left: 80px;
+  margin-left: 100px;
   padding: 20px;
   width: 100%;
   transition: margin-left 0.3s ease;
@@ -996,7 +996,7 @@ input, textarea {
   border-radius: 50%;
   text-transform: uppercase;
   margin-top: -80px;
-  margin-left: -8px;
+  margin-left: 0px;
 }
 
 .header-logo h1 {
