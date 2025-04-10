@@ -194,7 +194,7 @@ p {
   list-style: none;
   padding: 0;
   margin: 0;
-  max-height: calc(6 * 50px); /* Display 6 projects at a time, assuming 50px height per item */
+  max-height: calc(11 * 54px); /* Display 6 projects at a time, assuming 50px height per item */
   overflow-y: auto; /* Enable scrolling for the project list */
 }
 
