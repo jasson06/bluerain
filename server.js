@@ -554,7 +554,7 @@ const projectSchema = new mongoose.Schema({
 const invitationSchema = new mongoose.Schema({
   email: { type: String, required: true },
   role: { type: String, required: true, enum: ["vendor", "project-manager"] },
-  projectId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "Project" },
+  projectId: { type: mongoose.Schema.Types.ObjectId, required: false, ref: "Project" },
   token: { type: String, required: true },
   invitedAt: { type: Date, default: Date.now },
   status: { type: String, default: "pending", enum: ["pending", "accepted", "declined"] }, // Tracks invitation state
@@ -1097,9 +1097,33 @@ app.get('/estimate-view.html', (req, res) => {
 // Add Vendor
 app.post('/api/add-vendor', async (req, res) => {
   try {
-    const newVendor = new Vendor(req.body);
+    const { name, email, phone } = req.body;
+
+    if (!email || !name) {
+      return res.status(400).json({ success: false, message: "Name and email are required." });
+    }
+
+    const existing = await Vendor.findOne({ email });
+    if (existing) {
+      return res.status(400).json({ success: false, message: "Vendor already exists with this email." });
+    }
+
+    const newVendor = new Vendor({ name, email, phone });
     await newVendor.save();
-    res.status(201).json({ success: true, message: 'Vendor added successfully', vendor: newVendor });
+
+    // Create an invite token (no project)
+    const token = crypto.randomBytes(32).toString("hex");
+    const invite = new Invitation({ email, role: "vendor", token });
+    await invite.save();
+
+    // Send activation email
+    await sendNewUserInviteEmail(email, "vendor", null, token);
+
+    res.status(201).json({
+      success: true,
+      message: 'Vendor added and invited successfully',
+      vendor: newVendor
+    });
   } catch (error) {
     console.error('Error adding vendor:', error.message);
     res.status(500).json({ success: false, error: error.message });
@@ -1142,16 +1166,26 @@ app.get('/api/vendors/:id', async (req, res) => {
 
 
 // API Endpoint to delete a vendor by ID
-app.delete('/api/vendors/:id', (req, res) => {
-  const vendorIndex = vendors.findIndex((v) => v.id === req.params.id);
+app.delete("/api/vendors/:id", async (req, res) => {
+  const { id } = req.params;
 
-  if (vendorIndex === -1) {
-    return res.status(404).json({ error: 'Vendor not found' });
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ success: false, message: "Invalid vendor ID." });
   }
 
-  vendors.splice(vendorIndex, 1);
-  console.log(`Vendor with ID ${req.params.id} deleted`); // Optional log for debugging
-  res.status(204).send();
+  try {
+    const deletedVendor = await Vendor.findByIdAndDelete(id);
+
+    if (!deletedVendor) {
+      return res.status(404).json({ success: false, message: "Vendor not found." });
+    }
+
+    console.log(`✅ Vendor with ID ${id} deleted`);
+    res.status(200).json({ success: true, message: "Vendor deleted successfully." });
+  } catch (error) {
+    console.error("❌ Error deleting vendor:", error.message);
+    res.status(500).json({ success: false, message: "Failed to delete vendor." });
+  }
 });
 
 
@@ -2697,59 +2731,60 @@ app.post("/api/invite", async (req, res) => {
   try {
     const { emails, role, projectId } = req.body;
 
-    if (!Array.isArray(emails) || emails.length === 0 || !role || !projectId) {
-      return res.status(400).json({ success: false, message: "Emails, role, and projectId are required." });
+    if (!Array.isArray(emails) || emails.length === 0 || !role) {
+      return res.status(400).json({
+        success: false,
+        message: "Emails and role are required."
+      });
     }
 
     const invitedUsers = [];
 
     for (const email of emails) {
       let existingUser =
-        role === "vendor" ? await Vendor.findOne({ email }) : await Manager.findOne({ email });
+        role === "vendor"
+          ? await Vendor.findOne({ email })
+          : await Manager.findOne({ email });
 
       if (existingUser) {
-        // Ensure assignedProjects exists before using .some()
-        const isAlreadyAssigned = existingUser.assignedProjects?.some(
-          (p) => p.projectId.toString() === projectId
-        );
+        if (projectId && role === "vendor") {
+          const isAlreadyAssigned = existingUser.assignedProjects?.some(
+            (p) => p.projectId.toString() === projectId
+          );
 
-        if (!isAlreadyAssigned) {
-          // Only add project assignment if the role is 'vendor'
-          if (role === "vendor") {
-            if (!existingUser.assignedProjects) {
-              existingUser.assignedProjects = []; // Ensure it's an array before pushing
-            }
+          if (!isAlreadyAssigned) {
+            existingUser.assignedProjects = existingUser.assignedProjects || [];
             existingUser.assignedProjects.push({ projectId, status: "new" });
             await existingUser.save();
           }
         }
 
         invitedUsers.push({ email, status: "existing-user" });
-
-        // Send email without token, just a login link
-        await sendExistingUserEmail(email, role, projectId);
+        await sendExistingUserEmail(email, role, projectId); // projectId may be null
       } else {
-        let token = crypto.randomBytes(32).toString("hex");
-
+        const token = crypto.randomBytes(32).toString("hex");
         const invitation = new Invitation({ email, role, projectId, token });
         await invitation.save();
 
         invitedUsers.push({ email, status: "invited" });
-
-        await sendNewUserInviteEmail(email, role, projectId, token);
+        await sendNewUserInviteEmail(email, role, projectId, token); // projectId may be null
       }
     }
 
     res.status(200).json({
       success: true,
       message: "Invitations processed successfully.",
-      invitedUsers,
+      invitedUsers
     });
   } catch (error) {
     console.error("Error inviting team members:", error);
-    res.status(500).json({ success: false, message: "Failed to invite team members." });
+    res.status(500).json({
+      success: false,
+      message: "Failed to invite team members."
+    });
   }
 });
+
 
 // 📩 Send Email for Existing Users
 async function sendExistingUserEmail(email, role, projectId) {
@@ -2763,53 +2798,56 @@ async function sendExistingUserEmail(email, role, projectId) {
     to: email,
     subject: "Project Assignment Notification",
     html: `
-      <h3>New Project Assigned</h3>
+      <h3>You've Been Invited</h3>
       <p>Hello,</p>
-      <p>You have been assigned as a <strong>${role}</strong> for project <strong>${projectId}</strong>.</p>
-      <p>You can sign in to view your projects:</p>
+      <p>You have been invited as a <strong>${role}</strong>${
+        projectId ? ` for project <strong>${projectId}</strong>` : ""
+      }.</p>
+      <p>You can sign in to access your dashboard:</p>
       <a href="${signInURL}" style="padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px;">Sign In</a>
-      <p>Best Regards,</p>
-      <p><strong>BESF Team</strong></p>
-    `,
+      <p>Best Regards,<br/><strong>BESF Team</strong></p>
+    `
   };
 
   try {
-    let info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Notification email sent to existing user ${email}! Message ID: ${info.messageId}`);
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Notification email sent to ${email} (existing user). ID: ${info.messageId}`);
     return true;
   } catch (error) {
-    console.error(`❌ Error sending email to existing user:`, error);
+    console.error(`❌ Error sending existing user email:`, error);
     return false;
   }
 }
+
 
 // 📩 Send Invitation Email for New Users
 async function sendNewUserInviteEmail(email, role, projectId, token) {
   const activationURL = `${process.env.BASE_URL}/sign-inpage.html?email=${encodeURIComponent(
     email
-  )}&projectId=${encodeURIComponent(projectId)}&role=${encodeURIComponent(
-    role
-  )}&token=${encodeURIComponent(token)}`;
+  )}&role=${encodeURIComponent(role)}&token=${encodeURIComponent(token)}${
+    projectId ? `&projectId=${encodeURIComponent(projectId)}` : ""
+  }`;
 
   const mailOptions = {
     from: `"BESF Team" <${process.env.EMAIL_USER}>`,
     to: email,
-    subject: "Project Invitation",
+    subject: "You're Invited to Join BESF",
     html: `
-      <h3>You're Invited to a Project</h3>
+      <h3>Welcome to BESF</h3>
       <p>Hello,</p>
-      <p>You have been invited as a <strong>${role}</strong> for project <strong>${projectId}</strong>.</p>
-      <p>Click below to activate your account:</p>
+      <p>You have been invited as a <strong>${role}</strong>${
+        projectId ? ` for project <strong>${projectId}</strong>` : ""
+      }.</p>
+      <p>Click the button below to activate your account:</p>
       <a href="${activationURL}" style="padding: 10px 20px; background: #28a745; color: white; text-decoration: none; border-radius: 5px;">Activate Account</a>
-      <p>If you were not expecting this, please ignore this email.</p>
-      <p>Best Regards,</p>
-      <p><strong>BESF Team</strong></p>
-    `,
+      <p>If you didn’t request this, please ignore the email.</p>
+      <p>Best Regards,<br/><strong>BESF Team</strong></p>
+    `
   };
 
   try {
-    let info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Invitation email sent to new user ${email}! Message ID: ${info.messageId}`);
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Invitation email sent to new user ${email}. ID: ${info.messageId}`);
     return true;
   } catch (error) {
     console.error(`❌ Error sending invitation email:`, error);
@@ -2830,6 +2868,8 @@ app.get('/sign-inpage.html', (req, res) => {
 
 
 
+// POST /api/invite/accept
+
 app.post("/api/invite/accept", async (req, res) => {
   console.log("Request body:", req.body);
 
@@ -2848,34 +2888,70 @@ app.post("/api/invite/accept", async (req, res) => {
       return res.status(404).json({ success: false, message: "Invalid or expired token." });
     }
 
-    // Validate projectId
-    const projectExists = await Project.findById(invitation.projectId);
-    if (!projectExists) {
-      console.log("Invalid project ID:", invitation.projectId);
-      return res.status(400).json({ success: false, message: "Invalid project ID." });
-    }
-
-    // Hash the password only once
+    // Hash the password once
     const hashedPassword = await bcrypt.hash(password, 10);
-    console.log("Hashed Password During Invite Acceptance:", hashedPassword);
+    console.log("Hashed password:", hashedPassword);
 
-    // Save user based on role
+    const userEmail = invitation.email.toLowerCase();
+
+    // Check if user already exists
     if (invitation.role === "vendor") {
-      const newVendor = new Vendor({
-        name,
-        email: invitation.email.toLowerCase(),
-        password: hashedPassword, // Ensure this is the correct hash
-        assignedProjects: [{ projectId: invitation.projectId, status: "new" }],
-      });
-      await newVendor.save();
+      let existingVendor = await Vendor.findOne({ email: userEmail });
+
+      if (existingVendor) {
+        // Update existing vendor's password and name if missing
+        if (!existingVendor.password) {
+          existingVendor.password = hashedPassword;
+          existingVendor.name = name;
+        }
+
+        // Add assigned project only if it exists and is not already assigned
+        if (invitation.projectId) {
+          const alreadyAssigned = existingVendor.assignedProjects?.some(
+            p => p.projectId.toString() === invitation.projectId.toString()
+          );
+          if (!alreadyAssigned) {
+            existingVendor.assignedProjects.push({ projectId: invitation.projectId, status: "new" });
+          }
+        }
+
+        await existingVendor.save();
+      } else {
+        // New vendor
+        const newVendor = new Vendor({
+          name,
+          email: userEmail,
+          password: hashedPassword,
+          assignedProjects: invitation.projectId ? [{ projectId: invitation.projectId, status: "new" }] : []
+        });
+        await newVendor.save();
+      }
     } else if (invitation.role === "project-manager") {
-      const newManager = new Manager({
-        name,
-        email: invitation.email.toLowerCase(),
-        password: hashedPassword, // Ensure this is the correct hash
-        assignedProjects: [{ projectId: invitation.projectId }],
-      });
-      await newManager.save();
+      let existingManager = await Manager.findOne({ email: userEmail });
+
+      if (existingManager) {
+        if (!existingManager.password) {
+          existingManager.password = hashedPassword;
+          existingManager.name = name;
+        }
+        if (invitation.projectId) {
+          const alreadyAssigned = existingManager.assignedProjects?.some(
+            p => p.projectId.toString() === invitation.projectId.toString()
+          );
+          if (!alreadyAssigned) {
+            existingManager.assignedProjects.push({ projectId: invitation.projectId });
+          }
+        }
+        await existingManager.save();
+      } else {
+        const newManager = new Manager({
+          name,
+          email: userEmail,
+          password: hashedPassword,
+          assignedProjects: invitation.projectId ? [{ projectId: invitation.projectId }] : []
+        });
+        await newManager.save();
+      }
     } else {
       console.log("Invalid role:", invitation.role);
       return res.status(400).json({ success: false, message: "Invalid role specified." });
