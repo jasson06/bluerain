@@ -2010,10 +2010,15 @@ async function fetchVendors() {
       row.innerHTML = `
         <td>${vendor.name}</td>
         <td>${vendor.email}</td>
-        <td>${vendor.phone}</td>
+        <td>${vendor.phone || "—"}</td>
         <td>
-          <button onclick="editVendor('${vendor._id}', '${vendor.name}', '${vendor.email}', '${vendor.phone}')">Edit</button>
-          <button onclick="removeVendor('${vendor._id}')">Remove</button>
+          <div class="dropdown">
+            <button class="dropbtn">⋮</button>
+            <div class="dropdown-content">
+              <a href="#" onclick="editVendor('${vendor._id}', '${vendor.name}', '${vendor.email}', '${vendor.phone || ''}')">Edit</a>
+              <a href="#" onclick="removeVendor('${vendor._id}')">Remove</a>
+            </div>
+          </div>
         </td>
       `;
       vendorList.appendChild(row);
