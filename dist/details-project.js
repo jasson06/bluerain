@@ -1418,28 +1418,54 @@ function enableDragAndDrop() {
 
 // Dynamically load projects into the sidebar
 async function loadSidebarProjects() {
-  const sidebarProjectsList = document.getElementById('sidebar-projects-list');
-  sidebarProjectsList.innerHTML = '<li>Loading Projects...</li>';
+  const upcomingList = document.getElementById('upcoming-list');
+  const inProgressList = document.getElementById('inprogress-list');
+  const onMarketList = document.getElementById('onmarket-list');
+  const completedList = document.getElementById('completed-list');
+
+  // Clear all lists with loading
+  const loadingMarkup = '<li>Loading...</li>';
+  upcomingList.innerHTML = loadingMarkup;
+  inProgressList.innerHTML = loadingMarkup;
+  onMarketList.innerHTML = loadingMarkup;
+  completedList.innerHTML = loadingMarkup;
 
   try {
-    const response = await fetch('/api/projects');
-    if (!response.ok) throw new Error('Failed to fetch projects');
+    const [upcomingRes, onMarketRes, completedRes, inProgressRes] = await Promise.all([
+      fetch('/api/upcoming-projects'),
+      fetch('/api/on-market-projects'),
+      fetch('/api/completed-projects'),
+      fetch('/api/projects') // ✅ In-progress
+    ]);
 
-    const data = await response.json();
-    sidebarProjectsList.innerHTML = '';
+    const upcoming = (await upcomingRes.json()).projects || [];
+    const onMarket = (await onMarketRes.json()).projects || [];
+    const completed = (await completedRes.json()).projects || [];
+    const inProgress = (await inProgressRes.json()).projects || [];
 
-    if (data.projects.length === 0) {
-      sidebarProjectsList.innerHTML = '<li>No projects found</li>';
-    } else {
-      data.projects.forEach((project) => {
-        const listItem = document.createElement('li');
-        listItem.innerHTML = `<a href="/details/projects/${project._id}">${project.name}</a>`;
-        sidebarProjectsList.appendChild(listItem);
+    const renderList = (listElement, projects) => {
+      listElement.innerHTML = '';
+      if (!projects.length) {
+        listElement.innerHTML = '<li style="color: #aaa;">None</li>';
+        return;
+      }
+      projects.forEach(project => {
+        const li = document.createElement('li');
+        li.innerHTML = `<a href="/details/projects/${project._id}">${project.name}</a>`;
+        listElement.appendChild(li);
       });
-    }
+    };
+
+    renderList(upcomingList, upcoming);
+    renderList(onMarketList, onMarket);
+    renderList(completedList, completed);
+    renderList(inProgressList, inProgress);
+
   } catch (error) {
     console.error('Error loading projects:', error);
-    sidebarProjectsList.innerHTML = '<li>Error loading projects</li>';
+    upcomingList.innerHTML = onMarketList.innerHTML =
+    inProgressList.innerHTML = completedList.innerHTML =
+      '<li>Error loading</li>';
   }
 }
 
