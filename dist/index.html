@@ -37,6 +37,12 @@
           </div>
         </li>
         <li><a href="quotes.html"><i class="fas fa-list-alt"></i> Quotes</a></li>
+        <li>
+          <a href="#" onclick="openSubcontractorsModal()">
+            <i class="fas fa-users-cog"></i> Subcontractors
+          </a>
+        </li>
+        
         <li><a href="#"><i class="fas fa-folder-open"></i> File and Photos</a></li>
         <li><a href="#"><i class="fas fa-calendar-alt"></i> Schedule</a></li>
         <li><a href="#"><i class="fas fa-tasks"></i> Tasks</a></li>
@@ -102,6 +108,28 @@
       <p>Loading updates...</p>
   </div>
 </div>   
+
+      <!-- Subcontractors Modal -->
+<div id="subcontractorsModal" class="modal">
+  <div class="modal-content">
+    <span class="close" id="closeSubModal">&times;</span>
+    <h2>Manage Subcontractors</h2>
+
+    <!-- Add Vendor Form -->
+    <form id="addVendorForm">
+      <input type="text" id="vendorName" placeholder="Name" required />
+      <input type="email" id="vendorEmail" placeholder="Email" />
+      <input type="tel" id="vendorPhone" placeholder="Phone" />
+      <button type="submit">Add Vendor</button>
+    </form>
+
+    <!-- Vendor List -->
+    <ul id="vendorList" class="vendor-list"></ul>
+
+    <!-- Vendor Details View -->
+    <div id="vendorDetails" class="vendor-details" style="display: none;"></div>
+  </div>
+</div>
   
 
   <!-- Script -->
