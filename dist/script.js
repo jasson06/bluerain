@@ -857,7 +857,130 @@ setInterval(() => {
       initMap();
       updateProjectCounts();
 });
- 
+
+
+// Subcontractor modal elements
+const subModal = document.getElementById("subcontractorsModal");
+const closeSubModal = document.getElementById("closeSubModal");
+const addVendorForm = document.getElementById("addVendorForm");
+const vendorList = document.getElementById("vendorList");
+
+// ✅ NEW: Detail display section
+const vendorDetails = document.getElementById("vendorDetails");
+
+// Open modal and load vendors
+function openSubcontractorsModal() {
+  subModal.style.display = "block";
+  fetchVendors();
+}
+
+// Close modal logic
+closeSubModal.onclick = () => subModal.style.display = "none";
+window.onclick = (e) => { if (e.target === subModal) subModal.style.display = "none"; };
+
+// Fetch vendors and render the list
+async function fetchVendors() {
+  try {
+    const res = await fetch('/api/vendors');
+    const vendors = await res.json();
+    vendorList.innerHTML = '';
+    if (vendorDetails) vendorDetails.style.display = 'none';
+
+    vendors.forEach(vendor => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span style="cursor: pointer;" onclick="showVendorDetails(${JSON.stringify(vendor).replace(/"/g, '&quot;')})">
+          ${vendor.name}
+        </span>
+        <span>
+          <button onclick="editVendor('${vendor._id}', '${vendor.name}', '${vendor.email}', '${vendor.phone}')">✏️</button>
+          <button onclick="deleteVendor('${vendor._id}')">🗑️</button>
+        </span>
+      `;
+      vendorList.appendChild(li);
+    });
+  } catch (err) {
+    console.error("Error fetching vendors:", err);
+  }
+}
+
+// Handle form submission to add vendor
+addVendorForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const vendor = {
+    name: document.getElementById("vendorName").value,
+    email: document.getElementById("vendorEmail").value,
+    phone: document.getElementById("vendorPhone").value
+  };
+
+  try {
+    // Step 1: Add the vendor
+    const addRes = await fetch('/api/add-vendor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(vendor)
+    });
+
+    const addedVendor = await addRes.json();
+
+    // Step 2: Send invite (without projectId)
+    if (addedVendor.vendor && addedVendor.vendor.email) {
+      await fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          emails: [addedVendor.vendor.email],
+          role: "vendor",         // 👈 Make sure your backend handles "vendor" role
+          projectId: null         // No project attached to this invite
+        })
+      });
+
+      console.log("✅ Invite sent to new vendor");
+    }
+
+    addVendorForm.reset();
+    fetchVendors();
+  } catch (error) {
+    console.error("❌ Error adding vendor or sending invite:", error);
+    alert("Failed to add vendor or send invite.");
+  }
+});
+
+
+// Delete vendor by ID
+async function deleteVendor(id) {
+  await fetch(`/api/vendors/${id}`, { method: 'DELETE' });
+  fetchVendors();
+}
+
+// Edit vendor info
+async function editVendor(id, name, email, phone) {
+  const newName = prompt("Update name:", name);
+  const newEmail = prompt("Update email:", email);
+  const newPhone = prompt("Update phone:", phone);
+  if (newName) {
+    await fetch(`/api/vendors/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newName, email: newEmail, phone: newPhone })
+    });
+    fetchVendors();
+  }
+}
+
+// ✅ NEW: Show vendor details in the modal
+function showVendorDetails(vendor) {
+  if (!vendorDetails) return;
+  vendorDetails.style.display = "block";
+  vendorDetails.innerHTML = `
+    <h3>${vendor.name}</h3>
+    <p><strong>Email:</strong> ${vendor.email || "N/A"}</p>
+    <p><strong>Phone:</strong> ${vendor.phone || "N/A"}</p>
+
+  `;
+}
+
  
 
 
