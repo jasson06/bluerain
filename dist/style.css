@@ -1263,3 +1263,43 @@ input, textarea {
   margin-bottom: 10px;
 }
 
+
+.vendor-menu-toggle {
+  cursor: pointer;
+  padding: 4px 10px;
+  font-size: 18px;
+  user-select: none;
+}
+
+.vendor-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 25px;
+  display: none;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 999;
+  min-width: 120px;
+}
+
+.vendor-dropdown-menu button {
+  background: transparent;
+  border: none;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  color: #0f172a; /* ← makes text black */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vendor-dropdown-menu button:hover {
+  background: #e6f0fa;
+}
+
