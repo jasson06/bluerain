@@ -859,6 +859,25 @@ setInterval(() => {
 });
 
 
+function signInAsVendor(vendorId) {
+  if (!vendorId) {
+    alert("Vendor ID missing.");
+    return;
+  }
+
+  fetch(`/api/vendors/login-direct/${vendorId}`)
+    .then(res => res.json())
+    .then(data => {
+      if (!data.vendorId) throw new Error("Invalid response from server.");
+      localStorage.setItem("vendorId", data.vendorId);
+      window.location.href = "/Subcontractor%20page.html";
+    })
+    .catch(err => {
+      console.error("Sign-in error:", err);
+      alert("Unable to sign in as this vendor.");
+    });
+}
+
 // Subcontractor modal elements
 const subModal = document.getElementById("subcontractorsModal");
 const closeSubModal = document.getElementById("closeSubModal");
@@ -888,15 +907,21 @@ async function fetchVendors() {
 
     vendors.forEach(vendor => {
       const li = document.createElement('li');
+      li.style.position = 'relative'; // to position dropdown
+    
       li.innerHTML = `
         <span style="cursor: pointer;" onclick="showVendorDetails(${JSON.stringify(vendor).replace(/"/g, '&quot;')})">
           ${vendor.name}
         </span>
-        <span>
-          <button onclick="editVendor('${vendor._id}', '${vendor.name}', '${vendor.email}', '${vendor.phone}')">✏️</button>
-          <button onclick="deleteVendor('${vendor._id}')">🗑️</button>
-        </span>
+        <span class="vendor-menu-toggle" onclick="toggleVendorMenu(event, '${vendor._id}')">⋮</span>
+        <div class="vendor-dropdown-menu" id="vendor-menu-${vendor._id}">
+          <button onclick="event.stopPropagation(); editVendor('${vendor._id}', '${vendor.name}', '${vendor.email}', '${vendor.phone}')">✏️ Edit</button>
+          <button onclick="event.stopPropagation(); deleteVendor('${vendor._id}')">🗑️ Delete</button>
+          <button onclick="event.stopPropagation(); signInAsVendor('${vendor._id}')">🔐 Sign In</button>
+
+        </div>
       `;
+    
       vendorList.appendChild(li);
     });
   } catch (err) {
@@ -946,6 +971,24 @@ addVendorForm.addEventListener('submit', async (e) => {
     alert("Failed to add vendor or send invite.");
   }
 });
+
+
+function toggleVendorMenu(event, id) {
+  event.stopPropagation();
+  document.querySelectorAll('.vendor-dropdown-menu').forEach(menu => {
+    if (menu.id !== `vendor-menu-${id}`) menu.style.display = 'none';
+  });
+
+  const menu = document.getElementById(`vendor-menu-${id}`);
+  menu.style.display = (menu.style.display === 'flex') ? 'none' : 'flex';
+}
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.vendor-dropdown-menu').forEach(menu => {
+    menu.style.display = 'none';
+  });
+});
+
 
 
 // Delete vendor by ID
