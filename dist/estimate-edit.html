@@ -7,7 +7,7 @@
 
  
   
-  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="./estimate-edit.js" defer></script>
   <style>
     /* Global Styles */
@@ -393,28 +393,13 @@
 
     /* Line Items Section */
     #estimate-section h2 {
+      
       font-size: 1.5rem;
       color: #333;
       margin-bottom: 20px;
     }
 
-    .add-line-item-button {
-      display: inline-block;
-      margin-bottom: 15px;
-      padding: 10px 20px;
-      background: #007bff;
-      color: white;
-      font-size: 1rem;
-      font-weight: bold;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
 
-    .add-line-item-button:hover {
-      background: #0056b3;
-    }
 
    /* Line Items Cards Layout */
 #line-items-cards {
@@ -510,44 +495,7 @@
   font-size: 1rem;
 }
 
-/* Category Header Styling */
-.category-header {
-  background-color: #f0f4f8;
-  padding: 10px 15px;
-  border-radius: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
 
-.category-header .category-title {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #333;
-  flex-grow: 1;
-  margin-right: 15px;
-}
-
-.category-header button {
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 30px;
-  height: 30px;
-  font-size: 1.2rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.2s ease;
-}
-
-.category-header button:hover {
-  background: #0056b3;
-}
 
 
 /* Assign to Status Styling */
@@ -573,6 +521,7 @@
   background: #cfe2f3; /* Subtle hover for better interaction */
   color: #084298; /* Darker blue on hover */
 }
+
 
 
 /* Assign to Section Styling */
@@ -756,6 +705,29 @@ button:disabled {
 
 
 
+/* Category Header Styling */
+.category-header {
+  background-color: #f0f4f8;
+  padding: 10px 15px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 5px rgba(3, 73, 249, 0.1);
+}
+
+.category-header .category-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #333;
+  flex-grow: 1;
+  margin-right: 15px;
+}
+
+
+
+
 /* CATEGORY HEADER CONTAINER */
 .category-header .category-title {
   font-size: 1.1rem;
@@ -861,10 +833,14 @@ button:disabled {
   background-color: #007bff;
   opacity: 0.15;
 }
-    
+
+
+
+
 
 /* Add Line Item Button */
-.add-line-item-button , .add-category-header-button {
+.add-line-item-button , .add-category-header-button , .export-estimate-excel-button {
+  
   background: linear-gradient(145deg, #1f98f4, #01397e);
   padding: 10px 18px;
   border-radius: 10px;
@@ -876,12 +852,11 @@ button:disabled {
   cursor: pointer;
 }
 
-.add-line-item-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-}
 
-.add-category-header-button:hover {
+
+.add-category-header-button:hover , 
+.export-estimate-excel-button ,
+.add-line-item-button:hover{
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
@@ -1070,7 +1045,9 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); /* focus ring */
   outline: none;
 }
-    
+
+
+
 </style> 
 </head>
 <body>
@@ -1109,6 +1086,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 
     <section id="estimate-section">
       <h2>Line Items</h2>
+      <button  class="export-estimate-excel-button"id="export-estimate-excel">📤 Export to Excel</button>
       <button class="add-line-item-button" id="add-line-item">+ Add Line Item</button>
       <button class="add-category-header-button" id="add-category-header">+ Add Room</button>
     
