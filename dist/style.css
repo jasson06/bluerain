@@ -41,7 +41,18 @@ button, input, textarea {
   transition: transform 0.3s ease;
   z-index: 1000;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  overflow-y: auto; /* Enables vertical scrolling */
 }
+
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
 
 .sidebar .logo {
   text-align: center;
@@ -88,6 +99,13 @@ button, input, textarea {
   margin: 10px;
 }
 
+
+.sidebar .logo {
+  position: sticky;
+  top: 0;
+  background-color: #0f4c75; /* match sidebar color */
+  z-index: 10;
+}
 /* Main Content */
 .main-content {
   margin-left: 100px;
