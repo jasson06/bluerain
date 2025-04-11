@@ -1171,7 +1171,53 @@ function updatePage() {
       console.error("Error loading vendors:", error);
     }
   }
+
+
+   async function exportEstimateToExcel() {
+    try {
+      if (!estimateId) {
+        alert("Please save the estimate before exporting.");
+        return;
+      }
   
+      const response = await fetch(`/api/estimates/${estimateId}`);
+      if (!response.ok) throw new Error("Failed to fetch estimate.");
+      const { estimate } = await response.json();
+  
+      // Flatten estimate line items
+      const rows = [];
+      estimate.lineItems.forEach(category => {
+        category.items.forEach(item => {
+          rows.push({
+            Category: category.category,
+            Name: item.name,
+            Description: item.description,
+            Quantity: item.quantity,
+            UnitPrice: item.unitPrice,
+            Total: item.quantity * item.unitPrice,
+            Status: item.status || "N/A",
+            AssignedTo: item.assignedTo?.name || "Unassigned"
+          });
+        });
+      });
+  
+      // Create a worksheet
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+  
+      // Create a workbook
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Estimate");
+  
+      // Generate Excel file
+      const fileName = `${estimate.title?.replace(/\s+/g, "_") || "estimate"}_${new Date().toISOString().split("T")[0]}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+      
+      console.log("✅ Estimate exported to Excel");
+    } catch (error) {
+      console.error("❌ Error exporting to Excel:", error);
+      alert("Failed to export estimate to Excel.");
+    }
+  }
 
   // Get Vendor Initials
   function getVendorInitials(assignedTo) {
@@ -1195,6 +1241,7 @@ function updatePage() {
   
 
   // Add Event Listeners
+  document.getElementById("export-estimate-excel").addEventListener("click", exportEstimateToExcel);
   document.getElementById("add-line-item").addEventListener("click", () => addLineItemCard());
   document.getElementById("add-category-header").addEventListener("click", () => {
     const categoryName = prompt("Enter Room/Area Name:");
