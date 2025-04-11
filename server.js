@@ -3737,6 +3737,18 @@ app.delete('/api/labor-costs/:id', async (req, res) => {
 });
 
 
+app.get('/api/vendors/login-direct/:id', async (req, res) => {
+  try {
+    const vendor = await Vendor.findById(req.params.id);
+    if (!vendor) return res.status(404).json({ message: "Vendor not found" });
+
+    // Optional: set session/token here
+
+    res.json({ vendorId: vendor._id });
+  } catch (err) {
+    res.status(500).json({ message: "Internal error" });
+  }
+});
 
 
 // Debugging route to check server deployment status
