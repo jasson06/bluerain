@@ -708,6 +708,25 @@ td {
 }
 
 
+    
+.item-description {
+  word-wrap: break-word;
+  white-space: normal;
+  font-size: 14px;
+  font-weight: normal;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin: 10px 0;
+}
+.item-description ul {
+  padding-left: 20px;
+  margin: 0;
+}
+.item-description li {
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
 
  </style>
 </head>
@@ -1329,6 +1348,20 @@ async function deletePhoto(itemId, photoUrl, type) {
 }
 
 
+     function formatDescription(desc) {
+  if (!desc) return "N/A";
+
+  const tasks = desc.split(/\s*\d+\.\s*\/\s*/).filter(t => t.trim() !== "");
+
+  return `
+    <ul>
+      ${tasks.map(task => `<li>${task.trim()}</li>`).join("")}
+    </ul>
+  `;
+}
+
+     
+
 // ✅ Fetch & Render Assigned Items with Photo Upload & Slideshow
 function displayAssignedItems(items) {
     const container = document.getElementById("line-items-list");
@@ -1349,7 +1382,7 @@ function displayAssignedItems(items) {
                  ${item.status || "In Progress"}
                 </span> 
                  </h6>
-            <h6>${item.description || "N/A"}</h6>
+            <div class="item-description">${formatDescription(item.description)}</div>
             <td>Qty: ${item.quantity || "0"}       <h4>  Unit Price: $${(item.unitPrice || 0).toFixed(2)}</h4></td>
            
 
