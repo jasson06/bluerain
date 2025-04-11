@@ -357,7 +357,8 @@
 
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  
   <script>
     function formatDateInput(dateStr) {
   if (!dateStr) return '';
@@ -424,6 +425,7 @@ function showToast(message, duration = 3000) {
 <button onclick="event.stopPropagation(); printQuote('${q._id}')">Print</button>
 <button onclick="event.stopPropagation(); downloadQuoteAsPDF('${q._id}')">Download PDF</button>
 <button onclick="event.stopPropagation(); shareQuote('${q._id}')">Share</button>
+<button onclick="event.stopPropagation(); exportQuoteToExcel('${q._id}')">Export to Excel</button>
 <button onclick="event.stopPropagation(); editQuote('${q._id}')">Edit</button>
 <button onclick="event.stopPropagation(); deleteQuote('${q._id}')">Delete</button>
 
@@ -1215,6 +1217,41 @@ async function shareQuote(id) {
     }
 
     fetchQuotes();
+
+    async function exportQuoteToExcel(id) {
+  try {
+    const res = await fetch(`/api/quotes/${id}`);
+    const q = await res.json();
+
+    if (!q || !q._id || !q.lineItems || q.lineItems.length === 0) {
+      showToast('No line items to export.');
+      return;
+    }
+
+    // Prepare flattened line items
+    const rows = q.lineItems.map(item => ({
+      "Category": item.category || "",     // Assumes item.category exists
+      "Name": item.name || "",
+      "Description": item.description || "",
+      "Quantity": item.qty || 0,
+      "Unit Price": item.rate || 0
+    }));
+
+    // Convert to Excel sheet
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+
+    // Create workbook and download
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Line Items");
+
+    const fileName = `Quote-${q.quoteNumber}-LineItems.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  } catch (err) {
+    console.error("❌ Export failed:", err);
+    showToast("Failed to export line items.");
+  }
+}
+    
   </script>
 </body>
 </html>
