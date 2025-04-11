@@ -83,6 +83,7 @@ body {
         padding: 25px;
         
         
+        
     }
 
     /* Color Box */
@@ -229,6 +230,8 @@ tr{
 }
 
 .photo-preview {
+        
+        
         align-items: center;
     }
 
@@ -321,7 +324,7 @@ button, .upload-btn {
     top: 0px;
     right: 7px;
     background: none;
-    color: rgb(255, 2, 2);
+    color: rgb(255, 0, 0);
     border: none;
     border-radius: 50%;
     font-size: 18px;
@@ -430,6 +433,7 @@ button, .upload-btn {
     width: 100%;
   }
 }
+
 
 
 
@@ -755,8 +759,6 @@ td {
   font-size: 14px;
 }
 
-
-    
 .item-description {
   word-wrap: break-word;
   white-space: normal;
@@ -775,6 +777,60 @@ td {
   margin-bottom: 8px;
   line-height: 1.4;
 }
+
+.estimate-tabs-wrapper {
+  margin: 20px 0;
+}
+
+.estimate-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.estimate-tab {
+  padding: 10px 16px;
+  background-color: #f1f5f9;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  position: relative;
+}
+
+.estimate-tab:hover {
+  background-color: #e2e8f0;
+  border-color: #007bff;
+}
+
+.estimate-tab.active {
+  background-color: #007bff;
+  color: white;
+  font-weight: bold;
+}
+
+.tab-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.estimate-tab .new-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background-color: #e11d48;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-weight: bold;
+}
+
 
  </style>
 </head>
@@ -817,19 +873,21 @@ td {
     </div>
 </section>
 
-<div class="estimate-selector">
-    <label for="estimate-dropdown"><strong>Select Work Order:</strong></label>
-    <select id="estimate-dropdown" onchange="handleEstimateSelection(this.value)">
-      <option value="">-- Select a Work Order --</option>
-    </select>
+<div class="estimate-tabs-wrapper">
+    <label><strong>Select Work Order:</strong></label>
+    <div class="estimate-tabs" id="estimateTabsContainer"></div>
   </div>
   
-
-
+  
 
   <div id="no-estimate-message" style="padding: 20px; text-align: center; color: #777;">
-    Please select a Work Order to display line items.
-  </div>
+  </div>  
+
+
+
+
+  
+  
   
        <!-- Line Items Section -->
 <!-- Line Items Section -->
@@ -996,45 +1054,85 @@ async function fetchProjectDetails(projectId) {
 
 async function fetchProjectEstimates(projectId) {
   const vendorId = localStorage.getItem("vendorId");
-  const dropdown = document.getElementById("estimate-dropdown");
+  const tabsContainer = document.getElementById("estimateTabsContainer");
 
   try {
-    const response = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
-    if (!response.ok) throw new Error("Failed to fetch assigned items.");
+    const res = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
+    
+    // Handle no assigned items gracefully
+    if (res.status === 404) {
+      tabsContainer.innerHTML = `<p style="padding: 12px; color: gray;">No work order have been assigned to you yet.</p>`;
+      return;
+    }
 
-    const { items } = await response.json();
-    const assignedEstimateMap = new Map();
+    if (!res.ok) throw new Error("Failed to fetch assigned items.");
+    const { items } = await res.json();
 
-    // Group items by estimateId
+    const assignedMap = new Map();
     items.forEach(item => {
       if (item.estimateId) {
-        if (!assignedEstimateMap.has(item.estimateId)) {
-          assignedEstimateMap.set(item.estimateId, []);
-        }
-        assignedEstimateMap.get(item.estimateId).push(item);
+        if (!assignedMap.has(item.estimateId)) assignedMap.set(item.estimateId, []);
+        assignedMap.get(item.estimateId).push(item);
       }
     });
 
-    // Fetch all estimates to get their titles/invoice numbers
-    const estResponse = await fetch(`/api/estimates?projectId=${projectId}`);
-    if (!estResponse.ok) throw new Error("Failed to fetch estimates.");
+    const estimateRes = await fetch(`/api/estimates?projectId=${projectId}`);
+    if (!estimateRes.ok) throw new Error("Failed to fetch estimates.");
+    const { estimates } = await estimateRes.json();
 
-    const { estimates } = await estResponse.json();
+    tabsContainer.innerHTML = ""; // Clear existing tabs
+    let firstTabSelected = false;
+    let validEstimateFound = false;
 
-    // Only show estimates that have at least one item assigned to vendor
     estimates.forEach(est => {
-      if (assignedEstimateMap.has(est._id)) {
-        const option = document.createElement("option");
-        option.value = est._id;
-        option.textContent = est.title ? `${est.title} (${est.invoiceNumber})` : est.invoiceNumber;
-        dropdown.appendChild(option);
+      const assignedItems = assignedMap.get(est._id);
+      if (!assignedItems) return;
+
+      validEstimateFound = true;
+
+      const hasNewItem = assignedItems.some(item =>
+        item.status === 'new' || (item.status === 'in-progress' && !item.viewed)
+      );
+
+      const label = est.title ? `${est.title} (${est.invoiceNumber})` : est.invoiceNumber;
+
+      const tab = document.createElement("button");
+      tab.className = "estimate-tab";
+      tab.dataset.estimateId = est._id;
+      tab.innerHTML = `
+        <span>${label}</span>
+        ${hasNewItem ? '<span class="new-badge">NEW</span>' : ''}
+      `;
+
+      tab.onclick = () => {
+        document.querySelectorAll(".estimate-tab").forEach(btn => btn.classList.remove("active"));
+        tab.classList.add("active");
+        handleEstimateSelection(est._id);
+      };
+
+      tabsContainer.appendChild(tab);
+
+      if (!firstTabSelected) {
+        firstTabSelected = true;
+        tab.click();
       }
     });
+
+    if (!validEstimateFound) {
+      tabsContainer.innerHTML = `<p style="padding: 12px; color: gray;">No assigned estimates found for this project.</p>`;
+    }
 
   } catch (error) {
-    console.error("❌ Error filtering estimates:", error);
+    console.error("❌ Error fetching project estimates:", error);
+    tabsContainer.innerHTML = `<p style="color: red; padding: 10px;">Failed to load work orders.</p>`;
   }
 }
+
+
+
+
+
+
 
 
 async function handleEstimateSelection(estimateId) {
@@ -1043,9 +1141,17 @@ async function handleEstimateSelection(estimateId) {
   const totalBox = document.getElementById("total-amount");
   const lineItemsSection = document.querySelector(".line-items-container");
 
+  // Highlight selected tab
+  document.querySelectorAll(".estimate-tab").forEach(tab => {
+    tab.classList.remove("active");
+    if (tab.dataset.estimateId === estimateId) {
+      tab.classList.add("active");
+    }
+  });
+
   if (!estimateId) {
     message.style.display = "block";
-    message.innerText = "Please select an invoice to display line items.";
+    message.innerText = "Please select a Work Order to display line items.";
     container.innerHTML = "";
     totalBox.innerHTML = "";
     lineItemsSection.style.display = "none";
@@ -1056,13 +1162,10 @@ async function handleEstimateSelection(estimateId) {
   const projectId = new URLSearchParams(window.location.search).get("projectId");
 
   try {
-    const res = await fetch(
-      `/api/vendors/${vendorId}/assigned-items/${projectId}`
-    );
+    const res = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
     const data = await res.json();
     const allItems = data.items || [];
 
-    // ✅ Properly filter by estimateId using string comparison
     const assignedItems = allItems.filter(
       item => item.estimateId?.toString() === estimateId
     );
@@ -1083,9 +1186,6 @@ async function handleEstimateSelection(estimateId) {
     alert("Failed to load your assigned items.");
   }
 }
-
-
-
 
 
 
@@ -1396,7 +1496,7 @@ async function deletePhoto(itemId, photoUrl, type) {
 }
 
 
-     function formatDescription(desc) {
+function formatDescription(desc) {
   if (!desc) return "N/A";
 
   const tasks = desc.split(/\s*\d+\.\s*\/\s*/).filter(t => t.trim() !== "");
@@ -1408,7 +1508,7 @@ async function deletePhoto(itemId, photoUrl, type) {
   `;
 }
 
-     
+
 
 // ✅ Fetch & Render Assigned Items with Photo Upload & Slideshow
 function displayAssignedItems(items) {
@@ -1431,6 +1531,8 @@ function displayAssignedItems(items) {
                 </span> 
                  </h6>
             <div class="item-description">${formatDescription(item.description)}</div>
+
+
             <td>Qty: ${item.quantity || "0"}       <h4>  Unit Price: $${(item.unitPrice || 0).toFixed(2)}</h4></td>
            
 
@@ -1540,3 +1642,4 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
  </script>
+
