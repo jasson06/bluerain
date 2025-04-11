@@ -991,15 +991,11 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   
 }
 /* ✅ Hide default hover tooltip on iPhones */
-@media (max-width: 491px) {
+@media (max-width: 480px) {
   .vendor-name::after {
     display: none !important;
   }
 
-  .category-header {
-  top: 128px; /* adjust to match the height of #button-action */
-
-}
   
 }
     
@@ -1099,7 +1095,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 
 
     <section id="button-action">
-  <button  class="export-estimate-excel-button"id="export-estimate-excel">📤 Export to Excel</button>
+  <button  class="export-estimate-excel-button"id="export-estimate-excel">Export</button>
   <button class="add-line-item-button" id="add-line-item">+ Add Line Item</button>
   <button class="add-category-header-button" id="add-category-header">+ Add Room</button>
 </section>
