@@ -870,7 +870,7 @@ function signInAsVendor(vendorId) {
     .then(data => {
       if (!data.vendorId) throw new Error("Invalid response from server.");
       localStorage.setItem("vendorId", data.vendorId);
-      window.location.href = "/Subcontractor%20page.html";
+      window.location.href = "/Subcontractor%20Page.html";
     })
     .catch(err => {
       console.error("Sign-in error:", err);
