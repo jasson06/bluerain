@@ -167,12 +167,17 @@ tr{
 
 /* Status Labels */
 .status-label {
-        display: inline-block;
-        padding: 5px 10px;
-        border-radius: 12px;
-        font-weight: bold;
-        text-transform: capitalize;
-    }
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: bold;
+    display: inline-block;
+    text-align: center;
+}
+
+.new {
+    background-color: red;
+    color: white;
+}
 
 .in-progress {
     background-color: orange;
@@ -183,6 +188,7 @@ tr{
     background-color: green;
     color: white;
 }
+
 
 
 
@@ -198,27 +204,7 @@ tr{
         border-radius: 5px;
     }
 
-.complete-btn {
-    background-color: green;
-    color: white;
-    padding: 10px 15px;
-    border: none;
-    cursor: pointer;
-    border-radius: 5px;
-}
 
-.in-progress-btn {
-    background-color: orange;
-    color: white;
-    padding: 10px 15px;
-    border: none;
-    cursor: pointer;
-    border-radius: 5px;
-}
-
-.complete-btn:hover, .in-progress-btn:hover {
-    opacity: 0.8;
-}
 
 /* photo css  */
 .photo-container {
@@ -441,7 +427,7 @@ button, .upload-btn {
 @media (max-width: 1024px) {
     /* Container Adjustments */
     .container {
-        width: 95%;
+        width: 100%;
         padding: 15px;
     }
 
@@ -832,6 +818,23 @@ td {
 }
 
 
+.return-dashboard-btn {
+    background-color: #0f4c75;
+    color: white;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.return-dashboard-btn:hover {
+    background-color: #0c3b5e;
+}
+
+
  </style>
 </head>
 <body>
@@ -847,30 +850,27 @@ td {
 <section id="project-details" class="project-details-container">
     <div class="project-header">
         <h2 id="project-name">Project Name</h2>
-        <div class="status-badge" id="project-status">Status</div>
+        <button class="return-dashboard-btn" onclick="window.location.href='/Subcontractor%20page.html'">
+            ⬅️ Return to Dashboard
+          </button>
+          
     </div>
 
     <div class="project-info-grid">
         <div class="project-info-item">
-            <strong>Project Code:</strong> <span id="project-code">####</span>
+            <strong>Lockbox Code:</strong> <span id="project-code">####</span>
         </div>
         <div class="project-info-item">
             <strong>Type:</strong> <span id="project-type">Type</span>
         </div>
         <div class="project-info-item">
             <strong>Address:</strong> 
-            <p id="project-address">Address will be here</p>
+            <p><a href="#" id="project-address" target="_blank" style="color: #007BFF; text-decoration: underline;">Address will be here</a></p>
         </div>
-        <div class="project-info-item">
-            <strong>Color:</strong>
-            <span id="project-color" class="color-box"></span>
-        </div>
-    </div>
+        
 
-    <div class="project-description">
-        <h3>Description</h3>
-        <p id="project-description">Project description goes here...</p>
-    </div>
+
+
 </section>
 
 <div class="estimate-tabs-wrapper">
@@ -1226,17 +1226,30 @@ async function fetchAssignedItems(vendorId, projectId) {
 // ✅ Render Project Details
 function displayProjectDetails(project) {
     document.getElementById("project-name").innerText = project.name || "Unnamed Project";
-    document.getElementById("project-status").innerText = project.status || "Unknown";
-    document.getElementById("project-color").style.backgroundColor = project.color || "#ccc"; // Display color
+    
+    
     document.getElementById("project-type").innerText = project.type || "N/A";
     document.getElementById("project-code").innerText = project.code || "N/A";
-    document.getElementById("project-description").innerText = project.description || "No description available.";
+    
 
     // Full Address
-    document.getElementById("project-address").innerText = 
-        `${project.address?.addressLine1 || "N/A"}, ${project.address?.addressLine2 || ""}, 
-         ${project.address?.city || "N/A"}, ${project.address?.state || "N/A"}, 
-         ${project.address?.zip || "N/A"}`.replace(/, ,/g, ',').trim();
+    const fullAddress = `${project.address?.addressLine1 || ""}, ${project.address?.addressLine2 || ""}, ${project.address?.city || ""}, ${project.address?.state || ""}, ${project.address?.zip || ""}`
+    .replace(/, ,/g, ',')
+    .replace(/,+$/, '')
+    .trim();
+
+const encodedAddress = encodeURIComponent(fullAddress);
+
+// ✅ Detect iOS for Apple Maps fallback
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const mapLink = isIOS
+    ? `http://maps.apple.com/?q=${encodedAddress}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+
+const addressEl = document.getElementById("project-address");
+addressEl.innerText = fullAddress || "N/A";
+addressEl.href = mapLink;
+
 }
 
 
@@ -1245,10 +1258,27 @@ function calculateTotal(items) {
     let totalAmount = items.reduce((sum, item) => sum + (item.total || 0), 0);
     return totalAmount.toFixed(2);
 }
+
+
 async function toggleItemStatus(vendorId, itemId, currentStatus) {
     try {
-        const newStatus = currentStatus === "completed" ? "in-progress" : "completed";
-        console.log(`📌 Changing Status for Item ${itemId}: ${currentStatus} → ${newStatus}`);
+        // Determine the next status
+        let newStatus;
+        let nextLabel;
+
+        if (currentStatus === "new") {
+            newStatus = "in-progress";
+            nextLabel = "Mark as Completed";
+        } else if (currentStatus === "in-progress") {
+            newStatus = "completed";
+            nextLabel = "Mark as In Progress";
+        } else if (currentStatus === "completed") {
+            newStatus = "in-progress";
+            nextLabel = "Mark as Completed";
+        } else {
+            newStatus = "in-progress";
+            nextLabel = "Mark as Completed";
+        }
 
         const response = await fetch(`/api/vendors/${vendorId}/update-item-status`, {
             method: "PUT",
@@ -1262,19 +1292,24 @@ async function toggleItemStatus(vendorId, itemId, currentStatus) {
             return;
         }
 
-        // ✅ Update UI immediately
+        // ✅ Update the status visually
         const statusElement = document.getElementById(`status-${itemId}`);
         const button = document.querySelector(`button[data-item-id="${itemId}"]`);
 
         if (statusElement) {
+            // Update text
             statusElement.innerText = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
-            statusElement.classList.remove("completed", "in-progress");
+
+            // Remove all status classes
+            statusElement.classList.remove("new", "in-progress", "completed");
+
+            // Add the new class to reflect color
             statusElement.classList.add(newStatus);
         }
 
         if (button) {
             button.setAttribute("data-current-status", newStatus);
-            button.innerText = newStatus === "completed" ? "Mark as In Progress" : "Mark as Completed";
+            button.innerText = nextLabel;
         }
 
         console.log(`✅ Status updated to: ${newStatus}`);
@@ -1282,6 +1317,8 @@ async function toggleItemStatus(vendorId, itemId, currentStatus) {
         console.error("❌ Error updating item status:", error);
     }
 }
+
+
 
 
 
@@ -1523,21 +1560,29 @@ function displayAssignedItems(items) {
     container.innerHTML = ""; 
 
     items.forEach((item) => {
+        const currentStatus = item.status || "new"; // default to 'new'
+
+        // Decide next label
+        let nextLabel = "Mark as In Progress";
+        if (currentStatus === "in-progress") nextLabel = "Mark as Completed";
+        if (currentStatus === "completed") nextLabel = "Mark as In Progress";
+
+        // Use exact CSS class names
+        let statusClass = "new"; // default red
+        if (currentStatus === "in-progress") statusClass = "in-progress";
+        if (currentStatus === "completed") statusClass = "completed";
+
         const row = document.createElement("tr");
         row.innerHTML = `
             <h6>${item.name || "Unnamed Item"}
-              <span class="status-label ${item.status === 'completed' ? 'completed' : 'in-progress'}" id="status-${item.itemId}">
-                 ${item.status || "In Progress"}
-                </span> 
-                 </h6>
+              <span class="status-label ${statusClass}" id="status-${item.itemId}">
+                 ${currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)}
+              </span> 
+            </h6>
             <div class="item-description">${formatDescription(item.description)}</div>
 
+            <td>Qty: ${item.quantity || "0"} <h4>Unit Price: $${(item.unitPrice || 0).toFixed(2)}</h4></td>
 
-            <td>Qty: ${item.quantity || "0"}       <h4>  Unit Price: $${(item.unitPrice || 0).toFixed(2)}</h4></td>
-           
-
-            
-           
             <td>
                 <div class="photo-preview">
                     <div class="photo-section">
@@ -1563,24 +1608,21 @@ function displayAssignedItems(items) {
                 </div>
             </td>
 
-
             <td>
-                <button class="toggle-status-btn" data-item-id="${item.itemId}" data-current-status="${item.status}">
-                    ${item.status === 'completed' ? "Mark as In Progress" : "Mark as Completed"}
+                <button class="toggle-status-btn" data-item-id="${item.itemId}" data-current-status="${currentStatus}">
+                    ${nextLabel}
                 </button>
-                 <h4>Total: $${(item.total || 0).toFixed(2)}</h4>
+                <h4>Total: $${(item.total || 0).toFixed(2)}</h4>
             </td>
-
-
-            
         `;
+
         container.appendChild(row);
     });
 
   // 🔹 Ensure Swipe and Dot Indicators Work Correctly
   enableGlobalSwipeEvents();
 
-    document.querySelectorAll(".toggle-status-btn").forEach(button => {
+  document.querySelectorAll(".toggle-status-btn").forEach(button => {
         button.addEventListener("click", function () {
             const itemId = this.getAttribute("data-item-id");
             const currentStatus = this.getAttribute("data-current-status");
@@ -1595,6 +1637,9 @@ function displayAssignedItems(items) {
 
     console.log("✅ Items Rendered Successfully! Grand Total: $" + grandTotal);
 }
+
+
+
 
 // ✅ Fix Swiping & Dots After Uploading Photos
 async function updatePhotoSection(itemId, type) {
@@ -1642,4 +1687,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
  </script>
+
+
 
