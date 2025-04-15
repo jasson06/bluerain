@@ -408,6 +408,7 @@ const estimateSchema = new mongoose.Schema({
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
   invoiceNumber: { type: String, required: true, unique: true },
   title: { type: String, default: '' },
+
   lineItems: [
     {
       type: {
@@ -416,35 +417,67 @@ const estimateSchema = new mongoose.Schema({
         required: true
       },
       category: { type: String, required: true },
-      status: { type: String, enum: ['in-progress', 'completed'], default: 'in-progress' },
+
+      // ✅ Expanded to support QC statuses
+      status: { 
+        type: String, 
+        enum: ['in-progress', 'completed', 'approved', 'rework'], 
+        default: 'in-progress' 
+      },
+
       items: [
         {
           type: { type: String, enum: ['item'], default: 'item' },
           name: { type: String, required: true },
           description: { type: String },
+
           quantity: { type: Number, required: true, min: 1 },
           unitPrice: { type: Number, required: true, min: 0 },
           total: { type: Number, required: true },
-          status: { type: String, enum: ['in-progress', 'completed'], default: 'in-progress' },
+
+          // ✅ Expanded here too
+          status: { 
+            type: String, 
+            enum: ['in-progress', 'completed', 'approved', 'rework'], 
+            default: 'in-progress' 
+          },
+
+          qualityControl: {
+            status: {
+              type: String,
+              enum: ["pending", "approved", "rework"],
+              default: "pending"
+            },
+            notes: String,
+            reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Manager" },
+            reviewedAt: Date
+          },
+
           assignedTo: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Vendor',
-            default: null // Allow null explicitly for unassigned items
+            default: null
           },
+
           photos: {
-            before: [{ type: String }], // Store URLs of "before" photos
-            after: [{ type: String }],  // Store URLs of "after" photos
+            before: [{ type: String }],
+            after: [{ type: String }]
           },
-          startDate: { type: Date, default: null }, // ✅ Add Start Date
-          endDate: { type: Date, default: null } // ✅ Add End Date
+
+          startDate: { type: Date, default: null },
+          endDate: { type: Date, default: null }
         }
       ]
     }
   ],
+
   total: { type: Number, required: true },
   tax: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
+
+
+
 
 
 
@@ -469,11 +502,23 @@ const vendorSchema = new mongoose.Schema({
       quantity: { type: Number, required: true, min: 1 },
       unitPrice: { type: Number, required: true, min: 0 },
       total: { type: Number, required: true },
-      status: { type: String, enum: ["new", "in-progress", "completed"], default: "new" },
+      status: { type: String, enum: ["new", "in-progress", "completed", "approved", "rework"], default: "new" },
       photos: {
         before: [{ type: String }],
         after: [{ type: String }],
       },
+
+        // ✅ Quality Control Section
+    qualityControl: {
+      status: {
+        type: String,
+        enum: ["pending", "approved", "rework"],
+        default: "pending"
+      },
+      notes: { type: String },
+      reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Manager" },
+      reviewedAt: { type: Date }
+    },
       createdAt: { type: Date, default: Date.now },
       updatedAt: { type: Date, default: Date.now },
     }
@@ -482,7 +527,7 @@ const vendorSchema = new mongoose.Schema({
   assignedProjects: [
     {
       projectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project", required: true },
-      status: { type: String, enum: ["new", "in-progress", "completed"], default: "new" },
+      status: { type: String, enum: ["new", "in-progress", "completed", "rework"], default: "new" },
     }
   ],
 
@@ -494,7 +539,6 @@ const vendorSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: false },   // Becomes true when vendor activates account
 },
 { timestamps: true });
-
 
 // ✅ Indexing for Faster Queries
 vendorSchema.index({ "assignedItems.itemId": 1 });
