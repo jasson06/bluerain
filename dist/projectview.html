@@ -1487,36 +1487,68 @@ function jumpToPhoto(itemId, type, index) {
 
 // ✅ Upload Photos & Ensure Swiping Works
 async function uploadPhoto(event, itemId, type) {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-    
-    const estimateId = document.getElementById("estimate-dropdown").value;
-    const vendorId = localStorage.getItem("vendorId"); 
-    const formData = new FormData();
+  const files = event.target.files;
+  if (!files || files.length === 0) return;
 
-    for (let file of files) {
-        formData.append("photos", file);
+  const vendorId = localStorage.getItem("vendorId");
+  const projectId = new URLSearchParams(window.location.search).get("projectId");
+
+  if (!vendorId || !projectId) {
+    alert("Missing project or vendor context.");
+    return;
+  }
+
+  // Determine the selected estimateId
+  let estimateId = null;
+  const dropdown = document.getElementById("estimate-dropdown");
+   const activeTab = document.querySelector(".estimate-tab.active");
+    estimateId = activeTab?.dataset.estimateId;
+  
+
+  if (!estimateId) {
+    alert("Please select a Work Order before uploading.");
+    return;
+  }
+
+  const formData = new FormData();
+  for (let file of files) {
+    formData.append("photos", file);
+  }
+
+  formData.append("itemId", itemId);
+  formData.append("type", type);
+  formData.append("estimateId", estimateId);
+  formData.append("vendorId", vendorId);
+
+  // Show the spinner
+  const spinner = document.getElementById("photo-upload-spinner");
+  if (spinner) {
+    spinner.style.display = "block";
+  }
+
+  try {
+    const response = await fetch("/api/upload-photos", {
+      method: "POST",
+      body: formData
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || "Upload failed.");
+
+    alert(`✅ ${files.length} Photo(s) uploaded successfully!`);
+    updatePhotoSection(itemId, type);
+  } catch (error) {
+    console.error("❌ Photo Upload Error:", error);
+    alert("Failed to upload photos.");
+  } finally {
+    // Hide the spinner
+    if (spinner) {
+      spinner.style.display = "none";
     }
-    
-    formData.append("itemId", itemId);
-    formData.append("type", type);
-    formData.append("estimateId", estimateId);
-    formData.append("vendorId", vendorId);
-
-    try {
-        const response = await fetch("/api/upload-photos", { method: "POST", body: formData });
-        const result = await response.json();
-
-        if (!response.ok) throw new Error(result.message || "Upload failed.");
-
-        alert(`✅ ${files.length} Photo(s) uploaded successfully!`);
-        updatePhotoSection(itemId, type);
-    } catch (error) {
-        console.error("❌ Photo Upload Error:", error);
-        alert("Failed to upload photos.");
-    }
+  }
 }
 
+     
 // ✅ Delete Photo & Ensure Swiping Remains
 async function deletePhoto(itemId, photoUrl, type) {
     try {
@@ -1646,7 +1678,13 @@ async function updatePhotoSection(itemId, type) {
     try {
         const vendorId = localStorage.getItem("vendorId");
         const projectId = new URLSearchParams(window.location.search).get("projectId");
-        const estimateId = document.getElementById("estimate-dropdown").value;
+        const activeTab = document.querySelector(".estimate-tab.active");
+          const estimateId = activeTab?.dataset.estimateId;
+             if (!estimateId) {
+            console.warn("No active estimate selected.");
+            return;
+             }
+
 
         const response = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}?estimateId=${estimateId}`);
         if (!response.ok) throw new Error("Failed to fetch updated photos.");
@@ -1657,8 +1695,9 @@ async function updatePhotoSection(itemId, type) {
 
         document.getElementById(`${type}-photos-${itemId}`).innerHTML = generatePhotoPreview(item.photos[type], itemId, type);
 
-        // ✅ Reinitialize Swipe & Dots After Update
-        enableGlobalSwipeEvents();
+             // ✅ Re-enable swipe and auto slideshow
+             enableGlobalSwipeEvents();
+        initializeAutoSliding();
     } catch (error) {
         console.error("❌ Error updating photo section:", error);
     }
