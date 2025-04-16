@@ -638,14 +638,23 @@
     </div>
 
     <div class="payment-terms">
-      <strong>Payment Terms:</strong> Payment is due within 15 days of acceptance of this quote unless otherwise agreed in writing.
+      <h3>Payment Terms</h3>
+      <p>The total project amount shall be paid in the following phases:</p>
+      <ul style="margin-top: 10px; padding-left: 20px;">
+        <li><strong>30%</strong> at project start</li>
+        <li><strong>30%</strong> at 50% project completion</li>
+        <li><strong>30%</strong> at 75% project completion</li>
+        <li><strong>10%</strong> at final completion</li>
+      </ul>
+      <p style="margin-top: 10px;">Each payment is due within 7 days of invoice unless otherwise agreed in writing. Late payments may be subject to additional fees.</p>
     </div>
+    
 
     <div class="signature-block">
       <h3>Agreement</h3>
       <p>If you accept this quote, please sign and return.</p>
       <label>Client Name:</label>
-      <input type="text" placeholder="Client Full Name" />
+      <input type="text" id="signatureClientName" placeholder="Client Full Name" />
       <label>Signature:</label>
       <input type="text" placeholder="Client Signature" />
       <label>Date:</label>
@@ -886,6 +895,7 @@ function showClientSuggestions() {
       document.getElementById('toAddress').value = client.address;
       document.getElementById('toEmail').value = client.email;
       document.getElementById('toPhone').value = client.phone;
+      document.getElementById('signatureClientName').value = client.name;
       box.style.display = 'none';
     };
     box.appendChild(option);
@@ -908,9 +918,9 @@ document.addEventListener('click', e => {
 
 
 
-    let lineItems = [];
+let lineItems = [];
 
-    function addLineItem() {
+function addLineItem() {
   const name = document.getElementById('itemName');
   const description = document.getElementById('itemDesc');
   const rate = parseFloat(document.getElementById('itemRate').value);
@@ -950,49 +960,50 @@ document.addEventListener('click', e => {
       totalPreview.style.fontSize = '14px';
       document.querySelector('.line-item-row').appendChild(totalPreview);
     }
-    totalPreview.textContent = `Total: $${total.toFixed(2)}`;
+    totalPreview.textContent = `Total: $${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   });
 });
 
-    function renderTable() {
-      const table = document.getElementById('lineItemsTable');
-      table.innerHTML = '';
-      let subtotal = 0;
+function renderTable() {
+  const table = document.getElementById('lineItemsTable');
+  table.innerHTML = '';
+  let subtotal = 0;
 
-      lineItems.forEach((item, index) => {
-        const total = item.rate * item.qty;
-        subtotal += total;
+  lineItems.forEach((item, index) => {
+    const total = item.rate * item.qty;
+    subtotal += total;
 
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${item.name}</td>
-          <td>${item.description}</td>
-          <td>$${item.rate.toFixed(2)}</td>
-          <td>${item.qty}</td>
-          <td>$${total.toFixed(2)}</td>
-          <td>
-           <div class="action-dropdown" style="position: relative;">
-      <button class="dots" onclick="toggleLineItemMenu(event, ${index})">⋯</button>
-      <div class="action-dropdown-content" id="lineitem-menu-${index}" style="display: none; position: absolute; right: 0; background: white; border: 1px solid #ccc; border-radius: 5px; box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2); z-index: 1000;">
-        <button onclick="editLineItem(${index})">✏️ Edit</button>
-        <button onclick="deleteLineItem(${index})" style="color: red;">🗑️ Delete</button>
-      </div>
-    </div>
-  </td>
-        `;
-        table.appendChild(row);
-      });
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${item.name}</td>
+      <td>${item.description}</td>
+      <td>$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      <td>${item.qty.toLocaleString()}</td>
+      <td>$${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      <td>
+        <div class="action-dropdown" style="position: relative;">
+          <button class="dots" onclick="toggleLineItemMenu(event, ${index})">⋯</button>
+          <div class="action-dropdown-content" id="lineitem-menu-${index}" style="display: none; position: absolute; right: 0; background: white; border: 1px solid #ccc; border-radius: 5px; box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2); z-index: 1000;">
+            <button onclick="editLineItem(${index})">✏️ Edit</button>
+            <button onclick="deleteLineItem(${index})" style="color: red;">🗑️ Delete</button>
+          </div>
+        </div>
+      </td>
+    `;
+    table.appendChild(row);
+  });
 
-      const discount = parseFloat(document.getElementById('inputDiscount').value || 0);
-      const taxRate = parseFloat(document.getElementById('inputTax').value || 0);
-      const tax = (subtotal - discount) * (taxRate / 100);
-      const total = subtotal - discount + tax;
+  const discount = parseFloat(document.getElementById('inputDiscount').value || 0);
+  const taxRate = parseFloat(document.getElementById('inputTax').value || 0);
+  const tax = (subtotal - discount) * (taxRate / 100);
+  const total = subtotal - discount + tax;
 
-      document.getElementById('subtotal').textContent = subtotal.toFixed(2);
-      document.getElementById('discount').textContent = discount.toFixed(2);
-      document.getElementById('tax').textContent = tax.toFixed(2);
-      document.getElementById('grandTotal').textContent = total.toFixed(2);
-    }
+  document.getElementById('subtotal').textContent = subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
+  document.getElementById('discount').textContent = discount.toLocaleString(undefined, { minimumFractionDigits: 2 });
+  document.getElementById('tax').textContent = tax.toLocaleString(undefined, { minimumFractionDigits: 2 });
+  document.getElementById('grandTotal').textContent = total.toLocaleString(undefined, { minimumFractionDigits: 2 });
+}
+
 
     
     function toggleLineItemMenu(event, index) {
@@ -1070,19 +1081,28 @@ document.addEventListener('click', e => {
   const quoteDate = document.getElementById("quoteDate").value;
   const expirationDate = document.getElementById("validTill").value;
 
+  const signatureClientInput = document.getElementById("signatureClientName");
+  const clientSignatureName = signatureClientInput?.value || toName || "____________________________";
+
   const lineItemRows = lineItems.map(item => `
     <tr>
       <td>${item.name}</td>
       <td>${item.desc}</td>
-      <td>$${item.rate.toFixed(2)}</td>
-      <td>${item.qty}</td>
-      <td>$${(item.rate * item.qty).toFixed(2)}</td>
+     <td>$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+     <td>${item.qty.toLocaleString()}</td>
+     <td>$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+
     </tr>
   `).join("");
 
   const subtotal = lineItems.reduce((sum, i) => sum + i.rate * i.qty, 0);
   const tax = 0;
   const total = subtotal + tax;
+
+  // ✅ Calculate milestone amounts
+const total30 = (total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
+const total10 = (total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
+
 
   document.getElementById("quotePreviewContent").innerHTML = `
     <h2 style="color: #007bff;">BESF LLC</h2>
@@ -1119,20 +1139,29 @@ document.addEventListener('click', e => {
     </table>
 
     <div style="margin-top: 20px; text-align: right;">
-      <p><strong>Subtotal:</strong> $${subtotal.toFixed(2)}</p>
-      <p><strong>Tax:</strong> $${tax.toFixed(2)}</p>
-      <p><strong style="font-size: 18px;">Total:</strong> <span style="color: #007bff;">$${total.toFixed(2)}</span></p>
+     <p><strong>Subtotal:</strong> $${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+    <p><strong>Tax:</strong> $${tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+    <p><strong style="font-size: 18px;">Total:</strong> <span style="color: #007bff;">$${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></p>
+
     </div>
 
-    <div style="margin-top: 30px;">
-      <h3>Payment Terms</h3>
-      <p>Payment is due within 15 days of acceptance. Late payments may be subject to additional fees unless otherwise agreed upon in writing.</p>
-    </div>
+<div style="margin-top: 30px;">
+  <h3>Payment Terms</h3>
+  <p>The total project amount shall be paid in the following phases:</p>
+  <ul style="margin-top: 10px; padding-left: 20px;">
+    <li><strong>30%</strong> at project start: <strong>$${total30}</strong></li>
+    <li><strong>30%</strong> at 50% project completion: <strong>$${total30}</strong></li>
+    <li><strong>30%</strong> at 75% project completion: <strong>$${total30}</strong></li>
+    <li><strong>10%</strong> at final completion: <strong>$${total10}</strong></li>
+  </ul>
+  <p style="margin-top: 10px;">All payments are due within 7 days of invoice unless otherwise agreed upon in writing. Late payments may be subject to additional fees.</p>
+</div>
+
 
     <div style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px;">
       <h3>Agreement</h3>
       <p>If you accept this quote, please sign and return.</p>
-      <p><strong>Client Name:</strong> ____________________________</p>
+       <p><strong>Client Name:</strong> ${clientSignatureName}</p>
       <p><strong>Signature:</strong> ____________________________</p>
       <p><strong>Date:</strong> ____________________________</p>
     </div>
@@ -1175,11 +1204,12 @@ document.addEventListener('click', e => {
     notes: document.getElementById('quoteNotes').value,
     lineItems,
     totals: {
-      subtotal: document.getElementById('subtotal').textContent,
-      discount: document.getElementById('discount').textContent,
-      tax: document.getElementById('tax').textContent,
-      total: document.getElementById('grandTotal').textContent
-    }
+  subtotal: parseFloat(document.getElementById('subtotal').textContent.replace(/,/g, '')),
+  discount: parseFloat(document.getElementById('discount').textContent.replace(/,/g, '')),
+  tax: parseFloat(document.getElementById('tax').textContent.replace(/,/g, '')),
+  total: parseFloat(document.getElementById('grandTotal').textContent.replace(/,/g, ''))
+}
+
   };
 
   fetch('/api/quotes', {
@@ -1285,127 +1315,344 @@ function renderQuoteHistory() {
   }
 }
 async function showQuoteDetail(id) {
-  try {
-    const res = await fetch(`/api/quotes/${id}`);
-    const q = await res.json();
-    const detail = document.getElementById('quoteDetailContent');
-    detail.setAttribute('data-id', q._id);
+      try {
+        const res = await fetch(`/api/quotes/${id}`);
+        const q = await res.json();
+        const detail = document.getElementById('quoteDetailContent');
+        detail.setAttribute('data-id', q._id);
 
-    const lineItems = q.lineItems.map(item => `
-      <tr>
-        <td>${item.name}</td>
-        <td>${item.description}</td>
-        <td>$${item.rate.toFixed(2)}</td>
-        <td>${item.qty}</td>
-        <td>$${(item.rate * item.qty).toFixed(2)}</td>
-      </tr>`).join('');
+        // ✅ Add this block to calculate dollar amounts
+const total = parseFloat(q.totals.total || 0);
+const total30 = (total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
+const total10 = (total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
 
-    const licenseNumber = q.from.license || "RBC-2400049"; // ✅ Default fallback
 
-    detail.innerHTML = `
-      <h2 style="color: #007bff;">${q.from.name}</h2>
-      <p><strong>Quote #:</strong> ${q.quoteNumber}</p>
-      <p><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</p>
-      <p><strong>Valid till:</strong> ${new Date(q.validTill).toLocaleDateString()}</p>
-      <hr>
+const signatureClientInput = document.getElementById("signatureClientName");
+const clientSignatureName = signatureClientInput?.value || q.to?.name || "____________________________";
 
-      <div style="display: flex; justify-content: space-between;">
-        <div>
-          <h4>Quote From</h4>
-          <p>
-            ${q.from.name}<br>
-            ${q.from.address}<br>
-            ${q.from.email}<br>
-            ${q.from.phone}<br>
-            <strong>License:</strong> ${licenseNumber}
-          </p>
-        </div>
-        <div>
-          <h4>Quote To</h4>
-          <p>${q.to.name}<br>${q.to.address}<br>${q.to.email}<br>${q.to.phone}</p>
-        </div>
-      </div>
 
-      <h3 style="margin-top: 20px;">Line Items</h3>
-      <table style="width: 100%; border-collapse: collapse;">
-        <thead>
-          <tr style="background-color: #f0f0f0;">
-            <th>Item</th><th>Description</th><th>Rate</th><th>Qty</th><th>Total</th>
-          </tr>
-        </thead>
-        <tbody>${lineItems}</tbody>
-      </table>
+        const lineItems = q.lineItems.map(item => `
+          <tr>
+            <td>${item.name}</td>
+            <td>${item.description}</td>
+           <td>$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+           <td>${item.qty.toLocaleString()}</td>
+           <td>$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
 
-      <div style="margin-top: 20px; text-align: right;">
-        <p><strong>Subtotal:</strong> $${parseFloat(q.totals.subtotal).toFixed(2)}</p>
-        <p><strong>Discount:</strong> $${parseFloat(q.totals.discount).toFixed(2)}</p>
-        <p><strong>Tax:</strong> $${parseFloat(q.totals.tax).toFixed(2)}</p>
-        <p><strong style="font-size: 18px;">Total:</strong> 
-          <span style="color: #007bff;">$${parseFloat(q.totals.total).toFixed(2)}</span>
-        </p>
-      </div>
+          </tr>`).join('');
 
-      <div style="margin-top: 30px;">
-        <h3>Notes</h3>
-        <p>${q.notes || 'N/A'}</p>
-      </div>
+        detail.innerHTML = `
+          <h2 style="color: #007bff;">BESF LLC</h2>
+          <p><strong>Quote #:</strong> ${q.quoteNumber}</p>
+          <p><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</p>
+          <p><strong>Valid till:</strong> ${new Date(q.validTill).toLocaleDateString()}</p>
+          <hr>
 
-      <div style="margin-top: 30px;">
-        <h3>Payment Terms</h3>
-        <p>Payment is due within 15 days of acceptance. Late payments may be subject to additional fees unless otherwise agreed upon in writing.</p>
-      </div>
+          <div style="display: flex; justify-content: space-between;">
+            <div>
+              <h4>Quote From</h4>
+              <p>${q.from.name}<br>${q.from.address}<br>${q.from.email}<br>${q.from.phone}</p>
+            </div>
+            <div>
+              <h4>Quote To</h4>
+              <p>${q.to.name}<br>${q.to.address}<br>${q.to.email}<br>${q.to.phone}</p>
+            </div>
+          </div>
 
-      <div style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px;">
-        <h3>Agreement</h3>
-        <p>If you accept this quote, please sign and return.</p>
-        <p><strong>Client Name:</strong> ____________________________</p>
-        <p><strong>Signature:</strong> ____________________________</p>
-        <p><strong>Date:</strong> ____________________________</p>
-      </div>
-    `;
+          <h3 style="margin-top: 20px;">Line Items</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background-color: #f0f0f0;">
+                <th>Item</th><th>Description</th><th>Rate</th><th>Qty</th><th>Total</th>
+              </tr>
+            </thead>
+            <tbody>${lineItems}</tbody>
+          </table>
 
-    document.getElementById('quoteDetailModal').style.display = 'flex';
-  } catch (err) {
-    console.error('Failed to fetch quote details:', err);
-  }
+          <div style="margin-top: 20px; text-align: right;">
+           <p><strong>Subtotal:</strong> $${parseFloat(q.totals.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+           <p><strong>Discount:</strong> $${parseFloat(q.totals.discount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p><strong>Tax:</strong> $${parseFloat(q.totals.tax).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p><strong style="font-size: 18px;">Total:</strong> 
+            <span style="color: #007bff;">$${parseFloat(q.totals.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+           </p>
+
+          </div>
+
+          <div style="margin-top: 30px;">
+            <h3>Notes</h3>
+            <p>${q.notes || 'N/A'}</p>
+          </div>
+
+
+<div style="margin-top: 30px;">
+  <h3>Payment Terms</h3>
+  <p>The total project amount shall be paid in the following phases:</p>
+  <ul style="margin-top: 10px; padding-left: 20px;">
+    <li><strong>30%</strong> at project start: <strong>$${total30}</strong></li>
+    <li><strong>30%</strong> at 50% project completion: <strong>$${total30}</strong></li>
+    <li><strong>30%</strong> at 75% project completion: <strong>$${total30}</strong></li>
+    <li><strong>10%</strong> at final completion: <strong>$${total10}</strong></li>
+  </ul>
+  <p style="margin-top: 10px;">All payments are due within 7 days of invoice unless otherwise agreed upon in writing. Late payments may be subject to additional fees.</p>
+</div>
+
+
+          <div style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px;">
+            <h3>Agreement</h3>
+            <p>If you accept this quote, please sign and return.</p>
+             <p><strong>Client Name:</strong> ${clientSignatureName}</p>
+            <p><strong>Signature:</strong> ____________________________</p>
+            <p><strong>Date:</strong> ____________________________</p>
+          </div>
+        `;
+
+        document.getElementById('quoteDetailModal').style.display = 'flex';
+      } catch (err) {
+        console.error('Failed to fetch quote details:', err);
+      }
+    }
+
+    function printQuoteDetail() {
+  const detailContent = document.getElementById("quoteDetailContent");
+  const printWindow = window.open('', '_blank');
+
+  const styledHTML = `
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Print Quote</title>
+         <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            margin: 40px;
+            color: #000;
+            font-size: 14px;
+          }
+
+          h1, h2, h3 {
+            margin: 0;
+            padding: 0;
+          }
+
+          .company {
+            color: #0ea5e9;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+          }
+
+          .info-grid {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            margin-bottom: 20px;
+          }
+
+          .info-section {
+            width: 48%;
+          }
+
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+          }
+
+          thead {
+            background: #f3f4f6;
+          }
+
+          th, td {
+            padding: 8px;
+            text-align: left;
+          }
+
+          tr:not(:last-child) td {
+            border-bottom: 1px solid #ddd;
+          }
+
+          .totals {
+            margin-top: 20px;
+            text-align: right;
+          }
+
+          .totals p {
+            margin: 4px 0;
+          }
+
+          .totals strong {
+            color: #0ea5e9;
+          }
+
+          .section {
+            margin-top: 40px;
+          }
+
+          .signature {
+            margin-top: 60px;
+          }
+
+          .signature-line {
+            display: flex;
+            gap: 50px;
+            margin-top: 20px;
+          }
+
+          .signature-line p {
+            border-top: 1px solid #333;
+            width: 200px;
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 4px;
+          }
+
+          hr {
+            margin: 30px 0;
+            border: none;
+            border-top: 1px solid #ccc;
+          }
+        </style>
+      </head>
+      <body>
+        ${detailContent.innerHTML}
+      </body>
+    </html>
+  `;
+
+  printWindow.document.write(styledHTML);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
 }
 
 
-    function printQuoteDetail() {
-      const detailContent = document.getElementById("quoteDetailContent");
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(`
-        <html><head><title>Print Quote</title></head><body>
-        ${detailContent.innerHTML}
-        </body></html>
-      `);
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-    }
-
     async function shareQuoteDetail() {
-      const detail = document.getElementById('quoteDetailContent');
-      if (!detail) return alert('No quote loaded.');
+  const detail = document.getElementById('quoteDetailContent');
+  if (!detail) return alert('No quote loaded.');
 
-      const blob = new Blob([detail.innerHTML], { type: 'text/html' });
-      const file = new File([blob], 'quote.html', { type: 'text/html' });
+  const styledHTML = `
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Quote Details</title>
+       <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            margin: 40px;
+            color: #000;
+            font-size: 14px;
+          }
 
-      try {
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: 'Quote Details',
-            text: 'Sharing the quote details with you.',
-            files: [file]
-          });
-        } else {
-          showToast('Sharing not supported on this device.');
-        }
-      } catch (err) {
-        console.error('Error sharing quote:', err);
-        showToast('Failed to share quote.');
-      }
+          h1, h2, h3 {
+            margin: 0;
+            padding: 0;
+          }
+
+          .company {
+            color: #0ea5e9;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+          }
+
+          .info-grid {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            margin-bottom: 20px;
+          }
+
+          .info-section {
+            width: 48%;
+          }
+
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+          }
+
+          thead {
+            background: #f3f4f6;
+          }
+
+          th, td {
+            padding: 8px;
+            text-align: left;
+          }
+
+          tr:not(:last-child) td {
+            border-bottom: 1px solid #ddd;
+          }
+
+          .totals {
+            margin-top: 20px;
+            text-align: right;
+          }
+
+          .totals p {
+            margin: 4px 0;
+          }
+
+          .totals strong {
+            color: #0ea5e9;
+          }
+
+          .section {
+            margin-top: 40px;
+          }
+
+          .signature {
+            margin-top: 60px;
+          }
+
+          .signature-line {
+            display: flex;
+            gap: 50px;
+            margin-top: 20px;
+          }
+
+          .signature-line p {
+            border-top: 1px solid #333;
+            width: 200px;
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 4px;
+          }
+
+          hr {
+            margin: 30px 0;
+            border: none;
+            border-top: 1px solid #ccc;
+          }
+        </style>
+      </head>
+      <body>
+        ${detail.innerHTML}
+      </body>
+    </html>
+  `;
+
+  const blob = new Blob([styledHTML], { type: 'text/html' });
+  const file = new File([blob], 'quote-details.html', { type: 'text/html' });
+
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        title: 'Quote Details',
+        text: 'Here is the quote you requested.',
+        files: [file]
+      });
+    } else {
+      showToast('Sharing not supported on this device.');
     }
+  } catch (err) {
+    console.error('Error sharing quote:', err);
+    showToast('Failed to share quote.');
+  }
+}
+
 
     async function deleteQuoteDetail() {
       const detail = document.getElementById('quoteDetailContent');
@@ -1464,7 +1711,7 @@ async function showQuoteDetail(id) {
             <div onclick="useSuggestedLabor(${index})">
               <strong>${item.name}</strong><br>
               <small>${item.description}</small><br>
-              <span style="color: #007bff; font-weight: bold;">$${item.rate.toFixed(2)}</span>
+              <span style="color: #007bff; font-weight: bold;">$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </div>
             <div class="action-dropdown">
               <button class="dots" onclick="toggleActionDropdown(event, ${index})">⋯</button>
@@ -1556,8 +1803,8 @@ async function showQuoteDetail(id) {
     closeLaborCostModal();
   }
 
-
-      window.addEventListener('DOMContentLoaded', () => {
+ 
+  window.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     const modalToOpen = params.get('modal');
 
@@ -1568,7 +1815,6 @@ async function showQuoteDetail(id) {
 
   window.openLaborCostModal = openLaborCostModal;
 
-  
   </script>
 </body>
 </html>
