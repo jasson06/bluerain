@@ -359,7 +359,10 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
+    <!-- Required for PDF generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
   <script>
     function formatDateInput(dateStr) {
   if (!dateStr) return '';
@@ -743,74 +746,65 @@ async function downloadQuoteAsPDF(id) {
     const total30 = (q.totals.total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
     const total10 = (q.totals.total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
 
-    const htmlContent = `
-      <div style="font-family: 'Segoe UI', sans-serif; padding: 10px; color: #000; width: 800px;">
-        <div style="color: #0ea5e9; font-size: 20px; font-weight: bold;">BESF LLC</div>
-        <div style="margin-top: 25px;"><strong>Quote #:</strong> ${q.quoteNumber}</div>
-        <div><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</div>
-        <div><strong>Valid till:</strong> ${new Date(q.validTill).toLocaleDateString()}</div>
+    const html = `
+      <div style="font-family: 'Segoe UI', sans-serif; padding: 40px; max-width: 800px; color: #000; font-size: 14px;">
+        <h2 style="color:#0ea5e9;">BESF LLC</h2>
+        <p><strong>Quote #:</strong> ${q.quoteNumber}</p>
+        <p><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</p>
+        <p><strong>Valid till:</strong> ${new Date(q.validTill).toLocaleDateString()}</p>
 
-        <div style="display: flex; justify-content: space-between; margin-top: 20px;">
-          <div style="width: 48%;">
+        <div style="display: flex; justify-content: space-between;">
+          <div style="width:48%">
             <h4>Quote From</h4>
             <p>${q.from.name}<br>${q.from.address}<br>${q.from.email}<br>${q.from.phone}<br><strong>License:</strong> ${q.from.license || 'RBC-2400049'}</p>
           </div>
-          <div style="width: 48%;">
+          <div style="width:48%">
             <h4>Quote To</h4>
             <p>${q.to.name}<br>${q.to.address}<br>${q.to.email}<br>${q.to.phone}</p>
           </div>
         </div>
 
         <h4 style="margin-top: 30px;">Line Items</h4>
-        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <table style="width:100%; border-collapse: collapse; font-size: 13px; margin-top: 10px;">
           <thead>
-            <tr>
-              <th style="padding: 8px; border: 1px solid #ddd;">Item</th>
-              <th style="padding: 8px; border: 1px solid #ddd;">Description</th>
-              <th style="padding: 8px; border: 1px solid #ddd;">Rate</th>
-              <th style="padding: 8px; border: 1px solid #ddd;">Qty</th>
-              <th style="padding: 8px; border: 1px solid #ddd;">Total</th>
+            <tr style="background:#f3f4f6;">
+              <th style="border:1px solid #ccc; padding:8px;">Item</th>
+              <th style="border:1px solid #ccc; padding:8px;">Description</th>
+              <th style="border:1px solid #ccc; padding:8px;">Rate</th>
+              <th style="border:1px solid #ccc; padding:8px;">Qty</th>
+              <th style="border:1px solid #ccc; padding:8px;">Total</th>
             </tr>
           </thead>
           <tbody>
             ${q.lineItems.map(item => `
               <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;">${item.name}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${item.description}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${item.qty}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-              </tr>
-            `).join('')}
+                <td style="border:1px solid #ccc; padding:8px;">${item.name}</td>
+                <td style="border:1px solid #ccc; padding:8px;">${item.description}</td>
+                <td style="border:1px solid #ccc; padding:8px;">$${item.rate.toFixed(2)}</td>
+                <td style="border:1px solid #ccc; padding:8px;">${item.qty}</td>
+                <td style="border:1px solid #ccc; padding:8px;">$${(item.rate * item.qty).toFixed(2)}</td>
+              </tr>`).join('')}
           </tbody>
         </table>
 
-        <div style="margin-top: 20px; text-align: right;">
-          <p>Subtotal: $${q.totals.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-          <p>Discount: $${q.totals.discount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-          <p>Tax: $${q.totals.tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-          <p><strong style="color: #0ea5e9;">Total: $${q.totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></p>
+        <div style="text-align:right; margin-top: 20px;">
+          <p>Subtotal: $${q.totals.subtotal.toFixed(2)}</p>
+          <p>Discount: $${q.totals.discount.toFixed(2)}</p>
+          <p>Tax: $${q.totals.tax.toFixed(2)}</p>
+          <p><strong style="color:#0ea5e9;">Total: $${q.totals.total.toFixed(2)}</strong></p>
         </div>
 
         <div style="margin-top: 30px;">
-          <h4>Notes</h4>
-          <p>${q.notes || 'N/A'}</p>
-        </div>
-
-        <div style="margin-top: 30px;">
-          <h3>Payment Terms</h3>
-          <ul style="margin-top: 10px; padding-left: 20px;">
-            <li><strong>30%</strong> at project start: <strong>$${total30}</strong></li>
-            <li><strong>30%</strong> at 50% completion: <strong>$${total30}</strong></li>
-            <li><strong>30%</strong> at 75% completion: <strong>$${total30}</strong></li>
-            <li><strong>10%</strong> at final completion: <strong>$${total10}</strong></li>
+          <h4>Payment Terms</h4>
+          <ul style="padding-left: 20px;">
+            <li>30% at project start: $${total30}</li>
+            <li>30% at 50% completion: $${total30}</li>
+            <li>30% at 75% completion: $${total30}</li>
+            <li>10% at final completion: $${total10}</li>
           </ul>
-          <p style="margin-top: 10px;">Each payment is due within 7 days of invoice unless otherwise agreed in writing. Late payments may be subject to additional fees.</p>
         </div>
 
-        <hr style="margin: 40px 0;">
-
-        <div>
+        <div style="margin-top: 30px;">
           <h4>Agreement</h4>
           <p>If you accept this quote, please sign and return.</p>
           <div style="display: flex; gap: 50px; margin-top: 20px;">
@@ -821,26 +815,39 @@ async function downloadQuoteAsPDF(id) {
       </div>
     `;
 
-    const container = document.createElement('div');
-    container.innerHTML = htmlContent;
+     // Create iframe container
+     const container = document.createElement('div');
     document.body.appendChild(container);
 
-    const opt = {
-      margin:       0,
-      filename:     `Quote-${q.quoteNumber}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, scrollY: 0 },
-      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.left = '-9999px';
+    iframe.style.width = '800px';
+    iframe.style.height = '1000px';
+    container.appendChild(iframe);
 
-    await html2pdf().set(opt).from(container).save();
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<body style="background:#fff;">${html}</body>`);
+    doc.close();
 
-    container.remove();
+    await new Promise(resolve => setTimeout(resolve, 300)); // wait for iframe to render
+
+    await html2pdf().set({
+      margin: 0,
+      filename: `Quote-${q.quoteNumber}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, scrollY: 0, backgroundColor: '#fff' },
+      jsPDF: { unit: 'pt', format: 'letter', orientation: 'portrait' }
+    }).from(doc.body).save();
+
+    document.body.removeChild(container);
   } catch (err) {
-    console.error('PDF download error:', err);
-    showToast('Failed to download PDF.');
+    console.error("PDF download error:", err);
+    showToast("Failed to generate or download PDF.");
   }
 }
+
 
 
 // ✅ Updated: printQuote()
@@ -1008,11 +1015,24 @@ async function printQuote(id) {
       </html>
     `;
 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
+     // ✅ Use hidden iframe to ensure iOS Safari compatibility
+     const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    // Wait for iframe content to be ready, then print
+    iframe.onload = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+
+      // Optional: Remove iframe after printing
+      setTimeout(() => document.body.removeChild(iframe), 1000);
+    };
   } catch (err) {
     console.error('Print error:', err);
     showToast('Unable to print quote.');
