@@ -282,7 +282,8 @@
   color: #0284c7;
   background: rgba(14, 165, 233, 0.1);
 }
-    
+
+
   .toast {
   position: fixed;
   bottom: 20px;
@@ -358,7 +359,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  
+
   <script>
     function formatDateInput(dateStr) {
   if (!dateStr) return '';
@@ -518,62 +519,85 @@ function toggleMenu(event, id) {
       document.getElementById('quoteModal').style.display = 'none';
     }
 
-    async function viewQuote(id) {
-      try {
-        const res = await fetch(`/api/quotes/${id}`);
-        const q = await res.json();
+// ✅ Updated: viewQuote()
+async function viewQuote(id) {
+  try {
+    const res = await fetch(`/api/quotes/${id}`);
+    const q = await res.json();
 
-        const items = q.lineItems.map(item => `
+    const total30 = (q.totals.total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
+    const total10 = (q.totals.total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
+
+    const items = q.lineItems.map(item => `
+      <tr>
+        <td>${item.name}</td>
+        <td>${item.description}</td>
+        <td>$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+        <td>${item.qty}</td>
+        <td>$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+      </tr>`).join('');
+
+    const html = `
+      <div class="modal-header">
+        <h3>Quote Details</h3>
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+      </div>
+      <p><strong>Quote #:</strong> ${q.quoteNumber}</p>
+      <p><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</p>
+      <p><strong>Valid till:</strong> ${new Date(q.validTill).toLocaleDateString()}</p>
+      <hr>
+      <h4>Quote From</h4>
+      <p>${q.from.name}<br>${q.from.address}<br>${q.from.email}<br>${q.from.phone}<br><strong>License #:</strong> ${q.from.license || 'RBC-2400049'}</p>
+      <h4>Quote To</h4>
+      <p>${q.to.name}<br>${q.to.address}<br>${q.to.email}<br>${q.to.phone}</p>
+      <h4>Line Items</h4>
+      <table>
+        <thead>
           <tr>
-            <td>${item.name}</td>
-            <td>${item.description}</td>
-            <td>$${item.rate.toFixed(2)}</td>
-            <td>${item.qty}</td>
-            <td>$${(item.rate * item.qty).toFixed(2)}</td>
-          </tr>`).join('');
+            <th>Item</th><th>Description</th><th>Rate</th><th>Qty</th><th>Total</th>
+          </tr>
+        </thead>
+        <tbody>${items}</tbody>
+      </table>
+      <div style="text-align: right; margin-top: 10px;">
+        <p><strong>Subtotal:</strong> $${q.totals.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+        <p><strong>Discount:</strong> $${q.totals.discount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+        <p><strong>Tax:</strong> ${q.totals.tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}%</p>
+        <p><strong>Total:</strong> $${q.totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+      </div>
+      <div style="margin-top: 20px;">
+        <strong>Notes:</strong>
+        <p>${q.notes || 'None'}</p>
+      </div>
+      <div style="margin-top: 30px;">
+        <h3>Payment Terms</h3>
+        <ul style="margin-top: 10px; padding-left: 20px;">
+          <li><strong>30%</strong> at project start: <strong>$${total30}</strong></li>
+          <li><strong>30%</strong> at 50% completion: <strong>$${total30}</strong></li>
+          <li><strong>30%</strong> at 75% completion: <strong>$${total30}</strong></li>
+          <li><strong>10%</strong> at final completion: <strong>$${total10}</strong></li>
+        </ul>
+        <p>Each payment is due within 7 days of invoice unless otherwise agreed in writing.</p>
+      </div>
+      <div style="margin-top: 30px;">
+        <h3>Agreement</h3>
+        <p>If you accept this quote, please sign and return.</p>
+        <p><strong>Client Name:</strong> ${q.to.name || "____________________________"}</p>
+        <p><strong>Signature:</strong> ____________________________</p>
+        <p><strong>Date:</strong> ____________________________</p>
+      </div>
+    `;
 
-        const html = `
-          <div class="modal-header">
-            <h3>Quote Details</h3>
-            <span class="close-modal" onclick="closeModal()">&times;</span>
-          </div>
-          <p><strong>Quote #:</strong> ${q.quoteNumber}</p>
-          <p><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</p>
-          <p><strong>Valid till:</strong> ${new Date(q.validTill).toLocaleDateString()}</p>
-          <hr>
-          <h4>Quote From</h4>
-          <p>${q.from.name}<br>${q.from.address}<br>${q.from.email}<br>${q.from.phone}<br><strong>License #:</strong> ${q.from.license || 'RBC-2400049'}</p>
-          <h4>Quote To</h4>
-          <p>${q.to.name}<br>${q.to.address}<br>${q.to.email}<br>${q.to.phone}</p>
-          <h4>Line Items</h4>
-          <table>
-            <thead>
-              <tr>
-                <th>Item</th><th>Description</th><th>Rate</th><th>Qty</th><th>Total</th>
-              </tr>
-            </thead>
-            <tbody>${items}</tbody>
-          </table>
-          <div style="text-align: right; margin-top: 10px;">
-            <p><strong>Subtotal:</strong> $${q.totals.subtotal.toFixed(2)}</p>
-            <p><strong>Discount:</strong> $${q.totals.discount.toFixed(2)}</p>
-            <p><strong>Tax:</strong> $${q.totals.tax.toFixed(2)}</p>
-            <p><strong>Total:</strong> $${q.totals.total.toFixed(2)}</p>
-          </div>
-          <div style="margin-top: 20px;">
-            <strong>Notes:</strong>
-            <p>${q.notes || 'None'}</p>
-          </div>
-        `;
+    openModal(html);
+  } catch (err) {
+    console.error('Error fetching quote:', err);
+    showToast('Failed to load quote details.');
+  }
+}
 
-        openModal(html);
-      } catch (err) {
-        console.error('Error fetching quote:', err);
-        showToast('Failed to load quote details.');
-      }
-    }
 
-    async function editQuote(id) {
+// ✅ Updated: editQuote() with tax and discount editable
+async function editQuote(id) {
   try {
     const res = await fetch(`/api/quotes/${id}`);
     const q = await res.json();
@@ -610,12 +634,18 @@ function toggleMenu(event, id) {
         <input type="tel" id="clientPhone" value="${q.to?.phone || ''}" placeholder="Phone" style="width: 100%;" />
 
         <label>Date:</label>
-       <input type="date" id="quoteDate" value="${formatDateInput(q.date)}" />
+        <input type="date" id="quoteDate" value="${formatDateInput(q.date)}" />
         <label>Valid Till:</label>
-       <input type="date" id="validTill" value="${formatDateInput(q.validTill)}" />
+        <input type="date" id="validTill" value="${formatDateInput(q.validTill)}" />
 
         <h4>Line Items</h4>
         ${lineItemsHTML}
+
+        <label>Discount ($):</label>
+        <input type="number" id="editDiscount" value="${q.totals.discount || 0}" min="0" step="0.01" style="width: 100%;" />
+
+        <label>Tax ($):</label>
+        <input type="number" id="editTax" value="${q.totals.tax || 0}" min="0" step="0.01" style="width: 100%;" />
 
         <label>Notes:</label>
         <textarea id="quoteNotes" style="width: 100%; height: 80px;">${q.notes || ''}</textarea>
@@ -630,6 +660,7 @@ function toggleMenu(event, id) {
     showToast('Error loading quote.');
   }
 }
+
 
 
 async function saveEditedQuote(id, itemCount) {
@@ -654,14 +685,32 @@ async function saveEditedQuote(id, itemCount) {
     lineItems: []
   };
 
+  let subtotal = 0;
+
   for (let i = 0; i < itemCount; i++) {
+    const rate = parseFloat(document.getElementById(`itemRate-${i}`).value) || 0;
+    const qty = parseInt(document.getElementById(`itemQty-${i}`).value) || 0;
+
     updatedQuote.lineItems.push({
       name: document.getElementById(`itemName-${i}`).value,
       description: document.getElementById(`itemDesc-${i}`).value,
-      rate: parseFloat(document.getElementById(`itemRate-${i}`).value),
-      qty: parseInt(document.getElementById(`itemQty-${i}`).value)
+      rate,
+      qty
     });
+
+    subtotal += rate * qty;
   }
+
+  const discount = parseFloat(document.getElementById('editDiscount')?.value || 0);
+  const tax = parseFloat(document.getElementById('editTax')?.value || 0);
+  const total = subtotal - discount + tax;
+
+  updatedQuote.totals = {
+    subtotal,
+    discount,
+    tax,
+    total
+  };
 
   try {
     const res = await fetch(`/api/quotes/${id}`, {
@@ -679,29 +728,25 @@ async function saveEditedQuote(id, itemCount) {
     }
   } catch (err) {
     console.error('Save error:', err);
+    showToast('An error occurred while saving.');
   }
 }
 
 
+
+// ✅ Updated: downloadQuoteAsPDF()
 async function downloadQuoteAsPDF(id) {
   try {
     const res = await fetch(`/api/quotes/${id}`);
     const q = await res.json();
 
-    const items = q.lineItems.map(item => `
-      <tr>
-        <td>${item.name}</td>
-        <td>${item.description}</td>
-        <td>$${item.rate.toFixed(2)}</td>
-        <td>${item.qty}</td>
-        <td>$${(item.rate * item.qty).toFixed(2)}</td>
-      </tr>
-    `).join('');
+    const total30 = (q.totals.total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
+    const total10 = (q.totals.total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
 
     const htmlContent = `
-      <div style="font-family: 'Segoe UI', sans-serif; padding: 40px; color: #000; max-width: 800px; margin: auto;">
+      <div style="font-family: 'Segoe UI', sans-serif; padding: 10px; color: #000; width: 800px;">
         <div style="color: #0ea5e9; font-size: 20px; font-weight: bold;">BESF LLC</div>
-        <div style="margin-top: 10px;"><strong>Quote #:</strong> ${q.quoteNumber}</div>
+        <div style="margin-top: 25px;"><strong>Quote #:</strong> ${q.quoteNumber}</div>
         <div><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</div>
         <div><strong>Valid till:</strong> ${new Date(q.validTill).toLocaleDateString()}</div>
 
@@ -716,38 +761,35 @@ async function downloadQuoteAsPDF(id) {
           </div>
         </div>
 
-<h4 style="margin-top: 30px;">Line Items</h4>
-<table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; background: #ffffff; color: #000;">
-  <thead>
-    <tr>
-      <th style="padding: 8px; border: 1px solid #ddd; background: #ffffff; color: #000; font-weight: bold;">Item</th>
-      <th style="padding: 8px; border: 1px solid #ddd; background: #ffffff; color: #000; font-weight: bold;">Description</th>
-      <th style="padding: 8px; border: 1px solid #ddd; background: #ffffff; color: #000; font-weight: bold;">Rate</th>
-      <th style="padding: 8px; border: 1px solid #ddd; background: #ffffff; color: #000; font-weight: bold;">Qty</th>
-      <th style="padding: 8px; border: 1px solid #ddd; background: #ffffff; color: #000; font-weight: bold;">Total</th>
-    </tr>
-  </thead>
-  <tbody>
-    ${q.lineItems.map(item => `
-      <tr style="background: #ffffff; color: #000;">
-        <td style="padding: 8px; border: 1px solid #ddd;">${item.name}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${item.description}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">$${item.rate.toFixed(2)}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${item.qty}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">$${(item.rate * item.qty).toFixed(2)}</td>
-      </tr>
-    `).join('')}
-  </tbody>
-</table>
-
-
-
+        <h4 style="margin-top: 30px;">Line Items</h4>
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+          <thead>
+            <tr>
+              <th style="padding: 8px; border: 1px solid #ddd;">Item</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Description</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Rate</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Qty</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${q.lineItems.map(item => `
+              <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">${item.name}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${item.description}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${item.qty}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
 
         <div style="margin-top: 20px; text-align: right;">
-          <p>Subtotal: $${q.totals.subtotal.toFixed(2)}</p>
-          <p>Discount: $${q.totals.discount.toFixed(2)}</p>
-          <p>Tax: $${q.totals.tax.toFixed(2)}</p>
-          <p><strong style="color: #0ea5e9;">Total: $${q.totals.total.toFixed(2)}</strong></p>
+          <p>Subtotal: $${q.totals.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          <p>Discount: $${q.totals.discount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          <p>Tax: $${q.totals.tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          <p><strong style="color: #0ea5e9;">Total: $${q.totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></p>
         </div>
 
         <div style="margin-top: 30px;">
@@ -756,8 +798,14 @@ async function downloadQuoteAsPDF(id) {
         </div>
 
         <div style="margin-top: 30px;">
-          <h4>Payment Terms</h4>
-          <p>Payment is due within 15 days of acceptance. Late payments may be subject to additional fees unless otherwise agreed upon in writing.</p>
+          <h3>Payment Terms</h3>
+          <ul style="margin-top: 10px; padding-left: 20px;">
+            <li><strong>30%</strong> at project start: <strong>$${total30}</strong></li>
+            <li><strong>30%</strong> at 50% completion: <strong>$${total30}</strong></li>
+            <li><strong>30%</strong> at 75% completion: <strong>$${total30}</strong></li>
+            <li><strong>10%</strong> at final completion: <strong>$${total10}</strong></li>
+          </ul>
+          <p style="margin-top: 10px;">Each payment is due within 7 days of invoice unless otherwise agreed in writing. Late payments may be subject to additional fees.</p>
         </div>
 
         <hr style="margin: 40px 0;">
@@ -766,29 +814,28 @@ async function downloadQuoteAsPDF(id) {
           <h4>Agreement</h4>
           <p>If you accept this quote, please sign and return.</p>
           <div style="display: flex; gap: 50px; margin-top: 20px;">
-            <p style="border-top: 1px solid #333; width: 200px; text-align: center; padding-top: 6px;">Client Name</p>
-            <p style="border-top: 1px solid #333; width: 200px; text-align: center; padding-top: 6px;">Signature</p>
+            <p style="border-top: 1px solid #333; width: 200px; text-align: center; padding-top: 6px;">${q.to.name || 'Client Name'}</p>
+            <p style="border-top: 1px solid #333; width: 200px; text-align: center; padding-top: 6px;">Date</p>
           </div>
         </div>
       </div>
     `;
 
-    // Create a temporary div to render HTML
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlContent;
-    document.body.appendChild(tempDiv);
+    const container = document.createElement('div');
+    container.innerHTML = htmlContent;
+    document.body.appendChild(container);
 
     const opt = {
       margin:       0,
       filename:     `Quote-${q.quoteNumber}.pdf`,
       image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2 },
+      html2canvas:  { scale: 2, scrollY: 0 },
       jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
 
-    await html2pdf().set(opt).from(tempDiv).save();
+    await html2pdf().set(opt).from(container).save();
 
-    tempDiv.remove();
+    container.remove();
   } catch (err) {
     console.error('PDF download error:', err);
     showToast('Failed to download PDF.');
@@ -796,19 +843,22 @@ async function downloadQuoteAsPDF(id) {
 }
 
 
-
+// ✅ Updated: printQuote()
 async function printQuote(id) {
   try {
     const res = await fetch(`/api/quotes/${id}`);
     const q = await res.json();
 
+    const total30 = (q.totals.total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
+    const total10 = (q.totals.total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
+
     const items = q.lineItems.map(item => `
       <tr>
         <td>${item.name}</td>
         <td>${item.description}</td>
-        <td>$${item.rate.toFixed(2)}</td>
+        <td>$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
         <td>${item.qty}</td>
-        <td>$${(item.rate * item.qty).toFixed(2)}</td>
+        <td>$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
       </tr>
     `).join('');
 
@@ -819,80 +869,61 @@ async function printQuote(id) {
         <style>
           body {
             font-family: 'Segoe UI', Tahoma, sans-serif;
-            margin: 40px;
+            margin: 0 auto;
+            padding: 40px;
             color: #000;
             font-size: 14px;
+            max-width: 800px;
           }
-
-          h1, h2, h3 {
+          h1, h2, h3, h4 {
             margin: 0;
             padding: 0;
           }
-
           .company {
             color: #0ea5e9;
             font-size: 20px;
             font-weight: bold;
             margin-bottom: 8px;
           }
-
           .info-grid {
             display: flex;
             justify-content: space-between;
-            margin-top: 20px;
-            margin-bottom: 20px;
+            margin: 20px 0;
           }
-
           .info-section {
             width: 48%;
           }
-
           table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
           }
-
           thead {
             background: #f3f4f6;
           }
-
           th, td {
             padding: 8px;
             text-align: left;
+            border: 1px solid #ddd;
           }
-
-          tr:not(:last-child) td {
-            border-bottom: 1px solid #ddd;
-          }
-
           .totals {
             margin-top: 20px;
             text-align: right;
           }
-
           .totals p {
             margin: 4px 0;
           }
-
           .totals strong {
             color: #0ea5e9;
           }
-
           .section {
             margin-top: 40px;
           }
-
-          .signature {
-            margin-top: 60px;
-          }
-
           .signature-line {
             display: flex;
             gap: 50px;
             margin-top: 20px;
           }
-
           .signature-line p {
             border-top: 1px solid #333;
             width: 200px;
@@ -900,7 +931,6 @@ async function printQuote(id) {
             margin-top: 20px;
             padding-top: 4px;
           }
-
           hr {
             margin: 30px 0;
             border: none;
@@ -922,18 +952,11 @@ async function printQuote(id) {
         <div class="info-grid">
           <div class="info-section">
             <h4>Quote From</h4>
-            <p>${q.from.name}</p>
-            <p>${q.from.address}</p>
-            <p>${q.from.email}</p>
-            <p>${q.from.phone}</p>
-            <p><strong>License:</strong> ${q.from.license || 'RBC-2400049'}</p>
+            <p>${q.from.name}<br>${q.from.address}<br>${q.from.email}<br>${q.from.phone}<br><strong>License:</strong> ${q.from.license || 'RBC-2400049'}</p>
           </div>
           <div class="info-section">
             <h4>Quote To</h4>
-            <p>${q.to.name}</p>
-            <p>${q.to.address}</p>
-            <p>${q.to.email}</p>
-            <p>${q.to.phone}</p>
+            <p>${q.to.name}<br>${q.to.address}<br>${q.to.email}<br>${q.to.phone}</p>
           </div>
         </div>
 
@@ -948,10 +971,10 @@ async function printQuote(id) {
         </table>
 
         <div class="totals">
-          <p>Subtotal: $${q.totals.subtotal.toFixed(2)}</p>
-          <p>Discount: $${q.totals.discount.toFixed(2)}</p>
-          <p>Tax: $${q.totals.tax.toFixed(2)}</p>
-          <p><strong>Total: $${q.totals.total.toFixed(2)}</strong></p>
+          <p>Subtotal: $${q.totals.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          <p>Discount: $${q.totals.discount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          <p>Tax: $${q.totals.tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          <p><strong>Total: $${q.totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></p>
         </div>
 
         <div class="section">
@@ -960,8 +983,14 @@ async function printQuote(id) {
         </div>
 
         <div class="section">
-          <h4>Payment Terms</h4>
-          <p>Payment is due within 15 days of acceptance. Late payments may be subject to additional fees unless otherwise agreed upon in writing.</p>
+          <h3>Payment Terms</h3>
+          <ul style="margin-top: 10px; padding-left: 20px;">
+            <li><strong>30%</strong> at project start: <strong>$${total30}</strong></li>
+            <li><strong>30%</strong> at 50% completion: <strong>$${total30}</strong></li>
+            <li><strong>30%</strong> at 75% completion: <strong>$${total30}</strong></li>
+            <li><strong>10%</strong> at final completion: <strong>$${total10}</strong></li>
+          </ul>
+          <p>Each payment is due within 7 days of invoice unless otherwise agreed in writing.</p>
         </div>
 
         <hr>
@@ -971,7 +1000,7 @@ async function printQuote(id) {
           <p>If you accept this quote, please sign and return.</p>
 
           <div class="signature-line">
-            <p>Client Name</p>
+            <p>${q.to.name || 'Client Name'}</p>
             <p>Signature</p>
           </div>
         </div>
@@ -995,18 +1024,23 @@ async function printQuote(id) {
 
 
 
+
+// ✅ Updated: shareQuote()
 async function shareQuote(id) {
   try {
     const res = await fetch(`/api/quotes/${id}`);
     const q = await res.json();
 
+    const total30 = (q.totals.total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
+    const total10 = (q.totals.total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
+
     const items = q.lineItems.map(item => `
       <tr>
         <td>${item.name}</td>
         <td>${item.description}</td>
-        <td>$${item.rate.toFixed(2)}</td>
+        <td>$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
         <td>${item.qty}</td>
-        <td>$${(item.rate * item.qty).toFixed(2)}</td>
+        <td>$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
       </tr>
     `).join('');
 
@@ -1017,7 +1051,9 @@ async function shareQuote(id) {
         <style>
           body {
             font-family: 'Segoe UI', Tahoma, sans-serif;
-            margin: 40px;
+            margin: 0 auto;
+            padding: 40px;
+            max-width: 800px;
             color: #000;
             font-size: 14px;
           }
@@ -1058,10 +1094,7 @@ async function shareQuote(id) {
           th, td {
             padding: 8px;
             text-align: left;
-          }
-
-          tr:not(:last-child) td {
-            border-bottom: 1px solid #ddd;
+            border: 1px solid #ddd;
           }
 
           .totals {
@@ -1081,10 +1114,6 @@ async function shareQuote(id) {
             margin-top: 40px;
           }
 
-          .signature {
-            margin-top: 60px;
-          }
-
           .signature-line {
             display: flex;
             gap: 50px;
@@ -1095,7 +1124,6 @@ async function shareQuote(id) {
             border-top: 1px solid #333;
             width: 200px;
             text-align: center;
-            margin-top: 20px;
             padding-top: 4px;
           }
 
@@ -1120,18 +1148,11 @@ async function shareQuote(id) {
         <div class="info-grid">
           <div class="info-section">
             <h4>Quote From</h4>
-            <p>${q.from.name}</p>
-            <p>${q.from.address}</p>
-            <p>${q.from.email}</p>
-            <p>${q.from.phone}</p>
-            <p><strong>License:</strong> ${q.from.license || 'RBC-2400049'}</p>
+            <p>${q.from.name}<br>${q.from.address}<br>${q.from.email}<br>${q.from.phone}<br><strong>License:</strong> ${q.from.license || 'RBC-2400049'}</p>
           </div>
           <div class="info-section">
             <h4>Quote To</h4>
-            <p>${q.to.name}</p>
-            <p>${q.to.address}</p>
-            <p>${q.to.email}</p>
-            <p>${q.to.phone}</p>
+            <p>${q.to.name}<br>${q.to.address}<br>${q.to.email}<br>${q.to.phone}</p>
           </div>
         </div>
 
@@ -1146,10 +1167,10 @@ async function shareQuote(id) {
         </table>
 
         <div class="totals">
-          <p>Subtotal: $${q.totals.subtotal.toFixed(2)}</p>
-          <p>Discount: $${q.totals.discount.toFixed(2)}</p>
-          <p>Tax: $${q.totals.tax.toFixed(2)}</p>
-          <p><strong>Total: $${q.totals.total.toFixed(2)}</strong></p>
+          <p>Subtotal: $${q.totals.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          <p>Discount: $${q.totals.discount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          <p>Tax: $${q.totals.tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          <p><strong>Total: $${q.totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></p>
         </div>
 
         <div class="section">
@@ -1157,9 +1178,15 @@ async function shareQuote(id) {
           <p>${q.notes || 'N/A'}</p>
         </div>
 
-        <div class="section">
-          <h4>Payment Terms</h4>
-          <p>Payment is due within 15 days of acceptance. Late payments may be subject to additional fees unless otherwise agreed upon in writing.</p>
+        <div class="payment-terms">
+          <h3>Payment Terms</h3>
+          <ul style="margin-top: 10px; padding-left: 20px;">
+            <li><strong>30%</strong> at project start: <strong>$${total30}</strong></li>
+            <li><strong>30%</strong> at 50% completion: <strong>$${total30}</strong></li>
+            <li><strong>30%</strong> at 75% completion: <strong>$${total30}</strong></li>
+            <li><strong>10%</strong> at final completion: <strong>$${total10}</strong></li>
+          </ul>
+          <p style="margin-top: 10px;">Each payment is due within 7 days of invoice unless otherwise agreed in writing. Late payments may be subject to additional fees.</p>
         </div>
 
         <hr>
@@ -1167,10 +1194,9 @@ async function shareQuote(id) {
         <div class="section">
           <h4>Agreement</h4>
           <p>If you accept this quote, please sign and return.</p>
-
           <div class="signature-line">
-            <p>Client Name</p>
-            <p>Signature</p>
+            <p>${q.to.name || 'Client Name'}</p>
+            <p>Date</p>
           </div>
         </div>
       </body>
@@ -1218,6 +1244,8 @@ async function shareQuote(id) {
 
     fetchQuotes();
 
+
+
     async function exportQuoteToExcel(id) {
   try {
     const res = await fetch(`/api/quotes/${id}`);
@@ -1251,7 +1279,9 @@ async function shareQuote(id) {
     showToast("Failed to export line items.");
   }
 }
-    
+
+
+
   </script>
 </body>
 </html>
