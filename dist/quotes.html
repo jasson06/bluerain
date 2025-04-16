@@ -794,6 +794,12 @@ async function downloadQuoteAsPDF(id) {
           <p><strong style="color:#0ea5e9;">Total: $${q.totals.total.toFixed(2)}</strong></p>
         </div>
 
+
+           <div class="section">
+          <h4>Notes</h4>
+          <p>${q.notes || 'N/A'}</p>
+           </div>
+
         <div style="margin-top: 30px;">
           <h4>Payment Terms</h4>
           <ul style="padding-left: 20px;">
