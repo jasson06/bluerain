@@ -3676,6 +3676,7 @@ app.delete('/api/quotes/:id', async (req, res) => {
 });
 
 
+// Update a quote
 app.put('/api/quotes/:id', async (req, res) => {
   try {
     const quoteId = req.params.id;
@@ -3687,20 +3688,21 @@ app.put('/api/quotes/:id', async (req, res) => {
       validTill,
       notes,
       lineItems,
-      status // ✅ Accept status
+      status,
+      totals // Accept tax as percentage: totals.tax (e.g., 8.25)
     } = req.body;
 
     if (!to?.name || !Array.isArray(lineItems) || lineItems.length === 0) {
       return res.status(400).json({ message: 'Missing required fields: client name or line items' });
     }
 
-    // Calculate totals
+    // ✅ Calculate totals using provided tax as percentage
     const subtotal = lineItems.reduce((acc, item) => acc + (item.rate * item.qty), 0);
-    const discount = 0;
-    const tax = subtotal * 0.1;
-    const total = subtotal - discount + tax;
+    const discount = parseFloat(totals?.discount) || 0;
+    const taxRate = parseFloat(totals?.tax) || 0;
+    const taxAmount = (subtotal - discount) * (taxRate / 100);
+    const total = subtotal - discount + taxAmount;
 
-    // Build update object
     const updateFields = {
       to,
       from,
@@ -3709,17 +3711,17 @@ app.put('/api/quotes/:id', async (req, res) => {
       validTill,
       notes,
       lineItems,
-      totals: { subtotal, discount, tax, total }
+      totals: {
+        subtotal,
+        discount,
+        tax: taxRate, // stored as percentage
+        total
+      }
     };
 
-    // Include status only if provided
     if (status) updateFields.status = status;
 
-    const updatedQuote = await Quote.findByIdAndUpdate(
-      quoteId,
-      updateFields,
-      { new: true }
-    );
+    const updatedQuote = await Quote.findByIdAndUpdate(quoteId, updateFields, { new: true });
 
     if (!updatedQuote) {
       return res.status(404).json({ message: 'Quote not found' });
