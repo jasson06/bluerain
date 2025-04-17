@@ -537,6 +537,19 @@
 }
 
 
+.drag-handle {
+  touch-action: none;
+  cursor: grab;
+  font-size: 18px;
+  padding: 4px;
+  display: inline-block;
+}
+
+
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+
   </style>
 </head>
 <body>
@@ -602,6 +615,7 @@
         <table>
           <thead>
             <tr>
+              <th></th>
               <th>Item</th>
               <th>Description</th>
               <th>Rate</th>
@@ -761,7 +775,7 @@
 <div id="loader" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.7); z-index: 9999; display: none; justify-content: center; align-items: center;">
   <div style="border: 6px solid #f3f3f3; border-top: 6px solid #007bff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
 </div>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script>
 
@@ -973,18 +987,21 @@ function renderTable() {
     subtotal += total;
 
     const row = document.createElement('tr');
+    row.setAttribute('data-index', index);
+
     row.innerHTML = `
+      <td style="text-align:center;"><span class="drag-handle" style="cursor: grab;">☰</span></td>
       <td>${item.name}</td>
       <td>${item.description}</td>
-      <td>$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-      <td>${item.qty.toLocaleString()}</td>
-      <td>$${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      <td>$${item.rate.toFixed(2)}</td>
+      <td>${item.qty}</td>
+      <td>$${total.toFixed(2)}</td>
       <td>
         <div class="action-dropdown" style="position: relative;">
-          <button class="dots" onclick="toggleLineItemMenu(event, ${index})">⋯</button>
-          <div class="action-dropdown-content" id="lineitem-menu-${index}" style="display: none; position: absolute; right: 0; background: white; border: 1px solid #ccc; border-radius: 5px; box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2); z-index: 1000;">
-            <button onclick="editLineItem(${index})">✏️ Edit</button>
-            <button onclick="deleteLineItem(${index})" style="color: red;">🗑️ Delete</button>
+          <button class="dots" onclick="toggleLineItemMenu(event, ${index})">\u22EF</button>
+          <div class="action-dropdown-content" id="lineitem-menu-${index}" style="display: none; position: absolute; right: 0; background: white; border: 1px solid #ccc; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1000;">
+            <button onclick="editLineItem(${index})">\u270F\uFE0F Edit</button>
+            <button onclick="deleteLineItem(${index})" style="color: red;">\uD83D\uDDD1\uFE0F Delete</button>
           </div>
         </div>
       </td>
@@ -997,11 +1014,32 @@ function renderTable() {
   const tax = (subtotal - discount) * (taxRate / 100);
   const total = subtotal - discount + tax;
 
-  document.getElementById('subtotal').textContent = subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
-  document.getElementById('discount').textContent = discount.toLocaleString(undefined, { minimumFractionDigits: 2 });
-  document.getElementById('tax').textContent = tax.toLocaleString(undefined, { minimumFractionDigits: 2 });
-  document.getElementById('grandTotal').textContent = total.toLocaleString(undefined, { minimumFractionDigits: 2 });
+  document.getElementById('subtotal').textContent = subtotal.toFixed(2);
+  document.getElementById('discount').textContent = discount.toFixed(2);
+  document.getElementById('tax').textContent = tax.toFixed(2);
+  document.getElementById('grandTotal').textContent = total.toFixed(2);
 }
+
+
+  // ✅ Enable drag and drop on tbody
+  document.addEventListener('DOMContentLoaded', () => {
+    const tableBody = document.getElementById('lineItemsTable');
+
+    Sortable.create(tableBody, {
+      handle: '.drag-handle',
+      animation: 150,
+      onEnd: function (evt) {
+        const oldIndex = evt.oldIndex;
+        const newIndex = evt.newIndex;
+
+        if (oldIndex !== newIndex) {
+          const movedItem = lineItems.splice(oldIndex, 1)[0];
+          lineItems.splice(newIndex, 0, movedItem);
+          renderTable(); // Re-render to update indexes
+        }
+      }
+    });
+  });
 
 
     
