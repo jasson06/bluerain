@@ -987,18 +987,18 @@ async function downloadQuoteAsPDF(id) {
                 <div style="display: grid; grid-template-columns: 1.5fr 3fr 1fr 0.7fr 1fr; border-bottom: 1px solid #e5e7eb; padding: 10px 0;">
                   <div style="padding: 0 6px;">${item.name}</div>
                   <div style="padding: 0 6px;">${item.description}</div>
-                  <div style="padding: 0 6px;">$${item.rate.toFixed(2)}</div>
+                  <div style="padding: 0 6px;">$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                   <div style="padding: 0 6px;">${item.qty}</div>
-                  <div style="padding: 0 6px;">$${(item.rate * item.qty).toFixed(2)}</div>
+                  <div style="padding: 0 6px;">$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                 </div>
               `).join('')}
             </div>
 
             <div style="text-align:right; margin-top: 20px;">
-              <p>Subtotal: $${q.totals.subtotal.toFixed(2)}</p>
-              <p>Discount: $${q.totals.discount.toFixed(2)}</p>
-              <p>Tax: $${q.totals.tax.toFixed(2)}</p>
-              <p><strong style="color:#0ea5e9;">Total: $${q.totals.total.toFixed(2)}</strong></p>
+               <p>Subtotal: $${q.totals.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          <p>Discount: $${q.totals.discount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          <p>Tax: $${q.totals.tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          <p><strong>Total: $${q.totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></p>
             </div>
 
             <div class="section">
@@ -1054,7 +1054,6 @@ async function downloadQuoteAsPDF(id) {
     showToast("Failed to generate or download PDF.");
   }
 }
-
 
 
 // ✅ Updated: printQuote()
