@@ -331,6 +331,17 @@
   background-color: #ef4444; /* red */
 }
 
+.drag-handle {
+  cursor: grab;
+  touch-action: none;
+  padding: 0 6px;
+  font-size: 20px;
+  user-select: none;
+}
+.drag-ghost {
+  opacity: 0.4;
+  background-color: #f0f0f0;
+}
 
   </style>
 </head>
@@ -359,10 +370,11 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Required for PDF generation -->
+  <!-- Required for PDF generation -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
   <script>
     function formatDateInput(dateStr) {
   if (!dateStr) return '';
@@ -605,12 +617,24 @@ async function editQuote(id) {
     const res = await fetch(`/api/quotes/${id}`);
     const q = await res.json();
 
-    const lineItemsHTML = q.lineItems.map((item, idx) => `
-      <div style="margin-bottom: 10px;">
-        <input type="text" value="${item.name}" placeholder="Item name" id="itemName-${idx}" style="width: 30%;" />
-        <input type="text" value="${item.description}" placeholder="Description" id="itemDesc-${idx}" style="width: 30%;" />
-        <input type="number" value="${item.rate}" placeholder="Rate" id="itemRate-${idx}" style="width: 15%;" />
-        <input type="number" value="${item.qty}" placeholder="Qty" id="itemQty-${idx}" style="width: 15%;" />
+    const lineItemsHTML = q.lineItems.map(item => `
+      <div class="line-item draggable" draggable="true" style="
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 10px;
+        align-items: center;
+        border: 1px solid #e5e7eb;
+        padding: 6px;
+        border-radius: 6px;
+        background: #fff;
+      ">
+        <span class="drag-handle" style="cursor: grab; font-size: 18px;">☰</span>
+        <input type="text" class="item-name" value="${item.name}" placeholder="Item name" style="flex: 1 1 150px; min-width: 100px;" />
+        <input type="text" class="item-desc" value="${item.description}" placeholder="Description" style="flex: 2 1 200px; min-width: 120px;" />
+        <input type="number" class="item-rate" value="${item.rate}" placeholder="Rate" style="flex: 1 1 80px; min-width: 60px;" />
+        <input type="number" class="item-qty" value="${item.qty}" placeholder="Qty" style="flex: 1 1 60px; min-width: 50px;" />
+        <button class="delete-line-btn" style="background: none; border: none; cursor: pointer; color: #e11d48;" title="Delete line item">🗑️</button>
       </div>
     `).join('');
 
@@ -620,6 +644,7 @@ async function editQuote(id) {
         <span class="close-modal" onclick="closeModal()">&times;</span>
       </div>
       <div>
+        <!-- Basic Fields -->
         <label>Quote Number:</label>
         <input type="text" id="quoteNumber" value="${q.quoteNumber}" style="width: 100%;" />
 
@@ -641,23 +666,49 @@ async function editQuote(id) {
         <label>Valid Till:</label>
         <input type="date" id="validTill" value="${formatDateInput(q.validTill)}" />
 
+        <!-- Line Items -->
         <h4>Line Items</h4>
-        ${lineItemsHTML}
+        <div id="lineItemsContainer">${lineItemsHTML}</div>
 
-        <label>Discount ($):</label>
-        <input type="number" id="editDiscount" value="${q.totals.discount || 0}" min="0" step="0.01" style="width: 100%;" />
+        <button type="button" onclick="addNewLineItem()" style="
+          margin: 10px 0;
+          background-color: #10b981;
+          color: white;
+          border: none;
+          padding: 10px 14px;
+          border-radius: 6px;
+          cursor: pointer;
+        ">➕ Add Line Item</button>
 
-        <label>Tax ($):</label>
-        <input type="number" id="editTax" value="${q.totals.tax || 0}" min="0" step="0.01" style="width: 100%;" />
+        <!-- Totals -->
+        <div style="margin-top: 20px;">
+          <label>Discount ($):</label>
+          <input type="number" id="editDiscount" value="${q.totals.discount || 0}" min="0" step="0.01" style="width: 100%;" />
+          <label>Tax ($):</label>
+          <input type="number" id="editTax" value="${q.totals.tax || 0}" min="0" step="0.01" style="width: 100%;" />
+          <label>Notes:</label>
+          <textarea id="quoteNotes" style="width: 100%; height: 80px;">${q.notes || ''}</textarea>
+          <div style="margin-top: 10px;">
+            <strong>Subtotal:</strong> <span id="calcSubtotal">$0.00</span><br>
+            <strong>Total:</strong> <span id="calcTotal">$0.00</span>
+          </div>
+        </div>
 
-        <label>Notes:</label>
-        <textarea id="quoteNotes" style="width: 100%; height: 80px;">${q.notes || ''}</textarea>
-
-        <button style="margin-top:20px;" onclick="saveEditedQuote('${id}', ${q.lineItems.length})">Save</button>
+        <button style="
+          margin-top: 20px;
+          background-color: #10b981;
+          color: white;
+          border: none;
+          padding: 10px 16px;
+          border-radius: 6px;
+          cursor: pointer;
+        " onclick="saveEditedQuote('${id}')">💾 Save</button>
       </div>
     `;
 
     openModal(html);
+    enableDragAndDrop();  // 👈 initialize sorting
+    setupLiveTotalCalculation(); // 👈 initialize live updates
   } catch (err) {
     console.error('Failed to load quote for editing', err);
     showToast('Error loading quote.');
@@ -665,8 +716,101 @@ async function editQuote(id) {
 }
 
 
+function enableDragAndDrop() {
+  const container = document.getElementById('lineItemsContainer');
 
-async function saveEditedQuote(id, itemCount) {
+  Sortable.create(container, {
+    handle: '.drag-handle',
+    animation: 150,
+    ghostClass: 'drag-ghost',
+    onEnd: () => {
+      const reorderedItems = [];
+      container.querySelectorAll('.line-item').forEach(item => {
+        reorderedItems.push({
+          name: item.querySelector('.item-name')?.value || '',
+          description: item.querySelector('.item-desc')?.value || '',
+          rate: parseFloat(item.querySelector('.item-rate')?.value || 0),
+          qty: parseFloat(item.querySelector('.item-qty')?.value || 0)
+        });
+      });
+      lineItems = reorderedItems; // update main array if you want to persist order
+      setupLiveTotalCalculation(); // recalculate totals after reorder
+    }
+  });
+}
+
+
+function setupLiveTotalCalculation() {
+  const container = document.getElementById('lineItemsContainer');
+
+  const updateTotals = () => {
+    let subtotal = 0;
+    container.querySelectorAll('.line-item').forEach(item => {
+      const rate = parseFloat(item.querySelector('.item-rate')?.value || 0);
+      const qty = parseFloat(item.querySelector('.item-qty')?.value || 0);
+      subtotal += rate * qty;
+    });
+
+    const discount = parseFloat(document.getElementById('editDiscount')?.value || 0);
+    const taxRate = parseFloat(document.getElementById('editTax')?.value || 0); // treat as %
+    const taxAmount = subtotal * (taxRate / 100);
+
+    const total = subtotal + taxAmount - discount;
+
+    document.getElementById('calcSubtotal').textContent = `$${subtotal.toFixed(2)}`;
+    document.getElementById('calcTotal').textContent = `$${total.toFixed(2)}`;
+  };
+
+  container.addEventListener('input', updateTotals);
+  document.getElementById('editDiscount').addEventListener('input', updateTotals);
+  document.getElementById('editTax').addEventListener('input', updateTotals);
+
+  updateTotals();
+}
+
+
+
+
+
+
+function addNewLineItem() {
+  const container = document.getElementById('lineItemsContainer');
+  const row = document.createElement('div');
+  row.className = 'line-item';
+  row.style.cssText = `
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center;
+  `;
+
+  row.innerHTML = `
+    <input type="text" class="item-name" placeholder="Item name" style="flex: 1 1 150px; min-width: 100px;" />
+    <input type="text" class="item-desc" placeholder="Description" style="flex: 2 1 200px; min-width: 120px;" />
+    <input type="number" class="item-rate" placeholder="Rate" style="flex: 1 1 80px; min-width: 60px;" />
+    <input type="number" class="item-qty" placeholder="Qty" style="flex: 1 1 60px; min-width: 50px;" />
+    <button class="delete-line-btn" style="background: none; border: none; cursor: pointer; color: #e11d48;" title="Delete line item">
+      🗑️
+    </button>
+  `;
+
+  container.appendChild(row);
+}
+
+
+document.addEventListener('click', function (e) {
+  if (e.target && e.target.classList.contains('delete-line-btn')) {
+    const row = e.target.closest('.line-item');
+    if (row) row.remove();
+  }
+});
+
+
+
+
+
+async function saveEditedQuote(id) {
   const updatedQuote = {
     quoteNumber: document.getElementById('quoteNumber').value,
     from: {
@@ -690,30 +834,30 @@ async function saveEditedQuote(id, itemCount) {
 
   let subtotal = 0;
 
-  for (let i = 0; i < itemCount; i++) {
-    const rate = parseFloat(document.getElementById(`itemRate-${i}`).value) || 0;
-    const qty = parseInt(document.getElementById(`itemQty-${i}`).value) || 0;
+  // 🔁 Get all current line items using class selectors
+  const names = document.querySelectorAll('.item-name');
+  const descs = document.querySelectorAll('.item-desc');
+  const rates = document.querySelectorAll('.item-rate');
+  const qtys = document.querySelectorAll('.item-qty');
 
-    updatedQuote.lineItems.push({
-      name: document.getElementById(`itemName-${i}`).value,
-      description: document.getElementById(`itemDesc-${i}`).value,
-      rate,
-      qty
-    });
+  for (let i = 0; i < names.length; i++) {
+    const name = names[i].value.trim();
+    const description = descs[i].value.trim();
+    const rate = parseFloat(rates[i].value) || 0;
+    const qty = parseFloat(qtys[i].value) || 0;
 
-    subtotal += rate * qty;
+    // Avoid adding completely blank rows
+    if (name || description || rate > 0 || qty > 0) {
+      updatedQuote.lineItems.push({ name, description, rate, qty });
+      subtotal += rate * qty;
+    }
   }
 
   const discount = parseFloat(document.getElementById('editDiscount')?.value || 0);
   const tax = parseFloat(document.getElementById('editTax')?.value || 0);
   const total = subtotal - discount + tax;
 
-  updatedQuote.totals = {
-    subtotal,
-    discount,
-    tax,
-    total
-  };
+  updatedQuote.totals = { subtotal, discount, tax, total };
 
   try {
     const res = await fetch(`/api/quotes/${id}`, {
@@ -734,6 +878,7 @@ async function saveEditedQuote(id, itemCount) {
     showToast('An error occurred while saving.');
   }
 }
+
 
 
 
@@ -795,10 +940,10 @@ async function downloadQuoteAsPDF(id) {
         </div>
 
 
-           <div class="section">
+            <div class="section">
           <h4>Notes</h4>
           <p>${q.notes || 'N/A'}</p>
-           </div>
+        </div>
 
         <div style="margin-top: 30px;">
           <h4>Payment Terms</h4>
