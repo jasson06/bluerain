@@ -881,7 +881,6 @@ async function saveEditedQuote(id) {
 
 
 
-
 // ✅ Updated: downloadQuoteAsPDF()
 async function downloadQuoteAsPDF(id) {
   try {
@@ -995,12 +994,15 @@ async function downloadQuoteAsPDF(id) {
               `).join('')}
             </div>
 
-            <div style="text-align:right; margin-top: 20px;">
-               <p>Subtotal: $${q.totals.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-          <p>Discount: $${q.totals.discount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-          <p>Tax: $${q.totals.tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-          <p><strong>Total: $${q.totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></p>
-            </div>
+          <div style="margin-top: 20px; text-align: right;">
+           <p><strong>Subtotal:</strong> $${parseFloat(q.totals.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+           <p><strong>Discount:</strong> $${parseFloat(q.totals.discount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p><strong>Tax:</strong> $${parseFloat(q.totals.tax).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p><strong style="font-size: 18px;">Total:</strong> 
+            <span style="color: #007bff;">$${parseFloat(q.totals.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+           </p>
+
+          </div>
 
             <div class="section">
               <h4>Notes</h4>
