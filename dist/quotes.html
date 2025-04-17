@@ -904,6 +904,7 @@ async function downloadQuoteAsPDF(id) {
               padding: 40px;
               max-width: 800px;
               margin: auto;
+              background-color: #ffffff;
             }
             h2 {
               color: #0ea5e9;
@@ -1043,7 +1044,7 @@ async function downloadQuoteAsPDF(id) {
       margin: 0,
       filename: `Quote-${q.quoteNumber}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, scrollY: 0, backgroundColor: '#fff' },
+      html2canvas: { scale: 2, scrollY: 0, backgroundColor: '#ffffff' },
       jsPDF: { unit: 'pt', format: 'letter', orientation: 'portrait' },
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     }).from(doc.body).save();
