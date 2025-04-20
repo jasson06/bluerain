@@ -441,6 +441,7 @@ function showToast(message, duration = 3000) {
 <button onclick="event.stopPropagation(); printQuote('${q._id}')">Print</button>
 <button onclick="event.stopPropagation(); downloadQuoteAsPDF('${q._id}')">Download PDF</button>
 <button onclick="event.stopPropagation(); shareQuote('${q._id}')">Share</button>
+<button onclick="event.stopPropagation(); convertToJob('${q._id}')">Convert to Job</button>
 <button onclick="event.stopPropagation(); exportQuoteToExcel('${q._id}')">Export to Excel</button>
 <button onclick="event.stopPropagation(); editQuote('${q._id}')">Edit</button>
 <button onclick="event.stopPropagation(); deleteQuote('${q._id}')">Delete</button>
@@ -1510,6 +1511,27 @@ async function shareQuote(id) {
 }
 
 
+
+    async function convertToJob(quoteId) {
+  if (!confirm("Are you sure you want to convert this quote to a job?")) return;
+
+  try {
+    const res = await fetch(`/api/quotes/${quoteId}/convert-to-job`, {
+      method: "POST"
+    });
+    const result = await res.json();
+
+    if (result.success && result.redirectUrl) {
+      // ✅ Automatically redirect to project detail page
+      window.location.href = result.redirectUrl;
+    } else {
+      alert("Conversion failed.");
+    }
+  } catch (err) {
+    console.error('Error:', err);
+    alert("An error occurred while converting the quote.");
+  }
+}
 
   </script>
 </body>
