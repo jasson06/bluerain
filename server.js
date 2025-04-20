@@ -3735,6 +3735,114 @@ app.put('/api/quotes/:id', async (req, res) => {
 });
 
 
+
+// Helper to parse address string
+function parseAddress(addressString) {
+  const regex = /(.*),\s*(.+),\s*([A-Z]{2})\s*(\d{5})/;
+  const match = addressString.match(regex);
+  if (!match) return {};
+
+  return {
+    street: match[1].trim(),
+    city: match[2].trim(),
+    state: match[3].trim(),
+    zip: match[4].trim()
+  };
+}
+
+
+
+app.post("/api/quotes/:id/convert-to-job", async (req, res) => {
+  try {
+    const quote = await Quote.findById(req.params.id);
+    if (!quote) return res.status(404).json({ error: "Quote not found" });
+
+    // Fallback if no address
+    const fullAddress = quote.to?.address || "Unknown Address";
+
+    // Extract address parts safely
+    const addressParts = fullAddress.split(",");
+    const street = addressParts[0]?.trim() || "";
+    const city = addressParts[1]?.trim() || "";
+    const stateZip = addressParts[2]?.trim() || "";
+    const [state, zip] = stateZip.split(" ").filter(Boolean); // handles "TX 78201"
+
+    const projectName = `${street.split(" ").slice(1).join(" ")} ${street.split(" ")[0] || ""}`.trim() || "Unnamed Project";
+
+    const parsedAddress = {
+      addressLine1: street, // 👈 ensure matches frontend expectations
+      addressLine2: '',
+      city,
+      state,
+      zip: zip || ''
+    };
+
+    console.log("📍 Parsed address:", { ...parsedAddress, projectName });
+
+    // ✅ Create Project
+    const project = await Project.create({
+      name: projectName,
+      code: "1111",
+      type: "residential",
+      status: "in-progress",
+      address: parsedAddress,
+      client: {
+        name: quote.to?.name || "Client",
+        email: quote.to?.email || "",
+        phone: quote.to?.phone || "",
+      },
+      fromQuoteId: quote._id
+    });
+
+    // ✅ Format estimate line items to match expected schema
+    const formattedLineItems = [{
+      type: "category",
+      category: "General", // or infer from quote
+      status: "in-progress",
+      items: quote.lineItems.map(item => ({
+        type: "item",
+        name: item.name || "Unnamed",
+        description: item.description || "",
+        quantity: item.qty || 1,
+        unitPrice: item.rate || 0,
+        total: (item.qty || 1) * (item.rate || 0),
+        status: "in-progress",
+        assignedTo: null,
+        photos: {},
+        startDate: null,
+        endDate: null
+      }))
+    }];
+
+    // ✅ Create Estimate
+    const estimate = await Estimate.create({
+      projectId: project._id,
+      invoiceNumber: `INV-${Date.now()}`,
+      title: `Estimate from Quote ${quote.quoteNumber}`,
+      total: quote.totals?.total || 0,
+      tax: quote.totals?.tax || 0,
+      status: "draft",
+      lineItems: formattedLineItems,
+      createdFromQuote: quote._id
+    });
+
+   // ✅ Include redirect URL for frontend
+   res.status(200).json({
+    success: true,
+    message: "Quote converted to project and estimate",
+    projectId: project._id,
+    estimateId: estimate._id,
+    redirectUrl: `/details/projects/${project._id}`
+  });
+
+} catch (err) {
+  console.error("Error converting quote:", err);
+  res.status(500).json({ error: "Failed to convert quote" });
+}
+});
+
+
+
 // Get all labor cost suggestions
 app.get('/api/labor-costs', async (req, res) => {
   try {
