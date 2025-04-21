@@ -3969,13 +3969,20 @@ app.put("/api/folders/:id", async (req, res) => {
 
 
 // ADD file to folder
-app.post("/api/folders/:id/files", async (req, res) => {
-  const { file } = req.body;
+app.post('/api/folders/:id/files', upload.single('file'), async (req, res) => {
   const folder = await FileSystem.findById(req.params.id);
-  folder.files.push(file);
+  const fileData = {
+    name: req.file.originalname,
+    size: (req.file.size / 1024).toFixed(0) + ' KB',
+    type: req.file.mimetype,
+    modified: new Date().toLocaleString(),
+    url: `/uploads/${req.file.filename}` // accessible route
+  };
+  folder.files.push(fileData);
   await folder.save();
-  res.json(folder);
+  res.json(fileData);
 });
+
 
 // RENAME a file in folder
 app.put("/api/folders/:folderId/files/:index", async (req, res) => {
