@@ -742,6 +742,21 @@ const laborCostSchema = new mongoose.Schema({
   rate: { type: Number, required: true }
 }, { timestamps: true });
 
+
+const fileSchema = new mongoose.Schema({
+  name: String,
+  size: String,
+  type: String,
+  modified: String,
+  url: String
+});
+
+const folderSchema = new mongoose.Schema({
+  name: String,
+  position: Number,
+  files: [fileSchema]
+});
+
 const Task = mongoose.model('Task', taskSchema);
 const Comment = mongoose.model("Comment", commentSchema);
 const Client = mongoose.model('Client', clientSchema);
@@ -756,6 +771,7 @@ const DailyUpdate = mongoose.model("DailyUpdate", DailyUpdateSchema);
 const Invoice = mongoose.model('Invoice', invoiceSchema);
 const Quote = mongoose.model('Quote', quoteSchema);
 const LaborCost = mongoose.model('LaborCost', laborCostSchema);
+const FileSystem = mongoose.model('FileSystem', folderSchema);
 
 
 module.exports = {
@@ -3916,6 +3932,102 @@ app.get('/api/debug', (req, res) => {
 });
 
 
+// GET all folders
+app.get("/api/folders", async (req, res) => {
+  const folders = await FileSystem.find().sort("position");
+  res.json(folders);
+});
+
+// CREATE a folder
+app.post("/api/folders", async (req, res) => {
+  const { name } = req.body;
+  const count = await FileSystem.countDocuments();
+  const folder = await FileSystem.create({ name, position: count, files: [] });
+  res.json(folder);
+});
+
+
+
+// Reorder folders (static route must come before /:id)
+app.put("/api/folders/reorder", async (req, res) => {
+  const { order } = req.body; // [{_id, position}]
+  for (let item of order) {
+    await FileSystem.findByIdAndUpdate(item._id, { position: item.position });
+  }
+  res.json({ success: true });
+});
+
+// Rename folder
+app.put("/api/folders/:id", async (req, res) => {
+  const folder = await FileSystem.findByIdAndUpdate(
+    req.params.id,
+    { name: req.body.name },
+    { new: true }
+  );
+  res.json(folder);
+});
+
+
+// ADD file to folder
+app.post("/api/folders/:id/files", async (req, res) => {
+  const { file } = req.body;
+  const folder = await FileSystem.findById(req.params.id);
+  folder.files.push(file);
+  await folder.save();
+  res.json(folder);
+});
+
+// RENAME a file in folder
+app.put("/api/folders/:folderId/files/:index", async (req, res) => {
+  const folder = await FileSystem.findById(req.params.folderId);
+  folder.files[req.params.index].name = req.body.name;
+  await folder.save();
+  res.json(folder);
+});
+
+// DELETE folder
+app.delete("/api/folders/:id", async (req, res) => {
+  await FileSystem.findByIdAndDelete(req.params.id);
+  res.json({ success: true });
+});
+
+// DELETE file from folder
+app.delete("/api/folders/:folderId/files/:index", async (req, res) => {
+  const { folderId, index } = req.params;
+  const folder = await FileSystem.findById(folderId);
+  if (!folder) return res.status(404).json({ error: "Folder not found" });
+
+  // Remove file by index directly
+  folder.files.splice(index, 1);
+  await FileSystem.updateOne(
+    { _id: folderId },
+    { $set: { files: folder.files } }
+  );
+
+  const updated = await FileSystem.findById(folderId);
+  res.json(updated);
+});
+
+// POST /api/folders/:folderId/delete-files
+app.post("/api/folders/:folderId/delete-files", async (req, res) => {
+  const { folderId } = req.params;
+  const { indexes } = req.body;
+
+  try {
+    const folder = await FileSystem.findById(folderId);
+    if (!folder) return res.status(404).json({ error: "Folder not found" });
+
+    // Remove files by index in descending order
+    indexes.sort((a, b) => b - a).forEach(i => folder.files.splice(i, 1));
+
+    await folder.save({ optimisticConcurrency: false });
+
+    res.json(folder);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to delete selected files" });
+  }
+});
 
 
 
