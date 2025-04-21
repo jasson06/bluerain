@@ -530,35 +530,33 @@ function highlightNewFolder(folderId) {
   }, 200);
 }
     
-    async function uploadFile() {
-      const input = document.getElementById('file-input');
-      const files = Array.from(input.files);
-      if (!files.length || !currentFolder) return;
-      showSpinner();
-      try {
-        for (const file of files) {
-          const fileData = {
-            name: file.name,
-            type: file.type || 'Unknown',
-            size: (file.size / 1024).toFixed(0) + ' KB',
-            modified: new Date().toLocaleString(),
-            url: URL.createObjectURL(file)
-          };
-          await fetch(`/api/folders/${currentFolder._id}/files`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ file: fileData })
-          });
-        }
-        input.value = '';
-        await fetchFolders(currentFolder._id);
-        showToast('Files uploaded successfully');
-      } catch {
-        showToast('Failed to upload files');
-      } finally {
-        hideSpinner();
-      }
+
+   async function uploadFile() {
+  const input = document.getElementById('file-input');
+  const files = Array.from(input.files);
+  if (!files.length || !currentFolder) return;
+
+  showSpinner();
+  try {
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      await fetch(`/api/folders/${currentFolder._id}/files`, {
+        method: 'POST',
+        body: formData
+      });
     }
+    input.value = '';
+    await fetchFolders(currentFolder._id);
+    showToast('Files uploaded successfully');
+  } catch {
+    showToast('Failed to upload files');
+  } finally {
+    hideSpinner();
+  }
+}
+
 
 
     
