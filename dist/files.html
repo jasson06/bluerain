@@ -201,6 +201,10 @@
       display: block;
     }
 
+        .dropdown-content {
+  touch-action: manipulation; /* Helps with mobile tap behavior */
+}
+
     .dot-menu-btn {
   background: transparent;
   border: none;
@@ -764,34 +768,35 @@ function renderFiles() {
 function toggleDropdown(event) {
   event.stopPropagation();
 
-  // Close all others
-  closeAllDropdowns();
-
   const dropdown = event.currentTarget.nextElementSibling;
   const isVisible = dropdown.style.display === 'block';
 
-  // Reset all
-  document.querySelectorAll('.dropdown-content').forEach(dc => {
-    dc.style.display = 'none';
-  });
+  // Close all other dropdowns first
+  closeAllDropdowns();
 
-  // Toggle this one
   if (!isVisible) {
     dropdown.style.display = 'block';
+
+    // One-time click outside to close
+    const closeOnOutsideClick = (e) => {
+      if (!dropdown.contains(e.target) && !event.currentTarget.contains(e.target)) {
+        dropdown.style.display = 'none';
+        document.removeEventListener('click', closeOnOutsideClick);
+        document.removeEventListener('touchstart', closeOnOutsideClick);
+      }
+    };
+
+    // Attach listener to detect outside clicks
+    document.addEventListener('click', closeOnOutsideClick);
+    document.addEventListener('touchstart', closeOnOutsideClick);
   }
 }
 
-// Closes all dropdowns
 function closeAllDropdowns() {
   document.querySelectorAll('.dropdown-content').forEach(dc => {
     dc.style.display = 'none';
   });
 }
-
-// Touch + Click support
-window.addEventListener('click', closeAllDropdowns);
-window.addEventListener('touchstart', closeAllDropdowns);
-
 
 
 
