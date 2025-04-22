@@ -564,7 +564,7 @@ function highlightNewFolder(folderId) {
 
 
     
-    function renderFolders() {
+   function renderFolders() {
   const list = document.getElementById('carpet-list');
   list.innerHTML = '';
 
@@ -584,61 +584,91 @@ function highlightNewFolder(folderId) {
     contentWrapper.style.gap = '8px';
     contentWrapper.style.flex = '1';
 
-    // 📁 Folder label
     const span = document.createElement('span');
-    span.textContent = '📁 ' + folder.name;
     span.style.cursor = 'pointer';
     span.style.flex = '1';
+    
+    const folderTextEl = document.createElement('strong');
+    folderTextEl.className = 'folder-name-text';
+    folderTextEl.textContent = folder.name;
 
-    let clickCount = 0;
+    span.innerHTML = '📁 ';
+    span.appendChild(folderTextEl);
+
+    // ✅ Delay selection on click to allow dblclick
     span.addEventListener('click', () => {
-      clickCount++;
-      setTimeout(() => clickCount = 0, 400);
-      if (clickCount === 1) {
+      setTimeout(() => {
+        // If dblclick fired, skip selection
+        if (span.getAttribute('data-renaming') === 'true') return;
+
         currentFolder = folder;
         document.getElementById('active-folder').textContent = folder.name;
         renderFolders();
         renderFiles();
-      }
-      if (clickCount === 2) {
-        const input = document.createElement('input');
-        input.value = folder.name;
-        input.onblur = async () => {
-          const newName = input.value.trim();
-          if (newName && newName !== folder.name) {
-            try {
-              showSpinner();
-              await fetch(`/api/folders/${folder._id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: newName })
-              });
-              await fetchFolders(folder._id);
-              showToast('Folder renamed');
-            } catch {
-              showToast('Rename failed');
-            } finally {
-              hideSpinner();
-            }
-          } else {
-            renderFolders();
-          }
-        };
-        div.innerHTML = '';
-        div.appendChild(input);
-        input.focus();
-      }
+      }, 200);
     });
 
-    // ☰ Drag corner
+    // ✅ Rename on double-click
+    folderTextEl.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      span.setAttribute('data-renaming', 'true');
+
+      const input = document.createElement('input');
+      input.value = folder.name;
+      input.style.flex = '1';
+      input.style.padding = '6px';
+      input.style.fontSize = '1rem';
+      input.style.borderRadius = '6px';
+      input.style.border = '1px solid #cbd5e1';
+      input.setAttribute('autocomplete', 'off');
+
+      const handleRename = async () => {
+        const newName = input.value.trim();
+        if (newName && newName !== folder.name) {
+          try {
+            showSpinner();
+            await fetch(`/api/folders/${folder._id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: newName })
+            });
+            await fetchFolders(folder._id);
+            showToast('Folder renamed');
+          } catch {
+            showToast('Rename failed');
+          } finally {
+            hideSpinner();
+          }
+        } else {
+          renderFolders();
+        }
+      };
+
+      input.addEventListener('blur', () => {
+        span.removeAttribute('data-renaming');
+        handleRename();
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleRename();
+        if (e.key === 'Escape') {
+          span.removeAttribute('data-renaming');
+          renderFolders();
+        }
+      });
+
+      span.replaceChild(input, folderTextEl);
+      input.focus();
+    });
+
+    // ☰ Drag handle
     const dragIcon = document.createElement('span');
     dragIcon.className = 'drag-corner';
     dragIcon.textContent = '☰';
     dragIcon.style.cursor = 'grab';
     dragIcon.title = 'Drag to reorder';
 
-    // 🗑️ Delete button
-    const deleteBtn = document.createElement('button');
+     // 🗑️ Delete button
+     const deleteBtn = document.createElement('button');
     deleteBtn.innerHTML = '🗑️';
     deleteBtn.style.border = 'none';
     deleteBtn.style.background = 'transparent';
@@ -668,7 +698,6 @@ function highlightNewFolder(folderId) {
 
     contentWrapper.appendChild(span);
     contentWrapper.appendChild(dragIcon);
-
     div.appendChild(contentWrapper);
     div.appendChild(deleteBtn);
     list.appendChild(div);
