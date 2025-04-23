@@ -58,7 +58,7 @@
       align-items: center;
       gap: 8px;
     }
-    .trash-icon {
+    .button .trash-icon {
       background: transparent;
       border: none;
       color: #ef4444;
@@ -201,9 +201,10 @@
       display: block;
     }
 
-        .dropdown-content {
+    .dropdown-content {
   touch-action: manipulation; /* Helps with mobile tap behavior */
 }
+
 
     .dot-menu-btn {
   background: transparent;
@@ -223,6 +224,20 @@
 
 .dot-menu-btn:hover {
   background-color: #f1f5f9;
+}
+
+
+.sidebar {
+  min-width: 220px;
+  max-width: 100%;
+  width: auto;
+  transition: width 0.3s ease;
+  overflow-x: hidden;
+  padding-right: 8px;
+}
+
+.sidebar.expanded {
+  width: 320px;
 }
 
 
@@ -281,6 +296,37 @@
         gap: 0px;
       }
     }
+
+
+
+.folder-wrapper {
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+}
+
+.subfolder-container {
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+}
+
+.subfolder-container.open {
+  max-height: 1000px;
+}
+
+.subfolder-container.closed {
+  max-height: 0;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    max-height: 50vh; /* or adjust as needed */
+  }
+}
+
+.sidebar {
+    -webkit-overflow-scrolling: touch; /* iOS smooth scroll */
+  }
   </style>
 </head>
 <body>
@@ -298,7 +344,14 @@
     
       <div class="main">
         <div class="toolbar" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-          <h3 id="active-folder" style="margin: 0; color: #0f172a; font-size: 1.5rem; font-weight: 600;">No folder selected</h3>
+          <h3 id="active-folder" style="margin: 0; color: #0f172a; font-size: 1.5rem; font-weight: 600; display: flex; align-items: center; gap: 10px;">
+            <span id="back-folder-icon"
+      style="cursor: pointer; display: none; font-size: 1.2rem; padding-right: 6px;">
+  ◀
+</span>
+
+            <span id="active-folder-name">No folder selected</span>
+          </h3>
           <div>
             <input type="file" id="file-input" multiple style="padding: 10px; border-radius: 12px; border: 1px solid #cbd5e1; background: #ffffff; margin-right: 10px;" />
             <button onclick="uploadFile()" style="background: linear-gradient(to right, #0ea5e9, #3b82f6); color: white; border-radius: 10px; font-weight: 600; padding: 10px 20px;">Upload</button>
@@ -330,8 +383,32 @@
       <button onclick="deleteSelectedFiles()" style="background:white; color:#0ea5e9; border:none; padding:10px 16px; border-radius:10px; cursor:pointer;">Delete Selected</button>
     </div>
     
-      
     <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const backIcon = document.getElementById('back-folder-icon');
+        backIcon.addEventListener('click', () => {
+          if (!currentFolder?.parentId) return;
+          const parent = folders.find(f => String(f._id) === String(currentFolder.parentId));
+          if (parent) {
+            currentFolder = parent;
+            document.getElementById('active-folder-name').textContent = parent.name;
+            document.getElementById('back-folder-icon').style.display = parent.parentId ? 'inline' : 'none';
+            renderFolders();
+            renderFiles();
+          }
+        });
+      });
+
+      function updateActiveFolderUI() {
+        if (currentFolder) {
+          document.getElementById('active-folder-name').textContent = currentFolder.name;
+          document.getElementById('back-folder-icon').style.display = currentFolder.parentId ? 'inline' : 'none';
+        }
+      }
+    </script>
+    <script>
+
+
         function initFolderDrag() {
           const el = document.getElementById('carpet-list');
           if (!el) return;
@@ -371,9 +448,11 @@
           await fetchFolders();
           initFolderDrag();
         });
+        
         </script>
         
       <script>
+       
     function showToast(message) {
       const toast = document.getElementById('toast');
       toast.textContent = message;
@@ -448,26 +527,37 @@ async function deleteFolder(folderId) {
 }
 
 
-    async function fetchFolders(selectFolderId = null) {
-      showSpinner();
-      try {
-        const res = await fetch('/api/folders');
-        folders = await res.json();
-        renderFolders();
-        if (selectFolderId) {
-          const match = folders.find(f => f._id === selectFolderId);
-          if (match) {
-            currentFolder = match;
-            document.getElementById('active-folder').textContent = currentFolder.name;
-            renderFiles();
-          }
-        }
-      } catch {
-        showToast('Failed to load folders');
-      } finally {
-        hideSpinner();
+async function fetchFolders(selectFolderId = null) {
+  showSpinner();
+  try {
+    const res = await fetch('/api/folders');
+    folders = await res.json();
+
+    // Normalize all parentId values to strings for accurate matching
+    folders.forEach(folder => {
+      if (folder.parentId && typeof folder.parentId !== 'string') {
+        folder.parentId = folder.parentId._id || folder.parentId.toString();
+      }
+    });
+
+    renderFolders(); // ✅ renders sidebar
+    if (selectFolderId) {
+      const match = folders.find(f => f._id === selectFolderId);
+      if (match) {
+        currentFolder = match;
+        updateActiveFolderUI();
+
+        renderFiles(); // ✅ renders table
       }
     }
+    console.log("📁 Loaded folders:", folders);
+  } catch {
+    showToast('Failed to load folders');
+  } finally {
+    hideSpinner();
+  }
+}
+
     
     let sortField = 'name';
 let sortOrder = 1; // 1 for A-Z/New-Old, -1 for Z-A/Old-New
@@ -497,21 +587,16 @@ function triggerFolderCreate() {
   createCarpet(name);
 }
 
-async function createCarpet(nameOverride = null) {
-  const name = nameOverride || document.getElementById('new-carpet-name')?.value.trim();
-  if (!name) return;
+async function createCarpet(name, parentId = null) {
   showSpinner();
   try {
     const res = await fetch('/api/folders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name })
+      body: JSON.stringify({ name, parentId }) // ✅ parentId is now passed
     });
     const folder = await res.json();
-    if (!nameOverride && document.getElementById('new-carpet-name')) {
-      document.getElementById('new-carpet-name').value = '';
-    }
-    await fetchFolders(folder._id);
+    await fetchFolders(parentId || folder._id);
     highlightNewFolder(folder._id);
     showToast('Folder created');
   } catch {
@@ -520,6 +605,7 @@ async function createCarpet(nameOverride = null) {
     hideSpinner();
   }
 }
+
 
 function highlightNewFolder(folderId) {
   setTimeout(() => {
@@ -534,8 +620,7 @@ function highlightNewFolder(folderId) {
   }, 200);
 }
     
-
-   async function uploadFile() {
+async function uploadFile() {
   const input = document.getElementById('file-input');
   const files = Array.from(input.files);
   if (!files.length || !currentFolder) return;
@@ -562,156 +647,310 @@ function highlightNewFolder(folderId) {
 }
 
 
+function triggerFolderCreate(parentId = null) {
+  const name = prompt("Enter folder name");
+  if (!name) return;
+  createCarpet(name, parentId);
+}
 
-    
-   function renderFolders() {
-  const list = document.getElementById('carpet-list');
-  list.innerHTML = '';
-
-  folders.forEach((folder) => {
-    const div = document.createElement('div');
-    div.className = 'carpet' + (currentFolder && currentFolder._id === folder._id ? ' selected' : '');
-    div.setAttribute('data-folder-id', folder._id);
-    div.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
-    div.style.display = 'flex';
-    div.style.alignItems = 'center';
-    div.style.justifyContent = 'space-between';
-    div.style.gap = '8px';
-
-    const contentWrapper = document.createElement('div');
-    contentWrapper.style.display = 'flex';
-    contentWrapper.style.alignItems = 'center';
-    contentWrapper.style.gap = '8px';
-    contentWrapper.style.flex = '1';
-
-    const span = document.createElement('span');
-    span.style.cursor = 'pointer';
-    span.style.flex = '1';
-    
-    const folderTextEl = document.createElement('strong');
-    folderTextEl.className = 'folder-name-text';
-    folderTextEl.textContent = folder.name;
-
-    span.innerHTML = '📁 ';
-    span.appendChild(folderTextEl);
-
-    // ✅ Delay selection on click to allow dblclick
-    span.addEventListener('click', () => {
-      setTimeout(() => {
-        // If dblclick fired, skip selection
-        if (span.getAttribute('data-renaming') === 'true') return;
-
-        currentFolder = folder;
-        document.getElementById('active-folder').textContent = folder.name;
-        renderFolders();
-        renderFiles();
-      }, 200);
+async function createCarpet(name, parentId = null) {
+  showSpinner();
+  try {
+    const res = await fetch('/api/folders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, parentId })
     });
+    const folder = await res.json();
+    await fetchFolders(parentId || folder._id);
+    highlightNewFolder(folder._id);
+    showToast('Folder created');
+  } catch {
+    showToast('Failed to create folder');
+  } finally {
+    hideSpinner();
+  }
+}
 
-    // ✅ Rename on double-click
-    folderTextEl.addEventListener('dblclick', (e) => {
-      e.stopPropagation();
-      span.setAttribute('data-renaming', 'true');
+const expandedFolderIds = new Set(); // Track open folders
 
-      const input = document.createElement('input');
-      input.value = folder.name;
-      input.style.flex = '1';
-      input.style.padding = '6px';
-      input.style.fontSize = '1rem';
-      input.style.borderRadius = '6px';
-      input.style.border = '1px solid #cbd5e1';
-      input.setAttribute('autocomplete', 'off');
 
-      const handleRename = async () => {
-        const newName = input.value.trim();
-        if (newName && newName !== folder.name) {
-          try {
-            showSpinner();
-            await fetch(`/api/folders/${folder._id}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name: newName })
-            });
-            await fetchFolders(folder._id);
-            showToast('Folder renamed');
-          } catch {
-            showToast('Rename failed');
-          } finally {
-            hideSpinner();
+    
+function renderFolders(parentId = null, container = null, level = 0) {
+  const list = container || document.getElementById('carpet-list');
+  if (!container) list.innerHTML = '';
+
+  folders
+    .filter(folder =>
+      (folder.parentId && String(folder.parentId) === String(parentId)) ||
+      (!folder.parentId && parentId === null)
+    )
+    .forEach((folder) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'folder-wrapper';
+
+      const div = document.createElement('div');
+      div.className = 'carpet' + (currentFolder && currentFolder._id === folder._id ? ' selected' : '');
+      div.setAttribute('data-folder-id', folder._id);
+      div.style.marginLeft = `${level * 16}px`;
+      div.style.display = 'flex';
+      div.style.flexDirection = 'column';
+
+      const headerRow = document.createElement('div');
+      headerRow.style.display = 'flex';
+      headerRow.style.alignItems = 'center';
+      headerRow.style.justifyContent = 'space-between';
+      headerRow.style.gap = '6px';
+
+      const leftGroup = document.createElement('div');
+      leftGroup.style.display = 'flex';
+      leftGroup.style.alignItems = 'center';
+      leftGroup.style.gap = '6px';
+      leftGroup.style.flexGrow = '1';
+
+      const twisty = document.createElement('span');
+      twisty.textContent = expandedFolderIds.has(folder._id) ? '▾' : '▸';
+      twisty.style.cursor = 'pointer';
+      twisty.style.userSelect = 'none';
+
+      const span = document.createElement('span');
+      span.style.cursor = 'pointer';
+      span.style.display = 'flex';
+      span.style.alignItems = 'center';
+      span.style.gap = '6px';
+      span.style.flexGrow = '1';
+
+      const folderTextEl = document.createElement('strong');
+      folderTextEl.className = 'folder-name-text';
+      folderTextEl.textContent = folder.name;
+
+      span.innerHTML = '';
+      span.appendChild(document.createTextNode('📁'));
+      span.appendChild(folderTextEl);
+
+      span.addEventListener('click', () => {
+        setTimeout(() => {
+          if (span.getAttribute('data-renaming') === 'true') return;
+          currentFolder = folder;
+          updateActiveFolderUI();
+
+          renderFolders();
+          renderFiles();
+        }, 200);
+      });
+
+      folderTextEl.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        span.setAttribute('data-renaming', 'true');
+        const input = document.createElement('input');
+        input.value = folder.name;
+        input.style.flex = '1';
+        input.style.padding = '6px';
+        input.style.fontSize = '1rem';
+        input.style.borderRadius = '6px';
+        input.style.border = '1px solid #cbd5e1';
+        input.setAttribute('autocomplete', 'off');
+
+        const handleRename = async () => {
+          const newName = input.value.trim();
+          if (newName && newName !== folder.name) {
+            try {
+              showSpinner();
+              await fetch(`/api/folders/${folder._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newName })
+              });
+              await fetchFolders(folder._id);
+              showToast('Folder renamed');
+            } catch {
+              showToast('Rename failed');
+            } finally {
+              hideSpinner();
+            }
+          } else {
+            renderFolders();
           }
-        } else {
-          renderFolders();
-        }
-      };
+        };
 
-      input.addEventListener('blur', () => {
-        span.removeAttribute('data-renaming');
-        handleRename();
-      });
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') handleRename();
-        if (e.key === 'Escape') {
+        input.addEventListener('blur', () => {
           span.removeAttribute('data-renaming');
-          renderFolders();
-        }
+          handleRename();
+        });
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') handleRename();
+          if (e.key === 'Escape') {
+            span.removeAttribute('data-renaming');
+            renderFolders();
+          }
+        });
+
+        span.replaceChild(input, folderTextEl);
+        input.focus();
       });
 
-      span.replaceChild(input, folderTextEl);
-      input.focus();
-    });
+      const dragIcon = document.createElement('span');
+      dragIcon.className = 'drag-corner';
+      dragIcon.textContent = '☰';
+      dragIcon.style.cursor = 'grab';
+      dragIcon.title = 'Drag to reorder';
 
-    // ☰ Drag handle
-    const dragIcon = document.createElement('span');
-    dragIcon.className = 'drag-corner';
-    dragIcon.textContent = '☰';
-    dragIcon.style.cursor = 'grab';
-    dragIcon.title = 'Drag to reorder';
+      const addSubBtn = document.createElement('button');
+addSubBtn.title = 'Add Subfolder';
 
-     // 🗑️ Delete button
-     const deleteBtn = document.createElement('button');
-    deleteBtn.innerHTML = '🗑️';
-    deleteBtn.style.border = 'none';
-    deleteBtn.style.background = 'transparent';
-    deleteBtn.style.cursor = 'pointer';
-    deleteBtn.title = 'Delete Folder';
+// Apply styles for modern circular design
+Object.assign(addSubBtn.style, {
+  width: '28px',
+  height: '28px',
+  borderRadius: '50%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: 'linear-gradient(to right, #0ea5e9, #3b82f6)',
+  border: 'none',
+  cursor: 'pointer',
+  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+  transition: 'transform 0.15s ease-in-out',
+  padding: '0'
+});
 
-    deleteBtn.onclick = async (e) => {
-      e.stopPropagation();
-      const confirmed = confirm(`Delete folder "${folder.name}"?`);
-      if (!confirmed) return;
+// SVG Plus icon
+addSubBtn.innerHTML = `
+  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="white" viewBox="0 0 24 24">
+    <path d="M12 5c.552 0 1 .448 1 1v5h5c.552 0 1 .448 1 1s-.448 1-1 1h-5v5c0 .552-.448 1-1 1s-1-.448-1-1v-5H6c-.552 0-1-.448-1-1s.448-1 1-1h5V6c0-.552.448-1 1-1z"/>
+  </svg>
+`;
 
-      showSpinner();
-      try {
-        div.style.opacity = '0';
-        div.style.transform = 'translateY(-8px)';
-        setTimeout(async () => {
+// Hover scale
+addSubBtn.onmouseover = () => addSubBtn.style.transform = 'scale(1.1)';
+addSubBtn.onmouseout = () => addSubBtn.style.transform = 'scale(1)';
+
+// Click behavior
+addSubBtn.onclick = (e) => {
+  e.stopPropagation();
+  triggerFolderCreate(folder._id);
+};
+
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.innerHTML = '🗑️';
+      deleteBtn.title = 'Delete Folder';
+      deleteBtn.style.border = 'none';
+      deleteBtn.style.background = 'transparent';
+      deleteBtn.style.cursor = 'pointer';
+      deleteBtn.onclick = async (e) => {
+        e.stopPropagation();
+        const confirmed = confirm(`Delete folder "${folder.name}"?`);
+        if (!confirmed) return;
+        showSpinner();
+        try {
           await fetch(`/api/folders/${folder._id}`, { method: 'DELETE' });
           await fetchFolders();
           showToast('Folder deleted');
-        }, 350);
-      } catch {
-        showToast('Failed to delete folder');
-      } finally {
-        hideSpinner();
+        } catch {
+          showToast('Failed to delete folder');
+        } finally {
+          hideSpinner();
+        }
+      };
+
+      // Twist toggle
+      twisty.onclick = (e) => {
+        e.stopPropagation();
+        const isOpen = expandedFolderIds.has(folder._id);
+        if (isOpen) {
+          expandedFolderIds.delete(folder._id);
+        } else {
+          expandedFolderIds.add(folder._id);
+        }
+        renderFolders();
+      };
+
+      leftGroup.appendChild(twisty);
+      leftGroup.appendChild(span);
+      leftGroup.appendChild(dragIcon);
+
+      const rightGroup = document.createElement('div');
+      rightGroup.style.display = 'flex';
+      rightGroup.style.alignItems = 'center';
+      rightGroup.style.gap = '4px';
+
+      rightGroup.appendChild(addSubBtn);
+      rightGroup.appendChild(deleteBtn);
+
+      headerRow.appendChild(leftGroup);
+      headerRow.appendChild(rightGroup);
+
+      const childContainer = document.createElement('div');
+      childContainer.className = 'subfolder-container';
+      childContainer.style.marginLeft = '16px';
+      childContainer.style.overflow = 'hidden';
+      childContainer.style.transition = 'max-height 0.35s ease';
+      childContainer.classList.add(expandedFolderIds.has(folder._id) ? 'open' : 'closed');
+      childContainer.style.maxHeight = expandedFolderIds.has(folder._id) ? '1000px' : '0';
+      childContainer.style.display = 'block';
+
+      div.appendChild(headerRow);
+      wrapper.appendChild(div);
+      wrapper.appendChild(childContainer);
+      list.appendChild(wrapper);
+
+      // Render subfolders inside container if open
+      if (expandedFolderIds.has(folder._id)) {
+        renderFolders(folder._id, childContainer, level + 1);
       }
-    };
+    });
 
-    contentWrapper.appendChild(span);
-    contentWrapper.appendChild(dragIcon);
-    div.appendChild(contentWrapper);
-    div.appendChild(deleteBtn);
-    list.appendChild(div);
-  });
-
-  if (folders.length && !currentFolder) {
+  if (!container && folders.length && !currentFolder) {
     currentFolder = folders[0];
-    document.getElementById('active-folder').textContent = currentFolder.name;
+    updateActiveFolderUI();
+
     renderFolders();
     renderFiles();
   }
 }
 
+function adjustSidebarWidth() {
+  const sidebar = document.querySelector('.sidebar');
+  const list = document.getElementById('carpet-list');
 
+  if (!sidebar || !list) return;
+
+  // Detect if any line overflows or deeply nested
+  const needsExpand = [...list.querySelectorAll('.folder-wrapper')].some(div => {
+    const depth = parseInt(div.style.marginLeft || '0');
+    const textLength = div.innerText.length;
+    return depth >= 48 || textLength >= 20;
+  });
+
+  sidebar.classList.toggle('expanded', needsExpand);
+}
+
+
+
+async function renameFolder(folderId) {
+  const folder = folders.find(f => f._id === folderId);
+  if (!folder) return showToast("Folder not found");
+
+  const newName = prompt("Rename folder:", folder.name);
+  if (!newName || newName.trim() === folder.name) return;
+
+  showSpinner();
+  try {
+    await fetch(`/api/folders/${folderId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName.trim() })
+    });
+
+    await fetchFolders(currentFolder?._id); // Refresh with current folder context
+    showToast("Folder renamed");
+  } catch {
+    showToast("Rename failed");
+  } finally {
+    hideSpinner();
+  }
+}
 
 
     
@@ -720,13 +959,49 @@ function renderFiles() {
   tbody.innerHTML = '';
   const searchTerm = document.getElementById('folder-search')?.value.toLowerCase() || '';
 
-  if (!currentFolder || !currentFolder.files.length) {
-    tbody.innerHTML = '<tr><td colspan="6">No files in this folder.</td></tr>';
+  if (!currentFolder) {
+    tbody.innerHTML = '<tr><td colspan="6">No folder selected.</td></tr>';
     updateSortIndicators();
     return;
   }
 
-  let files = [...currentFolder.files];
+  // 🔍 Normalize and match subfolders
+  const subfolders = folders.filter(f => {
+    if (!f.parentId) return false;
+    return String(f.parentId) === String(currentFolder._id);
+  });
+
+  const files = [...currentFolder.files];
+
+  if (!subfolders.length && !files.length) {
+    tbody.innerHTML = '<tr><td colspan="6">No files or folders in this folder.</td></tr>';
+    updateSortIndicators();
+    return;
+  }
+
+  // 📁 Render subfolders
+  subfolders.forEach(folder => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td></td>
+      <td style="cursor: pointer;" onclick="openSubfolder('${folder._id}')">📁 <strong>${folder.name}</strong></td>
+      <td>—</td>
+      <td>Folder</td>
+      <td>—</td>
+      <td>
+        <div class="dropdown">
+          <button class="dropdown-toggle" onclick="toggleDropdown(event)">⋮</button>
+          <div class="dropdown-content">
+            <button onclick="event.stopPropagation(); renameFolder('${folder._id}')">Rename</button>
+            <button onclick="event.stopPropagation(); deleteFolder('${folder._id}')">Delete</button>
+          </div>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  // 🗂️ Sort files
   if (sortField === 'name') {
     files.sort((a, b) => a.name.localeCompare(b.name) * sortOrder);
   } else if (sortField === 'date') {
@@ -734,6 +1009,7 @@ function renderFiles() {
     if (sortOrder === -1) files.reverse();
   }
 
+  // 📄 Render files
   files.forEach((file, index) => {
     if (searchTerm && !file.name.toLowerCase().includes(searchTerm)) return;
 
@@ -741,42 +1017,40 @@ function renderFiles() {
     row.setAttribute('data-index', index);
 
     row.innerHTML = `
-  <td>
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <span class="drag-corner" style="cursor: grab;" data-drag-handle>☰</span>
-      <input type="checkbox" class="file-checkbox" data-index="${index}" onchange="toggleFloatingToolbar()" />
-    </div>
-  </td>
-  <td><a href="${file.url}" target="_blank" style="text-decoration:underline">📄 ${file.name}</a></td>
-  <td>${file.modified}</td>
-  <td>${file.type}</td>
-  <td>${file.size}</td>
-  <td>
-    <div class="dropdown">
-      <button class="dropdown-toggle" onclick="toggleDropdown(event)">⋮</button>
-      <div class="dropdown-content">
-        <button onclick="event.stopPropagation(); renameFile(${index})">Edit</button>
-        <button onclick="event.stopPropagation(); deleteFile(${index}, event)">Delete</button>
-      </div>
-    </div>
-  </td>
-`;
-
+      <td>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="drag-corner" style="cursor: grab;" data-drag-handle>☰</span>
+          <input type="checkbox" class="file-checkbox" data-index="${index}" onchange="toggleFloatingToolbar()" />
+        </div>
+      </td>
+      <td><a href="${file.url}" target="_blank" style="text-decoration:underline">📄 ${file.name}</a></td>
+      <td>${file.modified}</td>
+      <td>${file.type}</td>
+      <td>${file.size}</td>
+      <td>
+        <div class="dropdown">
+          <button class="dropdown-toggle" onclick="toggleDropdown(event)">⋮</button>
+          <div class="dropdown-content">
+            <button onclick="event.stopPropagation(); renameFile(${index})">Edit</button>
+            <button onclick="event.stopPropagation(); deleteFile(${index}, event)">Delete</button>
+          </div>
+        </div>
+      </td>
+    `;
     tbody.appendChild(row);
   });
 
   updateSortIndicators();
   toggleFloatingToolbar();
 
-  // ✅ Enable Sortable only on drag icon
+  // ✅ Enable drag sorting for files
   Sortable.create(tbody, {
     animation: 150,
-    handle: '[data-drag-handle]', // Limit dragging to icon only
+    handle: '[data-drag-handle]',
     onEnd: async (evt) => {
       if (evt.oldIndex !== evt.newIndex) {
         const moved = currentFolder.files.splice(evt.oldIndex, 1)[0];
         currentFolder.files.splice(evt.newIndex, 0, moved);
-
         try {
           await fetch(`/api/folders/${currentFolder._id}/reorder-files`, {
             method: 'PUT',
@@ -794,28 +1068,40 @@ function renderFiles() {
 
 
 
+
+
 function toggleDropdown(event) {
   event.stopPropagation();
 
   const dropdown = event.currentTarget.nextElementSibling;
-  const isVisible = dropdown.style.display === 'block';
+  const isVisible = dropdown && dropdown.style.display === 'block';
 
   // Close all other dropdowns first
   closeAllDropdowns();
 
-  if (!isVisible) {
+  if (!isVisible && dropdown) {
     dropdown.style.display = 'block';
 
-    // One-time click outside to close
     const closeOnOutsideClick = (e) => {
-      if (!dropdown.contains(e.target) && !event.currentTarget.contains(e.target)) {
+      const stillExists = document.body.contains(dropdown);
+      const target = e.target;
+
+      if (
+        stillExists &&
+        (!dropdown.contains(target) && (!event.currentTarget || !event.currentTarget.contains(target)))
+      ) {
         dropdown.style.display = 'none';
+        document.removeEventListener('click', closeOnOutsideClick);
+        document.removeEventListener('touchstart', closeOnOutsideClick);
+      }
+
+      // If dropdown was removed from DOM, remove listeners anyway
+      if (!stillExists) {
         document.removeEventListener('click', closeOnOutsideClick);
         document.removeEventListener('touchstart', closeOnOutsideClick);
       }
     };
 
-    // Attach listener to detect outside clicks
     document.addEventListener('click', closeOnOutsideClick);
     document.addEventListener('touchstart', closeOnOutsideClick);
   }
@@ -829,32 +1115,63 @@ function closeAllDropdowns() {
 
 
 
+
+
+
     
-    async function renameFile(index) {
-      const row = document.querySelector(`tr[data-index="${index}"]`);
-      const nameCell = row.querySelector('td:nth-child(2)');
-      const input = document.createElement('input');
-      input.value = currentFolder.files[index].name;
-      input.onblur = async () => {
-        showSpinner();
-        try {
-          await fetch(`/api/folders/${currentFolder._id}/files/${index}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: input.value.trim() })
-          });
-          await fetchFolders(currentFolder._id);
-          showToast('File renamed');
-        } catch {
-          showToast('Rename failed');
-        } finally {
-          hideSpinner();
-        }
-      };
-      nameCell.innerHTML = '';
-      nameCell.appendChild(input);
-      input.focus();
+async function renameFile(index) {
+  const row = document.querySelector(`tr[data-index="${index}"]`);
+  const nameCell = row.querySelector('td:nth-child(2)');
+
+  const input = document.createElement('input');
+  input.value = currentFolder.files[index].name;
+
+  // Optional style polish
+  input.style.padding = '8px 10px';
+  input.style.borderRadius = '8px';
+  input.style.border = '1px solid #cbd5e1';
+  input.style.fontSize = '0.95rem';
+  input.style.width = '100%';
+  input.style.background = '#ffffffcc';
+  input.style.outline = 'none';
+  input.style.boxShadow = '0 0 0 2px rgba(14,165,233,0.2)';
+
+  // Confirm rename on blur
+  input.onblur = async () => {
+    const newName = input.value.trim();
+    if (newName === currentFolder.files[index].name || newName === '') {
+      renderFiles(); // Reset
+      return;
     }
+
+    showSpinner();
+    try {
+      await fetch(`/api/folders/${currentFolder._id}/files/${index}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName })
+      });
+      await fetchFolders(currentFolder._id);
+      showToast('File renamed');
+    } catch {
+      showToast('Rename failed');
+    } finally {
+      hideSpinner();
+    }
+  };
+
+  // Also rename on Enter key
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      input.blur();
+    }
+  });
+
+  nameCell.innerHTML = '';
+  nameCell.appendChild(input);
+  input.focus();
+}
+
     
     async function deleteFile(index, e) {
       e.stopPropagation();
@@ -925,9 +1242,20 @@ function closeAllDropdowns() {
   }
 }
 
+    // Ensure function is globally available
+window.openSubfolder = function (folderId) {
+  const sub = folders.find(f => f._id === folderId);
+  if (sub) {
+    currentFolder = sub;
+    updateActiveFolderUI();
 
-    
-    document.addEventListener('DOMContentLoaded', fetchFolders);
+    renderFolders();
+    renderFiles();
+  }
+};
+
+adjustSidebarWidth();
+
     </script>
     </body>
     </html>
