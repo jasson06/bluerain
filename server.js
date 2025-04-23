@@ -754,6 +754,7 @@ const fileSchema = new mongoose.Schema({
 const folderSchema = new mongoose.Schema({
   name: String,
   position: Number,
+  parentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Folder', default: null },
   files: [fileSchema]
 });
 
@@ -772,6 +773,7 @@ const Invoice = mongoose.model('Invoice', invoiceSchema);
 const Quote = mongoose.model('Quote', quoteSchema);
 const LaborCost = mongoose.model('LaborCost', laborCostSchema);
 const FileSystem = mongoose.model('FileSystem', folderSchema);
+const Folder = mongoose.model('Folder', folderSchema); // ✅ Add this line
 
 
 module.exports = {
@@ -3921,28 +3923,40 @@ app.get('/api/vendors/login-direct/:id', async (req, res) => {
 });
 
 
-// Debugging route to check server deployment status
-app.get('/api/debug', (req, res) => {
-  res.json({
-    success: true,
-    message: 'API is working on Render!',
-    environment: process.env.NODE_ENV,
-    port: process.env.PORT,
-  });
-});
-
-
-// GET all folders
+// GET all folders (no population to keep parentId as string)
 app.get("/api/folders", async (req, res) => {
-  const folders = await FileSystem.find().sort("position");
-  res.json(folders);
+  try {
+    const folders = await FileSystem.find().lean();
+    
+    // Normalize ObjectId to string for comparison in frontend
+    folders.forEach(f => {
+      if (f.parentId && f.parentId._id) {
+        f.parentId = f.parentId._id.toString();
+      } else if (f.parentId) {
+        f.parentId = f.parentId.toString();
+      }
+    });
+
+    res.json(folders);
+  } catch (err) {
+    console.error("❌ Failed to fetch folders:", err);
+    res.status(500).json({ message: "Error fetching folders." });
+  }
 });
+
 
 // CREATE a folder
 app.post("/api/folders", async (req, res) => {
-  const { name } = req.body;
-  const count = await FileSystem.countDocuments();
-  const folder = await FileSystem.create({ name, position: count, files: [] });
+  const { name, parentId } = req.body;
+
+  const folder = new FileSystem({
+    name,
+    parentId: parentId || null, // ✅ Use parentId if provided
+    position: 0,
+    files: []
+  });
+
+  await folder.save();
   res.json(folder);
 });
 
@@ -4037,6 +4051,16 @@ app.post("/api/folders/:folderId/delete-files", async (req, res) => {
 });
 
 
+
+// Debugging route to check server deployment status
+app.get('/api/debug', (req, res) => {
+  res.json({
+    success: true,
+    message: 'API is working on Render!',
+    environment: process.env.NODE_ENV,
+    port: process.env.PORT,
+  });
+});
 
 
 // Root Route
