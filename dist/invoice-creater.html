@@ -158,28 +158,38 @@ button {
       opacity: 1;
     }
 
-    .modal {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.4);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 10000;
-      padding: 20px;
-      overflow-y: auto;
-    }
+/* 🔧 Main modal wrapper: allow full height scrolling */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  display: none;
+  justify-content: center;
+  align-items: flex-start; /* ⬅ ensures content starts at top, useful on mobile */
+  z-index: 10000;
+  padding: 40px 20px; /* ⬅ padding allows breathing room on small screens */
+  overflow-y: auto;   /* ⬅ allows scroll if content overflows */
+}
 
-    .modal-content {
-      background: var(--white);
-      width: 90%;
-      max-width: 800px;
-      padding: 30px;
-      border-radius: var(--radius);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    }
+/* 🔧 Inner modal content: limit max height and enable scrolling */
+.modal-content {
+  background: #fff;
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;       /* ⬅ restrict to 90% of viewport height */
+  overflow-y: auto;       /* ⬅ enables scrolling within modal */
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Optional: make table scroll horizontally if too wide */
+.table-container {
+  overflow-x: auto;
+}
 
     .modal-header {
       display: flex;
