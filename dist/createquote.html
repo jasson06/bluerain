@@ -14,7 +14,7 @@
     }
 
     .container {
-      max-width: 900px;
+      max-width: 1100px;
       margin: auto;
       background: white;
       padding: 30px;
@@ -38,12 +38,36 @@
     }
 
     input, textarea {
-      width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
+  width: 100%;
+  font-size: 14px;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-sizing: border-box;
     }
+
+    #line-items-cards textarea,
+.line-item-row textarea {
+  resize: vertical;           /* ✅ Enables manual drag */
+  overflow-y: auto;
+  min-height: 60px;
+  max-height: 300px;          /* Prevent it from taking too much space */
+  font-size: 14px;
+  padding: 8px 10px;
+  border: 1px solid #cccccc;
+  border-radius: 8px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+    
+@media (max-width: 600px) {
+  .line-item-row textarea,
+  .line-item-row input,
+  .line-item-row button {
+    width: 100%;
+  }
+}
 
     table {
       width: 100%;
@@ -313,7 +337,10 @@
   }
 
   h1 {
-    font-size: 1.4rem;
+    h1 {
+  font-size: clamp(1.4rem, 2vw, 2rem);
+}
+
   }
 }
 
@@ -550,6 +577,18 @@
     cursor: grabbing;
   }
 
+
+  .summary-box {
+  position: sticky;
+  bottom: 0;
+  background: #f5faff;
+  z-index: 999;
+  border-top: 2px solid #ddd;
+}
+
+
+
+
   </style>
 </head>
 <body>
@@ -605,9 +644,9 @@
       <div class="line-item-row">
         <input id="itemName" placeholder="Item Name" />
         <div id="suggestionBox" style="position: absolute; background: #fff; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000; display: none; max-height: 150px; overflow-y: auto;"></div>
-        <input id="itemDesc" placeholder="Description" />
-        <input id="itemRate" type="number" placeholder="Rate" />
+        <textarea id="itemDesc" placeholder="Description" rows="2"></textarea>
         <input id="itemQty" type="number" placeholder="Quantity" />
+        <input id="itemRate" type="number" placeholder="Rate" />
         <button class="btn" onclick="addLineItem()">Add</button>
       </div>
 
@@ -876,11 +915,14 @@ function hideLoader() {
 let clientList = [];
 
 async function fetchClients() {
+  showLoader(); // 👈 START
   try {
     const res = await fetch('/api/clients');
     clientList = await res.json();
   } catch (err) {
     console.error('Failed to fetch clients:', err);
+  } finally {
+    hideLoader(); // 👈 END
   }
 }
 
@@ -977,6 +1019,8 @@ function addLineItem() {
   });
 });
 
+
+
 function renderTable() {
   const table = document.getElementById('lineItemsTable');
   table.innerHTML = '';
@@ -989,23 +1033,37 @@ function renderTable() {
     const row = document.createElement('tr');
     row.setAttribute('data-index', index);
 
-    row.innerHTML = `
-      <td style="text-align:center;"><span class="drag-handle" style="cursor: grab;">☰</span></td>
+    const isEditing = item.isEditing;
+
+    row.innerHTML = isEditing ? `
+      <td></td>
+      <td><input value="${item.name}" id="editName-${index}" /></td>
+      <td><textarea id="editDesc-${index}">${item.description}</textarea></td>
+      <td><input type="number" value="${item.rate}" id="editRate-${index}" /></td>
+      <td><input type="number" value="${item.qty}" id="editQty-${index}" /></td>
+      <td>$${(item.rate * item.qty).toFixed(2)}</td>
+      <td>
+        <button class="btn" onclick="saveLineItem(${index})">✅</button>
+        <button class="btn" onclick="cancelEditLineItem(${index})">❌</button>
+      </td>
+    ` : `
+      <td style="text-align:center;"><span class="drag-handle">☰</span></td>
       <td>${item.name}</td>
       <td>${item.description}</td>
       <td>$${item.rate.toFixed(2)}</td>
       <td>${item.qty}</td>
       <td>$${total.toFixed(2)}</td>
       <td>
-        <div class="action-dropdown" style="position: relative;">
-          <button class="dots" onclick="toggleLineItemMenu(event, ${index})">\u22EF</button>
-          <div class="action-dropdown-content" id="lineitem-menu-${index}" style="display: none; position: absolute; right: 0; background: white; border: 1px solid #ccc; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1000;">
-            <button onclick="editLineItem(${index})">\u270F\uFE0F Edit</button>
-            <button onclick="deleteLineItem(${index})" style="color: red;">\uD83D\uDDD1\uFE0F Delete</button>
+        <div class="action-dropdown">
+          <button class="dots" onclick="toggleLineItemMenu(event, ${index})">⋯</button>
+          <div class="action-dropdown-content" id="lineitem-menu-${index}">
+            <button onclick="editLineItem(${index})">✏️ Edit</button>
+            <button onclick="deleteLineItem(${index})" style="color: red;">🗑️ Delete</button>
           </div>
         </div>
       </td>
     `;
+
     table.appendChild(row);
   });
 
@@ -1019,6 +1077,7 @@ function renderTable() {
   document.getElementById('tax').textContent = tax.toFixed(2);
   document.getElementById('grandTotal').textContent = total.toFixed(2);
 }
+
 
 
   // ✅ Enable drag and drop on tbody
@@ -1042,6 +1101,32 @@ function renderTable() {
   });
 
 
+
+  function editLineItem(index) {
+  lineItems[index].isEditing = true;
+  renderTable();
+}
+
+function cancelEditLineItem(index) {
+  delete lineItems[index].isEditing;
+  renderTable();
+}
+
+function saveLineItem(index) {
+  const name = document.getElementById(`editName-${index}`).value;
+  const description = document.getElementById(`editDesc-${index}`).value;
+  const rate = parseFloat(document.getElementById(`editRate-${index}`).value);
+  const qty = parseInt(document.getElementById(`editQty-${index}`).value);
+
+  if (!name || isNaN(rate) || isNaN(qty)) {
+    showToast("Please fill in all fields correctly.");
+    return;
+  }
+
+  lineItems[index] = { name, description, rate, qty };
+  renderTable();
+}
+
     
     function toggleLineItemMenu(event, index) {
   event.stopPropagation();
@@ -1055,14 +1140,7 @@ function renderTable() {
 }
 
 
-    function editLineItem(index) {
-      const item = lineItems[index];
-      document.getElementById('itemName').value = item.name;
-      document.getElementById('itemDesc').value = item.desc;
-      document.getElementById('itemRate').value = item.rate;
-      document.getElementById('itemQty').value = item.qty;
-      deleteLineItem(index);
-    }
+
 
     function deleteLineItem(index) {
       lineItems.splice(index, 1);
@@ -1087,7 +1165,7 @@ function renderTable() {
       const previewContent = document.getElementById("quotePreviewContent");
       const blob = new Blob([previewContent.innerHTML], { type: 'text/html' });
       const file = new File([blob], 'quote-preview.html', { type: 'text/html' });
-
+      showLoader(); // 👈 START
       try {
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({
@@ -1101,6 +1179,8 @@ function renderTable() {
       } catch (err) {
         console.error('Share error:', err);
         showToast('Error sharing quote preview.');
+      } finally {
+        hideLoader(); // 👈 END
       }
     }
 
@@ -1248,7 +1328,7 @@ const total10 = (total * 0.10).toLocaleString(undefined, { minimumFractionDigits
 }
 
   };
-
+  showLoader(); // 🔵 Show loader at start
   fetch('/api/quotes', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1263,6 +1343,9 @@ const total10 = (total * 0.10).toLocaleString(undefined, { minimumFractionDigits
     .catch(err => {
       console.error('Error saving quote:', err);
       showToast('❌ Failed to save quote');
+    })
+    .finally(() => {
+      hideLoader(); // 🔵 Always hide loader after fetch is done
     });
 }
 
@@ -1291,12 +1374,15 @@ let currentPage = 1;
 const itemsPerPage = 5;
 
 async function loadQuoteHistory() {
+  showLoader(); // 👈 START
   try {
     const res = await fetch('/api/quotes');
     allQuotes = await res.json();
     renderQuoteHistory();
   } catch (err) {
     console.error('Failed to load quote history:', err);
+  } finally {
+    hideLoader(); // 👈 END
   }
 }
 
@@ -1352,6 +1438,7 @@ function renderQuoteHistory() {
   }
 }
 async function showQuoteDetail(id) {
+  showLoader(); // 👈 START
       try {
         const res = await fetch(`/api/quotes/${id}`);
         const q = await res.json();
@@ -1447,6 +1534,8 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
         document.getElementById('quoteDetailModal').style.display = 'flex';
       } catch (err) {
         console.error('Failed to fetch quote details:', err);
+      } finally {
+        hideLoader(); // 👈 END
       }
     }
 
@@ -1673,7 +1762,7 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
 
   const blob = new Blob([styledHTML], { type: 'text/html' });
   const file = new File([blob], 'quote-details.html', { type: 'text/html' });
-
+  showLoader(); // 👈 START
   try {
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
@@ -1687,6 +1776,8 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
   } catch (err) {
     console.error('Error sharing quote:', err);
     showToast('Failed to share quote.');
+  } finally {
+    hideLoader(); // 👈 END
   }
 }
 
@@ -1695,6 +1786,7 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
       const detail = document.getElementById('quoteDetailContent');
       const id = detail.getAttribute('data-id');
       if (!id || !confirm('Are you sure you want to delete this quote?')) return;
+      showLoader(); // 👈 START
       try {
         const res = await fetch(`/api/quotes/${id}`, { method: 'DELETE' });
         if (res.ok) {
@@ -1706,6 +1798,8 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
         }
       } catch (err) {
         console.error('Delete error:', err);
+      } finally {
+        hideLoader(); // 👈 END
       }
     }
 
@@ -1722,12 +1816,15 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
   }
 
   async function fetchLaborSuggestions() {
+    showLoader(); // 👈 START
     try {
       const res = await fetch('/api/labor-costs');
       laborCostList = await res.json();
       renderLaborSuggestions();
     } catch (err) {
       console.error('Failed to load labor suggestions:', err);
+    } finally {
+      hideLoader(); // 👈 END
     }
   }
 
@@ -1778,7 +1875,7 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
     const rate = parseFloat(document.getElementById('newLaborRate').value);
 
     if (!name || !description || isNaN(rate)) return alert('Please fill all fields correctly.');
-
+    showLoader(); // 👈 START
     try {
       const res = await fetch('/api/labor-costs', {
         method: 'POST',
@@ -1790,6 +1887,8 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
       renderLaborSuggestions();
     } catch (err) {
       console.error('Error adding labor item:', err);
+    } finally {
+      hideLoader(); // 👈 END
     }
 
     document.getElementById('newLaborName').value = '';
@@ -1804,7 +1903,7 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
     const rate = parseFloat(prompt('Edit rate:', item.rate));
 
     if (!name || !description || isNaN(rate)) return;
-
+    showLoader(); // 👈 START
     try {
       const res = await fetch(`/api/labor-costs/${item._id}`, {
         method: 'PUT',
@@ -1816,19 +1915,23 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
       renderLaborSuggestions();
     } catch (err) {
       console.error('Error updating labor item:', err);
+    } finally {
+      hideLoader(); // 👈 END
     }
   }
 
   async function deleteLaborItem(index) {
     const item = laborCostList[index];
     if (!confirm('Are you sure you want to delete this item?')) return;
-
+    showLoader(); // 👈 START
     try {
       await fetch(`/api/labor-costs/${item._id}`, { method: 'DELETE' });
       laborCostList.splice(index, 1);
       renderLaborSuggestions();
     } catch (err) {
       console.error('Error deleting labor item:', err);
+    } finally {
+      hideLoader(); // 👈 END
     }
   }
 
