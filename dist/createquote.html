@@ -895,6 +895,14 @@ document.addEventListener('click', e => {
 });
 
 
+function formatCurrency(value) {
+  return `$${parseFloat(value).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })}`;
+}
+
+    
 
 function showToast(message) {
   const toast = document.getElementById('toast');
@@ -1041,7 +1049,7 @@ function renderTable() {
       <td><textarea id="editDesc-${index}">${item.description}</textarea></td>
       <td><input type="number" value="${item.rate}" id="editRate-${index}" /></td>
       <td><input type="number" value="${item.qty}" id="editQty-${index}" /></td>
-      <td>$${(item.rate * item.qty).toFixed(2)}</td>
+      <td>${formatCurrency(item.rate * item.qty)}</td>
       <td>
         <button class="btn" onclick="saveLineItem(${index})">✅</button>
         <button class="btn" onclick="cancelEditLineItem(${index})">❌</button>
@@ -1050,9 +1058,9 @@ function renderTable() {
       <td style="text-align:center;"><span class="drag-handle">☰</span></td>
       <td>${item.name}</td>
       <td>${item.description}</td>
-      <td>$${item.rate.toFixed(2)}</td>
+      <td>${formatCurrency(item.rate)}</td>
       <td>${item.qty}</td>
-      <td>$${total.toFixed(2)}</td>
+      <td>${formatCurrency(total)}</td>
       <td>
         <div class="action-dropdown">
           <button class="dots" onclick="toggleLineItemMenu(event, ${index})">⋯</button>
@@ -1072,12 +1080,11 @@ function renderTable() {
   const tax = (subtotal - discount) * (taxRate / 100);
   const total = subtotal - discount + tax;
 
-  document.getElementById('subtotal').textContent = subtotal.toFixed(2);
-  document.getElementById('discount').textContent = discount.toFixed(2);
-  document.getElementById('tax').textContent = tax.toFixed(2);
-  document.getElementById('grandTotal').textContent = total.toFixed(2);
+  document.getElementById('subtotal').textContent = formatCurrency(subtotal).replace('$', '');
+  document.getElementById('discount').textContent = formatCurrency(discount).replace('$', '');
+  document.getElementById('tax').textContent = formatCurrency(tax).replace('$', '');
+  document.getElementById('grandTotal').textContent = formatCurrency(total).replace('$', '');
 }
-
 
 
   // ✅ Enable drag and drop on tbody
