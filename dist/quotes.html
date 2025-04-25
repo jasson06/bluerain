@@ -20,29 +20,7 @@
       color: #0ea5e9;
     }
 
-    .filter-bar {
-      max-width: 1200px;
-      margin: 0 auto 30px;
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
 
-    .filter-bar input {
-      padding: 12px 16px;
-      border: 1px solid #cbd5e1;
-      border-radius: 12px;
-      flex: 1;
-      min-width: 200px;
-      background: #ffffff;
-      color: #0f172a;
-      font-size: 1rem;
-    }
-
-    .filter-bar {
-  border-bottom: 1px solid #e2e8f0;
-}
 
     .quote-list {
       max-width: 1200px;
@@ -216,7 +194,7 @@
   position: absolute;
   top: 16px;
   right: 16px;
-  font-size: 20px;
+  font-size: 30px;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -343,15 +321,153 @@
   background-color: #f0f0f0;
 }
 
+
+.filter-card {
+  background: #ffffff;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.04);
+  margin: 0 auto 30px;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+}
+
+.input-wrapper {
+  position: relative;
+  flex: 1 1 200px;
+}
+
+.input-wrapper input {
+  width: 80%;
+  padding: 14px 12px 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #ffffff;
+  font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input-wrapper label {
+  position: absolute;
+  top: 14px;
+  left: 12px;
+  color: #64748b;
+  background: #ffffff;
+  font-size: 14px;
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+.input-wrapper input:focus + label,
+.input-wrapper input:not(:placeholder-shown):not(:focus) + label {
+  top: -8px;
+  left: 10px;
+  font-size: 12px;
+  color: #0ea5e9;
+  padding: 0 4px;
+}
+
+.filter-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.clear-btn {
+  background: #e2e8f0;
+  color: #0f172a;
+  border: none;
+  font-weight: 500;
+  padding: 10px 24px;
+  font-size: 0.95rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.clear-btn:hover {
+  background: #cbd5e1;
+}
+
+.active-filters {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.active-filters .tag {
+  background: #0ea5e9;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+}
+
+.active-filters .tag button {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+
   </style>
 </head>
 <body>
   <div id="toast" class="toast"></div>
   <h1>📄 All Quotes</h1>
-  <div class="filter-bar">
-    <input type="text" id="searchName" placeholder="Search by Client Name...">
-    <input type="text" id="searchNumber" placeholder="Search by Quote #...">
+
+  <div class="filter-card">
+    <div class="filter-group">
+      <div class="input-wrapper">
+        <input type="text" id="searchName" placeholder=" " />
+        <label for="searchName">Client Name</label>
+      </div>
+      <div class="input-wrapper">
+        <input type="text" id="searchNumber" placeholder=" " />
+        <label for="searchNumber">Quote #</label>
+      </div>
+      <div class="input-wrapper">
+        <input type="date" id="startDate" />
+        <label for="startDate">From Date</label>
+      </div>
+      <div class="input-wrapper">
+        <input type="date" id="endDate" />
+        <label for="endDate">To Date</label>
+      </div>
+      
+      <div class="input-wrapper">
+        <input type="text" id="searchAddress" placeholder=" " />
+        <label for="searchAddress">Address</label>
+      </div>
+    </div>
+    <div class="filter-actions">
+      <button class="btn clear-btn" onclick="clearFilters()">Clear Filters</button>
+    </div>
+    <div class="active-filters" id="activeFilters"></div>
   </div>
+  
+  
+  
   <div id="quoteContainer" class="quote-list"></div>
 
   <div id="quoteModal" class="modal">
@@ -513,20 +629,100 @@ function toggleMenu(event, id) {
 
 
 
-    function filterQuotes() {
-      const name = document.getElementById('searchName').value.toLowerCase();
-      const number = document.getElementById('searchNumber').value.toLowerCase();
-      const filtered = allQuotes.filter(q =>
-        (q.to?.name?.toLowerCase().includes(name)) &&
-        (q.quoteNumber?.toLowerCase().includes(number))
-      );
-      renderQuotes(filtered);
-      
+function filterQuotes() {
+  const name = document.getElementById('searchName').value.toLowerCase();
+  const number = document.getElementById('searchNumber').value.toLowerCase();
+  const address = document.getElementById('searchAddress').value.toLowerCase();
+  const startDate = document.getElementById('startDate').value;
+  const endDate = document.getElementById('endDate').value;
+
+  const filtered = allQuotes.filter(q => {
+    const clientName = q.to?.name?.toLowerCase() || '';
+    const quoteNum = q.quoteNumber?.toLowerCase() || '';
+    const fullAddress = `${q.to?.address || ''}`.toLowerCase();
+    const quoteDate = q.date ? new Date(q.date).toISOString().split('T')[0] : '';
+
+    const isWithinDateRange =
+      (!startDate || quoteDate >= startDate) &&
+      (!endDate || quoteDate <= endDate);
+
+    return (
+      clientName.includes(name) &&
+      quoteNum.includes(number) &&
+      fullAddress.includes(address) &&
+      isWithinDateRange
+    );
+  });
+
+  renderQuotes(filtered);
+  updateActiveFilters();
+}
+
+
+
+function updateActiveFilters() {
+  const filters = [
+    { id: 'searchName', label: 'Client' },
+    { id: 'searchNumber', label: 'Quote #' },
+    { id: 'searchAddress', label: 'Address' }
+  ];
+
+  const startDate = document.getElementById('startDate').value;
+  const endDate = document.getElementById('endDate').value;
+  const container = document.getElementById('activeFilters');
+  container.innerHTML = '';
+
+  // ✅ Add simple text filters
+  filters.forEach(filter => {
+    const val = document.getElementById(filter.id).value;
+    if (val) {
+      const tag = document.createElement('div');
+      tag.className = 'tag';
+      tag.innerHTML = `${filter.label}: ${val} <button onclick="removeFilter('${filter.id}')">&times;</button>`;
+      container.appendChild(tag);
     }
+  });
+
+  // ✅ Add date range filter
+  if (startDate || endDate) {
+    const label = startDate && endDate
+      ? `Date: ${startDate} → ${endDate}`
+      : startDate
+      ? `From: ${startDate}`
+      : `Until: ${endDate}`;
+    
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    tag.innerHTML = `${label} <button onclick="removeFilter('startDate'); removeFilter('endDate')">&times;</button>`;
+    container.appendChild(tag);
+  }
+}
+
+
+function removeFilter(id) {
+  document.getElementById(id).value = '';
+  filterQuotes();
+}
+
+function clearFilters() {
+  document.getElementById('searchName').value = '';
+  document.getElementById('searchNumber').value = '';
+  document.getElementById('searchAddress').value = '';
+  document.getElementById('startDate').value = '';
+  document.getElementById('endDate').value = '';
+  filterQuotes();
+}
+
+
+
 
     
-    document.getElementById('searchName').addEventListener('input', filterQuotes);
-    document.getElementById('searchNumber').addEventListener('input', filterQuotes);
+document.getElementById('searchName').addEventListener('input', filterQuotes);
+document.getElementById('searchNumber').addEventListener('input', filterQuotes);
+document.getElementById('searchAddress').addEventListener('input', filterQuotes);
+document.getElementById('startDate').addEventListener('change', filterQuotes);
+document.getElementById('endDate').addEventListener('change', filterQuotes);
+
 
     function openModal(contentHTML) {
       document.getElementById('quoteModalContent').innerHTML = contentHTML;
@@ -884,6 +1080,7 @@ async function saveEditedQuote(id) {
 
 
 
+
 // ✅ Updated: downloadQuoteAsPDF()
 async function downloadQuoteAsPDF(id) {
   try {
@@ -1060,6 +1257,8 @@ async function downloadQuoteAsPDF(id) {
     showToast("Failed to generate or download PDF.");
   }
 }
+
+
 
 // ✅ downloadReceiptAsPDF() — same structure as invoice, labeled "Receipt"
 async function downloadReceiptAsPDF(id) {
@@ -1421,7 +1620,8 @@ async function downloadInvoiceAsPDF(id) {
     showToast("Failed to generate or download PDF.");
   }
 }
-    
+
+
 
 // ✅ Updated: printQuote()
 async function printQuote(id) {
@@ -1875,7 +2075,7 @@ async function shareQuote(id) {
 
 
 
-    async function convertToJob(quoteId) {
+async function convertToJob(quoteId) {
   if (!confirm("Are you sure you want to convert this quote to a job?")) return;
 
   try {
@@ -1895,6 +2095,8 @@ async function shareQuote(id) {
     alert("An error occurred while converting the quote.");
   }
 }
+
+
 
   </script>
 </body>
