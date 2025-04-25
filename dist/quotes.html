@@ -438,12 +438,14 @@ function showToast(message, duration = 3000) {
         <div class="menu-toggle" onclick="toggleMenu(event, '${q._id}')">⋮</div>
         <div class="quote-menu" id="menu-${q._id}">
 <button onclick="event.stopPropagation(); viewQuote('${q._id}')">View</button>
+<button onclick="event.stopPropagation(); editQuote('${q._id}')">Edit</button>
+<button onclick="event.stopPropagation(); downloadQuoteAsPDF('${q._id}')">Download Quote PDF</button>
+<button onclick="event.stopPropagation(); downloadInvoiceAsPDF('${q._id}')"> Download Invoice PDF</button>
+<button onclick="event.stopPropagation(); downloadReceiptAsPDF('${q._id}')">Download Receipt PDF</button>
 <button onclick="event.stopPropagation(); printQuote('${q._id}')">Print</button>
-<button onclick="event.stopPropagation(); downloadQuoteAsPDF('${q._id}')">Download PDF</button>
 <button onclick="event.stopPropagation(); shareQuote('${q._id}')">Share</button>
 <button onclick="event.stopPropagation(); convertToJob('${q._id}')">Convert to Job</button>
 <button onclick="event.stopPropagation(); exportQuoteToExcel('${q._id}')">Export to Excel</button>
-<button onclick="event.stopPropagation(); editQuote('${q._id}')">Edit</button>
 <button onclick="event.stopPropagation(); deleteQuote('${q._id}')">Delete</button>
 
         </div>
@@ -890,7 +892,7 @@ async function downloadQuoteAsPDF(id) {
 
     const total30 = (q.totals.total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
     const total10 = (q.totals.total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
-
+    const clientNameSafe = q.to.name.replace(/[^a-z0-9]/gi, '_'); // sanitize for safe filename
     const styledHTML = `
       <html>
         <head>
@@ -1045,7 +1047,7 @@ async function downloadQuoteAsPDF(id) {
 
     await html2pdf().set({
       margin: 0,
-      filename: `Quote-${q.quoteNumber}.pdf`,
+      filename: `Quote-${q.quoteNumber}-${clientNameSafe}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, scrollY: 0, backgroundColor: '#ffffff' },
       jsPDF: { unit: 'pt', format: 'letter', orientation: 'portrait' },
@@ -1059,6 +1061,367 @@ async function downloadQuoteAsPDF(id) {
   }
 }
 
+// ✅ downloadReceiptAsPDF() — same structure as invoice, labeled "Receipt"
+async function downloadReceiptAsPDF(id) {
+  try {
+    const res = await fetch(`/api/quotes/${id}`);
+    const q = await res.json();
+
+    const total30 = (q.totals.total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
+    const total10 = (q.totals.total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
+    const receiptNumber = `R-${new Date().getTime()}`;
+    const clientNameSafe = q.to.name.replace(/[^a-z0-9]/gi, '_'); // sanitize filename
+
+    const styledHTML = `
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Receipt PDF</title>
+          <style>
+            body {
+              font-family: 'Segoe UI', Tahoma, sans-serif;
+              margin: 0 auto;
+              padding: 40px;
+              color: #000;
+              font-size: 14px;
+              max-width: 800px;
+            }
+            h1, h2, h3, h4 {
+              margin: 0;
+              padding: 0;
+            }
+            .company {
+              color: #0ea5e9;
+              font-size: 20px;
+              font-weight: bold;
+              margin-bottom: 8px;
+            }
+            .info-grid {
+              display: flex;
+              justify-content: space-between;
+              margin: 20px 0;
+            }
+            .info-section {
+              width: 48%;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 20px;
+            }
+            thead {
+              background: #f3f4f6;
+            }
+            th, td {
+              padding: 8px;
+              text-align: left;
+              border: 1px solid #ddd;
+            }
+            .totals {
+              margin-top: 20px;
+              text-align: right;
+            }
+            .totals p {
+              margin: 4px 0;
+            }
+            .totals strong {
+              color: #0ea5e9;
+            }
+            .section {
+              margin-top: 40px;
+            }
+            .signature-line {
+              display: flex;
+              gap: 50px;
+              margin-top: 20px;
+            }
+            .signature-line p {
+              border-top: 1px solid #333;
+              width: 200px;
+              text-align: center;
+              margin-top: 20px;
+              padding-top: 4px;
+            }
+            hr {
+              margin: 30px 0;
+              border: none;
+              border-top: 1px solid #ccc;
+            }
+          </style>
+        </head>
+        <body>
+          <div style="font-family: 'Segoe UI', sans-serif; padding: 40px; max-width: 800px; color: #000; font-size: 14px;">
+            <h2 style="color:#0ea5e9;">BESF LLC</h2>
+            <p><strong>Receipt #:</strong> ${receiptNumber}</p>
+
+            <p><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</p>
+            <p><strong>Due Date:</strong> ${new Date(q.validTill).toLocaleDateString()}</p>
+
+            <div style="display: flex; justify-content: space-between;">
+              <div style="width:48%">
+                <h4>Receipt From</h4>
+                <p>
+                  ${q.from.name}<br>
+                  ${q.from.address}<br>
+                  ${q.from.email}<br>
+                  ${q.from.phone}<br>
+                  <strong>License:</strong> ${q.from.license || 'RBC-2400049'}
+                </p>
+              </div>
+              <div style="width:48%">
+                <h4>Receipt To</h4>
+                <p>
+                  ${q.to.name}<br>
+                  ${q.to.address}<br>
+                  ${q.to.email}<br>
+                  ${q.to.phone}
+                </p>
+              </div>
+            </div>
+
+            <h3 style="margin-top: 30px;">Line Items</h3>
+            <div style="display: flex; flex-direction: column; font-size: 14px; margin-top: 10px;">
+              <div style="display: grid; grid-template-columns: 1.5fr 3fr 1fr 0.7fr 1fr; font-weight: 600; background: #f3f4f6; padding: 10px 0; border-bottom: 1px solid #ccc;">
+                <div style="padding: 0 6px;">Item</div>
+                <div style="padding: 0 6px;">Description</div>
+                <div style="padding: 0 6px;">Rate</div>
+                <div style="padding: 0 6px;">Qty</div>
+                <div style="padding: 0 6px;">Total</div>
+              </div>
+              ${q.lineItems.map(item => `
+                <div style="display: grid; grid-template-columns: 1.5fr 3fr 1fr 0.7fr 1fr; border-bottom: 1px solid #e5e7eb; padding: 10px 0;">
+                  <div style="padding: 0 6px;">${item.name}</div>
+                  <div style="padding: 0 6px;">${item.description}</div>
+                  <div style="padding: 0 6px;">$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                  <div style="padding: 0 6px;">${item.qty}</div>
+                  <div style="padding: 0 6px;">$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                </div>
+              `).join('')}
+            </div>
+
+            <div style="margin-top: 20px; text-align: right;">
+              <p><strong>Subtotal:</strong> $${parseFloat(q.totals.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <p><strong>Discount:</strong> $${parseFloat(q.totals.discount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <p><strong>Tax:</strong> $${parseFloat(q.totals.tax).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <p><strong style="font-size: 18px;">Total:</strong> 
+                <span style="color: #007bff;">$${parseFloat(q.totals.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </p>
+            </div>
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.left = '-9999px';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(styledHTML);
+    doc.close();
+
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    await html2pdf().set({
+      margin: 0,
+      filename: `Receipt-${receiptNumber}-${clientNameSafe}.pdf`,
+
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, scrollY: 0, backgroundColor: '#ffffff' },
+      jsPDF: { unit: 'pt', format: 'letter', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    }).from(doc.body).save();
+
+    document.body.removeChild(iframe);
+  } catch (err) {
+    console.error("PDF download error:", err);
+    showToast("Failed to generate or download PDF.");
+  }
+}
+
+
+
+
+// ✅ downloadInvoiceAsPDF() — same structure as quote download but labeled as "Invoice"
+async function downloadInvoiceAsPDF(id) {
+  try {
+    const res = await fetch(`/api/quotes/${id}`); // Same endpoint
+    const q = await res.json();
+
+    const total30 = (q.totals.total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
+    const total10 = (q.totals.total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
+    const invoiceNumber = `INV-${new Date().getTime()}`;
+    const clientNameSafe = q.to.name.replace(/[^a-z0-9]/gi, '_'); // sanitize filename
+    const styledHTML = `
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Invoice PDF</title>
+ <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            margin: 0 auto;
+            padding: 40px;
+            color: #000;
+            font-size: 14px;
+            max-width: 800px;
+          }
+          h1, h2, h3, h4 {
+            margin: 0;
+            padding: 0;
+          }
+          .company {
+            color: #0ea5e9;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+          }
+          .info-grid {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+          }
+          .info-section {
+            width: 48%;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+          }
+          thead {
+            background: #f3f4f6;
+          }
+          th, td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+          }
+          .totals {
+            margin-top: 20px;
+            text-align: right;
+          }
+          .totals p {
+            margin: 4px 0;
+          }
+          .totals strong {
+            color: #0ea5e9;
+          }
+          .section {
+            margin-top: 40px;
+          }
+          .signature-line {
+            display: flex;
+            gap: 50px;
+            margin-top: 20px;
+          }
+          .signature-line p {
+            border-top: 1px solid #333;
+            width: 200px;
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 4px;
+          }
+          hr {
+            margin: 30px 0;
+            border: none;
+            border-top: 1px solid #ccc;
+          }
+        </style>
+        </head>
+        <body>
+          <div style="font-family: 'Segoe UI', sans-serif; padding: 40px; max-width: 800px; color: #000; font-size: 14px;">
+            <h2 style="color:#0ea5e9;">BESF LLC</h2>
+            <p><strong>Invoice #:</strong> ${invoiceNumber}</p>
+
+            <p><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</p>
+            <p><strong>Due Date:</strong> ${new Date(q.validTill).toLocaleDateString()}</p>
+
+            <div style="display: flex; justify-content: space-between;">
+              <div style="width:48%">
+                <h4>Invoice From</h4>
+                <p>
+                  ${q.from.name}<br>
+                  ${q.from.address}<br>
+                  ${q.from.email}<br>
+                  ${q.from.phone}<br>
+                  <strong>License:</strong> ${q.from.license || 'RBC-2400049'}
+                </p>
+              </div>
+              <div style="width:48%">
+                <h4>Invoice To</h4>
+                <p>
+                  ${q.to.name}<br>
+                  ${q.to.address}<br>
+                  ${q.to.email}<br>
+                  ${q.to.phone}
+                </p>
+              </div>
+            </div>
+
+            <h3 style="margin-top: 30px;">Line Items</h3>
+            <div style="display: flex; flex-direction: column; font-size: 14px; margin-top: 10px;">
+              <div style="display: grid; grid-template-columns: 1.5fr 3fr 1fr 0.7fr 1fr; font-weight: 600; background: #f3f4f6; padding: 10px 0; border-bottom: 1px solid #ccc;">
+                <div style="padding: 0 6px;">Item</div>
+                <div style="padding: 0 6px;">Description</div>
+                <div style="padding: 0 6px;">Rate</div>
+                <div style="padding: 0 6px;">Qty</div>
+                <div style="padding: 0 6px;">Total</div>
+              </div>
+              ${q.lineItems.map(item => `
+                <div style="display: grid; grid-template-columns: 1.5fr 3fr 1fr 0.7fr 1fr; border-bottom: 1px solid #e5e7eb; padding: 10px 0;">
+                  <div style="padding: 0 6px;">${item.name}</div>
+                  <div style="padding: 0 6px;">${item.description}</div>
+                  <div style="padding: 0 6px;">$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                  <div style="padding: 0 6px;">${item.qty}</div>
+                  <div style="padding: 0 6px;">$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                </div>
+              `).join('')}
+            </div>
+
+          <div style="margin-top: 20px; text-align: right;">
+            <p><strong>Subtotal:</strong> $${parseFloat(q.totals.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p><strong>Discount:</strong> $${parseFloat(q.totals.discount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p><strong>Tax:</strong> $${parseFloat(q.totals.tax).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p><strong style="font-size: 18px;">Total:</strong> 
+              <span style="color: #007bff;">$${parseFloat(q.totals.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            </p>
+          </div>
+
+           
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.left = '-9999px';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(styledHTML);
+    doc.close();
+
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    await html2pdf().set({
+      margin: 0,
+      filename: `Invoice-${invoiceNumber}-${clientNameSafe}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, scrollY: 0, backgroundColor: '#ffffff' },
+      jsPDF: { unit: 'pt', format: 'letter', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    }).from(doc.body).save();
+
+    document.body.removeChild(iframe);
+  } catch (err) {
+    console.error("PDF download error:", err);
+    showToast("Failed to generate or download PDF.");
+  }
+}
+    
 
 // ✅ Updated: printQuote()
 async function printQuote(id) {
