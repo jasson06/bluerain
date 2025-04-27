@@ -430,7 +430,7 @@ const estimateSchema = new mongoose.Schema({
           type: { type: String, enum: ['item'], default: 'item' },
           name: { type: String, required: true },
           description: { type: String },
-
+          costCode: { type: String, default: 'Uncategorized' }, // ✅ Added Cost Code
           quantity: { type: Number, required: true, min: 1 },
           unitPrice: { type: Number, required: true, min: 0 },
           total: { type: Number, required: true },
@@ -479,9 +479,6 @@ const estimateSchema = new mongoose.Schema({
 
 
 
-
-
-
 // Schemas and Models
 const vendorSchema = new mongoose.Schema({
   name: { type: String, required: false, trim: true },  // Name is now optional
@@ -493,10 +490,10 @@ const vendorSchema = new mongoose.Schema({
 
   assignedItems: [
     {
-      itemId: { type: mongoose.Schema.Types.ObjectId, ref: "Item", required: true },
+      itemId: { type: String, required: true }, 
       projectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project" },
       estimateId: { type: mongoose.Schema.Types.ObjectId, ref: "Estimate" },
-
+      costCode: { type: String, default: "Uncategorized" },
       name: { type: String, required: true },
       description: { type: String, default: "No description provided" },
       quantity: { type: Number, required: true, min: 1 },
@@ -540,6 +537,7 @@ const vendorSchema = new mongoose.Schema({
 },
 { timestamps: true });
 
+
 // ✅ Indexing for Faster Queries
 vendorSchema.index({ "assignedItems.itemId": 1 });
 vendorSchema.index({ "assignedItems.projectId": 1 });
@@ -562,8 +560,6 @@ vendorSchema.pre('save', async function (next) {
     next(error);
   }
 });
-
-
 
 
 // Project schema
@@ -691,7 +687,8 @@ const invoiceSchema = new mongoose.Schema({
       name: String,
       description: String,
       quantity: Number,
-      unitPrice: Number
+      unitPrice: Number,
+      costCode: String // ✅ Added cost code here
     }
   ],
   total: Number,
@@ -718,6 +715,7 @@ const quoteSchema = new mongoose.Schema({
   validTill: Date,
   notes: String,
   lineItems: [{
+    costCode: String, // ✅ Added costCode field
     name: String,
     description: String,
     rate: Number,
@@ -739,7 +737,8 @@ const quoteSchema = new mongoose.Schema({
 const laborCostSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String },
-  rate: { type: Number, required: true }
+  rate: { type: Number, required: true },
+  costCode: { type: String } // ✅ NEW FIELD
 }, { timestamps: true });
 
 
@@ -847,6 +846,7 @@ app.post('/api/estimates', async (req, res) => {
             type: 'item',
             name: item.name,
             description: item.description || '',
+            costCode: item.costCode || 'Uncategorized', // ✅ Add cost code
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             total: item.total || item.quantity * item.unitPrice,
@@ -897,7 +897,6 @@ app.post('/api/estimates', async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to save estimate.' });
   }
 });
-
 
 
 
@@ -1006,18 +1005,16 @@ app.put("/api/estimates/:id", async (req, res) => {
     const estimateId = req.params.id;
     const updatesPayload = req.body;
 
-            // Defensive: Ensure title is a string
-        if (typeof updatesPayload.title !== "string") {
-          updatesPayload.title = "";
-        }
+    // Defensive: Ensure title is a string
+    if (typeof updatesPayload.title !== "string") {
+      updatesPayload.title = "";
+    }
 
-    // Helper function to normalize status values.
+    // Normalize status helper
     function normalizeStatus(status) {
       if (typeof status !== "string") return status;
       status = status.trim();
-      // Map "Not Started" to "in-progress"
       if (status.toLowerCase() === "not started") return "in-progress";
-      // Otherwise, replace spaces with hyphens and lowercase
       return status.toLowerCase().replace(/\s+/g, "-");
     }
 
@@ -1027,7 +1024,7 @@ app.put("/api/estimates/:id", async (req, res) => {
       return res.status(404).json({ message: "Estimate not found" });
     }
 
-    // Create a map of existing items by their _id.
+    // Create a map of existing items by their _id
     const existingItemsMap = new Map();
     existingEstimate.lineItems.forEach((lineItem) => {
       lineItem.items.forEach((item) => {
@@ -1035,60 +1032,52 @@ app.put("/api/estimates/:id", async (req, res) => {
       });
     });
 
-    // Merge new items with existing data.
+    // Merge new items with existing data
     updatesPayload.lineItems.forEach((lineItem) => {
       lineItem.items.forEach((item) => {
-        // If a status is provided, normalize it.
         if (item.status && item.status.trim() !== "") {
           item.status = normalizeStatus(item.status);
         }
 
-        // If the item exists in the database, preserve its fields if not provided.
         if (item._id && existingItemsMap.has(item._id.toString())) {
           const existingItem = existingItemsMap.get(item._id.toString());
-          // Preserve existing photos and assignedTo
+
+          // Preserve fields
           item.photos = existingItem.photos ?? { before: [], after: [] };
           item.assignedTo = existingItem.assignedTo ?? null;
-          // Preserve existing startDate if not provided
-          if (item.startDate === undefined || item.startDate === null || item.startDate === "") {
-            item.startDate = existingItem.startDate;
-          }
-          // Preserve existing endDate if not provided
-          if (item.endDate === undefined || item.endDate === null || item.endDate === "") {
-            item.endDate = existingItem.endDate;
-          }
-          // Even if the incoming item.status is empty, force normalization on the existing value.
-          if (!item.status || item.status.trim() === "") {
-            item.status = normalizeStatus(existingItem.status);
-          }
+          item.startDate = item.startDate ?? existingItem.startDate;
+          item.endDate = item.endDate ?? existingItem.endDate;
+          item.status = item.status || normalizeStatus(existingItem.status);
+          item.costCode = item.costCode || existingItem.costCode || "Uncategorized"; // ✅ Preserve cost code
         } else {
-          // For new items, if status is not provided or is empty, default to "in-progress"
+          // For new items
           if (!item.status || item.status.trim() === "") {
             item.status = "in-progress";
           }
+          item.costCode = item.costCode || "Uncategorized"; // ✅ Default for new items
         }
       });
     });
 
-        // ✅ Recalculate the estimate total
-        let newTotal = 0;
-        updatesPayload.lineItems.forEach((lineItem) => {
-          lineItem.items.forEach((item) => {
-            newTotal += (item.quantity || 1) * (item.unitPrice || 0);
-          });
-        });
+    // ✅ Recalculate the estimate total
+    let newTotal = 0;
+    updatesPayload.lineItems.forEach((lineItem) => {
+      lineItem.items.forEach((item) => {
+        newTotal += (item.quantity || 1) * (item.unitPrice || 0);
+      });
+    });
 
-    // Update the document with the merged data
+    // Update the document
     const updatedEstimate = await Estimate.findByIdAndUpdate(
       estimateId,
-      { 
-        $set: { ...updatesPayload, total: newTotal } // ✅ Update total
+      {
+        $set: { ...updatesPayload, total: newTotal }
       },
       { new: true, runValidators: true }
     );
 
-    // ✅ Log the estimate update in daily logs
-        await logDailyUpdate(
+    // ✅ Log the update
+    await logDailyUpdate(
       updatedEstimate.projectId,
       `Estimate ${updatedEstimate.invoiceNumber} was updated${updatedEstimate.title ? `: "${updatedEstimate.title}"` : ""}.`
     );
@@ -2178,9 +2167,16 @@ app.post('/api/vendors/:vendorId/assign-item', async (req, res) => {
   const { projectId, itemId, name, description, quantity, unitPrice, total } = req.body;
 
   try {
+    // ✅ Find Vendor
     const vendor = await Vendor.findById(vendorId);
     if (!vendor) {
       return res.status(404).json({ message: 'Vendor not found.' });
+    }
+
+    // ✅ Find Project for Logging
+    const project = await Project.findById(projectId).select("name");
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found.' });
     }
 
     // ✅ Assign the item to a specific project
@@ -2196,12 +2192,26 @@ app.post('/api/vendors/:vendorId/assign-item', async (req, res) => {
     });
 
     await vendor.save();
+
+    // ✅ Log the assignment in Daily Updates
+    await logDailyUpdate(
+      projectId,
+      `Item "${name}" assigned to vendor "${vendor.name}".`
+    );
+
+    console.log(`📦 Item "${name}" assigned to Vendor "${vendor.name}" for Project "${project.name}".`);
+
     res.status(201).json({ message: 'Item assigned successfully.', vendor });
+
   } catch (error) {
-    console.error('Error assigning item:', error);
+    console.error('❌ Error assigning item:', error);
     res.status(500).json({ message: 'Failed to assign item.' });
   }
 });
+ 
+
+
+
 
 
 app.post("/api/assign-items", async (req, res) => {
@@ -2212,7 +2222,7 @@ app.post("/api/assign-items", async (req, res) => {
   }
 
   try {
-    // ✅ Find Vendor & Estimate
+    // ✅ Find Vendor, Estimate, Project
     const vendor = await Vendor.findById(vendorId);
     const estimate = await Estimate.findById(estimateId);
     const project = await Project.findById(projectId).select("name");
@@ -2224,20 +2234,25 @@ app.post("/api/assign-items", async (req, res) => {
     let updatedAssignedItems = [];
 
     for (const item of items) {
-      // 🔹 Find the item in the estimate
-      const estimateItem = estimate.lineItems.flatMap(cat => cat.items)
-        .find(i => i._id.toString() === item.itemId);
+      // 🔎 Find the item inside the estimate
+      const foundCategory = estimate.lineItems.find(cat => 
+        cat.items.some(i => i._id.toString() === item.itemId)
+      );
+      const estimateItem = foundCategory?.items.find(i => i._id.toString() === item.itemId);
 
       if (!estimateItem) {
         console.warn(`⚠️ Item ${item.itemId} not found in estimate.`);
         continue;
       }
 
-      // ✅ Check if the item is already assigned to the vendor
+   // ✅ Instead of category name, use the item's own costCode field
+   const costCode = estimateItem.costCode || "Uncategorized";
+
+      // ✅ Check if item is already assigned
       let vendorItem = vendor.assignedItems.find(i => i.itemId.toString() === item.itemId);
-      
+
       if (!vendorItem) {
-        // 🔹 Create a new assigned item in the vendor's list
+        // ➡️ Create new assigned item
         vendorItem = {
           itemId: item.itemId,
           projectId,
@@ -2248,36 +2263,38 @@ app.post("/api/assign-items", async (req, res) => {
           unitPrice: item.unitPrice,
           total: item.total,
           status: "new",
+          costCode, // ✅ Add the costCode
           photos: {
-            before: [...(estimateItem.photos?.before || [])], // Copy photos from estimate
+            before: [...(estimateItem.photos?.before || [])],
             after: [...(estimateItem.photos?.after || [])]
           }
         };
         vendor.assignedItems.push(vendorItem);
       } else {
-        // ✅ Update existing assigned item in the vendor's list
+        // ➡️ Update existing assigned item
         vendorItem.name = item.name;
         vendorItem.description = item.description;
         vendorItem.quantity = item.quantity;
         vendorItem.unitPrice = item.unitPrice;
         vendorItem.total = item.total;
+        vendorItem.costCode = costCode; // ✅ Update costCode too
         vendorItem.photos.before = [...(estimateItem.photos?.before || [])];
         vendorItem.photos.after = [...(estimateItem.photos?.after || [])];
       }
 
       updatedAssignedItems.push(vendorItem);
 
-      // ✅ Log the assignment in Daily Updates
+      // ✅ Log the assignment
       await logDailyUpdate(
         projectId,
         `Item "${item.name}" was assigned to Vendor "${vendor.name}" for Project "${project.name}".`
       );
     }
 
-    // ✅ Save Vendor with Updated Assigned Items
+    // ✅ Save Vendor with updated assigned items
     await vendor.save();
 
-    // ✅ Update `assignedTo` Field in Estimate
+    // ✅ Update assignedTo field in the estimate items
     const updateOperations = items.map(item => ({
       updateOne: {
         filter: { 
@@ -2298,12 +2315,12 @@ app.post("/api/assign-items", async (req, res) => {
       await Estimate.bulkWrite(updateOperations);
     }
 
-    console.log("✅ Items assigned successfully & photos copied!");
+    console.log("✅ Items assigned successfully with cost codes!");
 
-    // ✅ Return updated assigned items so frontend updates properly
-    res.status(200).json({ 
-      message: "Items assigned successfully!", 
-      assignedItems: vendor.assignedItems 
+    // ✅ Send updated assignedItems back to frontend
+    res.status(200).json({
+      message: "Items assigned successfully!",
+      assignedItems: vendor.assignedItems
     });
 
   } catch (error) {
@@ -2312,15 +2329,6 @@ app.post("/api/assign-items", async (req, res) => {
   }
 });
 
-
-
-
-
-
-
-
-
-  
   /* ==========
      📌 Delete Photo
      ========== */
@@ -3772,7 +3780,8 @@ function parseAddress(addressString) {
 
 app.post("/api/quotes/:id/convert-to-job", async (req, res) => {
   try {
-    const quote = await Quote.findById(req.params.id);
+     // ✅ Get raw quote data with lean()
+ const quote = await Quote.findById(req.params.id).lean();
     if (!quote) return res.status(404).json({ error: "Quote not found" });
 
     // Fallback if no address
@@ -3796,7 +3805,7 @@ app.post("/api/quotes/:id/convert-to-job", async (req, res) => {
     };
 
     console.log("📍 Parsed address:", { ...parsedAddress, projectName });
-
+    console.log("Line item sample:", quote.lineItems[0]);
     // ✅ Create Project
     const project = await Project.create({
       name: projectName,
@@ -3812,31 +3821,61 @@ app.post("/api/quotes/:id/convert-to-job", async (req, res) => {
       fromQuoteId: quote._id
     });
 
-    // ✅ Format estimate line items to match expected schema
-    const formattedLineItems = [{
-      type: "category",
-      category: "General", // or infer from quote
-      status: "in-progress",
-      items: quote.lineItems.map(item => ({
-        type: "item",
-        name: item.name || "Unnamed",
-        description: item.description || "",
-        quantity: item.qty || 1,
-        unitPrice: item.rate || 0,
-        total: (item.qty || 1) * (item.rate || 0),
-        status: "in-progress",
-        assignedTo: null,
-        photos: {},
-        startDate: null,
-        endDate: null
-      }))
-    }];
+       // ✅ Helper to capitalize each word
+       function capitalizeWords(str) {
+        return str.replace(/\b\w/g, char => char.toUpperCase());
+      }
+  
+      // ✅ Group line items by extracted room name
+      const groupedByRoom = {};
+  
+      quote.lineItems.forEach(item => {
+        let category = "General"; // Default category if no room detected
+        let cleanedName = item.name.trim();
+  
+        if (item.name.includes("-")) {
+          const parts = item.name.split("-");
+          if (parts.length > 1) {
+            category = capitalizeWords(parts[1].trim().toLowerCase());
+            cleanedName = parts[0].trim(); // ✅ Remove room part from item name
+          }
+        }
+  
+        if (!groupedByRoom[category]) groupedByRoom[category] = [];
+  
+        groupedByRoom[category].push({
+          type: "item",
+          name: cleanedName, // ✅ Save cleaned name here
+          description: item.description || "",
+          costCode: item.costCode || "Uncategorized",
+          quantity: item.qty || 1,
+          unitPrice: item.rate || 0,
+          total: (item.qty || 1) * (item.rate || 0),
+          status: "in-progress",
+          assignedTo: null,
+          photos: {},
+          startDate: null,
+          endDate: null
+        });
+      });
+  
+      // ✅ Format nicely to save to estimate
+      const formattedLineItems = Object.entries(groupedByRoom)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([category, items]) => ({
+          type: "category",
+          category, // Keep category as nicely formatted room name
+          status: "in-progress",
+          items
+        }));
+  
+
 
     // ✅ Create Estimate
     const estimate = await Estimate.create({
       projectId: project._id,
       invoiceNumber: `INV-${Date.now()}`,
-      title: `Estimate from Quote ${quote.quoteNumber}`,
+      title: `Estimate from Quote ${quote.quoteNumber || 'N/A'}`,
       total: quote.totals?.total || 0,
       tax: quote.totals?.tax || 0,
       status: "draft",
@@ -3844,21 +3883,20 @@ app.post("/api/quotes/:id/convert-to-job", async (req, res) => {
       createdFromQuote: quote._id
     });
 
-   // ✅ Include redirect URL for frontend
-   res.status(200).json({
-    success: true,
-    message: "Quote converted to project and estimate",
-    projectId: project._id,
-    estimateId: estimate._id,
-    redirectUrl: `/details/projects/${project._id}`
-  });
+    // ✅ Return success
+    res.status(200).json({
+      success: true,
+      message: "Quote converted to project and estimate",
+      projectId: project._id,
+      estimateId: estimate._id,
+      redirectUrl: `/details/projects/${project._id}`
+    });
 
-} catch (err) {
-  console.error("Error converting quote:", err);
-  res.status(500).json({ error: "Failed to convert quote" });
-}
+  } catch (err) {
+    console.error("Error converting quote:", err);
+    res.status(500).json({ error: "Failed to convert quote" });
+  }
 });
-
 
 
 // Get all labor cost suggestions
