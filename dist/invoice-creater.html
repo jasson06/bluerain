@@ -910,12 +910,21 @@ function addManualItem() {
 
     function editItem(index) {
       const item = lineItems[index];
+      document.getElementById('itemCostCode').value = item.costCode;
       document.getElementById('itemName').value = item.name;
       document.getElementById('itemDesc').value = item.description;
       document.getElementById('itemQty').value = item.quantity;
       document.getElementById('itemPrice').value = item.unitPrice;
       deleteItem(index);
       showToast('Editing item — re-enter details.');
+        // ✅ Scroll smoothly to the manual entry section
+  const manualEntrySection = document.getElementById('itemName');
+  if (manualEntrySection) {
+    manualEntrySection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => {
+      manualEntrySection.focus(); // After scrolling, focus the input
+    }, 400); // slight delay to ensure scroll completes
+  }
     }
 
     function deleteItem(index) {
