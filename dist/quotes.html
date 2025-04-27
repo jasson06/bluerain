@@ -1039,26 +1039,41 @@ async function saveEditedQuote(id) {
   const rates = document.querySelectorAll('.item-rate');
   const qtys = document.querySelectorAll('.item-qty');
 
-  for (let i = 0; i < names.length; i++) {
-    const name = names[i].value.trim();
-    const description = descs[i].value.trim();
-    const rate = parseFloat(rates[i].value) || 0;
-    const qty = parseFloat(qtys[i].value) || 0;
-
-    // Avoid adding completely blank rows
-    if (name || description || rate > 0 || qty > 0) {
-      updatedQuote.lineItems.push({ name, description, rate, qty });
-      subtotal += rate * qty;
-    }
-  }
-
-  const discount = parseFloat(document.getElementById('editDiscount')?.value || 0);
-  const tax = parseFloat(document.getElementById('editTax')?.value || 0);
-  const total = subtotal - discount + tax;
-
-  updatedQuote.totals = { subtotal, discount, tax, total };
-
   try {
+    // ✅ Fetch the existing quote first to retain costCodes
+    const existingRes = await fetch(`/api/quotes/${id}`);
+    const existingQuote = await existingRes.json();
+
+    for (let i = 0; i < names.length; i++) {
+      const name = names[i].value.trim();
+      const description = descs[i].value.trim();
+      const rate = parseFloat(rates[i].value) || 0;
+      const qty = parseFloat(qtys[i].value) || 0;
+
+      // Avoid adding completely blank rows
+      if (name || description || rate > 0 || qty > 0) {
+        // Try to find matching old item by name
+        const existingItem = existingQuote.lineItems.find(item => item.name === name);
+
+        updatedQuote.lineItems.push({
+          costCode: existingItem?.costCode || "Uncategorized", // ✅ Retain original costCode
+          name,
+          description,
+          rate,
+          qty
+        });
+
+        subtotal += rate * qty;
+      }
+    }
+
+    const discount = parseFloat(document.getElementById('editDiscount')?.value || 0);
+    const tax = parseFloat(document.getElementById('editTax')?.value || 0);
+    const total = subtotal - discount + tax;
+
+    updatedQuote.totals = { subtotal, discount, tax, total };
+
+    // ✅ Now submit
     const res = await fetch(`/api/quotes/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -1066,17 +1081,18 @@ async function saveEditedQuote(id) {
     });
 
     if (res.ok) {
-      showToast('Quote updated successfully.');
+      showToast('✅ Quote updated successfully.');
       closeModal();
       fetchQuotes();
     } else {
-      showToast('Failed to update quote.');
+      showToast('❌ Failed to update quote.');
     }
   } catch (err) {
     console.error('Save error:', err);
-    showToast('An error occurred while saving.');
+    showToast('❌ An error occurred while saving.');
   }
 }
+
 
 
 
