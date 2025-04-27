@@ -643,146 +643,146 @@ function refreshLineItems(categories) {
     return header;
   }
 
- // Add Line Item Card Function
- function addLineItemCard(item = {}, categoryHeader = null) {
+// Add Line Item Card Function
+function addLineItemCard(item = {}, categoryHeader = null) {
   const card = document.createElement("div");
   card.classList.add("line-item-card");
   card.setAttribute("data-item-id", item._id || `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
   card.setAttribute("data-assigned-to", item.assignedTo || "");
 
-const assignedToName = item.assignedTo?.name || "Unassigned";
-const assignedToInitials = item.assignedTo?.name
-  ? item.assignedTo.name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-  : "NA";
+  const assignedToName = item.assignedTo?.name || "Unassigned";
+  const assignedToInitials = item.assignedTo?.name
+    ? item.assignedTo.name.split(" ").map((n) => n[0]).join("").toUpperCase()
+    : "NA";
 
+  // ✅ Define possible statuses
+  const status = item.status || "new";
+  const statusClass = getStatusClass(status);
 
-         // ✅ Define possible statuses
-      const status = item.status || "new"; // Default status if none is provided
-      const statusClass = getStatusClass(status);
-
-   
-    // Ensure photos object exists
-    if (!item.photos) {
-      item.photos = { before: [], after: [] };
+  // Ensure photos object exists
+  if (!item.photos) {
+    item.photos = { before: [], after: [] };
   }
 
   card.innerHTML = `
-  <div class="card-header">
+    <div class="card-header">
       <input type="checkbox" class="line-item-select" ${item.assignedTo ? "disabled" : ""}>
       <input type="text" class="item-name" value="${item.name || ""}" placeholder="Item Name">
       <div class="suggestion-box" style="display:none; position:absolute; background:#fff; border:1px solid #ccc; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1); max-height:150px; overflow-y:auto; z-index:1000;"></div>
-
       <button class="btn delete-line-item">Delete</button>
       ${item.assignedTo ? `<button class="btn unassign-item">Unassign</button>` : ""}
     </div>
 
-      <div class="card-details">
-          <div class="detail">
-              <label>Description</label>
-              <textarea class="item-description" placeholder="Description">${item.description || ""}</textarea>
-          </div>
-          <div class="detail">
-              <label>Quantity</label>
-              <input type="number" class="item-quantity" value="${item.quantity || 1}" min="1">
-          </div>
-          <div class="detail">
-              <label>Unit Price</label>
-              <input type="number" class="item-price" value="${item.unitPrice || 0}" min="0" step="0.01">
-          </div>
+    <div class="card-details">
+ <div class="detail">
+  <label>Cost Code</label>
+  <input type="text" class="item-cost-code" value="${item.costCode || ''}" placeholder="Cost Code">
+</div>
+
+      <div class="detail">
+        <label>Description</label>
+        <textarea class="item-description" placeholder="Description">${item.description || ""}</textarea>
       </div>
-
-        <!-- ✅ Wrap Before & After in a Horizontal Container -->
-    <div class="photo-section">
-        <div class="photo-preview">
-            <h5>Before Photos</h5>
-            <div id="before-photos-${card.getAttribute("data-item-id")}">
-                ${generatePhotoPreview(item.photos.before, card.getAttribute("data-item-id"), "before")}
-            </div>
-            <label class="upload-btn">
-                <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'before')">
-                +
-            </label>
-        </div>
-
-        <div class="photo-preview">
-            <h5>After Photos</h5>
-            <div id="after-photos-${card.getAttribute("data-item-id")}">
-                ${generatePhotoPreview(item.photos.after, card.getAttribute("data-item-id"), "after")}
-            </div>
-            <label class="upload-btn">
-                <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'after')">
-                +
-            </label>
-        </div>
+      <div class="detail">
+        <label>Quantity</label>
+        <input type="number" class="item-quantity" value="${item.quantity || 1}" min="1">
+      </div>
+      <div class="detail">
+        <label>Unit Price</label>
+        <input type="number" class="item-price" value="${item.unitPrice || 0}" min="0" step="0.01">
+      </div>
     </div>
 
-                        <!-- ✅ Line Item Status -->
-        <div class="status-container">
-        <span>Status:<span class="item-status ${statusClass}">${status.toUpperCase()}</span></span>
+    <div class="photo-section">
+      <div class="photo-preview">
+        <h5>Before Photos</h5>
+        <div id="before-photos-${card.getAttribute("data-item-id")}">
+          ${generatePhotoPreview(item.photos.before, card.getAttribute("data-item-id"), "before")}
         </div>
+        <label class="upload-btn">
+          <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'before')">
+          +
+        </label>
+      </div>
 
-<div class="card-footer">
-  <span>
-    Assigned to:
-    <span class="vendor-name tooltip-click" data-fullname="${assignedToName}">
-      ${assignedToInitials}
-    </span>
-  </span>
-  <span class="item-total">
-    $${((item.quantity || 1) * (item.unitPrice || 0)).toFixed(2)}
-  </span>
-</div>
+      <div class="photo-preview">
+        <h5>After Photos</h5>
+        <div id="after-photos-${card.getAttribute("data-item-id")}">
+          ${generatePhotoPreview(item.photos.after, card.getAttribute("data-item-id"), "after")}
+        </div>
+        <label class="upload-btn">
+          <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'after')">
+          +
+        </label>
+      </div>
+    </div>
+
+    <div class="status-container">
+      <span>Status:<span class="item-status ${statusClass}">${status.toUpperCase()}</span></span>
+    </div>
+
+    <div class="card-footer">
+      <span>
+        Assigned to:
+        <span class="vendor-name tooltip-click" data-fullname="${assignedToName}">
+          ${assignedToInitials}
+        </span>
+      </span>
+      <span class="item-total">
+        $${((item.quantity || 1) * (item.unitPrice || 0)).toFixed(2)}
+      </span>
+    </div>
   `;
 
+  const itemNameInput = card.querySelector(".item-name");
+  const suggestionBox = card.querySelector(".suggestion-box");
 
- const itemNameInput = card.querySelector(".item-name");
-const suggestionBox = card.querySelector(".suggestion-box");
+  itemNameInput.addEventListener("input", () => {
+    const value = itemNameInput.value.toLowerCase();
+    suggestionBox.innerHTML = "";
 
-itemNameInput.addEventListener("input", () => {
-  const value = itemNameInput.value.toLowerCase();
-  suggestionBox.innerHTML = "";
+    if (!value) return (suggestionBox.style.display = "none");
 
-  if (!value) return (suggestionBox.style.display = "none");
+    const matches = laborCostList.filter(item =>
+      item.name.toLowerCase().includes(value)
+    );
 
-  const matches = laborCostList.filter(item =>
-    item.name.toLowerCase().includes(value)
-  );
+    if (matches.length === 0) return (suggestionBox.style.display = "none");
 
-  if (matches.length === 0) return (suggestionBox.style.display = "none");
+    matches.forEach(match => {
+      const option = document.createElement("div");
+      option.textContent = match.name;
+      option.style.padding = "8px";
+      option.style.cursor = "pointer";
+      option.onmouseenter = () => (option.style.background = "#f0f0f0");
+      option.onmouseleave = () => (option.style.background = "#fff");
+      option.onclick = () => {
+        itemNameInput.value = match.name;
+        card.querySelector(".item-description").value = match.description;
+        card.querySelector(".item-price").value = match.rate;
+        card.querySelector(".item-cost-code").value = match.costCode || "Uncategorized";
+        suggestionBox.style.display = "none";
+      };
+      suggestionBox.appendChild(option);
+    });
 
-  matches.forEach(match => {
-    const option = document.createElement("div");
-    option.textContent = match.name;
-    option.style.padding = "8px";
-    option.style.cursor = "pointer";
-    option.onmouseenter = () => (option.style.background = "#f0f0f0");
-    option.onmouseleave = () => (option.style.background = "#fff");
-    option.onclick = () => {
-      itemNameInput.value = match.name;
-      card.querySelector(".item-description").value = match.description;
-      card.querySelector(".item-price").value = match.rate;
-      suggestionBox.style.display = "none";
-    };
-    suggestionBox.appendChild(option);
+    const rect = itemNameInput.getBoundingClientRect();
+    suggestionBox.style.top = `${itemNameInput.offsetTop + itemNameInput.offsetHeight}px`;
+    suggestionBox.style.left = `${itemNameInput.offsetLeft}px`;
+    suggestionBox.style.width = `${itemNameInput.offsetWidth}px`;
+    suggestionBox.style.display = "block";
   });
 
-  const rect = itemNameInput.getBoundingClientRect();
-  suggestionBox.style.top = `${itemNameInput.offsetTop + itemNameInput.offsetHeight}px`;
-  suggestionBox.style.left = `${itemNameInput.offsetLeft}px`;
-  suggestionBox.style.width = `${itemNameInput.offsetWidth}px`;
-  suggestionBox.style.display = "block";
-});
+  // Hide on outside click
+  document.addEventListener("click", (e) => {
+    if (!card.contains(e.target)) {
+      suggestionBox.style.display = "none";
+    }
+  });
 
-// Hide on outside click
-document.addEventListener("click", (e) => {
-  if (!card.contains(e.target)) {
-    suggestionBox.style.display = "none";
-  }
-});
+  
+
+
    
    
 // ✅ Enable vendor name 
@@ -899,13 +899,34 @@ document.addEventListener("click", (e) => {
     const selectedItems = Array.from(document.querySelectorAll(".line-item-select:checked")).map((checkbox) => {
       const card = checkbox.closest(".line-item-card");
       const itemId = card.getAttribute("data-item-id");
+  
       const name = card.querySelector(".item-name").value.trim();
       const description = card.querySelector(".item-description").value.trim() || "No description provided";
       const quantity = parseInt(card.querySelector(".item-quantity").value, 10) || 1;
       const unitPrice = parseFloat(card.querySelector(".item-price").value) || 0;
       const total = quantity * unitPrice;
   
-      return { itemId, name, description, quantity, unitPrice, total, assignedTo: vendorId };
+      // ✅ If cost code exists on the card, grab it
+      let costCode = card.getAttribute("data-cost-code");
+  
+      // 🔥 If cost code is missing, fallback to category name
+      if (!costCode || costCode === "Uncategorized") {
+        const categoryHeader = card.previousElementSibling?.classList.contains("category-header")
+          ? card.previousElementSibling
+          : card.closest(".category-header");
+        costCode = categoryHeader?.querySelector(".category-title span")?.textContent?.trim() || "Uncategorized";
+      }
+  
+      return {
+        itemId,
+        name,
+        description,
+        quantity,
+        unitPrice,
+        total,
+        assignedTo: vendorId,
+        costCode // ✅ Always set costCode correctly
+      };
     });
   
     if (selectedItems.length === 0) {
@@ -914,7 +935,7 @@ document.addEventListener("click", (e) => {
     }
   
     try {
-      // Send API Request
+      // ✅ Send API Request with cost code included
       const response = await fetch("/api/assign-items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -923,30 +944,29 @@ document.addEventListener("click", (e) => {
   
       if (!response.ok) throw new Error("Failed to assign items.");
   
-      // Update the UI for Assigned Items
+      // ✅ Update UI for assigned items
       selectedItems.forEach((item) => {
         const card = document.querySelector(`.line-item-card[data-item-id="${item.itemId}"]`);
         if (card) {
-        // Update the "Assigned to" field
-        card.setAttribute("data-assigned-to", vendorId);
-        card.querySelector(".vendor-name").textContent = getVendorInitials(vendorId);
+          card.setAttribute("data-assigned-to", vendorId);
+          card.querySelector(".vendor-name").textContent = getVendorInitials(vendorId);
   
-          // Uncheck the item after assignment
           const checkbox = card.querySelector(".line-item-select");
-          checkbox.checked = false;
-  
-          // Disable the checkbox to prevent reassignment
-          checkbox.disabled = true;
+          if (checkbox) {
+            checkbox.checked = false;
+            checkbox.disabled = true;
+          }
         }
       });
   
-      alert("Items assigned successfully!");
-      updatePage(); // Reflect the changes immediately
+      alert("✅ Items assigned successfully!");
+      updatePage(); // Refresh totals and page
     } catch (error) {
-      console.error("Error assigning items:", error);
+      console.error("❌ Error assigning items:", error);
       alert("Error assigning items. Please try again.");
     }
   }
+  
 
 
 
@@ -1014,122 +1034,122 @@ async function saveEstimate() {
   let currentCategory = null;
 
   document.querySelectorAll("#line-items-cards > div").forEach((element) => {
-      if (element.classList.contains("category-header")) {
-          currentCategory = {
-              _id: element.getAttribute("data-category-id") || undefined,
-              type: "category",
-              category: element.querySelector(".category-title span").textContent.trim(),
-              status: "in-progress",
-              items: [],
-          };
-          lineItems.push(currentCategory);
-      } else if (element.classList.contains("line-item-card")) {
-          const assignedToValue = element.getAttribute("data-assigned-to");
-          const assignedTo = assignedToValue && /^[a-f\d]{24}$/i.test(assignedToValue) ? assignedToValue : undefined;
+    if (element.classList.contains("category-header")) {
+      currentCategory = {
+        _id: element.getAttribute("data-category-id") || undefined,
+        type: "category",
+        category: element.querySelector(".category-title span").textContent.trim(),
+        status: "in-progress",
+        items: [],
+      };
+      lineItems.push(currentCategory);
+    } else if (element.classList.contains("line-item-card")) {
+      const assignedToValue = element.getAttribute("data-assigned-to");
+      const assignedTo = assignedToValue && /^[a-f\d]{24}$/i.test(assignedToValue) ? assignedToValue : undefined;
 
-          let item = {
-              _id: element.getAttribute("data-item-id") || undefined,
-              type: "item",
-              name: element.querySelector(".item-name").value.trim(),
-              description: element.querySelector(".item-description").value.trim() || "",
-              quantity: parseInt(element.querySelector(".item-quantity").value, 10) || 1,
-              unitPrice: parseFloat(element.querySelector(".item-price").value) || 0,
-              total:
-                  (parseInt(element.querySelector(".item-quantity").value, 10) || 1) *
-                  (parseFloat(element.querySelector(".item-price").value) || 0),
-              assignedTo,
-          };
+      const item = {
+        _id: element.getAttribute("data-item-id") || undefined,
+        type: "item",
+        name: element.querySelector(".item-name").value.trim(),
+        description: element.querySelector(".item-description").value.trim() || "",
+        quantity: parseInt(element.querySelector(".item-quantity").value, 10) || 1,
+        unitPrice: parseFloat(element.querySelector(".item-price").value) || 0,
+        total: (
+          (parseInt(element.querySelector(".item-quantity").value, 10) || 1) *
+          (parseFloat(element.querySelector(".item-price").value) || 0)
+        ),
+        assignedTo,
+        costCode: element.querySelector(".item-cost-code")?.value.trim() || "Uncategorized" // ✅ NEW: Capture cost code
+      };
 
-          const beforePhotos = Array.from(element.querySelectorAll(".photo-before")).map(img => img.src);
-          const afterPhotos = Array.from(element.querySelectorAll(".photo-after")).map(img => img.src);
+      const beforePhotos = Array.from(element.querySelectorAll(".photo-before")).map(img => img.src);
+      const afterPhotos = Array.from(element.querySelectorAll(".photo-after")).map(img => img.src);
 
-          // ✅ Only include photos if they exist
-          if (beforePhotos.length > 0 || afterPhotos.length > 0) {
-              item.photos = {
-                  before: beforePhotos.length > 0 ? beforePhotos : undefined,
-                  after: afterPhotos.length > 0 ? afterPhotos : undefined,
-              };
-          }
-
-          if (!item._id || item._id.startsWith("item-")) {
-              delete item._id; // Remove temporary IDs for new items
-          }
-
-          if (currentCategory) {
-              currentCategory.items.push(item);
-          } else {
-              console.error("Item without a category:", item);
-              alert("Item found without a category. Please add a category before saving.");
-          }
+      if (beforePhotos.length > 0 || afterPhotos.length > 0) {
+        item.photos = {
+          before: beforePhotos.length > 0 ? beforePhotos : undefined,
+          after: afterPhotos.length > 0 ? afterPhotos : undefined,
+        };
       }
+
+      if (!item._id || item._id.startsWith("item-")) {
+        delete item._id; // Remove temporary IDs
+      }
+
+      if (currentCategory) {
+        currentCategory.items.push(item);
+      } else {
+        console.error("Item without a category:", item);
+        alert("Item found without a category. Please add a category before saving.");
+      }
+    }
   });
 
   const tax = parseFloat(document.getElementById("tax-input").value) || 0;
 
   try {
-      let existingEstimate = null;
-      if (estimateId) {
-          // ✅ Fetch existing estimate to merge data (Avoid overwriting)
-          const response = await fetch(`/api/estimates/${estimateId}`);
-          if (!response.ok) throw new Error("Failed to fetch existing estimate.");
-          existingEstimate = await response.json();
-      }
+    let existingEstimate = null;
+    if (estimateId) {
+      const response = await fetch(`/api/estimates/${estimateId}`);
+      if (!response.ok) throw new Error("Failed to fetch existing estimate.");
+      existingEstimate = await response.json();
+    }
 
-      // ✅ Ensure previous data is merged instead of overwritten
-      const mergedLineItems = lineItems.map((category) => {
-          const existingCategory = existingEstimate?.lineItems?.find((cat) => cat._id === category._id);
+    const mergedLineItems = lineItems.map((category) => {
+      const existingCategory = existingEstimate?.lineItems?.find((cat) => cat._id === category._id);
+
+      return {
+        ...category,
+        items: category.items.map((item) => {
+          const existingItem = existingCategory?.items?.find((exItem) => exItem._id === item._id);
 
           return {
-              ...category,
-              items: category.items.map((item) => {
-                  const existingItem = existingCategory?.items?.find((exItem) => exItem._id === item._id);
-
-                  return {
-                      ...existingItem, // Retain all existing data
-                      ...item, // Overwrite only updated fields
-                    total: item.quantity * item.unitPrice, // ✅ Ensure recalculated total is used
-                      photos: item.photos ?? existingItem?.photos, // ✅ Preserve existing photos if not updated
-                      assignedTo: item.assignedTo || existingItem?.assignedTo, // Prevent null overwrite
-                  };
-              }),
+            ...existingItem, // Retain all old data
+            ...item, // Overwrite with new data
+            total: item.quantity * item.unitPrice,
+            photos: item.photos ?? existingItem?.photos,
+            assignedTo: item.assignedTo || existingItem?.assignedTo,
+            costCode: item.costCode || existingItem?.costCode || "Uncategorized" // ✅ Merge or fallback
           };
-      });
+        }),
+      };
+    });
 
-       const title = document.getElementById("estimate-title").value.trim();
-       const updatedEstimate = { projectId, title, lineItems: mergedLineItems, tax };
+    const title = document.getElementById("estimate-title").value.trim();
+    const updatedEstimate = { projectId, title, lineItems: mergedLineItems, tax };
 
-      // ✅ Send update request
-      const method = estimateId ? "PUT" : "POST";
-      const url = estimateId ? `/api/estimates/${estimateId}` : "/api/estimates";
+    const method = estimateId ? "PUT" : "POST";
+    const url = estimateId ? `/api/estimates/${estimateId}` : "/api/estimates";
 
-      const saveResponse = await fetch(url, {
-          method,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updatedEstimate),
-      });
+    const saveResponse = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedEstimate),
+    });
 
-      if (!saveResponse.ok) {
-          const error = await saveResponse.json();
-          throw new Error(error.message || `Failed to ${method === "POST" ? "create" : "update"} estimate.`);
-      }
+    if (!saveResponse.ok) {
+      const error = await saveResponse.json();
+      throw new Error(error.message || `Failed to ${method === "POST" ? "create" : "update"} estimate.`);
+    }
 
-      console.log("🔍 Saving Estimate Data:", JSON.stringify(updatedEstimate, null, 2));
+    console.log("🔍 Saving Estimate Data:", JSON.stringify(updatedEstimate, null, 2));
 
-      const result = await saveResponse.json();
-      alert(`Estimate ${method === "POST" ? "created" : "updated"} successfully!`, result);
+    const result = await saveResponse.json();
+    alert(`Estimate ${method === "POST" ? "created" : "updated"} successfully!`, result);
 
-      if (!estimateId && result.estimate && result.estimate._id) {
-          estimateId = result.estimate._id;
-          window.history.pushState({}, "", `?projectId=${projectId}&estimateId=${estimateId}`);
-      }
+    if (!estimateId && result.estimate && result.estimate._id) {
+      estimateId = result.estimate._id;
+      window.history.pushState({}, "", `?projectId=${projectId}&estimateId=${estimateId}`);
+    }
 
-      await loadEstimateDetails();
-      updatePage();
+    await loadEstimateDetails();
+    updatePage();
   } catch (error) {
-      console.error("Error saving estimate:", error);
-      alert("Error saving the estimate. Please try again.");
+    console.error("Error saving estimate:", error);
+    alert("Error saving the estimate. Please try again.");
   }
 }
+
 
 
 
@@ -1240,6 +1260,8 @@ function updatePage() {
    await fetchLaborCostList();
   
 
+
+
   // Add Event Listeners
   document.getElementById("export-estimate-excel").addEventListener("click", exportEstimateToExcel);
   document.getElementById("add-line-item").addEventListener("click", () => addLineItemCard());
@@ -1251,5 +1273,3 @@ function updatePage() {
   document.getElementById("tax-input").addEventListener("input", updateSummary);
   document.getElementById("save-estimate").addEventListener("click", saveEstimate);
 });
-
-
