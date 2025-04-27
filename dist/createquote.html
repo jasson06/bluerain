@@ -153,9 +153,11 @@
 
     .modal {
   position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  top: 0;
+  left: 0;
+  width: 100%; 
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5); /* Dark overlay for mobile */
   display: none;
   justify-content: center;
   align-items: flex-start;
@@ -165,13 +167,14 @@
   box-sizing: border-box;
 }
 
+/* Modal Content */
 .modal-content {
   background: #fff;
   border-radius: 8px;
   padding: 20px;
   width: 100%;
   max-width: 800px;
-  box-sizing: border-box;
+  
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
@@ -512,7 +515,7 @@
   }
   .action-dropdown-content {
     display: none;
-    position: absolute;
+    position: flex;
     right: 0;
     background-color: #fff;
     border: 1px solid #ccc;
@@ -557,8 +560,8 @@
     border-collapse: collapse;
   }
 
-  .table-responsive-sm th,
-  .table-responsive-sm td {
+  .table-responsive-sm th
+   {
     white-space: nowrap;
   }
 }
@@ -587,8 +590,88 @@
 }
 
 
+#loader {
+  transition: opacity 0.3s ease;
+}
+
+#loader.hide {
+  opacity: 0;
+  pointer-events: none;
+}
 
 
+/* Sidebar behavior only for desktop */
+.labor-toolbar {
+  background: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 50px;
+}
+
+/* Desktop style (min-width 768px) */
+@media (min-width: 768px) {
+  .labor-toolbar {
+    background: transparent;
+    justify-content: flex-end;
+    align-items: stretch;
+    padding: 0;
+    transition: all 0.3s ease;
+  }
+
+  .labor-toolbar .modal-content {
+    width: 360px;
+    max-width: 360px;
+    height: 100vh;
+    border-radius: 0;
+    border-left: 2px solid #eee;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+    animation: slideIn 0.3s forwards;
+  }
+
+  /* Slide-in animation */
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* Push main content when sidebar open */
+  body.sidebar-open .container {
+    margin-right: 370px; /* width of sidebar + small gap */
+    transition: margin 0.3s ease;
+  }
+}
+
+
+
+/* ✅ Desktop override for the Labor Cost Modal */
+@media (min-width: 768px) {
+  #laborCostModal {
+    background: transparent; /* No dark background */
+    width: auto;
+    height: auto;
+    top: 80px; /* below sticky header if you have */
+    right: 0;
+    left: auto;
+    bottom: 0;
+    padding: 0;
+    display: none;
+    justify-content: flex-end; /* Stick to the right */
+  }
+
+  #laborCostModal .modal-content {
+    width: 400px; /* Width of the sidebar */
+    height: calc(100vh - 60px); /* Full height minus header */
+    max-width: 340px;
+    border-radius: 0;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto;
+    position: fixed;
+    right: 0;
+    top: 20px;
+    background: #fff;
+  }
+}
   </style>
 </head>
 <body>
@@ -642,6 +725,7 @@
     <div class="section">
       <h3>Line Items</h3>
       <div class="line-item-row">
+        <input id="itemCode" placeholder="Cost Code" />
         <input id="itemName" placeholder="Item Name" />
         <div id="suggestionBox" style="position: absolute; background: #fff; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000; display: none; max-height: 150px; overflow-y: auto;"></div>
         <textarea id="itemDesc" placeholder="Description" rows="2"></textarea>
@@ -655,6 +739,7 @@
           <thead>
             <tr>
               <th></th>
+              <th>Cost Code</th>
               <th>Item</th>
               <th>Description</th>
               <th>Rate</th>
@@ -777,7 +862,8 @@
   </div>
 
 <!-- Suggested Labor Cost List Modal -->
-<div id="laborCostModal" class="modal">
+<div id="laborCostModal" class="modal labor-toolbar">
+
   <div class="modal-content">
     <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
       <h3>Labor Cost Suggestions</h3>
@@ -786,6 +872,7 @@
     <input type="text" id="laborSearchInput" placeholder="Search labor task..." oninput="renderLaborSuggestions()" style="width: 100%; padding: 8px; margin: 10px 0;">
     <ul id="laborSuggestionList" style="list-style: none; padding: 0; max-height: 400px; overflow-y: auto;"></ul>
     <div style="margin-top: 10px;">
+      <input id="newLaborCode" placeholder="Cost Code" style="width: 100%; padding: 8px; margin-top: 10px;" />
       <input id="newLaborName" placeholder="Task Name" style="width: 100%; padding: 8px; margin-top: 10px;" />
       <input id="newLaborDesc" placeholder="Description" style="width: 100%; padding: 8px; margin-top: 10px;" />
       <input id="newLaborRate" type="number" placeholder="Rate ($)" style="width: 100%; padding: 8px; margin-top: 10px;" />
@@ -846,33 +933,45 @@
 
     document.getElementById('itemName').addEventListener('input', showLaborSuggestions);
 
-function showLaborSuggestions() {
+    function showLaborSuggestions() {
   const input = document.getElementById('itemName');
   const value = input.value.toLowerCase();
   const box = document.getElementById('suggestionBox');
   box.innerHTML = '';
-  
-  if (!value) return box.style.display = 'none';
+
+  if (!value) return (box.style.display = 'none');
 
   const matches = laborCostList.filter(item =>
     item.name.toLowerCase().includes(value)
   );
 
-  if (matches.length === 0) return box.style.display = 'none';
+  if (matches.length === 0) return (box.style.display = 'none');
 
   matches.forEach(item => {
     const option = document.createElement('div');
-    option.textContent = item.name;
+    option.innerHTML = `
+      <small style="color: #64748b;"><strong>Code:</strong> ${item.costCode || '-'}</small>
+      <strong>${item.name}</strong><br>
+      <small>${item.description}</small><br>
+      
+    `;
     option.style.padding = '8px';
     option.style.cursor = 'pointer';
-    option.onmouseenter = () => option.style.background = '#f0f0f0';
-    option.onmouseleave = () => option.style.background = '#fff';
+    option.style.borderBottom = '1px solid #eee';
+
+    option.onmouseenter = () => (option.style.background = '#f1f5f9');
+    option.onmouseleave = () => (option.style.background = '#fff');
+
     option.onclick = () => {
       document.getElementById('itemName').value = item.name;
       document.getElementById('itemDesc').value = item.description;
       document.getElementById('itemRate').value = item.rate;
+      if (document.getElementById('itemCode')) {
+        document.getElementById('itemCode').value = item.costCode || '';
+      }
       box.style.display = 'none';
     };
+
     box.appendChild(option);
   });
 
@@ -894,7 +993,6 @@ document.addEventListener('click', e => {
   }
 });
 
-
 function formatCurrency(value) {
   return `$${parseFloat(value).toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -902,7 +1000,6 @@ function formatCurrency(value) {
   })}`;
 }
 
-    
 
 function showToast(message) {
   const toast = document.getElementById('toast');
@@ -988,6 +1085,7 @@ function addLineItem() {
   const description = document.getElementById('itemDesc');
   const rate = parseFloat(document.getElementById('itemRate').value);
   const qty = parseInt(document.getElementById('itemQty').value);
+  const costCode = document.getElementById('itemCode').value;
 
   if (!name.value || isNaN(rate) || isNaN(qty)) {
     [name, document.getElementById('itemRate'), document.getElementById('itemQty')].forEach(el => {
@@ -997,7 +1095,14 @@ function addLineItem() {
     return;
   }
 
-  lineItems.push({ name: name.value, description: description.value, rate, qty });
+  lineItems.push({
+    
+    name: name.value,
+    description: description.value,
+    rate,
+    qty,
+    costCode // ✅ Added
+  });
 
   renderTable();
   showToast('Line item added');
@@ -1006,8 +1111,10 @@ function addLineItem() {
   description.value = '';
   document.getElementById('itemRate').value = '';
   document.getElementById('itemQty').value = '';
+  document.getElementById('itemCode').value = ''; // ✅ Clear cost code
   [name, document.getElementById('itemRate'), document.getElementById('itemQty')].forEach(el => el.style.borderColor = '#ccc');
 }
+
 
 // Live total preview
 ['itemRate', 'itemQty'].forEach(id => {
@@ -1027,6 +1134,13 @@ function addLineItem() {
   });
 });
 
+// 📏 Auto Expand for Description Textarea
+const descField = document.getElementById('itemDesc');
+
+descField.addEventListener('input', function () {
+  this.style.height = 'auto';
+  this.style.height = (this.scrollHeight) + 'px';
+});
 
 
 function renderTable() {
@@ -1044,8 +1158,9 @@ function renderTable() {
     const isEditing = item.isEditing;
 
     row.innerHTML = isEditing ? `
-      <td></td>
-      <td><input value="${item.name}" id="editName-${index}" /></td>
+      <td style="text-align:center;"><span class="drag-handle">☰</span></td>
+      <td><input type="text" value="${item.costCode || ''}" id="editCode-${index}" readonly style="background: #f1f5f9; cursor: not-allowed;" /></td> 
+      <td><input type="text" value="${item.name}" id="editName-${index}" /></td>
       <td><textarea id="editDesc-${index}">${item.description}</textarea></td>
       <td><input type="number" value="${item.rate}" id="editRate-${index}" /></td>
       <td><input type="number" value="${item.qty}" id="editQty-${index}" /></td>
@@ -1056,6 +1171,7 @@ function renderTable() {
       </td>
     ` : `
       <td style="text-align:center;"><span class="drag-handle">☰</span></td>
+      <td>${item.costCode || '-'}</td>
       <td>${item.name}</td>
       <td>${item.description}</td>
       <td>${formatCurrency(item.rate)}</td>
@@ -1085,6 +1201,7 @@ function renderTable() {
   document.getElementById('tax').textContent = formatCurrency(tax).replace('$', '');
   document.getElementById('grandTotal').textContent = formatCurrency(total).replace('$', '');
 }
+
 
 
   // ✅ Enable drag and drop on tbody
@@ -1130,9 +1247,14 @@ function saveLineItem(index) {
     return;
   }
 
-  lineItems[index] = { name, description, rate, qty };
+  // Preserve costCode
+  const costCodeInput = document.getElementById(`editCode-${index}`);
+  const costCode = costCodeInput ? costCodeInput.value.trim() : (lineItems[index].costCode || "Uncategorized");
+
+  lineItems[index] = { costCode, name, description, rate, qty };
   renderTable();
 }
+
 
     
     function toggleLineItemMenu(event, index) {
@@ -1209,15 +1331,15 @@ function saveLineItem(index) {
   const clientSignatureName = signatureClientInput?.value || toName || "____________________________";
 
   const lineItemRows = lineItems.map(item => `
-    <tr>
-      <td>${item.name}</td>
-      <td>${item.desc}</td>
-     <td>$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-     <td>${item.qty.toLocaleString()}</td>
-     <td>$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+  <tr>
+    <td>${item.name}</td>
+    <td>${item.description}</td>
+    <td>$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+    <td>${item.qty.toLocaleString()}</td>
+    <td>$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+  </tr>
+`).join("");
 
-    </tr>
-  `).join("");
 
   const subtotal = lineItems.reduce((sum, i) => sum + i.rate * i.qty, 0);
   const tax = 0;
@@ -1813,14 +1935,22 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
 
     let laborCostList = [];
 
-  function openLaborCostModal() {
-    document.getElementById('laborCostModal').style.display = 'flex';
-    fetchLaborSuggestions();
+    function openLaborCostModal() {
+  document.getElementById('laborCostModal').style.display = 'flex';
+  fetchLaborSuggestions();
+  if (window.innerWidth >= 768) {
+    document.body.classList.add('sidebar-open');
   }
+}
 
-  function closeLaborCostModal() {
-    document.getElementById('laborCostModal').style.display = 'none';
+function closeLaborCostModal() {
+  document.getElementById('laborCostModal').style.display = 'none';
+  if (window.innerWidth >= 768) {
+    document.body.classList.remove('sidebar-open');
   }
+}
+
+
 
   async function fetchLaborSuggestions() {
     showLoader(); // 👈 START
@@ -1850,6 +1980,7 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
         <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 8px; border-radius: 8px; background: #f9f9f9;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div onclick="useSuggestedLabor(${index})">
+              <small style="color: #64748b;"><strong>cost code:</strong> ${item.costCode || '-'}</small><br>
               <strong>${item.name}</strong><br>
               <small>${item.description}</small><br>
               <span style="color: #007bff; font-weight: bold;">$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
@@ -1877,55 +2008,61 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
   }
 
   async function addLaborItem() {
-    const name = document.getElementById('newLaborName').value;
-    const description = document.getElementById('newLaborDesc').value;
-    const rate = parseFloat(document.getElementById('newLaborRate').value);
+  const name = document.getElementById('newLaborName').value;
+  const description = document.getElementById('newLaborDesc').value;
+  const rate = parseFloat(document.getElementById('newLaborRate').value);
+  const costCode = document.getElementById('newLaborCode').value;
 
-    if (!name || !description || isNaN(rate)) return alert('Please fill all fields correctly.');
-    showLoader(); // 👈 START
-    try {
-      const res = await fetch('/api/labor-costs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description, rate })
-      });
-      const newItem = await res.json();
-      laborCostList.unshift(newItem);
-      renderLaborSuggestions();
-    } catch (err) {
-      console.error('Error adding labor item:', err);
-    } finally {
-      hideLoader(); // 👈 END
-    }
-
-    document.getElementById('newLaborName').value = '';
-    document.getElementById('newLaborDesc').value = '';
-    document.getElementById('newLaborRate').value = '';
+  if (!name || !description || isNaN(rate)) return alert('Please fill all fields correctly.');
+  showLoader();
+  try {
+    const res = await fetch('/api/labor-costs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description, rate, costCode })
+    });
+    const newItem = await res.json();
+    laborCostList.unshift(newItem);
+    renderLaborSuggestions();
+  } catch (err) {
+    console.error('Error adding labor item:', err);
+  } finally {
+    hideLoader();
   }
 
-  async function editLaborItem(index) {
-    const item = laborCostList[index];
-    const name = prompt('Edit task name:', item.name);
-    const description = prompt('Edit description:', item.description);
-    const rate = parseFloat(prompt('Edit rate:', item.rate));
+  // Reset fields
+  ['newLaborName', 'newLaborDesc', 'newLaborRate', 'newLaborCode'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+}
 
-    if (!name || !description || isNaN(rate)) return;
-    showLoader(); // 👈 START
-    try {
-      const res = await fetch(`/api/labor-costs/${item._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description, rate })
-      });
-      const updated = await res.json();
-      laborCostList[index] = updated;
-      renderLaborSuggestions();
-    } catch (err) {
-      console.error('Error updating labor item:', err);
-    } finally {
-      hideLoader(); // 👈 END
-    }
+
+async function editLaborItem(index) {
+  const item = laborCostList[index];
+  const name = prompt('Edit task name:', item.name);
+  const description = prompt('Edit description:', item.description);
+  const rate = parseFloat(prompt('Edit rate ($):', item.rate));
+  const costCode = prompt('Edit cost code:', item.costCode || '');
+
+  if (!name || !description || isNaN(rate)) return;
+
+  showLoader();
+  try {
+    const res = await fetch(`/api/labor-costs/${item._id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description, rate, costCode })
+    });
+    const updated = await res.json();
+    laborCostList[index] = updated;
+    renderLaborSuggestions();
+  } catch (err) {
+    console.error('Error updating labor item:', err);
+  } finally {
+    hideLoader();
   }
+}
+
 
   async function deleteLaborItem(index) {
     const item = laborCostList[index];
@@ -1943,17 +2080,32 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
   }
 
   function useSuggestedLabor(index) {
-    const item = laborCostList[index];
-    document.getElementById('itemName').value = item.name;
-    document.getElementById('itemDesc').value = item.description;
-    document.getElementById('itemRate').value = item.rate;
-    closeLaborCostModal();
-  }
+  const item = laborCostList[index];
+
+  // Match the REAL HTML IDs
+  const nameField = document.getElementById('itemName');
+  const descField = document.getElementById('itemDesc');
+  const rateField = document.getElementById('itemRate');
+  const qtyField = document.getElementById('itemQty');
+  const costCodeField = document.getElementById('itemCode'); // ✅ FIXED to itemCode
+
+  if (nameField) nameField.value = item.name || '';
+  if (descField) descField.value = item.description || '';
+  if (rateField) rateField.value = item.rate || 0;
+  if (qtyField) qtyField.value = 1;
+  if (costCodeField) costCodeField.value = item.costCode || '';
+
+  
+}
+
+
+
 
  
   window.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     const modalToOpen = params.get('modal');
+    
 
     if (modalToOpen === 'laborCost' && typeof openLaborCostModal === 'function') {
       openLaborCostModal();
