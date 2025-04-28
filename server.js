@@ -1276,23 +1276,56 @@ app.get('/api/managers/:id', async (req, res) => {
 });
 
 
-// API Endpoint to update an existing vendor
-app.put('/api/vendors/:id', (req, res) => {
-  const { name } = req.body;
+// ✅ Edit Vendor Information
 
-  if (!name) {
-    return res.status(400).json({ error: 'Vendor name is required for update' });
+app.put("/api/vendors/:id", async (req, res) => {
+  try {
+    const { id } = req.params; // Get vendor ID from URL
+    const updateData = req.body; // Get updated fields from request body
+
+    if (!id) {
+      return res.status(400).json({ success: false, message: "Vendor ID is required." });
+    }
+
+    if (!updateData || Object.keys(updateData).length === 0) {
+      return res.status(400).json({ success: false, message: "No update data provided." });
+    }
+
+    // If using MongoDB (Database)
+    if (typeof Vendor !== "undefined") {
+      const updatedVendor = await Vendor.findByIdAndUpdate(id, updateData, { 
+        new: true, 
+        runValidators: true 
+      });
+
+      if (!updatedVendor) {
+        return res.status(404).json({ success: false, message: "Vendor not found." });
+      }
+
+      console.log(`✅ Vendor with ID ${id} updated in DB`);
+      return res.status(200).json({ success: true, message: "Vendor updated successfully!", vendor: updatedVendor });
+    }
+
+    // If using in-memory array (`vendors`)
+    if (typeof vendors !== "undefined" && Array.isArray(vendors)) {
+      const vendorIndex = vendors.findIndex((v) => v.id === id);
+      if (vendorIndex === -1) {
+        return res.status(404).json({ success: false, message: "Vendor not found." });
+      }
+
+      // Update the vendor object in memory
+      vendors[vendorIndex] = { ...vendors[vendorIndex], ...updateData };
+
+      console.log(`✅ Vendor with ID ${id} updated in memory`);
+      return res.status(200).json({ success: true, message: "Vendor updated successfully!", vendor: vendors[vendorIndex] });
+    }
+
+    return res.status(500).json({ success: false, message: "Vendor storage method not recognized." });
+
+  } catch (error) {
+    console.error("❌ Error updating vendor:", error);
+    res.status(500).json({ success: false, message: "Failed to update vendor. Please try again." });
   }
-
-  const vendor = vendors.find((v) => v.id === req.params.id);
-
-  if (!vendor) {
-    return res.status(404).json({ error: 'Vendor not found' });
-  }
-
-  vendor.name = name;
-  console.log(`Vendor with ID ${req.params.id} updated`); // Optional log for debugging
-  res.status(200).json(vendor);
 });
 
  
