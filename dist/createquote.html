@@ -672,6 +672,16 @@
     background: #fff;
   }
 }
+
+#editLaborModal .modal-content {
+  max-width: 500px;
+  padding: 20px;
+}
+
+textarea {
+  transition: height 0.2s ease;
+}
+
   </style>
 </head>
 <body>
@@ -881,6 +891,28 @@
   </div>
 </div>
 
+
+<!-- Edit Labor Item Modal -->
+<div id="editLaborModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Edit Labor Item</h3>
+      <span class="close-modal" onclick="closeEditLaborModal()" style="font-size: 24px; cursor: pointer;">&times;</span>
+    </div>
+    <div style="margin-top: 10px;">
+      <input id="editLaborCode" placeholder="Cost Code" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
+      <input id="editLaborName" placeholder="Task Name" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
+      <textarea id="editLaborDesc" placeholder="Description"
+  style="width: 100%; padding: 8px; margin-bottom: 10px; resize: vertical; min-height: 80px; overflow-y: hidden;"
+  oninput="autoResizeTextarea(this)"></textarea>
+
+      <input id="editLaborRate" type="number" placeholder="Rate ($)" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
+      <button onclick="saveEditedLaborItem()" class="btn" style="margin-top: 10px;">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+
 <!-- Toast Notification -->
 <div id="toast" style="
   position: fixed;
@@ -1075,6 +1107,10 @@ document.addEventListener('click', e => {
   }
 });
 
+function autoResizeTextarea(textarea) {
+  textarea.style.height = 'auto'; // Reset
+  textarea.style.height = textarea.scrollHeight + 'px'; // Grow to fit content
+}
 
 
 
@@ -1161,7 +1197,8 @@ function renderTable() {
       <td style="text-align:center;"><span class="drag-handle">☰</span></td>
       <td><input type="text" value="${item.costCode || ''}" id="editCode-${index}" readonly style="background: #f1f5f9; cursor: not-allowed;" /></td> 
       <td><input type="text" value="${item.name}" id="editName-${index}" /></td>
-      <td><textarea id="editDesc-${index}">${item.description}</textarea></td>
+      <td><textarea id="editDesc-${index}" oninput="autoResizeTextarea(this)">${item.description}</textarea></td>
+
       <td><input type="number" value="${item.rate}" id="editRate-${index}" /></td>
       <td><input type="number" value="${item.qty}" id="editQty-${index}" /></td>
       <td>${formatCurrency(item.rate * item.qty)}</td>
@@ -1190,6 +1227,9 @@ function renderTable() {
 
     table.appendChild(row);
   });
+
+    // ✅ After all rows added, auto adjust textareas
+    document.querySelectorAll('textarea[id^="editDesc-"]').forEach(autoResizeTextarea);
 
   const discount = parseFloat(document.getElementById('inputDiscount').value || 0);
   const taxRate = parseFloat(document.getElementById('inputTax').value || 0);
@@ -1966,26 +2006,113 @@ function closeLaborCostModal() {
   }
 
   function renderLaborSuggestions() {
-    const query = document.getElementById('laborSearchInput').value.toLowerCase();
-    const list = document.getElementById('laborSuggestionList');
-    list.innerHTML = '';
+  const query = document.getElementById('laborSearchInput').value.toLowerCase();
+  const list = document.getElementById('laborSuggestionList');
+  list.innerHTML = '';
 
-    const filtered = laborCostList.filter(item =>
+  // 🛠 Create Expand/Collapse Buttons
+  const controls = document.createElement('div');
+  controls.style.display = 'flex';
+  controls.style.justifyContent = 'flex-end';
+  controls.style.gap = '10px';
+  controls.style.marginBottom = '10px';
+
+  const expandAllBtn = document.createElement('button');
+  expandAllBtn.textContent = 'Expand All';
+  expandAllBtn.className = 'btn';
+  expandAllBtn.style.padding = '6px 12px';
+  expandAllBtn.onclick = () => {
+    list.querySelectorAll('ul').forEach(ul => ul.style.display = 'block');
+    list.querySelectorAll('li > div > span').forEach(span => span.textContent = '➖');
+  };
+
+  const collapseAllBtn = document.createElement('button');
+  collapseAllBtn.textContent = 'Collapse All';
+  collapseAllBtn.className = 'btn';
+  collapseAllBtn.style.padding = '6px 12px';
+  collapseAllBtn.onclick = () => {
+    list.querySelectorAll('ul').forEach(ul => ul.style.display = 'none');
+    list.querySelectorAll('li > div > span').forEach(span => span.textContent = '➕');
+  };
+
+  controls.appendChild(expandAllBtn);
+  controls.appendChild(collapseAllBtn);
+  list.appendChild(controls);
+
+  // 🧠 Group items by room
+  const groups = {};
+
+  laborCostList.forEach((item, index) => {
+    let room = 'General'; // Default group
+    const parts = item.name.split('-');
+    if (parts.length > 1) {
+      room = parts[1].trim().toLowerCase();
+    }
+    if (!groups[room]) groups[room] = [];
+    groups[room].push({ item, index });
+  });
+
+  // ✨ Sort rooms alphabetically
+  const sortedRooms = Object.keys(groups).sort((a, b) => a.localeCompare(b));
+
+  for (const roomName of sortedRooms) {
+    const groupItems = groups[roomName];
+
+    // 🔍 Filter inside group
+    const filtered = groupItems.filter(({ item }) =>
       item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)
     );
 
-    filtered.forEach((item, index) => {
+    if (query && filtered.length === 0) continue; // Skip empty groups when searching
+
+    // ➡️ Create collapsible room section
+    const groupContainer = document.createElement('li');
+    groupContainer.style.marginTop = '15px';
+
+    const header = document.createElement('div');
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    header.style.cursor = 'pointer';
+    header.style.padding = '8px 12px';
+    header.style.background = '#f0f4f8';
+    header.style.borderRadius = '8px';
+    header.style.fontWeight = 'bold';
+    header.style.color = '#007bff';
+    header.style.textTransform = 'capitalize';
+    header.innerHTML = ` ${roomName} <span style="font-size: 18px;">➕</span>`;
+
+    const itemList = document.createElement('ul');
+    itemList.style.listStyle = 'none';
+    itemList.style.paddingLeft = '15px';
+    itemList.style.display = query ? 'block' : 'none'; // 🔥 Open group if searching!
+
+    // Toggle display
+    header.onclick = () => {
+      if (itemList.style.display === 'none') {
+        itemList.style.display = 'block';
+        header.querySelector('span').textContent = '➖';
+      } else {
+        itemList.style.display = 'none';
+        header.querySelector('span').textContent = '➕';
+      }
+    };
+
+    groupContainer.appendChild(header);
+
+    (query ? filtered : groupItems).forEach(({ item, index }) => {
       const li = document.createElement('li');
+      li.style.marginTop = '8px';
       li.innerHTML = `
-        <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 8px; border-radius: 8px; background: #f9f9f9;">
+        <div style="border: 1px solid #ccc; padding: 10px; border-radius: 8px; background: #f9f9f9;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div onclick="useSuggestedLabor(${index})">
+            <div onclick="useSuggestedLabor(${index})" style="flex: 1; padding-right: 10px;">
               <small style="color: #64748b;"><strong>cost code:</strong> ${item.costCode || '-'}</small><br>
               <strong>${item.name}</strong><br>
               <small>${item.description}</small><br>
               <span style="color: #007bff; font-weight: bold;">$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </div>
-            <div class="action-dropdown">
+            <div class="action-dropdown" style="position: relative;">
               <button class="dots" onclick="toggleActionDropdown(event, ${index})">⋯</button>
               <div class="action-dropdown-content" id="action-menu-${index}">
                 <button onclick="useSuggestedLabor(${index})">Use</button>
@@ -1996,9 +2123,17 @@ function closeLaborCostModal() {
           </div>
         </div>
       `;
-      list.appendChild(li);
+      itemList.appendChild(li);
     });
+
+    groupContainer.appendChild(itemList);
+    list.appendChild(groupContainer);
   }
+}
+
+
+
+
 
   function toggleActionDropdown(event, index) {
     event.stopPropagation();
@@ -2037,31 +2172,62 @@ function closeLaborCostModal() {
 }
 
 
-async function editLaborItem(index) {
-  const item = laborCostList[index];
-  const name = prompt('Edit task name:', item.name);
-  const description = prompt('Edit description:', item.description);
-  const rate = parseFloat(prompt('Edit rate ($):', item.rate));
-  const costCode = prompt('Edit cost code:', item.costCode || '');
+let currentEditingLaborIndex = null; // 🔵 Store which labor item is being edited
 
-  if (!name || !description || isNaN(rate)) return;
+function editLaborItem(index) {
+  const item = laborCostList[index];
+  currentEditingLaborIndex = index; // Save it globally!
+
+  // Prefill the modal fields
+  document.getElementById('editLaborCode').value = item.costCode || '';
+  document.getElementById('editLaborName').value = item.name;
+  document.getElementById('editLaborDesc').value = item.description;
+  document.getElementById('editLaborRate').value = item.rate;
+
+  // Open the modal
+  document.getElementById('editLaborModal').style.display = 'flex';
+}
+
+function closeEditLaborModal() {
+  document.getElementById('editLaborModal').style.display = 'none';
+}
+
+async function saveEditedLaborItem() {
+  if (currentEditingLaborIndex === null) return;
+
+  const id = laborCostList[currentEditingLaborIndex]._id;
+  const name = document.getElementById('editLaborName').value.trim();
+  const description = document.getElementById('editLaborDesc').value.trim();
+  const rate = parseFloat(document.getElementById('editLaborRate').value);
+  const costCode = document.getElementById('editLaborCode').value.trim();
+
+  if (!name || !description || isNaN(rate)) {
+    alert('Please fill all fields correctly.');
+    return;
+  }
 
   showLoader();
   try {
-    const res = await fetch(`/api/labor-costs/${item._id}`, {
+    const res = await fetch(`/api/labor-costs/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, description, rate, costCode })
     });
+
     const updated = await res.json();
-    laborCostList[index] = updated;
+    laborCostList[currentEditingLaborIndex] = updated;
     renderLaborSuggestions();
+    showToast('✅ Labor item updated.');
   } catch (err) {
     console.error('Error updating labor item:', err);
+    showToast('❌ Failed to update labor item.');
   } finally {
     hideLoader();
+    closeEditLaborModal();
+    currentEditingLaborIndex = null;
   }
 }
+
 
 
   async function deleteLaborItem(index) {
@@ -2097,8 +2263,6 @@ async function editLaborItem(index) {
 
   
 }
-
-
 
 
  
