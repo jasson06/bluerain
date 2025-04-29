@@ -682,36 +682,6 @@ textarea {
   transition: height 0.2s ease;
 }
 
-
-
-    @media (min-width: 768px) {
-  #laborCostModal {
-    display: none;
-    justify-content: flex-end;
-    align-items: stretch;
-    background: transparent;
-  }
-
-  #laborCostModal .modal-content {
-    max-width: 340px;
-    height: 100vh;
-    border-radius: 0;
-    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
-    position: fixed;
-    right: 0;
-    top: 0;
-    background: white;
-    overflow-y: auto;
-  }
-}
-
-
-body.sidebar-open {
-  overflow: hidden; /* prevent scrolling behind modal */
-  -webkit-overflow-scrolling: touch;
-}
-
-
   </style>
 </head>
 <body>
@@ -2005,15 +1975,18 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
 
     let laborCostList = [];
 
-function openLaborCostModal() {
-  const modal = document.getElementById('laborCostModal');
-  modal.style.display = 'flex'; // Force visible
-
-  // iOS fix: trigger reflow to force Safari to repaint
-  void modal.offsetWidth;
-
+    function openLaborCostModal() {
+  document.getElementById('laborCostModal').style.display = 'flex';
+  fetchLaborSuggestions();
   if (window.innerWidth >= 768) {
     document.body.classList.add('sidebar-open');
+  }
+}
+
+function closeLaborCostModal() {
+  document.getElementById('laborCostModal').style.display = 'none';
+  if (window.innerWidth >= 768) {
+    document.body.classList.remove('sidebar-open');
   }
 }
 
