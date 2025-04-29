@@ -875,7 +875,7 @@ canvas {
   <!-- Notification Area (ensure it exists) -->
   <div id="notification"></div>
   
-  <script>
+   <script>
     let currentView = "listView"; // default view
 
     // Helper functions for status styling
@@ -1033,8 +1033,10 @@ function populateEstimateDropdown(estimates) {
       }
       
       /* --------------------- Data & State --------------------- */
+      let selectedLineItems = [];
       let currentLineItems = [];
       let flatTasks = [];
+      let filteredTasks = [];
       let sortField = "name";
       let sortDirection = "asc";
       let currentPage = 1;
@@ -1061,150 +1063,158 @@ function populateEstimateDropdown(estimates) {
         }
       }
       
+
+      
       /* --------------------- Render Functions --------------------- */
-      function renderTable(lineItems) {
-        flatTasks = getAllTasks(lineItems);
-        const searchQuery = document.getElementById("listSearch").value.toLowerCase();
-        const statusFilter = document.getElementById("statusFilter").value;
-        const categoryFilter = document.getElementById("categoryFilter").value.toLowerCase();
-        const startDateFrom = document.getElementById("startDateFrom").value;
-        const startDateTo = document.getElementById("startDateTo").value;
-        
-        let filteredTasks = flatTasks.filter(task => {
-          const matchesSearch = task.name.toLowerCase().includes(searchQuery);
-          const matchesStatus = statusFilter ? task.status === statusFilter : true;
-          const matchesCategory = categoryFilter ? task.category.toLowerCase().includes(categoryFilter) : true;
-          let matchesStartDate = true;
-          if (startDateFrom) {
-            matchesStartDate = task.startDate && new Date(task.startDate) >= new Date(startDateFrom);
-          }
-          if (matchesStartDate && startDateTo) {
-            matchesStartDate = task.startDate && new Date(task.startDate) <= new Date(startDateTo);
-          }
-          return matchesSearch && matchesStatus && matchesCategory && matchesStartDate;
-        });
-        
-        filteredTasks.sort((a, b) => {
-          let valA = a[sortField] || "";
-          let valB = b[sortField] || "";
-          if (sortField.includes("Date")) {
-            valA = new Date(valA);
-            valB = new Date(valB);
-          }
-          if (valA < valB) return sortDirection === "asc" ? -1 : 1;
-          if (valA > valB) return sortDirection === "asc" ? 1 : -1;
-          return 0;
-        });
-        
-        const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
-        if (currentPage > totalPages) currentPage = totalPages;
-        const startIdx = (currentPage - 1) * itemsPerPage;
-        const paginatedTasks = filteredTasks.slice(startIdx, startIdx + itemsPerPage);
-        
-        document.getElementById("pageIndicator").textContent = `Page ${currentPage} of ${totalPages || 1}`;
-        
-        const tbody = document.querySelector("#scheduleTable tbody");
-        tbody.innerHTML = "";
-        paginatedTasks.forEach(task => {
-          const row = document.createElement("tr");
-          row.className = task.status.toLowerCase().replace(" ", "-");
-          // If task is overdue and not completed, add the overdue style.
-          if (task.endDate && new Date() > new Date(task.endDate) && task.status !== "completed") {
-            row.classList.add("overdue");
-          }
-          
-          const categoryCell = document.createElement("td");
-          categoryCell.textContent = task.category || "Uncategorized";
-          categoryCell.setAttribute("data-label", "Category");
-          row.appendChild(categoryCell);
-          
-          const nameCell = document.createElement("td");
-          nameCell.textContent = task.name;
-          nameCell.style.cursor = "pointer";
-          nameCell.setAttribute("data-label", "Task");
-          nameCell.addEventListener("click", () => {
-            const modalContent = `
-              <h2>Edit Task</h2>
-              <label>Task Name: <input type="text" id="editName" value="${task.name}" readonly /></label><br/><br/>
-              <label>Start Date: <input type="date" id="editStart" value="${task.startDate ? new Date(task.startDate).toISOString().split("T")[0] : ''}" /></label><br/><br/>
-              <label>End Date: <input type="date" id="editEnd" value="${task.endDate ? new Date(task.endDate).toISOString().split("T")[0] : ''}" /></label><br/><br/>
-              <label>Status: 
-                <select id="editStatus">
-                  <option value="in-progress" ${task.status==="in-progress"?"selected":""}>In Progress</option>
-                  <option value="completed" ${task.status==="completed"?"selected":""}>Completed</option>
-                </select>
-              </label><br/><br/>
-              <label>Comments: <textarea id="editComments">${task.description || ''}</textarea></label><br/><br/>
-              <button id="saveEditBtn">Save</button>
-            `;
-            openModal(modalContent);
-            document.getElementById("saveEditBtn").addEventListener("click", async function() {
-              const updatedTask = {
-                name: task.name,
-                startDate: document.getElementById("editStart").value,
-                endDate: document.getElementById("editEnd").value,
-                status: document.getElementById("editStatus").value,
-                description: document.getElementById("editComments").value
-              };
-              await updateLineItem(task._id, updatedTask);
-              closeModal();
-              loadView("listView");
-            });
-          });
-          row.appendChild(nameCell);
-          
-          const startCell = document.createElement("td");
-          startCell.setAttribute("data-label", "Start Date");
-          const startInput = document.createElement("input");
-          startInput.type = "date";
-          startInput.value = task.startDate ? new Date(task.startDate).toISOString().split("T")[0] : "";
-          startInput.addEventListener("change", debounce(function() {
-            updateLineItem(task._id, { startDate: this.value });
-          }, 500));
-          startCell.appendChild(startInput);
-          row.appendChild(startCell);
-          
-          const endCell = document.createElement("td");
-          endCell.setAttribute("data-label", "End Date");
-          const endInput = document.createElement("input");
-          endInput.type = "date";
-          endInput.value = task.endDate ? new Date(task.endDate).toISOString().split("T")[0] : "";
-          endInput.addEventListener("change", debounce(function() {
-            updateLineItem(task._id, { endDate: this.value });
-          }, 500));
-          endCell.appendChild(endInput);
-          row.appendChild(endCell);
-          
-          const statusCell = document.createElement("td");
-          statusCell.setAttribute("data-label", "Status");
-          const statusSelect = document.createElement("select");
-          statusSelect.innerHTML = `
+      function renderTable() {
+  flatTasks = getAllTasks(selectedLineItems);
+
+  const searchQuery = document.getElementById("listSearch").value.toLowerCase();
+  const statusFilter = document.getElementById("statusFilter").value;
+  const categoryFilter = document.getElementById("categoryFilter").value.toLowerCase();
+  const startDateFrom = document.getElementById("startDateFrom").value;
+  const startDateTo = document.getElementById("startDateTo").value;
+
+  filteredTasks = flatTasks.filter(task => {
+    if (!task || typeof task.name !== "string") return false; // 🛡️ Safeguard
+
+    const matchesSearch = (task.name || "").toLowerCase().includes(searchQuery);
+    const matchesStatus = statusFilter ? (task.status || "") === statusFilter : true;
+    const matchesCategory = categoryFilter ? (task.category || "").toLowerCase().includes(categoryFilter) : true;
+    
+    let matchesStartDate = true;
+    if (startDateFrom) {
+      matchesStartDate = task.startDate && new Date(task.startDate) >= new Date(startDateFrom);
+    }
+    if (matchesStartDate && startDateTo) {
+      matchesStartDate = task.startDate && new Date(task.startDate) <= new Date(startDateTo);
+    }
+
+    return matchesSearch && matchesStatus && matchesCategory && matchesStartDate;
+  });
+
+  filteredTasks.sort((a, b) => {
+    let valA = a[sortField] || "";
+    let valB = b[sortField] || "";
+    if (sortField.includes("Date")) {
+      valA = new Date(valA);
+      valB = new Date(valB);
+    }
+    if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+    if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
+  if (currentPage > totalPages) currentPage = totalPages || 1; // 🛡️ Avoid 0 pages
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const paginatedTasks = filteredTasks.slice(startIdx, startIdx + itemsPerPage);
+
+  document.getElementById("pageIndicator").textContent = `Page ${currentPage} of ${totalPages || 1}`;
+
+  const tbody = document.querySelector("#scheduleTable tbody");
+  tbody.innerHTML = "";
+  paginatedTasks.forEach(task => {
+    const row = document.createElement("tr");
+    row.className = (task.status || "").toLowerCase().replace(" ", "-");
+
+    if (task.endDate && new Date() > new Date(task.endDate) && task.status !== "completed") {
+      row.classList.add("overdue");
+    }
+
+    const categoryCell = document.createElement("td");
+    categoryCell.textContent = task.category || "Uncategorized";
+    categoryCell.setAttribute("data-label", "Category");
+    row.appendChild(categoryCell);
+
+    const nameCell = document.createElement("td");
+    nameCell.textContent = task.name;
+    nameCell.style.cursor = "pointer";
+    nameCell.setAttribute("data-label", "Task");
+    nameCell.addEventListener("click", () => {
+      const modalContent = `
+        <h2>Edit Task</h2>
+        <label>Task Name: <input type="text" id="editName" value="${task.name}" readonly /></label><br/><br/>
+        <label>Start Date: <input type="date" id="editStart" value="${task.startDate ? new Date(task.startDate).toISOString().split("T")[0] : ''}" /></label><br/><br/>
+        <label>End Date: <input type="date" id="editEnd" value="${task.endDate ? new Date(task.endDate).toISOString().split("T")[0] : ''}" /></label><br/><br/>
+        <label>Status: 
+          <select id="editStatus">
             <option value="in-progress" ${task.status==="in-progress"?"selected":""}>In Progress</option>
             <option value="completed" ${task.status==="completed"?"selected":""}>Completed</option>
-          `;
-          updateStatusDropdownStyle(statusSelect);
-          statusSelect.addEventListener("change", debounce(function() {
-            updateStatusDropdownStyle(statusSelect);
-            updateLineItem(task._id, { status: statusSelect.value });
-          }, 500));
-          statusCell.appendChild(statusSelect);
-          row.appendChild(statusCell);
-          
-          const commentsCell = document.createElement("td");
-          commentsCell.setAttribute("data-label", "Comments");
-          const commentsInput = document.createElement("textarea");
-          commentsInput.style.resize = "vertical";
-          commentsInput.style.width = "90%";
-          commentsInput.value = task.description || "";
-          commentsInput.addEventListener("input", debounce(function() {
-            updateLineItem(task._id, { description: commentsInput.value });
-          }, 500));
-          commentsCell.appendChild(commentsInput);
-          row.appendChild(commentsCell);
-          
-          tbody.appendChild(row);
-        });
-      }
+          </select>
+        </label><br/><br/>
+        <label>Comments: <textarea id="editComments">${task.description || ''}</textarea></label><br/><br/>
+        <button id="saveEditBtn">Save</button>
+      `;
+      openModal(modalContent);
+      document.getElementById("saveEditBtn").addEventListener("click", async function() {
+        const updatedTask = {
+          name: task.name,
+          startDate: document.getElementById("editStart").value,
+          endDate: document.getElementById("editEnd").value,
+          status: document.getElementById("editStatus").value,
+          description: document.getElementById("editComments").value
+        };
+        await updateLineItem(task._id, updatedTask);
+        closeModal();
+        loadView("listView");
+      });
+    });
+    row.appendChild(nameCell);
+
+    const startCell = document.createElement("td");
+    startCell.setAttribute("data-label", "Start Date");
+    const startInput = document.createElement("input");
+    startInput.type = "date";
+    startInput.value = task.startDate ? new Date(task.startDate).toISOString().split("T")[0] : "";
+    startInput.addEventListener("change", debounce(function() {
+      updateLineItem(task._id, { startDate: this.value });
+    }, 500));
+    startCell.appendChild(startInput);
+    row.appendChild(startCell);
+
+    const endCell = document.createElement("td");
+    endCell.setAttribute("data-label", "End Date");
+    const endInput = document.createElement("input");
+    endInput.type = "date";
+    endInput.value = task.endDate ? new Date(task.endDate).toISOString().split("T")[0] : "";
+    endInput.addEventListener("change", debounce(function() {
+      updateLineItem(task._id, { endDate: this.value });
+    }, 500));
+    endCell.appendChild(endInput);
+    row.appendChild(endCell);
+
+    const statusCell = document.createElement("td");
+    statusCell.setAttribute("data-label", "Status");
+    const statusSelect = document.createElement("select");
+    statusSelect.innerHTML = `
+      <option value="in-progress" ${task.status==="in-progress"?"selected":""}>In Progress</option>
+      <option value="completed" ${task.status==="completed"?"selected":""}>Completed</option>
+    `;
+    updateStatusDropdownStyle(statusSelect);
+    statusSelect.addEventListener("change", debounce(function() {
+      updateStatusDropdownStyle(statusSelect);
+      updateLineItem(task._id, { status: statusSelect.value });
+    }, 500));
+    statusCell.appendChild(statusSelect);
+    row.appendChild(statusCell);
+
+    const commentsCell = document.createElement("td");
+    commentsCell.setAttribute("data-label", "Comments");
+    const commentsInput = document.createElement("textarea");
+    commentsInput.style.resize = "vertical";
+    commentsInput.style.width = "90%";
+    commentsInput.value = task.description || "";
+    commentsInput.addEventListener("input", debounce(function() {
+      updateLineItem(task._id, { description: commentsInput.value });
+    }, 500));
+    commentsCell.appendChild(commentsInput);
+    row.appendChild(commentsCell);
+
+    tbody.appendChild(row);
+  });
+}
+
       
       function renderGridView(lineItems) {
         if (!gridTasksOrder) {
@@ -1243,7 +1253,8 @@ function populateEstimateDropdown(estimates) {
               const temp = gridTasksOrder[sourceIndex];
               gridTasksOrder[sourceIndex] = gridTasksOrder[targetIndex];
               gridTasksOrder[targetIndex] = temp;
-              renderGridView({});
+              renderGridView(gridTasksOrder);
+
             }
           });
           gridItem.addEventListener("click", () => {
@@ -1578,27 +1589,38 @@ if (index < tasks.length - 1) {
       /* --------------------- View Handlers --------------------- */
       async function loadView(view) {
   currentView = view; // track current view
+
+  // Hide all views first
   ["dashboardView", "listView", "gridView", "calendarView", "ganttView"].forEach(v => {
     document.getElementById(v).style.display = "none";
   });
+
+  // Show the selected view
   document.getElementById(view).style.display = "block";
 
   const projectId = await getCurrentProjectId();
   if (projectId) {
     currentLineItems = await fetchLineItems(projectId);
+
     const estimateSelector = document.getElementById("estimateSelector");
     const selectedValue = estimateSelector?.value || "all";
-    const selectedLineItems =
-      selectedValue === "all"
-        ? currentLineItems.flatMap(est => est.lineItems || [])
-        : (currentLineItems[parseInt(selectedValue)]?.lineItems || []);
 
-    if (view === "gridView") gridTasksOrder = getAllTasks(selectedLineItems);
-    if (view === "listView") renderTable(selectedLineItems);
-    else if (view === "gridView") renderGridView(selectedLineItems);
-    else if (view === "calendarView") renderCalendarView(selectedLineItems);
-    else if (view === "ganttView") renderGanttChartView(selectedLineItems);
-    else if (view === "dashboardView") {
+    // ✅ Correctly assign selectedLineItems (no const, just assignment)
+    selectedLineItems = selectedValue === "all"
+      ? currentLineItems.flatMap(est => est.lineItems || [])
+      : (currentLineItems[parseInt(selectedValue)]?.lineItems || []);
+
+    // Render the appropriate view
+    if (view === "listView") {
+      renderTable(selectedLineItems);
+    } else if (view === "gridView") {
+      gridTasksOrder = getAllTasks(selectedLineItems);
+      renderGridView(selectedLineItems);
+    } else if (view === "calendarView") {
+      renderCalendarView(selectedLineItems);
+    } else if (view === "ganttView") {
+      renderGanttChartView(selectedLineItems);
+    } else if (view === "dashboardView") {
       setTimeout(() => {
         renderDashboardView(selectedLineItems);
       }, 500);
@@ -1606,59 +1628,46 @@ if (index < tasks.length - 1) {
   }
 }
 
+
       
       /* --------------------- Pagination Controls --------------------- */
-      document.getElementById("prevPageBtn").addEventListener("click", function() {
-        if (currentPage > 1) {
-          currentPage--;
-          renderTable(currentLineItems);
-        }
-      });
       document.getElementById("nextPageBtn").addEventListener("click", function() {
-        const totalPages = Math.ceil(getAllTasks(currentLineItems).filter(task => {
-          const searchQuery = document.getElementById("listSearch").value.toLowerCase();
-          const statusFilter = document.getElementById("statusFilter").value;
-          const categoryFilter = document.getElementById("categoryFilter").value.toLowerCase();
-          const startDateFrom = document.getElementById("startDateFrom").value;
-          const startDateTo = document.getElementById("startDateTo").value;
-          const matchesSearch = task.name.toLowerCase().includes(searchQuery);
-          const matchesStatus = statusFilter ? task.status === statusFilter : true;
-          const matchesCategory = categoryFilter ? task.category.toLowerCase().includes(categoryFilter) : true;
-          let matchesStartDate = true;
-          if (startDateFrom) {
-            matchesStartDate = task.startDate && new Date(task.startDate) >= new Date(startDateFrom);
-          }
-          if (matchesStartDate && startDateTo) {
-            matchesStartDate = task.startDate && new Date(task.startDate) <= new Date(startDateTo);
-          }
-          return matchesSearch && matchesStatus && matchesCategory && matchesStartDate;
-        }).length / itemsPerPage);
-        if (currentPage < totalPages) {
-          currentPage++;
-          renderTable(currentLineItems);
-        }
-      });
+  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage) || 1;
+  if (currentPage < totalPages) {
+    currentPage++;
+    renderTable();
+  }
+});
+
+document.getElementById("prevPageBtn").addEventListener("click", function() {
+  if (currentPage > 1) {
+    currentPage--;
+    renderTable();
+  }
+});
+
       
       /* --------------------- Filter Listeners --------------------- */
       document.getElementById("listSearch").addEventListener("input", () => {
         currentPage = 1;
-        renderTable(currentLineItems);
+        renderTable(selectedLineItems);
       });
       document.getElementById("statusFilter").addEventListener("change", () => {
         currentPage = 1;
-        renderTable(currentLineItems);
+        renderTable(selectedLineItems);
       });
       document.getElementById("categoryFilter").addEventListener("input", () => {
         currentPage = 1;
-        renderTable(currentLineItems);
+        renderTable(selectedLineItems);
       });
       document.getElementById("startDateFrom").addEventListener("change", () => {
         currentPage = 1;
-        renderTable(currentLineItems);
+        renderTable(selectedLineItems);
       });
       document.getElementById("startDateTo").addEventListener("change", () => {
         currentPage = 1;
-        renderTable(currentLineItems);
+        
+        renderTable(selectedLineItems);
       });
       
       /* --------------------- Sort Header Listeners --------------------- */
@@ -1671,18 +1680,18 @@ if (index < tasks.length - 1) {
             sortField = field;
             sortDirection = "asc";
           }
-          renderTable(currentLineItems);
+          renderTable(selectedLineItems);
         });
       });
       
       /* --------------------- Calendar Navigation --------------------- */
       document.getElementById("prevMonthBtn").addEventListener("click", function() {
         currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
-        renderCalendarView(currentLineItems);
+        renderCalendarView(selectedLineItems);
       });
       document.getElementById("nextMonthBtn").addEventListener("click", function() {
         currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
-        renderCalendarView(currentLineItems);
+        renderCalendarView(selectedLineItems);
       });
       
       /* --------------------- View Buttons --------------------- */
@@ -1726,12 +1735,13 @@ if (projectId) {
 
   // Default to All Estimates
   const allItems = currentLineItems.flatMap(est => est.lineItems || []);
-  renderTable(allItems);
+  selectedLineItems = allItems;  // ✅ Assign to selectedLineItems
+  renderTable();                 // ✅ No arguments
   document.getElementById("estimateSelector").value = "all";
 }
+
 
     });
   </script>
 </body>
 </html>
-
