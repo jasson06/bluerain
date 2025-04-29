@@ -410,6 +410,30 @@ td:nth-child(3) {
       font-size: 13px;
     }
   }
+
+      #suggestionBox {
+  position: absolute;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-height: 180px;
+  overflow-y: auto;
+  z-index: 9999;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  -webkit-overflow-scrolling: touch; /* smooth iOS scroll */
+}
+@media (max-width: 1024px) {
+  #suggestionBox {
+    max-width: 100%;
+    width: 100%;
+    left: 0 !important;
+  }
+}
+    
   </style>
 </head>
 <body>
@@ -781,7 +805,6 @@ function showLaborSuggestions() {
   const value = input.value.toLowerCase();
   let box = document.getElementById('suggestionBox');
 
-  // Create box if not exists
   if (!box) {
     box = document.createElement('div');
     box.id = 'suggestionBox';
@@ -789,19 +812,22 @@ function showLaborSuggestions() {
     box.style.background = '#fff';
     box.style.border = '1px solid #ccc';
     box.style.borderRadius = '6px';
-    box.style.boxShadow = '0 4px 10px rgba(0,0,0,0.1)';
-    box.style.maxHeight = '150px';
+    box.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+    box.style.maxHeight = '180px';
     box.style.overflowY = 'auto';
-    box.style.zIndex = '1000';
-    box.style.transition = 'opacity 0.2s ease';
-    box.style.opacity = '0';
-
+    box.style.zIndex = '9999';
+    box.style.opacity = '0'; // Start hidden to avoid flash
+    box.style.transition = 'opacity 0.3s ease';
+    box.style.webkitOverflowScrolling = 'touch'; // Smooth iOS scroll
+    box.style.pointerEvents = 'auto';
+    input.parentNode.style.position = 'relative'; // Ensure anchor point
     input.parentNode.appendChild(box);
   }
 
   box.innerHTML = '';
   if (!value) {
-    box.style.display = 'none';
+    box.style.opacity = '0';
+    box.style.pointerEvents = 'none';
     return;
   }
 
@@ -810,7 +836,8 @@ function showLaborSuggestions() {
   );
 
   if (matches.length === 0) {
-    box.style.display = 'none';
+    box.style.opacity = '0';
+    box.style.pointerEvents = 'none';
     return;
   }
 
@@ -824,6 +851,8 @@ function showLaborSuggestions() {
     option.style.padding = '8px';
     option.style.cursor = 'pointer';
     option.style.borderBottom = '1px solid #eee';
+    option.style.background = '#fff';
+
     option.onmouseenter = () => (option.style.background = '#f1f5f9');
     option.onmouseleave = () => (option.style.background = '#fff');
 
@@ -831,22 +860,27 @@ function showLaborSuggestions() {
       document.getElementById('itemName').value = item.name;
       document.getElementById('itemDesc').value = item.description;
       document.getElementById('itemCostCode').value = item.costCode || 'Uncategorized';
-      box.style.display = 'none';
+      box.style.opacity = '0';
+      box.style.pointerEvents = 'none';
     };
 
     box.appendChild(option);
   });
 
-  // ✅ iOS/tablet-safe positioning
+  // iOS-safe rendering offset
   const rect = input.getBoundingClientRect();
-  box.style.top = `${rect.bottom + window.scrollY}px`;
-  box.style.left = `${rect.left + window.scrollX}px`;
-  box.style.width = `${rect.width}px`;
-  box.style.display = 'block';
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+  const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
 
-  // Force repaint + fade-in for smoother iOS visibility
-  box.offsetHeight; // triggers reflow
-  box.style.opacity = '1';
+  box.style.top = `${input.offsetTop + input.offsetHeight}px`;
+  box.style.left = `${input.offsetLeft}px`;
+  box.style.width = `${input.offsetWidth}px`;
+
+  // Force repaint
+  requestAnimationFrame(() => {
+    box.style.opacity = '1';
+    box.style.pointerEvents = 'auto';
+  });
 }
 
 
