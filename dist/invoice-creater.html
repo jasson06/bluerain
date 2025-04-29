@@ -781,6 +781,7 @@ function showLaborSuggestions() {
   const value = input.value.toLowerCase();
   let box = document.getElementById('suggestionBox');
 
+  // Create box if not exists
   if (!box) {
     box = document.createElement('div');
     box.id = 'suggestionBox';
@@ -788,11 +789,14 @@ function showLaborSuggestions() {
     box.style.background = '#fff';
     box.style.border = '1px solid #ccc';
     box.style.borderRadius = '6px';
-    box.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+    box.style.boxShadow = '0 4px 10px rgba(0,0,0,0.1)';
     box.style.maxHeight = '150px';
     box.style.overflowY = 'auto';
     box.style.zIndex = '1000';
-    document.getElementById('itemName').parentNode.appendChild(box);
+    box.style.transition = 'opacity 0.2s ease';
+    box.style.opacity = '0';
+
+    input.parentNode.appendChild(box);
   }
 
   box.innerHTML = '';
@@ -820,30 +824,31 @@ function showLaborSuggestions() {
     option.style.padding = '8px';
     option.style.cursor = 'pointer';
     option.style.borderBottom = '1px solid #eee';
-
     option.onmouseenter = () => (option.style.background = '#f1f5f9');
     option.onmouseleave = () => (option.style.background = '#fff');
 
     option.onclick = () => {
       document.getElementById('itemName').value = item.name;
       document.getElementById('itemDesc').value = item.description;
-      // ✅ No longer touching the unit price (itemPrice)
-      if (document.getElementById('itemCostCode')) {
-        document.getElementById('itemCostCode').value = item.costCode || 'Uncategorized';
-      }
+      document.getElementById('itemCostCode').value = item.costCode || 'Uncategorized';
       box.style.display = 'none';
     };
 
     box.appendChild(option);
   });
 
-  // Correct positioning
+  // ✅ iOS/tablet-safe positioning
   const rect = input.getBoundingClientRect();
-  box.style.top = `${input.offsetTop + input.offsetHeight}px`;
-  box.style.left = `${input.offsetLeft}px`;
-  box.style.width = `${input.offsetWidth}px`;
+  box.style.top = `${rect.bottom + window.scrollY}px`;
+  box.style.left = `${rect.left + window.scrollX}px`;
+  box.style.width = `${rect.width}px`;
   box.style.display = 'block';
+
+  // Force repaint + fade-in for smoother iOS visibility
+  box.offsetHeight; // triggers reflow
+  box.style.opacity = '1';
 }
+
 
 
 // Add manual item (auto-includes cost code now!)
