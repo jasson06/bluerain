@@ -789,12 +789,10 @@ function showLaborSuggestions() {
     box.style.border = '1px solid #ccc';
     box.style.borderRadius = '6px';
     box.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-    box.style.maxHeight = '200px';
+    box.style.maxHeight = '150px';
     box.style.overflowY = 'auto';
-    box.style.zIndex = '10000';  // Make sure it's above modals
-
-    // 🛠️ Append to body instead of parent
-    document.body.appendChild(box);
+    box.style.zIndex = '1000';
+    document.getElementById('itemName').parentNode.appendChild(box);
   }
 
   box.innerHTML = '';
@@ -827,8 +825,9 @@ function showLaborSuggestions() {
     option.onmouseleave = () => (option.style.background = '#fff');
 
     option.onclick = () => {
-      input.value = item.name;
+      document.getElementById('itemName').value = item.name;
       document.getElementById('itemDesc').value = item.description;
+      // ✅ No longer touching the unit price (itemPrice)
       if (document.getElementById('itemCostCode')) {
         document.getElementById('itemCostCode').value = item.costCode || 'Uncategorized';
       }
@@ -838,11 +837,11 @@ function showLaborSuggestions() {
     box.appendChild(option);
   });
 
-  // 🛠️ Correct positioning on screen
+  // Correct positioning
   const rect = input.getBoundingClientRect();
-  box.style.top = `${window.scrollY + rect.bottom}px`; 
-  box.style.left = `${window.scrollX + rect.left}px`; 
-  box.style.width = `${rect.width}px`;
+  box.style.top = `${input.offsetTop + input.offsetHeight}px`;
+  box.style.left = `${input.offsetLeft}px`;
+  box.style.width = `${input.offsetWidth}px`;
   box.style.display = 'block';
 }
 
