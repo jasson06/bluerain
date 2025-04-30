@@ -682,6 +682,33 @@ textarea {
   transition: height 0.2s ease;
 }
 
+
+    /* 👇 iOS/iPad and tablet-specific override */
+@media screen and (max-width: 1024px) and (min-width: 768px) and (orientation: portrait), 
+       screen and (max-width: 1366px) and (min-width: 768px) and (orientation: landscape) {
+  #laborCostModal {
+    display: flex !important;
+    justify-content: flex-end !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: 100vh !important;
+    background: transparent !important;
+    z-index: 9999 !important;
+  }
+
+  #laborCostModal .modal-content {
+    width: 360px !important;
+    max-width: 360px !important;
+    height: 100vh !important;
+    position: fixed !important;
+    right: 0;
+    top: 0;
+    background: #fff;
+    border-left: 1px solid #ddd;
+    overflow-y: auto;
+    z-index: 10000;
+  }
+}
   </style>
 </head>
 <body>
