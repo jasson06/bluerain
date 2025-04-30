@@ -1991,6 +1991,19 @@ function closeLaborCostModal() {
 }
 
 
+if (navigator.userAgent.includes('iPad') || (navigator.userAgent.includes('Macintosh') && 'ontouchend' in document)) {
+  const style = document.createElement('style');
+  style.innerHTML = `
+    #laborCostModal {
+      display: flex !important;
+      justify-content: flex-end !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
+    
 
   async function fetchLaborSuggestions() {
     showLoader(); // 👈 START
