@@ -682,6 +682,32 @@ textarea {
   transition: height 0.2s ease;
 }
 
+
+
+    /* Force modal visibility and background on iPads (portrait and landscape) */
+@media screen and (min-device-width: 768px) and (max-device-width: 1024px) and (orientation: portrait),
+       screen and (min-device-width: 768px) and (max-device-width: 1366px) and (orientation: landscape) {
+  #laborCostModal {
+    display: flex !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+  }
+
+  #laborCostModal .modal-content {
+    position: relative;
+    width: 90%;
+    max-width: 600px;
+    margin: 60px auto;
+    height: auto;
+    max-height: 90vh;
+    border-radius: 12px;
+    overflow-y: auto;
+  }
+
+  body.sidebar-open .container {
+    margin-right: 0 !important; /* reset margin shift if any */
+  }
+}
+
   </style>
 </head>
 <body>
