@@ -1210,6 +1210,7 @@ function updatePage() {
         category.items.forEach(item => {
           rows.push({
             Category: category.category,
+            costCode: item.costCode,
             Name: item.name,
             Description: item.description,
             Quantity: item.quantity,
