@@ -600,16 +600,16 @@
 }
 
 
-/* 🔵 Default mobile/tablet: Overlay style */
+/* Sidebar overlay fallback for portrait (mobile/tablet) */
 .labor-toolbar {
   background: rgba(0, 0, 0, 0.5);
   justify-content: center;
   align-items: flex-start;
   padding-top: 50px;
-  display: none; /* Hidden until opened */
+  display: none;
 }
 
-/* Modal content (default) */
+/* Sidebar content default modal */
 #laborCostModal .modal-content {
   background: #fff;
   border-radius: 8px;
@@ -623,8 +623,8 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* 👨‍💻 Desktop & iPad Landscape: Sidebar behavior */
-@media (min-width: 768px) {
+/* 🔵 Desktop & iPad Landscape: Sidebar layout */
+@media screen and (min-width: 768px) {
   #laborCostModal {
     position: fixed;
     top: 0;
@@ -632,8 +632,8 @@
     bottom: 0;
     left: auto;
     width: auto;
-    background: transparent !important;
     display: none;
+    background: transparent !important;
     justify-content: flex-end;
     align-items: stretch;
     z-index: 9999;
@@ -651,6 +651,7 @@
     overflow-y: auto;
     animation: slideInSidebar 0.3s ease forwards;
     border-radius: 0;
+    position: relative;
   }
 
   @keyframes slideInSidebar {
@@ -664,19 +665,22 @@
     }
   }
 
-  /* Shift main content when sidebar is open */
+  /* ✅ Apply shift when sidebar is open */
   body.sidebar-open .container {
-    margin-right: 370px; /* 360 + padding */
+    margin-right: 370px !important;
     transition: margin 0.3s ease;
   }
 }
 
-/* 👩‍💻 iPad-specific landscape fix (older Safari iOS) */
+/* ✅ Force shift also on iPads (older iOS Safari fix) */
 @media only screen 
-  and (min-device-width: 768px) 
-  and (max-device-width: 1024px) 
-  and (orientation: landscape) {
-  
+  and (min-device-width: 768px)
+  and (max-device-width: 1024px) {
+
+  body.sidebar-open .container {
+    margin-right: 370px !important;
+  }
+
   #laborCostModal {
     display: flex !important;
     background: transparent !important;
@@ -684,24 +688,25 @@
     align-items: stretch;
   }
 
-  body.sidebar-open .container {
-    margin-right: 370px !important;
-    transition: margin 0.3s ease;
-  }
-
   #laborCostModal .modal-content {
     width: 360px;
     height: 100vh;
-    border-radius: 0;
     border-left: 2px solid #eee;
-    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+    border-radius: 0;
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
   }
 }
+
 
 /* 🔁 Smooth textarea transitions */
 textarea {
   transition: height 0.2s ease;
 }
+
   </style>
 </head>
 <body>
