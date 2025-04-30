@@ -684,27 +684,40 @@ textarea {
 
 
 
-    /* Force modal visibility and background on iPads (portrait and landscape) */
-@media screen and (min-device-width: 768px) and (max-device-width: 1024px) and (orientation: portrait),
-       screen and (min-device-width: 768px) and (max-device-width: 1366px) and (orientation: landscape) {
+/* Sidebar behavior for iPads (portrait and landscape) */
+@media screen and (min-device-width: 768px) and (max-device-width: 1366px) {
   #laborCostModal {
     display: flex !important;
-    background: rgba(0, 0, 0, 0.5) !important;
+    background: transparent !important;
+    justify-content: flex-end;
+    align-items: stretch;
+    padding: 0;
   }
 
   #laborCostModal .modal-content {
-    position: relative;
-    width: 90%;
-    max-width: 600px;
-    margin: 60px auto;
-    height: auto;
-    max-height: 90vh;
-    border-radius: 12px;
+    width: 360px;
+    max-width: 360px;
+    height: 100vh;
+    border-radius: 0;
+    border-left: 2px solid #eee;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
     overflow-y: auto;
+    position: fixed;
+    right: 0;
+    top: 0;
+    background: #fff;
+    animation: slideIn 0.3s forwards;
   }
 
+  /* Push content when sidebar is open */
   body.sidebar-open .container {
-    margin-right: 0 !important; /* reset margin shift if any */
+    margin-right: 370px !important;
+    transition: margin 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
   }
 }
 
