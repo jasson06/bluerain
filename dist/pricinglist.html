@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Labor Cost List</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: row;
+      background: #f8fafc;
+      margin: 0;
+      height: 100vh;
+    }
+    .sidebar {
+      width: 300px;
+      background: #fff;
+      border-right: 1px solid #e5e7eb;
+      padding: 20px;
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    .main-content {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      position: relative;
+      margin-top: -15px;
+    }
+    h1, h2 {
+        color: #007bff;
+      margin-bottom: 20px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+    input:focus,
+select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(96, 37, 235, 0.21);
+  outline: none;
+}
+    .btn {
+      background: #007bff;
+      color: white;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+    }
+    .btn:hover {
+      background: #0284c7;
+    }
+    .dots {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .action-dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 24px;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .action-dropdown-content button {
+      background: none;
+      border: none;
+      padding: 10px 16px;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+    }
+    .action-dropdown-content button:hover {
+      background: #f3f4f6;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 500px;
+      width: 100%;
+    }
+    .sticky-search {
+      position: sticky;
+      top: 0;
+      background: #f8fafc;
+      padding-bottom: 10px;
+      z-index: 100;
+      margin-top: 5px;
+    }
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #333;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      display: none;
+      z-index: 9999;
+    }
+    .spinner {
+      display: none;
+      width: 40px;
+      height: 40px;
+      border: 5px solid #ccc;
+      border-top-color: #007bff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+        height: auto;
+      }
+      .sidebar {
+        width: 90%;
+        height: auto;
+        position: sticky;
+        box-shadow: none;
+        border-right: none;
+        border-bottom: 1px solid #e5e7eb;
+        z-index: 9999;
+      }
+      .main-content {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>Add New Item</h2>
+    <input id="newLaborCode" placeholder="Cost Code" />
+    <input id="newLaborName" placeholder="Task Name" />
+    <input id="newLaborDesc" placeholder="Description" />
+    <input id="newLaborRate" type="number" placeholder="Rate ($)" />
+    <button onclick="addLaborItem()" class="btn">Add Item</button>
+  </div>
+
+  <div class="main-content">
+    <div class="sticky-search">
+      <h1>Pricing List</h1>
+<button onclick="exportLaborCosts()" class="btn" style="margin-top: 10px; max-width: 200px;">Export to CSV</button>
+<input type="file" id="csvImportInput" accept=".csv" style="display:none;" onchange="handleCSVImport(event)">
+<button onclick="document.getElementById('csvImportInput').click()" class="btn" style="margin-top: 10px; max-width: 200px;">Import from CSV</button>
+
+      <input type="text" id="laborSearchInput" placeholder="Search labor task..." oninput="renderLaborSuggestions()">
+    </div>
+    <div id="spinner" class="spinner"></div>
+    <ul id="laborSuggestionList" style="list-style: none; padding: 0;"></ul>
+  </div>
+
+  <div id="editLaborModal" class="modal">
+    <div class="modal-content">
+      <h2>Edit Labor Item</h2>
+      <input id="editLaborCode" placeholder="Cost Code" />
+      <input id="editLaborName" placeholder="Task Name" />
+      <input id="editLaborDesc" placeholder="Description" />
+      <input id="editLaborRate" type="number" placeholder="Rate ($)" />
+      <div style="margin-top: 10px;">
+        <button onclick="saveEditedLaborItem()" class="btn">Save</button>
+        <button onclick="closeEditLaborModal()" class="btn" style="background: #e11d48;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const toast = document.getElementById('toast');
+    const spinner = document.getElementById('spinner');
+    let laborCostList = [];
+    let currentEditingLaborIndex = null;
+
+    function showToast(message, duration = 3000) {
+      toast.textContent = message;
+      toast.style.display = 'block';
+      setTimeout(() => toast.style.display = 'none', duration);
+    }
+
+    function showLoader() {
+      spinner.style.display = 'block';
+    }
+
+    function hideLoader() {
+      spinner.style.display = 'none';
+    }
+
+    async function fetchLaborSuggestions() {
+      showLoader();
+      try {
+        const res = await fetch('/api/labor-costs');
+        laborCostList = await res.json();
+        renderLaborSuggestions();
+        showToast('Labor cost list loaded.');
+      } catch (err) {
+        console.error('Failed to load labor suggestions:', err);
+        showToast('❌ Failed to load data.');
+      } finally {
+        hideLoader();
+      }
+    }
+
+    function renderLaborSuggestions() {
+      const query = document.getElementById('laborSearchInput').value.toLowerCase();
+      const list = document.getElementById('laborSuggestionList');
+      list.innerHTML = '';
+
+      const groups = {};
+      laborCostList.forEach((item, index) => {
+        let room = 'General';
+        const parts = item.name.split('-');
+        if (parts.length > 1) room = parts[1].trim().toLowerCase();
+        if (!groups[room]) groups[room] = [];
+        groups[room].push({ item, index });
+      });
+
+      const sortedRooms = Object.keys(groups).sort();
+
+      for (const roomName of sortedRooms) {
+        const groupItems = groups[roomName];
+        const filtered = groupItems.filter(({ item }) =>
+          item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)
+        );
+        if (query && filtered.length === 0) continue;
+
+        const groupContainer = document.createElement('li');
+        const header = document.createElement('div');
+        header.innerHTML = `${roomName} <span style="font-size: 18px;">➕</span>`;
+        header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:8px 12px;background:#f0f4f8;border-radius:8px;font-weight:bold;color:#007bff;text-transform:capitalize;';
+        const itemList = document.createElement('ul');
+        itemList.style = 'list-style:none;padding-left:15px;display:' + (query ? 'block' : 'none');
+
+        header.onclick = () => {
+          const visible = itemList.style.display === 'block';
+          itemList.style.display = visible ? 'none' : 'block';
+          header.querySelector('span').textContent = visible ? '➕' : '➖';
+        };
+
+        groupContainer.appendChild(header);
+
+        (query ? filtered : groupItems).forEach(({ item, index }) => {
+          const li = document.createElement('li');
+          li.style.marginTop = '8px';
+          li.innerHTML = `
+            <div style="border:1px solid #ccc;padding:10px;border-radius:8px;background:#f9f9f9;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="flex:1;padding-right:10px;">
+                  <small style="color:#64748b;"><strong>cost code:</strong> ${item.costCode || '-'}</small><br>
+                  <strong>${item.name}</strong><br>
+                  <small>${item.description}</small><br>
+                  <span style="color:#007bff;font-weight:bold;">$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div class="action-dropdown" style="position:relative;">
+                  <button class="dots" onclick="toggleActionDropdown(event, ${index})">⋯</button>
+                  <div class="action-dropdown-content" id="action-menu-${index}">
+                    <button onclick="editLaborItem(${index})">Edit</button>
+                    <button onclick="deleteLaborItem(${index})">Delete</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+          itemList.appendChild(li);
+        });
+
+        groupContainer.appendChild(itemList);
+        list.appendChild(groupContainer);
+      }
+    }
+
+    function toggleActionDropdown(event, index) {
+      event.stopPropagation();
+      const menu = document.getElementById(`action-menu-${index}`);
+      menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+      document.addEventListener('click', () => (menu.style.display = 'none'), { once: true });
+    }
+
+    async function addLaborItem() {
+      const name = document.getElementById('newLaborName').value;
+      const description = document.getElementById('newLaborDesc').value;
+      const rate = parseFloat(document.getElementById('newLaborRate').value);
+      const costCode = document.getElementById('newLaborCode').value;
+
+      if (!name || !description || isNaN(rate)) return alert('Please fill all fields correctly.');
+
+      showLoader();
+      try {
+        const res = await fetch('/api/labor-costs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, description, rate, costCode })
+        });
+        const newItem = await res.json();
+        laborCostList.unshift(newItem);
+        renderLaborSuggestions();
+        showToast('✅ Labor item added');
+      } catch (err) {
+        console.error('Error adding labor item:', err);
+        showToast('❌ Failed to add labor item');
+      } finally {
+        hideLoader();
+        ['newLaborName', 'newLaborDesc', 'newLaborRate', 'newLaborCode'].forEach(id => {
+          document.getElementById(id).value = '';
+        });
+      }
+    }
+
+    function editLaborItem(index) {
+      const item = laborCostList[index];
+      currentEditingLaborIndex = index;
+      document.getElementById('editLaborCode').value = item.costCode || '';
+      document.getElementById('editLaborName').value = item.name;
+      document.getElementById('editLaborDesc').value = item.description;
+      document.getElementById('editLaborRate').value = item.rate;
+      document.getElementById('editLaborModal').style.display = 'flex';
+    }
+
+    function closeEditLaborModal() {
+      document.getElementById('editLaborModal').style.display = 'none';
+    }
+
+    async function saveEditedLaborItem() {
+      if (currentEditingLaborIndex === null) return;
+      const id = laborCostList[currentEditingLaborIndex]._id;
+      const name = document.getElementById('editLaborName').value.trim();
+      const description = document.getElementById('editLaborDesc').value.trim();
+      const rate = parseFloat(document.getElementById('editLaborRate').value);
+      const costCode = document.getElementById('editLaborCode').value.trim();
+
+      if (!name || !description || isNaN(rate)) return alert('Please fill all fields correctly.');
+
+      showLoader();
+      try {
+        const res = await fetch(`/api/labor-costs/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, description, rate, costCode })
+        });
+        const updated = await res.json();
+        laborCostList[currentEditingLaborIndex] = updated;
+        renderLaborSuggestions();
+        showToast('✅ Labor item updated');
+      } catch (err) {
+        console.error('Error updating labor item:', err);
+        showToast('❌ Update failed');
+      } finally {
+        hideLoader();
+        closeEditLaborModal();
+        currentEditingLaborIndex = null;
+      }
+    }
+
+    function exportLaborCosts() {
+  if (!laborCostList.length) {
+    showToast('No labor items to export.');
+    return;
+  }
+
+  const headers = ['costCode', 'name', 'description', 'rate'];
+  const rows = laborCostList.map(item => [
+    `"${item.costCode || ''}"`,
+    `"${item.name || ''}"`,
+    `"${item.description || ''}"`,
+    `"${item.rate != null ? `$${item.rate.toLocaleString()}` : ''}"`
+  ]);
+
+  const csvContent = [headers, ...rows]
+    .map(row => row.join(','))
+    .join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.href = url;
+  link.setAttribute('download', 'labor-cost-list.csv');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  showToast('✅ Exported labor list');
+}
+
+
+function handleCSVImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async function (e) {
+    const lines = e.target.result.split('\n').filter(line => line.trim());
+    const [headerLine, ...dataLines] = lines;
+    const headers = headerLine.trim().split(',').map(h => h.trim().toLowerCase());
+
+    let importedCount = 0;
+    let skippedCount = 0;
+    showLoader();
+
+    for (const line of dataLines) {
+      const values = line.split(',').map(cell => cell.replace(/(^"|"$)/g, '').trim());
+      const row = Object.fromEntries(headers.map((key, i) => [key, values[i]]));
+
+      const name = row.name?.trim();
+      const costCode = row.costcode?.trim() || '';
+      const description = row.description?.trim() || '';
+      const rateStr = row.rate?.replace(/[$,]/g, '').trim() || '';
+      const rate = parseFloat(rateStr);
+
+      if (!name || isNaN(rate)) {
+        console.warn('Skipping invalid row:', row);
+        skippedCount++;
+        continue;
+      }
+
+      const newItem = { name, costCode, description, rate };
+
+      try {
+        const res = await fetch('/api/labor-costs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newItem)
+        });
+        const saved = await res.json();
+        laborCostList.unshift(saved);
+        importedCount++;
+      } catch (err) {
+        console.error('❌ Failed to import row:', row, err);
+        skippedCount++;
+      }
+    }
+
+    renderLaborSuggestions();
+    hideLoader();
+    showToast(`✅ Imported ${importedCount} items. Skipped ${skippedCount}.`);
+  };
+
+  reader.readAsText(file);
+}
+
+
+
+    async function deleteLaborItem(index) {
+      const item = laborCostList[index];
+      if (!confirm('Are you sure you want to delete this item?')) return;
+      showLoader();
+      try {
+        await fetch(`/api/labor-costs/${item._id}`, { method: 'DELETE' });
+        laborCostList.splice(index, 1);
+        renderLaborSuggestions();
+        showToast('🗑️ Labor item deleted');
+      } catch (err) {
+        console.error('Error deleting labor item:', err);
+        showToast('❌ Delete failed');
+      } finally {
+        hideLoader();
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', fetchLaborSuggestions);
+  </script>
+</body>
+</html>
+
