@@ -612,7 +612,7 @@
 @media screen and (min-width: 768px) {
   /* Modal container as sidebar */
   #laborCostModal {
-    
+    display: flex !important;
     position: fixed !important;
     top: 0;
     right: 0;
@@ -677,30 +677,10 @@ textarea {
   and (min-device-width: 768px) 
   and (max-device-width: 1024px) 
   and (orientation: landscape) {
-
+  
   body.sidebar-open .container {
-    margin-right: 370px !important; /* Force content shift on iPad landscape */
+    margin-right: 370px !important; /* Force shift for iPad landscape */
     transition: margin 0.3s ease;
-  }
-
-  #laborCostModal {
-    display: flex !important;
-    background: transparent !important;
-    justify-content: flex-end;
-    align-items: stretch;
-  }
-
-  #laborCostModal .modal-content {
-    position: fixed;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: 360px;
-    height: 100vh;
-    border-radius: 0;
-    border-left: 2px solid #eee;
-    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
-    overflow-y: auto;
   }
 }
 
