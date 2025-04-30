@@ -600,7 +600,7 @@
 }
 
 
-/* 🔵 Default: Mobile & Tablet Portrait (overlay modal) */
+/* 🔵 Default overlay style (Mobile & Portrait Tablets) */
 .labor-toolbar {
   background: rgba(0, 0, 0, 0.5);
   justify-content: center;
@@ -608,12 +608,12 @@
   padding-top: 50px;
 }
 
-/* 🖥️ Desktop & Tablet Landscape: Sidebar Behavior */
-@media (min-width: 768px) {
-  /* 🔹 Sidebar modal container */
+/* 🖥️ Unified Sidebar Behavior for Desktop & iPad Landscape */
+@media screen and (min-width: 768px) {
+  /* Modal container as sidebar */
   #laborCostModal {
-    display: none;                 /* Hidden by default */
-    position: fixed;
+    
+    position: fixed !important;
     top: 0;
     right: 0;
     bottom: 0;
@@ -626,7 +626,7 @@
     padding: 0;
   }
 
-  /* 🔹 Sidebar modal content */
+  /* Sidebar modal content */
   #laborCostModal .modal-content,
   .labor-toolbar .modal-content {
     width: 360px;
@@ -641,7 +641,7 @@
     position: relative;
   }
 
-  /* 🧭 Slide-in animation */
+  /* Slide-in animation */
   @keyframes slideInSidebar {
     from {
       transform: translateX(100%);
@@ -653,9 +653,9 @@
     }
   }
 
-  /* 🔹 Shift main content when sidebar open */
+  /* Shift main content when sidebar is open */
   body.sidebar-open .container {
-    margin-right: 370px; /* 360px + 10px gap */
+    margin-right: 370px !important;
     transition: margin 0.3s ease;
   }
 }
@@ -670,6 +670,7 @@
 textarea {
   transition: height 0.2s ease;
 }
+
 
 
 @media only screen 
