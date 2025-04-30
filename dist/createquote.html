@@ -600,7 +600,7 @@
 }
 
 
-/* Sidebar behavior only for desktop */
+/* 🔵 Default: Mobile & Tablet Portrait (overlay modal) */
 .labor-toolbar {
   background: rgba(0, 0, 0, 0.5);
   justify-content: center;
@@ -608,91 +608,16 @@
   padding-top: 50px;
 }
 
-/* Desktop style (min-width 768px) */
+/* 🖥️ Desktop & Tablet Landscape: Sidebar Behavior */
 @media (min-width: 768px) {
-  .labor-toolbar {
-    background: transparent;
-    justify-content: flex-end;
-    align-items: stretch;
-    padding: 0;
-    transition: all 0.3s ease;
-  }
-
-  .labor-toolbar .modal-content {
-    width: 360px;
-    max-width: 360px;
-    height: 100vh;
-    border-radius: 0;
-    border-left: 2px solid #eee;
-    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
-    overflow-y: auto;
-    animation: slideIn 0.3s forwards;
-  }
-
-  /* Slide-in animation */
-  @keyframes slideIn {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-  }
-
-  /* Push main content when sidebar open */
-  body.sidebar-open .container {
-    margin-right: 370px; /* width of sidebar + small gap */
-    transition: margin 0.3s ease;
-  }
-}
-
-
-
-/* ✅ Desktop override for the Labor Cost Modal */
-@media (min-width: 768px) {
+  /* 🔹 Sidebar modal container */
   #laborCostModal {
-    background: transparent; /* No dark background */
-    width: auto;
-    height: auto;
-    top: 80px; /* below sticky header if you have */
-    right: 0;
-    left: auto;
-    bottom: 0;
-    padding: 0;
-    display: none;
-    justify-content: flex-end; /* Stick to the right */
-  }
-
-  #laborCostModal .modal-content {
-    width: 400px; /* Width of the sidebar */
-    height: calc(100vh - 60px); /* Full height minus header */
-    max-width: 340px;
-    border-radius: 0;
-    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-    overflow-y: auto;
-    position: fixed;
-    right: 0;
-    top: 20px;
-    background: #fff;
-  }
-}
-
-#editLaborModal .modal-content {
-  max-width: 500px;
-  padding: 20px;
-}
-
-textarea {
-  transition: height 0.2s ease;
-}
-
-
-
-@media screen and (min-width: 768px) {
-  #laborCostModal {
-    display: flex !important;
+    display: none;                 /* Hidden by default */
     position: fixed;
     top: 0;
     right: 0;
     bottom: 0;
-
-    /* DO NOT use left: 0 — we want a sidebar, not fullscreen */
+    left: auto;
     width: auto;
     background: transparent !important;
     z-index: 9999;
@@ -701,7 +626,9 @@ textarea {
     padding: 0;
   }
 
-  #laborCostModal .modal-content {
+  /* 🔹 Sidebar modal content */
+  #laborCostModal .modal-content,
+  .labor-toolbar .modal-content {
     width: 360px;
     max-width: 360px;
     height: 100vh;
@@ -710,8 +637,11 @@ textarea {
     box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
     overflow-y: auto;
     animation: slideInSidebar 0.3s ease forwards;
+    border-radius: 0;
+    position: relative;
   }
 
+  /* 🧭 Slide-in animation */
   @keyframes slideInSidebar {
     from {
       transform: translateX(100%);
@@ -723,12 +653,23 @@ textarea {
     }
   }
 
+  /* 🔹 Shift main content when sidebar open */
   body.sidebar-open .container {
-    margin-right: 370px;
+    margin-right: 370px; /* 360px + 10px gap */
     transition: margin 0.3s ease;
   }
 }
 
+/* ✏️ Edit Labor Modal (modal-centered layout) */
+#editLaborModal .modal-content {
+  max-width: 500px;
+  padding: 20px;
+}
+
+/* 🔁 Smooth text area height change */
+textarea {
+  transition: height 0.2s ease;
+}
 
   </style>
 </head>
