@@ -1746,8 +1746,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // Placeholder for using a template
 function downloadTemplate() {
   const link = document.createElement("a");
-  link.href = "/files/EstimateTemplate.xlsx"; // Adjust this path based on your server setup
-  link.download = "EstimateTemplate.xlsx";
+  link.href = "/files/EstimateTemplate2.xlsx"; // Adjust this path based on your server setup
+  link.download = "EstimateTemplate2.xlsx";
   document.body.appendChild(link); // Needed for Firefox
   link.click();
   document.body.removeChild(link);
