@@ -600,32 +600,19 @@
 }
 
 
-/* 🔵 Default mobile/tablet: Overlay style */
+/* 🔵 Default: Mobile & Tablet Portrait (overlay modal) */
 .labor-toolbar {
   background: rgba(0, 0, 0, 0.5);
   justify-content: center;
   align-items: flex-start;
   padding-top: 50px;
-  display: none; /* Hidden until opened */
 }
 
-/* Modal content (default) */
-#laborCostModal .modal-content {
-  background: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  max-height: 90vh;
-  overflow-y: auto;
-  width: 100%;
-  max-width: 600px;
-  margin: 20px auto;
-  position: relative;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-/* 👨‍💻 Desktop & iPad Landscape: Sidebar behavior */
+/* 🖥️ Desktop & Tablet Landscape: Sidebar Behavior */
 @media (min-width: 768px) {
+  /* 🔹 Sidebar modal container */
   #laborCostModal {
+    display: none;                 /* Hidden by default */
     position: fixed;
     top: 0;
     right: 0;
@@ -633,17 +620,17 @@
     left: auto;
     width: auto;
     background: transparent !important;
-    display: none;
+    z-index: 9999;
     justify-content: flex-end;
     align-items: stretch;
-    z-index: 9999;
     padding: 0;
   }
 
+  /* 🔹 Sidebar modal content */
   #laborCostModal .modal-content,
   .labor-toolbar .modal-content {
     width: 360px;
-    max-width: 330px;
+    max-width: 340px;
     height: 100vh;
     background: #fff;
     border-left: 2px solid #eee;
@@ -651,8 +638,10 @@
     overflow-y: auto;
     animation: slideInSidebar 0.3s ease forwards;
     border-radius: 0;
+    position: relative;
   }
 
+  /* 🧭 Slide-in animation */
   @keyframes slideInSidebar {
     from {
       transform: translateX(100%);
@@ -664,45 +653,23 @@
     }
   }
 
-  /* Shift main content when sidebar is open */
+  /* 🔹 Shift main content when sidebar open */
   body.sidebar-open .container {
-    margin-right: 370px; /* 360 + padding */
+    margin-right: 370px; /* 360px + 10px gap */
     transition: margin 0.3s ease;
   }
 }
 
-/* 👩‍💻 iPad-specific landscape fix (older Safari iOS) */
-@media only screen 
-  and (min-device-width: 768px) 
-  and (max-device-width: 1024px) 
-  and (orientation: landscape) {
-  
-  #laborCostModal {
-    display: flex !important;
-    background: transparent !important;
-    justify-content: flex-end;
-    align-items: stretch;
-  }
-
-  body.sidebar-open .container {
-    margin-right: 370px !important;
-    transition: margin 0.3s ease;
-  }
-
-  #laborCostModal .modal-content {
-    width: 360px;
-    height: 100vh;
-    border-radius: 0;
-    border-left: 2px solid #eee;
-    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
-  }
+/* ✏️ Edit Labor Modal (modal-centered layout) */
+#editLaborModal .modal-content {
+  max-width: 500px;
+  padding: 20px;
 }
 
-/* 🔁 Smooth textarea transitions */
+/* 🔁 Smooth text area height change */
 textarea {
   transition: height 0.2s ease;
 }
-
   </style>
 </head>
 <body>
@@ -1996,21 +1963,17 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
 
     let laborCostList = [];
 
-    function openLaborCostModal() {
-  const modal = document.getElementById('laborCostModal');
-  modal.style.display = 'flex';
 
-  // Apply sidebar shift for iPad and desktop
+    function openLaborCostModal() {
+  document.getElementById('laborCostModal').style.display = 'flex';
+  fetchLaborSuggestions();
   if (window.innerWidth >= 768) {
     document.body.classList.add('sidebar-open');
   }
 }
 
 function closeLaborCostModal() {
-  const modal = document.getElementById('laborCostModal');
-  modal.style.display = 'none';
-
-  // Remove sidebar shift
+  document.getElementById('laborCostModal').style.display = 'none';
   if (window.innerWidth >= 768) {
     document.body.classList.remove('sidebar-open');
   }
