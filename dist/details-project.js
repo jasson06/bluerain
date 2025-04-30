@@ -1608,6 +1608,7 @@ async function importEstimate() {
 
         // ✅ Validate extracted data
         const requiredFields = ["Category", "Name", "Quantity",];
+        const optionalFields = ["Cost Code"];
         const firstRow = jsonData[0] || {};
         const missingFields = requiredFields.filter(
           (field) => !(field in firstRow) || !firstRow[field]
@@ -1617,6 +1618,7 @@ async function importEstimate() {
           alert(`Invalid Excel file. Missing required fields: ${missingFields.join(", ")}`);
           return;
         }
+        
 
         // ✅ Convert extracted Excel data into the required format
         const formattedEstimate = formatEstimateFromExcel(jsonData);
@@ -1676,17 +1678,17 @@ function formatEstimateFromExcel(data) {
 
   data.forEach((row) => {
     const hasAllRequiredFields =
-    typeof row.Category === "string" &&
-    typeof row.Name === "string" &&
-    row.Category.trim() !== "" &&
-    row.Name.trim() !== "" &&
-    (row.Quantity !== undefined && row.Quantity !== null) &&
-    (row["Unit Price"] !== undefined && row["Unit Price"] !== null);
-  
-  if (!hasAllRequiredFields) {
-    console.warn("⚠️ Skipping row due to missing required fields:", row);
-    return;
-  }
+      typeof row.Category === "string" &&
+      typeof row.Name === "string" &&
+      row.Category.trim() !== "" &&
+      row.Name.trim() !== "" &&
+      (row.Quantity !== undefined && row.Quantity !== null) &&
+      (row["Unit Price"] !== undefined && row["Unit Price"] !== null);
+
+    if (!hasAllRequiredFields) {
+      console.warn("⚠️ Skipping row due to missing required fields:", row);
+      return;
+    }
 
     const categoryName = row.Category.trim();
     const item = {
@@ -1694,14 +1696,15 @@ function formatEstimateFromExcel(data) {
       description: row.Description ? row.Description.trim() : "",
       quantity: parseInt(row.Quantity, 10) || 1,
       unitPrice: parseFloat(row["Unit Price"]) || 0,
-      total: (parseInt(row.Quantity, 10) || 1) * (parseFloat(row["Unit Price"]) || 0)
+      total: (parseInt(row.Quantity, 10) || 1) * (parseFloat(row["Unit Price"]) || 0),
+      costCode: row["Cost Code"] ? String(row["Cost Code"]).trim() : "" // ✅ NEW FIELD
     };
 
     if (!lineItemsMap.has(categoryName)) {
       lineItemsMap.set(categoryName, {
-        type: "category", // ✅ Backend expects this
+        type: "category",
         category: categoryName,
-        status: "in-progress", // ✅ Backend expects this
+        status: "in-progress",
         items: []
       });
     }
@@ -1713,7 +1716,7 @@ function formatEstimateFromExcel(data) {
 
   return {
     lineItems,
-    tax: 0 // Default tax to 0 if not provided
+    tax: 0
   };
 }
 
