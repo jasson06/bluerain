@@ -167,6 +167,8 @@ app.get('/api/list-uploads', (req, res) => {
     });
 });
 
+// ✅ For email attachments (e.g., PDFs) — in-memory buffer
+const memoryUpload = multer({ storage: multer.memoryStorage() });
 
 
 
@@ -3656,23 +3658,64 @@ app.get('/history', async (req, res) => {
 });
 
 
-// ✅ Send invoice via email (uses default email if not provided)
-app.post('/api/send', async (req, res) => {
-  const { email = "jleonel3915@gmail.com", invoiceId } = req.body;
+// ✅ Send invoice via email (PDF attached)
+app.post('/api/send', memoryUpload.single('pdf'), async (req, res) => {
+  const { invoiceId } = req.body;
+  const pdfFile = req.file;
+
+  // 🛡 Validation
+  if (!invoiceId) {
+    console.warn("⚠️ Missing invoiceId");
+    return res.status(400).json({ message: "Missing invoiceId" });
+  }
+
+  if (!pdfFile || !pdfFile.buffer) {
+    console.warn("⚠️ Missing or invalid PDF file");
+    return res.status(400).json({ message: "Missing PDF attachment" });
+  }
 
   try {
     const invoice = await Invoice.findById(invoiceId);
-    if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
+    if (!invoice) {
+      console.warn(`❌ Invoice not found for ID: ${invoiceId}`);
+      return res.status(404).json({ message: 'Invoice not found' });
+    }
 
-    // Simulated sending logic
-    console.log(`📧 Sending invoice #${invoice.invoiceNumber} to ${email}`);
+    // ✅ Default recipients (hardcoded)
+    const recipients = [
+      "jleonel3915@gmail.com",
+      "VonleoInc@adaptive.build"
+    ];
 
-    res.json({ message: `Invoice sent to ${email}` });
+    const mailOptions = {
+      from: `"BESF Team" <${process.env.EMAIL_USER}>`,
+      to: recipients,
+      subject: `Invoice #${invoice.invoiceNumber}`,
+      html: `
+        <p>Hello,</p>
+        <p>Please find attached invoice <strong>${invoice.invoiceNumber}</strong>.</p>
+        <p>Thank you,<br><strong>BESF Team</strong></p>
+      `,
+      attachments: [
+        {
+          filename: `Invoice-${invoice.invoiceNumber}.pdf`,
+          content: pdfFile.buffer,
+          contentType: 'application/pdf'
+        }
+      ]
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Invoice sent to: ${recipients.join(', ')} | ID: ${info.messageId}`);
+
+    res.status(200).json({ message: `Invoice sent to: ${recipients.join(', ')}` });
   } catch (err) {
-    console.error('❌ Error sending invoice:', err);
+    console.error('❌ Failed to send invoice email:', err);
     res.status(500).json({ message: 'Failed to send invoice', error: err.message });
   }
 });
+
+
 
 // ✅ GET /api/notifications → Fetch recent notifications
 app.get("/api/notifications", async (req, res) => {
