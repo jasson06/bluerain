@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clients</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: row;
+      background: #f8fafc;
+      margin: 0;
+      height: 100vh;
+    }
+    .sidebar {
+      width: 300px;
+      background: #fff;
+      border-right: 1px solid #e5e7eb;
+      padding: 20px;
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    .main-content {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      position: relative;
+      margin-top: -15px;
+    }
+    h1, h2 {
+      color: #007bff;
+      margin-bottom: 20px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+    .btn {
+      background: #007bff;
+      color: white;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 90%;
+      margin: 5px;
+    }
+    .btn:hover {
+      background: #0284c7;
+    }
+    .sticky-bar {
+      position: sticky;
+      top: 0;
+      background: #f8fafc;
+      padding: 10px 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    ul { list-style: none; padding: 0; }
+    .client-item {
+      background: #fff;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .client-info { flex: 1; padding-right: 10px; }
+    .action-menu, .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    .dropdown-btn, .action-menu button {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .dropdown-content, .action-dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 30px;
+      background-color: #fff;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      border-radius: 6px;
+      width: 140px;
+      flex-direction: column;
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 200;
+    }
+    .dropdown.show .dropdown-content,
+    .action-menu.show .action-dropdown {
+      display: flex;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .dropdown-content button, .action-dropdown button {
+      padding: 8px 12px;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .dropdown-content button:hover, .action-dropdown button:hover {
+      background: #f3f4f6;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 500px;
+    }
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .main-content {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body onclick="closeAllDropdowns(event)">
+  <div class="sidebar">
+    <h2>Add New Client</h2>
+    <input id="clientName" placeholder="Client Name" />
+    <input id="clientAddress" placeholder="Address" />
+    <input id="clientEmail" placeholder="Email" />
+    <input id="clientPhone" placeholder="Phone" />
+    <button onclick="addClient()" class="btn">Add Client</button>
+  </div>
+
+  <div class="main-content">
+    <div class="sticky-bar">
+      <h2>Clients</h2>
+      <input type="text" id="clientSearchInput" placeholder="Search clients..." oninput="renderClients()" style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+      <div class="dropdown">
+        <button class="dropdown-btn" onclick="toggleDropdown(this)">⋮</button>
+        <div class="dropdown-content">
+          <button onclick="exportClientsCSV()">Export CSV</button>
+          <button onclick="document.getElementById('clientCSVInput').click()">Import CSV</button>
+        </div>
+      </div>
+    </div>
+
+    <input type="file" id="clientCSVInput" accept=".csv" style="display:none" onchange="handleClientCSVImport(event)">
+
+    <ul id="clientList"></ul>
+  </div>
+
+  <div id="editClientModal" class="modal">
+    <div class="modal-content">
+      <h3>Edit Client</h3>
+      <input id="editClientName" placeholder="Client Name" />
+      <input id="editClientAddress" placeholder="Address" />
+      <input id="editClientEmail" placeholder="Email" />
+      <input id="editClientPhone" placeholder="Phone" />
+      <div style="margin-top: 10px; text-align: right;">
+        <button onclick="saveClientEdit()" class="btn">Save</button>
+        <button onclick="closeClientEditModal()" class="btn" style="background: #b4b4b4;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function closeAllDropdowns(event) {
+      document.querySelectorAll('.dropdown, .action-menu').forEach(menu => {
+        if (!menu.contains(event.target)) {
+          menu.classList.remove('show');
+        }
+      });
+    }
+    function toggleDropdown(el) {
+      const parent = el.closest('.dropdown');
+      parent.classList.toggle('show');
+    }
+    function toggleActionDropdown(event, btn) {
+      event.stopPropagation();
+      const parent = btn.closest('.action-menu');
+      document.querySelectorAll('.action-menu').forEach(d => {
+        if (d !== parent) d.classList.remove('show');
+      });
+      parent.classList.toggle('show');
+    }
+
+    let clientList = [];
+    let currentEditIndex = null;
+
+    async function fetchClients() {
+      const res = await fetch('/api/clients');
+      clientList = await res.json();
+      renderClients();
+    }
+
+    function renderClients() {
+      const query = document.getElementById('clientSearchInput').value.toLowerCase();
+      const list = document.getElementById('clientList');
+      list.innerHTML = '';
+
+      clientList.filter(client => client.name.toLowerCase().includes(query)).forEach((client, index) => {
+        const li = document.createElement('li');
+        li.className = 'client-item';
+        li.innerHTML = `
+          <div class="client-info">
+            <strong>${client.name}</strong><br>
+            <small>${client.address}</small><br>
+            <small>${client.email}</small><br>
+            <small>${client.phone}</small>
+          </div>
+          <div class="action-menu">
+             <button onclick="toggleActionDropdown(event, this)">⋮</button>
+            <div class="action-dropdown">
+              <button onclick="openEditClientModal(${index})">Edit</button>
+              <button onclick="deleteClient(${index})">Delete</button>
+            </div>
+          </div>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    function openEditClientModal(index) {
+      const client = clientList[index];
+      currentEditIndex = index;
+      document.getElementById('editClientName').value = client.name;
+      document.getElementById('editClientAddress').value = client.address;
+      document.getElementById('editClientEmail').value = client.email;
+      document.getElementById('editClientPhone').value = client.phone;
+      document.getElementById('editClientModal').style.display = 'flex';
+    }
+
+    function closeClientEditModal() {
+      document.getElementById('editClientModal').style.display = 'none';
+      currentEditIndex = null;
+    }
+
+    async function saveClientEdit() {
+      const index = currentEditIndex;
+      const client = clientList[index];
+      const updated = {
+        name: document.getElementById('editClientName').value.trim(),
+        address: document.getElementById('editClientAddress').value.trim(),
+        email: document.getElementById('editClientEmail').value.trim(),
+        phone: document.getElementById('editClientPhone').value.trim()
+      };
+      const res = await fetch(`/api/clients/${client._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      });
+      const result = await res.json();
+      if (result) {
+        clientList[index] = result;
+        renderClients();
+      }
+      closeClientEditModal();
+    }
+
+    async function addClient() {
+      const name = document.getElementById('clientName').value.trim();
+      const address = document.getElementById('clientAddress').value.trim();
+      const email = document.getElementById('clientEmail').value.trim();
+      const phone = document.getElementById('clientPhone').value.trim();
+
+      if (!name || !address || !email || !phone) return alert('All fields are required.');
+
+      const res = await fetch('/api/add-client', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, address, email, phone })
+      });
+      const result = await res.json();
+      if (result.success) {
+        clientList.unshift(result.client);
+        renderClients();
+        ['clientName','clientAddress','clientEmail','clientPhone'].forEach(id => document.getElementById(id).value = '');
+      } else {
+        alert('Error: ' + result.error);
+      }
+    }
+
+    async function deleteClient(index) {
+      const client = clientList[index];
+      if (!confirm(`Delete ${client.name}?`)) return;
+      await fetch(`/api/clients/${client._id}`, { method: 'DELETE' });
+      clientList.splice(index, 1);
+      renderClients();
+    }
+
+    function exportClientsCSV() {
+      let csv = 'name,address,email,phone\n';
+      clientList.forEach(c => {
+        csv += `${c.name},${c.address},${c.email},${c.phone}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'clients.csv';
+      a.click();
+    }
+
+    function handleClientCSVImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const lines = e.target.result.split('\n').filter(l => l.trim());
+        const [header, ...rows] = lines;
+        const headers = header.split(',').map(h => h.trim().toLowerCase());
+
+        for (const line of rows) {
+          const values = line.split(',');
+          const row = Object.fromEntries(headers.map((h, i) => [h, values[i]?.trim()]));
+          if (!row.name || !row.address || !row.email || !row.phone) continue;
+
+          try {
+            const res = await fetch('/api/add-client', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(row)
+            });
+            const saved = await res.json();
+            if (saved.success) clientList.unshift(saved.client);
+          } catch (err) {
+            console.error('Import failed:', err);
+          }
+        }
+        renderClients();
+      };
+      reader.readAsText(file);
+    }
+
+    window.addEventListener('DOMContentLoaded', fetchClients);
+  </script>
+</body>
+</html>
