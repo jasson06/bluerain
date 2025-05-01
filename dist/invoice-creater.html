@@ -1184,7 +1184,6 @@ function generateInvoiceNumber() {
 
 async function submitInvoice() {
   const vendorId = localStorage.getItem('vendorId');
-
   const inputDate = document.getElementById('invoiceDate').value;
   const todayISO = new Date().toISOString();
   const invoiceDate = inputDate || todayISO;
@@ -1214,6 +1213,7 @@ async function submitInvoice() {
   }
 
   try {
+    // ✅ 1. Save invoice to backend
     const res = await fetch('/api/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1224,17 +1224,68 @@ async function submitInvoice() {
     const savedInvoice = await res.json();
     console.log("✅ Saved Invoice:", savedInvoice);
 
-    const sendRes = await fetch('/api/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        invoiceId: savedInvoice._id,
-        email: invoiceData.email
-      })
+    // ✅ 2. Render preview content so it's visible and populated
+    openInvoicePreview(); // Populate #invoicePreviewContent
+    await new Promise(resolve => setTimeout(resolve, 400)); // Wait for layout/paint
+
+    const invoiceModal = document.getElementById('invoiceModal');
+    const invoiceContent = document.getElementById('invoicePreviewContent');
+    const buttonsToHide = invoiceContent.querySelectorAll('.no-print');
+    invoiceModal.style.display = 'flex';
+
+    // ✅ Hide UI buttons temporarily
+    buttonsToHide.forEach(el => el.style.display = 'none');
+
+    // ✅ Flush layout to avoid Safari bugs
+    invoiceContent.scrollTop = 0;
+    window.scrollTo(0, 0);
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // ✅ 3. Generate PDF blob
+    const opt = {
+      margin: 0.5,
+      filename: `${savedInvoice.invoiceNumber}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        scrollY: 0,
+        scrollX: 0,
+        windowWidth: document.body.scrollWidth,
+        windowHeight: document.body.scrollHeight
+      },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    const pdfBlob = await html2pdf().from(invoiceContent).set(opt).outputPdf('blob');
+
+    // ✅ Restore hidden buttons
+    buttonsToHide.forEach(el => el.style.display = 'block');
+
+    const pdfFile = new File([pdfBlob], `${savedInvoice.invoiceNumber}.pdf`, {
+      type: 'application/pdf',
+      lastModified: Date.now()
     });
 
-    if (!sendRes.ok) throw new Error('Failed to send invoice');
+    if (!pdfFile || !pdfFile.size) {
+      showToast("❌ PDF generation failed");
+      return;
+    }
 
+    // ✅ 4. Send email with PDF attached
+    const formData = new FormData();
+    formData.append('invoiceId', savedInvoice._id);
+    formData.append('email', invoiceData.email);
+    formData.append('pdf', pdfFile);
+
+    const sendRes = await fetch('/api/send', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!sendRes.ok) throw new Error('Failed to send invoice email');
+
+    // ✅ 5. Final UI updates
     showToast('✅ Invoice submitted!');
     displayInvoiceHistory(invoiceData);
     lineItems = [];
@@ -1242,7 +1293,7 @@ async function submitInvoice() {
     closeInvoicePreview();
   } catch (err) {
     showToast('❌ Error submitting invoice.');
-    console.error(err);
+    console.error("❌ submitInvoice() Error:", err);
   }
 }
 
