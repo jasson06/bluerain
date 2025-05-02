@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", async () => {
  let laborCostList = [];
 
 async function fetchLaborCostList() {
-  showLoader(); // 👈 START
+  
   try {
     const res = await fetch("/api/labor-costs");
     laborCostList = await res.json();
