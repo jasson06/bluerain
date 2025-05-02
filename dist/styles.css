@@ -1907,3 +1907,11 @@ body {
   }
 }
 
+#loader {
+  transition: opacity 0.3s ease;
+}
+
+#loader.hide {
+  opacity: 0;
+  pointer-events: none;
+}
