@@ -1073,9 +1073,9 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 <!-- ✅ Fullscreen Photo Viewer -->
 <div id="photo-viewer" class="fullscreen-view" style="display: none;">
   <button class="close-btn" onclick="closePhotoViewer()">✖</button>
-  <button class="nav-button left" onclick="navigateFullScreen(0)">&#10094;</button>
+  <button class="nav-button left" onclick="navigateFullScreen(-1)">&#10094;</button>
   <img id="full-photo" src="" alt="Full Size Image">
-  <button class="nav-button right" onclick="navigateFullScreen(0)">&#10095;</button>
+  <button class="nav-button right" onclick="navigateFullScreen(1)">&#10095;</button>
 </div>
 
 
@@ -1134,9 +1134,28 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
         <button id="cancel-estimate" class="btn-secondary" onclick="window.location.href = document.referrer">Back</button>
       </div>
     </section>
-    
-  </div>
+     </div>
 
+ <!-- Toast Notification -->
+<div id="toast" style="
+position: fixed;
+top: 20px;
+left: 50%;
+transform: translateX(-50%);
+background: #007bff;
+color: white;
+padding: 12px 20px;
+border-radius: 6px;
+display: none;
+z-index: 9999;
+box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+"></div>
+
+
+<!-- Loader Spinner -->
+<div id="loader" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.7); z-index: 9999; display: none; justify-content: center; align-items: center;">
+<div style="border: 6px solid #f3f3f3; border-top: 6px solid #007bff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
+</div>
 
   
 </body>
