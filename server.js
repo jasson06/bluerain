@@ -3683,7 +3683,7 @@ app.post('/api/send', memoryUpload.single('pdf'), async (req, res) => {
 
     // ✅ Default recipients (hardcoded)
     const recipients = [
-      "jleonel3915@gmail.com",
+      "besf.jasson@gmail.com",
       "VonleoInc@adaptive.build"
     ];
 
