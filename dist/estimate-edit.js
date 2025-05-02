@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const addCategoryButton = document.getElementById("add-category-header");
   const addLineItemButton = document.getElementById("add-line-item");
   if (!projectId) {
-    alert("Project ID is missing!");
+    showToast("Project ID is missing!");
     return;
   }
 
@@ -20,18 +20,38 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   updatePage();
 
-
+  let fullScreenPhotos = [];
+  let fullScreenIndex = 0;
+  
  let laborCostList = [];
 
 async function fetchLaborCostList() {
+  showLoader(); // 👈 START
   try {
     const res = await fetch("/api/labor-costs");
     laborCostList = await res.json();
   } catch (error) {
     console.error("Failed to fetch labor cost suggestions", error);
+  } finally {
+   
   }
 }
   
+
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.style.display = 'block';
+  setTimeout(() => { toast.style.display = 'none'; }, 3000);
+}
+
+function showLoader() {
+  document.getElementById('loader').style.display = 'flex';
+}
+
+function hideLoader() {
+  document.getElementById('loader').style.display = 'none';
+}
   
  function generatePhotoPreview(photos, itemId, type) {
     if (!photos || photos.length === 0) {
@@ -246,15 +266,7 @@ function enableFullScreenSwipe() {
       }
   });
 
-      // ✅ Remove previous listeners before adding new ones
-      viewer.removeEventListener("touchstart", handleTouchStart);
-      viewer.removeEventListener("touchmove", handleTouchMove);
-      viewer.removeEventListener("touchend", handleTouchEnd);
-  
-      // ✅ Attach event listeners
-      viewer.addEventListener("touchstart", handleTouchStart);
-      viewer.addEventListener("touchmove", handleTouchMove);
-      viewer.addEventListener("touchend", handleTouchEnd);
+
   
   console.log("✅ Swipe enabled for full-screen viewer");
 }
@@ -279,7 +291,7 @@ window.closePhotoViewer = closePhotoViewer;
     const vendorId = localStorage.getItem("vendorId"); // This might be null if the item is unassigned
 
     if (!estimateId) {
-        alert("Estimate ID is missing! Please save the estimate first.");
+      showToast("Estimate ID is missing! Please save the estimate first.");
         return;
     }
 
@@ -295,6 +307,9 @@ window.closePhotoViewer = closePhotoViewer;
         formData.append("vendorId", vendorId);
     }
 
+    showLoader(); // 👈 START
+
+
     fetch("/api/upload-photos", { method: "POST", body: formData })
         .then(response => response.json())
         .then(result => {
@@ -303,15 +318,19 @@ window.closePhotoViewer = closePhotoViewer;
             }
             
             console.log(`✅ Uploaded ${files.length} Photo(s):`, result.photoUrls);
-            alert(`✅ ${files.length} Photo(s) uploaded successfully!`);
+            showToast(`✅ ${files.length} Photo(s) uploaded successfully!`);
 
             // ✅ Immediately refresh the photos
             setTimeout(() => updatePhotoSection(itemId, type), 500);
         })
         .catch(error => {
             console.error("❌ Photo Upload Error:", error);
-            alert("Failed to upload photos.");
+            showToast("Failed to upload photos.");
+          })
+          .finally(() => {
+            hideLoader();
         });
+        
 }
 
 
@@ -319,6 +338,8 @@ window.closePhotoViewer = closePhotoViewer;
 
  // ✅ Update Photo Section After Upload
 async function updatePhotoSection(itemId, type) {
+
+  showLoader(); // 👈 START
     try {
         const estimateId = new URLSearchParams(window.location.search).get("estimateId");
         const vendorId = localStorage.getItem("vendorId");
@@ -355,6 +376,9 @@ async function updatePhotoSection(itemId, type) {
         console.warn("⚠️ No photos found for item:", itemId);
     } catch (error) {
         console.error("❌ Error updating photo section:", error);
+      } finally {
+        hideLoader(); // 👈 END
+
     }
 }
 
@@ -364,50 +388,69 @@ async function updatePhotoSection(itemId, type) {
 
   
 
-async function updateEstimatePhotoData(itemId, type, newPhotos) {
-  try {
-      const estimateId = new URLSearchParams(window.location.search).get("estimateId");
-      if (!estimateId) return;
+async function updatePhotoSection(itemId, type) {
+  const containerId = `${type}-photos-${itemId}`;
+  let retries = 10;
 
-      // ✅ Fetch the current estimate data
-      const response = await fetch(`/api/estimates/${estimateId}`);
-      if (!response.ok) throw new Error("Failed to fetch estimate data.");
-      
-      const estimate = await response.json();
-
-      // ✅ Find the item within the estimate and update only the photos
-      let updatedPhotos = null;
-      let itemFound = false;
-
-      estimate.lineItems.forEach(category => {
-          category.items.forEach(item => {
-              if (item._id === itemId) {
-                  if (!item.photos) item.photos = { before: [], after: [] };
-                  item.photos[type] = [...(item.photos[type] || []), ...newPhotos]; // ✅ Merge existing + new photos
-                  updatedPhotos = item.photos; // Store the updated photos
-                  itemFound = true;
-              }
-          });
-      });
-
-      if (!itemFound) {
-          console.error("❌ Item not found in estimate:", itemId);
-          return;
-      }
-
-      // ✅ Instead of sending the entire estimate, only update the photos for this item
-      const saveResponse = await fetch(`/api/estimates/${estimateId}/update-photo`, {
-          method: "PATCH", // ✅ Use PATCH instead of PUT (only update photos, not entire estimate)
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ itemId, type, photos: updatedPhotos }),
-      });
-
-      if (!saveResponse.ok) throw new Error("Failed to update estimate with new photos.");
-      console.log("✅ Estimate photos updated successfully!");
-  } catch (error) {
-      console.error("❌ Error updating estimate photo data:", error);
+  // ⏳ Wait for the DOM element to exist
+  while (retries-- > 0 && !document.getElementById(containerId)) {
+    await new Promise(r => setTimeout(r, 50));
   }
+
+  const photoContainer = document.getElementById(containerId);
+  if (!photoContainer) {
+    console.warn(`❌ Photo container not found: ${containerId}`);
+    return;
+  }
+
+  // ✅ Show inline loader
+  photoContainer.innerHTML = `
+    <div style="display: flex; justify-content: center; align-items: center; min-height: 100px;">
+      <div style="border: 4px solid #f3f3f3; border-top: 4px solid #0ea5e9; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;"></div>
+    </div>
+  `;
+
+  let contentHTML = "";
+
+  try {
+    const estimateId = new URLSearchParams(window.location.search).get("estimateId");
+    const vendorId = localStorage.getItem("vendorId");
+
+    const res = await fetch(`/api/estimates/${estimateId}`);
+    if (res.ok) {
+      const { estimate } = await res.json();
+      const item = estimate.lineItems.flatMap(cat => cat.items).find(i => i._id === itemId);
+      if (item?.photos?.[type]) {
+        contentHTML = generatePhotoPreview(item.photos[type], itemId, type);
+      }
+    }
+
+    if (!contentHTML && vendorId && vendorId !== "null" && vendorId !== "undefined") {
+      const res = await fetch(`/api/vendors/${vendorId}/items/${itemId}/photos`);
+      if (res.ok) {
+        const { photos } = await res.json();
+        if (photos?.[type]) {
+          contentHTML = generatePhotoPreview(photos[type], itemId, type);
+        }
+      }
+    }
+
+    if (!contentHTML) {
+      contentHTML = `<p class="placeholder">No ${type} photos found.</p>`;
+    }
+
+  } catch (error) {
+    console.error("❌ Photo fetch error:", error);
+    contentHTML = `<p class="placeholder">Error loading ${type} photos.</p>`;
+  }
+
+  // ✅ Replace loader with actual content
+  photoContainer.innerHTML = contentHTML;
+
+  // ✅ Swipe re-init
+  setTimeout(() => enableSwipe(itemId, type), 100);
 }
+
 
 
 
@@ -483,6 +526,7 @@ window.jumpToPhoto = jumpToPhoto;
 
 // ✅ Updated Delete Photo Function for Render
 async function deletePhoto(itemId, photoUrl, type) {
+  showLoader(); // 👈 START
     try {
         // Ensure vendorId is correctly retrieved and not null/undefined
         const vendorId = localStorage.getItem("vendorId") || "default";
@@ -514,10 +558,13 @@ async function deletePhoto(itemId, photoUrl, type) {
 
         // ✅ Force Refresh the UI after deletion
         updatePhotoSection(itemId, type);
+        showToast("🗑️ Photo deleted successfully!");
 
     } catch (error) {
         console.error("❌ Error deleting photo:", error);
-        alert("Failed to delete photo. Check console for details.");
+        showToast("Failed to delete photo.");
+      } finally {
+        hideLoader(); // 👈 END
     }
 }
 
@@ -527,6 +574,7 @@ window.deletePhoto = deletePhoto;
 
   // Load Project Details
   async function loadProjectDetails() {
+    showLoader(); // 👈 START
     try {
       const response = await fetch(`/api/details/projects/${projectId}`);
       if (!response.ok) throw new Error("Failed to fetch project details.");
@@ -540,12 +588,15 @@ window.deletePhoto = deletePhoto;
       document.getElementById("project-address").textContent = `${project.address?.addressLine1 || "N/A"}, ${project.address?.city || "N/A"}, ${project.address?.state || "N/A"}, ${project.address?.zip || "N/A"}`;
     } catch (error) {
       console.error("Error loading project details:", error);
+    } finally {
+      hideLoader(); // 👈 END
     }
   }
 
 // ✅ Load Estimate Details (Ensure Photos Load)
 async function loadEstimateDetails() {
   if (!estimateId) return;
+  showLoader(); // 👈 START
   try {
       const response = await fetch(`/api/estimates/${estimateId}`);
       if (!response.ok) throw new Error("Failed to fetch estimate details.");
@@ -578,6 +629,8 @@ async function loadEstimateDetails() {
 
   } catch (error) {
       console.error("❌ Error loading estimate details:", error);
+    } finally {
+      hideLoader(); // 👈 END
   }
 }
 
@@ -640,6 +693,23 @@ function refreshLineItems(categories) {
     });
 
     lineItemsContainer.appendChild(header);
+
+    
+ // ✅ Scroll to and focus new category
+ setTimeout(() => {
+  header.scrollIntoView({ behavior: "smooth", block: "center" });
+  const editableSpan = header.querySelector("span[contenteditable]");
+  if (editableSpan) {
+    editableSpan.focus();
+    const range = document.createRange();
+    range.selectNodeContents(editableSpan);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+}, 100);
+
     return header;
   }
 
@@ -780,11 +850,8 @@ function addLineItemCard(item = {}, categoryHeader = null) {
     }
   });
 
-  
+ 
 
-
-   
-   
 // ✅ Enable vendor name 
   document.querySelectorAll(".vendor-name").forEach((el) => {
     el.removeAttribute("title"); // ❌ Remove default tooltip behavior
@@ -887,12 +954,12 @@ function addLineItemCard(item = {}, categoryHeader = null) {
     const vendorId = document.getElementById("vendor-select").value;
   
     if (!vendorId) {
-      alert("Please select a vendor.");
+      showToast("Please select a vendor.");
       return;
     }
   
     if (!projectId || !estimateId) {
-      alert("Missing project or estimate ID!");
+      showToast("Missing project or estimate ID!");
       return;
     }
   
@@ -930,10 +997,11 @@ function addLineItemCard(item = {}, categoryHeader = null) {
     });
   
     if (selectedItems.length === 0) {
-      alert("No items selected for assignment.");
+      showToast("No items selected for assignment.");
       return;
     }
   
+    showLoader(); // 👈 START
     try {
       // ✅ Send API Request with cost code included
       const response = await fetch("/api/assign-items", {
@@ -959,11 +1027,13 @@ function addLineItemCard(item = {}, categoryHeader = null) {
         }
       });
   
-      alert("✅ Items assigned successfully!");
+      showToast("✅ Items assigned successfully!");
       updatePage(); // Refresh totals and page
     } catch (error) {
       console.error("❌ Error assigning items:", error);
-      alert("Error assigning items. Please try again.");
+      showToast("Error assigning items. Please try again.");
+    } finally {
+      hideLoader();
     }
   }
   
@@ -1007,6 +1077,7 @@ function addLineItemCard(item = {}, categoryHeader = null) {
   }
   
   async function clearVendorAssignment(itemId) {
+    showLoader(); // 👈 START
     try {
       const response = await fetch(`/api/clear-vendor-assignment/${itemId}`, {
         method: "PATCH",
@@ -1021,7 +1092,9 @@ function addLineItemCard(item = {}, categoryHeader = null) {
       console.log(`Vendor assignment cleared for item: ${itemId}`);
     } catch (error) {
       console.error("Error clearing vendor assignment:", error);
-      alert("Failed to unassign item. Please try again.");
+      showToast("Failed to unassign item. Please try again.");
+    } finally {
+      hideLoader();
     }
   }
   
@@ -1080,13 +1153,13 @@ async function saveEstimate() {
         currentCategory.items.push(item);
       } else {
         console.error("Item without a category:", item);
-        alert("Item found without a category. Please add a category before saving.");
+        showToast("Item found without a category. Please add a category before saving.");
       }
     }
   });
 
   const tax = parseFloat(document.getElementById("tax-input").value) || 0;
-
+  showLoader(); // 👈 START
   try {
     let existingEstimate = null;
     if (estimateId) {
@@ -1135,7 +1208,7 @@ async function saveEstimate() {
     console.log("🔍 Saving Estimate Data:", JSON.stringify(updatedEstimate, null, 2));
 
     const result = await saveResponse.json();
-    alert(`Estimate ${method === "POST" ? "created" : "updated"} successfully!`, result);
+    showToastt(`Estimate ${method === "POST" ? "created" : "updated"} successfully!`, result);
 
     if (!estimateId && result.estimate && result.estimate._id) {
       estimateId = result.estimate._id;
@@ -1146,7 +1219,9 @@ async function saveEstimate() {
     updatePage();
   } catch (error) {
     console.error("Error saving estimate:", error);
-    alert("Error saving the estimate. Please try again.");
+    showToastt("Error saving the estimate. Please try again.");
+  } finally {
+    hideLoader(); // 👈 END
   }
 }
 
@@ -1167,6 +1242,7 @@ function updatePage() {
 
 
   async function loadVendors() {
+    showLoader(); // 👈 START
     try {
       const response = await fetch("/api/vendors");
       if (!response.ok) throw new Error("Failed to fetch vendors.");
@@ -1189,14 +1265,17 @@ function updatePage() {
       }, {});
     } catch (error) {
       console.error("Error loading vendors:", error);
+    } finally {
+      hideLoader(); // 👈 END
     }
   }
 
 
    async function exportEstimateToExcel() {
+    showLoader(); // 👈 START
     try {
       if (!estimateId) {
-        alert("Please save the estimate before exporting.");
+        showToast("Please save the estimate before exporting.");
         return;
       }
   
@@ -1236,7 +1315,9 @@ function updatePage() {
       console.log("✅ Estimate exported to Excel");
     } catch (error) {
       console.error("❌ Error exporting to Excel:", error);
-      alert("Failed to export estimate to Excel.");
+      showToast("Failed to export estimate to Excel.");
+    } finally {
+      hideLoader(); // 👈 END
     }
   }
 
@@ -1254,11 +1335,20 @@ function updatePage() {
   }
 
 
-  // Load All Data
-  await loadProjectDetails();
-  await loadVendors();
-  await loadEstimateDetails();
-   await fetchLaborCostList();
+  showLoader(); // global loader ON
+
+  try {
+    await loadProjectDetails();
+    await loadVendors();
+    await loadEstimateDetails();
+    await fetchLaborCostList();
+  } catch (error) {
+    console.error("Initial load failed:", error);
+    showToast("⚠️ Failed to load some data");
+  } finally {
+    hideLoader(); // global loader OFF
+  }
+  
   
 
 
@@ -1273,4 +1363,4 @@ function updatePage() {
   document.getElementById("assign-items-button").addEventListener("click", assignItemsToVendor);
   document.getElementById("tax-input").addEventListener("input", updateSummary);
   document.getElementById("save-estimate").addEventListener("click", saveEstimate);
-});
+ });
