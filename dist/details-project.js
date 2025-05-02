@@ -16,14 +16,27 @@ function refreshProjectPage() {
   loadEstimates(projectId);
 }
 
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.style.display = 'block';
+  setTimeout(() => { toast.style.display = 'none'; }, 3000);
+}
 
+function showLoader() {
+  document.getElementById('loader').style.display = 'flex';
+}
+
+function hideLoader() {
+  document.getElementById('loader').style.display = 'none';
+}
 
 
 // Function to load project details and make it a clickable tag with a dropdown icon
 async function loadProjectDetails(id) {
   const projectDetailsContainer = document.getElementById('project-details');
   const projectTitle = document.getElementById('project-title');
-
+showLoader(); // 👈 START
   try {
     const response = await fetch(`/api/details/projects/${id}`);
     if (!response.ok) throw new Error('Failed to fetch project details');
@@ -73,6 +86,8 @@ async function loadProjectDetails(id) {
     projectTitle.textContent = 'Error Loading Project Details';
     projectDetailsContainer.innerHTML =
       '<p>An error occurred while loading project details.</p>';
+        } finally {
+      hideLoader(); // 👈 END  
   }
 }
 
@@ -175,7 +190,7 @@ async function deleteProject() {
   if (!confirm("Are you sure you want to delete this project? This action cannot be undone.")) {
     return;
   }
-
+ showLoader(); // 👈 START
   try {
     const response = await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
 
@@ -183,12 +198,14 @@ async function deleteProject() {
       throw new Error("Failed to delete project.");
     }
 
-    alert("✅ Project deleted successfully.");
+    showToast("✅ Project deleted successfully.");
     closeEditProjectModal();
     window.location.href = "/"; // Redirect to the main dashboard
   } catch (error) {
     console.error("❌ Error deleting project:", error);
-    alert("An error occurred while deleting the project. Please try again.");
+   showToast("An error occurred while deleting the project. Please try again.");
+      } finally {
+    hideLoader(); // 👈 END
   }
 }
 
@@ -329,10 +346,10 @@ async function sendInvite() {
   const projectId = urlParams.get("projectId") || pathArray[pathArray.indexOf("projects") + 1];
 
   if (emails.length === 0 || !role || !projectId) {
-    alert("All fields are required.");
+    showToast("All fields are required.");
     return;
   }
-
+showLoader(); // 👈 START
   try {
     const response = await fetch("/api/invite", {
       method: "POST",
@@ -349,11 +366,13 @@ async function sendInvite() {
     const message = result.invitedUsers
       .map((user) => `${user.email}: ${user.status}`)
       .join("\n");
-    alert(`Invitations sent successfully:\n${message}`);
+    showToast(`Invitations sent successfully:\n${message}`);
     closeInviteModal();
   } catch (error) {
     console.error("Error sending invites:", error);
-    alert(`Error sending invites: ${error.message}`);
+    showToast(`Error sending invites: ${error.message}`);
+      } finally {
+    hideLoader(); // 👈 END
   }
 }
 
@@ -368,6 +387,7 @@ function closeInviteModal() {
 
 // ✅ Assign Task and Send Email Notification
 async function assignTask(taskId, assigneeId, assignedToModel) {
+  showLoader(); // 👈 START
   try {
       if (!taskId) {
           console.error("❌ Task ID is undefined. Cannot assign task.");
@@ -387,13 +407,15 @@ async function assignTask(taskId, assigneeId, assignedToModel) {
           throw new Error(data.message || 'Failed to assign task.');
       }
 
-      console.log("✅ Task assigned successfully. Calling sendTaskAssignmentEmail...");
+      showToast("✅ Task assigned successfully. Calling sendTaskAssignmentEmail...");
 
       // ✅ Ensure Task ID is correctly passed
       await sendTaskAssignmentEmail(taskId);
 
   } catch (error) {
-      console.error("❌ Error assigning task:", error);
+      showToast("❌ Error assigning task:", error);
+        } finally {
+      hideLoader(); // 👈 END
   }
 }
 
@@ -403,6 +425,7 @@ async function assignTask(taskId, assigneeId, assignedToModel) {
 
 // ✅ Function to Send Email Notification
 async function sendTaskAssignmentEmail(taskId) {
+  showLoader(); // 👈 START
   try {
     if (!taskId) {
       console.error("❌ Task ID is missing. Cannot fetch task details.");
@@ -466,10 +489,12 @@ Please check your dashboard for more details.
     });
 
     if (!emailResponse.ok) throw new Error("Failed to send email notification.");
-    console.log("✅ Email notification sent successfully.");
+    showToast("✅ Email notification sent successfully.");
 
   } catch (error) {
-    console.error("❌ Error sending email notification:", error);
+    showToast("❌ Error sending email notification:", error);
+      } finally {
+    hideLoader(); // 👈 END
   }
 }
 
@@ -485,7 +510,7 @@ async function loadTasks(projectId) {
   const taskList = document.getElementById('task-list');
   const taskCountElement = document.getElementById('task-count');
   taskList.innerHTML = '<p>Loading tasks...</p>';
-
+showLoader(); // 👈 START
   try {
     const response = await fetch(`/api/tasks?projectId=${projectId}`);
     if (!response.ok) throw new Error('Failed to fetch tasks');
@@ -591,6 +616,8 @@ async function loadTasks(projectId) {
   } catch (error) {
     console.error(error);
     taskList.innerHTML = '<p>An error occurred while loading tasks.</p>';
+      } finally {
+    hideLoader(); // 👈 END
   }
 }
 
@@ -669,7 +696,7 @@ async function openAssignModal(taskId) {
   document.getElementById('assign-btn').onclick = async () => {
     const assigneeId = assigneeSelect.value;
     if (!assigneeId) {
-      alert('Please select an assignee.');
+      showToast('Please select an assignee.');
       return;
     }
 
@@ -691,7 +718,7 @@ async function openAssignModal(taskId) {
       }
     } catch (error) {
       console.error('Error assigning task:', error);
-      alert('An error occurred while assigning the task.');
+      showToast('An error occurred while assigning the task.');
     }
   };
 
@@ -751,7 +778,7 @@ function openDueDatePicker(taskId, buttonElement) {
         dueDateElement.textContent = `Due: ${dateStr}`;
       } catch (error) {
         console.error(error);
-        alert("Failed to update due date.");
+        showToast("Failed to update due date.");
       }
 
       // Remove the date picker after selection
@@ -783,7 +810,7 @@ function updateTaskDueDate(taskId, newDueDate) {
 async function openEditTaskModal(taskId) {
   if (!taskId) {
     console.error('Task ID is missing in openEditTaskModal.');
-    alert('Task ID is missing. Please try again.');
+   showToast('Task ID is missing. Please try again.');
     return;
   }
 
@@ -820,7 +847,7 @@ async function updateTask(taskId) {
   const dueDate = document.getElementById('edit-task-due-date').value;
   const completed = document.getElementById('edit-task-completed').checked;
   const assignedTo = document.getElementById('edit-task-assigned-to').value;
-
+showLoader(); // 👈 START
   try {
     const response = await fetch(`/api/task/${taskId}`, {
       method: 'PUT',
@@ -838,7 +865,9 @@ async function updateTask(taskId) {
     }
   } catch (error) {
     console.error('Error updating task:', error);
-    alert('An error occurred while updating the task.');
+    showToast('An error occurred while updating the task.');
+      } finally {
+    hideLoader(); // 👈 END
   }
 }
 
@@ -856,14 +885,14 @@ function closeEditTaskModal() {
 async function deleteTask(taskId) {
   if (!taskId) {
     console.error("❌ Error: Task ID is missing.");
-    alert("Task ID is missing. Please try again.");
+    showToast("Task ID is missing. Please try again.");
     return;
   }
 
   if (!confirm("Are you sure you want to delete this task?")) {
     return; // Exit if the user cancels the confirmation
   }
-
+showLoader(); // 👈 START
   try {
     // Perform the API call to delete the task
     const response = await fetch(`/api/task/${taskId}`, { method: "DELETE" });
@@ -891,7 +920,9 @@ async function deleteTask(taskId) {
     }
   } catch (error) {
     console.error("❌ Error deleting task:", error);
-    alert(`An error occurred while deleting the task: ${error.message}`);
+    showToast(`An error occurred while deleting the task: ${error.message}`);
+      } finally {
+    hideLoader(); // 👈 END
   }
 }
 
@@ -972,7 +1003,7 @@ async function deletePhoto(photoId, type) {
   const filename = photoId.includes('/uploads/') ? photoId.split('/uploads/')[1] : photoId;
 
   
-
+showLoader(); // 👈 START
   try {
     const response = await fetch(`/api/delete-photo/${filename}`, { method: 'DELETE' });
 
@@ -985,7 +1016,9 @@ async function deletePhoto(photoId, type) {
     displayTaskDetails(taskId);
   } catch (error) {
     console.error('Error deleting photo:', error);
-    alert('An error occurred while deleting the photo.');
+    showToast('An error occurred while deleting the photo.');
+      } finally {
+    hideLoader(); // 👈 END
   }
 }
 
@@ -996,14 +1029,14 @@ async function deletePhoto(photoId, type) {
 async function displayTaskDetails(taskId) {
   if (!taskId) {
     console.error("Task ID is undefined in displayTaskDetails");
-    alert("Task ID is missing. Please try again.");
+    showToast("Task ID is missing. Please try again.");
     return;
   }
 
   const taskDetailsContainer = document.getElementById("task-details");
   taskDetailsContainer.dataset.taskId = taskId; // Store the task ID
   taskDetailsContainer.style.display = "block";
-
+showLoader(); // 👈 START
   try {
     // Fetch task details
     const response = await fetch(`/api/task/${taskId}`);
@@ -1068,6 +1101,8 @@ async function displayTaskDetails(taskId) {
         loadTasks(projectId);
       } catch (error) {
         console.error("Error updating task status:", error);
+     } finally {
+      hideLoader(); // 👈 END
       }
     };
 
@@ -1085,7 +1120,7 @@ async function displayTaskDetails(taskId) {
       if (commentText) {
         addComment(taskId, commentText);
       } else {
-        alert("Please write a comment before submitting.");
+        showToast("Please write a comment before submitting.");
       }
     };
   } catch (error) {
@@ -1103,7 +1138,7 @@ async function addComment(taskId, commentText) {
   const managerId = localStorage.getItem('managerId'); // Retrieve the ID of the logged-in user
 
   if (!managerName || !managerId) {
-    alert('Manager information is not available. Please log in again.');
+   showToast('Manager information is not available. Please log in again.');
     return;
   }
 
@@ -1139,6 +1174,7 @@ async function addComment(taskId, commentText) {
 
 // Function to load comments with manager's name and timestamp
 async function loadComments(taskId) {
+  showLoader(); // 👈 START
   try {
     const response = await fetch(`/api/comments?taskId=${taskId}`);
     if (response.ok) {
@@ -1165,6 +1201,8 @@ async function loadComments(taskId) {
   } catch (error) {
     console.error("Error loading comments:", error);
     document.getElementById("comments-list").innerHTML = "<p>Error loading comments.</p>";
+      } finally {
+    hideLoader(); // 👈 END
   }
 }
 
@@ -1209,7 +1247,7 @@ function populatePhotos(photos = [], type) {
 function displayPhotoModal(photoUrl) {
   if (!photoUrl) {
     console.error('Photo URL is missing.');
-    alert('Error: Unable to display the photo.');
+    showToast('Error: Unable to display the photo.');
     return;
   }
 
@@ -1240,7 +1278,7 @@ async function handlePhotoUpload(event, type) {
   const taskId = document.getElementById('task-details').dataset.taskId;
 
   if (!taskId) {
-    alert('Task ID is missing. Cannot upload photos.');
+    showToast('Task ID is missing. Cannot upload photos.');
     return;
   }
 
@@ -1253,7 +1291,7 @@ async function handlePhotoUpload(event, type) {
     formData.append('photos', file);
     formData.append('type', type);
     formData.append('taskId', taskId);
-
+ showLoader(); // 👈 START
     try {
       const response = await fetch('/api/upload-photos', {
         method: 'POST',
@@ -1268,6 +1306,8 @@ async function handlePhotoUpload(event, type) {
       }
     } catch (error) {
       console.error('Error uploading photo:', error);
+          } finally {
+      hideLoader(); // 👈 END
     }
   }
 
@@ -1483,7 +1523,7 @@ async function loadSidebarProjects() {
 async function loadEstimates(projectId) {
   const estimatesList = document.getElementById("estimates-list");
   const estimatesCount = document.getElementById("estimates-count");
-
+showLoader(); // 👈 START
   try {
     const response = await fetch(`/api/estimates?projectId=${projectId}`);
     if (!response.ok) throw new Error("Failed to fetch estimates");
@@ -1516,6 +1556,8 @@ async function loadEstimates(projectId) {
   } catch (error) {
     console.error("Error loading estimates:", error);
     estimatesList.innerHTML = "<p>An error occurred while loading estimates.</p>";
+      } finally {
+    hideLoader(); // 👈 END
   }
 }
 
@@ -1553,19 +1595,21 @@ function viewEstimate(estimateId) {
 // Function to delete an estimate
 async function deleteEstimate(estimateId) {
   if (!confirm("Are you sure you want to delete this estimate?")) return;
-
+showLoader(); // 👈 START
   try {
     const response = await fetch(`/api/estimates/${estimateId}`, { method: "DELETE" });
 
     if (!response.ok) throw new Error("Failed to delete estimate");
 
-    alert("Estimate deleted successfully!");
+    showToast("Estimate deleted successfully!");
 
     const projectId = getProjectId(); // Use the helper function
     loadEstimates(projectId); // Refresh the estimates after deletion
   } catch (error) {
     console.error("Error deleting estimate:", error);
-    alert("Failed to delete estimate. Please try again.");
+     showToast("Failed to delete estimate. Please try again.");
+     } finally {
+    hideLoader(); // 👈 END
   }
 }
 
@@ -1591,7 +1635,7 @@ async function importEstimate() {
   fileInput.addEventListener("change", async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-
+  showLoader(); // 👈 START
     try {
       const reader = new FileReader();
       reader.onload = async function (e) {
@@ -1615,7 +1659,7 @@ async function importEstimate() {
         );
         
         if (missingFields.length) {
-          alert(`Invalid Excel file. Missing required fields: ${missingFields.join(", ")}`);
+           showToast(`Invalid Excel file. Missing required fields: ${missingFields.join(", ")}`);
           return;
         }
         
@@ -1626,7 +1670,7 @@ async function importEstimate() {
         // ✅ Get the current project ID
         const projectId = getProjectId();
         if (!projectId) {
-          alert("Error: No project ID found.");
+          showToast("Error: No project ID found.");
           return;
         }
 
@@ -1650,7 +1694,7 @@ async function importEstimate() {
         const result = await response.json();
         console.log("✅ Created New Estimate:", result);
 
-        alert("Estimate imported and created successfully!");
+         showToast("Estimate imported and created successfully!");
 
         // ✅ Update the UI with the new estimate
         loadEstimates(projectId);
@@ -1665,7 +1709,9 @@ async function importEstimate() {
       reader.readAsArrayBuffer(file);
     } catch (error) {
       console.error("❌ Error importing estimate:", error);
-      alert("Error importing estimate. Please check the file and try again.");
+       showToast("Error importing estimate. Please check the file and try again.");
+          } finally {
+      hideLoader(); // 👈 END
     }
   });
 
@@ -1802,7 +1848,7 @@ function downloadTemplate() {
       
       const formData = new FormData();
       Array.from(files).forEach(file => formData.append('files', file));
-      
+       showLoader(); // 👈 START
       try {
         const response = await fetch(`/api/projects/${projectId}/files`, {
           method: 'POST',
@@ -1816,6 +1862,8 @@ function downloadTemplate() {
       } catch (error) {
         console.error('Error uploading files:', error);
         alert('Failed to upload files. Please check the console for more details.');
+            } finally {
+        hideLoader(); // 👈 END
       }
     }
   
@@ -1887,6 +1935,7 @@ function displayFiles(files) {
   
     // Delete File Function
     async function deleteFile(fileId, fileElement) {
+      showLoader(); // 👈 START
       try {
         const response = await fetch(`/api/projects/${projectId}/files/${fileId}`, {
           method: 'DELETE'
@@ -1897,6 +1946,8 @@ function displayFiles(files) {
         fileElement.remove();
       } catch (error) {
         console.error('Error deleting file:', error);
+              } finally {
+        hideLoader(); // 👈 END
       }
     }
   
@@ -2063,7 +2114,7 @@ async function fetchVendors() {
 async function removeVendor(vendorId) {
   try {
     await fetch(`/api/projects/${getProjectId()}/vendors/${vendorId}`, { method: "DELETE" });
-    alert("Vendor removed!");
+    showToast("Vendor removed!");
     fetchVendors();
   } catch (error) {
     console.error("Error removing vendor:", error);
@@ -2093,7 +2144,7 @@ async function updateVendor(vendorId, name, email, phone) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, phone }),
     });
-    alert("Vendor updated!");
+    showToast("Vendor updated!");
     fetchVendors();
   } catch (error) {
     console.error("Error updating vendor:", error);
