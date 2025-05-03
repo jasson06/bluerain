@@ -6,6 +6,11 @@
   <title>Construction Project Schedule</title>
   <!-- Include Chart.js for Dashboard Charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- ✅ Use this for version 0.6.1 (stable) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.css">
+<script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.js"></script>
+  
   <style>
     /* Top Bar with Header and Action Buttons */
     .top-bar {
@@ -365,246 +370,7 @@
       border-radius: 3px;
       padding: 2px 4px;
     }
-    
-/* Gantt Chart Container */ 
-.gantt-chart-container {
-  width: 20%; 
-  margin: 30px auto;
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  display: flex;
-  flex-direction: column;
-}
 
-/* Gantt Timeline Header */
-.gantt-timeline-header {
-  display: flex;
-  border-bottom: 2px solid #e0e0e0;
-  margin-bottom: 12px;
-  font-weight: 600;
-  background-color: #fafafa;
-  border-radius: 8px 8px 0 0;
-  overflow: visible;
-}
-
-.gantt-date-label {
-  min-width: 100px;
-  text-align: center;
-  font-size: 0.75rem;
-  padding: 6px 4px;
-  border-right: 1px solid #ececec;
-  color: #666;
-  white-space: nowrap;
-}
-
-.gantt-date-label.weekend {
-  background: #ffeef0;
-  color: #b91c1c;
-}
-
-.gantt-date-label.today {
-  background: #e0f2fe;
-  border-bottom: 2px solid #38bdf8;
-  font-weight: bold;
-}
-
-/* Task Row */
-.gantt-task-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-/* Task Label */
-.gantt-task-label {
-  width: 200px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  padding-right: 12px;
-  color: #333;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Bar Container Track */
-.gantt-bar-container {
-  position: relative;
-  flex: 1;
-  height: 40px;
-  background-color: #f5f5f5;
-  border-radius: 6px;
-  overflow: visible;
-}
-
-/* Task Bar */
-.gantt-task-bar {
-  position: absolute;
-  top: 9px;
-  height: 20px;
-  border-radius: 5px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: width 0.3s ease, left 0.3s ease;
-  min-width: 4px;
-}
-
-/* Status Colors */
-.gantt-task-bar.in-progress {
-  background-color: #f0ad4e;
-}
-
-.gantt-task-bar.completed {
-  background-color: #28a745;
-}
-
-.gantt-task-bar.overdue {
-  background-color: #dc3545;
-}
-
-/* Connector Line */
-.gantt-connector-line {
-  position: absolute;
-  top: 30px;
-  width: 2px;
-  height: 22px;
-  background-color: #666;
-  z-index: 5;
-  transform: translateX(-50%);
-}
-
-.gantt-connector-line::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  left: 50%;
-  transform: translateX(-50%) rotate(45deg);
-  width: 8px;
-  height: 8px;
-  border-right: 2px solid #666;
-  border-bottom: 2px solid #666;
-}
-
-/* Tooltip on Hover */
-.gantt-task-bar:hover::after {
-  content: attr(title);
-  position: absolute;
-  top: -35px;
-  left: 0;
-  background: rgba(0, 0, 0, 0.85);
-  color: #fff;
-  font-size: 0.75rem;
-  padding: 5px 10px;
-  border-radius: 4px;
-  white-space: pre;
-  z-index: 10;
-}
-
-/* Scrollbar Styling */
-.gantt-chart-container::-webkit-scrollbar {
-  height: 6px;
-}
-.gantt-chart-container::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 3px;
-}
-
-/* Responsive Tweaks */
-@media screen and (max-width: 768px) {
-  .gantt-task-label {
-    width: 120px;
-    font-size: 0.75rem;
-  }
-  .gantt-date-label {
-    font-size: 0.7rem;
-    min-width: 80px;
-  }
-  .gantt-task-bar {
-    height: 18px;
-    top: 10px;
-  }
-
-}
-
-/* Responsive Tweaks */
-@media screen and (max-width: 1200px) {
-  .gantt-chart-container {
-    width: 17%;
-  }
-}
-/* Responsive Tweaks */
-@media screen and (max-width: 1135px) {
-  .gantt-chart-container {
-    width: 16%;
-  }
-}
-/* Responsive Tweaks */
-@media screen and (max-width: 1100px) {
-  .gantt-chart-container {
-    width: 15%;
-  }
-}
-/* Responsive Tweaks */
-@media screen and (max-width: 1000px) {
-  .gantt-chart-container{
-    width: 14%;
-  }
-}
-
-/* Responsive Tweaks */
-@media screen and (max-width: 900px) {
-  .gantt-chart-container{
-    width: 13%;
-  }
-}
-/* Responsive Tweaks */
-@media screen and (max-width: 800px) {
-  .gantt-chart-container{
-    width: 11%;
-  }
-}
-
-/* Responsive Tweaks */
-@media screen and (max-width: 675px) {
-  .gantt-chart-container{
-    width: 10%;
-  }
-}
-/* Responsive Tweaks */
-@media screen and (max-width: 580px) {
-  .gantt-chart-container{
-    width: 9%;
-  }
-}
-/* Responsive Tweaks */
-@media screen and (max-width: 500px) {
-  .gantt-chart-container{
-    width: 8%;
-  }
-}
-
-/* Responsive Tweaks */
-@media screen and (max-width: 470px) {
-  .gantt-chart-container{
-    width: 7%;
-  }
-}
-
-/* Responsive Tweaks */
-@media screen and (max-width: 400px) {
-  .gantt-chart-container{
-    width: 6%;
-  }
-}
-/* Responsive Tweaks */
-@media screen and (max-width: 370px) {
-  .gantt-chart-container{
-    width: 5%;
-  }
-}
     
     /* Dashboard Canvas Sizing */
     #statusChart, #timelineChart {
@@ -845,6 +611,61 @@ canvas {
         max-width: 100%;
       }
     }
+
+
+/* Wrapper for the entire Gantt view */
+#ganttView {
+  width: 100%;
+  min-height: 600px;
+  max-height: 1000px;
+  padding: 10px;
+  overflow: auto;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+/* The actual Gantt chart container */
+#frappeGanttChart {
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+/* Ensure the SVG inside can scroll horizontally if needed */
+.gantt-container,
+.gantt-target {
+  min-width: 1000px;
+}
+
+
+
+.gantt .bar[class*="category-"] {
+  stroke: #1f2937 !important;
+  rx: 4;
+  ry: 4;
+}
+
+.gantt .bar-wrapper.category-bathroom .bar { fill: #f97316 !important; }
+.gantt .bar-wrapper.category-bedroom-1 .bar,
+.gantt .bar-wrapper.category-bedroom-2 .bar { fill: #8b5cf6 !important; }
+.gantt .bar-wrapper.category-closet .bar { fill: #eab308 !important; }
+.gantt .bar-wrapper.category-dining-room .bar { fill: #ec4899 !important; }
+.gantt .bar-wrapper.category-exterior-overall .bar { fill: #3b82f6 !important; }
+.gantt .bar-wrapper.category-general .bar { fill: #6b7280 !important; }
+.gantt .bar-wrapper.category-interior-overall .bar { fill: #a855f7 !important; }
+.gantt .bar-wrapper.category-kitchen .bar { fill: #10b981 !important; }
+.gantt .bar-wrapper.category-laundry .bar { fill: #0ea5e9 !important; }
+.gantt .bar-wrapper.category-living-room .bar { fill: #facc15 !important; }
+.gantt .bar-wrapper.category-default .bar { fill: #9ca3af !important; }
+
+
+/* --- Labels and progress --- */
+.gantt .bar-progress { fill: rgba(255,255,255,0.3) !important; }
+.gantt .bar-label { fill: white !important; font-weight: bold; font-size: 12px; }
+
+
+    
   </style>
 </head>
 <body>
@@ -941,8 +762,17 @@ canvas {
   </div>
   
   <!-- Gantt Chart View -->
-  <div id="ganttView" class="view" style="display: none;">
-    <!-- Gantt chart rendered by JavaScript -->
+  <div id="ganttView" class="gantt-chart-container">
+    <div style="margin-bottom: 10px;">
+      <label for="ganttMode"><strong>View Mode:</strong></label>
+      <select id="ganttMode">
+        <option value="Day">Day</option>
+        <option value="Week">Week</option>
+        <option value="Month">Month</option>
+      </select>
+    </div>
+    <div id="frappeGanttChart" style="min-height: 600px; background: #fff;"></div>
+
   </div>
   
   <!-- Modal for Editing/View Details -->
@@ -1426,117 +1256,102 @@ function populateEstimateDropdown(estimates) {
 
 
       
- function getDateWithoutTime(date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      let ganttInstance = null;
+let ganttViewMode = 'Day'; // Default view mode
+
+// ✅ Load Gantt Library
+async function loadGanttLibrary() {
+  return new Promise((resolve, reject) => {
+    if (window.Gantt) return resolve(); // Already loaded
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.js";
+    script.onload = () => resolve();
+    script.onerror = () => reject("❌ Failed to load Frappe Gantt.");
+    document.head.appendChild(script);
+  });
 }
 
-function renderGanttChartView(lineItems) {
-  const tasks = getAllTasks(lineItems).filter(t => t.startDate && t.endDate);
-  tasks.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+// ✅ Call this function after DOM is ready or data is loaded
+function renderGanttChartView(lineItems, viewMode = "Day") {
+  const containerId = "frappeGanttChart";
+  const container = document.getElementById(containerId);
 
-  const ganttContainer = document.createElement("div");
-  ganttContainer.className = "gantt-chart-container";
-
-  if (tasks.length === 0) {
-    ganttContainer.textContent = "No tasks available";
-    document.getElementById("ganttView").innerHTML = "";
-    document.getElementById("ganttView").appendChild(ganttContainer);
+  if (!container) {
+    console.error("⚠️ Gantt container not found:", containerId);
     return;
   }
 
-  const oneDay = 1000 * 3600 * 24;
-  const startTimes = tasks.map(t => getDateWithoutTime(new Date(t.startDate)).getTime());
-  const endTimes = tasks.map(t => getDateWithoutTime(new Date(t.endDate)).getTime());
-  const minTime = Math.min(...startTimes);
-  const maxTime = Math.max(...endTimes);
-  const totalDuration = Math.floor((maxTime - minTime) / oneDay) + 1;
-  const dayWidth = 100; // px per day
+  const allItems = lineItems.flatMap(cat =>
+    Array.isArray(cat.items)
+      ? cat.items.map(item => ({ ...item, category: cat.category }))
+      : []
+  );
 
-  // Timeline header
-  const timelineHeader = document.createElement("div");
-  timelineHeader.className = "gantt-timeline-header";
-  timelineHeader.style.minWidth = `${totalDuration * dayWidth}px`;
+  const tasks = allItems
+    .filter(item => item.startDate && item.endDate)
+    .map((item, index) => {
+      const start = formatDate(item.startDate);
+      const end = formatDate(item.endDate);
 
-  for (let i = 0; i < totalDuration; i++) {
-    const currentDate = new Date(minTime + i * oneDay);
-    const dateStr = currentDate.toLocaleDateString("en-CA");
+      if (!start || !end) {
+        console.warn("⛔ Skipping item due to invalid dates:", item.name, item.startDate, item.endDate);
+        return null;
+      }
 
-    const dateLabel = document.createElement("div");
-    dateLabel.className = "gantt-date-label";
-    dateLabel.textContent = dateStr;
+      const categoryClass = item.category
+        ? `category-${item.category.trim().toLowerCase().replace(/\s+/g, "-")}`
+        : "category-default";
 
-    const day = currentDate.getDay();
-    if (day === 0 || day === 6) dateLabel.classList.add("weekend");
-    if (dateStr === new Date().toLocaleDateString("en-CA")) dateLabel.classList.add("today");
+      return {
+        id: item._id || `task-${index + 1}`,
+        name: `${item.category}: ${item.name}`,
+        start,
+        end,
+        progress: item.progress || 0,
+        dependencies: item.dependencies || "",
+        custom_class: categoryClass
+      };
+    })
+    .filter(Boolean);
 
-    timelineHeader.appendChild(dateLabel);
+  if (tasks.length === 0) {
+    container.innerHTML = `<p style="padding: 20px;">No tasks available to display</p>`;
+    return;
   }
 
-  ganttContainer.appendChild(timelineHeader);
+  container.innerHTML = "";
 
-  tasks.forEach((task, index) => {
-    const taskRow = document.createElement("div");
-    taskRow.className = "gantt-task-row";
+  setTimeout(() => {
+    const gantt = new Gantt(`#${containerId}`, tasks, {
+      view_mode: viewMode,
+      date_format: "YYYY-MM-DD",
+      custom_popup_html: task => `
+        <div class="gantt-popup">
+          <strong>${task.name}</strong><br>
+          Start: ${task._start.toDateString()}<br>
+          End: ${task._end.toDateString()}<br>
+          Progress: ${task.progress}%
+        </div>
+      `,
+      on_date_change: (task, newStart, newEnd) => {
+        updateLineItem(task.id, {
+          startDate: newStart.toISOString(),
+          endDate: newEnd.toISOString()
+        });
+        alert(`📅 "${task.name}" date updated`, "success");
+      }
+    });
 
-    let icon = "📌";
-    if (task.status === "completed") icon = "✅";
-    else if (task.status === "in-progress") icon = "🔧";
-    else if (new Date(task.endDate) < new Date()) icon = "⛔";
-
-    const taskLabel = document.createElement("div");
-    taskLabel.className = "gantt-task-label";
-    taskLabel.textContent = `${icon} ${task.name}`;
-
-    const barContainer = document.createElement("div");
-    barContainer.className = "gantt-bar-container";
-    barContainer.style.width = `${totalDuration * dayWidth}px`;
-
-    const taskStart = getDateWithoutTime(new Date(task.startDate));
-    const taskEnd = getDateWithoutTime(new Date(task.endDate));
-    const minStart = getDateWithoutTime(new Date(minTime));
-
-    const offsetDays = Math.floor((taskStart - minStart) / oneDay);
-    const durationDays = Math.floor((taskEnd - taskStart) / oneDay) + 1;
-
-    const leftPx = offsetDays * dayWidth;
-    const widthPx = durationDays * dayWidth;
-
-    const taskBar = document.createElement("div");
-    taskBar.className = "gantt-task-bar";
-    taskBar.style.left = `${leftPx}px`;
-    taskBar.style.width = `${widthPx}px`;
-
-    taskBar.title = `Start: ${taskStart.toLocaleDateString("en-CA")}\nEnd: ${taskEnd.toLocaleDateString("en-CA")}\nStatus: ${task.status}`;
-
-    if (task.status === "completed") taskBar.classList.add("completed");
-    else if (task.status === "in-progress") taskBar.classList.add("in-progress");
-    else taskBar.classList.add("overdue");
-
-    barContainer.appendChild(taskBar);
-
-    // Connector line
-    if (index < tasks.length - 1) {
-      const nextTask = tasks[index + 1];
-      const nextStart = getDateWithoutTime(new Date(nextTask.startDate));
-      const nextOffsetDays = Math.floor((nextStart - minStart) / oneDay);
-      const nextLeftPx = nextOffsetDays * dayWidth;
-
-      const connector = document.createElement("div");
-      connector.className = "gantt-connector-line";
-      connector.style.left = `${nextLeftPx}px`;
-      barContainer.appendChild(connector);
-    }
-
-    taskRow.appendChild(taskLabel);
-    taskRow.appendChild(barContainer);
-    ganttContainer.appendChild(taskRow);
-  });
-
-  const ganttView = document.getElementById("ganttView");
-  ganttView.innerHTML = "";
-  ganttView.appendChild(ganttContainer);
+    console.log(`✅ Gantt rendered with ${tasks.length} tasks`);
+  }, 20);
 }
 
+
+// ✅ Date formatter
+function formatDate(date) {
+  const d = new Date(date);
+  return isNaN(d) ? "" : d.toISOString().split("T")[0];
+}
 
 
 
@@ -1710,7 +1525,7 @@ function renderGanttChartView(lineItems) {
     } else if (view === "calendarView") {
       renderCalendarView(selectedLineItems);
     } else if (view === "ganttView") {
-      renderGanttChartView(selectedLineItems);
+      renderGanttChartView(selectedLineItems, ganttViewMode);
     } else if (view === "dashboardView") {
       setTimeout(() => {
         renderDashboardView(selectedLineItems);
@@ -1736,6 +1551,13 @@ document.getElementById("prevPageBtn").addEventListener("click", function() {
     renderTable();
   }
 });
+
+
+      document.getElementById("ganttMode").addEventListener("change", function () {
+  ganttViewMode = this.value;
+  renderGanttChartView(selectedLineItems, ganttViewMode);
+});
+
 
       
       /* --------------------- Filter Listeners --------------------- */
