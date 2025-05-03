@@ -964,14 +964,17 @@ function getSelectedProjectAddress() {
 }
 
 
-function openInvoicePreview() {
+function openInvoicePreview(savedInvoice) {
   const projectAddress = getSelectedProjectAddress();
   const manualServiceAddress = document.getElementById('recipientAddress')?.value || 'N/A';
   const finalServiceAddress = projectAddress === 'N/A' ? manualServiceAddress : projectAddress;
 
   const projectName = document.getElementById('projectSelect').selectedOptions[0]?.text || 'Project Name';
   const email = document.getElementById('invoiceEmail').value || 'example@email.com';
-  const invoiceNumber = document.getElementById('invoiceNumber')?.value || 'N/A';
+  const invoiceNumber = savedInvoice?.invoiceNumber || 'N/A';
+  const invoiceDate = savedInvoice?.date
+    ? new Date(savedInvoice.date).toLocaleDateString()
+    : 'N/A';
 
   const total = lineItems.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
   const tax = 0;
@@ -985,6 +988,7 @@ function openInvoicePreview() {
       <p><strong>Project Name:</strong> ${projectName}</p>
       <p><strong>Service Address:</strong> ${finalServiceAddress}</p>
       <p><strong>Invoice #:</strong> ${invoiceNumber}</p>
+      <p><strong>Date:</strong> ${invoiceDate}</p>
       <hr style="margin: 20px 0; border-color: #ccc;" />
 
       <h3>Line Items</h3>
@@ -1225,7 +1229,7 @@ async function submitInvoice() {
     console.log("✅ Saved Invoice:", savedInvoice);
 
     // ✅ 2. Render preview content so it's visible and populated
-    openInvoicePreview(); // Populate #invoicePreviewContent
+    openInvoicePreview(savedInvoice); // Pass actual saved data
     await new Promise(resolve => setTimeout(resolve, 400)); // Wait for layout/paint
 
     const invoiceModal = document.getElementById('invoiceModal');
