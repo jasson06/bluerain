@@ -366,16 +366,18 @@
       padding: 2px 4px;
     }
     
-   /* Gantt Chart Container */
+/* Gantt Chart Container */ 
 .gantt-chart-container {
-  width: 90%;
-  max-width: 1200px;
+  width: 20%; 
   margin: 30px auto;
   background-color: #fff;
   padding: 20px;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Gantt Timeline Header */
@@ -390,55 +392,67 @@
 }
 
 .gantt-date-label {
-  flex: 1;
-  font-size: 0.75rem;
+  min-width: 100px;
   text-align: center;
-  padding: 6px;
+  font-size: 0.75rem;
+  padding: 6px 4px;
   border-right: 1px solid #ececec;
   color: #666;
   white-space: nowrap;
 }
 
-/* Gantt Row for Each Task */
+.gantt-date-label.weekend {
+  background: #ffeef0;
+  color: #b91c1c;
+}
+
+.gantt-date-label.today {
+  background: #e0f2fe;
+  border-bottom: 2px solid #38bdf8;
+  font-weight: bold;
+}
+
+/* Task Row */
 .gantt-task-row {
   display: flex;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
-/* Task Name Label */
+/* Task Label */
 .gantt-task-label {
-  width: 180px;
+  width: 200px;
   font-size: 0.85rem;
-  padding-right: 10px;
-  color: #333;
   font-weight: 500;
+  padding-right: 12px;
+  color: #333;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Task Bar Background Track */
+/* Bar Container Track */
 .gantt-bar-container {
   position: relative;
   flex: 1;
-  height: 50px; /* increased height for visual spacing */
-  background-color: #f4f4f4;
+  height: 40px;
+  background-color: #f5f5f5;
   border-radius: 6px;
-  overflow: visible; /* important */
+  overflow: visible;
 }
 
-/* Task Bar Itself */
+/* Task Bar */
 .gantt-task-bar {
   position: absolute;
-  height: 22px;
-  top: 8px;
-  border-radius: 6px;
+  top: 9px;
+  height: 20px;
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: width 0.3s ease, left 0.3s ease;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  min-width: 4px;
 }
 
-/* Task Bar Status Colors */
+/* Status Colors */
 .gantt-task-bar.in-progress {
   background-color: #f0ad4e;
 }
@@ -448,23 +462,15 @@
 }
 
 .gantt-task-bar.overdue {
-  background-color: #d9534f;
+  background-color: #dc3545;
 }
 
-
-
-
-.gantt-date-label.today {
-  background-color: #e3f2fd;
-  color: #007bff;
-  font-weight: bold;
-}
-
+/* Connector Line */
 .gantt-connector-line {
   position: absolute;
-  top: 32px;
+  top: 30px;
   width: 2px;
-  height: 24px;
+  height: 22px;
   background-color: #666;
   z-index: 5;
   transform: translateX(-50%);
@@ -482,15 +488,13 @@
   border-bottom: 2px solid #666;
 }
 
-
-
-
+/* Tooltip on Hover */
 .gantt-task-bar:hover::after {
   content: attr(title);
   position: absolute;
   top: -35px;
   left: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.85);
   color: #fff;
   font-size: 0.75rem;
   padding: 5px 10px;
@@ -499,28 +503,107 @@
   z-index: 10;
 }
 
-/* Mobile Adjustments */
-@media screen and (max-width: 480px) {
+/* Scrollbar Styling */
+.gantt-chart-container::-webkit-scrollbar {
+  height: 6px;
+}
+.gantt-chart-container::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+/* Responsive Tweaks */
+@media screen and (max-width: 768px) {
   .gantt-task-label {
+    width: 120px;
     font-size: 0.75rem;
-    width: 100px;
   }
   .gantt-date-label {
-    font-size: 0.65rem;
-    padding: 4px;
-  }
-  .gantt-bar-container {
-    height: 50px;
+    font-size: 0.7rem;
+    min-width: 80px;
   }
   .gantt-task-bar {
     height: 18px;
+    top: 10px;
   }
-  .gantt-chart-container {
-  width: 40%;
-  max-width: 950px;
- 
 
 }
+
+/* Responsive Tweaks */
+@media screen and (max-width: 1200px) {
+  .gantt-chart-container {
+    width: 17%;
+  }
+}
+/* Responsive Tweaks */
+@media screen and (max-width: 1135px) {
+  .gantt-chart-container {
+    width: 16%;
+  }
+}
+/* Responsive Tweaks */
+@media screen and (max-width: 1100px) {
+  .gantt-chart-container {
+    width: 15%;
+  }
+}
+/* Responsive Tweaks */
+@media screen and (max-width: 1000px) {
+  .gantt-chart-container{
+    width: 14%;
+  }
+}
+
+/* Responsive Tweaks */
+@media screen and (max-width: 900px) {
+  .gantt-chart-container{
+    width: 13%;
+  }
+}
+/* Responsive Tweaks */
+@media screen and (max-width: 800px) {
+  .gantt-chart-container{
+    width: 11%;
+  }
+}
+
+/* Responsive Tweaks */
+@media screen and (max-width: 675px) {
+  .gantt-chart-container{
+    width: 10%;
+  }
+}
+/* Responsive Tweaks */
+@media screen and (max-width: 580px) {
+  .gantt-chart-container{
+    width: 9%;
+  }
+}
+/* Responsive Tweaks */
+@media screen and (max-width: 500px) {
+  .gantt-chart-container{
+    width: 8%;
+  }
+}
+
+/* Responsive Tweaks */
+@media screen and (max-width: 470px) {
+  .gantt-chart-container{
+    width: 7%;
+  }
+}
+
+/* Responsive Tweaks */
+@media screen and (max-width: 400px) {
+  .gantt-chart-container{
+    width: 6%;
+  }
+}
+/* Responsive Tweaks */
+@media screen and (max-width: 370px) {
+  .gantt-chart-container{
+    width: 5%;
+  }
 }
     
     /* Dashboard Canvas Sizing */
@@ -1343,9 +1426,12 @@ function populateEstimateDropdown(estimates) {
 
 
       
-      function renderGanttChartView(lineItems) {
-  const tasks = getAllTasks(lineItems).filter(t => t.startDate && t.endDate);
+ function getDateWithoutTime(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
 
+function renderGanttChartView(lineItems) {
+  const tasks = getAllTasks(lineItems).filter(t => t.startDate && t.endDate);
   tasks.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
   const ganttContainer = document.createElement("div");
@@ -1359,27 +1445,29 @@ function populateEstimateDropdown(estimates) {
   }
 
   const oneDay = 1000 * 3600 * 24;
-  const startTimes = tasks.map(t => new Date(t.startDate).getTime());
-  const endTimes = tasks.map(t => new Date(t.endDate).getTime());
-  const minTime = Math.min(...startTimes) - oneDay;
-  const maxTime = Math.max(...endTimes) + oneDay;
-  const totalDuration = (maxTime - minTime) / oneDay;
+  const startTimes = tasks.map(t => getDateWithoutTime(new Date(t.startDate)).getTime());
+  const endTimes = tasks.map(t => getDateWithoutTime(new Date(t.endDate)).getTime());
+  const minTime = Math.min(...startTimes);
+  const maxTime = Math.max(...endTimes);
+  const totalDuration = Math.floor((maxTime - minTime) / oneDay) + 1;
+  const dayWidth = 100; // px per day
 
-  // Header
+  // Timeline header
   const timelineHeader = document.createElement("div");
   timelineHeader.className = "gantt-timeline-header";
+  timelineHeader.style.minWidth = `${totalDuration * dayWidth}px`;
 
-  for (let i = 0; i <= totalDuration; i++) {
+  for (let i = 0; i < totalDuration; i++) {
     const currentDate = new Date(minTime + i * oneDay);
-    const dateStr = currentDate.toISOString().split("T")[0];
+    const dateStr = currentDate.toLocaleDateString("en-CA");
 
     const dateLabel = document.createElement("div");
     dateLabel.className = "gantt-date-label";
     dateLabel.textContent = dateStr;
 
-    if (dateStr === new Date().toISOString().split("T")[0]) {
-      dateLabel.classList.add("today");
-    }
+    const day = currentDate.getDay();
+    if (day === 0 || day === 6) dateLabel.classList.add("weekend");
+    if (dateStr === new Date().toLocaleDateString("en-CA")) dateLabel.classList.add("today");
 
     timelineHeader.appendChild(dateLabel);
   }
@@ -1390,7 +1478,6 @@ function populateEstimateDropdown(estimates) {
     const taskRow = document.createElement("div");
     taskRow.className = "gantt-task-row";
 
-    // Label with status icon
     let icon = "📌";
     if (task.status === "completed") icon = "✅";
     else if (task.status === "in-progress") icon = "🔧";
@@ -1402,19 +1489,24 @@ function populateEstimateDropdown(estimates) {
 
     const barContainer = document.createElement("div");
     barContainer.className = "gantt-bar-container";
+    barContainer.style.width = `${totalDuration * dayWidth}px`;
 
-    const taskStart = new Date(task.startDate);
-    const taskEnd = new Date(task.endDate);
-    const offsetDays = (taskStart.getTime() - minTime) / oneDay;
-    const durationDays = (taskEnd.getTime() - taskStart.getTime()) / oneDay;
-    const leftPercent = (offsetDays / totalDuration) * 100;
-    const widthPercent = (durationDays / totalDuration) * 100;
+    const taskStart = getDateWithoutTime(new Date(task.startDate));
+    const taskEnd = getDateWithoutTime(new Date(task.endDate));
+    const minStart = getDateWithoutTime(new Date(minTime));
+
+    const offsetDays = Math.floor((taskStart - minStart) / oneDay);
+    const durationDays = Math.floor((taskEnd - taskStart) / oneDay) + 1;
+
+    const leftPx = offsetDays * dayWidth;
+    const widthPx = durationDays * dayWidth;
 
     const taskBar = document.createElement("div");
     taskBar.className = "gantt-task-bar";
-    taskBar.style.left = `${leftPercent}%`;
-    taskBar.style.width = `${widthPercent}%`;
-    taskBar.title = `Start: ${task.startDate}\nEnd: ${task.endDate}\nStatus: ${task.status}`;
+    taskBar.style.left = `${leftPx}px`;
+    taskBar.style.width = `${widthPx}px`;
+
+    taskBar.title = `Start: ${taskStart.toLocaleDateString("en-CA")}\nEnd: ${taskEnd.toLocaleDateString("en-CA")}\nStatus: ${task.status}`;
 
     if (task.status === "completed") taskBar.classList.add("completed");
     else if (task.status === "in-progress") taskBar.classList.add("in-progress");
@@ -1422,20 +1514,18 @@ function populateEstimateDropdown(estimates) {
 
     barContainer.appendChild(taskBar);
 
-    // ✅ Properly show vertical connector below the task bar
-// Only if not last task
-if (index < tasks.length - 1) {
-  const nextTask = tasks[index + 1];
-  const nextStart = new Date(nextTask.startDate);
-  const nextOffsetDays = (nextStart.getTime() - minTime) / oneDay;
-  const nextLeftPercent = (nextOffsetDays / totalDuration) * 100;
+    // Connector line
+    if (index < tasks.length - 1) {
+      const nextTask = tasks[index + 1];
+      const nextStart = getDateWithoutTime(new Date(nextTask.startDate));
+      const nextOffsetDays = Math.floor((nextStart - minStart) / oneDay);
+      const nextLeftPx = nextOffsetDays * dayWidth;
 
-  const connector = document.createElement("div");
-  connector.className = "gantt-connector-line";
-  connector.style.left = `${nextLeftPercent}%`; // 🔥 Move arrow to start of NEXT task
-  barContainer.appendChild(connector);
-}
-
+      const connector = document.createElement("div");
+      connector.className = "gantt-connector-line";
+      connector.style.left = `${nextLeftPx}px`;
+      barContainer.appendChild(connector);
+    }
 
     taskRow.appendChild(taskLabel);
     taskRow.appendChild(barContainer);
@@ -1446,6 +1536,7 @@ if (index < tasks.length - 1) {
   ganttView.innerHTML = "";
   ganttView.appendChild(ganttContainer);
 }
+
 
 
 
