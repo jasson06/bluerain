@@ -199,6 +199,57 @@
     </div>
   </div>
 
+
+<!-- Toast Notification -->
+<div id="toast" style="
+  position: fixed;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(to right, #0ea5e9, #3b82f6);
+  color: white;
+  padding: 14px 24px;
+  border-radius: 8px;
+  display: none;
+  z-index: 9999;
+  font-weight: 500;
+  font-size: 15px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+"></div>
+
+<!-- Loader Spinner -->
+<div id="loader" style="
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: 9999;
+  display: none;
+  justify-content: center;
+  align-items: center;
+">
+  <div style="
+    border: 5px solid #e5e7eb;
+    border-top: 5px solid #3b82f6;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    animation: spin 0.8s linear infinite;
+  "></div>
+</div>
+
+<!-- Add this to your <style> block or <head> -->
+<style>
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
+
+
   <script>
     function closeAllDropdowns(event) {
       document.querySelectorAll('.dropdown, .action-menu').forEach(menu => {
@@ -223,11 +274,37 @@
     let clientList = [];
     let currentEditIndex = null;
 
-    async function fetchClients() {
-      const res = await fetch('/api/clients');
-      clientList = await res.json();
-      renderClients();
-    }
+    function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.style.display = 'block';
+  setTimeout(() => { toast.style.display = 'none'; }, 3000);
+}
+
+function showLoader() {
+  document.getElementById('loader').style.display = 'flex';
+}
+
+function hideLoader() {
+  document.getElementById('loader').style.display = 'none';
+}
+
+
+
+async function fetchClients() {
+  showLoader();
+  try {
+    const res = await fetch('/api/clients');
+    clientList = await res.json();
+    renderClients();
+    showToast('✅ Clients loaded');
+  } catch (err) {
+    console.error('Error fetching clients:', err);
+    showToast('❌ Failed to fetch clients');
+  } finally {
+    hideLoader();
+  }
+}
 
     function renderClients() {
       const query = document.getElementById('clientSearchInput').value.toLowerCase();
@@ -272,104 +349,155 @@
     }
 
     async function saveClientEdit() {
-      const index = currentEditIndex;
-      const client = clientList[index];
-      const updated = {
-        name: document.getElementById('editClientName').value.trim(),
-        address: document.getElementById('editClientAddress').value.trim(),
-        email: document.getElementById('editClientEmail').value.trim(),
-        phone: document.getElementById('editClientPhone').value.trim()
-      };
-      const res = await fetch(`/api/clients/${client._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated)
-      });
-      const result = await res.json();
-      if (result) {
-        clientList[index] = result;
-        renderClients();
-      }
-      closeClientEditModal();
-    }
+  const index = currentEditIndex;
+  const client = clientList[index];
+  const updated = {
+    name: document.getElementById('editClientName').value.trim(),
+    address: document.getElementById('editClientAddress').value.trim(),
+    email: document.getElementById('editClientEmail').value.trim(),
+    phone: document.getElementById('editClientPhone').value.trim()
+  };
 
-    async function addClient() {
-      const name = document.getElementById('clientName').value.trim();
-      const address = document.getElementById('clientAddress').value.trim();
-      const email = document.getElementById('clientEmail').value.trim();
-      const phone = document.getElementById('clientPhone').value.trim();
-
-      if (!name || !address || !email || !phone) return alert('All fields are required.');
-
-      const res = await fetch('/api/add-client', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, address, email, phone })
-      });
-      const result = await res.json();
-      if (result.success) {
-        clientList.unshift(result.client);
-        renderClients();
-        ['clientName','clientAddress','clientEmail','clientPhone'].forEach(id => document.getElementById(id).value = '');
-      } else {
-        alert('Error: ' + result.error);
-      }
-    }
-
-    async function deleteClient(index) {
-      const client = clientList[index];
-      if (!confirm(`Delete ${client.name}?`)) return;
-      await fetch(`/api/clients/${client._id}`, { method: 'DELETE' });
-      clientList.splice(index, 1);
+  showLoader();
+  try {
+    const res = await fetch(`/api/clients/${client._id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated)
+    });
+    const result = await res.json();
+    if (result) {
+      clientList[index] = result;
       renderClients();
+      showToast('✅ Client updated');
     }
+  } catch (err) {
+    console.error('Error saving client:', err);
+    showToast('❌ Failed to update client');
+  } finally {
+    closeClientEditModal();
+    hideLoader();
+  }
+}
 
-    function exportClientsCSV() {
-      let csv = 'name,address,email,phone\n';
-      clientList.forEach(c => {
-        csv += `${c.name},${c.address},${c.email},${c.phone}\n`;
-      });
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'clients.csv';
-      a.click();
+async function addClient() {
+  const name = document.getElementById('clientName').value.trim();
+  const address = document.getElementById('clientAddress').value.trim();
+  const email = document.getElementById('clientEmail').value.trim();
+  const phone = document.getElementById('clientPhone').value.trim();
+
+  if (!name || !address || !email || !phone) {
+    showToast('⚠️ All fields are required.');
+    return;
+  }
+
+  showLoader();
+  try {
+    const res = await fetch('/api/add-client', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, address, email, phone })
+    });
+    const result = await res.json();
+    if (result.success) {
+      clientList.unshift(result.client);
+      renderClients();
+      ['clientName','clientAddress','clientEmail','clientPhone'].forEach(id => document.getElementById(id).value = '');
+      showToast('✅ Client added');
+    } else {
+      showToast('❌ ' + result.error);
     }
+  } catch (err) {
+    console.error('Add client error:', err);
+    showToast('❌ Failed to add client');
+  } finally {
+    hideLoader();
+  }
+}
 
-    function handleClientCSVImport(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+async function deleteClient(index) {
+  const client = clientList[index];
+  if (!confirm(`Delete ${client.name}?`)) return;
 
-      const reader = new FileReader();
-      reader.onload = async function(e) {
-        const lines = e.target.result.split('\n').filter(l => l.trim());
-        const [header, ...rows] = lines;
-        const headers = header.split(',').map(h => h.trim().toLowerCase());
+  showLoader();
+  try {
+    await fetch(`/api/clients/${client._id}`, { method: 'DELETE' });
+    clientList.splice(index, 1);
+    renderClients();
+    showToast('✅ Client deleted');
+  } catch (err) {
+    console.error('Delete error:', err);
+    showToast('❌ Failed to delete client');
+  } finally {
+    hideLoader();
+  }
+}
 
-        for (const line of rows) {
-          const values = line.split(',');
-          const row = Object.fromEntries(headers.map((h, i) => [h, values[i]?.trim()]));
-          if (!row.name || !row.address || !row.email || !row.phone) continue;
+function exportClientsCSV() {
+  showLoader();
+  try {
+    let csv = 'name,address,email,phone\n';
+    clientList.forEach(c => {
+      csv += `${c.name},${c.address},${c.email},${c.phone}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'clients.csv';
+    a.click();
+    showToast('📤 CSV exported');
+  } catch (err) {
+    console.error('CSV export failed:', err);
+    showToast('❌ Failed to export CSV');
+  } finally {
+    hideLoader();
+  }
+}
 
-          try {
-            const res = await fetch('/api/add-client', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(row)
-            });
-            const saved = await res.json();
-            if (saved.success) clientList.unshift(saved.client);
-          } catch (err) {
-            console.error('Import failed:', err);
-          }
+function handleClientCSVImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    showLoader();
+    try {
+      const lines = e.target.result.split('\n').filter(l => l.trim());
+      const [header, ...rows] = lines;
+      const headers = header.split(',').map(h => h.trim().toLowerCase());
+
+      for (const line of rows) {
+        const values = line.split(',');
+        const row = Object.fromEntries(headers.map((h, i) => [h, values[i]?.trim()]));
+        if (!row.name || !row.address || !row.email || !row.phone) continue;
+
+        try {
+          const res = await fetch('/api/add-client', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(row)
+          });
+          const saved = await res.json();
+          if (saved.success) clientList.unshift(saved.client);
+        } catch (err) {
+          console.error('Import failed:', err);
         }
-        renderClients();
-      };
-      reader.readAsText(file);
-    }
+      }
 
-    window.addEventListener('DOMContentLoaded', fetchClients);
+      renderClients();
+      showToast('✅ Clients imported');
+    } catch (err) {
+      console.error('CSV import error:', err);
+      showToast('❌ Failed to import clients');
+    } finally {
+      hideLoader();
+    }
+  };
+  reader.readAsText(file);
+}
+
+window.addEventListener('DOMContentLoaded', fetchClients);
   </script>
 </body>
 </html>
