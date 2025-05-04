@@ -56,12 +56,13 @@ button, input, textarea {
 
 .sidebar .logo {
   text-align: center;
-  margin: 10px 0;
+  margin: -15px 0;
 }
 
 .sidebar .logo img {
-  max-width: 50%;
-  border-radius: var(--border-radius);
+  max-width: 160px;
+  height: auto;
+  padding: 0px;
 }
 
 
@@ -99,13 +100,6 @@ button, input, textarea {
   margin: 10px;
 }
 
-
-.sidebar .logo {
-  position: sticky;
-  top: 0;
-  background-color: #0f4c75; /* match sidebar color */
-  z-index: 10;
-}
 /* Main Content */
 .main-content {
   margin-left: 100px;
