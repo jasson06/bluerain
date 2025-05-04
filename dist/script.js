@@ -89,6 +89,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+    let map;
+let markers = [];
+let markerCluster;
+const geocodeCache = new Map();
+const projectFilters = {
+  active: true,
+  upcoming: true,
+  completed: true,
+  onMarket: true
+};
+
+    
  function showToast(message) {
       const toast = document.getElementById('toast');
       toast.textContent = message;
@@ -546,151 +558,194 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-
-
-    
-let map;
-
-function initMap() {
- map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: 29.4241, lng: -98.4936 }, // Default to San Antonio
-        zoom: 10,
-        gestureHandling: "greedy", // Enables better pinch-to-zoom
-        zoomControl: true, // Ensures zoom control buttons are available
-        streetViewControl: false, // Hides Street View button for a cleaner UI
-        fullscreenControl: false, // Hides full-screen option on mobile
-    });
-
-    loadProjectLocations(); // Load markers
+// 📍 Marker Icon Based on Type
+function getMarkerIcon(type) {
+  const colors = {
+    active: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
+    upcoming: "http://maps.google.com/mapfiles/ms/icons/orange-dot.png",
+    completed: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+    onMarket: "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
+  };
+  return colors[type] || null;
 }
 
-// ✅ Make initMap globally accessible
-window.initMap = initMap;
+// 🧽 Clear Existing Markers
+function clearMarkers() {
+  markers.forEach(m => m.setMap(null));
+  markers = [];
+  if (markerCluster) markerCluster.clearMarkers();
+}
 
-// ✅ Load project locations
-async function loadProjectLocations() {
-    try {
-      // Fetch all project sets in parallel
-      const [activeRes, upcomingRes, completedRes, onMarketRes] = await Promise.all([
-        fetch("/api/projects"),
-        fetch("/api/upcoming-projects"),
-        fetch("/api/completed-projects"),
-        fetch("/api/on-market-projects")
-      ]);
-  
-      if (!activeRes.ok || !upcomingRes.ok || !completedRes.ok || !onMarketRes.ok) {
-        throw new Error("Failed to fetch project locations");
-      }
-  
-      const [activeData, upcomingData, completedData, onMarketData] = await Promise.all([
-        activeRes.json(),
-        upcomingRes.json(),
-        completedRes.json(),
-        onMarketRes.json()
-      ]);
-  
-      const allProjects = [
-        ...activeData.projects.map(p => ({ ...p, markerType: "active" })),
-        ...upcomingData.projects.map(p => ({ ...p, markerType: "upcoming" })),
-        ...completedData.projects.map(p => ({ ...p, markerType: "completed" })),
-        ...onMarketData.projects.map(p => ({ ...p, markerType: "onMarket" }))
-      ];
-  
-      if (allProjects.length === 0) {
-        console.warn("No project locations found.");
-        return;
-      }
-  
-      for (const project of allProjects) {
-        if (!project.address || !project.address.addressLine1) continue;
-  
-        const fullAddress = `${project.address.addressLine1}, ${project.address.city}, ${project.address.state} ${project.address.zip}`;
-  
-        try {
-          const geoResponse = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=AIzaSyCvzkKpCkAY2PHwU8I8zZiM_FLMzMj1bbg`
-          );
-          const geoData = await geoResponse.json();
-  
-          if (geoData.status === "OK") {
-            const { lat, lng } = geoData.results[0].geometry.location;
-            addMarker(lat, lng, project.name, project.markerType);
-          } else {
-            console.warn(`Skipping ${project.name}: No coordinates found.`);
-          }
-        } catch (geoError) {
-          console.error("Geocoding error:", geoError);
-        }
-      }
-    } catch (error) {
-      console.error("Error loading project locations:", error);
-    }
-  }
+// 📍 Create Marker + InfoWindow
+function createMarker(lat, lng, title, markerType) {
+  const marker = new google.maps.Marker({
+    position: { lat, lng },
+    map,
+    title,
+    icon: getMarkerIcon(markerType)
+  });
 
-// ✅ Add Markers & Open Google Maps Navigation
-function addMarker(lat, lng, title) {
-    const marker = new google.maps.Marker({
-        position: { lat, lng },
-        map,
-        title,
-    });
+  const infoWindow = new google.maps.InfoWindow({
+    content: `
+      <div style="
+        font-size: 10px;
+        font-weight: bold;
+        color: #ffffff;
+        background: #0f4c75;
+        padding: 6px 16px;
+        border-radius: 6px;
+        text-align: center;
+        white-space: nowrap;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        backdrop-filter: blur(2px);
+      ">
+        📍 ${title}
+      </div>`,
+    maxWidth: 140
+  });
 
-
-    const infoWindow = new google.maps.InfoWindow({
-        content: `
-            <div style="
-                font-size: 9px;
-                font-weight: bold;
-                color: #ffffff;
-                background: #0f4c75; 
-                padding: 6px 35px;
-                border-radius: 4px;
-                text-align: center;
-                white-space: nowrap;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                max-height: 30px;
-                overflow: hidden;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                backdrop-filter: blur(3px); /* Frosted glass effect */
-            ">
-                📍 ${title}
-            </div>
-        `,
-        maxWidth: 120,  // Controls the white box width
-        maxHeight: 50,  // Controls the white box height
-    });
-    
-
-
-
-    // Open label by default (so it's always visible)
+  marker.addListener("click", () => {
     infoWindow.open(map, marker);
-
-    
-// Open Apple Maps on iOS, Google Maps on others
-marker.addListener("click", () => {
     const destination = `${lat},${lng}`;
     const isAppleDevice = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent);
+    setTimeout(() => {
+      if (confirm("🧭 Open directions?")) {
+        const url = isAppleDevice
+          ? `https://maps.apple.com/?daddr=${destination}`
+          : `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+        window.open(url, "_blank");
+      }
+    }, 500);
+  });
 
-    if (isAppleDevice) {
-        // Open in Apple Maps
-        window.open(`https://maps.apple.com/?daddr=${destination}`, "_blank");
-    } else {
-        // Open in Google Maps
-        window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}`, "_blank");
+  return marker;
+}
+
+// 🗺️ Convert Address → Lat/Lng (with cache)
+async function getLatLngFromAddress(address) {
+  if (geocodeCache.has(address)) return geocodeCache.get(address);
+
+  const apiKey = "AIzaSyCvzkKpCkAY2PHwU8I8zZiM_FLMzMj1bbg";
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (data.status === "OK") {
+    const location = data.results[0].geometry.location;
+    geocodeCache.set(address, location);
+    return location;
+  } else {
+    console.warn(`Geocode failed: ${data.status} for ${address}`);
+    return null;
+  }
+}
+
+// ✅ Load All Project Locations
+async function loadProjectLocations() {
+  showLoader();
+  showToast("📍 Loading project locations...");
+
+  try {
+    const [activeRes, upcomingRes, completedRes, onMarketRes] = await Promise.all([
+      fetch("/api/projects"),
+      fetch("/api/upcoming-projects"),
+      fetch("/api/completed-projects"),
+      fetch("/api/on-market-projects")
+    ]);
+
+    if (![activeRes, upcomingRes, completedRes, onMarketRes].every(r => r.ok)) {
+      throw new Error("Failed to fetch one or more project groups.");
     }
-});
 
+    const [active, upcoming, completed, onMarket] = await Promise.all([
+      activeRes.json(),
+      upcomingRes.json(),
+      completedRes.json(),
+      onMarketRes.json()
+    ]);
+
+    const allProjects = [
+      ...active.projects.map(p => ({ ...p, markerType: "active" })),
+      ...upcoming.projects.map(p => ({ ...p, markerType: "upcoming" })),
+      ...completed.projects.map(p => ({ ...p, markerType: "completed" })),
+      ...onMarket.projects.map(p => ({ ...p, markerType: "onMarket" }))
+    ].filter(p => projectFilters[p.markerType]);
+
+    if (allProjects.length === 0) {
+      showToast("⚠️ No project locations available.");
+      clearMarkers();
+      return;
+    }
+
+    clearMarkers();
+
+    for (const project of allProjects) {
+      if (!project.address?.addressLine1) continue;
+
+      const fullAddress = `${project.address.addressLine1}, ${project.address.city}, ${project.address.state} ${project.address.zip}`;
+
+      try {
+        const coords = await getLatLngFromAddress(fullAddress);
+        if (coords) {
+          const marker = createMarker(coords.lat, coords.lng, project.name, project.markerType);
+          markers.push(marker);
+        } else {
+          console.warn(`No geocode result for: ${fullAddress}`);
+        }
+      } catch (err) {
+        console.error(`Geocoding failed for: ${fullAddress}`, err);
+      }
+    }
+
+    // ✅ Modern MarkerClusterer instantiation
+    if (markerCluster) markerCluster.clearMarkers();
+    markerCluster = new markerClusterer.MarkerClusterer({ map, markers });
+
+    showToast("✅ Map updated with project markers.");
+  } catch (err) {
+    console.error("Error loading project locations:", err);
+    showToast("❌ Error loading locations.");
+  } finally {
+    hideLoader();
+  }
 }
 
 
+// ✅ Init Map
+function initMap() {
+  map = new google.maps.Map(document.getElementById("map"), {
+    center: { lat: 29.4241, lng: -98.4936 },
+    zoom: 10,
+    gestureHandling: "greedy",
+    zoomControl: true,
+    streetViewControl: false,
+    fullscreenControl: false
+  });
 
-// Ensure `initMap` is called when the page loads
-document.addEventListener("DOMContentLoaded", () => {
-    initMap();
-});
+  loadProjectLocations();
+  setupFilterCheckboxes();
+}
+
+// ✅ Setup Filter Checkboxes
+function setupFilterCheckboxes() {
+  document.querySelectorAll("#projectFilters input[type='checkbox']").forEach(cb => {
+    cb.addEventListener("change", () => {
+      projectFilters[cb.value] = cb.checked;
+      loadProjectLocations();
+    });
+  });
+}
+
+// ✅ Expose to Google Maps loader
+window.initMap = initMap;
+
+// ✅ Load once DOM is ready
+document.addEventListener("DOMContentLoaded", initMap);
+
+
+    
+
     
   
   // Sidebar Toggle with Hamburger
