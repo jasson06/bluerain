@@ -188,8 +188,11 @@ button, input, textarea {
 }
 
 h3 {
-  text-align: center;
-  color: #333;
+font-size: 22px;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+    margin-bottom: 15px;
 }
 
 .item p {
