@@ -106,7 +106,15 @@
         </div>
     </div>
 
-    
+
+
+    <div id="projectFilters" style="display: flex; gap: 12px; padding: 10px 0; flex-wrap: wrap;">
+      <label><input type="checkbox" value="active" checked> 🟢 Active</label>
+      <label><input type="checkbox" value="upcoming" checked> 🟠 Upcoming</label>
+      <label><input type="checkbox" value="completed" checked> 🔵 Completed</label>
+      <label><input type="checkbox" value="onMarket" checked> 🔴 On Market</label>
+    </div>
+      
     <section id="map-section">
       <h3>Project Locations</h3>
       <div id="map"></div>
@@ -198,10 +206,18 @@
 
 
       
+<!-- ✅ Google Maps API -->
+<script
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCvzkKpCkAY2PHwU8I8zZiM_FLMzMj1bbg&callback=initMap"
+  async defer
+></script>
 
-  <!-- Script -->
-  <script src="./script.js"></script>
-  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCvzkKpCkAY2PHwU8I8zZiM_FLMzMj1bbg&callback=initMap"></script>
+<!-- ✅ MarkerClusterer -->
+<script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
+
+<!-- ✅ Your custom script -->
+<script src="script.js"></script>
+
 
 </body>
 
