@@ -89,7 +89,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-
+ function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
+    
+    function showLoader() {
+      document.getElementById('loader').style.display = 'flex';
+    }
+    
+    function hideLoader() {
+      document.getElementById('loader').style.display = 'none';
+    }
 
 
     // Form Submissions
@@ -137,15 +150,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
 
                     if (response.ok) {
-                        alert(`${formId.replace('-', ' ')} submitted successfully!`);
+                        showToast(`${formId.replace('-', ' ')} submitted successfully!`);
                         form.reset();
                     } else {
                         const error = await response.json();
-                        alert(`Error: ${error.error || 'An unexpected error occurred.'}`);
+                        showToast(`Error: ${error.error || 'An unexpected error occurred.'}`);
                     }
                 } catch (error) {
                     console.error(`Error submitting form ${formId}:`, error);
-                    alert('An error occurred while submitting the form. Please try again.');
+                    showToast('An error occurred while submitting the form. Please try again.');
                 }
             });
         }
@@ -215,7 +228,7 @@ async function loadProjects() {
   
     // 📅 Get today's date in YYYY-MM-DD
     const today = new Date().toISOString().split("T")[0];
-  
+  showLoader(); // 👈 START
     try {
       // Fetch both projects and today's updates
       const [projectsRes, updatesRes] = await Promise.all([
@@ -280,6 +293,8 @@ async function loadProjects() {
     } catch (error) {
       console.error('Error loading projects:', error);
       projectsList.innerHTML = '<p>Error loading projects. Please try again later.</p>';
+           } finally {
+      hideLoader(); // 👈 END
     }
   }
   
@@ -293,7 +308,7 @@ async function loadUpcomingProjects() {
     projectsList.innerHTML = "<p>Loading...</p>";
   
     const today = new Date().toISOString().split("T")[0];
-  
+  showLoader(); // 👈 START
     try {
       // Fetch upcoming projects and today's updates
       const [projectsRes, updatesRes] = await Promise.all([
@@ -362,6 +377,8 @@ async function loadUpcomingProjects() {
     } catch (error) {
       console.error("❌ Error loading upcoming projects:", error);
       projectsList.innerHTML = "<p>Error loading upcoming projects. Please try again later.</p>";
+            } finally {
+             hideLoader(); // 👈 END
     }
   }
   
@@ -371,7 +388,7 @@ async function loadUpcomingProjects() {
     projectsList.innerHTML = "<p>Loading...</p>";
   
     const today = new Date().toISOString().split("T")[0];
-  
+  showLoader(); // 👈 START
     try {
       const [projectsRes, updatesRes] = await Promise.all([
         fetch("/api/on-market-projects"),
@@ -439,6 +456,8 @@ async function loadUpcomingProjects() {
     } catch (error) {
       console.error("❌ Error loading 'On Market' projects:", error);
       projectsList.innerHTML = "<p>Error loading 'On Market' projects. Please try again later.</p>";
+            } finally {
+               hideLoader(); // 👈 END
     }
   }
 
@@ -449,7 +468,7 @@ async function loadUpcomingProjects() {
     projectsList.innerHTML = "<p>Loading...</p>"; // Show loading message
   
     const today = new Date().toISOString().split("T")[0];
-  
+  showLoader(); // 👈 START
     try {
       // Fetch completed projects and today's updates
       const [projectsRes, updatesRes] = await Promise.all([
@@ -515,6 +534,8 @@ async function loadUpcomingProjects() {
     } catch (error) {
       console.error("❌ Error loading completed projects:", error);
       projectsList.innerHTML = "<p>Error loading completed projects. Please try again later.</p>";
+            } finally {
+             hideLoader(); // 👈 END
     }
   }
 
