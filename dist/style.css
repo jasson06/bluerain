@@ -1303,3 +1303,43 @@ input, textarea {
   background: #e6f0fa;
 }
 
+#projectFilters label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #f1f5f9;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.3s;
+}
+
+#projectFilters label:hover {
+  background: #e2e8f0;
+}
+
+#projectFilters input[type="checkbox"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #3b82f6;
+  border-radius: 4px;
+  display: grid;
+  place-content: center;
+  transition: all 0.2s;
+}
+
+#projectFilters input[type="checkbox"]:checked {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+#projectFilters input[type="checkbox"]:checked::before {
+  content: "✔";
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
