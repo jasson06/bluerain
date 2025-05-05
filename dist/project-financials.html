@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Financials</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f9fafb;
+    }
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 40px 20px;
+    }
+    h1, h2 {
+      color: #0f4c75;
+    }
+    .section {
+      margin-bottom: 40px;
+      background: #fff;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table th, table td {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 12px 16px;
+      text-align: left;
+    }
+    .btn-primary {
+      background: #0ea5e9;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn-primary:hover {
+      background: #0284c7;
+    }
+    .upload-input {
+      margin-top: 10px;
+    }
+    .profit-summary {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .summary-card {
+      background: #f1f5f9;
+      flex: 1;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    .summary-card h3 {
+      margin-bottom: 10px;
+      color: #334155;
+    }
+    .summary-card p {
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 800px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-close {
+      text-align: right;
+    }
+    .modal-close button {
+      background: transparent;
+      border: none;
+      font-size: 1.2em;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 Financial Overview</h1>
+
+    <!-- Budget Section -->
+    <div class="section">
+      <h2>📋 Total Budget</h2>
+      <p id="total-budget" class="btn-primary" style="display: inline-block; font-size: 1.2em;">$0.00</p>
+    </div>
+
+    <!-- Expenses Section -->
+    <div class="section">
+      <h2>💸 Expenses</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Vendor</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody id="expenses-table-body"></tbody>
+      </table>
+      <button class="btn-primary" onclick="addExpense()">+ Add Expense</button>
+    </div>
+
+    <!-- Receipts Upload Section -->
+    <div class="section">
+      <h2>📤 Receipts</h2>
+      <input type="file" class="upload-input" id="receipt-upload" multiple />
+      <div id="receipt-preview"></div>
+    </div>
+
+    <!-- Invoices Section -->
+    <div class="section">
+      <h2>🧾 Invoices</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Client</th>
+            <th>Status</th>
+            <th>Total</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="invoice-table-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Profit Summary -->
+    <div class="section">
+      <h2>📈 Profit Summary</h2>
+      <div class="profit-summary">
+        <div class="summary-card">
+          <h3>Estimated Revenue</h3>
+          <p id="estimated-revenue">$0.00</p>
+        </div>
+        <div class="summary-card">
+          <h3>Total Expenses</h3>
+          <p id="total-expenses">$0.00</p>
+        </div>
+        <div class="summary-card">
+          <h3>Net Profit</h3>
+          <p id="net-profit">$0.00</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Invoice Modal -->
+  <div id="invoice-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-close"><button onclick="closeInvoiceModal()">&times;</button></div>
+      <div id="invoice-details">Loading...</div>
+    </div>
+  </div>
+
+<script>
+  const projectId = new URLSearchParams(window.location.search).get("projectId");
+
+  function addExpense() {
+    alert('Open modal to add expense');
+  }
+
+  function openInvoiceModal(invoiceId) {
+    const modal = document.getElementById("invoice-modal");
+    const container = document.getElementById("invoice-details");
+    modal.style.display = "flex";
+    container.innerHTML = "Loading...";
+
+    fetch(`/api/invoices/by-number/${invoiceId}`)
+      .then(res => res.json())
+      .then(({ invoice }) => {
+        if (!invoice) {
+          container.innerHTML = "Invoice not found.";
+          return;
+        }
+        container.innerHTML = `
+          <h3>Invoice #${invoice.invoiceNumber}</h3>
+          <p><strong>Date:</strong> ${invoice.date}</p>
+          <p><strong>Client:</strong> ${invoice.recipient?.name || 'N/A'}</p>
+          <p><strong>Email:</strong> ${invoice.email || 'N/A'}</p>
+          <p><strong>Total:</strong> $${invoice.total.toFixed(2)}</p>
+          <h4>Line Items</h4>
+          <ul>
+            ${invoice.lineItems.map(i => `<li>${i.name} - $${i.unitPrice} x ${i.quantity}</li>`).join('')}
+          </ul>
+        `;
+      });
+  }
+
+  function closeInvoiceModal() {
+    document.getElementById("invoice-modal").style.display = "none";
+  }
+
+  async function loadFinancials() {
+    try {
+      const [estimatesRes, invoicesRes] = await Promise.all([
+        fetch(`/api/estimates?projectId=${projectId}`),
+        fetch(`/api/invoices?projectId=${projectId}`)
+      ]);
+
+      if (!invoicesRes.ok) {
+        throw new Error("Failed to fetch invoices");
+      }
+
+      const [{ estimates }, invoicesData] = await Promise.all([
+        estimatesRes.json(),
+        invoicesRes.json()
+      ]);
+
+      const invoices = Array.isArray(invoicesData) ? invoicesData : invoicesData.invoices || [];
+
+      let totalBudget = 0;
+      estimates.forEach(e => totalBudget += e.total || 0);
+      document.getElementById("total-budget").textContent = `$${totalBudget.toFixed(2)}`;
+
+      let estRevenue = 0;
+      let invBody = document.getElementById('invoice-table-body');
+      invoices.forEach(i => {
+        if (i.projectId !== projectId) return;
+        estRevenue += i.total || 0;
+        invBody.innerHTML += `<tr>
+          <td>${i.date}</td>
+          <td>${i.recipient?.name || 'N/A'}</td>
+          <td>${i.status || 'Pending'}</td>
+          <td>$${(i.total || 0).toFixed(2)}</td>
+          <td><button class="btn-primary" onclick="openInvoiceModal('${i.invoiceNumber}')">View</button></td>
+        </tr>`;
+      });
+      document.getElementById('estimated-revenue').textContent = `$${estRevenue.toFixed(2)}`;
+
+      const expenses = [
+        { date: '2025-04-01', vendor: 'ABC Plumbing', category: 'Plumbing', description: 'Install pipes', amount: 0 },
+        { date: '2025-04-05', vendor: 'XYZ Electric', category: 'Electrical', description: 'Wiring', amount: 0 }
+      ];
+      let totalExp = 0;
+      const expBody = document.getElementById('expenses-table-body');
+      expenses.forEach(e => {
+        totalExp += e.amount;
+        expBody.innerHTML += `<tr>
+          <td>${e.date}</td>
+          <td>${e.vendor}</td>
+          <td>${e.category}</td>
+          <td>${e.description}</td>
+          <td>$${e.amount.toFixed(2)}</td>
+        </tr>`;
+      });
+      document.getElementById('total-expenses').textContent = `$${totalExp.toFixed(2)}`;
+      document.getElementById('net-profit').textContent = `$${(totalBudget - totalExp - estRevenue).toFixed(2)}`;
+
+    } catch (err) {
+      console.error("Error loading financials:", err);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadFinancials);
+</script>
+</body>
+</html>
+
