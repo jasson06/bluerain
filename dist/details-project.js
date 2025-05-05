@@ -1520,47 +1520,52 @@ async function loadSidebarProjects() {
  
 
 // Function to load estimates for the current project with edit and assignment options
-async function loadEstimates(projectId) {
-  const estimatesList = document.getElementById("estimates-list");
-  const estimatesCount = document.getElementById("estimates-count");
-showLoader(); // 👈 START
-  try {
-    const response = await fetch(`/api/estimates?projectId=${projectId}`);
-    if (!response.ok) throw new Error("Failed to fetch estimates");
-
-    const { estimates } = await response.json();
-
-    if (!estimates || estimates.length === 0) {
-      estimatesList.innerHTML = "<p>No estimates found.</p>";
-      estimatesCount.textContent = "(0)";
-    } else {
-      estimatesCount.textContent = `(${estimates.length})`;
-      estimatesList.innerHTML = estimates
-        .map((estimate) => `
-          <div class="estimate-item">
-          ${estimate.title ? `<h3 class="estimate-title">${estimate.title}</h3>` : ""}
-            <p><strong>Invoice #:</strong> ${estimate.invoiceNumber}</p>
-            <p><strong>Total:</strong> $${estimate.total.toFixed(2)}</p>
-
-            <!-- View, Edit, and Delete Buttons -->
-            <button class="view-estimate-button" onclick="viewEstimate('${estimate._id}')">View</button>
-            <button class="edit-estimate-button" onclick="editEstimate('${projectId}', '${estimate._id}')">Edit</button>
-            <button class="delete-estimate-button" onclick="deleteEstimate('${estimate._id}')">Delete</button>
-
-           
-          </div>
-        `).join("");
+  async function loadEstimates(projectId) {
+    const estimatesList = document.getElementById("estimates-list");
+    const estimatesCount = document.getElementById("estimates-count");
+    const totalBudgetEl = document.getElementById("total-budget"); // 👈 new
+    showLoader();
+  
+    try {
+      const response = await fetch(`/api/estimates?projectId=${projectId}`);
+      if (!response.ok) throw new Error("Failed to fetch estimates");
+  
+      const { estimates } = await response.json();
+  
+      if (!estimates || estimates.length === 0) {
+        estimatesList.innerHTML = "<p>No estimates found.</p>";
+        estimatesCount.textContent = "(0)";
+        totalBudgetEl.textContent = "$0.00"; // 👈 reset
+      } else {
+        estimatesCount.textContent = `(${estimates.length})`;
+  
+        let totalBudget = 0;
+        estimatesList.innerHTML = estimates.map((estimate) => {
+          totalBudget += estimate.total || 0;
+          return `
+            <div class="estimate-item">
+              ${estimate.title ? `<h3 class="estimate-title">${estimate.title}</h3>` : ""}
+              <p><strong>Invoice #:</strong> ${estimate.invoiceNumber}</p>
+              <p><strong>Total:</strong> $${estimate.total.toFixed(2)}</p>
+              <button class="view-estimate-button" onclick="viewEstimate('${estimate._id}')">View</button>
+              <button class="edit-estimate-button" onclick="editEstimate('${projectId}', '${estimate._id}')">Edit</button>
+              <button class="delete-estimate-button" onclick="deleteEstimate('${estimate._id}')">Delete</button>
+            </div>
+          `;
+        }).join("");
+  
+        totalBudgetEl.textContent = `$${totalBudget.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+      }
+  
+      loadTasks(projectId);
+    } catch (error) {
+      console.error("Error loading estimates:", error);
+      estimatesList.innerHTML = "<p>An error occurred while loading estimates.</p>";
+      totalBudgetEl.textContent = "$0.00"; // fallback
+    } finally {
+      hideLoader();
     }
-     // Reload tasks to update the UI
-     loadTasks(projectId);
-  } catch (error) {
-    console.error("Error loading estimates:", error);
-    estimatesList.innerHTML = "<p>An error occurred while loading estimates.</p>";
-      } finally {
-    hideLoader(); // 👈 END
   }
-}
-
 
   function openFinancialReport(projectId) {
     if (!projectId) {
