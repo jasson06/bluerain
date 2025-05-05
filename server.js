@@ -3595,6 +3595,24 @@ app.post('/api/create', async (req, res) => {
 });
 
 
+// ✅ GET invoices filtered by projectId
+app.get('/api/invoices', async (req, res) => {
+  const { projectId } = req.query;
+
+  try {
+    if (!projectId) {
+      return res.status(400).json({ message: "Missing projectId" });
+    }
+
+    const invoices = await Invoice.find({ projectId });
+
+    res.json({ invoices });
+  } catch (err) {
+    console.error("❌ Error fetching invoices by projectId:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // DELETE invoice by ID
 app.delete('/api/invoices/:id', async (req, res) => {
   const { id } = req.params;
