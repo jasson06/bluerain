@@ -1561,6 +1561,40 @@ showLoader(); // 👈 START
   }
 }
 
+
+  function openFinancialReport(projectId) {
+    if (!projectId) {
+      alert("Project ID is missing!");
+      return;
+    }
+    window.location.href = `/project-financials.html?projectId=${projectId}`;
+  }
+  
+  
+  function toggleDropdownt() {
+    const dropdown = document.getElementById("estimateDropdown");
+    dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+  }
+
+  function closeDropdownt() {
+    document.getElementById("estimateDropdown").style.display = "none";
+  }
+  function closeDropdown() {
+    document.getElementById("estimateDropdown").style.display = "none";
+  }
+  
+  // Close dropdown if clicked outside
+  window.addEventListener('click', function(e) {
+    const toggle = document.querySelector('.dropdown-togglet');
+    const menu = document.getElementById("estimateDropdown");
+    if (!toggle.contains(e.target) && !menu.contains(e.target)) {
+      menu.style.display = 'none';
+    }
+  });
+
+
+
+
 // Function to navigate to the edit estimate page
 function editEstimate(projectId, estimateId) {
   window.location.href = `/estimate-edit.html?projectId=${projectId}&estimateId=${estimateId}`;
@@ -1989,6 +2023,14 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSidebarProjects();
   setupManageTeamModal();
 
+
+// After DOM loads or within your init function:
+const financialBtn = document.getElementById("financial-report-button");
+if (financialBtn && projectId) {
+  financialBtn.onclick = () => openFinancialReport(projectId);
+}
+
+  
   // Sidebar toggle functionality
   const sidebar = document.querySelector('.sidebar');
   const toggleButton = document.createElement('button');
