@@ -76,7 +76,7 @@ p {
 .dropdown-icon.rotated {
   transform: rotate(180deg);
 }
- 
+
 /* Project Details Content */
 .project-details-content {
   display: none; /* Hidden by default */
@@ -1648,6 +1648,10 @@ p {
 }
 
 
+
+
+
+
 .dropdown-menu {
   display: none;
   position: absolute;
@@ -1670,7 +1674,6 @@ p {
 .dropdown-menu .dropdown-item:hover {
   background-color: #f1f5f9;
 }
-
 
 /* ----------------------------------- */
 /* delete estimate button */
@@ -1834,6 +1837,146 @@ body {
 }
 
 
+
+button {
+  margin: 1rem;
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+  background-color: white;
+  margin: 10% auto;
+  padding: 1rem;
+  width: 90%;
+  max-width: 500px;
+  border-radius: 8px;
+  position: relative;
+}
+
+.close {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+li {
+  
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+li.completed span {
+  text-decoration: line-through;
+  color: gray;
+}
+
+.priority-high { color: red; }
+.priority-medium { color: orange; }
+.priority-low { color: green; }
+
+.task-actions button {
+  margin-left: 0.3rem;
+}
+
+/* Badge pill-style status */
+.status-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.status-completed {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+/* Filter buttons */
+.task-filters {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.filter-btn {
+  background: #e9ecef;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.filter-btn.active {
+  background: #007bff;
+  color: white;
+}
+
+.task-actions {
+  position: relative;
+}
+
+.dropdown-toggle {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #333;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 28px;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  min-width: 160px;
+}
+
+.dropdown-menu button {
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.dropdown-menu button:hover {
+  background-color: #f1f1f1;
+}
+
+
+
+
+
+
+
 /*manage team modal */
 
 /* Modal content layout */
@@ -1974,6 +2117,156 @@ body {
   }
 }
 
+
+
+.qc-status-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 12px;
+  margin-left: 10px;
+  text-transform: uppercase;
+}
+
+.qc-status-tag.approved { background: #d4edda; color: #155724; }
+.qc-status-tag.rework { background: #f8d7da; color: #721c24; }
+.qc-status-tag.pending { background: #2176c6; color: #fcfcfc; }
+
+
+/* 📸 Limit QC preview image size */
+.photo-wrapper img {
+  max-width: 100px;
+  max-height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.photo-wrapper img:hover {
+  transform: scale(1.05);
+}
+
+/* 📸 Swipe container style for layout */
+.qc-photo-container {
+  overflow: hidden;
+  max-width: 240px;
+  border-radius: 10px;
+  margin-top: 8px;
+}
+
+.photo-wrapper {
+  display: flex;
+  transition: transform 0.4s ease;
+  width: 100%;
+  cursor: grab;
+}
+
+.photo-wrapper:active {
+  cursor: grabbing;
+}
+
+
+.photo-slide {
+  min-width: 100%;
+  text-align: center;
+}
+
+.photo-slide img {
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+/* Dots */
+.photo-dots {
+  text-align: center;
+  margin-top: 5px;
+}
+
+.photo-dots .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin: 0 4px;
+  background: #ccc;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.photo-dots .dot.active {
+  background: #007bff;
+}
+
+
+/* 🔍 Modal image */
+#qc-photo-modal img {
+  max-width: 90vw;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+
+.photo-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  cursor: grab;
+}
+
+.photo-modal img {
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: 10px;
+  box-shadow: 0 0 12px rgba(0,0,0,0.6);
+}
+
+.qc-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  background: white;
+  padding: 10px 16px;
+  border-bottom: 1px solid #ddd;
+  z-index: 100;
+}
+
+.qc-tab {
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.3s ease;
+}
+
+.qc-tab:hover {
+  background: #e2e8f0;
+}
+
+.qc-tab.active {
+  background: #2563eb;
+  color: white;
+  font-weight: bold;
+}
+
+.sticky-tabs {
+  position: sticky;
+  top: 0;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+  background: white;
+}
+
 #loader {
   transition: opacity 0.3s ease;
 }
@@ -1982,3 +2275,4 @@ body {
   opacity: 0;
   pointer-events: none;
 }
+
