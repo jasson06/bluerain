@@ -202,16 +202,34 @@
 <!-- Estimates Section -->
 <section id="estimates-section" class="details-section">
   <h2>Estimates <span id="estimates-count">(0)</span></h2>
+
   <div id="estimates-list">
     <!-- Estimates will be dynamically loaded here -->
     <p>No estimates found.</p>
   </div>
+
   <div class="estimates-options">
-    <div class="estimate-option" onclick="startFromScratch()">+ Start from Scratch</div>
-    <div class="estimate-option" onclick="importEstimate()">Import Estimate</div>
-        <div class="estimate-option" onclick="downloadTemplate()">
-      📥 Download Template
+
+    <!-- Click-toggle Dropdown -->
+    <div class="dropdown">
+      <button class="dropdown-togglet" onclick="toggleDropdownt()">Create New</button>
+      <div class="dropdown-menu" id="estimateDropdown" style="display: none;">
+        <div class="dropdown-item" onclick="startFromScratch(); closeDropdown()">➕ Start from Scratch</div>
+        <div class="dropdown-item" onclick="importEstimate(); closeDropdown()">📤 Import Estimate</div>
+        <div class="dropdown-item" onclick="downloadTemplate(); closeDropdown()">📥 Download Template</div>
+      </div>
     </div>
+    
+    <!-- Remaining Options -->
+    <div class="estimate-option" id="financial-report-button">
+      📘 Open Financial Report
+    </div>
+
+    <div class="estimate-option budget-button" style="cursor: default;">
+      💰 <strong>Total Budget:</strong><br>
+      <span id="total-budget">$0.00</span>
+    </div>
+
   </div>
 </section>
 
