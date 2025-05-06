@@ -763,6 +763,20 @@ const folderSchema = new mongoose.Schema({
   files: [fileSchema]
 });
 
+const expenseSchema = new mongoose.Schema({
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
+  item: {
+    itemId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    name: String,
+    costCode: String
+  },
+  vendor: String,
+  category: String,
+  description: String,
+  amount: { type: Number, required: true },
+  date: { type: String, required: true }
+}, { timestamps: true });
+
 const Task = mongoose.model('Task', taskSchema);
 const Comment = mongoose.model("Comment", commentSchema);
 const Client = mongoose.model('Client', clientSchema);
@@ -779,6 +793,7 @@ const Quote = mongoose.model('Quote', quoteSchema);
 const LaborCost = mongoose.model('LaborCost', laborCostSchema);
 const FileSystem = mongoose.model('FileSystem', folderSchema);
 const Folder = mongoose.model('Folder', folderSchema); // ✅ Add this line
+const Expense = mongoose.model('Expense', expenseSchema);
 
 
 module.exports = {
@@ -4203,6 +4218,96 @@ app.post("/api/folders/:folderId/delete-files", async (req, res) => {
     res.status(500).json({ error: "Failed to delete selected files" });
   }
 });
+
+
+
+// POST /api/expenses
+app.post("/api/expenses", async (req, res) => {
+  try {
+    const { projectId, item, date, vendor, category, description, amount } = req.body;
+
+    if (!projectId || !item?.itemId || !item?.name || !date || !vendor || !amount) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const expense = await Expense.create({
+      projectId,
+      item,
+      date,
+      vendor,
+      category,
+      description,
+      amount
+    });
+
+    res.status(201).json({ success: true, expense });
+  } catch (err) {
+    console.error("Error creating expense:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// GET /api/expenses?projectId=123
+app.get("/api/expenses", async (req, res) => {
+  try {
+    const { projectId } = req.query;
+    if (!projectId) return res.status(400).json({ message: "Missing projectId" });
+
+    const expenses = await Expense.find({ projectId }).sort({ date: -1 });
+    res.json({ expenses });
+  } catch (err) {
+    console.error("Error fetching expenses:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.get("/api/expenses/:id", async (req, res) => {
+  try {
+    const expense = await Expense.findById(req.params.id);
+    if (!expense) return res.status(404).json({ message: "Expense not found" });
+
+    res.json({ success: true, expense });
+  } catch (err) {
+    console.error("Error fetching expense:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.put("/api/expenses/:id", async (req, res) => {
+  try {
+    const { projectId, item, date, vendor, category, description, amount } = req.body;
+
+    if (!projectId || !item?.itemId || !item?.name || !date || !vendor || !amount) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const updated = await Expense.findByIdAndUpdate(
+      req.params.id,
+      { projectId, item, date, vendor, category, description, amount },
+      { new: true }
+    );
+
+    if (!updated) return res.status(404).json({ message: "Expense not found" });
+
+    res.json({ success: true, expense: updated });
+  } catch (err) {
+    console.error("Error updating expense:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.delete("/api/expenses/:id", async (req, res) => {
+  try {
+    const deleted = await Expense.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: "Expense not found" });
+
+    res.json({ success: true, message: "Expense deleted" });
+  } catch (err) {
+    console.error("Error deleting expense:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 
 
