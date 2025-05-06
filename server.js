@@ -690,13 +690,17 @@ const invoiceSchema = new mongoose.Schema({
       description: String,
       quantity: Number,
       unitPrice: Number,
-      costCode: String // ✅ Added cost code here
+      costCode: String
     }
   ],
   total: Number,
+  status: {
+    type: String,
+    enum: ['Pending', 'Paid', 'Overdue'],
+    default: 'Pending'
+  },
   createdAt: { type: Date, default: Date.now }
 });
-
 
 const quoteSchema = new mongoose.Schema({
   from: {
@@ -3595,7 +3599,7 @@ app.post('/api/create', async (req, res) => {
 });
 
 
-// ✅ GET invoices filtered by projectId
+// ✅ GET invoices filtered by projectId WITH project name
 app.get('/api/invoices', async (req, res) => {
   const { projectId } = req.query;
 
@@ -3604,11 +3608,29 @@ app.get('/api/invoices', async (req, res) => {
       return res.status(400).json({ message: "Missing projectId" });
     }
 
-    const invoices = await Invoice.find({ projectId });
+    const invoices = await Invoice.find({ projectId })
+      .populate('projectId', 'name'); // 👈 Include project name
 
     res.json({ invoices });
   } catch (err) {
     console.error("❌ Error fetching invoices by projectId:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+// PATCH /api/invoices/:id
+app.patch('/api/invoices/:id', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    const updated = await Invoice.findByIdAndUpdate(id, { status }, { new: true });
+    if (!updated) return res.status(404).json({ message: "Invoice not found" });
+
+    res.json({ success: true, invoice: updated });
+  } catch (err) {
+    console.error("Error updating invoice status:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
