@@ -1613,7 +1613,7 @@ function displayAssignedItems(items) {
             </h6>
             <div class="item-description">${formatDescription(item.description)}</div>
 
-            <td>Qty: ${item.quantity || "0"} <h4>Unit Price: $${(item.unitPrice || 0).toFixed(2)}</h4></td>
+            <td style="display:none">Qty: ${item.quantity || "0"} <h4>Unit Price: $${(item.unitPrice || 0).toFixed(2)}</h4></td>
 
             <td>
                 <div class="photo-preview">
@@ -1644,7 +1644,7 @@ function displayAssignedItems(items) {
                 <button class="toggle-status-btn" data-item-id="${item.itemId}" data-current-status="${currentStatus}">
                     ${nextLabel}
                 </button>
-                <h4>Total: $${(item.total || 0).toFixed(2)}</h4>
+                <h4 style="display:none">Total: $${(item.total || 0).toFixed(2)}</h4>
             </td>
         `;
 
