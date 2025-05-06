@@ -637,7 +637,7 @@ function closeInvoiceModal() {
 }
 
 
-    async function loadFinancials() {
+async function loadFinancials() {
   try {
     showLoader(true);
     const projectName = await fetchProjectName(projectId);
@@ -660,7 +660,7 @@ function closeInvoiceModal() {
 
     // 🔢 Total Budget from Estimates
     const totalBudget = estimates.reduce((sum, e) => sum + (e.total || 0), 0);
-    document.getElementById("total-budget").textContent = `$${totalBudget.toFixed(2)}`;
+    document.getElementById("total-budget").textContent = `$${totalBudget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
     // 🧾 Invoices
     let estRevenue = 0;
@@ -673,7 +673,6 @@ function closeInvoiceModal() {
         <tr>
           <td>${i.date}</td>
           <td>${projectName}</td>
-
           <td>
             <select class="status-select" onchange="updateInvoiceStatus('${i._id}', this.value); applyStatusColor(this)">
               <option value="Pending" ${i.status === "Pending" ? "selected" : ""}>Pending</option>
@@ -681,12 +680,12 @@ function closeInvoiceModal() {
               <option value="Overdue" ${i.status === "Overdue" ? "selected" : ""}>Overdue</option>
             </select>
           </td>
-          <td>$${(i.total || 0).toFixed(2)}</td>
+          <td>$${(i.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           <td><button class="btn-primary" onclick="openInvoiceModal('${i.invoiceNumber}')">View</button></td>
         </tr>`;
     });
 
-    document.getElementById("estimated-revenue").textContent = `$${estRevenue.toFixed(2)}`;
+    document.getElementById("estimated-revenue").textContent = `$${estRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
     // ✅ Expenses Table
     let totalExp = 0;
@@ -704,7 +703,7 @@ function closeInvoiceModal() {
         <td>${e.vendor}</td>
         <td>${e.category || "—"}</td>
         <td>${e.description || "—"}</td>
-        <td>$${e.amount.toFixed(2)}</td>
+        <td>$${e.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         <td>
           <button class="btn-primary" onclick="editExpense('${e._id}')">✏️</button>
           <button class="btn-primary" onclick="deleteExpense('${e._id}')">🗑️</button>
@@ -712,8 +711,8 @@ function closeInvoiceModal() {
       </tr>`;
     });
 
-    document.getElementById("total-expenses").textContent = `$${totalExp.toFixed(2)}`;
-    document.getElementById("net-profit").textContent = `$${(totalBudget - totalExp - estRevenue).toFixed(2)}`;
+    document.getElementById("total-expenses").textContent = `$${totalExp.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    document.getElementById("net-profit").textContent = `$${(totalBudget - totalExp - estRevenue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
     // 🎨 Apply status dropdown color styling
     document.querySelectorAll(".status-select").forEach(applyStatusColor);
@@ -725,6 +724,7 @@ function closeInvoiceModal() {
     showLoader(false);
   }
 }
+
 
 
 function applyStatusColor(selectEl) {
