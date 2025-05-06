@@ -644,7 +644,7 @@ async function getLatLngFromAddress(address) {
 // ✅ Load All Project Locations
 async function loadProjectLocations() {
   showLoader();
-  showToast("📍 Loading project locations...");
+  alert("📍 Loading project locations...");
 
   try {
     const [activeRes, upcomingRes, completedRes, onMarketRes] = await Promise.all([
@@ -702,7 +702,7 @@ async function loadProjectLocations() {
     if (markerCluster) markerCluster.clearMarkers();
     markerCluster = new markerClusterer.MarkerClusterer({ map, markers });
 
-    showToast("✅ Map updated with project markers.");
+    alert("✅ Map updated with project markers.");
   } catch (err) {
     console.error("Error loading project locations:", err);
     showToast("❌ Error loading locations.");
