@@ -1220,7 +1220,7 @@ async function saveEstimate() {
     console.log("🔍 Saving Estimate Data:", JSON.stringify(updatedEstimate, null, 2));
 
     const result = await saveResponse.json();
-    showToastt(`Estimate ${method === "POST" ? "created" : "updated"} successfully!`, result);
+    showToast(`Estimate ${method === "POST" ? "created" : "updated"} successfully!`, result);
 
     if (!estimateId && result.estimate && result.estimate._id) {
       estimateId = result.estimate._id;
@@ -1231,7 +1231,7 @@ async function saveEstimate() {
     updatePage();
   } catch (error) {
     console.error("Error saving estimate:", error);
-    showToastt("Error saving the estimate. Please try again.");
+    showToast("Error saving the estimate. Please try again.");
   } finally {
     hideLoader(); // 👈 END
   }
