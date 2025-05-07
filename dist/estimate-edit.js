@@ -821,9 +821,18 @@ function addLineItemCard(item = {}, categoryHeader = null) {
 
     matches.forEach(match => {
       const option = document.createElement("div");
-      option.textContent = match.name;
-      option.style.padding = "8px";
-      option.style.cursor = "pointer";
+      option.innerHTML = `
+      <div style="font-weight:600;">${match.name}</div>
+      <div style="font-size: 11px; color: #555; margin-top: 2px;">
+        ${match.description || "No description"}
+      </div>
+      <div style="font-size: 11px; color: #007bff; margin-top: 2px;">
+        $${(match.rate || 0).toFixed(2)}
+      </div>
+    `;
+    option.style.padding = "8px";
+    option.style.cursor = "pointer";
+    option.style.borderBottom = "1px solid #eee";
       option.onmouseenter = () => (option.style.background = "#f0f0f0");
       option.onmouseleave = () => (option.style.background = "#fff");
       option.onclick = () => {
@@ -843,12 +852,15 @@ function addLineItemCard(item = {}, categoryHeader = null) {
     suggestionBox.style.display = "block";
   });
 
-  // Hide on outside click
-  document.addEventListener("click", (e) => {
-    if (!card.contains(e.target)) {
-      suggestionBox.style.display = "none";
-    }
-  });
+// Close suggestion box if clicking outside the input or the box itself
+document.addEventListener("click", function handleOutsideClick(e) {
+  const isInsideInput = itemNameInput.contains(e.target);
+  const isInsideBox = suggestionBox.contains(e.target);
+
+  if (!isInsideInput && !isInsideBox) {
+    suggestionBox.style.display = "none";
+  }
+});
 
  
 
