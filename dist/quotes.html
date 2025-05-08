@@ -592,6 +592,7 @@ function hideLoader() {
       <div class="quote-item" onclick="viewQuote('${q._id}')">
         <div class="quote-meta">
           <strong>${q.quoteNumber}</strong>
+          ${q.to.address || 'No Address Provided'}<br>
           ${q.to?.name || 'Unknown'}<br>
           <small>${new Date(q.date).toLocaleDateString()}</small>
         </div>
