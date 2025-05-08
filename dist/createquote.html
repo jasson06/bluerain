@@ -710,7 +710,13 @@ textarea {
       <h3>Quote To</h3>
       <input id="toName" placeholder="Customer Name" oninput="showClientSuggestions()" />
 <div id="clientSuggestionBox" style="position: absolute; background: white; border: 1px solid #ccc; border-radius: 6px; z-index: 1000; display: none; max-height: 150px; overflow-y: auto;"></div>
-      <input id="toAddress" placeholder="Address" />
+      <input 
+id="toAddress" 
+placeholder="Address (e.g., 9150 Devils River, Converse, TX 78109)" 
+onfocus="initAutocomplete()" 
+autocomplete="off" 
+/>
+<span id="addressError" style="color: red; display: none;">Invalid address format. Please use: Street, City, ST ZIP</span>
       <input id="toEmail" placeholder="Email" />
       <input id="toPhone" placeholder="Phone Number" />
     </div>
@@ -956,6 +962,7 @@ textarea {
   100% { transform: rotate(360deg); }
 }
 </style>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCvzkKpCkAY2PHwU8I8zZiM_FLMzMj1bbg&libraries=places"></script>
     
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -1137,6 +1144,69 @@ function autoResizeTextarea(textarea) {
 }
 
 
+let autocomplete;
+
+function initAutocomplete() {
+  const addressInput = document.getElementById("toAddress");
+
+  autocomplete = new google.maps.places.Autocomplete(addressInput, {
+    types: ["address"],
+    componentRestrictions: { country: "us" },
+    fields: ["address_components", "formatted_address"],
+  });
+
+  autocomplete.addListener("place_changed", () => {
+    const place = autocomplete.getPlace();
+    if (!place.address_components) return;
+
+    const formattedAddress = formatAddressComponents(place.address_components);
+    addressInput.value = formattedAddress;
+
+    validateAddress(formattedAddress);
+  });
+}
+
+function formatAddressComponents(components) {
+  let street = "";
+  let city = "";
+  let state = "";
+  let zip = "";
+
+  components.forEach(component => {
+    const types = component.types;
+
+    if (types.includes("street_number")) {
+      street = component.long_name;
+    }
+    if (types.includes("route")) {
+      street += ` ${component.long_name}`;
+    }
+    if (types.includes("locality")) {
+      city = component.long_name;
+    }
+    if (types.includes("administrative_area_level_1")) {
+      state = component.short_name;
+    }
+    if (types.includes("postal_code")) {
+      zip = component.long_name;
+    }
+  });
+
+  return `${street}, ${city}, ${state} ${zip}`;
+}
+
+function validateAddress(address) {
+  const pattern = /^(\d+\s+\w+(?:\s+\w+)*),\s*(\w+(?:\s+\w+)*),\s*([A-Z]{2})\s*(\d{5})$/;
+  const errorSpan = document.getElementById('addressError');
+
+  if (pattern.test(address)) {
+    errorSpan.style.display = "none";
+  } else {
+    errorSpan.style.display = "block";
+  }
+}
+
+    
 
 let lineItems = [];
 
