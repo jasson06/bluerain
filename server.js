@@ -3892,58 +3892,72 @@ app.put('/api/quotes/:id', async (req, res) => {
 });
 
 
-
-// Helper to parse address string
+// Enhanced address parsing function to handle various address formats
 function parseAddress(addressString) {
-  const regex = /(.*),\s*(.+),\s*([A-Z]{2})\s*(\d{5})/;
+  const regex = /^(\d+\s+\w+(?:\s+\w+)*),?\s*(\w+(?:\s+\w+)*)?,?\s*([A-Z]{2})?\s*(\d{5})?$/;
   const match = addressString.match(regex);
-  if (!match) return {};
 
-  return {
-    street: match[1].trim(),
-    city: match[2].trim(),
-    state: match[3].trim(),
-    zip: match[4].trim()
+  if (!match) {
+    console.warn("Address format not recognized. Using fallback parsing.");
+    const parts = addressString.split(',').map(part => part.trim());
+
+    return applyDefaultAddressValues({
+      street: parts[0] || '',
+      city: parts[1] || '',
+      state: parts[2]?.split(' ')[0] || 'TX',
+      zip: parts[2]?.split(' ')[1] || '78109'
+    });
+  }
+
+  const parsedAddress = {
+    street: match[1] || '',
+    city: match[2] || '',
+    state: match[3] || 'TX',
+    zip: match[4] || '78109'
   };
+
+  return applyDefaultAddressValues(parsedAddress);
 }
 
+// Apply default values if state or zip are still undefined
+function applyDefaultAddressValues(address) {
+  address.state = address.state || 'TX';
+  address.zip = address.zip || '78109';
+  return address;
+}
+
+// Usage Example
+const address1 = "9150 Devils River Converse Texas, 78109";
+const address2 = "9150 Devils River, Converse, TX 78109";
+console.log(parseAddress(address1));
+console.log(parseAddress(address2));
 
 
+// Updated /convert-to-job endpoint to proceed with job creation even if address data is incomplete
 app.post("/api/quotes/:id/convert-to-job", async (req, res) => {
   try {
-     // ✅ Get raw quote data with lean()
- const quote = await Quote.findById(req.params.id).lean();
+    // ✅ Get raw quote data with lean()
+    const quote = await Quote.findById(req.params.id).lean();
     if (!quote) return res.status(404).json({ error: "Quote not found" });
 
-    // Fallback if no address
-    const fullAddress = quote.to?.address || "Unknown Address";
+    const fullAddress = quote.to?.address || "";
+    const parsedAddress = parseAddress(fullAddress);
 
-    // Extract address parts safely
-    const addressParts = fullAddress.split(",");
-    const street = addressParts[0]?.trim() || "";
-    const city = addressParts[1]?.trim() || "";
-    const stateZip = addressParts[2]?.trim() || "";
-    const [state, zip] = stateZip.split(" ").filter(Boolean); // handles "TX 78201"
+    const projectName = `${parsedAddress.street.split(" ").slice(1).join(" ")} ${parsedAddress.street.split(" ")[0] || ""}`.trim() || "Unnamed Project";
 
-    const projectName = `${street.split(" ").slice(1).join(" ")} ${street.split(" ")[0] || ""}`.trim() || "Unnamed Project";
-
-    const parsedAddress = {
-      addressLine1: street, // 👈 ensure matches frontend expectations
-      addressLine2: '',
-      city,
-      state,
-      zip: zip || ''
-    };
-
-    console.log("📍 Parsed address:", { ...parsedAddress, projectName });
-    console.log("Line item sample:", quote.lineItems[0]);
-    // ✅ Create Project
+    // Proceed even with incomplete address data
     const project = await Project.create({
       name: projectName,
       code: "1111",
       type: "residential",
       status: "in-progress",
-      address: parsedAddress,
+      address: {
+        addressLine1: parsedAddress.street,
+        addressLine2: '',
+        city: parsedAddress.city,
+        state: parsedAddress.state,
+        zip: parsedAddress.zip
+      },
       client: {
         name: quote.to?.name || "Client",
         email: quote.to?.email || "",
