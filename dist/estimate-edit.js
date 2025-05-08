@@ -753,6 +753,8 @@ function addLineItemCard(item = {}, categoryHeader = null) {
         <label>Description</label>
         <textarea class="item-description" placeholder="Description">${item.description || ""}</textarea>
       </div>
+
+    
       <div class="detail">
         <label>Quantity</label>
         <input type="number" class="item-quantity" value="${item.quantity || 1}" min="1">
@@ -761,7 +763,20 @@ function addLineItemCard(item = {}, categoryHeader = null) {
         <label>Unit Price</label>
         <input type="number" class="item-price" value="${item.unitPrice || 0}" min="0" step="0.01">
       </div>
+
+                      <div class="detail">
+        <label>Labor Cost</label>
+        <input type="text" class="item-labor-cost" value="$${((item.quantity || 1) * (item.unitPrice || 0) * 0.37).toFixed(2)}" readonly>
+      </div>
+    
+
+          <div class="detail">
+        <label>Material Cost</label>
+        <input type="text" class="item-material-cost" value="$${((item.quantity || 1) * (item.unitPrice || 0) * 0.4).toFixed(2)}" readonly>
+      </div>
     </div>
+
+
 
     <div class="photo-section">
       <div class="photo-preview">
@@ -803,54 +818,58 @@ function addLineItemCard(item = {}, categoryHeader = null) {
       </span>
     </div>
   `;
+  
+// Suggestion Box Logic
+const itemNameInput = card.querySelector(".item-name");
+const suggestionBox = card.querySelector(".suggestion-box");
 
-  const itemNameInput = card.querySelector(".item-name");
-  const suggestionBox = card.querySelector(".suggestion-box");
+itemNameInput.addEventListener("input", () => {
+  const value = itemNameInput.value.toLowerCase();
+  suggestionBox.innerHTML = "";
 
-  itemNameInput.addEventListener("input", () => {
-    const value = itemNameInput.value.toLowerCase();
-    suggestionBox.innerHTML = "";
+  if (!value) return (suggestionBox.style.display = "none");
 
-    if (!value) return (suggestionBox.style.display = "none");
+  const matches = laborCostList.filter(item =>
+    item.name.toLowerCase().includes(value)
+  );
 
-    const matches = laborCostList.filter(item =>
-      item.name.toLowerCase().includes(value)
-    );
+  if (matches.length === 0) return (suggestionBox.style.display = "none");
 
-    if (matches.length === 0) return (suggestionBox.style.display = "none");
-
-    matches.forEach(match => {
-      const option = document.createElement("div");
-      option.innerHTML = `
-      <div style="font-weight:600;">${match.name}</div>
-      <div style="font-size: 11px; color: #555; margin-top: 2px;">
-        ${match.description || "No description"}
-      </div>
-      <div style="font-size: 11px; color: #007bff; margin-top: 2px;">
-        $${(match.rate || 0).toFixed(2)}
-      </div>
-    `;
-    option.style.padding = "8px";
-    option.style.cursor = "pointer";
-    option.style.borderBottom = "1px solid #eee";
-      option.onmouseenter = () => (option.style.background = "#f0f0f0");
-      option.onmouseleave = () => (option.style.background = "#fff");
-      option.onclick = () => {
-        itemNameInput.value = match.name;
-        card.querySelector(".item-description").value = match.description;
-        card.querySelector(".item-price").value = match.rate;
-        card.querySelector(".item-cost-code").value = match.costCode || "Uncategorized";
-        suggestionBox.style.display = "none";
-      };
-      suggestionBox.appendChild(option);
-    });
-
-    const rect = itemNameInput.getBoundingClientRect();
-    suggestionBox.style.top = `${itemNameInput.offsetTop + itemNameInput.offsetHeight}px`;
-    suggestionBox.style.left = `${itemNameInput.offsetLeft}px`;
-    suggestionBox.style.width = `${itemNameInput.offsetWidth}px`;
-    suggestionBox.style.display = "block";
+  matches.forEach(match => {
+    const option = document.createElement("div");
+    option.innerHTML = `
+    <div style="font-weight:600;">${match.name}</div>
+    <div style="font-size: 11px; color: #555; margin-top: 2px;">
+      ${match.description || "No description"}
+    </div>
+    <div style="font-size: 11px; color: #007bff; margin-top: 2px;">
+      $${(match.rate || 0).toFixed(2)}
+    </div>
+  `;
+  option.style.padding = "8px";
+  option.style.cursor = "pointer";
+  option.style.borderBottom = "1px solid #eee";
+    option.onmouseenter = () => (option.style.background = "#f0f0f0");
+    option.onmouseleave = () => (option.style.background = "#fff");
+    option.onclick = () => {
+      itemNameInput.value = match.name;
+      card.querySelector(".item-description").value = match.description;
+      card.querySelector(".item-price").value = match.rate;
+      card.querySelector(".item-cost-code").value = match.costCode || "Uncategorized";
+      suggestionBox.style.display = "none";
+    };
+    suggestionBox.appendChild(option);
   });
+
+  const rect = itemNameInput.getBoundingClientRect();
+  suggestionBox.style.top = `${itemNameInput.offsetTop + itemNameInput.offsetHeight}px`;
+  suggestionBox.style.left = `${itemNameInput.offsetLeft}px`;
+  suggestionBox.style.width = `${itemNameInput.offsetWidth}px`;
+  suggestionBox.style.display = "block";
+  updateSummary();
+  updateSelectedLaborCost();
+
+});
 
 // Close suggestion box if clicking outside the input or the box itself
 document.addEventListener("click", function handleOutsideClick(e) {
@@ -861,6 +880,8 @@ document.addEventListener("click", function handleOutsideClick(e) {
     suggestionBox.style.display = "none";
   }
 });
+
+
 
  
 
@@ -915,32 +936,45 @@ document.addEventListener("click", function handleOutsideClick(e) {
   card.querySelector(".delete-line-item").addEventListener("click", () => {
     card.remove();
     updateSummary();
+    updateSelectedLaborCost();
+
   });
 
    // Update Item Total on Quantity or Price Change
    const quantityInput = card.querySelector(".item-quantity");
-   const priceInput = card.querySelector(".item-price");
+  const priceInput = card.querySelector(".item-price");
+  const laborCostInput = card.querySelector(".item-labor-cost");
+  const materialCostInput = card.querySelector(".item-material-cost");
+  const totalDisplay = card.querySelector(".item-total");
+  const checkbox = card.querySelector(".line-item-select");
+  checkbox.addEventListener("change", updateSelectedLaborCost);
+  
+  function updateCardValues() {
+    const quantity = parseInt(quantityInput.value, 10) || 0;
+    const price = parseFloat(priceInput.value) || 0;
+    const total = quantity * price;
+    const laborCost = total * 0.37;
+    const materialCost = total * 0.4;
 
-   function updateCardTotal() {
-     const quantity = parseInt(quantityInput.value, 10) || 0;
-     const price = parseFloat(priceInput.value) || 0;
-     const total = quantity * price;
-     card.querySelector(".item-total").textContent = `$${total.toFixed(2)}`;
-     updateSummary();
-   }
+    totalDisplay.textContent = `$${total.toFixed(2)}`;
+    laborCostInput.value = `$${laborCost.toFixed(2)}`;
+    materialCostInput.value = `$${materialCost.toFixed(2)}`;
+    updateSelectedLaborCost();
 
-   quantityInput.addEventListener("input", updateCardTotal);
-   priceInput.addEventListener("input", updateCardTotal);
+    updateSummary();
+  }
 
-   const lineItemsContainer = document.getElementById("line-items-cards");
+  quantityInput.addEventListener("input", updateCardValues);
+  priceInput.addEventListener("input", updateCardValues);
 
-   // Append Card to the Line Items Container
-   if (categoryHeader && categoryHeader.nextSibling) {
-     categoryHeader.parentNode.insertBefore(card, categoryHeader.nextSibling);
-   } else {
-     lineItemsContainer.appendChild(card);
-   }
- }
+  // Append the card to the container
+  const lineItemsContainer = document.getElementById("line-items-cards");
+  if (categoryHeader && categoryHeader.nextSibling) {
+    categoryHeader.parentNode.insertBefore(card, categoryHeader.nextSibling);
+  } else {
+    lineItemsContainer.appendChild(card);
+  }
+}
   // Update Summary Function
   function updateSummary() {
     const lineItems = document.querySelectorAll(".line-item-card");
@@ -960,7 +994,42 @@ document.addEventListener("click", function handleOutsideClick(e) {
   }
   
 
+// ✅ Function to Calculate and Display Selected Labor Cost
+function updateSelectedLaborCost() {
+  const selectedItems = document.querySelectorAll(".line-item-select:checked");
+  let totalLaborCost = 0;
 
+  selectedItems.forEach(item => {
+    const card = item.closest(".line-item-card");
+    const laborCost = parseFloat(card.querySelector(".item-labor-cost").value.replace("$", ""));
+    totalLaborCost += isNaN(laborCost) ? 0 : laborCost;
+  });
+
+  let floatingLaborCost = document.getElementById("floating-labor-cost");
+
+  if (!floatingLaborCost) {
+    floatingLaborCost = document.createElement("div");
+    floatingLaborCost.id = "floating-labor-cost";
+    floatingLaborCost.style.position = "fixed";
+    floatingLaborCost.style.bottom = "20px";
+    floatingLaborCost.style.right = "20px";
+    floatingLaborCost.style.backgroundColor = "#007bff";
+    floatingLaborCost.style.color = "#fff";
+    floatingLaborCost.style.padding = "10px 20px";
+    floatingLaborCost.style.borderRadius = "6px";
+    floatingLaborCost.style.zIndex = "9999";
+    document.body.appendChild(floatingLaborCost);
+  }
+
+  if (totalLaborCost > 0) {
+    floatingLaborCost.style.display = "block";
+    floatingLaborCost.textContent = `Selected Labor Cost: $${totalLaborCost.toFixed(2)}`;
+  } else {
+    floatingLaborCost.style.display = "none";
+  }
+}
+
+  
 
   async function assignItemsToVendor() {
     const vendorId = document.getElementById("vendor-select").value;
@@ -985,8 +1054,11 @@ document.addEventListener("click", function handleOutsideClick(e) {
       const unitPrice = parseFloat(card.querySelector(".item-price").value) || 0;
       const total = quantity * unitPrice;
   
+      // ✅ Calculate Labor Cost (40% of Total)
+      const laborCost = total * 0.37;
+  
       // ✅ If cost code exists on the card, grab it
-      let costCode = card.getAttribute("data-cost-code");
+      let costCode = card.querySelector(".item-cost-code")?.value.trim() || "Uncategorized";
   
       // 🔥 If cost code is missing, fallback to category name
       if (!costCode || costCode === "Uncategorized") {
@@ -1002,9 +1074,9 @@ document.addEventListener("click", function handleOutsideClick(e) {
         description,
         quantity,
         unitPrice,
-        total,
+        total: laborCost, // ✅ Assign Labor Cost as the new "total"
         assignedTo: vendorId,
-        costCode // ✅ Always set costCode correctly
+        costCode
       };
     });
   
