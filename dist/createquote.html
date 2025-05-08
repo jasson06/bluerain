@@ -1013,9 +1013,15 @@ autocomplete="off"
   matches.forEach(item => {
     const option = document.createElement('div');
     option.innerHTML = `
-      <small style="color: #64748b;"><strong>Code:</strong> ${item.costCode || '-'}</small>
-      <strong>${item.name}</strong><br>
-      <small>${item.description}</small><br>
+          <div style="font-weight:600;">${item.name}</div>
+          
+        <div style="font-size: 11px; color: #555; margin-top: 2px;">
+      ${item.description || "No description"}
+        </div>
+
+         <div style="font-size: 11px; color: #007bff; margin-top: 2px;">
+      $${(item.rate || 0).toFixed(2)}
+    </div>
       
     `;
     option.style.padding = '8px';
