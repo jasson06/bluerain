@@ -282,8 +282,8 @@ window.closePhotoViewer = closePhotoViewer;
 
 
 
-  // ✅ Upload Photo (Supports Before & After)
-  function uploadPhoto(event, itemId, type) {
+// ✅ Upload Photo (Supports Before & After)
+function uploadPhoto(event, itemId, type) {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
@@ -291,7 +291,7 @@ window.closePhotoViewer = closePhotoViewer;
     const vendorId = localStorage.getItem("vendorId"); // This might be null if the item is unassigned
 
     if (!estimateId) {
-      showToast("Estimate ID is missing! Please save the estimate first.");
+        showToast("Estimate ID is missing! Please save the estimate first.");
         return;
     }
 
@@ -307,8 +307,16 @@ window.closePhotoViewer = closePhotoViewer;
         formData.append("vendorId", vendorId);
     }
 
-    
-
+    // ✅ Show inline loader in the photo section
+    const containerId = `${type}-photos-${itemId}`;
+    const photoContainer = document.getElementById(containerId);
+    if (photoContainer) {
+        photoContainer.innerHTML = `
+            <div style="display: flex; justify-content: center; align-items: center; min-height: 100px;">
+                <div style="border: 4px solid #f3f3f3; border-top: 4px solid #0ea5e9; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;"></div>
+            </div>
+        `;
+    }
 
     fetch("/api/upload-photos", { method: "POST", body: formData })
         .then(response => response.json())
@@ -316,7 +324,7 @@ window.closePhotoViewer = closePhotoViewer;
             if (!result || !result.photoUrls) {
                 throw new Error(result.message || "Invalid server response.");
             }
-            
+
             console.log(`✅ Uploaded ${files.length} Photo(s):`, result.photoUrls);
             showToast(`✅ ${files.length} Photo(s) uploaded successfully!`);
 
@@ -326,12 +334,13 @@ window.closePhotoViewer = closePhotoViewer;
         .catch(error => {
             console.error("❌ Photo Upload Error:", error);
             showToast("Failed to upload photos.");
-          })
-          .finally(() => {
-            hideLoader();
+            // Clear loader on error
+            if (photoContainer) {
+                photoContainer.innerHTML = `<p class="placeholder">Error uploading photos.</p>`;
+            }
         });
-        
 }
+
 
 
   window.uploadPhoto = uploadPhoto;
