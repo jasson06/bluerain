@@ -307,7 +307,7 @@ window.closePhotoViewer = closePhotoViewer;
         formData.append("vendorId", vendorId);
     }
 
-    showLoader(); // 👈 START
+    
 
 
     fetch("/api/upload-photos", { method: "POST", body: formData })
