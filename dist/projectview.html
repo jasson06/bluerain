@@ -850,7 +850,7 @@ td {
 <section id="project-details" class="project-details-container">
     <div class="project-header">
         <h2 id="project-name">Project Name</h2>
-        <button class="return-dashboard-btn" onclick="window.location.href='/Subcontractor%20Page.html'">
+        <button class="return-dashboard-btn" onclick="window.location.href='/Subcontractor%20page.html'">
             ⬅️ Return to Dashboard
           </button>
           
@@ -917,6 +917,57 @@ td {
         <button id="next-photo" onclick="changePhotoViewer(1)">❯</button>
     </div>
     
+
+
+    <!-- Toast Notification -->
+<div id="toast" style="
+position: fixed;
+top: 30px;
+left: 50%;
+transform: translateX(-50%);
+background: linear-gradient(to right, #0ea5e9, #3b82f6);
+color: white;
+padding: 14px 24px;
+border-radius: 8px;
+display: none;
+z-index: 9999;
+font-weight: 500;
+font-size: 15px;
+box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+transition: opacity 0.3s ease, transform 0.3s ease;
+pointer-events: none;
+"></div>
+
+<!-- Loader Spinner -->
+<div id="loader" style="
+position: fixed;
+top: 0; left: 0;
+width: 100%; height: 100%;
+background: rgba(255, 255, 255, 0.6);
+backdrop-filter: blur(2px);
+z-index: 9999;
+display: none;
+justify-content: center;
+align-items: center;
+">
+<div style="
+  border: 5px solid #e5e7eb;
+  border-top: 5px solid #3b82f6;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  animation: spin 0.8s linear infinite;
+"></div>
+</div>
+
+<!-- Add this to your <style> block or <head> -->
+<style>
+@keyframes spin {
+0% { transform: rotate(0deg); }
+100% { transform: rotate(360deg); }
+}
+</style>
+
 </body>
 </html>
 
@@ -1012,6 +1063,21 @@ function enableGlobalSwipeEvents() {
     }
 }
 
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.style.display = 'block';
+  setTimeout(() => { toast.style.display = 'none'; }, 3000);
+}
+
+function showLoader() {
+  document.getElementById('loader').style.display = 'flex';
+}
+
+function hideLoader() {
+  document.getElementById('loader').style.display = 'none';
+}
+
 
 // ✅ Fix Dot Indicators (Now Correctly Updates)
 function updateDots(wrapperId, activeIndex) {
@@ -1031,6 +1097,7 @@ function updateDots(wrapperId, activeIndex) {
 
 // ✅ Fetch Project Details
 async function fetchProjectDetails(projectId) {
+    showLoader(); // 👈 START
     try {
         const response = await fetch(`/api/details/projects/${projectId}?t=${Date.now()}`);
                          await fetchProjectEstimates(projectId);
@@ -1048,6 +1115,8 @@ async function fetchProjectDetails(projectId) {
     } catch (error) {
         console.error("❌ Error fetching project details:", error);
         document.getElementById("project-name").innerText = "Failed to load project details.";
+    } finally {
+        hideLoader(); // 👈 END
     }
 }
 
@@ -1055,7 +1124,7 @@ async function fetchProjectDetails(projectId) {
 async function fetchProjectEstimates(projectId) {
   const vendorId = localStorage.getItem("vendorId");
   const tabsContainer = document.getElementById("estimateTabsContainer");
-
+  showLoader(); // 👈 START
   try {
     const res = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
     
@@ -1125,6 +1194,8 @@ async function fetchProjectEstimates(projectId) {
   } catch (error) {
     console.error("❌ Error fetching project estimates:", error);
     tabsContainer.innerHTML = `<p style="color: red; padding: 10px;">Failed to load work orders.</p>`;
+} finally {
+    hideLoader(); // 👈 END
   }
 }
 
@@ -1183,7 +1254,7 @@ async function handleEstimateSelection(estimateId) {
     }
   } catch (err) {
     console.error("❌ Error loading assigned items:", err);
-    alert("Failed to load your assigned items.");
+    showToast("Failed to load your assigned items.");
   }
 }
 
@@ -1312,9 +1383,9 @@ async function toggleItemStatus(vendorId, itemId, currentStatus) {
             button.innerText = nextLabel;
         }
 
-        console.log(`✅ Status updated to: ${newStatus}`);
+        showToast(`✅ Status updated to: ${newStatus}`);
     } catch (error) {
-        console.error("❌ Error updating item status:", error);
+        showToast("❌ Error updating item status:", error);
     }
 }
 
@@ -1494,7 +1565,7 @@ async function uploadPhoto(event, itemId, type) {
   const projectId = new URLSearchParams(window.location.search).get("projectId");
 
   if (!vendorId || !projectId) {
-    alert("Missing project or vendor context.");
+    showToast("Missing project or vendor context.");
     return;
   }
 
@@ -1506,7 +1577,7 @@ async function uploadPhoto(event, itemId, type) {
   
 
   if (!estimateId) {
-    alert("Please select a Work Order before uploading.");
+    showToast("Please select a Work Order before uploading.");
     return;
   }
 
@@ -1520,11 +1591,16 @@ async function uploadPhoto(event, itemId, type) {
   formData.append("estimateId", estimateId);
   formData.append("vendorId", vendorId);
 
-  // Show the spinner
-  const spinner = document.getElementById("photo-upload-spinner");
-  if (spinner) {
-    spinner.style.display = "block";
-  }
+    // ✅ Show inline loader in the photo section
+    const containerId = `${type}-photos-${itemId}`;
+    const photoContainer = document.getElementById(containerId);
+    if (photoContainer) {
+        photoContainer.innerHTML = `
+            <div style="display: flex; justify-content: center; align-items: center; min-height: 100px;">
+                <div style="border: 4px solid #f3f3f3; border-top: 4px solid #0ea5e9; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;"></div>
+            </div>
+        `;
+    }
 
   try {
     const response = await fetch("/api/upload-photos", {
@@ -1535,32 +1611,48 @@ async function uploadPhoto(event, itemId, type) {
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || "Upload failed.");
 
-    alert(`✅ ${files.length} Photo(s) uploaded successfully!`);
+    showToast(`✅ ${files.length} Photo(s) uploaded successfully!`);
     updatePhotoSection(itemId, type);
   } catch (error) {
     console.error("❌ Photo Upload Error:", error);
-    alert("Failed to upload photos.");
-  } finally {
-    // Hide the spinner
-    if (spinner) {
-      spinner.style.display = "none";
-    }
+    showToast("Failed to upload photos.");
+            // Clear loader on error
+            if (photoContainer) {
+                photoContainer.innerHTML = `<p class="placeholder">Error uploading photos.</p>`;
+            }
   }
 }
 
      
 // ✅ Delete Photo & Ensure Swiping Remains
 async function deletePhoto(itemId, photoUrl, type) {
+
+    
+        // ✅ Show inline loader in the photo section
+        const containerId = `${type}-photos-${itemId}`;
+    const photoContainer = document.getElementById(containerId);
+    if (photoContainer) {
+        photoContainer.innerHTML = `
+            <div style="display: flex; justify-content: center; align-items: center; min-height: 100px;">
+                <div style="border: 4px solid #f3f3f3; border-top: 4px solid #0ea5e9; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;"></div>
+            </div>
+        `;
+    }
+
     try {
         const response = await fetch(`/api/delete-photo/${localStorage.getItem("vendorId")}/${itemId}/${encodeURIComponent(photoUrl)}`, { method: "DELETE" });
 
         if (!response.ok) throw new Error("Failed to delete photo.");
 
-        alert("✅ Photo deleted successfully!");
+        showToast("✅ Photo deleted successfully!");
         updatePhotoSection(itemId, type);
     } catch (error) {
         console.error("❌ Error deleting photo:", error);
-        alert("Failed to delete photo.");
+        showToast("Failed to delete photo.");
+                    // Clear loader on error
+                    if (photoContainer) {
+                photoContainer.innerHTML = `<p class="placeholder">Error uploading photos.</p>`;
+            }
     }
 }
 
@@ -1726,6 +1818,5 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
  </script>
-
 
 
