@@ -1142,79 +1142,88 @@ function populateEstimateDropdown(estimates) {
 }
 
       
-      function renderGridView(lineItems) {
-        if (!gridTasksOrder) {
-          gridTasksOrder = getAllTasks(lineItems);
-        }
-        const gridContainer = document.querySelector("#gridView .grid-container");
-        gridContainer.innerHTML = "";
-        gridTasksOrder.forEach((task, index) => {
-          const gridItem = document.createElement("div");
-          gridItem.className = `grid-item ${task.status.toLowerCase().replace(" ", "-")}`;
-          if (task.endDate && new Date() > new Date(task.endDate) && task.status !== "completed") {
-            gridItem.classList.add("overdue");
-          }
-          gridItem.setAttribute("draggable", "true");
-          gridItem.innerHTML = `
-            <h3>${task.name}</h3>
-            <div class="grid-details">
-              <p><strong>Category:</strong> ${task.category || "Uncategorized"}</p>
-              <p><strong>Start:</strong> ${task.startDate ? new Date(task.startDate).toLocaleDateString() : ''}</p>
-              <p><strong>End:</strong> ${task.endDate ? new Date(task.endDate).toLocaleDateString() : ''}</p>
-              <p><strong>Status:</strong> <span class="status-label ${getStatusClass(task.status)}">${task.status}</span></p>
-              <p><strong>Comments:</strong> ${task.description ? (task.description.length > 50 ? task.description.substring(0,50) + "..." : task.description) : ''}</p>
-            </div>
-          `;
-          gridItem.addEventListener("dragstart", function(e) {
-            e.dataTransfer.setData("text/plain", index);
-          });
-          gridItem.addEventListener("dragover", function(e) {
-            e.preventDefault();
-          });
-          gridItem.addEventListener("drop", function(e) {
-            e.preventDefault();
-            const sourceIndex = e.dataTransfer.getData("text/plain");
-            const targetIndex = index;
-            if (sourceIndex !== targetIndex) {
-              const temp = gridTasksOrder[sourceIndex];
-              gridTasksOrder[sourceIndex] = gridTasksOrder[targetIndex];
-              gridTasksOrder[targetIndex] = temp;
-              renderGridView(gridTasksOrder);
+   function renderGridView(lineItems) {
+    gridTasksOrder = getAllTasks(lineItems);
+    const gridContainer = document.querySelector("#gridView .grid-container");
+    gridContainer.innerHTML = "";
 
-            }
-          });
-          gridItem.addEventListener("click", () => {
-            const modalContent = `
-              <h2>Edit Task</h2>
-              <label>Task Name: <input type="text" id="editName" value="${task.name}" readonly /></label><br/><br/>
-              <label>Start Date: <input type="date" id="editStart" value="${task.startDate ? new Date(task.startDate).toISOString().split("T")[0] : ''}" /></label><br/><br/>
-              <label>End Date: <input type="date" id="editEnd" value="${task.endDate ? new Date(task.endDate).toISOString().split("T")[0] : ''}" /></label><br/><br/>
-              <label>Status: 
-                <select id="editStatus">
-                  <option value="in-progress" ${task.status==="in-progress"?"selected":""}>In Progress</option>
-                  <option value="completed" ${task.status==="completed"?"selected":""}>Completed</option>
-                </select>
-              </label><br/><br/>
-              <label>Comments: <textarea id="editComments">${task.description || ''}</textarea></label><br/><br/>
-              <button id="saveEditBtn">Save</button>
-            `;
-            openModal(modalContent);
-            document.getElementById("saveEditBtn").addEventListener("click", async function() {
-              const updatedTask = {
-                name: task.name,
-                startDate: document.getElementById("editStart").value,
-                endDate: document.getElementById("editEnd").value,
-                status: document.getElementById("editStatus").value,
-                description: document.getElementById("editComments").value
-              };
-              await updateLineItem(task._id, updatedTask);
-              closeModal();
-              loadView("gridView");
-            });
-          });
-          gridContainer.appendChild(gridItem);
-        });
+    gridTasksOrder.forEach((task, index) => {
+      const gridItem = document.createElement("div");
+      gridItem.className = `grid-item ${task.status.toLowerCase().replace(" ", "-")}`;
+
+      if (task.endDate && new Date() > new Date(task.endDate) && task.status !== "completed") {
+        gridItem.classList.add("overdue");
       }
+
+      gridItem.setAttribute("draggable", "true");
+      gridItem.dataset.index = index;
+
+      gridItem.innerHTML = `
+        <h3>${task.name}</h3>
+        <div class="grid-details">
+          <p><strong>Category:</strong> ${task.category || "Uncategorized"}</p>
+          <p><strong>Start:</strong> ${task.startDate ? new Date(task.startDate).toLocaleDateString() : 'N/A'}</p>
+          <p><strong>End:</strong> ${task.endDate ? new Date(task.endDate).toLocaleDateString() : 'N/A'}</p>
+          <p><strong>Status:</strong> <span class="status-label ${getStatusClass(task.status)}">${task.status}</span></p>
+          <p><strong>Comments:</strong> ${task.description ? (task.description.length > 50 ? task.description.substring(0, 50) + "..." : task.description) : 'No comments'}</p>
+        </div>
+      `;
+
+      gridItem.addEventListener("dragstart", function(e) {
+        e.dataTransfer.setData("text/plain", index);
+      });
+
+      gridItem.addEventListener("dragover", function(e) {
+        e.preventDefault();
+      });
+
+      gridItem.addEventListener("drop", function(e) {
+        e.preventDefault();
+        const sourceIndex = e.dataTransfer.getData("text/plain");
+        const targetIndex = index;
+
+        if (sourceIndex !== targetIndex) {
+          const temp = gridTasksOrder[sourceIndex];
+          gridTasksOrder[sourceIndex] = gridTasksOrder[targetIndex];
+          gridTasksOrder[targetIndex] = temp;
+          renderGridView(gridTasksOrder);
+        }
+      });
+
+      gridItem.addEventListener("click", () => {
+        const modalContent = `
+          <h2>Edit Task</h2>
+          <label>Task Name: <input type="text" id="editName" value="${task.name}" readonly /></label><br/><br/>
+          <label>Start Date: <input type="date" id="editStart" value="${task.startDate ? new Date(task.startDate).toISOString().split("T")[0] : ''}" /></label><br/><br/>
+          <label>End Date: <input type="date" id="editEnd" value="${task.endDate ? new Date(task.endDate).toISOString().split("T")[0] : ''}" /></label><br/><br/>
+          <label>Status: 
+            <select id="editStatus">
+              <option value="in-progress" ${task.status === "in-progress" ? "selected" : ""}>In Progress</option>
+              <option value="completed" ${task.status === "completed" ? "selected" : ""}>Completed</option>
+            </select>
+          </label><br/><br/>
+          <label>Comments: <textarea id="editComments">${task.description || ''}</textarea></label><br/><br/>
+          <button id="saveEditBtn">Save</button>
+        `;
+        openModal(modalContent);
+
+        document.getElementById("saveEditBtn").addEventListener("click", async function() {
+          const updatedTask = {
+            name: task.name,
+            startDate: document.getElementById("editStart").value,
+            endDate: document.getElementById("editEnd").value,
+            status: document.getElementById("editStatus").value,
+            description: document.getElementById("editComments").value
+          };
+          await updateLineItem(task._id, updatedTask);
+          closeModal();
+          loadView("gridView");
+        });
+      });
+
+      gridContainer.appendChild(gridItem);
+    });
+  }
       
       function renderCalendarView(lineItems) {
         const calendarContainer = document.querySelector("#calendarView .calendar");
