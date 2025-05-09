@@ -955,15 +955,15 @@ function addItemToTable(item, isImported = false) {
   const cleaned = {
     name: item.name,
     description: item.description,
-    quantity: item.quantity,
+    quantity: Number(item.quantity),
     costCode: item.costCode || 'Uncategorized',
-    unitPrice: isImported ? (item.unitPrice * 0.37).toFixed(2) : item.unitPrice,
+    unitPrice: isImported ? parseFloat(item.unitPrice * 0.37).toFixed(2) : parseFloat(item.unitPrice).toFixed(2),
     total: isImported 
-      ? (item.quantity * item.unitPrice * 0.37).toFixed(2) 
-      : (item.quantity * item.unitPrice).toFixed(2)
+      ? parseFloat(item.quantity * item.unitPrice * 0.37).toFixed(2)
+      : parseFloat(item.quantity * item.unitPrice).toFixed(2)
   };
 
-  
+  console.log(`✅ Item Added - ${isImported ? "Imported" : "Manual"}:`, cleaned);
   lineItems.push(cleaned);
   renderLineItems();
 }
@@ -1061,7 +1061,7 @@ function openInvoicePreview(savedInvoice) {
     ? new Date(savedInvoice.date).toLocaleDateString()
     : 'N/A';
 
-  const total = lineItems.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
+  const total = lineItems.reduce((sum, i) => sum + (parseFloat(i.unitPrice) * parseFloat(i.quantity)), 0);
   const tax = 0;
   const grandTotal = total + tax;
 
@@ -1089,16 +1089,20 @@ function openInvoicePreview(savedInvoice) {
           </tr>
         </thead>
         <tbody>
-          ${lineItems.map(item => `
-            <tr>
-              <td style="border: 1px solid #ccc; padding: 8px;">${item.costCode || 'N/A'}</td>
-              <td style="border: 1px solid #ccc; padding: 8px;">${item.name}</td>
-              <td style="border: 1px solid #ccc; padding: 8px;">${item.description}</td>
-              <td style="border: 1px solid #ccc; padding: 8px;">${item.quantity}</td>
-              <td style="border: 1px solid #ccc; padding: 8px;">$${item.unitPrice.toFixed(2)}</td>
-              <td style="border: 1px solid #ccc; padding: 8px;">$${(item.unitPrice * item.quantity).toFixed(2)}</td>
-            </tr>
-          `).join('')}
+          ${lineItems.map(item => {
+            const unitPrice = parseFloat(item.unitPrice) || 0;
+            const total = (unitPrice * item.quantity).toFixed(2);
+            return `
+              <tr>
+                <td style="border: 1px solid #ccc; padding: 8px;">${item.costCode || 'N/A'}</td>
+                <td style="border: 1px solid #ccc; padding: 8px;">${item.name}</td>
+                <td style="border: 1px solid #ccc; padding: 8px;">${item.description}</td>
+                <td style="border: 1px solid #ccc; padding: 8px;">${item.quantity}</td>
+                <td style="border: 1px solid #ccc; padding: 8px;">$${unitPrice.toFixed(2)}</td>
+                <td style="border: 1px solid #ccc; padding: 8px;">$${total}</td>
+              </tr>
+            `;
+          }).join('')}
         </tbody>
       </table>
 
