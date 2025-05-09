@@ -585,6 +585,9 @@ td:nth-child(3) {
 }
 </style>
 
+
+
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <script>
@@ -723,15 +726,21 @@ async function fetchEstimatesForProject(vendorId, projectId) {
     } else {
       const data = await itemsRes.json();
       items = data.items || [];
+      console.log("📦 Fetched Assigned Items:", items);
     }
 
-    // 2. Group items by estimateId
+    // 2. Group items by estimateId and adjust the total
     const estimateMap = new Map();
     items.forEach(item => {
       if (item.estimateId) {
         if (!estimateMap.has(item.estimateId)) {
           estimateMap.set(item.estimateId, []);
         }
+
+        // ✅ Calculate total as 37% of original and log the value
+        item.total = item.quantity * item.unitPrice * 0.37;
+        console.log(`Item: ${item.name} | Quantity: ${item.quantity} | Unit Price: ${item.unitPrice} | Total (37%): ${item.total}`);
+        
         estimateMap.get(item.estimateId).push(item);
       }
     });
@@ -746,6 +755,7 @@ async function fetchEstimatesForProject(vendorId, projectId) {
     const estRes = await fetch(`/api/estimates?projectId=${projectId}`);
     if (!estRes.ok) throw new Error("Failed to fetch estimates.");
     const { estimates } = await estRes.json();
+    console.log("📋 Fetched Estimates:", estimates);
 
     let matchedEstimates = 0;
 
@@ -777,10 +787,11 @@ async function fetchEstimatesForProject(vendorId, projectId) {
       const selectedOption = this.options[this.selectedIndex];
       const invoiceNumber = selectedOption.getAttribute("data-invoice-number");
 
-
+      console.log(`📦 Selected Estimate: ${estimateId} | Invoice Number: ${invoiceNumber}`);
 
       if (estimateId) {
         const assignedItems = estimateMap.get(estimateId) || [];
+        console.log("📦 Assigned Items for Selected Estimate:", assignedItems);
         displayLineItems(assignedItems);
       } else {
         lineItemSelect.innerHTML = '';
@@ -792,6 +803,23 @@ async function fetchEstimatesForProject(vendorId, projectId) {
     showToast("❌ Could not fetch estimates.");
   }
 }
+
+function importLineItems() {
+  const selected = Array.from(document.getElementById('lineItemSelect').selectedOptions);
+
+  selected.forEach(opt => {
+    const item = JSON.parse(opt.dataset.details);
+
+   
+    
+    // Apply the 37% calculation only for imported items
+    addItemToTable(item, true);
+  });
+
+  showToast('Imported selected line items.');
+}
+
+
 
 
 
@@ -814,14 +842,7 @@ function displayLineItems(items) {
 
 
 
-    function importLineItems() {
-      const selected = Array.from(document.getElementById('lineItemSelect').selectedOptions);
-      selected.forEach(opt => {
-        const item = JSON.parse(opt.dataset.details);
-        addItemToTable(item);
-      });
-      showToast('Imported selected line items.');
-    }
+
 
 // Enable live suggestions
 document.getElementById('itemName').addEventListener('input', showLaborSuggestions);
@@ -907,52 +928,60 @@ function addManualItem() {
     name: document.getElementById('itemName').value.trim(),
     description: document.getElementById('itemDesc').value.trim(),
     quantity: Number(document.getElementById('itemQty').value),
-    unitPrice: Number(document.getElementById('itemPrice').value),
+    unitPrice: Number(document.getElementById('itemPrice').value)
   };
 
-  addItemToTable(item);
+  
+  
+  addItemToTable(item, false);
 
-  // Clear fields after adding
+  // Clear input fields
   document.getElementById('itemCostCode').value = '';
   document.getElementById('itemName').value = '';
   document.getElementById('itemDesc').value = '';
   document.getElementById('itemQty').value = '';
   document.getElementById('itemPrice').value = '';
-
+  
   const suggestionBox = document.getElementById('suggestionBox');
-  if (suggestionBox) suggestionBox.style.display = 'none'; // Hide suggestion box
+  if (suggestionBox) suggestionBox.style.display = 'none';
 
   showToast('✅ Added manual line item.');
 }
 
 
 
-    function addItemToTable(item) {
+
+function addItemToTable(item, isImported = false) {
   const cleaned = {
     name: item.name,
     description: item.description,
     quantity: item.quantity,
-    unitPrice: item.unitPrice,
-    costCode: item.costCode || 'Uncategorized'  // ✅ Keep cost code from vendor's assigned data
+    costCode: item.costCode || 'Uncategorized',
+    unitPrice: isImported ? (item.unitPrice * 0.37).toFixed(2) : item.unitPrice,
+    total: isImported 
+      ? (item.quantity * item.unitPrice * 0.37).toFixed(2) 
+      : (item.quantity * item.unitPrice).toFixed(2)
   };
+
+  
   lineItems.push(cleaned);
   renderLineItems();
 }
 
 
-    function renderLineItems() {
+function renderLineItems() {
   const tbody = document.getElementById('lineItemsTable');
   tbody.innerHTML = '';
+
   lineItems.forEach((item, index) => {
-    const total = (item.quantity * item.unitPrice).toFixed(2);
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td>${item.costCode || 'Uncategorized'}</td>
+      <td>${item.costCode}</td>
       <td>${item.name}</td>
       <td>${item.description}</td>
       <td>${item.quantity}</td>
-      <td>$${item.unitPrice.toFixed(2)}</td>
-      <td>$${total}</td>
+      <td>$${item.unitPrice}</td>
+      <td>$${item.total}</td>
       <td>
         <div class="dropdown">
           <button class="dropdown-btn">⋮</button>
@@ -965,7 +994,10 @@ function addManualItem() {
     `;
     tbody.appendChild(row);
   });
+
+  
 }
+
 
 
     function editItem(index) {
