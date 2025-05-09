@@ -917,23 +917,26 @@ function populateEstimateDropdown(estimates) {
   estimateSelector.addEventListener("change", () => {
     const selectedValue = estimateSelector.value;
 
-    const selectedLineItems =
+    selectedLineItems =
       selectedValue === "all"
         ? estimates.flatMap(est => est.lineItems || [])
         : (estimates[parseInt(selectedValue)]?.lineItems || []);
 
-    // Update all views based on the current view
-    if (currentView === "listView") renderTable(selectedLineItems);
-    else if (currentView === "gridView") renderGridView(selectedLineItems);
-    else if (currentView === "calendarView") renderCalendarView(selectedLineItems);
-    else if (currentView === "ganttView") renderGanttChartView(selectedLineItems);
-    else if (currentView === "dashboardView") {
-      setTimeout(() => {
-        renderDashboardView(selectedLineItems);
-      }, 300);
+    // ✅ Render the appropriate view based on the current view
+    if (currentView === "listView") {
+      renderTable(selectedLineItems);
+    } else if (currentView === "gridView") {
+      renderGridView(selectedLineItems);
+    } else if (currentView === "calendarView") {
+      renderCalendarView(selectedLineItems);
+    } else if (currentView === "ganttView") {
+      renderGanttChartView(selectedLineItems, ganttViewMode);
+    } else if (currentView === "dashboardView") {
+      renderDashboardView(selectedLineItems);
     }
   });
 }
+
 
 
 
@@ -1661,6 +1664,8 @@ if (projectId) {
   selectedLineItems = allItems;  // ✅ Assign to selectedLineItems
   renderTable();                 // ✅ No arguments
   document.getElementById("estimateSelector").value = "all";
+       // Set default view to "listView"
+     loadView("listView");
 }
 
 
