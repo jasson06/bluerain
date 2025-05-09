@@ -535,7 +535,20 @@ window.jumpToPhoto = jumpToPhoto;
 
 // ✅ Updated Delete Photo Function for Render
 async function deletePhoto(itemId, photoUrl, type) {
-  showLoader(); // 👈 START
+
+
+    // ✅ Show inline loader in the photo section
+    const containerId = `${type}-photos-${itemId}`;
+    const photoContainer = document.getElementById(containerId);
+    if (photoContainer) {
+        photoContainer.innerHTML = `
+            <div style="display: flex; justify-content: center; align-items: center; min-height: 100px;">
+                <div style="border: 4px solid #f3f3f3; border-top: 4px solid #0ea5e9; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;"></div>
+            </div>
+        `;
+    }
+
+
     try {
         // Ensure vendorId is correctly retrieved and not null/undefined
         const vendorId = localStorage.getItem("vendorId") || "default";
@@ -572,8 +585,11 @@ async function deletePhoto(itemId, photoUrl, type) {
     } catch (error) {
         console.error("❌ Error deleting photo:", error);
         showToast("Failed to delete photo.");
-      } finally {
-        hideLoader(); // 👈 END
+          // Clear loader on error
+          if (photoContainer) {
+              photoContainer.innerHTML = `<p class="placeholder">Error uploading photos.</p>`;
+          }
+          
     }
 }
 
