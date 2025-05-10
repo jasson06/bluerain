@@ -287,7 +287,7 @@ button:active {
       section.innerHTML += `
         <div class="qc-item ${item.qualityControl?.status}">
           <strong>${item.name}</strong> - Vendor: ${item.vendorName || "Unknown"}
-          <p>${item.description}</p>
+          <p><h3>Description</h3>${item.description}</p>
 
           ${reviewedBy}
           ${reworkNotes}
