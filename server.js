@@ -4092,6 +4092,7 @@ app.delete('/api/labor-costs/:id', async (req, res) => {
 });
 
 
+
 app.get('/api/vendors/login-direct/:id', async (req, res) => {
   try {
     const vendor = await Vendor.findById(req.params.id);
@@ -4105,6 +4106,181 @@ app.get('/api/vendors/login-direct/:id', async (req, res) => {
   }
 });
 
+
+
+// ✅ New route for items in Vendor.assignedItems
+app.get("/api/quality-review/items/:projectId", async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { status } = req.query;
+
+    const vendors = await Vendor.find({ "assignedItems.projectId": projectId });
+    const estimates = await Estimate.find({ projectId });
+    const managers = await Manager.find({}, { _id: 1, name: 1 });
+
+    // 🔹 Create manager map for name lookup
+    const managerMap = {};
+    managers.forEach(mgr => {
+      managerMap[mgr._id.toString()] = mgr.name;
+    });
+
+    const qcItems = [];
+    const addedItemIds = new Set(); // 🛡️ Avoid duplicates using item._id.toString()
+
+    // 🔹 Vendor items
+    vendors.forEach(vendor => {
+      vendor.assignedItems.forEach(item => {
+        const itemId = item.itemId?.toString();
+        const qcStatus = item.qualityControl?.status || "pending";
+        const reviewedByName = item.qualityControl?.reviewedBy
+          ? managerMap[item.qualityControl.reviewedBy.toString()] || "Unknown"
+          : null;
+
+        if (
+          item.projectId.toString() === projectId &&
+          ["completed", "rework", "approved"].includes(item.status)
+        ) {
+          if (!status || qcStatus === status || status === "all") {
+            // 🔹 Lookup estimate title for vendor item
+            const matchingEstimate = estimates.find(est =>
+              est._id.toString() === item.estimateId?.toString()
+            );
+            const estimateTitle =
+              matchingEstimate?.title || matchingEstimate?.invoiceNumber || "Untitled Estimate";
+
+            const uniqueKey = itemId || item._id.toString();
+            if (!addedItemIds.has(uniqueKey)) {
+              qcItems.push({
+                ...item.toObject(),
+                vendorId: vendor._id,
+                vendorName: vendor.name || "Unknown Vendor",
+                estimateId: item.estimateId,
+                estimateTitle,
+                source: "vendor",
+                qualityControl: {
+                  ...item.qualityControl,
+                  reviewedByName
+                }
+              });
+              addedItemIds.add(uniqueKey);
+            }
+          }
+        }
+      });
+    });
+
+    // 🔹 Estimate items (in case some are not assigned to vendors)
+    estimates.forEach(estimate => {
+      const estimateTitle = estimate.title || estimate.invoiceNumber || "Untitled Estimate";
+
+      estimate.lineItems.forEach(section => {
+        section.items.forEach(item => {
+          const itemId = item._id.toString();
+          const qcStatus = item.qualityControl?.status || "pending";
+          const reviewedByName = item.qualityControl?.reviewedBy
+            ? managerMap[item.qualityControl.reviewedBy.toString()] || "Unknown"
+            : null;
+
+          if (["completed", "rework", "approved"].includes(item.status)) {
+            if (!status || qcStatus === status || status === "all") {
+              if (!addedItemIds.has(itemId)) {
+                qcItems.push({
+                  ...item.toObject(),
+                  estimateId: estimate._id,
+                  estimateTitle,
+                  vendorId: item.assignedTo || null,
+                  vendorName: "(from estimate)",
+                  source: "estimate",
+                  qualityControl: {
+                    ...item.qualityControl,
+                    reviewedByName
+                  }
+                });
+                addedItemIds.add(itemId);
+              }
+            }
+          }
+        });
+      });
+    });
+
+    res.json({ items: qcItems });
+  } catch (err) {
+    console.error("❌ Error fetching QC items:", err);
+    res.status(500).json({ error: "Failed to fetch items for review" });
+  }
+});
+
+
+
+
+
+
+
+
+// ✅ Unified PUT route for QC Approval or Rework (estimate or vendor)
+// ✅ PUT update QC status (estimate + vendor)
+// ✅ PUT update QC status on estimate AND vendor
+app.put("/api/items/:itemId/quality-review", async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    let { status, notes, reviewedBy } = req.body;
+
+    // Normalize status to lowercase to prevent casing mismatch
+    status = String(status).trim().toLowerCase();
+
+    if (!["approved", "rework"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status value." });
+    }
+
+    let source = null;
+    const reviewedAt = new Date();
+
+    // ✅ Try Estimate First
+    const estimate = await Estimate.findOne({ "lineItems.items._id": itemId });
+    if (estimate) {
+      for (const section of estimate.lineItems) {
+        const item = section.items.id(itemId);
+        if (item) {
+          // Update both status and qualityControl block
+          item.status = status;
+          item.qualityControl = {
+            status,
+            notes,
+            reviewedBy,
+            reviewedAt
+          };
+          await estimate.save();
+          return res.json({ success: true, source: "estimate" });
+        }
+      }
+    }
+
+    // ✅ Fallback to Vendor assignedItems
+    const vendor = await Vendor.findOne({ "assignedItems._id": itemId });
+    if (vendor) {
+      const item = vendor.assignedItems.id(itemId);
+      if (item) {
+        item.status = status;
+        item.qualityControl = {
+          status,
+          notes,
+          reviewedBy,
+          reviewedAt
+        };
+        await vendor.save();
+        return res.json({ success: true, source: "vendor" });
+      }
+    }
+
+    // ❌ Not found in either
+    res.status(404).json({ error: "Item not found in either estimate or vendor list." });
+
+  } catch (err) {
+    console.error("❌ Error updating QC status:", err);
+    res.status(500).json({ error: "Failed to update QC status" });
+  }
+});
 
 // GET all folders (no population to keep parentId as string)
 app.get("/api/folders", async (req, res) => {
