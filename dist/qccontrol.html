@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Quality Control Review</title>
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f0f4f8; margin: 0; padding: 20px; color: #333; transition: background-color 0.3s ease; }
+    .qc-section { background: #ffffff; padding: 24px; border-radius: 16px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.06); margin-bottom: 24px; transition: transform 0.3s, box-shadow 0.3s; }
+    .qc-section:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08); }
+    .qc-section h2 { color: #007bff; font-size: 26px; font-weight: 700; margin-bottom: 16px; }
+    .qc-item { background: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); margin-bottom: 16px; transition: transform 0.3s, box-shadow 0.3s; }
+    .qc-item:hover { transform: scale(1.02); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08); }
+    .qc-item.rework { border-left: 6px solid #ff4757; }
+    .qc-item.approved { border-left: 6px solid #2ed573; }
+    .qc-tabs { display: flex; gap: 12px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: #ccc transparent; }
+    .qc-tabs::-webkit-scrollbar { height: 8px; }
+    .qc-tabs::-webkit-scrollbar-thumb { background-color: #007bff; border-radius: 4px; }
+    .qc-tabs .qc-tab { padding: 12px 20px; cursor: pointer; background: #f1f5f9; border-radius: 24px; transition: background 0.3s, color 0.3s, transform 0.3s; }
+    .qc-tabs .qc-tab.active { background: #007bff; color: #ffffff; font-weight: 600; transform: scale(1.05); }
+
+    .qc-button { padding: 10px 20px; background-color: #007bff; color: #ffffff; border: none; border-radius: 24px; cursor: pointer; font-weight: 600; transition: background-color 0.3s, box-shadow 0.3s, transform 0.3s; }
+    .qc-button:hover { background-color: #005bbf; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); transform: scale(1.03); }
+    .qc-button:active { background-color: #003f7f; }
+
+ /* 📸 Limit QC preview image size */
+.photo-wrapper img {
+  max-width: 100px;
+  max-height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.photo-wrapper img:hover {
+  transform: scale(1.05);
+}
+
+/* 📸 Swipe container style for layout */
+.qc-photo-container {
+  overflow: hidden;
+  max-width: 240px;
+  border-radius: 10px;
+  margin-top: 8px;
+}
+
+.photo-wrapper {
+  display: flex;
+  transition: transform 0.4s ease;
+  width: 100%;
+  cursor: grab;
+}
+
+.photo-wrapper:active {
+  cursor: grabbing;
+}
+
+
+.photo-slide {
+  min-width: 100%;
+  text-align: center;
+}
+
+.photo-slide img {
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+/* Dots */
+.photo-dots {
+  text-align: center;
+  margin-top: 5px;
+}
+
+.photo-dots .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin: 0 4px;
+  background: #ccc;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.photo-dots .dot.active {
+  background: #007bff;
+}
+
+
+/* 🔍 Modal image */
+.photo-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.photo-modal img {
+  max-width: 80vw;
+  max-height: 80vh;
+  border-radius: 10px;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
+}
+
+.photo-modal .prev-btn,
+.photo-modal .next-btn {
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  padding: 10px;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10000;
+}
+
+.photo-modal .prev-btn {
+  left: 10px;
+}
+
+.photo-modal .next-btn {
+  right: 10px;
+}
+
+.photo-modal .prev-btn:hover,
+.photo-modal .next-btn:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+    #loader { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); align-items: center; justify-content: center; z-index: 9999; }
+    #loader .spinner { border: 6px solid #f3f3f3; border-top: 6px solid #007bff; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+    @keyframes spin { 100% { transform: rotate(360deg); }}
+    #toast { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #007bff; color: #ffffff; padding: 14px 28px; border-radius: 24px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); z-index: 9999; transition: opacity 0.3s, transform 0.3s; }
+    #toast.show { display: block; opacity: 1; transform: translateX(-50%) translateY(0); }
+    @media (max-width: 768px) {
+      .qc-tabs { flex-wrap: wrap; }
+      .qc-item { padding: 18px; }
+      .qc-tabs .qc-tab { padding: 10px 16px; }
+      .photos-container img { width: 80px; height: 80px; }
+      .qc-button { padding: 8px 16px; }
+    }
+
+    button {
+  padding: 10px 20px;
+  margin: 5px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  transform: scale(1.05);
+}
+
+button:active {
+  transform: scale(0.95);
+}
+
+.approve-btn {
+  background-color: #4caf50;
+  color: white;
+}
+
+.approve-btn:hover {
+  background-color: #43a047;
+}
+
+.rework-btn {
+  background-color: #f44336;
+  color: white;
+}
+
+.rework-btn:hover {
+  background-color: #e53935;
+}
+
+  </style>
+</head>
+<body>
+
+<section class="qc-section" id="quality-control-section">
+  <h2>🛠️ Quality Control Review</h2>
+  <div id="quality-review-items">
+    <p style="color:#aaa;">Loading items for review...</p>
+  </div>
+</section>
+
+<div id="loader"><div class="spinner"></div></div>
+<div id="toast"></div>
+
+<div id="qc-photo-modal" class="photo-modal" onclick="closeQCPhotoModal()">
+    <button class="prev-btn" onclick="navigatePhoto(-1, event)">⬅️</button>
+    <img id="qc-photo-view" src="" alt="QC Photo">
+    <button class="next-btn" onclick="navigatePhoto(1, event)">➡️</button>
+  </div>
+  
+  
+
+
+
+<script>
+  function showLoader(show) {
+    document.getElementById("loader").style.display = show ? "flex" : "none";
+  }
+
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.style.display = "block";
+    setTimeout(() => { toast.style.display = "none"; }, 3000);
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const projectId = new URLSearchParams(window.location.search).get("projectId");
+    const managerId = localStorage.getItem("managerId");
+    renderQualityControlItems(projectId, managerId);
+  });
+
+
+  async function renderQualityControlItems(projectId, managerId) {
+    showLoader(true);
+    const container = document.getElementById("quality-review-items");
+    container.innerHTML = "<p style='color:#aaa;'>Loading items for review...</p>";
+
+    try {
+      const res = await fetch(`/api/quality-review/items/${projectId}`);
+      const { items } = await res.json();
+      showLoader(false);
+      container.innerHTML = "";
+      showToast("Items loaded successfully");
+
+      const reworkCount = items.filter(i => i.qualityControl?.status === "rework").length;
+      const approvedCount = items.filter(i => i.qualityControl?.status === "approved").length;
+      const pendingCount = items.filter(i => !i.qualityControl?.status || i.qualityControl?.status === "pending").length;
+
+      container.innerHTML += `
+        <div class="qc-tabs">
+          <button class="qc-tab active" data-status="all">All (${items.length})</button>
+          <button class="qc-tab" data-status="approved">✅ Approved (${approvedCount})</button>
+          <button class="qc-tab" data-status="rework">🛠 Rework (${reworkCount})</button>
+          <button class="qc-tab" data-status="pending">⏳ Pending (${pendingCount})</button>
+        </div>
+        <div id="qc-items-section"></div>
+      `;
+
+      document.querySelectorAll(".qc-tab").forEach(tab => {
+        tab.addEventListener("click", () => {
+          document.querySelectorAll(".qc-tab").forEach(t => t.classList.remove("active"));
+          tab.classList.add("active");
+          showQCItems(items, managerId, tab.dataset.status);
+        });
+      });
+
+      showQCItems(items, managerId, "all");
+
+    } catch (err) {
+      showLoader(false);
+      showToast("Error loading items");
+      console.error(err);
+    }
+  }
+
+  function showQCItems(items, managerId, status) {
+    const section = document.getElementById("qc-items-section");
+    section.innerHTML = "";
+
+    items.filter(i => status === "all" || i.qualityControl?.status === status || (status === "pending" && (!i.qualityControl?.status || i.qualityControl?.status === "pending"))).forEach(item => {
+      const beforePhotos = generatePhotoWrapper(item.photos?.before || [], item._id, "before");
+      const afterPhotos = generatePhotoWrapper(item.photos?.after || [], item._id, "after");
+
+      const reviewedBy = item.qualityControl?.reviewedByName ? `<div>Reviewed by: ${item.qualityControl.reviewedByName}</div>` : "";
+      const reworkNotes = item.qualityControl?.notes ? `<div class='rework-notes'>🔴 Rework Notes: ${item.qualityControl.notes}</div>` : "";
+
+      section.innerHTML += `
+        <div class="qc-item ${item.qualityControl?.status}">
+          <strong>${item.name}</strong> - Vendor: ${item.vendorName || "Unknown"}
+          <p>${item.description}</p>
+
+          ${reviewedBy}
+          ${reworkNotes}
+
+          <div class="photos-container">
+            <div><strong>Before:</strong> ${beforePhotos}</div>
+            <div><strong>After:</strong> ${afterPhotos}</div>
+          </div>
+
+          <textarea id='qc-note-${item._id}' placeholder='Enter rework notes...'></textarea>
+<div style="margin-top: 10px; display: flex; gap: 10px;">
+  <button class="approve-btn" onclick="approveQC('${item._id}', '${managerId}')">✅ Approve</button>
+  <button class="rework-btn" onclick="requestReworkQC('${item._id}', '${managerId}')">🛠 Request Rework</button>
+</div>
+        </div>
+      `;
+      enableQCPhotoSwipe(item._id, "before");
+      enableQCPhotoSwipe(item._id, "after");
+    });
+  }
+
+
+  function generatePhotoWrapper(photos, itemId, type) {
+  if (!photos || photos.length === 0) return `<p style='color:#999;'>No photos</p>`;
+
+  const dots = photos.map((_, i) =>
+    `<span class="dot" onclick="openQCPhotoModal('${itemId}', '${type}', ${i})"></span>`
+  ).join('');
+
+  return `
+    <div class="qc-photo-container">
+      <div class="photo-wrapper" id="qc-wrapper-${type}-${itemId}" data-photos='${JSON.stringify(photos)}' data-index="0">
+        ${photos.map((url, i) =>
+          `<div class="photo-slide">
+            <img src="${url}" onclick="openQCPhotoModal('${itemId}', '${type}', ${i})">
+          </div>`).join("")
+        }
+      </div>
+      <div class="photo-dots" id="qc-dots-${type}-${itemId}">${dots}</div>
+    </div>
+  `;
+}
+
+
+
+function enableQCPhotoSwipe(itemId, type) {
+  const wrapper = document.getElementById(`qc-wrapper-${type}-${itemId}`);
+  if (!wrapper) return;
+
+  const photos = JSON.parse(wrapper.getAttribute("data-photos"));
+  let index = 0;
+  let startX = 0;
+  let isDragging = false;
+
+  // Touch support
+  wrapper.addEventListener("touchstart", e => {
+    startX = e.touches[0].clientX;
+  });
+
+  wrapper.addEventListener("touchend", e => {
+    const endX = e.changedTouches[0].clientX;
+    if (Math.abs(endX - startX) > 30) {
+      index += (endX < startX ? 1 : -1);
+      index = (index + photos.length) % photos.length;
+      wrapper.style.transform = `translateX(-${index * 100}%)`;
+      wrapper.setAttribute("data-index", index);
+      updateQCDots(itemId, type, index);
+    }
+  });
+
+  // Mouse support
+  wrapper.addEventListener("mousedown", e => {
+    isDragging = true;
+    startX = e.clientX;
+  });
+
+  wrapper.addEventListener("mouseup", e => {
+    if (!isDragging) return;
+    isDragging = false;
+
+    const endX = e.clientX;
+    if (Math.abs(endX - startX) > 30) {
+      index += (endX < startX ? 1 : -1);
+      index = (index + photos.length) % photos.length;
+      wrapper.style.transform = `translateX(-${index * 100}%)`;
+      wrapper.setAttribute("data-index", index);
+      updateQCDots(itemId, type, index);
+    }
+  });
+
+  // Optional: prevent accidental dragging selection
+  wrapper.addEventListener("dragstart", e => e.preventDefault());
+}
+
+
+function jumpToQCPhoto(itemId, type, index) {
+  const wrapper = document.getElementById(`qc-wrapper-${type}-${itemId}`);
+  if (!wrapper) return;
+  wrapper.style.transform = `translateX(-${index * 100}%)`;
+  wrapper.setAttribute("data-index", index);
+  updateQCDots(itemId, type, index);
+}
+
+function updateQCDots(itemId, type, index) {
+  const dots = document.querySelectorAll(`#qc-dots-${type}-${itemId} .dot`);
+  dots.forEach((dot, i) => dot.classList.toggle("active", i === index));
+}
+
+
+function openQCPhotoModal(itemId, type, startIndex = 0) {
+  const wrapper = document.getElementById(`qc-wrapper-${type}-${itemId}`);
+  if (!wrapper) {
+    console.warn("No wrapper found for item:", itemId, type);
+    return;
+  }
+
+  const photos = JSON.parse(wrapper.getAttribute("data-photos"));
+  if (!photos || photos.length === 0) {
+    console.warn("No photos available for item:", itemId);
+    return;
+  }
+
+  const modal = document.getElementById("qc-photo-modal");
+  const viewer = document.getElementById("qc-photo-view");
+
+  // Update attributes
+  modal.setAttribute("data-photos", JSON.stringify(photos));
+  modal.setAttribute("data-index", startIndex);
+
+  // Set the initial image
+  viewer.src = photos[startIndex];
+
+  // Ensure the modal is visible
+  modal.style.display = "flex";
+}
+
+function navigatePhoto(direction, event) {
+  event.stopPropagation(); // Prevent closing modal when clicking navigation buttons
+
+  const modal = document.getElementById("qc-photo-modal");
+  const viewer = document.getElementById("qc-photo-view");
+  const photos = JSON.parse(modal.getAttribute("data-photos") || "[]");
+  let index = parseInt(modal.getAttribute("data-index") || "0");
+
+  // Calculate new index
+  index += direction;
+  if (index < 0) index = photos.length - 1; // Wrap to last photo
+  if (index >= photos.length) index = 0; // Wrap to first photo
+
+  // Update modal and viewer
+  modal.setAttribute("data-index", index);
+  viewer.src = photos[index];
+}
+
+function closeQCPhotoModal() {
+  const modal = document.getElementById("qc-photo-modal");
+  modal.style.display = "none";
+  modal.removeAttribute("data-photos");
+  modal.removeAttribute("data-index");
+}
+
+
+function enableModalSwipeForQC() {
+  const modal = document.getElementById("qc-photo-modal");
+  const viewer = document.getElementById("qc-photo-view");
+
+  let startX = 0;
+  let currentX = 0;
+  let isDragging = false;
+
+  // 🔹 Touch support
+  modal.addEventListener("touchstart", (e) => {
+    startX = e.touches[0].clientX;
+  });
+
+  modal.addEventListener("touchend", (e) => {
+    const endX = e.changedTouches[0].clientX;
+    handleModalSwipe(endX - startX);
+  });
+
+  // 🔹 Mouse drag support
+  modal.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    startX = e.clientX;
+  });
+
+  modal.addEventListener("mousemove", (e) => {
+    if (!isDragging) return;
+    currentX = e.clientX;
+  });
+
+  modal.addEventListener("mouseup", () => {
+    if (!isDragging) return;
+    isDragging = false;
+    const distance = currentX - startX;
+    handleModalSwipe(distance);
+  });
+
+  modal.addEventListener("mouseleave", () => {
+    isDragging = false; // Cancel drag on leave
+  });
+
+  // Prevent image dragging ghost
+  viewer.setAttribute("draggable", "false");
+
+  function handleModalSwipe(distance) {
+    const photos = JSON.parse(modal.getAttribute("data-photos") || "[]");
+    let index = parseInt(modal.getAttribute("data-index") || "0");
+
+    if (Math.abs(distance) > 30) {
+      index += distance < 0 ? 1 : -1;
+      index = (index + photos.length) % photos.length;
+      modal.setAttribute("data-index", index);
+      viewer.src = photos[index];
+    }
+  }
+}
+  async function approveQC(itemId, managerId) {
+    showLoader(true);
+    try {
+      await fetch(`/api/items/${itemId}/quality-review`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "approved", notes: "", reviewedBy: managerId })
+      });
+      showToast("Item approved");
+      location.reload();
+    } catch (err) {
+      showLoader(false);
+      showToast("Error approving item");
+      console.error(err);
+    }
+  }
+
+  async function requestReworkQC(itemId, managerId) {
+    const note = document.getElementById(`qc-note-${itemId}`).value;
+    if (!note) return showToast("Please enter rework notes");
+    showLoader(true);
+
+    try {
+      await fetch(`/api/items/${itemId}/quality-review`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "rework", notes: note, reviewedBy: managerId })
+      });
+      showToast("Rework requested");
+      location.reload();
+    } catch (err) {
+      showLoader(false);
+      showToast("Error requesting rework");
+      console.error(err);
+    }
+  }
+</script>
+
+</body>
+</html>
