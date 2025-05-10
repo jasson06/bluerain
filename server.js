@@ -2134,9 +2134,10 @@ app.get('/api/vendors/:vendorId/assigned-projects', async (req, res) => {
 
     const newJobs = vendor.assignedProjects.filter(proj => proj.status === 'new');
     const inProgress = vendor.assignedProjects.filter(proj => proj.status === 'in-progress');
+    const rework = vendor.assignedProjects.filter(proj => proj.status === 'rework');
     const completed = vendor.assignedProjects.filter(proj => proj.status === 'completed');
 
-    res.status(200).json({ success: true, newJobs, inProgress, completed });
+    res.status(200).json({ success: true, newJobs, inProgress, rework, completed });
   } catch (error) {
     console.error('Error fetching assigned projects:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch assigned projects.' });
