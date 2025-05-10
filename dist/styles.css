@@ -2254,11 +2254,7 @@ li.completed span {
   background: #e2e8f0;
 }
 
-.qc-tab.active {
-  background: #2563eb;
-  color: white;
-  font-weight: bold;
-}
+
 
 .sticky-tabs {
   position: sticky;
@@ -2275,4 +2271,35 @@ li.completed span {
   opacity: 0;
   pointer-events: none;
 }
+
+.qc-control-btn {
+  background-color: #0f4c75;
+  color: #fff;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background-color 0.3s, box-shadow 0.3s, transform 0.3s;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.qc-control-btn:hover {
+  background-color: #0056b3;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  transform: scale(1.03);
+}
+
+.qc-control-btn:active {
+  background-color: #003f7f;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+  transform: scale(0.98);
+}
+
+.qc-control-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.3);
+}
+
 
