@@ -2197,3 +2197,51 @@ async function updateVendor(vendorId, name, email, phone) {
     console.error("Error updating vendor:", error);
   }
 }
+
+// ✅ Fetch and Render Quality Control Summary Only
+async function renderQualityControlItems(projectId) {
+  const container = document.getElementById("quality-review-items");
+  container.innerHTML = "<p style='color:#aaa;'>Loading summary...</p>";
+
+  try {
+    const res = await fetch(`/api/quality-review/items/${projectId}`);
+    const { items } = await res.json();
+    container.innerHTML = "";
+
+    if (!items || items.length === 0) {
+      container.innerHTML = "<p style='color:#999;'>No items currently pending review.</p>";
+      return;
+    }
+
+    // 🔢 Summary counts
+    const reworkCount = items.filter(i => i.qualityControl?.status === "rework").length;
+    const approvedCount = items.filter(i => i.qualityControl?.status === "approved").length;
+    const pendingCount = items.filter(i => !i.qualityControl?.status || i.qualityControl?.status === "pending").length;
+
+    // 🔹 Navigation Button
+    container.innerHTML += `
+      <div class="qc-nav">
+        <button class="qc-control-btn" onclick="navigateToQCControl('${projectId}')">Go to QC Control</button>
+      </div>
+    `;
+
+    // 🔹 Summary Tags
+    container.innerHTML += `
+      <div class="qc-tabs sticky-tabs">
+        <button class="qc-tab active" data-status="all">All (${items.length})</button>
+        <button class="qc-tab" data-status="approved">✅ Approved (${approvedCount})</button>
+        <button class="qc-tab" data-status="rework">🛠 Rework (${reworkCount})</button>
+        <button class="qc-tab" data-status="pending">⏳ Pending (${pendingCount})</button>
+      </div>
+    `;
+
+  } catch (err) {
+    console.error("❌ Error loading QC summary:", err);
+    container.innerHTML = "<p style='color: red;'>Failed to load quality control summary.</p>";
+  }
+}
+
+// ✅ Navigation to QC Control Page
+function navigateToQCControl(projectId) {
+  window.location.href = `/qccontrol.html?projectId=${projectId}`;
+}
