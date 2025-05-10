@@ -139,6 +139,10 @@ button:hover {
     font-weight: bold;
 }
 
+.status-rework {
+      color: #dc2626;
+      font-weight: bold;
+    }
 
 /* ✅ Modern Toastify Custom Styles */
     .toastify {
@@ -283,6 +287,11 @@ button:hover {
         <h2>In Progress</h2>
         <div id="in-progress-container" class="scroll-container"></div>
       </section>
+
+      <section id="rework">
+        <h2>Rework</h2>
+        <div id="rework-container" class="scroll-container"></div>
+      </section>
       
       <section id="completed">
         <h2>Completed Jobs</h2>
@@ -306,11 +315,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 // Helper function to return a CSS class based on status
 function getStatusClass(status) {
-    if (status === "new") return "status-new";
-    if (status === "in-progress") return "status-in-progress";
-    if (status === "completed") return "status-completed";
-    return "";
-}
+      if (status === "new") return "status-new";
+      if (status === "in-progress") return "status-in-progress";
+      if (status === "rework") return "status-rework";
+      if (status === "completed") return "status-completed";
+      return "";
+    }
 
 // ✅ Fetch Assigned Projects
 async function fetchAssignedProjects(vendorId) {
@@ -319,12 +329,20 @@ async function fetchAssignedProjects(vendorId) {
         if (!response.ok) throw new Error("Failed to fetch assigned projects.");
 
         const data = await response.json();
-        displayAssignedProjects(data.newJobs, "new-jobs-container");
-        displayAssignedProjects(data.inProgress, "in-progress-container");
-        displayAssignedProjects(data.completed, "completed-container");
+
+displayAssignedProjects(data.newJobs, "new-jobs-container");
+displayAssignedProjects(data.inProgress, "in-progress-container");
+displayAssignedProjects(data.completed, "completed-container");
+displayAssignedProjects(data.rework, "rework-container"); // ✅ ADD THIS LINE
+
 
         // ✅ Check all projects from all categories
-        const allProjects = [...(data.newJobs || []), ...(data.inProgress || []), ...(data.completed || [])];
+        const allProjects = [
+  ...(data.newJobs || []),
+  ...(data.inProgress || []),
+  ...(data.completed || []),
+  ...(data.rework || []) // ✅ INCLUDE REWORK PROJECTS
+];
 
         allProjects.forEach(p => {
     if (p.projectId && p.projectId._id) {
@@ -337,7 +355,6 @@ async function fetchAssignedProjects(vendorId) {
         console.error("Error fetching assigned projects:", error);
     }
 }
-
 
 /// ✅ Helper Function to Show Modern Toast Messages
 function showToast(message, type = "success") {
@@ -357,36 +374,27 @@ function showToast(message, type = "success") {
 
 // ✅ Display Projects
 function displayAssignedProjects(projects, containerId) {
-    const container = document.getElementById(containerId);
-    container.innerHTML = "";
-
-    if (!projects || projects.length === 0) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+      if (!projects || projects.length === 0) {
         container.innerHTML = "<p>No projects available.</p>";
         return;
-    }
-
-    projects.forEach((project) => {
+      }
+      projects.forEach((project) => {
         const { projectId } = project;
-        if (!projectId) return; // Skip if projectId is missing
-
-        const projectCard = document.createElement("div");
-        projectCard.classList.add("project-card");
-
-        projectCard.innerHTML = `
-            <h3>${projectId.name || "Unnamed Project"}</h3>
-            <p><strong>Status:</strong> <span class="${getStatusClass(project.status)}">${project.status || "N/A"}</span></p>
-            <p><strong>Type:</strong> ${projectId.type || "N/A"}</p>
-            <p><strong>Address:</strong> 
-                ${projectId.address?.addressLine1 || ""}, 
-                ${projectId.address?.city || ""}, 
-                ${projectId.address?.state || ""}
-            </p>
-    <button onclick="viewProject('${projectId._id}', '${project.status}')">Line items</button>
-`;
-
-        container.appendChild(projectCard);
-    });
-}
+        if (!projectId) return;
+        const card = document.createElement("div");
+        card.classList.add("project-card");
+        card.innerHTML = `
+          <h3>${projectId.name || "Unnamed Project"}</h3>
+          <p><strong>Status:</strong> <span class="${getStatusClass(project.status)}">${project.status}</span></p>
+          <p><strong>Type:</strong> ${projectId.type || "N/A"}</p>
+          <p><strong>Address:</strong> ${projectId.address?.addressLine1 || ""}, ${projectId.address?.city || ""}, ${projectId.address?.state || ""}</p>
+          <button onclick="viewProject('${projectId._id}', '${project.status}')">Line items</button>
+        `;
+        container.appendChild(card);
+      });
+    }
 
 function goToInvoicePage() {
   window.location.href = '/invoice-creater.html';
@@ -422,63 +430,69 @@ async function startProject(projectId) {
 }
 
 async function checkAndUpdateProjectStatus(vendorId, projectId, currentStatus) {
-    try {
-        const response = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
+  try {
+    const response = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
 
-        if (!response.ok) {
-            if (response.status === 404) {
-                console.warn(`⚠️ No assigned items for project ${projectId}`);
-                return;
-            }
-            throw new Error("Failed to fetch assigned items.");
-        }
-
-        const data = await response.json();
-        const assignedItems = data.items;
-
-        if (!Array.isArray(assignedItems) || assignedItems.length === 0) {
-            console.warn(`ℹ️ Project ${projectId} has no assigned items.`);
-            return;
-        }
-
-        const anyNew = assignedItems.some(item => item.status === "new");
-        const allCompleted = assignedItems.every(item => item.status === "completed");
-        const anyInProgress = assignedItems.some(item => item.status === "in-progress");
-
-        let newStatus = null;
-
-        if (anyNew) {
-            newStatus = "new"; // 🔴 Priority: If even 1 item is new, project is "new"
-        } else if (allCompleted) {
-            newStatus = "completed";
-        } else if (anyInProgress) {
-            newStatus = "in-progress";
-        }
-
-        if (newStatus && newStatus !== currentStatus) {
-            const updateResponse = await fetch('/api/vendor/update-project-status', {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    vendorId,
-                    projectId,
-                    status: newStatus
-                }),
-            });
-
-            if (!updateResponse.ok) throw new Error(`Failed to update project status to ${newStatus}.`);
-            console.log(`✅ Project ${projectId} status updated to ${newStatus}`);
-
-            // ✅ Reload only if something actually changed
-            window.location.reload();
-        }
-
-    } catch (error) {
-        console.error("❌ Error in checkAndUpdateProjectStatus:", error);
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.warn(`⚠️ No assigned items for project ${projectId}`);
+        return currentStatus;
+      }
+      throw new Error("Failed to fetch assigned items.");
     }
+
+    const data = await response.json();
+    const assignedItems = data.items;
+
+    if (!Array.isArray(assignedItems) || assignedItems.length === 0) {
+      console.warn(`ℹ️ Project ${projectId} has no assigned items.`);
+      return currentStatus;
+    }
+
+    const anyNew = assignedItems.some(item => item.status === "new");
+    const anyRework = assignedItems.some(item => item.status === "rework");
+    const anyInProgress = assignedItems.some(item => item.status === "in-progress");
+    const allCompleted = assignedItems.every(item =>
+      item.status === "completed" && item.qualityControl?.status === "approved"
+    );
+
+    let newStatus = currentStatus;
+
+    // ✅ Priority Order
+    if (anyNew) {
+      newStatus = "new";
+    } else if (anyRework) {
+      newStatus = "rework";
+    } else if (allCompleted) {
+      newStatus = "completed";
+    } else if (anyInProgress) {
+      newStatus = "in-progress";
+    }
+
+    if (newStatus !== currentStatus) {
+      const updateResponse = await fetch('/api/vendor/update-project-status', {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ vendorId, projectId, status: newStatus }),
+      });
+
+      if (!updateResponse.ok) throw new Error(`Failed to update project status to ${newStatus}`);
+      console.log(`✅ Project ${projectId} status updated to ${newStatus}`);
+
+                  // ✅ Reload only if something actually changed
+                  window.location.reload();
+    }
+
+    return newStatus;
+
+  } catch (error) {
+    console.error("❌ Error in checkAndUpdateProjectStatus:", error);
+    return currentStatus;
+  }
 }
+
 
 
 
