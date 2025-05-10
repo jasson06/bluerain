@@ -2027,6 +2027,9 @@ document.addEventListener('DOMContentLoaded', () => {
   enableDragAndDrop();
   loadSidebarProjects();
   setupManageTeamModal();
+  renderQualityControlItems(projectId);
+  enableModalSwipeForQC();
+
 
 
 // After DOM loads or within your init function:
