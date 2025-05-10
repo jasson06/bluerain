@@ -2028,7 +2028,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSidebarProjects();
   setupManageTeamModal();
   renderQualityControlItems(projectId);
-  enableModalSwipeForQC();
+  
 
 
 
