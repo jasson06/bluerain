@@ -190,8 +190,8 @@ tr{
 }
 
 
-.Approved {
-    background-color: rgb(12, 105, 236);
+.approved {
+    background-color: #007BFF;
     color: white;
 }
 
@@ -1706,6 +1706,7 @@ function displayAssignedItems(items) {
         let statusClass = "new"; // default red
         if (currentStatus === "in-progress") statusClass = "in-progress";
         if (currentStatus === "completed") statusClass = "completed";
+        if (currentStatus === "approved") statusClass = "approved";
 
         // Rework Notes Display
         const reworkNotes = item.qualityControl?.status === "rework" 
