@@ -1383,7 +1383,7 @@ async function toggleItemStatus(vendorId, itemId, currentStatus) {
             statusElement.innerText = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
 
             // Remove all status classes
-            statusElement.classList.remove("new", "in-progress", "completed",);
+            statusElement.classList.remove("new", "in-progress", "completed","approved");
 
             // Add the new class to reflect color
             statusElement.classList.add(newStatus);
