@@ -300,6 +300,55 @@ button:hover {
       
   </main>
 
+      <!-- Toast Notification -->
+<div id="toast" style="
+position: fixed;
+top: 30px;
+left: 50%;
+transform: translateX(-50%);
+background: linear-gradient(to right, #0ea5e9, #3b82f6);
+color: white;
+padding: 14px 24px;
+border-radius: 8px;
+display: none;
+z-index: 9999;
+font-weight: 500;
+font-size: 15px;
+box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+transition: opacity 0.3s ease, transform 0.3s ease;
+pointer-events: none;
+"></div>
+
+<!-- Loader Spinner -->
+<div id="loader" style="
+position: fixed;
+top: 0; left: 0;
+width: 100%; height: 100%;
+background: rgba(255, 255, 255, 0.6);
+backdrop-filter: blur(2px);
+z-index: 9999;
+display: none;
+justify-content: center;
+align-items: center;
+">
+<div style="
+  border: 5px solid #e5e7eb;
+  border-top: 5px solid #3b82f6;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  animation: spin 0.8s linear infinite;
+"></div>
+</div>
+
+<!-- Add this to your <style> block or <head> -->
+<style>
+@keyframes spin {
+0% { transform: rotate(0deg); }
+100% { transform: rotate(360deg); }
+}
+</style>
+
   <script>
 document.addEventListener("DOMContentLoaded", async () => {
     const vendorId = localStorage.getItem("vendorId");
@@ -313,6 +362,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     await fetchAssignedProjects(vendorId);
 });
 
+
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.style.display = 'block';
+  setTimeout(() => { toast.style.display = 'none'; }, 3000);
+}
+
+function showLoader() {
+  document.getElementById('loader').style.display = 'flex';
+}
+
+function hideLoader() {
+  document.getElementById('loader').style.display = 'none';
+}
+    
 // Helper function to return a CSS class based on status
 function getStatusClass(status) {
       if (status === "new") return "status-new";
@@ -324,6 +389,7 @@ function getStatusClass(status) {
 
 // ✅ Fetch Assigned Projects
 async function fetchAssignedProjects(vendorId) {
+  showLoader(); // 👈 START
     try {
         const response = await fetch(`/api/vendors/${vendorId}/assigned-projects?t=${new Date().getTime()}`);
         if (!response.ok) throw new Error("Failed to fetch assigned projects.");
@@ -353,23 +419,10 @@ displayAssignedProjects(data.rework, "rework-container"); // ✅ ADD THIS LINE
 
     } catch (error) {
         console.error("Error fetching assigned projects:", error);
+              } finally {
+    hideLoader(); // 👈 END
     }
 }
-
-/// ✅ Helper Function to Show Modern Toast Messages
-function showToast(message, type = "success") {
-    const icon = type === "success" ? "✅" : "❌"; // Emoji Icons
-    Toastify({
-        text: `${icon} ${message}`, // Add icon before message
-        duration: type === "success" ? 3000 : -1, // Auto-close for success, persistent for errors
-        close: type === "error", // Close button for errors
-        gravity: "top",
-        position: "center",
-        className: type === "success" ? "toastify toastify-success" : "toastify toastify-error", // Apply custom styles
-        stopOnFocus: true, // Prevent auto-dismiss on hover
-    }).showToast();
-}
-
 
 
 // ✅ Display Projects
@@ -433,6 +486,7 @@ async function startProject(projectId) {
 
     
 async function checkAndUpdateProjectStatus(vendorId, projectId, currentStatus) {
+  showLoader(); // 👈 START
     try {
         const response = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
 
@@ -491,7 +545,7 @@ async function checkAndUpdateProjectStatus(vendorId, projectId, currentStatus) {
                 return currentStatus;
             }
 
-            console.log(`✅ Project ${projectId} status updated to ${newStatus}`);
+            showToast(`✅ Project status updated to ${newStatus}`);
             window.location.reload(); // Reload to reflect updated status
         }
 
@@ -500,6 +554,8 @@ async function checkAndUpdateProjectStatus(vendorId, projectId, currentStatus) {
     } catch (error) {
         console.error("❌ Error in checkAndUpdateProjectStatus:", error);
         return currentStatus;
+              } finally {
+    hideLoader(); // 👈 END
     }
 }
 
