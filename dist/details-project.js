@@ -1928,38 +1928,45 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ✅ Display Files
-  function displayFiles(files) {
-    const container = document.getElementById('uploaded-files-container');
-    container.innerHTML = '';
+function displayFiles(files) {
+  const container = document.getElementById('uploaded-files-container');
+  container.innerHTML = '';
 
-    files.forEach(file => {
-      const fileItem = document.createElement('div');
-      fileItem.className = 'file-item';
+  files.forEach(file => {
+    const fileItem = document.createElement('div');
+    fileItem.className = 'file-item';
 
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.className = 'file-checkbox';
-      checkbox.dataset.fileId = file._id;
-      checkbox.addEventListener('change', toggleActionDropdown);
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'file-checkbox';
+    checkbox.dataset.fileId = file._id;
+    checkbox.addEventListener('change', toggleActionDropdown);
 
-      const fileIcon = document.createElement('span');
-      fileIcon.className = 'file-icon';
-      fileIcon.textContent = getFileIcon(file.mimetype);
+    const fileIcon = document.createElement('span');
+    fileIcon.className = 'file-icon';
+    fileIcon.textContent = getFileIcon(file.mimetype);
 
-      const fileName = document.createElement('span');
-      fileName.textContent = file.filename;
-      fileName.className = 'file-name';
-      fileName.style.cursor = 'pointer';
-      fileName.addEventListener('click', () => previewFile(file));
+    const fileName = document.createElement('span');
+    fileName.textContent = file.filename;
+    fileName.className = 'file-name';
+    fileName.style.cursor = 'pointer';
 
-      fileItem.appendChild(checkbox);
-      fileItem.appendChild(fileIcon);
-      fileItem.appendChild(fileName);
-      container.appendChild(fileItem);
+    // Construct the file URL with proper encoding
+    const fileUrl = `${UPLOADS_PATH}${encodeURIComponent(file.filename)}`;
+
+    fileName.addEventListener('click', () => {
+      previewFile(fileUrl, file.mimetype);
     });
 
-    toggleActionDropdown();
-  }
+    fileItem.appendChild(checkbox);
+    fileItem.appendChild(fileIcon);
+    fileItem.appendChild(fileName);
+    container.appendChild(fileItem);
+  });
+
+  toggleActionDropdown();
+}
+
 
   // ✅ Select All / Deselect All Function
   function selectAllFiles() {
