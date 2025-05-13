@@ -2044,31 +2044,38 @@ function displayFiles(files) {
   }
 
   // ✅ Preview File
-  function previewFile(file) {
-    const modal = document.getElementById('file-preview-modal');
-    const content = document.getElementById('preview-content');
-    content.innerHTML = '';
+function previewFile(fileUrl, mimetype) {
+  const modal = document.getElementById('file-preview-modal');
+  const content = document.getElementById('preview-content');
+  content.innerHTML = '';
 
-    const fileUrl = `${UPLOADS_PATH}${encodeURIComponent(file.filename)}`;
-    const fileType = file.mimetype.split('/')[0];
+  const fileType = mimetype.split('/')[0];
 
-    if (fileType === 'image') {
-      const img = document.createElement('img');
-      img.src = fileUrl;
-      img.style.width = '100%';
-      content.appendChild(img);
-    } else if (file.mimetype === 'application/pdf') {
-      const iframe = document.createElement('iframe');
-      iframe.src = fileUrl;
-      iframe.style.width = '100%';
-      iframe.style.height = '500px';
-      content.appendChild(iframe);
-    } else {
-      content.textContent = `Preview not available for ${file.mimetype}`;
-    }
+  if (fileType === 'image') {
+    const img = document.createElement('img');
+    img.src = fileUrl;
+    img.alt = 'Preview Image';
+    img.style.width = '100%';
+    img.style.maxHeight = '550px';
+    content.appendChild(img);
 
-    modal.classList.add('active');
+  } else if (mimetype === 'application/pdf') {
+    const iframe = document.createElement('iframe');
+    iframe.src = fileUrl;
+    iframe.style.width = '100%';
+    iframe.style.height = '500px';
+    content.appendChild(iframe);
+
+  } else {
+    const unsupported = document.createElement('p');
+    unsupported.textContent = `Preview not available for ${mimetype}`;
+    unsupported.style.color = '#d9534f';
+    content.appendChild(unsupported);
   }
+
+  modal.classList.add('active');
+}
+
 
   // ✅ Close Preview
   document.getElementById('file-preview-modal').addEventListener('click', function (e) {
