@@ -1839,292 +1839,160 @@ function downloadTemplate() {
 }
 
 
-document.addEventListener("DOMContentLoaded", () => {
-  const BASE_URL = "https://node-mongodb-api-1h93.onrender.com";
-  const UPLOADS_PATH = `${BASE_URL}/uploads/`;
-
-  const pathSegments = window.location.pathname.split('/');
-  const projectId = pathSegments.includes('projects') ? pathSegments[pathSegments.indexOf('projects') + 1] : null;
-
-  if (projectId) {
-    fetchFiles(projectId);
-  } else {
-    console.error("Project ID is missing from the URL");
-  }
-
-  // ✅ Fetch Files Function
-  function fetchFiles(projectId) {
-    fetch(`${BASE_URL}/api/projects/${projectId}/files`)
-      .then(response => {
-        if (!response.ok) throw new Error('Failed to fetch files');
-        return response.json();
-      })
-      .then(files => displayFiles(files))
-      .catch(error => {
-        console.error('Error fetching files:', error);
-      });
-  }
-
-  // ✅ Unified File Upload Function (Click & Drop)
-  function uploadFiles() {
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = 'image/*,application/pdf';
-    fileInput.multiple = true;
-    fileInput.addEventListener('change', handleFileUpload);
-    fileInput.click();
-  }
-
-  // ✅ Drag and Drop Implementation
-  const dropzone = document.getElementById('dropzone');
-
-  dropzone.addEventListener('click', uploadFiles);
-
-  dropzone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropzone.classList.add('drag-over');
-  });
-
-  dropzone.addEventListener('dragleave', () => {
-    dropzone.classList.remove('drag-over');
-  });
-
-  dropzone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropzone.classList.remove('drag-over');
-    handleDrop(e);
-  });
-
-  function handleDrop(e) {
-    const files = e.dataTransfer.files;
-    if (files.length) {
-      handleFileUpload({ target: { files } });
-    }
-  }
-
- // ✅ Handle Files Upload
-  async function handleFiles(event) {
-    const files = event.target.files;
-
-    if (!projectId) {
+  document.addEventListener("DOMContentLoaded", () => { 
+    const pathSegments = window.location.pathname.split('/');
+    const projectId = pathSegments.includes('projects') ? pathSegments[pathSegments.indexOf('projects') + 1] : null;
+  
+    if (projectId) {
+      fetch(`/api/projects/${projectId}/files`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch files');
+          }
+          return response.json();
+        })
+        .then(files => {
+          console.log('Fetched files:', files);
+          displayFiles(files);  // Ensure this function is accessible
+        })
+        .catch(error => {
+          console.error('Error fetching files:', error);
+        });
+    } else {
       console.error("Project ID is missing from the URL");
-      alert("Project ID is missing. Please refresh the page or navigate properly.");
-      return;
     }
-
-    const formData = new FormData();
-    Array.from(files).forEach(file => formData.append('files', file));
-
-    showLoader();
-
-    try {
-      const response = await fetch(`${BASE_URL}/api/projects/${projectId}/files`, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) throw new Error('Failed to upload files');
-
-      const uploadedFiles = await response.json();
-      displayFiles(uploadedFiles.files);
-
-    } catch (error) {
-      console.error('Error uploading files:', error);
-      alert('Failed to upload files. Please check the console for more details.');
-    } finally {
-      hideLoader();
+  
+    // Upload Files Functionality
+    function uploadFiles() {
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*,application/pdf'; 
+      fileInput.multiple = true;
+      fileInput.style.display = 'none';
+      
+      fileInput.addEventListener('change', handleFiles);
+      
+      document.body.appendChild(fileInput);
+      fileInput.click();
     }
-  }
-
-// ✅ Display Files
-function displayFiles(files) {
-  const container = document.getElementById('uploaded-files-container');
-  container.innerHTML = '';
-
-  files.forEach(file => {
-    const fileItem = document.createElement('div');
-    fileItem.className = 'file-item';
-
-    // Checkbox for Selection
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.className = 'file-checkbox';
-    checkbox.dataset.fileId = file._id;
-    checkbox.addEventListener('change', toggleActionDropdown);
-
-    // File Icon
-    const fileIcon = document.createElement('span');
-    fileIcon.className = 'file-icon';
-    fileIcon.textContent = getFileIcon(file.mimetype);
-
-    // Construct the file URL with proper encoding
-    const fileUrl = `${UPLOADS_PATH}${encodeURIComponent(file.filename)}`;
-
-    // File Name (Clickable for Preview)
-    const fileName = document.createElement('span');
-    fileName.textContent = file.filename;
-    fileName.className = 'file-name';
-    fileName.style.cursor = 'pointer';
-    fileName.title = 'Click to preview';
-    fileName.addEventListener('click', () => {
-      previewFile(fileUrl, file.mimetype);
-    });
-
-    // Download Button
-    const downloadButton = document.createElement('button');
-    downloadButton.textContent = 'Download';
-    downloadButton.className = 'file-action download-btn';
-    downloadButton.title = 'Download File';
-    downloadButton.addEventListener('click', () => downloadFile(file._id));
-
-    // Delete Button
-    const deleteButton = document.createElement('button');
-    deleteButton.textContent = 'Delete';
-    deleteButton.className = 'file-action delete-btn';
-    deleteButton.title = 'Delete File';
-    deleteButton.addEventListener('click', () => deleteFile(file._id, fileItem));
-
-    // Assemble the File Item
-    fileItem.appendChild(checkbox);
-    fileItem.appendChild(fileIcon);
-    fileItem.appendChild(fileName);
-    fileItem.appendChild(downloadButton);
-    fileItem.appendChild(deleteButton);
-
-    container.appendChild(fileItem);
-  });
-
-  toggleActionDropdown();
-}
-
-
-
-  // ✅ Select All / Deselect All Function
-  function selectAllFiles() {
-    const selectAllCheckbox = document.getElementById('select-all');
-    const checkboxes = document.querySelectorAll('.file-checkbox');
-
-    checkboxes.forEach(checkbox => {
-      checkbox.checked = selectAllCheckbox.checked;
-    });
-
-    toggleActionDropdown();
-  }
-
-  // ✅ Toggle Action Dropdown
-  function toggleActionDropdown() {
-    const selectedFiles = document.querySelectorAll('.file-checkbox:checked').length;
-    const actionDropdown = document.getElementById('file-actions');
-    actionDropdown.style.display = selectedFiles > 0 ? 'block' : 'none';
-  }
-
-  // ✅ Perform File Action (Delete or Download)
-  function performFileAction() {
-    const action = document.getElementById('file-action-select').value;
-    const selectedFiles = Array.from(document.querySelectorAll('.file-checkbox:checked'))
-      .map(cb => cb.dataset.fileId);
-
-    if (!selectedFiles.length) {
-      alert("No files selected.");
-      return;
-    }
-
-    if (action === 'delete') {
-      deleteMultipleFiles(selectedFiles);
-    } else if (action === 'download') {
-      selectedFiles.forEach(id => downloadFile(id));
-    }
-  }
-
-  // ✅ Delete Multiple Files
-  async function deleteMultipleFiles(fileIds) {
-    const projectId = getProjectId();
-    const deletionPromises = fileIds.map(id => deleteFile(projectId, id));
-    await Promise.allSettled(deletionPromises);
-    fetchFiles(projectId);
-  }
-
-  async function deleteFile(projectId, fileId) {
-    try {
-      const response = await fetch(`${BASE_URL}/api/projects/${projectId}/files/${fileId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error("File deletion failed");
+  
+    async function handleFiles(event) {
+      const files = event.target.files;
+      
+      if (!projectId) {
+        console.error("Project ID is missing from the URL");
+        alert("Project ID is missing. Please refresh the page or navigate properly.");
+        return;
       }
-    } catch (error) {
-      console.error(`Error deleting file ${fileId}:`, error);
+      
+      const formData = new FormData();
+      Array.from(files).forEach(file => formData.append('files', file));
+       showLoader(); // 👈 START
+      try {
+        const response = await fetch(`/api/projects/${projectId}/files`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!response.ok) throw new Error('Failed to upload files');
+        
+        const uploadedFiles = await response.json();
+        displayFiles(uploadedFiles.files);  // Make sure this points to the correct array
+      } catch (error) {
+        console.error('Error uploading files:', error);
+        alert('Failed to upload files. Please check the console for more details.');
+            } finally {
+        hideLoader(); // 👈 END
+      }
     }
-  }
+  
+    
 
-  // ✅ Download File
-  function downloadFile(fileId) {
-    const projectId = getProjectId();
-    if (!projectId) return;
+// ✅ Display Files Function (Ensures Correct URL Format for Render)
+function displayFiles(files) {
+    const filesContainer = document.getElementById('uploaded-files-container');
+    filesContainer.innerHTML = '';  // Clear previous content
 
-    const downloadUrl = `${BASE_URL}/api/projects/${projectId}/files/${fileId}/download`;
-    window.open(downloadUrl, '_blank');
-  }
+    if (!Array.isArray(files)) {
+        console.error('Expected an array but got:', files);
+        return;
+    }
 
-  // ✅ Get File Icon
-  function getFileIcon(mimetype) {
-    if (mimetype.startsWith('image')) return '📷';
-    if (mimetype === 'application/pdf') return '📄';
-    return '📁';
-  }
+    // ✅ Base URL for uploaded files on Render
+    const BASE_URL = "https://node-mongodb-api-1h93.onrender.com/uploads/";
 
-  // ✅ Preview File
-function previewFile(fileUrl, mimetype) {
-  const modal = document.getElementById('file-preview-modal');
-  const content = document.getElementById('preview-content');
-  content.innerHTML = '';
+    files.forEach(file => {
+        const fileElement = document.createElement('div');
+        fileElement.classList.add('file-item');
 
-  const fileType = mimetype.split('/')[0];
+        // ✅ Ensure the correct filename format (with timestamp prefix)
+        let correctFilename = file.path.split('/').pop();  // Extracts full filename with timestamp
 
-  if (fileType === 'image') {
-    const img = document.createElement('img');
-    img.src = fileUrl;
-    img.alt = 'Preview Image';
-    img.style.width = '100%';
-    img.style.maxHeight = '550px';
-    content.appendChild(img);
+        if (!correctFilename.includes('-')) {
+            console.warn(`⚠️ Potentially incorrect filename format: ${correctFilename}`);
+        }
 
-  } else if (mimetype === 'application/pdf') {
-    const iframe = document.createElement('iframe');
-    iframe.src = fileUrl;
-    iframe.style.width = '100%';
-    iframe.style.height = '500px';
-    content.appendChild(iframe);
+        // ✅ Construct the correct file URL
+        const fileUrl = `${BASE_URL}${encodeURIComponent(correctFilename)}`;
 
-  } else {
-    const unsupported = document.createElement('p');
-    unsupported.textContent = `Preview not available for ${mimetype}`;
-    unsupported.style.color = '#d9534f';
-    content.appendChild(unsupported);
-  }
+        if (file.mimetype.startsWith('image/')) {
+            // ✅ Display Image
+            const img = document.createElement('img');
+            img.src = fileUrl;
+            img.style.width = '150px';
+            img.style.cursor = 'pointer';
+            img.addEventListener('click', () => window.open(fileUrl, '_blank'));
+            fileElement.appendChild(img);
+        } else {
+            // ✅ Display Other Files as Links
+            const fileLink = document.createElement('a');
+            fileLink.href = fileUrl;
+            fileLink.target = '_blank';
+            fileLink.textContent = correctFilename;
 
-  modal.classList.add('active');
+            const fileIcon = document.createElement('i');
+            fileIcon.className = 'fas fa-file-alt'; // FontAwesome file icon
+            fileLink.prepend(fileIcon);
+
+            fileElement.appendChild(fileLink);
+        }
+
+        // ✅ Add Delete Icon
+        const removeIcon = document.createElement('i');
+        removeIcon.className = 'fas fa-times'; // FontAwesome "x" icon
+        removeIcon.style.cursor = 'pointer';
+        removeIcon.style.marginLeft = '10px';
+        removeIcon.addEventListener('click', () => deleteFile(file._id, fileElement));
+
+        fileElement.appendChild(removeIcon);
+        filesContainer.appendChild(fileElement);
+    });
 }
 
 
-  // ✅ Close Preview
-  document.getElementById('file-preview-modal').addEventListener('click', function (e) {
-    if (e.target === this) {
-      closePreview();
+
+  
+    // Delete File Function
+    async function deleteFile(fileId, fileElement) {
+      showLoader(); // 👈 START
+      try {
+        const response = await fetch(`/api/projects/${projectId}/files/${fileId}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) throw new Error('Failed to delete file');
+        
+        fileElement.remove();
+      } catch (error) {
+        console.error('Error deleting file:', error);
+              } finally {
+        hideLoader(); // 👈 END
+      }
     }
+  
+    // Expose the uploadFiles function globally
+    window.uploadFiles = uploadFiles;
   });
-
-  function closePreview() {
-    document.getElementById('file-preview-modal').classList.remove('active');
-  }
-
-  // ✅ Expose Global Functions
-  window.uploadFiles = uploadFiles;
-  window.selectAllFiles = selectAllFiles;
-  window.performFileAction = performFileAction;
-  window.closePreview = closePreview;
-});
 
   
   
