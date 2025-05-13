@@ -2042,31 +2042,91 @@ document.addEventListener("DOMContentLoaded", () => {
     window.open(downloadUrl, '_blank');
   }
 
-  // ✅ Delete Multiple Files
-  async function deleteMultipleFiles(fileIds) {
-    const projectId = getProjectId();
-    const deletionPromises = fileIds.map(id => deleteFile(id));
-    await Promise.allSettled(deletionPromises);
-    fetchFiles(projectId);
+// ✅ Delete Multiple Files with Confirmation
+async function deleteMultipleFiles(fileIds) {
+  const projectId = getProjectId();
+  if (!projectId) {
+    showToast("❌ Project ID is missing.", "error");
+    return;
   }
+
+  if (!fileIds.length) {
+    showToast("❌ No files selected for deletion.", "error");
+    return;
+  }
+
+  // ✅ Confirmation Prompt
+  const confirmation = confirm(`Are you sure you want to delete ${fileIds.length} file(s)?`);
+  if (!confirmation) {
+    showToast("File deletion cancelled.");
+    return;
+  }
+
+  const deletionPromises = fileIds.map(id => deleteFile(id));
+  const results = await Promise.allSettled(deletionPromises);
+
+  let successCount = 0;
+  let errorCount = 0;
+
+  results.forEach(result => {
+    if (result.status === "fulfilled") {
+      successCount++;
+    } else {
+      errorCount++;
+    }
+  });
+
+  // ✅ Show toast based on success/failure counts
+  if (successCount > 0) {
+    showToast(`✅ ${successCount} file(s) deleted successfully.`);
+  }
+  if (errorCount > 0) {
+    showToast(`❌ Failed to delete ${errorCount} file(s).`, "error");
+  }
+
+  // Refresh the file list
+  fetchFiles(projectId);
+}
+
 
   // ✅ Delete Single File
-  async function deleteFile(fileId, fileElement) {
-    const projectId = getProjectId();
-    try {
-      const response = await fetch(`${BASE_URL}/api/projects/${projectId}/files/${fileId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error("File deletion failed");
-      }
-
-      fileElement.remove();
-    } catch (error) {
-      console.error(`Error deleting file ${fileId}:`, error);
-    }
+// ✅ Delete Single File with Confirmation and Toast Notification
+async function deleteFile(fileId, fileElement) {
+  const projectId = getProjectId();
+  if (!projectId) {
+    showToast("❌ Project ID is missing.", "error");
+    return;
   }
+
+  // ✅ Confirmation Prompt
+  const confirmation = confirm("Are you sure you want to delete this file?");
+  if (!confirmation) {
+    showToast("File deletion cancelled.");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/projects/${projectId}/files/${fileId}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw new Error("File deletion failed");
+    }
+
+    // ✅ Remove file element from DOM
+    if (fileElement) {
+      fileElement.remove();
+    }
+
+    showToast("✅ File deleted successfully.");
+
+  } catch (error) {
+    console.error(`Error deleting file ${fileId}:`, error);
+    showToast("❌ Error deleting file. Please try again.", "error");
+  }
+}
+
 
   // ✅ Get File Icon
   function getFileIcon(mimetype) {
