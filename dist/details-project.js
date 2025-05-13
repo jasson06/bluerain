@@ -1839,6 +1839,8 @@ function downloadTemplate() {
 }
 
 
+
+
 document.addEventListener("DOMContentLoaded", () => {
   const BASE_URL = "https://node-mongodb-api-1h93.onrender.com";
   const UPLOADS_PATH = `${BASE_URL}/uploads/`;
@@ -1929,7 +1931,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const fileItem = document.createElement('div');
       fileItem.className = 'file-item';
 
-      // Extract the filename from the full path
+      // Extract the filename from the path
       const filename = file.path.split('/').pop();
       const fileUrl = `${UPLOADS_PATH}${encodeURIComponent(filename)}`;
 
@@ -1945,7 +1947,7 @@ document.addEventListener("DOMContentLoaded", () => {
       fileIcon.className = 'file-icon';
       fileIcon.textContent = getFileIcon(file.mimetype);
 
-      // File Name
+      // File Name (Preview Clickable)
       const fileName = document.createElement('span');
       fileName.textContent = filename;
       fileName.className = 'file-name';
@@ -1976,7 +1978,7 @@ document.addEventListener("DOMContentLoaded", () => {
     toggleActionDropdown();
   }
 
-  // ✅ Toggle Action Dropdown
+ // ✅ Toggle Action Dropdown
   function toggleActionDropdown() {
     const selectedFiles = document.querySelectorAll('.file-checkbox:checked').length;
     const actionDropdown = document.getElementById('file-actions');
@@ -2037,7 +2039,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const iframe = document.createElement('iframe');
       iframe.src = fileUrl;
       iframe.style.width = '100%';
-      iframe.style.height = '500px';
+      iframe.style.height = '800px';
       content.appendChild(iframe);
 
     } else {
@@ -2047,7 +2049,7 @@ document.addEventListener("DOMContentLoaded", () => {
     modal.classList.add('active');
   }
 
-  // ✅ Close Preview
+  // ✅ Close Preview Modal
   document.getElementById('file-preview-modal').addEventListener('click', function (e) {
     if (e.target === this) {
       closePreview();
@@ -2055,7 +2057,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   function closePreview() {
-    document.getElementById('file-preview-modal').classList.remove('active');
+    const modal = document.getElementById('file-preview-modal');
+    modal.classList.remove('active');
   }
 
   // ✅ Expose Global Functions
