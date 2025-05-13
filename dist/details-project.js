@@ -1843,22 +1843,26 @@ document.addEventListener("DOMContentLoaded", () => {
   const BASE_URL = "https://node-mongodb-api-1h93.onrender.com";
   const UPLOADS_PATH = `${BASE_URL}/uploads/`;
 
-  const projectId = getProjectId();
+  const pathSegments = window.location.pathname.split('/');
+  const projectId = pathSegments.includes('projects') ? pathSegments[pathSegments.indexOf('projects') + 1] : null;
+
   if (projectId) {
     fetchFiles(projectId);
+  } else {
+    console.error("Project ID is missing from the URL");
   }
 
-  function getProjectId() {
-    const segments = window.location.pathname.split('/');
-    const index = segments.indexOf('projects');
-    return index !== -1 ? segments[index + 1] : null;
-  }
-
+  // ✅ Fetch Files Function
   function fetchFiles(projectId) {
     fetch(`${BASE_URL}/api/projects/${projectId}/files`)
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to fetch files');
+        return response.json();
+      })
       .then(files => displayFiles(files))
-      .catch(err => console.error('Error fetching files:', err));
+      .catch(error => {
+        console.error('Error fetching files:', error);
+      });
   }
 
   // ✅ Unified File Upload Function (Click & Drop)
@@ -1898,36 +1902,41 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ✅ Handle File Upload
-  async function handleFileUpload(event) {
-    const projectId = getProjectId();
+ // ✅ Handle Files Upload
+  async function handleFiles(event) {
+    const files = event.target.files;
+
     if (!projectId) {
-      console.error("Project ID is missing.");
+      console.error("Project ID is missing from the URL");
+      alert("Project ID is missing. Please refresh the page or navigate properly.");
       return;
     }
-
-    const files = event.target.files;
-    if (!files.length) return;
 
     const formData = new FormData();
     Array.from(files).forEach(file => formData.append('files', file));
 
+    showLoader();
+
     try {
       const response = await fetch(`${BASE_URL}/api/projects/${projectId}/files`, {
         method: 'POST',
-        body: formData,
+        body: formData
       });
 
-      if (!response.ok) throw new Error("File upload failed");
+      if (!response.ok) throw new Error('Failed to upload files');
 
       const uploadedFiles = await response.json();
       displayFiles(uploadedFiles.files);
+
     } catch (error) {
-      console.error("Error uploading files:", error);
+      console.error('Error uploading files:', error);
+      alert('Failed to upload files. Please check the console for more details.');
+    } finally {
+      hideLoader();
     }
   }
 
-  // ✅ Display Files
+// ✅ Display Files
 function displayFiles(files) {
   const container = document.getElementById('uploaded-files-container');
   container.innerHTML = '';
@@ -1936,36 +1945,58 @@ function displayFiles(files) {
     const fileItem = document.createElement('div');
     fileItem.className = 'file-item';
 
+    // Checkbox for Selection
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.className = 'file-checkbox';
     checkbox.dataset.fileId = file._id;
     checkbox.addEventListener('change', toggleActionDropdown);
 
+    // File Icon
     const fileIcon = document.createElement('span');
     fileIcon.className = 'file-icon';
     fileIcon.textContent = getFileIcon(file.mimetype);
 
+    // Construct the file URL with proper encoding
+    const fileUrl = `${UPLOADS_PATH}${encodeURIComponent(file.filename)}`;
+
+    // File Name (Clickable for Preview)
     const fileName = document.createElement('span');
     fileName.textContent = file.filename;
     fileName.className = 'file-name';
     fileName.style.cursor = 'pointer';
-
-    // Construct the file URL with proper encoding
-    const fileUrl = `${UPLOADS_PATH}${encodeURIComponent(file.filename)}`;
-
+    fileName.title = 'Click to preview';
     fileName.addEventListener('click', () => {
       previewFile(fileUrl, file.mimetype);
     });
 
+    // Download Button
+    const downloadButton = document.createElement('button');
+    downloadButton.textContent = 'Download';
+    downloadButton.className = 'file-action download-btn';
+    downloadButton.title = 'Download File';
+    downloadButton.addEventListener('click', () => downloadFile(file._id));
+
+    // Delete Button
+    const deleteButton = document.createElement('button');
+    deleteButton.textContent = 'Delete';
+    deleteButton.className = 'file-action delete-btn';
+    deleteButton.title = 'Delete File';
+    deleteButton.addEventListener('click', () => deleteFile(file._id, fileItem));
+
+    // Assemble the File Item
     fileItem.appendChild(checkbox);
     fileItem.appendChild(fileIcon);
     fileItem.appendChild(fileName);
+    fileItem.appendChild(downloadButton);
+    fileItem.appendChild(deleteButton);
+
     container.appendChild(fileItem);
   });
 
   toggleActionDropdown();
 }
+
 
 
   // ✅ Select All / Deselect All Function
