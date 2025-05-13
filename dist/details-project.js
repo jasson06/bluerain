@@ -1839,161 +1839,231 @@ function downloadTemplate() {
 }
 
 
-  document.addEventListener("DOMContentLoaded", () => { 
-    const pathSegments = window.location.pathname.split('/');
-    const projectId = pathSegments.includes('projects') ? pathSegments[pathSegments.indexOf('projects') + 1] : null;
-  
-    if (projectId) {
-      fetch(`/api/projects/${projectId}/files`)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('Failed to fetch files');
-          }
-          return response.json();
-        })
-        .then(files => {
-          console.log('Fetched files:', files);
-          displayFiles(files);  // Ensure this function is accessible
-        })
-        .catch(error => {
-          console.error('Error fetching files:', error);
-        });
-    } else {
-      console.error("Project ID is missing from the URL");
-    }
-  
-    // Upload Files Functionality
-    function uploadFiles() {
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      fileInput.accept = 'image/*,application/pdf'; 
-      fileInput.multiple = true;
-      fileInput.style.display = 'none';
-      
-      fileInput.addEventListener('change', handleFiles);
-      
-      document.body.appendChild(fileInput);
-      fileInput.click();
-    }
-  
-    async function handleFiles(event) {
-      const files = event.target.files;
-      
-      if (!projectId) {
-        console.error("Project ID is missing from the URL");
-        alert("Project ID is missing. Please refresh the page or navigate properly.");
-        return;
-      }
-      
-      const formData = new FormData();
-      Array.from(files).forEach(file => formData.append('files', file));
-       showLoader(); // 👈 START
-      try {
-        const response = await fetch(`/api/projects/${projectId}/files`, {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (!response.ok) throw new Error('Failed to upload files');
-        
-        const uploadedFiles = await response.json();
-        displayFiles(uploadedFiles.files);  // Make sure this points to the correct array
-      } catch (error) {
-        console.error('Error uploading files:', error);
-        alert('Failed to upload files. Please check the console for more details.');
-            } finally {
-        hideLoader(); // 👈 END
-      }
-    }
-  
-    
+document.addEventListener("DOMContentLoaded", () => {
+  const BASE_URL = "https://node-mongodb-api-1h93.onrender.com";
+  const UPLOADS_PATH = `${BASE_URL}/uploads/`;
 
-// ✅ Display Files Function (Ensures Correct URL Format for Render)
-function displayFiles(files) {
-    const filesContainer = document.getElementById('uploaded-files-container');
-    filesContainer.innerHTML = '';  // Clear previous content
+  const projectId = getProjectId();
+  if (projectId) {
+    fetchFiles(projectId);
+  }
 
-    if (!Array.isArray(files)) {
-        console.error('Expected an array but got:', files);
-        return;
-    }
+  function getProjectId() {
+    const segments = window.location.pathname.split('/');
+    const index = segments.indexOf('projects');
+    return index !== -1 ? segments[index + 1] : null;
+  }
 
-    // ✅ Base URL for uploaded files on Render
-    const BASE_URL = "https://node-mongodb-api-1h93.onrender.com/uploads/";
+  function fetchFiles(projectId) {
+    fetch(`${BASE_URL}/api/projects/${projectId}/files`)
+      .then(response => response.json())
+      .then(files => displayFiles(files))
+      .catch(err => console.error('Error fetching files:', err));
+  }
 
-    files.forEach(file => {
-        const fileElement = document.createElement('div');
-        fileElement.classList.add('file-item');
+  // ✅ Unified File Upload Function (Click & Drop)
+  function uploadFiles() {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*,application/pdf';
+    fileInput.multiple = true;
+    fileInput.addEventListener('change', handleFileUpload);
+    fileInput.click();
+  }
 
-        // ✅ Ensure the correct filename format (with timestamp prefix)
-        let correctFilename = file.path.split('/').pop();  // Extracts full filename with timestamp
+  // ✅ Drag and Drop Implementation
+  const dropzone = document.getElementById('dropzone');
 
-        if (!correctFilename.includes('-')) {
-            console.warn(`⚠️ Potentially incorrect filename format: ${correctFilename}`);
-        }
-
-        // ✅ Construct the correct file URL
-        const fileUrl = `${BASE_URL}${encodeURIComponent(correctFilename)}`;
-
-        if (file.mimetype.startsWith('image/')) {
-            // ✅ Display Image
-            const img = document.createElement('img');
-            img.src = fileUrl;
-            img.style.width = '150px';
-            img.style.cursor = 'pointer';
-            img.addEventListener('click', () => window.open(fileUrl, '_blank'));
-            fileElement.appendChild(img);
-        } else {
-            // ✅ Display Other Files as Links
-            const fileLink = document.createElement('a');
-            fileLink.href = fileUrl;
-            fileLink.target = '_blank';
-            fileLink.textContent = correctFilename;
-
-            const fileIcon = document.createElement('i');
-            fileIcon.className = 'fas fa-file-alt'; // FontAwesome file icon
-            fileLink.prepend(fileIcon);
-
-            fileElement.appendChild(fileLink);
-        }
-
-        // ✅ Add Delete Icon
-        const removeIcon = document.createElement('i');
-        removeIcon.className = 'fas fa-times'; // FontAwesome "x" icon
-        removeIcon.style.cursor = 'pointer';
-        removeIcon.style.marginLeft = '10px';
-        removeIcon.addEventListener('click', () => deleteFile(file._id, fileElement));
-
-        fileElement.appendChild(removeIcon);
-        filesContainer.appendChild(fileElement);
-    });
-}
-
-
-
-  
-    // Delete File Function
-    async function deleteFile(fileId, fileElement) {
-      showLoader(); // 👈 START
-      try {
-        const response = await fetch(`/api/projects/${projectId}/files/${fileId}`, {
-          method: 'DELETE'
-        });
-        
-        if (!response.ok) throw new Error('Failed to delete file');
-        
-        fileElement.remove();
-      } catch (error) {
-        console.error('Error deleting file:', error);
-              } finally {
-        hideLoader(); // 👈 END
-      }
-    }
-  
-    // Expose the uploadFiles function globally
-    window.uploadFiles = uploadFiles;
+  dropzone.addEventListener('click', uploadFiles);
+  dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.classList.add('drag-over');
   });
 
+  dropzone.addEventListener('dragleave', () => {
+    dropzone.classList.remove('drag-over');
+  });
+
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('drag-over');
+    handleDrop(e);
+  });
+
+  function handleDrop(e) {
+    const files = e.dataTransfer.files;
+    if (files.length) {
+      handleFileUpload({ target: { files } });
+    }
+  }
+
+  // ✅ Handle File Upload
+  async function handleFileUpload(event) {
+    const files = event.target.files;
+    if (!files.length) return;
+
+    const formData = new FormData();
+    Array.from(files).forEach(file => formData.append('files', file));
+
+    try {
+      const response = await fetch(`${BASE_URL}/api/projects/${projectId}/files`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("File upload failed");
+
+      const uploadedFiles = await response.json();
+      displayFiles(uploadedFiles.files);
+    } catch (error) {
+      console.error("Error uploading files:", error);
+    }
+  }
+
+  // ✅ Display Files with Correct Path Handling
+  function displayFiles(files) {
+    const container = document.getElementById('uploaded-files-container');
+    container.innerHTML = '';
+
+    files.forEach(file => {
+      const fileItem = document.createElement('div');
+      fileItem.className = 'file-item';
+
+      // Extract the filename from the full path
+      const filename = file.path.split('/').pop();
+      const fileUrl = `${UPLOADS_PATH}${encodeURIComponent(filename)}`;
+
+      // Checkbox for Selection
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'file-checkbox';
+      checkbox.dataset.fileId = file._id;
+      checkbox.addEventListener('change', toggleActionDropdown);
+
+      // File Icon
+      const fileIcon = document.createElement('span');
+      fileIcon.className = 'file-icon';
+      fileIcon.textContent = getFileIcon(file.mimetype);
+
+      // File Name
+      const fileName = document.createElement('span');
+      fileName.textContent = filename;
+      fileName.className = 'file-name';
+      fileName.style.cursor = 'pointer';
+      fileName.addEventListener('click', () => previewFile(fileUrl, file.mimetype));
+
+      // Download Button
+      const downloadBtn = document.createElement('button');
+      downloadBtn.textContent = 'Download';
+      downloadBtn.className = 'file-action';
+      downloadBtn.addEventListener('click', () => downloadFile(file._id));
+
+      // Delete Button
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.className = 'file-action delete-btn';
+      deleteBtn.addEventListener('click', () => deleteFile(file._id, fileItem));
+
+      fileItem.appendChild(checkbox);
+      fileItem.appendChild(fileIcon);
+      fileItem.appendChild(fileName);
+      fileItem.appendChild(downloadBtn);
+      fileItem.appendChild(deleteBtn);
+
+      container.appendChild(fileItem);
+    });
+
+    toggleActionDropdown();
+  }
+
+  // ✅ Toggle Action Dropdown
+  function toggleActionDropdown() {
+    const selectedFiles = document.querySelectorAll('.file-checkbox:checked').length;
+    const actionDropdown = document.getElementById('file-actions');
+    actionDropdown.style.display = selectedFiles > 0 ? 'block' : 'none';
+  }
+
+  // ✅ Download File
+  function downloadFile(fileId) {
+    const projectId = getProjectId();
+    if (!projectId) return;
+
+    const downloadUrl = `${BASE_URL}/api/projects/${projectId}/files/${fileId}/download`;
+    window.open(downloadUrl, '_blank');
+  }
+
+  // ✅ Delete File
+  async function deleteFile(fileId, fileElement) {
+    const projectId = getProjectId();
+    if (!projectId) return;
+
+    try {
+      const response = await fetch(`${BASE_URL}/api/projects/${projectId}/files/${fileId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error("File deletion failed");
+      }
+
+      fileElement.remove();
+    } catch (error) {
+      console.error(`Error deleting file ${fileId}:`, error);
+    }
+  }
+
+  // ✅ Get File Icon
+  function getFileIcon(mimetype) {
+    if (mimetype.startsWith('image')) return '📷';
+    if (mimetype === 'application/pdf') return '📄';
+    return '📁';
+  }
+
+  // ✅ Preview File
+  function previewFile(fileUrl, mimetype) {
+    const modal = document.getElementById('file-preview-modal');
+    const content = document.getElementById('preview-content');
+    content.innerHTML = '';
+
+    const fileType = mimetype.split('/')[0];
+
+    if (fileType === 'image') {
+      const img = document.createElement('img');
+      img.src = fileUrl;
+      img.style.width = '100%';
+      content.appendChild(img);
+
+    } else if (mimetype === 'application/pdf') {
+      const iframe = document.createElement('iframe');
+      iframe.src = fileUrl;
+      iframe.style.width = '100%';
+      iframe.style.height = '500px';
+      content.appendChild(iframe);
+
+    } else {
+      content.textContent = `Preview not available for ${mimetype}`;
+    }
+
+    modal.classList.add('active');
+  }
+
+  // ✅ Close Preview
+  document.getElementById('file-preview-modal').addEventListener('click', function (e) {
+    if (e.target === this) {
+      closePreview();
+    }
+  });
+
+  function closePreview() {
+    document.getElementById('file-preview-modal').classList.remove('active');
+  }
+
+  // ✅ Expose Global Functions
+  window.uploadFiles = uploadFiles;
+  window.selectAllFiles = selectAllFiles;
+  window.performFileAction = performFileAction;
+  window.closePreview = closePreview;
+});
   
   
   
