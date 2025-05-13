@@ -152,8 +152,6 @@ const connectToDatabase = async () => {
 
 connectToDatabase();
 
-  
-
 
 
 app.get('/api/list-uploads', (req, res) => {
@@ -2674,34 +2672,61 @@ app.get('/api/projects/:projectId/files', async (req, res) => {
 });
 
 
-// API to delete a specific file from a project
+// DELETE Route for File Deletion (Render Production Environment)
 app.delete('/api/projects/:projectId/files/:fileId', async (req, res) => {
   const { projectId, fileId } = req.params;
 
   try {
     const project = await Project.findById(projectId);
+
     if (!project) {
-      return res.status(404).send('Project not found');
+      console.warn(`Project not found: ${projectId}`);
+      return res.status(404).json({ error: 'Project not found' });
     }
 
-    const fileIndex = project.files.findIndex(file => file._id.toString() === fileId);
-    if (fileIndex === -1) {
-      return res.status(404).send('File not found');
+    const file = project.files.find(f => f._id.toString() === fileId);
+    if (!file) {
+      console.warn(`File ID not found in project: ${fileId}`);
+      return res.status(404).json({ error: 'File not found in project' });
     }
 
-    const filePath = project.files[fileIndex].path;
-    fs.unlinkSync(filePath); // Delete from filesystem
+    // Normalize the file path for cross-platform compatibility
+    let filePath = file.path.replace(/\\/g, '/'); // Convert backslashes to forward slashes
 
-    project.files.splice(fileIndex, 1); // Remove from database
-    await project.save();
-
-        // ✅ Log file deletion in daily updates
-        await logDailyUpdate(projectId, `File deleted`);
+    // Construct the absolute path for the Render server
+    const basePath = process.env.NODE_ENV === 'production' 
+      ? '/mnt/data' 
+      : __dirname;
       
-    res.status(200).json({ message: 'File deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting file:', error);
-    res.status(500).send('Internal Server Error');
+    const absolutePath = path.join(basePath, filePath);
+
+    console.log(`Resolved file path for deletion: ${absolutePath}`);
+
+    // Attempt to delete the file from the filesystem
+    try {
+      if (fs.existsSync(absolutePath)) {
+        fs.unlinkSync(absolutePath);
+        console.log(`File deleted from server: ${absolutePath}`);
+      } else {
+        console.warn(`File not found on server: ${absolutePath}`);
+      }
+    } catch (fsError) {
+      console.error('Error deleting file from filesystem:', fsError);
+      return res.status(500).json({ error: 'Error deleting file from server' });
+    }
+
+    // Remove the file entry from the project document
+    await Project.findByIdAndUpdate(
+      projectId,
+      { $pull: { files: { _id: fileId } } },
+      { new: true }
+    );
+
+    return res.status(200).json({ message: 'File deleted successfully' });
+
+  } catch (err) {
+    console.error('Server error during file deletion:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -4499,7 +4524,35 @@ app.delete("/api/expenses/:id", async (req, res) => {
   }
 });
 
+// ✅ Download File Route
+app.get('/api/projects/:projectId/files/:fileId/download', async (req, res) => {
+  const { projectId, fileId } = req.params;
 
+  try {
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const file = project.files.find(f => f._id.toString() === fileId);
+    if (!file) {
+      return res.status(404).json({ error: 'File not found in project' });
+    }
+
+    const filePath = path.join(UPLOADS_DIR, file.path.replace(/\\/g, '/'));
+
+    if (!fs.existsSync(filePath)) {
+      console.warn(`File not found at: ${filePath}`);
+      return res.status(404).json({ error: 'File not found on server' });
+    }
+
+    console.log(`✅ Downloading file from: ${filePath}`);
+    res.download(filePath, file.filename);
+  } catch (err) {
+    console.error('Download Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 
 // Debugging route to check server deployment status
