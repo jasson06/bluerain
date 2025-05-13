@@ -1958,7 +1958,17 @@ document.addEventListener("DOMContentLoaded", () => {
         previewFile(fileUrl, file.mimetype);
       });
 
+        // Download Button
+      const downloadBtn = document.createElement('button');
+      downloadBtn.textContent = 'Download';
+      downloadBtn.className = 'file-action';
+      downloadBtn.addEventListener('click', () => downloadFile(file._id));
 
+      // Delete Button
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.className = 'file-action delete-btn';
+      deleteBtn.addEventListener('click', () => deleteFile(file._id, fileItem));
 
       fileItem.appendChild(checkbox);
       fileItem.appendChild(fileIcon);
