@@ -2086,7 +2086,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const iframe = document.createElement('iframe');
       iframe.src = fileUrl;
       iframe.style.width = '100%';
-      iframe.style.height = '500px';
+      iframe.style.height = '600px';
       content.appendChild(iframe);
 
     } else {
