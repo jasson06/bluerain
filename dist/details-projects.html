@@ -249,14 +249,43 @@
 <!-- Files Section -->
 <section id="files-section" class="details-section">
   <h2>Files & Photos</h2>
+
   <div class="upload-box">
     <button class="upload-button" onclick="uploadFiles()">Upload Files ▼</button>
     <p>Upload images, files, and more to share with your team.</p>
   </div>
-  
-  <!-- Dedicated container for files -->
+  <div id="dropzone" class="dropzone" ondrop="handleDrop(event)" ondragover="event.preventDefault();">
+  Drag and drop files here or click to upload
+</div>
+
+
+  <!-- Action Dropdown -->
+  <div id="file-actions" class="action-dropdown" style="display: none;">
+    <select id="file-action-select">
+      <option value="" disabled selected>Select Action</option>
+      <option value="download">Download</option>
+      <option value="delete">Delete</option>
+    </select>
+    <button onclick="performFileAction()">Apply</button>
+  </div>
+
+  <!-- Select All Checkbox -->
+  <div>
+    <label>
+      <input type="checkbox" id="select-all" onclick="selectAllFiles()"> Select All
+    </label>
+  </div>
+
+  <!-- Files Container -->
   <div id="uploaded-files-container" class="files-container"></div>
-</section>
+
+<!-- Preview Modal Structure -->
+<div id="file-preview-modal" class="file-preview-modal">
+  <div class="modal-content" onclick="event.stopPropagation();">
+    <span class="close" onclick="closePreview()">&times;</span>
+    <div id="preview-content">Preview Content</div>
+  </div>
+</div>
 
 
 
