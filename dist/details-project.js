@@ -1958,23 +1958,23 @@ document.addEventListener("DOMContentLoaded", () => {
         previewFile(fileUrl, file.mimetype);
       });
 
-        // Download Button
-      const downloadBtn = document.createElement('button');
-      downloadBtn.textContent = 'Download';
-      downloadBtn.className = 'file-action';
-      downloadBtn.addEventListener('click', () => downloadFile(file._id));
+       // Download Icon
+    const downloadIcon = document.createElement('i');
+    downloadIcon.className = 'fas fa-download file-action-icon';
+    downloadIcon.title = 'Download';
+    downloadIcon.addEventListener('click', () => downloadFile(file._id));
 
-      // Delete Button
-      const deleteBtn = document.createElement('button');
-      deleteBtn.textContent = 'Delete';
-      deleteBtn.className = 'file-action delete-btn';
-      deleteBtn.addEventListener('click', () => deleteFile(file._id, fileItem));
+    // Delete Icon
+    const deleteIcon = document.createElement('i');
+    deleteIcon.className = 'fas fa-trash-alt file-action-icon';
+    deleteIcon.title = 'Delete';
+    deleteIcon.addEventListener('click', () => deleteFile(file._id, fileItem));
 
       fileItem.appendChild(checkbox);
       fileItem.appendChild(fileIcon);
       fileItem.appendChild(fileName);
-      fileItem.appendChild(downloadBtn);
-      fileItem.appendChild(deleteBtn);
+       fileItem.appendChild(downloadIcon);
+    fileItem.appendChild(deleteIcon);
 
       container.appendChild(fileItem);
     });
