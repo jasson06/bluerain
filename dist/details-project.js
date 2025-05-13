@@ -1922,7 +1922,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ✅ Display Files with Correct Path Handling
+ // ✅ Display Files with Matching Structure
   function displayFiles(files) {
     const container = document.getElementById('uploaded-files-container');
     container.innerHTML = '';
@@ -1948,16 +1948,20 @@ document.addEventListener("DOMContentLoaded", () => {
       fileIcon.textContent = getFileIcon(file.mimetype);
 
       // File Name (Preview Clickable)
-      const fileName = document.createElement('span');
+      const fileName = document.createElement('a');
+      fileName.href = '#';
       fileName.textContent = filename;
       fileName.className = 'file-name';
       fileName.style.cursor = 'pointer';
-      fileName.addEventListener('click', () => previewFile(fileUrl, file.mimetype));
+      fileName.addEventListener('click', (e) => {
+        e.preventDefault();
+        previewFile(fileUrl, file.mimetype);
+      });
 
       // Download Button
       const downloadBtn = document.createElement('button');
       downloadBtn.textContent = 'Download';
-      downloadBtn.className = 'file-action';
+      downloadBtn.className = 'file-action download-btn';
       downloadBtn.addEventListener('click', () => downloadFile(file._id));
 
       // Delete Button
@@ -1978,11 +1982,44 @@ document.addEventListener("DOMContentLoaded", () => {
     toggleActionDropdown();
   }
 
- // ✅ Toggle Action Dropdown
+  // ✅ Toggle Action Dropdown
   function toggleActionDropdown() {
     const selectedFiles = document.querySelectorAll('.file-checkbox:checked').length;
     const actionDropdown = document.getElementById('file-actions');
     actionDropdown.style.display = selectedFiles > 0 ? 'block' : 'none';
+  }
+
+  // ✅ Select All / Deselect All Function
+  function selectAllFiles() {
+    const selectAllCheckbox = document.getElementById('select-all');
+    const checkboxes = document.querySelectorAll('.file-checkbox');
+
+    checkboxes.forEach(checkbox => {
+      checkbox.checked = selectAllCheckbox.checked;
+    });
+
+    toggleActionDropdown();
+  }
+
+  // ✅ Perform File Action (Delete or Download)
+  function performFileAction() {
+    const action = document.getElementById('file-action-select').value;
+    const selectedFiles = Array.from(document.querySelectorAll('.file-checkbox:checked'))
+      .map(cb => cb.dataset.fileId);
+
+    if (!selectedFiles.length) {
+      alert("No files selected.");
+      return;
+    }
+
+    if (action === 'delete') {
+      deleteMultipleFiles(selectedFiles);
+    } else if (action === 'download') {
+      selectedFiles.forEach(id => downloadFile(id));
+    }
+
+    document.getElementById('select-all').checked = false;
+    toggleActionDropdown();
   }
 
   // ✅ Download File
@@ -1994,11 +2031,17 @@ document.addEventListener("DOMContentLoaded", () => {
     window.open(downloadUrl, '_blank');
   }
 
-  // ✅ Delete File
+  // ✅ Delete Multiple Files
+  async function deleteMultipleFiles(fileIds) {
+    const projectId = getProjectId();
+    const deletionPromises = fileIds.map(id => deleteFile(id));
+    await Promise.allSettled(deletionPromises);
+    fetchFiles(projectId);
+  }
+
+  // ✅ Delete Single File
   async function deleteFile(fileId, fileElement) {
     const projectId = getProjectId();
-    if (!projectId) return;
-
     try {
       const response = await fetch(`${BASE_URL}/api/projects/${projectId}/files/${fileId}`, {
         method: 'DELETE',
@@ -2027,9 +2070,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const content = document.getElementById('preview-content');
     content.innerHTML = '';
 
-    const fileType = mimetype.split('/')[0];
-
-    if (fileType === 'image') {
+    if (mimetype.startsWith('image')) {
       const img = document.createElement('img');
       img.src = fileUrl;
       img.style.width = '100%';
@@ -2039,7 +2080,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const iframe = document.createElement('iframe');
       iframe.src = fileUrl;
       iframe.style.width = '100%';
-      iframe.style.height = '800px';
+      iframe.style.height = '500px';
       content.appendChild(iframe);
 
     } else {
