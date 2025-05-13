@@ -1915,6 +1915,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!response.ok) throw new Error("File upload failed");
 
+          showToast("✅ Files uploaded successfully.");
+    
+    // ✅ Refresh the file section to display the new file
+    fetchFiles(projectId);
+
       const uploadedFiles = await response.json();
       displayFiles(uploadedFiles.files);
     } catch (error) {
