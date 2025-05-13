@@ -2305,3 +2305,230 @@ li.completed span {
 
 
 
+#files-section {
+  width: 90%;
+  max-width: 1200px;
+  margin: 30px auto;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+#files-section h2 {
+  font-size: 24px;
+  color: #0f4c75;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 10px;
+}
+/* Upload Box */
+.upload-box {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+.upload-box p {
+  color: #666;
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Action Dropdown */
+.action-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.action-dropdown select {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #f8f9fa;
+  color: #333;
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+}
+
+.action-dropdown select:focus {
+  border-color: #007bff;
+  outline: none;
+}
+
+.action-dropdown button {
+  background-color: #0f4c75;
+  color: #fff;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.action-dropdown button:hover {
+  background-color: #186aa1;
+}
+
+/* Select All Checkbox */
+#select-all {
+  margin-right: 8px;
+}
+
+#select-all + label {
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+}
+
+/* Files Container */
+.files-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 0;
+  max-height: 300px;
+  overflow-y: auto;
+  border-top: 1px solid #ddd;
+  border-bottom: 1px solid #ddd;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: background-color 0.3s ease;
+}
+
+.file-item:hover {
+  background-color: #e2e6ea;
+}
+
+.file-item .file-name {
+  flex-grow: 1;
+  color: #007bff;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 14px;
+}
+
+.file-item .file-name:hover {
+  text-decoration: none;
+}
+
+.file-item .file-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.file-item .file-actions button {
+  background-color: #dc3545;
+  color: #fff;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.file-item .file-actions button:hover {
+  background-color: #c82333;
+}
+
+    /* ✅ Improved Modal Styles */
+.file-preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.file-preview-modal.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal-content {
+  width: 90%;
+  max-width: 600px;
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  position: relative;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-content .close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 50px;
+  cursor: pointer;
+  color: #555;
+}
+
+.modal-content .close:hover {
+  color: #007bff;
+}
+
+.modal-content img,
+.modal-content iframe {
+  width: 100%;
+  max-height: 550px;
+  border-radius: 8px;
+  object-fit: cover;
+  margin-bottom: 10px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.dropzone {
+  width: 92%;
+  padding: 20px;
+  margin-bottom: 15px;
+  background-color: #f8f9fa;
+  border: 2px dashed #007bff;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.dropzone:hover {
+  background-color: #e0e7ff;
+  border-color: #0056b3;
+}
+
+.dropzone.active {
+  background-color: #d4edda;
+  border-color: #28a745;
+}
+
+.dropzone.drag-over {
+  background-color: #cce5ff;
+  border-color: #007bff;
+}
