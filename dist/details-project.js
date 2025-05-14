@@ -1927,43 +1927,40 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
- // ✅ Display Files with Matching Structure
-  function displayFiles(files) {
-    const container = document.getElementById('uploaded-files-container');
-    container.innerHTML = '';
+// ✅ Display Files with Updated Preview Function
+function displayFiles(files) {
+  const container = document.getElementById('uploaded-files-container');
+  container.innerHTML = '';
 
-    files.forEach(file => {
-      const fileItem = document.createElement('div');
-      fileItem.className = 'file-item';
+  files.forEach(file => {
+    const fileItem = document.createElement('div');
+    fileItem.className = 'file-item';
 
-      // Extract the filename from the path
-      const filename = file.path.split('/').pop();
-      const fileUrl = `${UPLOADS_PATH}${encodeURIComponent(filename)}`;
+    // Extract the filename from the path
+    const filename = file.path.split('/').pop();
+    const fileUrl = `${UPLOADS_PATH}${encodeURIComponent(filename)}`;
 
-      // Checkbox for Selection
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.className = 'file-checkbox';
-      checkbox.dataset.fileId = file._id;
-      checkbox.addEventListener('change', toggleActionDropdown);
+    // Checkbox for Selection
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'file-checkbox';
+    checkbox.dataset.fileId = file._id;
+    checkbox.addEventListener('change', toggleActionDropdown);
 
-      // File Icon
-      const fileIcon = document.createElement('span');
-      fileIcon.className = 'file-icon';
-      fileIcon.textContent = getFileIcon(file.mimetype);
+    // File Icon
+    const fileIcon = document.createElement('span');
+    fileIcon.className = 'file-icon';
+    fileIcon.textContent = getFileIcon(file.mimetype);
 
-      // File Name (Preview Clickable)
-      const fileName = document.createElement('a');
-      fileName.href = '#';
-      fileName.textContent = filename;
-      fileName.className = 'file-name';
-      fileName.style.cursor = 'pointer';
-      fileName.addEventListener('click', (e) => {
-        e.preventDefault();
-        previewFile(fileUrl, file.mimetype);
-      });
+    // File Name (Clickable to Open in New Tab)
+    const fileName = document.createElement('a');
+    fileName.href = fileUrl;
+    fileName.textContent = filename;
+    fileName.className = 'file-name';
+    fileName.target = '_blank'; // ✅ Open in a new tab
+    fileName.style.cursor = 'pointer';
 
-       // Download Icon
+    // Download Icon
     const downloadIcon = document.createElement('i');
     downloadIcon.className = 'fas fa-download file-action-icon';
     downloadIcon.title = 'Download';
@@ -1975,17 +1972,18 @@ document.addEventListener("DOMContentLoaded", () => {
     deleteIcon.title = 'Delete';
     deleteIcon.addEventListener('click', () => deleteFile(file._id, fileItem));
 
-      fileItem.appendChild(checkbox);
-      fileItem.appendChild(fileIcon);
-      fileItem.appendChild(fileName);
-       fileItem.appendChild(downloadIcon);
+    fileItem.appendChild(checkbox);
+    fileItem.appendChild(fileIcon);
+    fileItem.appendChild(fileName);
+    fileItem.appendChild(downloadIcon);
     fileItem.appendChild(deleteIcon);
 
-      container.appendChild(fileItem);
-    });
+    container.appendChild(fileItem);
+  });
 
-    toggleActionDropdown();
-  }
+  toggleActionDropdown();
+}
+
 
   // ✅ Toggle Action Dropdown
   function toggleActionDropdown() {
@@ -2135,43 +2133,22 @@ async function deleteFile(fileId, fileElement) {
     return '📁';
   }
 
-  // ✅ Preview File
-  function previewFile(fileUrl, mimetype) {
-    const modal = document.getElementById('file-preview-modal');
-    const content = document.getElementById('preview-content');
-    content.innerHTML = '';
-
-    if (mimetype.startsWith('image')) {
-      const img = document.createElement('img');
-      img.src = fileUrl;
-      img.style.width = '100%';
-      content.appendChild(img);
-
-    } else if (mimetype === 'application/pdf') {
-      const iframe = document.createElement('iframe');
-      iframe.src = fileUrl;
-      iframe.style.width = '100%';
-      iframe.style.height = '600px';
-      content.appendChild(iframe);
-
-    } else {
-      content.textContent = `Preview not available for ${mimetype}`;
-    }
-
-    modal.classList.add('active');
+// ✅ Preview File - Open in a New Tab Instead of Modal
+function previewFile(fileUrl, mimetype) {
+  if (!fileUrl) {
+    showToast("❌ File URL is missing.", "error");
+    return;
   }
 
-  // ✅ Close Preview Modal
-  document.getElementById('file-preview-modal').addEventListener('click', function (e) {
-    if (e.target === this) {
-      closePreview();
-    }
-  });
-
-  function closePreview() {
-    const modal = document.getElementById('file-preview-modal');
-    modal.classList.remove('active');
+  try {
+    window.open(fileUrl, '_blank');
+    showToast("✅ File opened in a new tab.");
+  } catch (error) {
+    console.error("Error opening file:", error);
+    showToast("❌ Error opening file.", "error");
   }
+}
+
 
   // ✅ Expose Global Functions
   window.uploadFiles = uploadFiles;
