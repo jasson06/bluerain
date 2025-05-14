@@ -301,105 +301,102 @@ p {
 
 
 /* ----------------------------------- */
-/* Task Section Styling */
+/* Task Section Styling - Scrollable on Mobile */
 /* ----------------------------------- */
 #tasks-section {
-  padding: 0;
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(6, 6, 6, 0.1);
-  width: 100%; /* Ensure the section spans the full width */
-  margin: 0; /* Remove any margins around the section */
+  padding: 15px;
+  background-color: #f9fafb;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  width: 97%;
+  overflow: hidden; /* Prevent overflow in the container */
+  margin-bottom: 15px;
+  transition: background-color 0.3s;
+}
+
+#tasks-section:hover {
+  background-color: #eef4fa;
 }
 
 #task-count {
-  font-size: 16px;
-  font-weight: normal;
-  color: #555;
-  margin-left: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #007bff;
+  margin-bottom: 10px;
+  text-align: right;
 }
 
-
 /* ----------------------------------- */
-/* Task List */
+/* Task List - Horizontal Scroll for Mobile */
 /* ----------------------------------- */
-
 #task-list {
-  position: relative; /* Set relative positioning for this container */
-  margin: 0;
+  list-style-type: none;
   padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-x: auto; /* Enable horizontal scrolling */
+  white-space: nowrap; /* Prevent line breaks */
 }
 
+#task-list::-webkit-scrollbar {
+  height: 8px;
+}
 
+#task-list::-webkit-scrollbar-thumb {
+  background-color: #007bff;
+  border-radius: 4px;
+}
+
+#task-list::-webkit-scrollbar-thumb:hover {
+  background-color: #0056b3;
+}
 
 #task-list li {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background-color: #fcfbfb;
-  padding: 10px;
-  margin: 10px 0;
+  background-color: #ffffff;
+  padding: 12px 15px;
   border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: background-color 0.3s, box-shadow 0.3s;
   cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 14px;
-  width: 95%;
+  gap: 10px;
+  min-width: 650px; /* Ensure enough width for horizontal scrolling */
 }
-
 
 #task-list li:hover {
-  background-color: #c7eaf7;
-  box-shadow: 0 2px 4px rgba(145, 161, 171, 0.1);
-}
-
-.task-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-
-.task-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 15px;
-  border-bottom: 1px solid #ddd; /* Separate tasks with a thin border */
-  background-color: #ffffff;
-  transition: box-shadow 0.3s ease;
-  width: 100%; /* Ensure task item spans full width */
-}
-
-.task-item:hover {
-  background-color: #eef7ff;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+  background-color: #e0f3ff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .task-item:last-child {
-  border-bottom: none; /* Remove border for the last item */
+  margin-bottom: 0;
 }
 
 .task-info {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 5px; /* Add spacing between task title and initials */
+  gap: 10px;
+  flex: 1;
 }
 
 .task-title {
   font-size: 14px;
-  font-weight: bold;
+  font-weight: 500;
   color: #333;
-  white-space: nowrap;
+  white-space: nowrap; /* Prevent text wrap */
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
 }
 
-/* Task Actions */
 .task-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  margin-left: auto;
 }
 
 
@@ -2243,7 +2240,7 @@ li.completed span {
 
 .qc-tab {
   border: none;
-  padding: 8px 14px;
+  padding: 8px 3px;
   border-radius: 8px;
   background: #f3f4f6;
   cursor: pointer;
