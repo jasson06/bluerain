@@ -230,84 +230,121 @@ button:active {
   });
 
 
-  async function renderQualityControlItems(projectId, managerId) {
-    showLoader(true);
-    const container = document.getElementById("quality-review-items");
-    container.innerHTML = "<p style='color:#aaa;'>Loading items for review...</p>";
+async function renderQualityControlItems(projectId, managerId) {
+  showLoader(true);
+  const container = document.getElementById("quality-review-items");
+  container.innerHTML = "<p style='color:#aaa;'>Loading items for review...</p>";
 
-    try {
-      const res = await fetch(`/api/quality-review/items/${projectId}`);
-      const { items } = await res.json();
-      showLoader(false);
-      container.innerHTML = "";
-      showToast("Items loaded successfully");
+  try {
+    const res = await fetch(`/api/quality-review/items/${projectId}`);
+    const { items } = await res.json();
+    showLoader(false);
+    container.innerHTML = "";
 
-      const reworkCount = items.filter(i => i.qualityControl?.status === "rework").length;
-      const approvedCount = items.filter(i => i.qualityControl?.status === "approved").length;
-      const pendingCount = items.filter(i => !i.qualityControl?.status || i.qualityControl?.status === "pending").length;
+    const reworkCount = items.filter(i => i.qualityControl?.status === "rework").length;
+    const approvedCount = items.filter(i => i.qualityControl?.status === "approved").length;
+    const pendingCount = items.filter(i => !i.qualityControl?.status || i.qualityControl?.status === "pending").length;
 
-      container.innerHTML += `
-        <div class="qc-tabs">
-          <button class="qc-tab active" data-status="all">All (${items.length})</button>
-          <button class="qc-tab" data-status="approved">✅ Approved (${approvedCount})</button>
-          <button class="qc-tab" data-status="rework">🛠 Rework (${reworkCount})</button>
-          <button class="qc-tab" data-status="pending">⏳ Pending (${pendingCount})</button>
-        </div>
-        <div id="qc-items-section"></div>
-      `;
+    container.innerHTML = `
+      <div class="qc-tabs">
+        <button class="qc-tab active" data-status="all">All (${items.length})</button>
+        <button class="qc-tab" data-status="approved">✅ Approved (${approvedCount})</button>
+        <button class="qc-tab" data-status="rework">🛠 Rework (${reworkCount})</button>
+        <button class="qc-tab" data-status="pending">⏳ Pending (${pendingCount})</button>
+      </div>
+      <div id="qc-items-section"></div>
+    `;
 
-      document.querySelectorAll(".qc-tab").forEach(tab => {
-        tab.addEventListener("click", () => {
-          document.querySelectorAll(".qc-tab").forEach(t => t.classList.remove("active"));
-          tab.classList.add("active");
-          showQCItems(items, managerId, tab.dataset.status);
-        });
+    document.querySelectorAll(".qc-tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".qc-tab").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        renderQCItems(items, managerId, tab.dataset.status);
       });
-
-      showQCItems(items, managerId, "all");
-
-    } catch (err) {
-      showLoader(false);
-      showToast("Error loading items");
-      console.error(err);
-    }
-  }
-
-  function showQCItems(items, managerId, status) {
-    const section = document.getElementById("qc-items-section");
-    section.innerHTML = "";
-
-    items.filter(i => status === "all" || i.qualityControl?.status === status || (status === "pending" && (!i.qualityControl?.status || i.qualityControl?.status === "pending"))).forEach(item => {
-      const beforePhotos = generatePhotoWrapper(item.photos?.before || [], item._id, "before");
-      const afterPhotos = generatePhotoWrapper(item.photos?.after || [], item._id, "after");
-
-      const reviewedBy = item.qualityControl?.reviewedByName ? `<div>Reviewed by: ${item.qualityControl.reviewedByName}</div>` : "";
-      const reworkNotes = item.qualityControl?.notes ? `<div class='rework-notes'>🔴 Rework Notes: ${item.qualityControl.notes}</div>` : "";
-
-      section.innerHTML += `
-        <div class="qc-item ${item.qualityControl?.status}">
-          <strong>${item.name}</strong> - Vendor: ${item.vendorName || "Unknown"}
-          <p><h3>Description</h3>${item.description}</p>
-
-          ${reviewedBy}
-          ${reworkNotes}
-
-          <div class="photos-container">
-            <div><strong>Before:</strong> ${beforePhotos}</div>
-            <div><strong>After:</strong> ${afterPhotos}</div>
-          </div>
-
-          <textarea id='qc-note-${item._id}' placeholder='Enter rework notes...'></textarea>
-<div style="margin-top: 10px; display: flex; gap: 10px;">
-  <button class="approve-btn" onclick="approveQC('${item._id}', '${managerId}')">✅ Approve</button>
-  <button class="rework-btn" onclick="requestReworkQC('${item._id}', '${managerId}')">🛠 Request Rework</button>
-</div>
-        </div>
-      `;
-      enableQCPhotoSwipe(item._id, "before");
-      enableQCPhotoSwipe(item._id, "after");
     });
+
+    const activeStatus = document.querySelector(".qc-tab.active").dataset.status;
+    renderQCItems(items, managerId, activeStatus);
+
+        // Update counts after rendering
+    updateTabCounts();
+
+  } catch (err) {
+    showLoader(false);
+    console.error(err);
+    showToast("Error loading items.");
   }
+}
+
+
+ async function refreshQCSection() {
+  const projectId = new URLSearchParams(window.location.search).get("projectId");
+  const managerId = localStorage.getItem("managerId");
+  const activeStatus = document.querySelector(".qc-tab.active").dataset.status;
+
+  showLoader(true);
+
+  try {
+    const response = await fetch(`/api/quality-review/items/${projectId}`);
+    if (!response.ok) throw new Error(`Error: ${response.statusText}`);
+
+    const { items } = await response.json();
+    renderQCItems(items, managerId, activeStatus);
+  } catch (err) {
+    console.error("Error refreshing section:", err);
+    showToast("Error refreshing section.");
+  } finally {
+    showLoader(false);
+  }
+}
+
+function renderQCItems(items, managerId, status) {
+  const section = document.getElementById("qc-items-section");
+  section.innerHTML = "";
+
+  const filteredItems = items.filter(item =>
+    status === "all" || item.qualityControl?.status === status || 
+    (status === "pending" && (!item.qualityControl?.status || item.qualityControl?.status === "pending"))
+  );
+
+  if (filteredItems.length === 0) {
+    section.innerHTML = `<p style="color:#aaa;">No items found for "${status}" status.</p>`;
+    return;
+  }
+
+  filteredItems.forEach(item => {
+    const beforePhotos = generatePhotoWrapper(item.photos?.before || [], item._id, "before");
+    const afterPhotos = generatePhotoWrapper(item.photos?.after || [], item._id, "after");
+
+    const reviewedBy = item.qualityControl?.reviewedByName ? `<div>Reviewed by: ${item.qualityControl.reviewedByName}</div>` : "";
+    const reworkNotes = item.qualityControl?.notes ? `<div class='rework-notes'>🔴 Rework Notes: ${item.qualityControl.notes}</div>` : "";
+
+    section.innerHTML += `
+      <div class="qc-item ${item.qualityControl?.status}">
+        <strong>${item.name}</strong> - Vendor: ${item.vendorName || "Unknown"}
+        <p><h3>Description</h3>${item.description}</p>
+
+        ${reviewedBy}
+        ${reworkNotes}
+
+        <div class="photos-container">
+          <div><strong>Before:</strong> ${beforePhotos}</div>
+          <div><strong>After:</strong> ${afterPhotos}</div>
+        </div>
+
+        <textarea id='qc-note-${item._id}' placeholder='Enter rework notes...'></textarea>
+        <div style="margin-top: 10px; display: flex; gap: 10px;">
+          <button class="approve-btn" onclick="approveQC('${item._id}', '${managerId}')">✅ Approve</button>
+          <button class="rework-btn" onclick="requestReworkQC('${item._id}', '${managerId}')">🛠 Request Rework</button>
+        </div>
+      </div>
+    `;
+
+    enableQCPhotoSwipe(item._id, "before");
+    enableQCPhotoSwipe(item._id, "after");
+  });
+}
+
 
 
   function generatePhotoWrapper(photos, itemId, type) {
@@ -505,42 +542,89 @@ function enableModalSwipeForQC() {
     }
   }
 }
-  async function approveQC(itemId, managerId) {
-    showLoader(true);
-    try {
-      await fetch(`/api/items/${itemId}/quality-review`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "approved", notes: "", reviewedBy: managerId })
-      });
-      showToast("Item approved");
-      location.reload();
-    } catch (err) {
-      showLoader(false);
-      showToast("Error approving item");
-      console.error(err);
-    }
+
+
+async function updateTabCounts() {
+  const projectId = new URLSearchParams(window.location.search).get("projectId");
+  
+  try {
+    const response = await fetch(`/api/quality-review/items/${projectId}`);
+    if (!response.ok) throw new Error(`Error: ${response.statusText}`);
+
+    const { items } = await response.json();
+
+    const reworkCount = items.filter(i => i.qualityControl?.status === "rework").length;
+    const approvedCount = items.filter(i => i.qualityControl?.status === "approved").length;
+    const pendingCount = items.filter(i => !i.qualityControl?.status || i.qualityControl?.status === "pending").length;
+
+    document.querySelector('.qc-tab[data-status="all"]').textContent = `All (${items.length})`;
+    document.querySelector('.qc-tab[data-status="approved"]').textContent = `✅ Approved (${approvedCount})`;
+    document.querySelector('.qc-tab[data-status="rework"]').textContent = `🛠 Rework (${reworkCount})`;
+    document.querySelector('.qc-tab[data-status="pending"]').textContent = `⏳ Pending (${pendingCount})`;
+
+  } catch (err) {
+    console.error("Error updating tab counts:", err);
+    showToast("Error updating tab counts.");
+  }
+}
+
+
+async function approveQC(itemId, managerId) {
+  showLoader(true);
+  try {
+    const response = await fetch(`/api/items/${itemId}/quality-review`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "approved", notes: "", reviewedBy: managerId })
+    });
+
+    if (!response.ok) throw new Error(`Error: ${response.statusText}`);
+
+    showToast("Item approved");
+    refreshQCSection(); // Refresh section
+    updateTabCounts();  // Refresh tab counts
+
+  } catch (err) {
+    console.error("Error approving item:", err);
+    showToast("Error approving item.");
+  } finally {
+    showLoader(false);
+  }
+}
+
+async function requestReworkQC(itemId, managerId) {
+  const noteElement = document.getElementById(`qc-note-${itemId}`);
+  const notes = noteElement ? noteElement.value.trim() : "";
+
+  if (!notes) {
+    showToast("Please enter rework notes");
+    return;
   }
 
-  async function requestReworkQC(itemId, managerId) {
-    const note = document.getElementById(`qc-note-${itemId}`).value;
-    if (!note) return showToast("Please enter rework notes");
-    showLoader(true);
+  showLoader(true);
 
-    try {
-      await fetch(`/api/items/${itemId}/quality-review`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "rework", notes: note, reviewedBy: managerId })
-      });
-      showToast("Rework requested");
-      location.reload();
-    } catch (err) {
-      showLoader(false);
-      showToast("Error requesting rework");
-      console.error(err);
-    }
+  try {
+    const response = await fetch(`/api/items/${itemId}/quality-review`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "rework", notes, reviewedBy: managerId })
+    });
+
+    if (!response.ok) throw new Error(`Error: ${response.statusText}`);
+
+    showToast("Rework requested");
+    refreshQCSection();
+    updateTabCounts();  // Refresh tab counts
+
+  } catch (err) {
+    console.error("Error requesting rework:", err);
+    showToast("Error requesting rework.");
+  } finally {
+    showLoader(false);
   }
+}
+
+
 </script>
 
 </body>
