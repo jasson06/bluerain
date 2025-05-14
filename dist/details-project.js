@@ -2154,7 +2154,7 @@ function previewFile(fileUrl, mimetype) {
   window.uploadFiles = uploadFiles;
   window.selectAllFiles = selectAllFiles;
   window.performFileAction = performFileAction;
-  window.closePreview = closePreview;
+ 
 });
   
   
