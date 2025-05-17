@@ -1067,11 +1067,30 @@ document.addEventListener('click', () => {
 
 
 
-// Delete vendor by ID
+// Delete vendor by ID with confirmation
 async function deleteVendor(id) {
-  await fetch(`/api/vendors/${id}`, { method: 'DELETE' });
-  fetchVendors();
+  const confirmDelete = confirm("Are you sure you want to delete this vendor? This action cannot be undone.");
+  
+  if (confirmDelete) {
+    try {
+      const response = await fetch(`/api/vendors/${id}`, { method: 'DELETE' });
+      
+      if (response.ok) {
+        alert("Vendor deleted successfully.");
+        fetchVendors();
+      } else {
+        const errorData = await response.json();
+        console.error("Error deleting vendor:", errorData.message);
+        alert(`Error: ${errorData.message}`);
+      }
+
+    } catch (error) {
+      console.error("Error:", error);
+      alert("An error occurred while deleting the vendor.");
+    }
+  }
 }
+
 
 // Edit vendor info
 async function editVendor(id, name, email, phone) {
