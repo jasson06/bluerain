@@ -331,7 +331,7 @@
 
 .input-wrapper {
   position: relative;
-  flex: 1 1 200px;
+  flex: 1 1 100px;
 }
 
 .input-wrapper input {
@@ -418,6 +418,359 @@
 }
 
 
+/* Tooltip for payment status */
+.payment-status-tooltip {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.payment-status-tooltip .tooltip-content {
+  visibility: hidden;
+  width: max-content;
+  max-width: 320px;
+  background: #222;
+  color: #fff;
+  text-align: left;
+  border-radius: 6px;
+  padding: 8px 12px;
+  position: absolute;
+  z-index: 100;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-size: 0.95em;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.payment-status-tooltip:hover .tooltip-content {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Modern Payment Modal Styles */
+#paymentsModal .modal-content {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(14, 165, 233, 0.18), 0 1.5px 8px rgba(0,0,0,0.08);
+  padding: 32px 28px 24px 28px;
+  max-width: 420px;
+  width: 100%;
+  animation: fadeInScale 0.25s;
+  position: relative;
+}
+
+#paymentsModal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 10px;
+}
+
+#paymentsModal .modal-header h3 {
+  font-size: 1.3rem;
+  color: #0ea5e9;
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+#paymentsModal .close-modal {
+  font-size: 1.8rem;
+  color: #64748b;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+#paymentsModal .close-modal:hover {
+  color: #ef4444;
+}
+
+#paymentsModal #paymentSummary {
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  font-size: 1.05rem;
+  color: #0f172a;
+  box-shadow: 0 1px 4px rgba(14,165,233,0.04);
+}
+
+#paymentsModal #paymentsForm > div {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 10px 12px 8px 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(14,165,233,0.04);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+#paymentsModal label {
+  flex: 1 1 120px;
+  font-weight: 600;
+  color: #0ea5e9;
+  margin-bottom: 0;
+}
+
+#paymentsModal input[type="number"] {
+  width: 90px;
+  border-radius: 7px;
+  border: 1px solid #cbd5e1;
+  padding: 7px 10px;
+  font-size: 1rem;
+  background: #fff;
+  margin-right: 4px;
+  transition: border 0.2s;
+}
+#paymentsModal input[type="number"]:focus {
+  border: 1.5px solid #0ea5e9;
+  outline: none;
+}
+
+#paymentsModal select {
+  border-radius: 7px;
+  border: 1px solid #cbd5e1;
+  padding: 7px 10px;
+  font-size: 1rem;
+  background: #fff;
+  margin-right: 4px;
+  transition: border 0.2s;
+}
+#paymentsModal select:focus {
+  border: 1.5px solid #0ea5e9;
+  outline: none;
+}
+
+#paymentsModal input[type="date"] {
+  border-radius: 7px;
+  border: 1px solid #cbd5e1;
+  padding: 7px 10px;
+  font-size: 1rem;
+  background: #fff;
+  transition: border 0.2s;
+}
+#paymentsModal input[type="date"]:focus {
+  border: 1.5px solid #0ea5e9;
+  outline: none;
+}
+
+#paymentsModal #savePaymentsBtn {
+  width: 100%;
+  margin-top: 18px;
+  background: linear-gradient(90deg, #0ea5e9 60%, #10b981 100%);
+  color: #fff;
+  font-weight: 600;
+  font-size: 1.1rem;
+  border-radius: 10px;
+  padding: 12px 0;
+  border: none;
+  box-shadow: 0 2px 8px rgba(14,165,233,0.08);
+  transition: background 0.2s;
+}
+#paymentsModal #savePaymentsBtn:hover {
+  background: linear-gradient(90deg, #10b981 60%, #0ea5e9 100%);
+}
+
+@keyframes fadeInScale {
+  0% { opacity: 0; transform: scale(0.97);}
+  100% { opacity: 1; transform: scale(1);}
+}
+
+/* Modern View Quote Modal Styles */
+#quoteModal .modal-content {
+  background: #fff;
+  border-radius: 22px;
+  box-shadow: 0 8px 32px rgba(14, 165, 233, 0.13), 0 1.5px 8px rgba(0,0,0,0.08);
+  padding: 38px 32px 28px 32px;
+  max-width: 700px;
+  width: 100%;
+  animation: fadeInScale 0.25s;
+  position: relative;
+  color: #0f172a;
+}
+
+#quoteModal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 10px;
+}
+
+#quoteModal .modal-header h3 {
+  font-size: 1.5rem;
+  color: #0ea5e9;
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+#quoteModal .close-modal {
+  font-size: 2rem;
+  color: #64748b;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+#quoteModal .close-modal:hover {
+  color: #ef4444;
+}
+
+#quoteModal table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 18px;
+  background: #f9fafb;
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 1rem;
+}
+#quoteModal th, #quoteModal td {
+  padding: 12px 10px;
+  border: 1px solid #e2e8f0;
+}
+#quoteModal th {
+  background: #f1f5f9;
+  color: #0ea5e9;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+#quoteModal tr:last-child td {
+  border-bottom: none;
+}
+
+#quoteModal .totals {
+  margin-top: 18px;
+  text-align: right;
+  font-size: 1.08rem;
+}
+#quoteModal .totals p {
+  margin: 4px 0;
+}
+#quoteModal .totals strong {
+  color: #0ea5e9;
+  font-size: 1.1rem;
+}
+
+#quoteModal .section {
+  margin-top: 32px;
+}
+
+#quoteModal .section h3, #quoteModal .section h4 {
+  color: #0ea5e9;
+  margin-bottom: 8px;
+}
+
+#quoteModal .payment-schedule-table {
+  margin-top: 18px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f9fafb;
+  box-shadow: 0 1px 4px rgba(14,165,233,0.04);
+}
+
+#quoteModal .payment-schedule-table th,
+#quoteModal .payment-schedule-table td {
+  border: 1px solid #e2e8f0;
+  padding: 10px 8px;
+  font-size: 1rem;
+}
+#quoteModal .payment-schedule-table th {
+  background: #e0f2fe;
+  color: #0ea5e9;
+}
+
+#quoteModal .payment-schedule-table td.status-paid {
+  color: #10b981;
+  font-weight: 600;
+}
+#quoteModal .payment-schedule-table td.status-overdue {
+  color: #ef4444;
+  font-weight: 600;
+}
+#quoteModal .payment-schedule-table td.status-pending {
+  color: #64748b;
+  font-weight: 600;
+}
+
+#quoteModal .summary-row {
+  text-align: right;
+  font-size: 1.08rem;
+  margin-top: 10px;
+}
+
+#quoteModal .agreement {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+#quoteModal .signature-line {
+  display: flex;
+  gap: 50px;
+  margin-top: 20px;
+}
+#quoteModal .signature-line p {
+  border-top: 1px solid #333;
+  width: 200px;
+  text-align: center;
+  padding-top: 4px;
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  #quoteModal .modal-content {
+    padding: 18px 6px 18px 6px;
+    max-width: 98vw;
+  }
+}
+
+
+/* Modern Status Filter Dropdown */
+#statusFilter {
+  width: 80%;
+  padding: 14px 12px 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  appearance: none;
+  margin-bottom: 0;
+}
+
+#statusFilter:focus {
+  outline: none;
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.18);
+}
+
+.input-wrapper label[for="statusFilter"] {
+  position: absolute;
+  top: 14px;
+  left: 12px;
+  color: #64748b;
+  background: #ffffff;
+  font-size: 14px;
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+#statusFilter:focus + label,
+#statusFilter:not([value=""]):not(:focus) + label {
+  top: -8px;
+  left: 10px;
+  font-size: 12px;
+  color: #0ea5e9;
+  padding: 0 4px;
+}
   </style>
 </head>
 <body>
@@ -448,6 +801,18 @@
         <label for="searchAddress">Address</label>
       </div>
     </div>
+    <div class="input-wrapper">
+
+  <select id="statusFilter">
+    <option value="">All Statuses</option>
+    <option value="Draft">Draft</option>
+    <option value="Sent">Sent</option>
+    <option value="Approved">Approved</option>
+    <option value="Rejected">Rejected</option>
+  </select>
+  <label for="statusFilter">Status</label>
+</div>
+
     <div class="filter-actions">
       <button class="btn clear-btn" onclick="clearFilters()">Clear Filters</button>
     </div>
@@ -470,6 +835,18 @@
   <button id="addQuoteBtn" onclick="location.href='/createquote.html'" title="New Quote">
     ＋
   </button>
+
+<div id="paymentsModal" class="modal">
+  <div class="modal-content" style="max-width: 500px;">
+    <div class="modal-header">
+      <h3>Manage Payments</h3>
+      <span class="close-modal" onclick="closePaymentsModal()">&times;</span>
+    </div>
+    <div id="paymentsModalBody"></div>
+    <button id="savePaymentsBtn" style="margin-top: 16px; background: #0ea5e9;">Save</button>
+  </div>
+</div>
+
 
 <!-- Toast Notification -->
 <div id="toast" style="
@@ -578,7 +955,20 @@ function hideLoader() {
       }
     }
 
-    function renderQuotes(quotes) {
+
+    // Add this above renderQuotes()
+function getPaymentStatus(payments) {
+  if (!payments || payments.length === 0) return "No Schedule";
+  const allPaid = payments.every(p => p.status === "Paid");
+  const anyOverdue = payments.some(p => p.status === "Overdue");
+  const anyPaid = payments.some(p => p.status === "Paid");
+  if (allPaid) return "All Paid";
+  if (anyOverdue) return "Overdue";
+  if (anyPaid) return "Partial";
+  return "Pending";
+}
+
+function renderQuotes(quotes) {
   const container = document.getElementById('quoteContainer');
   container.innerHTML = quotes.map(q => {
     const statusClass = {
@@ -588,34 +978,104 @@ function hideLoader() {
       'Rejected': 'status-rejected'
     }[q.status] || 'status-draft';
 
-    return `
-      <div class="quote-item" onclick="viewQuote('${q._id}')">
-        <div class="quote-meta">
-          <strong>${q.quoteNumber}</strong>
-          ${q.to.address || 'No Address Provided'}<br>
-          ${q.to?.name || 'Unknown'}<br>
-          <small>${new Date(q.date).toLocaleDateString()}</small>
-        </div>
+    // --- Payment Status ---
+    const paymentStatus = getPaymentStatus(q.payments);
+    let paymentColor = "#64748b"; // default
+    if (paymentStatus === "All Paid") paymentColor = "#10b981";
+    else if (paymentStatus === "Overdue") paymentColor = "#ef4444";
+    else if (paymentStatus === "Partial") paymentColor = "#f59e0b";
+    else if (paymentStatus === "Pending") paymentColor = "#64748b";
 
-        <select class="status-dropdown ${statusClass}" onchange="updateQuoteStatus(event, '${q._id}', this.value)" onclick="event.stopPropagation()">
-          ${['Draft', 'Sent', 'Approved', 'Rejected'].map(status => `
-            <option value="${status}" ${q.status === status ? 'selected' : ''}>${status}</option>
-          `).join('')}
-        </select>
+    // --- Quote Total ---
+    const total = q.totals?.total !== undefined
+      ? `$${parseFloat(q.totals.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+      : "N/A";
 
-        <div class="menu-toggle" onclick="toggleMenu(event, '${q._id}')">⋮</div>
-        <div class="quote-menu" id="menu-${q._id}">
-<button onclick="event.stopPropagation(); viewQuote('${q._id}')">View</button>
-<button onclick="event.stopPropagation(); editQuote('${q._id}')">Edit</button>
-<button onclick="event.stopPropagation(); downloadQuoteAsPDF('${q._id}')">Download Quote PDF</button>
-<button onclick="event.stopPropagation(); downloadInvoiceAsPDF('${q._id}')"> Download Invoice PDF</button>
-<button onclick="event.stopPropagation(); downloadReceiptAsPDF('${q._id}')">Download Receipt PDF</button>
-<button onclick="event.stopPropagation(); printQuote('${q._id}')">Print</button>
-<button onclick="event.stopPropagation(); shareQuote('${q._id}')">Share</button>
-<button onclick="event.stopPropagation(); convertToJob('${q._id}')">Convert to Job</button>
-<button onclick="event.stopPropagation(); exportQuoteToExcel('${q._id}')">Export to Excel</button>
-<button onclick="event.stopPropagation(); deleteQuote('${q._id}')">Delete</button>
+      // ...inside renderQuotes(quotes)...
+const totalNum = q.totals?.total ? parseFloat(q.totals.total) : 0;
+const paid = (q.payments || []).filter(p => p.status === "Paid")
+  .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+const outstanding = totalNum - paid;
 
+const paidPayments = (q.payments || []).filter(p => p.status === "Paid");
+const tooltipContent = paidPayments.length
+  ? paidPayments.map(p =>
+      `<div>
+        <strong>${p.label}:</strong> $${parseFloat(p.amount).toLocaleString(undefined, {minimumFractionDigits:2})}
+        ${p.date ? `<span style="color:#a3e635;">(${p.date})</span>` : ""}
+      </div>`
+    ).join('')
+  : "<div>No payments made yet.</div>";
+
+return `
+  <div class="quote-item" onclick="viewQuote('${q._id}')">
+    <div class="quote-meta">
+      <strong>${q.quoteNumber}</strong>
+      ${q.to.address || 'No Address Provided'}<br>
+      ${q.to?.name || 'Unknown'}<br>
+      <small>${new Date(q.date).toLocaleDateString()}</small>
+    </div>
+
+    <div style="margin: 10px 0 6px 0;">
+      <span style="font-weight:600;">Total:</span>
+      <span style="color:#0ea5e9; font-weight:600;">${total}</span>
+    </div>
+
+    ${
+      q.status === "Approved"
+        ? `
+          <div style="margin-bottom: 8px;">
+            <span
+              class="payment-status-tooltip"
+              style="
+                display:inline-block;
+                padding:2px 12px;
+                border-radius:999px;
+                background:${paymentColor};
+                color:#fff;
+                font-size:0.85rem;
+                font-weight:600;
+                letter-spacing:0.5px;
+                cursor:pointer;
+              "
+              onclick="event.stopPropagation(); openPaymentsModal('${q._id}')"
+              title="Click to manage payments"
+            >
+              ${paymentStatus}
+              <span class="tooltip-content">
+                ${tooltipContent}
+              </span>
+            </span>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <span style="font-weight:600;">Outstanding:</span>
+            <span style="color:${outstanding > 0 ? '#ef4444' : '#10b981'};">
+              $${outstanding.toLocaleString(undefined, {minimumFractionDigits:2})}
+            </span>
+          </div>
+        `
+        : ""
+    }
+
+    <select class="status-dropdown ${statusClass}" onchange="updateQuoteStatus(event, '${q._id}', this.value)" onclick="event.stopPropagation()">
+      ${['Draft', 'Sent', 'Approved', 'Rejected'].map(status => `
+        <option value="${status}" ${q.status === status ? 'selected' : ''}>${status}</option>
+      `).join('')}
+    </select>
+
+    <div class="menu-toggle" onclick="toggleMenu(event, '${q._id}')">⋮</div>
+    <div class="quote-menu" id="menu-${q._id}">
+      <button onclick="event.stopPropagation(); openPaymentsModal('${q._id}')">Manage Payments</button>
+          <button onclick="event.stopPropagation(); viewQuote('${q._id}')">View</button>
+          <button onclick="event.stopPropagation(); editQuote('${q._id}')">Edit</button>
+          <button onclick="event.stopPropagation(); downloadQuoteAsPDF('${q._id}')">Download Quote PDF</button>
+          <button onclick="event.stopPropagation(); downloadInvoiceAsPDF('${q._id}')"> Download Invoice PDF</button>
+          <button onclick="event.stopPropagation(); downloadReceiptAsPDF('${q._id}')">Download Receipt PDF</button>
+          <button onclick="event.stopPropagation(); printQuote('${q._id}')">Print</button>
+          <button onclick="event.stopPropagation(); shareQuote('${q._id}')">Share</button>
+          <button onclick="event.stopPropagation(); convertToJob('${q._id}')">Convert to Job</button>
+          <button onclick="event.stopPropagation(); exportQuoteToExcel('${q._id}')">Export to Excel</button>
+          <button onclick="event.stopPropagation(); deleteQuote('${q._id}')">Delete</button>
         </div>
       </div>
     `;
@@ -689,22 +1149,26 @@ function filterQuotes() {
   const address = document.getElementById('searchAddress').value.toLowerCase();
   const startDate = document.getElementById('startDate').value;
   const endDate = document.getElementById('endDate').value;
+  const status = document.getElementById('statusFilter').value;
 
   const filtered = allQuotes.filter(q => {
     const clientName = q.to?.name?.toLowerCase() || '';
     const quoteNum = q.quoteNumber?.toLowerCase() || '';
     const fullAddress = `${q.to?.address || ''}`.toLowerCase();
     const quoteDate = q.date ? new Date(q.date).toISOString().split('T')[0] : '';
-
     const isWithinDateRange =
       (!startDate || quoteDate >= startDate) &&
       (!endDate || quoteDate <= endDate);
+
+    // Add status filter here
+    const statusMatch = !status || q.status === status;
 
     return (
       clientName.includes(name) &&
       quoteNum.includes(number) &&
       fullAddress.includes(address) &&
-      isWithinDateRange
+      isWithinDateRange &&
+      statusMatch
     );
   });
 
@@ -718,7 +1182,8 @@ function updateActiveFilters() {
   const filters = [
     { id: 'searchName', label: 'Client' },
     { id: 'searchNumber', label: 'Quote #' },
-    { id: 'searchAddress', label: 'Address' }
+    { id: 'searchAddress', label: 'Address' },
+    { id: 'statusFilter', label: 'Status' } // <-- Add this line
   ];
 
   const startDate = document.getElementById('startDate').value;
@@ -764,6 +1229,7 @@ function clearFilters() {
   document.getElementById('searchAddress').value = '';
   document.getElementById('startDate').value = '';
   document.getElementById('endDate').value = '';
+  document.getElementById('statusFilter').value = '';
   filterQuotes();
 }
 
@@ -776,6 +1242,7 @@ document.getElementById('searchNumber').addEventListener('input', filterQuotes);
 document.getElementById('searchAddress').addEventListener('input', filterQuotes);
 document.getElementById('startDate').addEventListener('change', filterQuotes);
 document.getElementById('endDate').addEventListener('change', filterQuotes);
+document.getElementById('statusFilter').addEventListener('change', filterQuotes);
 
 
     function openModal(contentHTML) {
@@ -793,7 +1260,8 @@ async function viewQuote(id) {
   try {
     const res = await fetch(`/api/quotes/${id}`);
     const q = await res.json();
-
+    
+    let schedule = q.payments || [ ...defaultSchedule ];
     const total30 = (q.totals.total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
     const total10 = (q.totals.total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
 
@@ -805,6 +1273,54 @@ async function viewQuote(id) {
         <td>${item.qty}</td>
         <td>$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
       </tr>`).join('');
+
+      let payments = (q.payments && q.payments.length > 0)
+  ? q.payments
+  : [
+      { label: "30% at project start", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
+      { label: "30% at 50% completion", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
+      { label: "30% at 75% completion", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
+      { label: "10% at final completion", amount: +(q.totals.total * 0.1).toFixed(2), status: "Pending", date: "" }
+    ];
+
+const totalPaid = payments
+  .filter(p => p.status === "Paid")
+  .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+const outstanding = q.totals.total - totalPaid;
+
+const paymentsTable = `
+  <div style="margin-top:30px;">
+    <h3>Payment Schedule</h3>
+    <table  style="width:100%; border-collapse:collapse; margin-top:10px;">
+      <thead>
+        <tr style="background:#f3f4f6;">
+          <th style="padding:8px; border:1px solid #ddd;">Stage</th>
+          <th style="padding:8px; border:1px solid #ddd;">Amount</th>
+          <th style="padding:8px; border:1px solid #ddd;">Status</th>
+          <th style="padding:8px; border:1px solid #ddd;">Date Paid</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${payments.map(p => `
+          <tr>
+            <td style="padding:8px; border:1px solid #ddd;">${p.label}</td>
+            <td style="padding:8px; border:1px solid #ddd;">$${parseFloat(p.amount).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+            <td style="padding:8px; border:1px solid #ddd; color:${p.status === "Paid" ? "#10b981" : (p.status === "Overdue" ? "#ef4444" : "#64748b")}; font-weight:600;">
+              ${p.status}
+            </td>
+            <td style="padding:8px; border:1px solid #ddd;">${p.status === "Paid" && p.date ? p.date : ""}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <div style="margin-top:10px; text-align:right;">
+      <strong>Total Paid:</strong> $${totalPaid.toLocaleString(undefined, {minimumFractionDigits:2})}<br>
+      <strong>Outstanding:</strong> <span style="color:${outstanding > 0 ? '#ef4444' : '#10b981'};">
+        $${outstanding.toLocaleString(undefined, {minimumFractionDigits:2})}
+      </span>
+    </div>
+  </div>
+`;
 
     const html = `
       <div class="modal-header">
@@ -834,28 +1350,19 @@ async function viewQuote(id) {
         <p><strong>Tax:</strong> ${q.totals.tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}%</p>
         <p><strong>Total:</strong> $${q.totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
       </div>
-      <div style="margin-top: 20px;">
-        <strong>Notes:</strong>
-        <p>${q.notes || 'None'}</p>
-      </div>
-      <div style="margin-top: 30px;">
-        <h3>Payment Terms</h3>
-        <ul style="margin-top: 10px; padding-left: 20px;">
-          <li><strong>30%</strong> at project start: <strong>$${total30}</strong></li>
-          <li><strong>30%</strong> at 50% completion: <strong>$${total30}</strong></li>
-          <li><strong>30%</strong> at 75% completion: <strong>$${total30}</strong></li>
-          <li><strong>10%</strong> at final completion: <strong>$${total10}</strong></li>
-        </ul>
-        <p>Each payment is due within 7 days of invoice unless otherwise agreed in writing.</p>
-      </div>
-      <div style="margin-top: 30px;">
-        <h3>Agreement</h3>
-        <p>If you accept this quote, please sign and return.</p>
-        <p><strong>Client Name:</strong> ${q.to.name || "____________________________"}</p>
-        <p><strong>Signature:</strong> ____________________________</p>
-        <p><strong>Date:</strong> ____________________________</p>
-      </div>
-    `;
+ <div style="margin-top: 20px;">
+    <strong>Notes:</strong>
+    <p>${q.notes || 'None'}</p>
+  </div>
+  ${paymentsTable}
+  <div style="margin-top: 30px;">
+    <h3>Agreement</h3>
+    <p>If you accept this quote, please sign and return.</p>
+    <p><strong>Client Name:</strong> ${q.to.name || "____________________________"}</p>
+    <p><strong>Signature:</strong> ____________________________</p>
+    <p><strong>Date:</strong> ____________________________</p>
+  </div>
+`;
 
     openModal(html);
   } catch (err) {
@@ -937,6 +1444,8 @@ async function editQuote(id) {
           cursor: pointer;
         ">➕ Add Line Item</button>
 
+        
+
         <!-- Totals -->
         <div style="margin-top: 20px;">
           <label>Discount ($):</label>
@@ -962,6 +1471,7 @@ async function editQuote(id) {
         " onclick="saveEditedQuote('${id}')">💾 Save</button>
       </div>
     `;
+
 
     openModal(html);
     enableDragAndDrop();  // 👈 initialize sorting
@@ -1537,82 +2047,130 @@ async function downloadInvoiceAsPDF(id) {
     const total10 = (q.totals.total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
     const invoiceNumber = `INV-${new Date().getTime()}`;
     const clientNameSafe = q.to.name.replace(/[^a-z0-9]/gi, '_'); // sanitize filename
+
+    // --- Payment Schedule Table ---
+    const payments = (q.payments && q.payments.length > 0)
+      ? q.payments
+      : [
+          { label: "30% at project start", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
+          { label: "30% at 50% completion", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
+          { label: "30% at 75% completion", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
+          { label: "10% at final completion", amount: +(q.totals.total * 0.1).toFixed(2), status: "Pending", date: "" }
+        ];
+
+    const totalPaid = payments
+      .filter(p => p.status === "Paid")
+      .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+    const outstanding = q.totals.total - totalPaid;
+
+    const paymentsTable = `
+      <h3 style="margin-top: 30px;">Payment Schedule</h3>
+      <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+        <thead>
+          <tr style="background:#f3f4f6;">
+            <th style="padding:8px; border:1px solid #ddd;">Stage</th>
+            <th style="padding:8px; border:1px solid #ddd;">Amount</th>
+            <th style="padding:8px; border:1px solid #ddd;">Status</th>
+            <th style="padding:8px; border:1px solid #ddd;">Date Paid</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${payments.map(p => `
+            <tr>
+              <td style="padding:8px; border:1px solid #ddd;">${p.label}</td>
+              <td style="padding:8px; border:1px solid #ddd;">$${parseFloat(p.amount).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+              <td style="padding:8px; border:1px solid #ddd; color:${p.status === "Paid" ? "#10b981" : (p.status === "Overdue" ? "#ef4444" : "#64748b")}; font-weight:600;">
+                ${p.status}
+              </td>
+              <td style="padding:8px; border:1px solid #ddd;">${p.status === "Paid" && p.date ? p.date : ""}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      <div style="margin-top:10px; text-align:right;">
+        <strong>Total Paid:</strong> $${totalPaid.toLocaleString(undefined, {minimumFractionDigits:2})}<br>
+        <strong>Outstanding:</strong> <span style="color:${outstanding > 0 ? '#ef4444' : '#10b981'};">
+          $${outstanding.toLocaleString(undefined, {minimumFractionDigits:2})}
+        </span>
+      </div>
+    `;
+
     const styledHTML = `
       <html>
         <head>
           <meta charset="UTF-8">
           <title>Invoice PDF</title>
- <style>
-          body {
-            font-family: 'Segoe UI', Tahoma, sans-serif;
-            margin: 0 auto;
-            padding: 40px;
-            color: #000;
-            font-size: 14px;
-            max-width: 800px;
-          }
-          h1, h2, h3, h4 {
-            margin: 0;
-            padding: 0;
-          }
-          .company {
-            color: #0ea5e9;
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 8px;
-          }
-          .info-grid {
-            display: flex;
-            justify-content: space-between;
-            margin: 20px 0;
-          }
-          .info-section {
-            width: 48%;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-          }
-          thead {
-            background: #f3f4f6;
-          }
-          th, td {
-            padding: 8px;
-            text-align: left;
-            border: 1px solid #ddd;
-          }
-          .totals {
-            margin-top: 20px;
-            text-align: right;
-          }
-          .totals p {
-            margin: 4px 0;
-          }
-          .totals strong {
-            color: #0ea5e9;
-          }
-          .section {
-            margin-top: 40px;
-          }
-          .signature-line {
-            display: flex;
-            gap: 50px;
-            margin-top: 20px;
-          }
-          .signature-line p {
-            border-top: 1px solid #333;
-            width: 200px;
-            text-align: center;
-            margin-top: 20px;
-            padding-top: 4px;
-          }
-          hr {
-            margin: 30px 0;
-            border: none;
-            border-top: 1px solid #ccc;
-          }
-        </style>
+          <style>
+            body {
+              font-family: 'Segoe UI', Tahoma, sans-serif;
+              margin: 0 auto;
+              padding: 40px;
+              color: #000;
+              font-size: 14px;
+              max-width: 800px;
+            }
+            h1, h2, h3, h4 {
+              margin: 0;
+              padding: 0;
+            }
+            .company {
+              color: #0ea5e9;
+              font-size: 20px;
+              font-weight: bold;
+              margin-bottom: 8px;
+            }
+            .info-grid {
+              display: flex;
+              justify-content: space-between;
+              margin: 20px 0;
+            }
+            .info-section {
+              width: 48%;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 20px;
+            }
+            thead {
+              background: #f3f4f6;
+            }
+            th, td {
+              padding: 8px;
+              text-align: left;
+              border: 1px solid #ddd;
+            }
+            .totals {
+              margin-top: 20px;
+              text-align: right;
+            }
+            .totals p {
+              margin: 4px 0;
+            }
+            .totals strong {
+              color: #0ea5e9;
+            }
+            .section {
+              margin-top: 40px;
+            }
+            .signature-line {
+              display: flex;
+              gap: 50px;
+              margin-top: 20px;
+            }
+            .signature-line p {
+              border-top: 1px solid #333;
+              width: 200px;
+              text-align: center;
+              margin-top: 20px;
+              padding-top: 4px;
+            }
+            hr {
+              margin: 30px 0;
+              border: none;
+              border-top: 1px solid #ccc;
+            }
+          </style>
         </head>
         <body>
           <div style="font-family: 'Segoe UI', sans-serif; padding: 40px; max-width: 800px; color: #000; font-size: 14px;">
@@ -1664,16 +2222,22 @@ async function downloadInvoiceAsPDF(id) {
               `).join('')}
             </div>
 
-          <div style="margin-top: 20px; text-align: right;">
-            <p><strong>Subtotal:</strong> $${parseFloat(q.totals.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-            <p><strong>Discount:</strong> $${parseFloat(q.totals.discount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-            <p><strong>Tax:</strong> $${parseFloat(q.totals.tax).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-            <p><strong style="font-size: 18px;">Total:</strong> 
-              <span style="color: #007bff;">$${parseFloat(q.totals.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-            </p>
-          </div>
+            <div style="margin-top: 20px; text-align: right;">
+              <p><strong>Subtotal:</strong> $${parseFloat(q.totals.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <p><strong>Discount:</strong> $${parseFloat(q.totals.discount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <p><strong>Tax:</strong> $${parseFloat(q.totals.tax).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <p><strong style="font-size: 18px;">Total:</strong> 
+                <span style="color: #007bff;">$${parseFloat(q.totals.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </p>
+            </div>
 
-           
+            ${paymentsTable}
+
+            <div class="section">
+              <h4>Notes</h4>
+              <p>${q.notes || 'N/A'}</p>
+            </div>
+          </div>
         </body>
       </html>
     `;
@@ -2195,6 +2759,131 @@ async function convertToJob(quoteId) {
   } finally {
     hideLoader(); // 👈 END
   }
+}
+
+
+async function openPaymentsModal(quoteId) {
+  showLoader();
+  try {
+    const res = await fetch(`/api/quotes/${quoteId}`);
+    const q = await res.json();
+
+    if (q.status !== "Approved") {
+      showToast("You can only manage payments for approved quotes.");
+      hideLoader();
+      return;
+    }
+
+    // Default schedule if not present
+const total = q.totals && q.totals.total ? q.totals.total : 0;
+let schedule = (q.payments && q.payments.length > 0)
+  ? q.payments
+  : [
+      { label: "30% at project start", amount: +(total * 0.3).toFixed(2), status: "Pending", date: "" },
+      { label: "30% at 50% completion", amount: +(total * 0.3).toFixed(2), status: "Pending", date: "" },
+      { label: "30% at 75% completion", amount: +(total * 0.3).toFixed(2), status: "Pending", date: "" },
+      { label: "10% at final completion", amount: +(total * 0.1).toFixed(2), status: "Pending", date: "" }
+    ];
+
+const totalPaid = schedule
+  .filter(p => p.status === "Paid")
+  .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+const outstanding = total - totalPaid;
+
+    // Render form
+document.getElementById('paymentsModalBody').innerHTML = `
+  <div id="paymentSummary" style="margin-bottom:16px;">
+    <strong>Total:</strong> $${total.toLocaleString(undefined, {minimumFractionDigits:2})}<br>
+    <strong>Paid:</strong> $${totalPaid.toLocaleString(undefined, {minimumFractionDigits:2})}<br>
+    <strong>Outstanding:</strong> <span style="color:${outstanding > 0 ? '#ef4444' : '#10b981'};">
+      $${outstanding.toLocaleString(undefined, {minimumFractionDigits:2})}
+    </span>
+  </div>
+  <form id="paymentsForm">
+    ${schedule.map((p, i) => `
+      <div style="margin-bottom:12px;">
+        <label><strong>${p.label}</strong></label><br>
+        <input
+          type="number"
+          name="amount${i}"
+          value="${p.amount}"
+          min="0"
+          step="0.01"
+          style="width:110px; margin-right:8px;"
+          placeholder="Amount"
+        />
+        <select name="status${i}">
+          <option value="Pending" ${p.status === "Pending" ? "selected" : ""}>Pending</option>
+          <option value="Paid" ${p.status === "Paid" ? "selected" : ""}>Paid</option>
+          <option value="Overdue" ${p.status === "Overdue" ? "selected" : ""}>Overdue</option>
+        </select>
+        <input type="date" name="date${i}" value="${p.date || ""}" style="margin-left:8px;">
+      </div>
+    `).join('')}
+  </form>
+`;
+
+const form = document.getElementById('paymentsForm');
+form.addEventListener('input', updatePaymentSummary);
+
+function updatePaymentSummary() {
+  const form = document.getElementById('paymentsForm');
+  let paid = 0;
+  schedule.forEach((p, i) => {
+    if (form[`status${i}`].value === "Paid") {
+      paid += parseFloat(form[`amount${i}`].value) || 0;
+    }
+  });
+  const outstanding = total - paid;
+  document.getElementById('paymentSummary').innerHTML = `
+    <strong>Total:</strong> $${total.toLocaleString(undefined, {minimumFractionDigits:2})}<br>
+    <strong>Paid:</strong> $${paid.toLocaleString(undefined, {minimumFractionDigits:2})}<br>
+    <strong>Outstanding:</strong> <span style="color:${outstanding > 0 ? '#ef4444' : '#10b981'};">
+      $${outstanding.toLocaleString(undefined, {minimumFractionDigits:2})}
+    </span>
+  `;
+}
+    document.getElementById('paymentsModal').style.display = 'flex';
+
+document.getElementById('savePaymentsBtn').onclick = async function() {
+  const form = document.getElementById('paymentsForm');
+const newSchedule = schedule.map((p, i) => ({
+  ...p,
+  amount: parseFloat(form[`amount${i}`].value) || 0,
+  status: form[`status${i}`].value,
+  date: form[`date${i}`].value
+}));
+
+  showLoader();
+  try {
+    const updateRes = await fetch(`/api/quotes/${quoteId}/payments`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payments: newSchedule })
+    });
+    if (updateRes.ok) {
+      showToast('Payments updated.');
+      
+      fetchQuotes();
+    } else {
+      showToast('Failed to update payments.');
+    }
+  } catch (err) {
+    showToast('Error updating payments.');
+  } finally {
+    hideLoader();
+  }
+};
+  } catch (err) {
+     console.error('Failed to load payments:', err);
+    showToast('Failed to load payments.');
+  } finally {
+    hideLoader();
+  }
+}
+
+function closePaymentsModal() {
+  document.getElementById('paymentsModal').style.display = 'none';
 }
 
 
