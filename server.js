@@ -735,7 +735,15 @@ const quoteSchema = new mongoose.Schema({
     type: String,
     enum: ['Draft', 'Sent', 'Approved'],
     default: 'Draft'
+  },
+  payments: [
+  {
+    label: String,
+    amount: Number,
+    status: { type: String, enum: ["Pending", "Paid", "Overdue"], default: "Pending" },
+    date: String
   }
+],
 }, { timestamps: true });
 
 const laborCostSchema = new mongoose.Schema({
@@ -4062,6 +4070,27 @@ app.post("/api/quotes/:id/convert-to-job", async (req, res) => {
   } catch (err) {
     console.error("Error converting quote:", err);
     res.status(500).json({ error: "Failed to convert quote" });
+  }
+});
+
+
+// Update only the payments schedule for a quote
+app.put('/api/quotes/:id/payments', async (req, res) => {
+  try {
+    const { payments } = req.body;
+    if (!Array.isArray(payments)) {
+      return res.status(400).json({ message: "Payments must be an array." });
+    }
+    const updated = await Quote.findByIdAndUpdate(
+      req.params.id,
+      { payments },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ message: "Quote not found" });
+    res.json({ success: true, payments: updated.payments });
+  } catch (err) {
+    console.error("Error updating payments:", err);
+    res.status(500).json({ message: "Failed to update payments" });
   }
 });
 
