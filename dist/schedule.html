@@ -1278,6 +1278,7 @@ function populateEstimateDropdown(estimates) {
 
 
       
+
       let ganttInstance = null;
 let ganttViewMode = 'Day'; // Default view mode
 
@@ -1303,6 +1304,7 @@ function renderGanttChartView(lineItems, viewMode = "Day") {
     return;
   }
 
+  // Flatten and normalize tasks
   const allItems = lineItems.flatMap(cat =>
     Array.isArray(cat.items)
       ? cat.items.map(item => ({ ...item, category: cat.category }))
@@ -1326,12 +1328,13 @@ function renderGanttChartView(lineItems, viewMode = "Day") {
 
       return {
         id: item._id || `task-${index + 1}`,
-        name: `${item.category}: ${item.name}`,
+        name: item.name, // Only the task name, not category
         start,
         end,
         progress: item.progress || 0,
         dependencies: item.dependencies || "",
-        custom_class: categoryClass
+        custom_class: categoryClass,
+        category: item.category || "Uncategorized"
       };
     })
     .filter(Boolean);
@@ -1344,12 +1347,16 @@ function renderGanttChartView(lineItems, viewMode = "Day") {
   container.innerHTML = "";
 
   setTimeout(() => {
+    // Remove any previous custom labels
+    document.querySelectorAll('.gantt-bar-label-right').forEach(el => el.remove());
+
     const gantt = new Gantt(`#${containerId}`, tasks, {
       view_mode: viewMode,
       date_format: "YYYY-MM-DD",
       custom_popup_html: task => `
         <div class="gantt-popup">
           <strong>${task.name}</strong><br>
+          <span style="color:#007bff;">${task.category || ""}</span><br>
           Start: ${task._start.toDateString()}<br>
           End: ${task._end.toDateString()}<br>
           Progress: ${task.progress}%
@@ -1360,13 +1367,66 @@ function renderGanttChartView(lineItems, viewMode = "Day") {
           startDate: newStart.toISOString(),
           endDate: newEnd.toISOString()
         });
-        alert(`📅 "${task.name}" date updated`, "success");
+        showNotification(`📅 "${task.name}" date updated`, "success");
       }
     });
 
+// Add labels to the right of each bar
+// Add SVG text labels to the right of each bar
+setTimeout(() => {
+  // Remove any previous custom SVG labels
+  document.querySelectorAll('.gantt-bar-label-right-svg').forEach(el => el.remove());
+
+  // Get the main SVG element
+  const svg = document.querySelector('.gantt svg');
+  if (!svg) return;
+
+  // Detect vertical offset from main group transform, if any
+  let yOffset = 0;
+  // Find the first <g> with a transform (usually the main group)
+  const mainGroup = Array.from(svg.querySelectorAll('g')).find(g => g.hasAttribute('transform'));
+  if (mainGroup) {
+    const match = mainGroup.getAttribute('transform').match(/translate\(\s*0\s*,\s*(-?\d+)\s*\)/);
+    if (match) yOffset = parseInt(match[1], 10);
+  }
+
+  document.querySelectorAll('.gantt .bar-wrapper').forEach(wrapper => {
+    const bar = wrapper.querySelector('.bar');
+    if (!bar) return;
+
+    // Get the label text from the task name
+    const taskId = wrapper.getAttribute('data-id');
+    const task = tasks.find(t => t.id == taskId);
+    if (!task) return;
+
+    // Get bar's bounding box (relative to SVG)
+    const barRect = bar.getBBox();
+
+    // Create SVG text element
+    const svgNS = "http://www.w3.org/2000/svg";
+    const text = document.createElementNS(svgNS, "text");
+    text.setAttribute("class", "gantt-bar-label-right-svg");
+    text.setAttribute("x", barRect.x + barRect.width + 18); // 18px to the right of the bar
+    text.setAttribute("y", barRect.y + barRect.height / 2 + yOffset);
+    text.setAttribute("fill", "#22223b");
+    text.setAttribute("font-size", "13");
+    text.setAttribute("font-weight", "bold");
+    text.setAttribute("dominant-baseline", "middle");
+    text.setAttribute("text-anchor", "start");
+    text.setAttribute("pointer-events", "none");
+    text.textContent = task.name;
+
+    // Append to the main SVG (not to the bar's group)
+    svg.appendChild(text);
+  });
+}, 350);
+
+    enableTouchDragForGantt();
     console.log(`✅ Gantt rendered with ${tasks.length} tasks`);
   }, 20);
 }
+
+
 
 
 // ✅ Date formatter
@@ -1374,6 +1434,52 @@ function formatDate(date) {
   const d = new Date(date);
   return isNaN(d) ? "" : d.toISOString().split("T")[0];
 }
+
+
+function enableTouchDragForGantt() {
+  const bars = document.querySelectorAll(".gantt .bar-wrapper");
+
+  bars.forEach(bar => {
+    let startX = 0;
+    let originalLeft = 0;
+    let isDragging = false;
+
+    bar.addEventListener("touchstart", e => {
+      const touch = e.touches[0];
+      startX = touch.clientX;
+      originalLeft = bar.getBoundingClientRect().left;
+      isDragging = true;
+      bar.style.transition = "none";
+    });
+
+    bar.addEventListener("touchmove", e => {
+      if (!isDragging) return;
+      const touch = e.touches[0];
+      const dx = touch.clientX - startX;
+      bar.style.transform = `translateX(${dx}px)`;
+      e.preventDefault();
+    });
+
+    bar.addEventListener("touchend", () => {
+      if (!isDragging) return;
+      bar.style.transition = "transform 0.2s ease-out";
+      bar.style.transform = "translateX(0)";
+      isDragging = false;
+
+      // Optional: you can trigger a backend update here using the new date
+      // Requires calculating the new start/end based on dx
+    });
+  });
+}
+
+
+
+// ✅ Date formatter
+function formatDate(date) {
+  const d = new Date(date);
+  return isNaN(d) ? "" : d.toISOString().split("T")[0];
+}
+
 
 
 
