@@ -1972,6 +1972,13 @@ function displayFiles(files) {
     deleteIcon.title = 'Delete';
     deleteIcon.addEventListener('click', () => deleteFile(file._id, fileItem));
 
+            // --- Preview on Hover ---
+fileItem.addEventListener('mouseenter', (e) => showFilePreview(e, fileUrl, file.mimetype));
+fileItem.addEventListener('mousemove', (e) => {
+  if (!isMouseOverPopup) moveFilePreview(e);
+});
+fileItem.addEventListener('mouseleave', hideFilePreview);
+
     fileItem.appendChild(checkbox);
     fileItem.appendChild(fileIcon);
     fileItem.appendChild(fileName);
@@ -1984,6 +1991,55 @@ function displayFiles(files) {
   toggleActionDropdown();
 }
 
+  // --- File Preview Functions ---
+let isMouseOverPopup = false;
+let isMouseOverFileItem = false;
+
+function showFilePreview(e, fileUrl, mimetype) {
+  const popup = document.getElementById('file-preview-popup');
+  if (!popup) return;
+
+  if (mimetype.startsWith('image')) {
+    popup.innerHTML = `<img src="${fileUrl}" alt="Preview" />`;
+  } else if (mimetype === 'application/pdf') {
+    popup.innerHTML = `<embed src="${fileUrl}#toolbar=0&navpanes=0&scrollbar=0" type="application/pdf" width="300" height="300" />`;
+  } else {
+    popup.innerHTML = `<div style="padding:20px 10px; color:#64748b;">No preview available</div>`;
+  }
+  popup.style.display = 'block';
+  // Do NOT call moveFilePreview here!
+}
+
+function moveFilePreview(e) {
+  const popup = document.getElementById('file-preview-popup');
+  if (!popup || isMouseOverPopup) return;
+  popup.style.left = (e.clientX + 20) + 'px';
+  popup.style.top = (e.clientY + 10) + 'px';
+}
+
+function hideFilePreview() {
+  const popup = document.getElementById('file-preview-popup');
+  if (popup) popup.style.display = 'none';
+}
+
+
+
+// Add these listeners ONCE after DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+  const popup = document.getElementById('file-preview-popup');
+  if (popup) {
+    popup.addEventListener('mouseenter', () => {
+      isMouseOverPopup = true;
+      popup.style.display = 'block';
+    });
+    popup.addEventListener('mouseleave', () => {
+      isMouseOverPopup = false;
+      setTimeout(() => {
+        if (!isMouseOverFileItem) hideFilePreview();
+      }, 80);
+    });
+  }
+});
 
   // ✅ Toggle Action Dropdown
   function toggleActionDropdown() {
