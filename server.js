@@ -3356,6 +3356,37 @@ app.put('/api/estimates/line-items/:lineItemId', async (req, res) => {
 // Products API Endpoints
 // ──────────────────────────────────────────────
 
+// DELETE /api/selection-boards?projectId=...&room=...
+app.delete("/api/selection-boards", async (req, res) => {
+  const { projectId, room } = req.query;
+
+  if (!projectId || !room) {
+    return res.status(400).json({ message: "Missing projectId or room" });
+  }
+
+  try {
+    const normalizedRoom = decodeURIComponent(room).trim().toLowerCase();
+
+    // Log all rooms for debug
+    const boards = await SelectionBoard.find({ projectId });
+    console.log("📋 Rooms in DB:", boards.map(b => `"${b.room}"`));
+
+    const deleted = await SelectionBoard.findOneAndDelete({
+      projectId,
+      room: { $regex: new RegExp(`^${normalizedRoom}$`, 'i') } // Case-insensitive exact match
+    });
+
+    if (!deleted) {
+      return res.status(404).json({ message: `No board found for room "${normalizedRoom}" in this project.` });
+    }
+
+    res.json({ message: `Room "${normalizedRoom}" deleted successfully.` });
+  } catch (err) {
+    console.error("❌ Error deleting room:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 
 
 // GET /api/products - Return all products
