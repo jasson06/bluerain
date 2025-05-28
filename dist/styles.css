@@ -2499,3 +2499,26 @@ li.completed span {
   color: #007bff;
 }
 
+/* File Preview Popup */
+.file-preview-popup {
+  position: fixed;
+  z-index: 99999;
+  display: none;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.13);
+  border-radius: 10px;
+  padding: 8px;
+  max-width: 320px;
+  max-height: 320px;
+  overflow: auto;           /* <-- allow scrolling if content is larger */
+  pointer-events: auto;     /* <-- allow mouse interaction */
+  cursor: pointer;          /* <-- show pointer cursor */
+}
+.file-preview-popup img,
+.file-preview-popup embed {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  border-radius: 8px;
+}
