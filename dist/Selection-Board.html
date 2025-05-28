@@ -4,76 +4,89 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Selection Board Dashboard</title>
-  <!-- Import Google Font "Roboto" -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" />
   <style>
-    /* Base Styles */
     body {
       font-family: 'Roboto', Arial, sans-serif;
       margin: 0;
-      padding: 20px;
+      padding: 0;
       background-color: #f0f2f5;
+      display: flex;
     }
-    header {
-      text-align: center;
-      padding: 15px;
-      background: linear-gradient(135deg, #43464f, #6b7073);
-      color: white;
-      font-size: 24px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    }
-
-    
+  header {
+    text-align: center;
+    padding: 15px;
+    background: linear-gradient(135deg, #43464f, #6b7073);
+    color: white;
+    font-size: 15px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    position: fixed;
+    top: 0;
+    left: 250px;
+    width: calc(100% - 250px);
+    z-index: 10;
+    transition: left 0.2s, width 0.2s;
+  }
     main {
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-      padding: 20px;
+      flex: 1;
+      width: 100%;
+      margin-top: 60px;
     }
-    section {
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      padding: 20px;
-      width: 90%;
-      max-width: 800px;
-      transition: transform 0.3s ease;
-    }
-    section:hover {
-      transform: translateY(-3px);
-    }
-    /* Dashboard Section */
-    #dashboard-section h2 {
-      text-align: center;
-      margin-bottom: 15px;
-    }
-    .dashboard-top {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
+  .sidebar {
+    width: 250px;
+    background: #fff;
+    border-right: 1px solid #e0e0e0;
+    padding: 20px;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+    min-height: calc(100vh - 60px);
+    box-sizing: border-box;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 11;
+    transition: left 0.2s, width 0.2s;
+  }
+    .custom-room-dropdown {
       margin-bottom: 20px;
     }
-    .room-selection {
-      flex: 1 1 300px;
-      padding: 15px;
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      background: #fafafa;
-    }
-    .room-selection h3 {
-      margin-top: 0;
-      color: #333;
-    }
-    .room-selection select {
-      width: 100%;
+    .room-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       padding: 10px;
-      border: 1px solid #ccc;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
       border-radius: 4px;
-      margin-bottom: 10px;
-      font-size: 16px;
+      margin-bottom: 4px;
     }
-    .room-selection button {
+    .room-row:hover {
+      background-color: #f0f0f0;
+    }
+    .room-label {
+      flex-grow: 1;
+      color: #333;
+      outline: none;
+    }
+    .room-label.selected {
+      background: #d0eaff;
+      font-weight: bold;
+      border-radius: 4px;
+      padding: 4px 6px;
+      border-left: 4px solid #007bff;
+    }
+    .trash-icon {
+      margin-left: 10px;
+      font-size: 16px;
+      color: #888;
+      transition: color 0.2s ease;
+      cursor: pointer;
+    }
+    .trash-icon:hover {
+      color: #dc3545;
+    }
+    #add-new-room {
       width: 100%;
       padding: 10px;
       background-color: #007bff;
@@ -83,21 +96,32 @@
       cursor: pointer;
       font-size: 16px;
       transition: background-color 0.3s ease;
+      margin-top: 10px;
     }
-    .room-selection button:hover {
+    #add-new-room:hover {
       background-color: #0056b3;
     }
-    .dashboard-bottom {
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      padding: 15px;
-      background: #fafafa;
-    }
-    .dashboard-bottom h3 {
-      margin-top: 0;
-      color: #333;
-    }
-    /* Saved Boards Container */
+  /* Main Content */
+.content {
+  margin-left: 250px;
+  padding: 40px 32px 32px 32px;
+  background: transparent;
+  min-height: 100vh;
+}
+section {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 4px 24px rgba(0,123,255,0.07);
+  padding: 28px 24px 24px 24px;
+  margin-bottom: 28px;
+  transition: box-shadow 0.2s;
+}
+section h2 {
+  color: #007bff;
+  font-size: 1.4rem;
+  margin-bottom: 18px;
+  letter-spacing: 0.5px;
+}
     #saved-boards-container .saved-board {
       border: 1px solid #e0e0e0;
       margin: 10px 0;
@@ -122,7 +146,6 @@
       position: relative;
       font-size: 14px;
     }
-    /* Delete icon for saved board items */
     .saved-delete {
       position: absolute;
       top: 2px;
@@ -137,7 +160,7 @@
       font-size: 12px;
       cursor: pointer;
     }
-    /* Product Listing Section - Available Fixtures */
+   /* Product Listing Section - Available Fixtures */
     #product-list {
       width: 90%;
       max-width: 800px;
@@ -205,6 +228,7 @@
       cursor: pointer;
       z-index: 2;
     }
+    
 
     /* Updated Like Icon Styling */
     .like-icon {
@@ -256,7 +280,6 @@
       margin: auto;
       border-radius: 4px;
     }
-    /* Modal Styles */
     .modal {
       display: none;
       position: fixed;
@@ -296,7 +319,6 @@
     .close-modal:hover {
       color: #333;
     }
-    /* Button Styling for "Add" and "Add Product" */
     .product-card button,
     #create-product-form button {
       background-color: #007bff;
@@ -313,8 +335,6 @@
       background-color: #0353a9;
       transform: scale(1.03);
     }
-
-    /* Loading indicator for product details */
     #loading-indicator {
       text-align: center;
       padding: 10px;
@@ -322,9 +342,7 @@
       font-weight: bold;
       display: none;
     }
-
- /* Toast Notification Styles */
- #toast {
+    #toast {
       visibility: hidden;
       min-width: 250px;
       background-color: #28a745;
@@ -351,59 +369,124 @@
       from { bottom: 30px; opacity: 1; }
       to { bottom: 0; opacity: 0; }
     }
-
-     /* Responsive Styles */
-     @media (max-width: 768px) {
-      #products-container {
-        flex-wrap: nowrap;
-      }
+  @media (max-width: 601px) {
+    header {
+      left: 0;
+      width: 100%;
+      font-size: 15px;
+    }
+    .sidebar {
+      position: static;
+      width: 100%;
+      height: auto;
+      min-height: unset;
+      box-shadow: none;
+      border-right: none;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 10px;
+    }
+    .content {
+      margin-left: 0;
+      padding: 10px;
+    }
       .product-card {
-        flex: 0 0 calc((100% - 30px) / 3); /* 3 products at a time */
-      }
-      section {
-        width: 90%;
-      }
-      .dashboard-top {
-        flex-direction: column;
-      }
-      .modal-content {
-        width: 90%;
+        min-width: 120px;
+        max-width: 140px;
       }
     }
+
+     /* Responsive for phones */
+  @media (max-width: 600px) {
+    body {
+      flex-direction: column;
+      display: block;
+    }
+    header {
+      position: static;
+      left: 0;
+      width: 100%;
+      font-size: 15px;
+      padding: 10px;
+    }
+    main {
+      flex-direction: column;
+      margin-top: 0;
+      width: 100%;
+      display: block;
+    }
+    .sidebar {
+      position: static;
+      width: 100%;
+      height: auto;
+      min-height: unset;
+      box-shadow: none;
+      border-right: none;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 8px;
+      z-index: 1;
+    }
+    .content {
+      margin-left: 0;
+      margin-top: 0;
+      padding: 8px;
+    }
+    section {
+      padding: 10px;
+      margin-bottom: 12px;
+    }
+    .product-card {
+      min-width: 100px;
+      max-width: 100%;
+      font-size: 12px;
+      padding: 6px;
+    }
+    #create-product-list {
+      padding: 10px;
+    }
+    #create-product-form input,
+    #create-product-form textarea {
+      font-size: 14px;
+      padding: 7px;
+    }
+    .room-row {
+      padding: 7px;
+      font-size: 14px;
+    }
+    .room-label.selected {
+      padding: 3px 4px;
+      font-size: 14px;
+    }
+    #add-new-room {
+      font-size: 14px;
+      padding: 8px;
+    }
+    #toast {
+      font-size: 14px;
+      padding: 10px;
+    }
+  }
   </style>
 </head>
 <body>
   <header>
     <h1>Selection Board Dashboard</h1>
   </header>
-  
-  <!-- Toast Notification -->
   <div id="toast"></div>
-
   <main>
-    <!-- Dashboard Section (only Room Selection and Saved Board) -->
-    <section id="dashboard-section">
-      <h2>Dashboard</h2>
-      <div class="dashboard-top">
-        <div class="room-selection">
-          <h3>Select a Room</h3>
-          <select id="room-dropdown">
-            <option value="living-room">Living Room</option>
-            <option value="kitchen">Kitchen</option>
-            <option value="bathroom">Bathroom</option>
-            <option value="bedroom">Bedroom</option>
-          </select>
-          <div class="dashboard-bottom">
-            <h3>Saved Selection Board for This Room</h3>
-            <div id="saved-boards-container">
-              <!-- Saved board for the current room will be displayed here -->
-            </div>
-          <button id="add-new-room">Add New Room</button>
+    <div class="sidebar">
+      <h3>Select a Room</h3>
+      <div id="custom-room-dropdown" class="custom-room-dropdown"></div>
+      <button id="add-new-room">Add New Room</button>
+    </div>
+    <div class="content">
+      <section id="dashboard-section">
+        <h2>Dashboard</h2>
+        <div class="dashboard-bottom">
+          <h3>Saved Selection Board for This Room</h3>
+          <div id="saved-boards-container"></div>
         </div>
-      </div>
-      </div>
-    </section>
-    
+      </section>
+
     <!-- Product Listing Section -->
     <section id="product-list">
       <h2>Available Fixtures</h2>
@@ -497,8 +580,113 @@
       });
     }
     
-    document.addEventListener("DOMContentLoaded", () => {
-      loadAdditionalRooms();
+document.addEventListener("DOMContentLoaded", () => {
+  // ✅ Format helper
+  function formatRoomName(room) {
+    return room
+      .replace(/-/g, ' ')
+      .replace(/#/, ' #')
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  // ✅ Enhanced Room Loader (keeps hardcoded HTML)
+ async function populateRoomDropdownFromBoards() {
+  const projectId = await getCurrentProjectId();
+  if (!projectId) {
+    console.warn("❌ Project ID not found");
+    return;
+  }
+
+  const container = document.getElementById("custom-room-dropdown");
+  container.innerHTML = "";
+
+  const roomSet = new Set([
+    "living-room", "kitchen", "bathroom", "bedroom" // your defaults
+  ]);
+
+  try {
+    const response = await fetch(`/api/selection-boards?projectId=${projectId}`);
+    if (response.ok) {
+      const boards = await response.json();
+      boards.forEach(board => {
+        if (board.room) roomSet.add(board.room.trim().toLowerCase());
+      });
+    }
+  } catch (err) {
+    console.error("Error fetching backend rooms:", err);
+  }
+
+  const stored = JSON.parse(localStorage.getItem("additionalRooms") || "[]");
+  stored.forEach(roomObj => {
+    if (roomObj?.value) roomSet.add(roomObj.value.trim().toLowerCase());
+  });
+
+  const roomList = Array.from(roomSet).sort();
+  roomList.forEach(room => {
+    const row = document.createElement("div");
+    row.className = "room-row";
+
+    const label = document.createElement("span");
+    label.className = "room-label";
+    label.textContent = room.replace(/-/g, " ").replace(/#/, " #").replace(/\b\w/g, c => c.toUpperCase());
+    label.dataset.value = room;
+    label.onclick = () => {
+      document.querySelectorAll(".room-label").forEach(l => l.classList.remove("selected"));
+      label.classList.add("selected");
+      loadSavedBoardForRoom(room);
+    };
+
+    const trash = document.createElement("span");
+    trash.className = "trash-icon";
+    trash.innerHTML = "🗑️";
+    trash.onclick = async (e) => {
+      e.stopPropagation();
+      const confirmDelete = confirm(`Delete room "${room}" and its board?`);
+      if (!confirmDelete) return;
+
+      try {
+        const response = await fetch(`/api/selection-boards?projectId=${projectId}&room=${encodeURIComponent(room)}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) throw new Error(await response.text());
+
+        // Remove from localStorage
+        const filtered = stored.filter(r => r.value !== room);
+        localStorage.setItem("additionalRooms", JSON.stringify(filtered));
+
+        // Refresh UI
+        showToast(`Deleted room: ${room}`);
+        populateRoomDropdownFromBoards();
+      } catch (err) {
+        alert("Failed to delete room.");
+        console.error(err);
+      }
+    };
+
+    row.appendChild(label);
+    row.appendChild(trash);
+    container.appendChild(row);
+  });
+
+  // Auto-select the first room
+  const firstLabel = container.querySelector(".room-label");
+  if (firstLabel) {
+    firstLabel.classList.add("selected");
+    loadSavedBoardForRoom(firstLabel.dataset.value);
+  }
+}
+
+
+  // ✅ Async startup
+  (async () => {
+    await populateRoomDropdownFromBoards();  // enhanced version
+    await loadProducts();
+    const projectId = await getCurrentProjectId();
+    if (projectId) {
+      console.log("Current Project ID:", projectId);
+      loadSavedBoardForRoom();
+    }
+  })();
       
       /* --------------------- Modal Event Listeners --------------------- */
       const modal = document.getElementById("full-details-modal");
@@ -729,18 +917,24 @@
       });
       
       /* --------------------- Selection Board Functions --------------------- */
-      async function addToBoard(productId) {
-        const projectId = await getCurrentProjectId();
-        if (!projectId) {
-          alert("Project ID not found.");
-          return;
-        }
-        const room = document.getElementById("room-dropdown").value;
-        const product = products.find(p => p._id.toString() === productId);
-        if (!product) {
-          alert("Product not found.");
-          return;
-        }
+async function addToBoard(productId) {
+  const projectId = await getCurrentProjectId();
+  if (!projectId) {
+    alert("Project ID not found.");
+    return;
+  }
+  // FIX: Get selected room from sidebar
+  const selectedLabel = document.querySelector("#custom-room-dropdown .room-label.selected");
+  const room = selectedLabel ? selectedLabel.dataset.value : null;
+  if (!room) {
+    alert("Please select a room first.");
+    return;
+  }
+  const product = products.find(p => p._id.toString() === productId);
+  if (!product) {
+    alert("Product not found.");
+    return;
+  }
         let board;
         try {
           const response = await fetch(`/api/selection-boards?projectId=${projectId}`);
@@ -823,31 +1017,52 @@
           alert("Failed to remove product from board.");
         }
       }
+
       
-      async function loadSavedBoardForRoom() {
-        const projectId = await getCurrentProjectId();
-        if (!projectId) {
-          alert("Project ID not found.");
-          return;
-        }
-        const selectedRoom = document.getElementById("room-dropdown").value;
-        console.log("Loading board for room:", selectedRoom);
-        try {
-          const response = await fetch(`/api/selection-boards?projectId=${projectId}`);
-          console.log("Load saved boards response status:", response.status);
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Error loading saved boards: ${response.status} - ${errorText}`);
-          }
-          const boards = await response.json();
-          console.log("Boards loaded:", boards);
-          const boardForRoom = boards.find(board => board.room.toLowerCase() === selectedRoom.toLowerCase());
-          displaySavedBoard(boardForRoom);
-        } catch (error) {
-          console.error("Error loading saved boards:", error);
-          alert("Failed to load saved boards.");
-        }
-      }
+      
+     async function loadSavedBoardForRoom(selectedRoom = null) {
+  const projectId = await getCurrentProjectId();
+  if (!projectId) {
+    alert("Project ID not found.");
+    return;
+  }
+
+  // If no room is passed, get the currently selected room from the custom UI
+  if (!selectedRoom) {
+    const selectedLabel = document.querySelector(".room-label.selected");
+    selectedRoom = selectedLabel?.dataset.value;
+  }
+
+  if (!selectedRoom) {
+    console.warn("⚠️ No room selected.");
+    return;
+  }
+
+  console.log("🔄 Loading board for room:", selectedRoom);
+
+  try {
+    const response = await fetch(`/api/selection-boards?projectId=${projectId}`);
+    console.log("Load saved boards response status:", response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error loading saved boards: ${response.status} - ${errorText}`);
+    }
+
+    const boards = await response.json();
+    console.log("Boards loaded:", boards);
+
+    const boardForRoom = boards.find(board =>
+      board.room?.trim().toLowerCase() === selectedRoom.trim().toLowerCase()
+    );
+
+    displaySavedBoard(boardForRoom);
+  } catch (error) {
+    console.error("Error loading saved boards:", error);
+    alert("Failed to load saved boards.");
+  }
+}
+
       
       function displaySavedBoard(board) {
         const container = document.getElementById("saved-boards-container");
@@ -910,29 +1125,85 @@
         container.appendChild(boardDiv);
       }
       
-      function addNewRoom() {
-        const newRoom = prompt("Enter new room name:");
-        if (newRoom) {
-          const roomDropdown = document.getElementById("room-dropdown");
-          const exists = Array.from(roomDropdown.options).some(option => option.text.toLowerCase() === newRoom.toLowerCase());
-          if (exists) {
-            alert("This room already exists.");
-          } else {
-            const value = newRoom.toLowerCase().replace(/\s+/g, "-");
-            const option = document.createElement("option");
-            option.value = value;
-            option.textContent = newRoom;
-            roomDropdown.appendChild(option);
-            roomDropdown.value = value;
-            console.log("New room added:", value);
-            saveRoomToLocalStorage({ value, text: newRoom });
-            loadSavedBoardForRoom();
-          }
-        }
+     function addNewRoom() {
+  const newRoom = prompt("Enter new room name:");
+  if (!newRoom) return;
+
+  const value = newRoom.trim().toLowerCase();
+
+  const existingLabels = Array.from(document.querySelectorAll("#custom-room-dropdown .room-label"));
+  const exists = existingLabels.some(label => label.dataset.value === value);
+
+  if (exists) {
+    alert("This room already exists.");
+    return;
+  }
+
+  // ✅ Save to localStorage
+  saveRoomToLocalStorage({ value, text: newRoom });
+
+  // ✅ Create new row for the custom dropdown
+  const container = document.getElementById("custom-room-dropdown");
+
+  const row = document.createElement("div");
+  row.className = "room-row";
+
+  const label = document.createElement("span");
+  label.className = "room-label selected";
+  label.dataset.value = value;
+  label.textContent = newRoom;
+  label.onclick = () => {
+    document.querySelectorAll(".room-label").forEach(l => l.classList.remove("selected"));
+    label.classList.add("selected");
+    loadSavedBoardForRoom(value);
+  };
+
+  const trash = document.createElement("span");
+  trash.className = "trash-icon";
+  trash.innerHTML = "🗑️";
+  trash.onclick = async (e) => {
+    e.stopPropagation();
+    const confirmDelete = confirm(`Delete room "${value}"?`);
+    if (!confirmDelete) return;
+
+    try {
+      const projectId = await getCurrentProjectId();
+      const response = await fetch(`/api/selection-boards?projectId=${projectId}&room=${encodeURIComponent(value)}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok && response.status !== 404) {
+        throw new Error(await response.text());
       }
+
+      // Remove from localStorage
+      const stored = JSON.parse(localStorage.getItem("additionalRooms") || "[]");
+      const updated = stored.filter(r => r.value !== value);
+      localStorage.setItem("additionalRooms", JSON.stringify(updated));
+
+      row.remove();
+      showToast(`Room "${value}" deleted.`);
+      loadSavedBoardForRoom();
+    } catch (err) {
+      console.error("❌ Failed to delete room:", err);
+      alert("Failed to delete room.");
+    }
+  };
+
+  // Remove "selected" from others
+  document.querySelectorAll(".room-label").forEach(l => l.classList.remove("selected"));
+
+  row.appendChild(label);
+  row.appendChild(trash);
+  container.appendChild(row);
+
+  console.log("New room added:", value);
+  loadSavedBoardForRoom(value);
+}
+
       
-      document.getElementById("room-dropdown").addEventListener("change", () => {
-        const selected = document.getElementById("room-dropdown").value;
+      document.getElementById("custom-room-dropdown").addEventListener("change", () => {
+        const selected = document.getElementById("custom-room-dropdown").value;
         console.log("Room changed to:", selected);
         loadSavedBoardForRoom();
       });
