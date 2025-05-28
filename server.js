@@ -3444,6 +3444,7 @@ app.get('/api/selection-boards', async (req, res) => {
 
 
 
+
 // --------------------- Endpoint: Proxy for External URL --------------------- //
 app.get('/api/product-details', async (req, res) => {
   const { url } = req.query;
