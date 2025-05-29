@@ -912,6 +912,17 @@
   </div>
 </div>
 
+<!-- Payment Schedule Selection Modal -->
+<div id="scheduleSelectModal" class="modal">
+  <div class="modal-content" style="max-width: 500px;">
+    <div class="modal-header">
+      <h3>Select Payment Schedule</h3>
+      <span class="close-modal" onclick="closeScheduleSelectModal()">&times;</span>
+    </div>
+    <div id="scheduleSelectBody"></div>
+    <button id="selectScheduleBtn" style="margin-top: 18px; background: #0ea5e9;">Select</button>
+  </div>
+</div>
 
 <!-- Toast Notification -->
 <div id="toast" style="
@@ -2101,36 +2112,83 @@ async function downloadReceiptAsPDF(id) {
 
 
 
-// ✅ downloadInvoiceAsPDF() — same structure as quote download but labeled as "Invoice"
 async function downloadInvoiceAsPDF(id) {
-  showLoader(); // 👈 START
+  showLoader();
   try {
-    const res = await fetch(`/api/quotes/${id}`); // Same endpoint
+    const res = await fetch(`/api/quotes/${id}`);
     const q = await res.json();
 
-    const total30 = (q.totals.total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
-    const total10 = (q.totals.total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
+    let schedules = [];
+    if (q.paymentSchedules && q.paymentSchedules.length > 0) {
+      schedules = q.paymentSchedules;
+    } else if (q.payments && q.payments.length > 0) {
+      schedules = [{
+        name: "Default Schedule",
+        description: "Imported from legacy payments",
+        payments: q.payments
+      }];
+    }
+
+    // Show the modal to select (even if only one)
+    if (schedules.length > 0) {
+      hideLoader();
+      openScheduleSelectModal(schedules, function(selectedSchedules) {
+        downloadInvoiceWithSchedule(q, selectedSchedules);
+      });
+      return;
+    }
+
+    // If no schedules and no payments, proceed with default
+    await downloadInvoiceWithSchedule(q, []);
+  } catch (err) {
+    console.error("PDF download error:", err);
+    showToast("Failed to generate or download PDF.");
+    hideLoader();
+  }
+}
+
+// Helper function to generate the invoice PDF with the selected schedule
+async function downloadInvoiceWithSchedule(q, selectedPayments) {
+  showLoader();
+  try {
     const invoiceNumber = `INV-${new Date().getTime()}`;
-    const clientNameSafe = q.to.name.replace(/[^a-z0-9]/gi, '_'); // sanitize filename
+    const clientNameSafe = q.to.name.replace(/[^a-z0-9]/gi, '_');
 
+    // Gather all payments from all schedules
+    let allPayments = [];
+    if (q.paymentSchedules && q.paymentSchedules.length > 0) {
+      q.paymentSchedules.forEach(sch => {
+        if (sch.payments && sch.payments.length > 0) {
+          allPayments = allPayments.concat(sch.payments.map(p => ({
+            ...p,
+            scheduleName: sch.name || ""
+          })));
+        }
+      });
+    } else if (q.payments && q.payments.length > 0) {
+      allPayments = q.payments;
+    } else {
+      allPayments = [
+        { label: "30% at project start", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
+        { label: "30% at 50% completion", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
+        { label: "30% at 75% completion", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
+        { label: "10% at final completion", amount: +(q.totals.total * 0.1).toFixed(2), status: "Pending", date: "" }
+      ];
+    }
 
+    // Find which payments are selected (by label+amount+date for uniqueness)
+    const selectedKeys = (Array.isArray(selectedPayments) ? selectedPayments : []).map(
+      p => `${p.label}|${p.amount}|${p.date || ""}`
+    );
 
-    // --- Payment Schedule Table ---
-    const payments = (q.payments && q.payments.length > 0)
-      ? q.payments
-      : [
-          { label: "30% at project start", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
-          { label: "30% at 50% completion", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
-          { label: "30% at 75% completion", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
-          { label: "10% at final completion", amount: +(q.totals.total * 0.1).toFixed(2), status: "Pending", date: "" }
-        ];
-
-    const totalPaid = payments
+    // Calculate totalPaid and outstanding using allPayments
+    const totalPaid = allPayments
       .filter(p => p.status === "Paid")
       .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-    const outstanding = q.totals.total - totalPaid;
-// Find the first payment that is not Paid
-const nextDueIndex = payments.findIndex(p => p.status !== "Paid");
+
+    const outstanding = (q.totals && q.totals.total ? q.totals.total : 0) - totalPaid;
+
+    // Payment table with highlight for selected
     const paymentsTable = `
       <h3 style="margin-top: 30px;">Payment Schedule</h3>
       <table style="margin-top: 32px;
@@ -2149,27 +2207,52 @@ const nextDueIndex = payments.findIndex(p => p.status !== "Paid");
             <th style="padding:8px; border:1px solid #ddd;">Date Paid</th>
           </tr>
         </thead>
-       <tbody>
-  ${payments.map((p, idx) => `
-    <tr style="${idx === nextDueIndex ? 'background:#fffbe6;' : ''}">
-      <td style="padding:8px; border:1px solid #ddd;">
-        ${p.label}
-        ${idx === nextDueIndex ? '<span style="color:#f59e0b; font-weight:600; margin-left:8px;">(Due Now)</span>' : ''}
-      </td>
-      <td style="padding:8px; border:1px solid #ddd;">$${parseFloat(p.amount).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-      <td style="padding:8px; border:1px solid #ddd; color:${p.status === "Paid" ? "#10b981" : (p.status === "Overdue" ? "#ef4444" : "#64748b")}; font-weight:600;">
-        ${p.status}
-      </td>
-      <td style="padding:8px; border:1px solid #ddd;">${p.status === "Paid" && p.date ? p.date : ""}</td>
-    </tr>
-  `).join('')}
-</tbody>
+        <tbody>
+          ${allPayments.map((p, idx) => {
+            const key = `${p.label}|${p.amount}|${p.date || ""}`;
+            const isSelected = selectedKeys.includes(key);
+            return `
+              <tr style="${isSelected ? 'background:#fffbe6; font-weight:bold;' : ''}">
+                <td style="padding:8px; border:1px solid #ddd;">
+                  ${p.label}
+                  
+                  ${isSelected ? '<span style="color:#f59e0b; font-weight:600; margin-left:8px;">(Due Now)</span>' : ''}
+                </td>
+                <td style="padding:8px; border:1px solid #ddd;">$${parseFloat(p.amount).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                <td style="padding:8px; border:1px solid #ddd; color:${p.status === "Paid" ? "#10b981" : (p.status === "Overdue" ? "#ef4444" : "#64748b")}; font-weight:600;">
+                  ${p.status}
+                </td>
+                <td style="padding:8px; border:1px solid #ddd;">${p.status === "Paid" && p.date ? p.date : ""}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
       </table>
       <div style="margin-top:10px; text-align:right;">
         <strong>Total Paid:</strong> $${totalPaid.toLocaleString(undefined, {minimumFractionDigits:2})}<br>
         <strong>Outstanding:</strong> <span style="color:${outstanding > 0 ? '#ef4444' : '#10b981'};">
           $${outstanding.toLocaleString(undefined, {minimumFractionDigits:2})}
         </span>
+      </div>
+    `;
+
+    // Section for selected payments total or all paid message
+    const selectedTotal = (Array.isArray(selectedPayments) ? selectedPayments : []).reduce(
+      (sum, p) => sum + (parseFloat(p.amount) || 0), 0
+    );
+
+    const selectedSummary = selectedKeys.length > 0 ? `
+      <div style="margin-top:8px; color:#f59e0b; font-weight:600;">
+        Please make the following payment${selectedKeys.length > 1 ? 's' : ''} totaling: 
+        <u>
+          $${selectedTotal.toLocaleString(undefined, {minimumFractionDigits:2})}
+        </u>
+        <br>
+        ${selectedPayments.map(p => `${p.label}: $${parseFloat(p.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`).join('<br>')}
+      </div>
+    ` : `
+      <div style="margin-top:8px; color:#10b981; font-weight:600;">
+        All scheduled payments have been made. Thank you!
       </div>
     `;
 
@@ -2312,15 +2395,7 @@ const nextDueIndex = payments.findIndex(p => p.status !== "Paid");
 
             ${paymentsTable}
 
-            ${nextDueIndex !== -1 ? `
-  <div style="margin-top:8px; color:#f59e0b; font-weight:600;">
-    Please make the next payment: <u>${payments[nextDueIndex].label}</u> for <u>$${parseFloat(payments[nextDueIndex].amount).toLocaleString(undefined, {minimumFractionDigits:2})}</u>
-  </div>
-` : `
-  <div style="margin-top:8px; color:#10b981; font-weight:600;">
-    All scheduled payments have been made. Thank you!
-  </div>
-`}
+            ${selectedSummary}
  
           </div>
         </body>
@@ -2353,10 +2428,102 @@ const nextDueIndex = payments.findIndex(p => p.status !== "Paid");
     console.error("PDF download error:", err);
     showToast("Failed to generate or download PDF.");
   } finally {
-    hideLoader(); // 👈 END  
+    hideLoader();
   }
 }
 
+
+function openScheduleSelectModal(schedules, onSelect) {
+  const modal = document.getElementById('scheduleSelectModal');
+  const body = document.getElementById('scheduleSelectBody');
+  modal.style.display = 'flex';
+
+  // Flatten all payments to check if all are paid
+  const allPayments = schedules.flatMap(sch => sch.payments || []);
+  const unpaidPayments = allPayments.filter(p => p.status !== "Paid");
+
+  if (unpaidPayments.length === 0) {
+    body.innerHTML = `
+      <div style="padding:32px 0; text-align:center; color:#10b981; font-size:1.2rem;">
+        All scheduled payments have been made. Thank you!
+      </div>
+    `;
+    document.getElementById('selectScheduleBtn').onclick = function() {
+      closeScheduleSelectModal();
+      if (typeof onSelect === 'function') onSelect([]);
+    };
+    return;
+  }
+
+  // Improved styles for payment selection
+  body.innerHTML = schedules.map((sch, sIdx) => `
+    <div style="
+      margin-bottom:22px;
+      border:1.5px solid #bae6fd;
+      border-radius:14px;
+      background: #f0f9ff;
+      box-shadow: 0 2px 8px rgba(14,165,233,0.07);
+      padding:0;
+      overflow:hidden;
+    ">
+      <div style="
+        background: linear-gradient(90deg, #0ea5e9 60%, #38bdf8 100%);
+        color: #fff;
+        font-weight:700;
+        font-size:1.1rem;
+        padding: 12px 18px 8px 18px;
+        border-bottom: 1px solid #bae6fd;
+      ">
+        ${sch.name ? sch.name : 'Payment Schedule'}
+        ${sch.description ? `<div style="font-size:0.97em; color:#e0f2fe; font-weight:400; margin-top:2px;">${sch.description}</div>` : ''}
+      </div>
+      <div style="padding: 14px 18px 10px 18px;">
+        ${sch.payments.map((p, pIdx) => `
+          <label style="
+            display:flex;
+            align-items:center;
+            gap:10px;
+            margin-bottom:8px;
+            padding:8px 0;
+            border-radius:8px;
+            cursor:${p.status === "Paid" ? "not-allowed" : "pointer"};
+            opacity:${p.status === "Paid" ? "0.6" : "1"};
+            transition: background 0.18s;
+          " onmouseover="if(this.querySelector('input').disabled!==true)this.style.background='#e0f2fe'" onmouseout="this.style.background='transparent'">
+            <input type="checkbox" name="paymentOption" value="${sIdx}_${pIdx}" style="accent-color:#0ea5e9; width:18px; height:18px;" ${p.status === "Paid" ? "disabled" : ""}>
+            <span>
+              <span style="font-weight:600;">${p.label}</span>
+              <span style="color:#0ea5e9; font-weight:600; margin-left:8px;">$${parseFloat(p.amount).toLocaleString(undefined, {minimumFractionDigits:2})}</span>
+              ${p.status === "Paid" ? `<span style="color:#10b981; margin-left:8px;">[Paid]</span>` : ""}
+              ${p.status === "Overdue" ? `<span style="color:#ef4444; margin-left:8px;">[Overdue]</span>` : ""}
+              ${p.date ? `<span style="color:#64748b; margin-left:8px; font-size:0.96em;">${p.date}</span>` : ""}
+            </span>
+          </label>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  // Handle selection
+  document.getElementById('selectScheduleBtn').onclick = function() {
+    const checked = Array.from(document.querySelectorAll('input[name="paymentOption"]:checked'));
+    if (checked.length === 0) {
+      showToast("Please select at least one unpaid payment.");
+      return;
+    }
+    // Collect selected payments
+    const selectedPayments = checked.map(cb => {
+      const [sIdx, pIdx] = cb.value.split('_').map(Number);
+      return schedules[sIdx].payments[pIdx];
+    });
+    closeScheduleSelectModal();
+    if (typeof onSelect === 'function') onSelect(selectedPayments);
+  };
+}
+
+function closeScheduleSelectModal() {
+  document.getElementById('scheduleSelectModal').style.display = 'none';
+}
 
 
 // ✅ Updated: printQuote()
