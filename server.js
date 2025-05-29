@@ -736,14 +736,29 @@ const quoteSchema = new mongoose.Schema({
     enum: ['Draft', 'Sent', 'Approved'],
     default: 'Draft'
   },
-  payments: [
-  {
-    label: String,
-    amount: Number,
-    status: { type: String, enum: ["Pending", "Paid", "Overdue"], default: "Pending" },
-    date: String
-  }
-],
+   payments: [
+    {
+      label: String,
+      amount: Number,
+      status: { type: String, enum: ["Pending", "Paid", "Overdue"], default: "Pending" },
+      date: String
+    }
+  ],
+  // 👇 ADD THIS:
+  paymentSchedules: [
+    {
+      name: String,
+      description: String,
+      payments: [
+        {
+          label: String,
+          amount: Number,
+          status: { type: String, enum: ["Pending", "Paid", "Overdue"], default: "Pending" },
+          date: String
+        }
+      ]
+    }
+  ]
 }, { timestamps: true });
 
 const laborCostSchema = new mongoose.Schema({
@@ -3850,7 +3865,7 @@ app.get("/api/notifications", async (req, res) => {
 // Create a new quote
 app.post('/api/quotes', async (req, res) => {
   try {
-    const newQuote = new Quote(req.body);
+    const newQuote = new Quote(req.body); // req.body.paymentSchedules will be saved if present
     const savedQuote = await newQuote.save();
     res.status(201).json(savedQuote);
   } catch (err) {
@@ -3874,6 +3889,18 @@ app.get('/api/quotes/:id', async (req, res) => {
   try {
     const quote = await Quote.findById(req.params.id);
     if (!quote) return res.status(404).json({ error: 'Quote not found' });
+
+    // If paymentSchedules is missing or empty, convert legacy payments
+    if ((!quote.paymentSchedules || quote.paymentSchedules.length === 0) && quote.payments && quote.payments.length > 0) {
+      quote.paymentSchedules = [
+        {
+          name: "Default Schedule",
+          description: "Imported from legacy payments",
+          payments: quote.payments
+        }
+      ];
+    }
+
     res.json(quote);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch quote' });
@@ -3900,15 +3927,7 @@ app.put('/api/quotes/:id', async (req, res) => {
   try {
     const quoteId = req.params.id;
     const {
-      to,
-      from,
-      quoteNumber,
-      date,
-      validTill,
-      notes,
-      lineItems,
-      status,
-      totals // Accept tax as percentage: totals.tax (e.g., 8.25)
+      to, from, quoteNumber, date, validTill, notes, lineItems, status, totals, paymentSchedules // 👈 add paymentSchedules
     } = req.body;
 
     if (!to?.name || !Array.isArray(lineItems) || lineItems.length === 0) {
@@ -3922,23 +3941,12 @@ app.put('/api/quotes/:id', async (req, res) => {
     const taxAmount = (subtotal - discount) * (taxRate / 100);
     const total = subtotal - discount + taxAmount;
 
-    const updateFields = {
-      to,
-      from,
-      quoteNumber,
-      date,
-      validTill,
-      notes,
-      lineItems,
-      totals: {
-        subtotal,
-        discount,
-        tax: taxRate, // stored as percentage
-        total
-      }
+       const updateFields = {
+      to, from, quoteNumber, date, validTill, notes, lineItems,
+      totals: { subtotal, discount, tax: taxRate, total }
     };
-
     if (status) updateFields.status = status;
+    if (paymentSchedules) updateFields.paymentSchedules = paymentSchedules; // 👈 add this
 
     const updatedQuote = await Quote.findByIdAndUpdate(quoteId, updateFields, { new: true });
 
@@ -3952,7 +3960,6 @@ app.put('/api/quotes/:id', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
-
 
 // Enhanced address parsing function to handle various address formats
 function parseAddress(addressString) {
