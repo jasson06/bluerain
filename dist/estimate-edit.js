@@ -980,6 +980,7 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
   card.remove();
   updateSummary();
   updateSelectedLaborCost();
+  autoSaveEstimate(); // <-- Auto-save after delete
 });
 
     // Update Item Total on Quantity or Price Change
