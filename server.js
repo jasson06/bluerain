@@ -2322,6 +2322,9 @@ app.patch("/api/vendors/:vendorId/assigned-items/update", async (req, res) => {
     assignedItem.updatedAt = new Date();
     assignedItem.estimateId = estimateId; // Ensure estimateId is set
 
+            // 👇 THIS IS THE CRUCIAL LINE
+    vendor.markModified('assignedItems');
+
     await vendor.save();
     res.json({ message: "Assigned item updated", assignedItem });
   } catch (error) {
