@@ -756,7 +756,7 @@ function addLineItemCard(item = {}, categoryHeader = null) {
   const card = document.createElement("div");
   card.classList.add("line-item-card");
   card.setAttribute("data-item-id", item._id || `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
-  card.setAttribute("data-assigned-to", item.assignedTo || "");
+  card.setAttribute("data-assigned-to", (item.assignedTo && item.assignedTo._id) ? item.assignedTo._id : (typeof item.assignedTo === "string" ? item.assignedTo : ""));
 
   const assignedToName = item.assignedTo?.name || "Unassigned";
   const assignedToInitials = item.assignedTo?.name
