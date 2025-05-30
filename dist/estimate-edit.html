@@ -1063,7 +1063,22 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 }
 
 
-
+#floating-vendor-select .btn {
+  background: linear-gradient(90deg, #007bff 60%, #0056b3 100%);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+}
+#floating-vendor-select #cancel-vendor-btn {
+  background: #f3f3f3;
+  color: #333;
+  border: 1px solid #ccc;
+}
 </style> 
 </head>
 <body>
@@ -1135,6 +1150,13 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
       </div>
     </section>
      </div>
+
+  <div id="floating-vendor-select" style="display:none; position:fixed; bottom:80px; right:20px; background:#fff; border:1px solid #ccc; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15); padding:16px; z-index:10000;">
+  <label for="floating-vendor-dropdown">Assign to Vendor:</label>
+  <select id="floating-vendor-dropdown"></select>
+  <button id="assign-vendor-btn" class="btn">Assign</button>
+  <button id="cancel-vendor-btn" class="btn" style="margin-left:8px;">Cancel</button>
+</div>
 
 <!-- Toast Notification -->
 <div id="toast" style="
