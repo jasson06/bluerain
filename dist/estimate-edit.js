@@ -746,7 +746,7 @@ function autoSaveEstimate() {
   autoSaveTimeout = setTimeout(() => {
     saveEstimate();
     showToast("Auto-saved!");
-  }, 1200); // 1.2 seconds debounce
+  }, 2500); // 2.5 seconds debounce
 }
 
 
@@ -970,13 +970,17 @@ document.addEventListener("click", function handleOutsideClick(e) {
     unassignButton.addEventListener("click", () => unassignItem(card));
   }
 
-  // Delete Line Item
-  card.querySelector(".delete-line-item").addEventListener("click", () => {
-    card.remove();
-    updateSummary();
-    updateSelectedLaborCost();
-
-  });
+ // Delete Line Item
+card.querySelector(".delete-line-item").addEventListener("click", () => {
+  const assignedTo = card.getAttribute("data-assigned-to");
+  if (assignedTo && /^[a-f\d]{24}$/i.test(assignedTo)) {
+    showToast("Unassign line item before deleting.");
+    return;
+  }
+  card.remove();
+  updateSummary();
+  updateSelectedLaborCost();
+});
 
     // Update Item Total on Quantity or Price Change
   const quantityInput = card.querySelector(".item-quantity");
