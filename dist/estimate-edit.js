@@ -1601,6 +1601,114 @@ function updatePage() {
   }
   
   
+// --- Floating Vendor Select Menu ---
+(function() {
+  // Create the floating menu HTML and add to body
+  const floatingMenu = document.createElement("div");
+  floatingMenu.id = "floating-vendor-select";
+  floatingMenu.style.display = "none";
+  floatingMenu.style.position = "fixed";
+  floatingMenu.style.bottom = "80px";
+  floatingMenu.style.right = "20px";
+  floatingMenu.style.background = "#fff";
+  floatingMenu.style.border = "1px solid #ccc";
+  floatingMenu.style.borderRadius = "8px";
+  floatingMenu.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
+  floatingMenu.style.padding = "16px";
+  floatingMenu.style.zIndex = "10000";
+floatingMenu.innerHTML = `
+  <label for="floating-vendor-dropdown" style="font-weight:600; margin-bottom:8px; display:block;">Assign to Vendor:</label>
+  <select id="floating-vendor-dropdown" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc; margin-bottom:16px;"></select>
+  <div style="display:flex; gap:10px; justify-content:flex-end;">
+    <button id="assign-vendor-btn" class="btn" style="
+      background: linear-gradient(90deg, #007bff 60%, #0056b3 100%) !important;
+      color: #fff !important;
+      border: none !important;
+      border-radius: 5px !important;
+      padding: 8px 20px !important;
+      font-weight: 600 !important;
+      cursor: pointer !important;
+      transition: background 0.2s !important;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.07) !important;
+    ">Assign</button>
+    <button id="cancel-vendor-btn" class="btn" style="
+      background: #f3f3f3 !important;
+      color: #333 !important;
+      border: 1px solid #ccc !important;
+      border-radius: 5px !important;
+      padding: 8px 20px !important;
+      font-weight: 600 !important;
+      cursor: pointer !important;
+      transition: background 0.2s !important;
+    ">Cancel</button>
+  </div>
+`;
+  document.body.appendChild(floatingMenu);
+
+  let selectedCardForVendor = null;
+
+  // Show menu when a line-item-select is checked
+  document.body.addEventListener("change", function(e) {
+    if (e.target.classList.contains("line-item-select")) {
+      if (e.target.checked) {
+        selectedCardForVendor = e.target.closest(".line-item-card");
+        showFloatingVendorSelect();
+      }
+    }
+  });
+
+  function showFloatingVendorSelect() {
+    const menu = document.getElementById("floating-vendor-select");
+    const dropdown = document.getElementById("floating-vendor-dropdown");
+    dropdown.innerHTML = '<option value="">Select a Vendor</option>';
+    if (window.vendorMap) {
+      Object.values(window.vendorMap).forEach(vendor => {
+        const option = document.createElement("option");
+        option.value = vendor._id;
+        option.textContent = vendor.name;
+        dropdown.appendChild(option);
+      });
+    }
+    menu.style.display = "block";
+  }
+
+  function hideFloatingVendorSelect() {
+    document.getElementById("floating-vendor-select").style.display = "none";
+    if (selectedCardForVendor) {
+      // Uncheck the checkbox if cancelled
+      const checkbox = selectedCardForVendor.querySelector(".line-item-select");
+      if (checkbox) checkbox.checked = false;
+      selectedCardForVendor = null;
+    }
+  }
+
+  // Assign vendor when button clicked
+document.getElementById("assign-vendor-btn").onclick = async function() {
+  const vendorId = document.getElementById("floating-vendor-dropdown").value;
+  if (!vendorId) {
+    showToast("Please select a vendor.");
+    return;
+  }
+  if (!selectedCardForVendor) return;
+
+  // Set the vendor dropdown to the selected vendor
+  document.getElementById("vendor-select").value = vendorId;
+
+  // Check the checkbox for this card (if not already checked)
+  const checkbox = selectedCardForVendor.querySelector(".line-item-select");
+  if (checkbox) {
+    checkbox.checked = true;
+  }
+
+  // Call the existing assignItemsToVendor function
+  await assignItemsToVendor();
+
+  // Hide the floating menu and reset
+  hideFloatingVendorSelect();
+};
+
+  document.getElementById("cancel-vendor-btn").onclick = hideFloatingVendorSelect;
+})();
 
 
 
