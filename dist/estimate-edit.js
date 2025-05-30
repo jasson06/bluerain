@@ -1171,19 +1171,29 @@ const selectedItems = Array.from(document.querySelectorAll(".line-item-select:ch
       if (!response.ok) throw new Error("Failed to assign items.");
   
       // ✅ Update UI for assigned items
-      selectedItems.forEach((item) => {
-        const card = document.querySelector(`.line-item-card[data-item-id="${item.itemId}"]`);
-        if (card) {
-          card.setAttribute("data-assigned-to", vendorId);
-          card.querySelector(".vendor-name").textContent = getVendorInitials(vendorId);
-  
-          const checkbox = card.querySelector(".line-item-select");
-          if (checkbox) {
-            checkbox.checked = false;
-            checkbox.disabled = true;
-          }
-        }
-      });
+selectedItems.forEach((item) => {
+  const card = document.querySelector(`.line-item-card[data-item-id="${item.itemId}"]`);
+  if (card) {
+    card.setAttribute("data-assigned-to", vendorId);
+    card.querySelector(".vendor-name").textContent = getVendorInitials(vendorId);
+
+    // Disable and uncheck the checkbox
+    const checkbox = card.querySelector(".line-item-select");
+    if (checkbox) {
+      checkbox.checked = false;
+      checkbox.disabled = true;
+    }
+
+    // If Unassign button doesn't exist, add it
+    if (!card.querySelector(".unassign-item")) {
+      const unassignBtn = document.createElement("button");
+      unassignBtn.className = "btn unassign-item";
+      unassignBtn.textContent = "Unassign";
+      unassignBtn.addEventListener("click", () => unassignItem(card));
+      card.querySelector(".card-header").appendChild(unassignBtn);
+    }
+  }
+});
   
       showToast("✅ Items assigned successfully!");
       updatePage(); // Refresh totals and page
@@ -1219,21 +1229,35 @@ const selectedItems = Array.from(document.querySelectorAll(".line-item-select:ch
 
 
   
-  function unassignItem(card) {
-    const itemId = card.getAttribute("data-item-id");
-  
-    // Clear the "Assigned to" field in the UI
-    card.setAttribute("data-assigned-to", "");
-    card.querySelector(".vendor-name").textContent = "Unassigned";
-  
-    // Re-enable the checkbox for the item
-    const checkbox = card.querySelector(".line-item-select");
-    checkbox.disabled = false;
-    checkbox.checked = false;
-  
-    // Send API Request to unassign the item
-    clearVendorAssignment(itemId);
+function unassignItem(card) {
+  const itemId = card.getAttribute("data-item-id");
+
+  // Clear the "Assigned to" field in the UI
+  card.setAttribute("data-assigned-to", "");
+  card.querySelector(".vendor-name").textContent = "Unassigned";
+
+  // Re-enable the checkbox for the item
+  const checkbox = card.querySelector(".line-item-select");
+  checkbox.disabled = false;
+  checkbox.checked = false;
+
+  // Remove the Unassign button
+  const unassignBtn = card.querySelector(".unassign-item");
+  if (unassignBtn) unassignBtn.remove();
+
+  // If the Assign checkbox is missing, add it back (if needed)
+  if (!checkbox) {
+    const header = card.querySelector(".card-header");
+    const assignCheckbox = document.createElement("input");
+    assignCheckbox.type = "checkbox";
+    assignCheckbox.className = "line-item-select";
+    header.insertBefore(assignCheckbox, header.firstChild);
+    assignCheckbox.addEventListener("change", updateSelectedLaborCost);
   }
+
+  // Send API Request to unassign the item
+  clearVendorAssignment(itemId);
+}
   
   async function clearVendorAssignment(itemId) {
     showLoader(); // 👈 START
