@@ -970,7 +970,7 @@ document.addEventListener("click", function handleOutsideClick(e) {
     unassignButton.addEventListener("click", () => unassignItem(card));
   }
 
- // Delete Line Item
+// Delete Line Item
 card.querySelector(".delete-line-item").addEventListener("click", () => {
   const assignedTo = card.getAttribute("data-assigned-to");
   if (assignedTo && /^[a-f\d]{24}$/i.test(assignedTo)) {
@@ -1198,7 +1198,7 @@ selectedItems.forEach((item) => {
     }
   }
 });
-      // 👇 Add this line after the forEach block
+// 👇 Add this line after the forEach block
 updateSelectedLaborCost();
   
       showToast("✅ Items assigned successfully!");
@@ -1528,6 +1528,8 @@ function updatePage() {
   }
 
 
+
+
    async function exportEstimateToExcel() {
     showLoader(); // 👈 START
     try {
@@ -1715,6 +1717,7 @@ document.getElementById("assign-vendor-btn").onclick = async function() {
 
   document.getElementById("cancel-vendor-btn").onclick = hideFloatingVendorSelect;
 })();
+
 
 
 
