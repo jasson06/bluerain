@@ -1070,7 +1070,10 @@ document.querySelectorAll(".category-title span[contenteditable]").forEach(span 
 
 // ✅ Function to Calculate and Display Selected Labor Cost
 function updateSelectedLaborCost() {
-  const selectedItems = document.querySelectorAll(".line-item-select:checked");
+  // Only count checkboxes that are enabled (not assigned)
+  const selectedItems = Array.from(document.querySelectorAll(".line-item-select:checked"))
+    .filter(cb => !cb.disabled);
+
   let totalLaborCost = 0;
 
   selectedItems.forEach(item => {
@@ -1095,7 +1098,8 @@ function updateSelectedLaborCost() {
     document.body.appendChild(floatingLaborCost);
   }
 
-  if (totalLaborCost > 0) {
+  // Hide if no assignable items are selected
+  if (totalLaborCost > 0 && selectedItems.length > 0) {
     floatingLaborCost.style.display = "block";
     floatingLaborCost.textContent = `Selected Labor Cost: $${totalLaborCost.toFixed(2)}`;
   } else {
@@ -1194,6 +1198,8 @@ selectedItems.forEach((item) => {
     }
   }
 });
+      // 👇 Add this line after the forEach block
+updateSelectedLaborCost();
   
       showToast("✅ Items assigned successfully!");
       updatePage(); // Refresh totals and page
