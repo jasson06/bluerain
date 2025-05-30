@@ -282,63 +282,63 @@ window.closePhotoViewer = closePhotoViewer;
 
 
 
-// ✅ Upload Photo (Supports Before & After)
+ // ✅ Upload Photo (Supports Before & After)
 function uploadPhoto(event, itemId, type) {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
+  const files = event.target.files;
+  if (!files || files.length === 0) return;
 
-    const estimateId = new URLSearchParams(window.location.search).get("estimateId");
-    const vendorId = localStorage.getItem("vendorId"); // This might be null if the item is unassigned
+  const estimateId = new URLSearchParams(window.location.search).get("estimateId");
+  const vendorId = localStorage.getItem("vendorId"); // This might be null if the item is unassigned
 
-    if (!estimateId) {
-        showToast("Estimate ID is missing! Please save the estimate first.");
-        return;
-    }
+  if (!estimateId) {
+      showToast("Estimate ID is missing! Please save the estimate first.");
+      return;
+  }
 
-    const formData = new FormData();
-    for (let file of files) {
-        formData.append("photos", file);
-    }
-    formData.append("estimateId", estimateId);
-    formData.append("itemId", itemId);
-    formData.append("type", type);
+  const formData = new FormData();
+  for (let file of files) {
+      formData.append("photos", file);
+  }
+  formData.append("estimateId", estimateId);
+  formData.append("itemId", itemId);
+  formData.append("type", type);
 
-    if (vendorId && vendorId !== "null" && vendorId !== "undefined") {
-        formData.append("vendorId", vendorId);
-    }
+  if (vendorId && vendorId !== "null" && vendorId !== "undefined") {
+      formData.append("vendorId", vendorId);
+  }
 
-    // ✅ Show inline loader in the photo section
-    const containerId = `${type}-photos-${itemId}`;
-    const photoContainer = document.getElementById(containerId);
-    if (photoContainer) {
-        photoContainer.innerHTML = `
-            <div style="display: flex; justify-content: center; align-items: center; min-height: 100px;">
-                <div style="border: 4px solid #f3f3f3; border-top: 4px solid #0ea5e9; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;"></div>
-            </div>
-        `;
-    }
+  // ✅ Show inline loader in the photo section
+  const containerId = `${type}-photos-${itemId}`;
+  const photoContainer = document.getElementById(containerId);
+  if (photoContainer) {
+      photoContainer.innerHTML = `
+          <div style="display: flex; justify-content: center; align-items: center; min-height: 100px;">
+              <div style="border: 4px solid #f3f3f3; border-top: 4px solid #0ea5e9; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;"></div>
+          </div>
+      `;
+  }
 
-    fetch("/api/upload-photos", { method: "POST", body: formData })
-        .then(response => response.json())
-        .then(result => {
-            if (!result || !result.photoUrls) {
-                throw new Error(result.message || "Invalid server response.");
-            }
+  fetch("/api/upload-photos", { method: "POST", body: formData })
+      .then(response => response.json())
+      .then(result => {
+          if (!result || !result.photoUrls) {
+              throw new Error(result.message || "Invalid server response.");
+          }
 
-            console.log(`✅ Uploaded ${files.length} Photo(s):`, result.photoUrls);
-            showToast(`✅ ${files.length} Photo(s) uploaded successfully!`);
+          console.log(`✅ Uploaded ${files.length} Photo(s):`, result.photoUrls);
+          showToast(`✅ ${files.length} Photo(s) uploaded successfully!`);
 
-            // ✅ Immediately refresh the photos
-            setTimeout(() => updatePhotoSection(itemId, type), 500);
-        })
-        .catch(error => {
-            console.error("❌ Photo Upload Error:", error);
-            showToast("Failed to upload photos.");
-            // Clear loader on error
-            if (photoContainer) {
-                photoContainer.innerHTML = `<p class="placeholder">Error uploading photos.</p>`;
-            }
-        });
+          // ✅ Immediately refresh the photos
+          setTimeout(() => updatePhotoSection(itemId, type), 500);
+      })
+      .catch(error => {
+          console.error("❌ Photo Upload Error:", error);
+          showToast("Failed to upload photos.");
+          // Clear loader on error
+          if (photoContainer) {
+              photoContainer.innerHTML = `<p class="placeholder">Error uploading photos.</p>`;
+          }
+      });
 }
 
 
@@ -589,7 +589,7 @@ async function deletePhoto(itemId, photoUrl, type) {
           if (photoContainer) {
               photoContainer.innerHTML = `<p class="placeholder">Error uploading photos.</p>`;
           }
-          
+
     }
 }
 
@@ -738,6 +738,19 @@ function refreshLineItems(categories) {
     return header;
   }
 
+
+// Add this near the top, after showToast/hideLoader etc.
+let autoSaveTimeout;
+function autoSaveEstimate() {
+  clearTimeout(autoSaveTimeout);
+  autoSaveTimeout = setTimeout(() => {
+    saveEstimate();
+    showToast("Auto-saved!");
+  }, 1200); // 1.2 seconds debounce
+}
+
+
+
 // Add Line Item Card Function
 function addLineItemCard(item = {}, categoryHeader = null) {
   const card = document.createElement("div");
@@ -791,13 +804,13 @@ function addLineItemCard(item = {}, categoryHeader = null) {
 
                       <div class="detail">
         <label>Labor Cost</label>
-        <input type="text" class="item-labor-cost" value="$${((item.quantity || 1) * (item.unitPrice || 0) * 0.37).toFixed(2)}" readonly>
+        <input type="number" class="item-labor-cost" value="${item.laborCost !== undefined ? item.laborCost : ((item.quantity || 1) * (item.unitPrice || 0) * 0.37).toFixed(2)}" min="0" step="0.01">
       </div>
     
 
           <div class="detail">
         <label>Material Cost</label>
-        <input type="text" class="item-material-cost" value="$${((item.quantity || 1) * (item.unitPrice || 0) * 0.4).toFixed(2)}" readonly>
+        <input type="number" class="item-material-cost" value="${item.materialCost !== undefined ? item.materialCost : ((item.quantity || 1) * (item.unitPrice || 0) * 0.4).toFixed(2)}" min="0" step="0.01">
       </div>
     </div>
 
@@ -965,32 +978,63 @@ document.addEventListener("click", function handleOutsideClick(e) {
 
   });
 
-   // Update Item Total on Quantity or Price Change
-   const quantityInput = card.querySelector(".item-quantity");
+    // Update Item Total on Quantity or Price Change
+  const quantityInput = card.querySelector(".item-quantity");
   const priceInput = card.querySelector(".item-price");
   const laborCostInput = card.querySelector(".item-labor-cost");
   const materialCostInput = card.querySelector(".item-material-cost");
   const totalDisplay = card.querySelector(".item-total");
   const checkbox = card.querySelector(".line-item-select");
   checkbox.addEventListener("change", updateSelectedLaborCost);
-  
+
   function updateCardValues() {
     const quantity = parseInt(quantityInput.value, 10) || 0;
     const price = parseFloat(priceInput.value) || 0;
     const total = quantity * price;
-    const laborCost = total * 0.37;
-    const materialCost = total * 0.4;
+
+    // Only auto-update if not manually edited
+    if (laborCostInput.getAttribute("data-manual") !== "true") {
+      laborCostInput.value = (total * 0.37).toFixed(2);
+    }
+    if (materialCostInput.getAttribute("data-manual") !== "true") {
+      materialCostInput.value = (total * 0.4).toFixed(2);
+    }
 
     totalDisplay.textContent = `$${total.toFixed(2)}`;
-    laborCostInput.value = `$${laborCost.toFixed(2)}`;
-    materialCostInput.value = `$${materialCost.toFixed(2)}`;
     updateSelectedLaborCost();
-
     updateSummary();
+    autoSaveEstimate();
   }
 
+  // When user edits labor/material cost, set manual flag
+  laborCostInput.addEventListener("input", () => {
+    laborCostInput.setAttribute("data-manual", "true");
+    autoSaveEstimate();
+  });
+  materialCostInput.addEventListener("input", () => {
+    materialCostInput.setAttribute("data-manual", "true");
+    autoSaveEstimate();
+  });
+
+  // When quantity or price changes, recalculate if not manually overridden
   quantityInput.addEventListener("input", updateCardValues);
   priceInput.addEventListener("input", updateCardValues);
+// Auto-save when editing estimate title
+document.getElementById("estimate-title").addEventListener("input", autoSaveEstimate);
+
+// Auto-save when editing any category name (contenteditable)
+document.querySelectorAll(".category-title span[contenteditable]").forEach(span => {
+  span.addEventListener("input", autoSaveEstimate);
+});
+  // Auto-save on all editable fields
+  [
+    
+    card.querySelector(".item-name"),
+    card.querySelector(".item-description"),
+    card.querySelector(".item-cost-code")
+  ].forEach(input => {
+    if (input) input.addEventListener("input", autoSaveEstimate);
+  });
 
   // Append the card to the container
   const lineItemsContainer = document.getElementById("line-items-cards");
@@ -1069,41 +1113,41 @@ function updateSelectedLaborCost() {
       return;
     }
   
-    const selectedItems = Array.from(document.querySelectorAll(".line-item-select:checked")).map((checkbox) => {
-      const card = checkbox.closest(".line-item-card");
-      const itemId = card.getAttribute("data-item-id");
+const selectedItems = Array.from(document.querySelectorAll(".line-item-select:checked")).map((checkbox) => {
+  const card = checkbox.closest(".line-item-card");
+  const itemId = card.getAttribute("data-item-id");
+
+  const name = card.querySelector(".item-name").value.trim();
+  const description = card.querySelector(".item-description").value.trim() || "No description provided";
+  const quantity = parseInt(card.querySelector(".item-quantity").value, 10) || 1;
+  const unitPrice = parseFloat(card.querySelector(".item-price").value) || 0;
+  const laborCost = parseFloat(card.querySelector(".item-labor-cost").value) || 0;
+  const total = laborCost; // <-- total sent to vendor is now labor cost
+
+  let costCode = card.querySelector(".item-cost-code")?.value.trim() || "Uncategorized";
+  if (!costCode || costCode === "Uncategorized") {
+    const categoryHeader = card.previousElementSibling?.classList.contains("category-header")
+      ? card.previousElementSibling
+      : card.closest(".category-header");
+    costCode = categoryHeader?.querySelector(".category-title span")?.textContent?.trim() || "Uncategorized";
+  }
+
+  const itemObj = {
+    itemId,
+    name,
+    description,
+    quantity,
+    unitPrice,
+    total,        // Now total is the labor cost
+    laborCost,    // Actual labor cost field
+    assignedTo: vendorId,
+    costCode
+  };
+
   
-      const name = card.querySelector(".item-name").value.trim();
-      const description = card.querySelector(".item-description").value.trim() || "No description provided";
-      const quantity = parseInt(card.querySelector(".item-quantity").value, 10) || 1;
-      const unitPrice = parseFloat(card.querySelector(".item-price").value) || 0;
-      const total = quantity * unitPrice;
-  
-      // ✅ Calculate Labor Cost (40% of Total)
-      const laborCost = total * 0.37;
-  
-      // ✅ If cost code exists on the card, grab it
-      let costCode = card.querySelector(".item-cost-code")?.value.trim() || "Uncategorized";
-  
-      // 🔥 If cost code is missing, fallback to category name
-      if (!costCode || costCode === "Uncategorized") {
-        const categoryHeader = card.previousElementSibling?.classList.contains("category-header")
-          ? card.previousElementSibling
-          : card.closest(".category-header");
-        costCode = categoryHeader?.querySelector(".category-title span")?.textContent?.trim() || "Uncategorized";
-      }
-  
-      return {
-        itemId,
-        name,
-        description,
-        quantity,
-        unitPrice,
-        total: laborCost, // ✅ Assign Labor Cost as the new "total"
-        assignedTo: vendorId,
-        costCode
-      };
-    });
+
+  return itemObj;
+});
   
     if (selectedItems.length === 0) {
       showToast("No items selected for assignment.");
@@ -1145,6 +1189,7 @@ function updateSelectedLaborCost() {
       hideLoader();
     }
   }
+  
   
 
 
@@ -1208,6 +1253,23 @@ function updateSelectedLaborCost() {
   }
   
   
+function refreshLineItemCard(updatedItem) {
+  // Find the card by data-item-id
+  const card = document.querySelector(`.line-item-card[data-item-id="${updatedItem._id}"]`);
+  if (!card) return;
+
+  // Update fields (add more as needed)
+  card.querySelector(".item-name").value = updatedItem.name || "";
+  card.querySelector(".item-description").value = updatedItem.description || "";
+  card.querySelector(".item-quantity").value = updatedItem.quantity || 1;
+  card.querySelector(".item-price").value = updatedItem.unitPrice || 0;
+  card.querySelector(".item-labor-cost").value = updatedItem.laborCost !== undefined ? updatedItem.laborCost : ((updatedItem.quantity || 1) * (updatedItem.unitPrice || 0) * 0.37).toFixed(2);
+  card.querySelector(".item-material-cost").value = updatedItem.materialCost !== undefined ? updatedItem.materialCost : ((updatedItem.quantity || 1) * (updatedItem.unitPrice || 0) * 0.4).toFixed(2);
+  card.querySelector(".item-cost-code").value = updatedItem.costCode || "";
+  card.querySelector(".item-total").textContent = `$${((updatedItem.quantity || 1) * (updatedItem.unitPrice || 0)).toFixed(2)}`;
+  // Optionally update status, assignedTo, etc.
+}
+
 
 
 // Save Estimate
@@ -1236,12 +1298,14 @@ async function saveEstimate() {
         description: element.querySelector(".item-description").value.trim() || "",
         quantity: parseInt(element.querySelector(".item-quantity").value, 10) || 1,
         unitPrice: parseFloat(element.querySelector(".item-price").value) || 0,
+        laborCost: parseFloat(element.querySelector(".item-labor-cost").value) || 0,
+        materialCost: parseFloat(element.querySelector(".item-material-cost").value) || 0,
         total: (
           (parseInt(element.querySelector(".item-quantity").value, 10) || 1) *
           (parseFloat(element.querySelector(".item-price").value) || 0)
         ),
         assignedTo,
-        costCode: element.querySelector(".item-cost-code")?.value.trim() || "Uncategorized" // ✅ NEW: Capture cost code
+        costCode: element.querySelector(".item-cost-code")?.value.trim() || "Uncategorized"
       };
 
       const beforePhotos = Array.from(element.querySelectorAll(".photo-before")).map(img => img.src);
@@ -1268,7 +1332,7 @@ async function saveEstimate() {
   });
 
   const tax = parseFloat(document.getElementById("tax-input").value) || 0;
-  showLoader(); // 👈 START
+
   try {
     let existingEstimate = null;
     if (estimateId) {
@@ -1291,7 +1355,7 @@ async function saveEstimate() {
             total: item.quantity * item.unitPrice,
             photos: item.photos ?? existingItem?.photos,
             assignedTo: item.assignedTo || existingItem?.assignedTo,
-            costCode: item.costCode || existingItem?.costCode || "Uncategorized" // ✅ Merge or fallback
+            costCode: item.costCode || existingItem?.costCode || "Uncategorized"
           };
         }),
       };
@@ -1322,19 +1386,68 @@ async function saveEstimate() {
     if (!estimateId && result.estimate && result.estimate._id) {
       estimateId = result.estimate._id;
       window.history.pushState({}, "", `?projectId=${projectId}&estimateId=${estimateId}`);
+      await loadEstimateDetails(); // For new estimates, load everything
+      updatePage();
+      return;
     }
 
-    await loadEstimateDetails();
+    // --- After a successful save, update vendor assignments using DOM values ---
+    const patchPromises = [];
+    document.querySelectorAll(".line-item-card").forEach(card => {
+      const assignedTo = card.getAttribute("data-assigned-to");
+      if (assignedTo && /^[a-f\d]{24}$/i.test(assignedTo)) {
+        const itemId = card.getAttribute("data-item-id");
+        const name = card.querySelector(".item-name").value.trim();
+        const description = card.querySelector(".item-description").value.trim() || "";
+        const quantity = parseInt(card.querySelector(".item-quantity").value, 10) || 1;
+        const unitPrice = parseFloat(card.querySelector(".item-price").value) || 0;
+        const laborCost = parseFloat(card.querySelector(".item-labor-cost").value) || 0;
+        const materialCost = parseFloat(card.querySelector(".item-material-cost").value) || 0;
+        const costCode = card.querySelector(".item-cost-code")?.value.trim() || "Uncategorized";
+        const status = "new"; // Or get from DOM if editable
+        const photos = undefined; // Add logic if you want to sync photos
+        const qualityControl = undefined; // Add logic if you want to sync QC
+
+        patchPromises.push(
+          fetch(`/api/vendors/${assignedTo}/assigned-items/update`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              projectId,
+              estimateId,
+              item: {
+                itemId,
+                name,
+                description,
+                quantity,
+                unitPrice,
+                laborCost,
+                materialCost,
+                total: laborCost, // Always use laborCost as total for vendor
+                costCode,
+                status,
+                photos,
+                qualityControl
+              }
+            })
+          }).then(res => {
+            if (!res.ok) {
+              console.warn("Failed to update assigned item for vendor:", assignedTo, itemId);
+            }
+          }).catch(err => {
+            console.warn("Failed to update assigned item for vendor:", err);
+          })
+        );
+      }
+    });
+    await Promise.all(patchPromises);
+
     updatePage();
   } catch (error) {
     console.error("Error saving estimate:", error);
     showToast("Error saving the estimate. Please try again.");
-  } finally {
-    hideLoader(); // 👈 END
   }
 }
-
-
 
 
 
