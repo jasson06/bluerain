@@ -6,7 +6,7 @@
   <title>Estimate Edit</title>
 
  
-  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="./estimate-edit.js" defer></script>
   <style>
@@ -217,7 +217,7 @@
 /* ✅ Photo Section Layout */
 .photo-section {
     display: flex;
-     align-items: flex-start;
+    align-items: flex-start;
     justify-content: flex-start;
     flex-wrap: wrap; /* Ensures responsiveness */
 }
@@ -390,6 +390,9 @@
       color: #555;
     }
 
+
+
+    
     /* Line Items Section */
     #estimate-section h2 {
       
@@ -804,13 +807,6 @@ button:disabled {
 }
 
 
-
-
-.category-block {
-  position: relative;
-  margin-bottom: 32px;
-}
-
 #button-action {
   position: sticky;
   top: 0;
@@ -830,6 +826,14 @@ button:disabled {
   border-radius: 14px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
+
+
+.category-block {
+  position: relative;
+  margin-bottom: 32px;
+}
+
+
 
 .category-header::after {
   content: "";
@@ -983,6 +987,9 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 
 
 
+
+
+
 /* ✅ Hide default hover tooltip on iPhones */
 @media (min-width: 480px) {
   .custom-tooltip {
@@ -994,17 +1001,15 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 @media (max-width: 480px) {
   .vendor-name::after {
     display: none !important;
-  }
-  
+  } 
 }
 
-    @media (max-width: 415px) {
+@media (max-width: 415px) {
  .category-header {
    top: 125px; /* adjust to match the height of #button-action */
 }
   
 }
-    
 /* Tooltip Styling */
 .vendor-name::after {
  content: attr(data-fullname);
@@ -1063,6 +1068,54 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 }
 
 
+.drag-handle {
+  cursor: grab;
+  font-size: 18px;
+  margin-left: 10px;
+}
+
+.sortable-ghost {
+  opacity: 0.5;
+  background-color: #f0f0f0;
+  border: 2px dashed #0ea5e9;
+}
+
+.category-name {
+  outline: none;
+  font-weight: bold;
+  font-size: 1.1rem;
+  padding: 2px 4px;
+  min-width: 100px;
+  display: flex;
+  margin-left: -100px;
+}
+
+#loader {
+  transition: opacity 0.3s ease;
+}
+
+#loader.hide {
+  opacity: 0;
+  pointer-events: none;
+}
+
+
+.photo-inline-loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100px;
+}
+
+.photo-inline-loader .loader {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #0ea5e9;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+}
+
 #floating-vendor-select .btn {
   background: linear-gradient(90deg, #007bff 60%, #0056b3 100%);
   color: #fff;
@@ -1097,8 +1150,9 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 
 
 
+
   <div class="container">
-    <header class="estimate-header">
+    <header class="estimate-header"> 
       <div id="project-details">
         <h2 id="project-title"></h2>
         <p id="project-code"></p>
@@ -1109,13 +1163,13 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
       </div>
     </header>
 
-        <div class="estimate-title-wrapper">
+
+    <div class="estimate-title-wrapper">
       <label for="estimate-title"><strong>Estimate Title:</strong></label>
       <input type="text" id="estimate-title" placeholder="e.g., Kitchen Remodel Estimate" />
     </div>
-
-
-    <section id="button-action">
+    
+<section id="button-action">
   <button  class="export-estimate-excel-button"id="export-estimate-excel">Export</button>
   <button class="add-line-item-button" id="add-line-item">+ Add Line Item</button>
   <button class="add-category-header-button" id="add-category-header">+ Add Room</button>
@@ -1123,7 +1177,9 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 
     <section id="estimate-section">
       <h2>Line Items</h2>
-          <div id="line-items-cards">
+
+    
+      <div id="line-items-cards">
         <!-- Line item cards will be dynamically added here -->
       </div>
     
@@ -1134,6 +1190,8 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
         <input type="number" id="tax-input" placeholder="Enter %" min="0" max="100">
         <p><strong>Total:</strong> <span id="total">0.00</span></p>
       </div>
+
+      
     
       <div class="vendor-assign-section">
         <h3>Assign Selected Items to a Vendor</h3>
@@ -1149,9 +1207,10 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
         <button id="cancel-estimate" class="btn-secondary" onclick="window.location.href = document.referrer">Back</button>
       </div>
     </section>
-     </div>
+    
+  </div>
 
-  <div id="floating-vendor-select" style="display:none; position:fixed; bottom:80px; right:20px; background:#fff; border:1px solid #ccc; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15); padding:16px; z-index:10000;">
+<div id="floating-vendor-select" style="display:none; position:fixed; bottom:80px; right:20px; background:#fff; border:1px solid #ccc; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15); padding:16px; z-index:10000;">
   <label for="floating-vendor-dropdown">Assign to Vendor:</label>
   <select id="floating-vendor-dropdown"></select>
   <button id="assign-vendor-btn" class="btn">Assign</button>
@@ -1206,7 +1265,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   100% { transform: rotate(360deg); }
 }
 </style>
+
   
 </body>
 </html>
-
