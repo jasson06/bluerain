@@ -1307,6 +1307,7 @@ function refreshLineItemCard(updatedItem) {
 
 
 
+
 // Save Estimate
 async function saveEstimate() {
   const lineItems = [];
@@ -1439,19 +1440,23 @@ async function saveEstimate() {
         const laborCost = parseFloat(card.querySelector(".item-labor-cost").value) || 0;
         const materialCost = parseFloat(card.querySelector(".item-material-cost").value) || 0;
         const costCode = card.querySelector(".item-cost-code")?.value.trim() || "Uncategorized";
-        const status = "new"; // Or get from DOM if editable
-        const photos = undefined; // Add logic if you want to sync photos
-        const qualityControl = undefined; // Add logic if you want to sync QC
+        const status = "new";
+        const photos = undefined;
+        const qualityControl = undefined;
 
         patchPromises.push(
           fetch(`/api/vendors/${assignedTo}/assigned-items/update`, {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              projectId,
-              estimateId,
-              item: {
-                itemId,
+            headers: {
+              "Content-Type": "application/json",
+              "Cache-Control": "no-cache",
+              "Pragma": "no-cache"
+            },
+body: JSON.stringify({
+  projectId: String(projectId),
+  estimateId: estimateId ? String(estimateId) : undefined,
+  item: {
+    itemId: String(itemId),
                 name,
                 description,
                 quantity,
@@ -1469,6 +1474,7 @@ async function saveEstimate() {
             if (!res.ok) {
               console.warn("Failed to update assigned item for vendor:", assignedTo, itemId);
             }
+            return res.json().catch(() => ({}));
           }).catch(err => {
             console.warn("Failed to update assigned item for vendor:", err);
           })
@@ -1483,7 +1489,6 @@ async function saveEstimate() {
     showToast("Error saving the estimate. Please try again.");
   }
 }
-
 
 
 
