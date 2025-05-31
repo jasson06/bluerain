@@ -683,7 +683,8 @@ const invoiceSchema = new mongoose.Schema({
       description: String,
       quantity: Number,
       unitPrice: Number,
-      costCode: String
+      costCode: String,
+      total: { type: Number, required: true }
     }
   ],
   total: Number,
@@ -3746,12 +3747,22 @@ app.post('/api/create', async (req, res) => {
       total,
       from,
       to,
-      vendorId // ✅ expecting this from frontend (set it in the body or headers)
+      vendorId
     } = req.body;
 
     if (!projectId || !invoiceNumber || !lineItems?.length) {
       return res.status(400).json({ message: 'Missing required invoice fields.' });
     }
+
+    // Ensure each line item has a total (prefer laborCost if present)
+    const lineItemsWithTotal = lineItems.map(item => ({
+      ...item,
+      total: typeof item.total !== "undefined"
+        ? Number(item.total)
+        : (typeof item.laborCost !== "undefined"
+            ? Number(item.laborCost)
+            : (Number(item.quantity) * (parseFloat(item.unitPrice) || 0)))
+    }));
 
     const invoice = new Invoice({
       vendorId: vendorId ? new mongoose.Types.ObjectId(vendorId) : undefined,
@@ -3761,8 +3772,8 @@ app.post('/api/create', async (req, res) => {
       date,
       from,
       to,
-      lineItems,
-      total
+      lineItems: lineItemsWithTotal,
+      total: lineItemsWithTotal.reduce((sum, i) => sum + (parseFloat(i.total) || 0), 0)
     });
 
     const savedInvoice = await invoice.save();
