@@ -816,29 +816,28 @@ function addLineItemCard(item = {}, categoryHeader = null) {
 
 
 
-    <div class="photo-section">
-      <div class="photo-preview">
-        <h5>Before Photos</h5>
-        <div id="before-photos-${card.getAttribute("data-item-id")}">
-          ${generatePhotoPreview(item.photos.before, card.getAttribute("data-item-id"), "before")}
-        </div>
-        <label class="upload-btn">
-          <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'before')">
-          +
-        </label>
-      </div>
-
-      <div class="photo-preview">
-        <h5>After Photos</h5>
-        <div id="after-photos-${card.getAttribute("data-item-id")}">
-          ${generatePhotoPreview(item.photos.after, card.getAttribute("data-item-id"), "after")}
-        </div>
-        <label class="upload-btn">
-          <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'after')">
-          +
-        </label>
-      </div>
+    <!-- Collapsible Photo Section -->
+<div class="photo-toggle-section-modern">
+  <button class="toggle-photos-btn-modern">📸 Show Photos</button>
+  <div class="photo-section-modern" style="display: none;">
+    <div class="photo-preview-modern">
+      <h5>Before Photos</h5>
+      <div id="before-photos-${card.getAttribute("data-item-id")}"></div>
+      <label class="upload-btn-modern">
+        <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'before')">
+        <span>＋ Add</span>
+      </label>
     </div>
+    <div class="photo-preview-modern">
+      <h5>After Photos</h5>
+      <div id="after-photos-${card.getAttribute("data-item-id")}"></div>
+      <label class="upload-btn-modern">
+        <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'after')">
+        <span>＋ Add</span>
+      </label>
+    </div>
+  </div>
+</div>
 
     <div class="status-container">
       <span>Status:<span class="item-status ${statusClass}">${status.toUpperCase()}</span></span>
@@ -920,7 +919,26 @@ document.addEventListener("click", function handleOutsideClick(e) {
 });
 
 
+ // Collapsible photo section logic
+const toggleBtn = card.querySelector('.toggle-photos-btn-modern');
+const photoSection = card.querySelector('.photo-section-modern');
+  let photosLoaded = false;
 
+  toggleBtn.addEventListener('click', async () => {
+    if (photoSection.style.display === "none") {
+      photoSection.style.display = "flex";
+      toggleBtn.textContent = "Hide Photos";
+      if (!photosLoaded) {
+        // Load photos only when first opened
+        await updatePhotoSection(card.getAttribute("data-item-id"), "before");
+        await updatePhotoSection(card.getAttribute("data-item-id"), "after");
+        photosLoaded = true;
+      }
+    } else {
+      photoSection.style.display = "none";
+      toggleBtn.textContent = "Show Photos";
+    }
+  });
  
 
 // ✅ Enable vendor name 
