@@ -962,16 +962,12 @@ function addItemToTable(item, isImported = false) {
   const cleaned = {
     name: item.name,
     description: item.description,
-    quantity: Number(item.quantity),
+    quantity: Number(item.quantity) || 0,
     costCode: item.costCode || 'Uncategorized',
-    unitPrice: parseFloat(item.unitPrice).toFixed(2),
-    // Always use laborCost if present, even if total exists
-    total: typeof item.laborCost !== "undefined"
-      ? parseFloat(item.laborCost).toFixed(2)
-      : (typeof item.total !== "undefined"
-          ? parseFloat(item.total).toFixed(2)
-          : parseFloat(item.quantity * item.unitPrice).toFixed(2))
-          
+    unitPrice: parseFloat(item.unitPrice) || 0,
+    total: isImported
+      ? (typeof item.laborCost !== "undefined" ? parseFloat(item.laborCost) || 0 : 0)
+      : (Number(item.quantity) * (parseFloat(item.unitPrice) || 0))
   };
 
   console.log(`✅ Item Added - ${isImported ? "Imported" : "Manual"}:`, cleaned);
@@ -992,8 +988,7 @@ function renderLineItems() {
       <td>${item.name}</td>
       <td>${item.description}</td>
       <td>${item.quantity}</td>
-      
-      <td>$${item.total}</td>
+      <td>$${(parseFloat(item.total) || 0).toFixed(2)}</td>
       <td>
         <div class="dropdown">
           <button class="dropdown-btn">⋮</button>
@@ -1006,9 +1001,10 @@ function renderLineItems() {
     `;
     tbody.appendChild(row);
   });
+}
 
   
-}
+
 
 
 
@@ -1073,7 +1069,8 @@ function openInvoicePreview(savedInvoice) {
     ? new Date(savedInvoice.date).toLocaleDateString()
     : 'N/A';
 
-  const total = lineItems.reduce((sum, i) => sum + (parseFloat(i.unitPrice) * parseFloat(i.quantity)), 0);
+  // 👇 Use item.total (which is laborCost for imported items)
+  const total = lineItems.reduce((sum, i) => sum + (parseFloat(i.total) || 0), 0);
   const tax = 0;
   const grandTotal = total + tax;
 
@@ -1096,22 +1093,28 @@ function openInvoicePreview(savedInvoice) {
             <th style="border: 1px solid #ccc; padding: 10px;">ITEM</th>
             <th style="border: 1px solid #ccc; padding: 10px;">DESCRIPTION</th>
             <th style="border: 1px solid #ccc; padding: 10px;">QUANTITY</th>
-            <th style="border: 1px solid #ccc; padding: 10px;">UNIT PRICE</th>
+            
             <th style="border: 1px solid #ccc; padding: 10px;">TOTAL</th>
           </tr>
         </thead>
         <tbody>
           ${lineItems.map(item => {
             const unitPrice = parseFloat(item.unitPrice) || 0;
-            const total = (unitPrice * item.quantity).toFixed(2);
+            const total = (parseFloat(item.total) || 0).toFixed(2); // Always use .total
             return `
               <tr>
                 <td style="border: 1px solid #ccc; padding: 8px;">${item.costCode || 'N/A'}</td>
                 <td style="border: 1px solid #ccc; padding: 8px;">${item.name}</td>
                 <td style="border: 1px solid #ccc; padding: 8px;">${item.description}</td>
                 <td style="border: 1px solid #ccc; padding: 8px;">${item.quantity}</td>
-                <td style="border: 1px solid #ccc; padding: 8px;">$${unitPrice.toFixed(2)}</td>
-                <td style="border: 1px solid #ccc; padding: 8px;">$${total}</td>
+                
+                <td style="border: 1px solid #ccc; padding: 8px;">$${(
+  typeof item.total !== "undefined"
+    ? parseFloat(item.total)
+    : (typeof item.laborCost !== "undefined"
+        ? parseFloat(item.laborCost)
+        : (parseFloat(item.unitPrice) * parseFloat(item.quantity) || 0))
+).toFixed(2)}</td>
               </tr>
             `;
           }).join('')}
@@ -1294,14 +1297,24 @@ async function submitInvoice() {
   const todayISO = new Date().toISOString();
   const invoiceDate = inputDate || todayISO;
 
+  // Ensure each line item has a total property
+  const lineItemsWithTotal = lineItems.map(item => ({
+    ...item,
+    total: typeof item.total !== "undefined"
+      ? Number(item.total)
+      : (typeof item.laborCost !== "undefined"
+          ? Number(item.laborCost)
+          : (Number(item.quantity) * (parseFloat(item.unitPrice) || 0)))
+  }));
+
   const invoiceData = {
     vendorId,
     projectId: document.getElementById('projectSelect').value,
     email: document.getElementById('invoiceEmail').value || "jleonel3915@gmail.com",
     invoiceNumber: generateInvoiceNumber(),
     date: invoiceDate,
-    lineItems,
-    total: lineItems.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0),
+    lineItems: lineItemsWithTotal, // <-- use the new array
+    total: lineItemsWithTotal.reduce((sum, i) => sum + (parseFloat(i.total) || 0), 0),
     from: {
       company: document.getElementById('companyName').value,
       address: document.getElementById('companyAddress').value,
@@ -1585,22 +1598,22 @@ async function openSavedInvoiceModal(invoiceNumber) {
               <th style="border: 1px solid #ccc; padding: 10px;">ITEM</th>
               <th style="border: 1px solid #ccc; padding: 10px;">DESCRIPTION</th>
               <th style="border: 1px solid #ccc; padding: 10px;">Qty</th>
-              <th style="border: 1px solid #ccc; padding: 10px;">UNIT COST</th>
+             
               <th style="border: 1px solid #ccc; padding: 10px;">TOTAL</th>
             </tr>
           </thead>
-          <tbody>
-            ${invoice.lineItems.map(item => `
-              <tr>
-                <td style="border: 1px solid #ccc; padding: 8px;">${item.costCode || 'N/A'}</td>
-                <td style="border: 1px solid #ccc; padding: 8px;">${item.name}</td>
-                <td style="border: 1px solid #ccc; padding: 8px;">${item.description}</td>
-                <td style="border: 1px solid #ccc; padding: 8px;">${item.quantity}</td>
-                <td style="border: 1px solid #ccc; padding: 8px;">$${item.unitPrice.toFixed(2)}</td>
-                <td style="border: 1px solid #ccc; padding: 8px;">$${(item.unitPrice * item.quantity).toFixed(2)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
+<tbody>
+  ${invoice.lineItems.map(item => `
+    <tr>
+      <td style="border: 1px solid #ccc; padding: 8px;">${item.costCode || 'N/A'}</td>
+      <td style="border: 1px solid #ccc; padding: 8px;">${item.name}</td>
+      <td style="border: 1px solid #ccc; padding: 8px;">${item.description}</td>
+      <td style="border: 1px solid #ccc; padding: 8px;">${item.quantity}</td>
+      
+      <td style="border: 1px solid #ccc; padding: 8px;">$${(parseFloat(item.total) || 0).toFixed(2)}</td>
+    </tr>
+  `).join('')}
+</tbody>
         </table>
 
         <div style="margin-top: 30px; border: 1px solid #ccc; border-radius: 10px; padding: 20px; background: #f9fbfd;">
