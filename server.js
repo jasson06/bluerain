@@ -2282,50 +2282,62 @@ app.post('/api/vendors/:vendorId/assign-item', async (req, res) => {
  
 
 app.patch("/api/vendors/:vendorId/assigned-items/update", async (req, res) => {
-  console.log("PATCH called", req.body); // Debug log
   const { vendorId } = req.params;
   const { projectId, estimateId, item } = req.body;
 
-  try {
-    const vendor = await Vendor.findById(vendorId);
-    if (!vendor) return res.status(404).json({ message: "Vendor not found." });
+  if (!vendorId || !projectId || !item || !item.itemId) {
+    return res.status(400).json({ message: "Missing required fields." });
+  }
 
-    // Try to match with estimateId, fallback to just projectId+itemId
-    let assignedItem = vendor.assignedItems.find(i =>
-      i.projectId?.toString() === projectId &&
-      i.estimateId?.toString() === estimateId &&
-      i.itemId?.toString() === item.itemId
+  // Convert all IDs to strings for reliable matching
+  const itemIdStr = item.itemId.toString();
+  const projectIdStr = projectId.toString();
+  const estimateIdStr = estimateId ? estimateId.toString() : undefined;
+
+  try {
+    // Find the vendor
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) {
+      return res.status(404).json({ message: "Vendor not found." });
+    }
+
+    // Find the correct assigned item (match all IDs as strings)
+    let assignedItem = vendor.assignedItems.find(ai =>
+      ai.itemId.toString() === itemIdStr &&
+      ai.projectId?.toString() === projectIdStr &&
+      (!estimateIdStr || ai.estimateId?.toString() === estimateIdStr)
     );
-    if (!assignedItem) {
-      assignedItem = vendor.assignedItems.find(i =>
-        i.projectId?.toString() === projectId &&
-        i.itemId?.toString() === item.itemId
+
+    // If not found, try without estimateId (for backward compatibility)
+    if (!assignedItem && estimateIdStr) {
+      assignedItem = vendor.assignedItems.find(ai =>
+        ai.itemId.toString() === itemIdStr &&
+        ai.projectId?.toString() === projectIdStr
       );
     }
+
     if (!assignedItem) {
-      console.warn("Assigned item not found for update:", { projectId, estimateId, itemId: item.itemId });
+      console.warn("Assigned item not found for update:", { vendorId, projectIdStr, estimateIdStr, itemIdStr });
       return res.status(404).json({ message: "Assigned item not found." });
     }
 
     // Update all relevant fields
-    assignedItem.name = item.name;
-    assignedItem.description = item.description;
-    assignedItem.quantity = item.quantity;
-    assignedItem.unitPrice = item.unitPrice;
-    assignedItem.laborCost = item.laborCost;
-    assignedItem.materialCost = item.materialCost;
-    assignedItem.total = item.laborCost; // Always use laborCost as total
-    assignedItem.costCode = item.costCode;
-    assignedItem.status = item.status;
-    assignedItem.photos = item.photos;
-    assignedItem.qualityControl = item.qualityControl;
+    assignedItem.name = item.name || assignedItem.name || "Unnamed";
+    assignedItem.description = item.description || assignedItem.description || "";
+    assignedItem.quantity = typeof item.quantity === "number" ? item.quantity : assignedItem.quantity || 1;
+    assignedItem.unitPrice = typeof item.unitPrice === "number" ? item.unitPrice : assignedItem.unitPrice || 0;
+    assignedItem.laborCost = typeof item.laborCost === "number" ? item.laborCost : assignedItem.laborCost || 0;
+    assignedItem.materialCost = typeof item.materialCost === "number" ? item.materialCost : assignedItem.materialCost || 0;
+    assignedItem.total = typeof item.total === "number" ? item.total : assignedItem.laborCost || 0; // Use laborCost as total if not provided
+    assignedItem.costCode = item.costCode || assignedItem.costCode || "Uncategorized";
+    assignedItem.status = item.status || assignedItem.status || "new";
+    assignedItem.photos = item.photos || assignedItem.photos || { before: [], after: [] };
+    assignedItem.qualityControl = item.qualityControl || assignedItem.qualityControl || { status: "pending" };
     assignedItem.updatedAt = new Date();
-    assignedItem.estimateId = estimateId; // Ensure estimateId is set
-
-            // 👇 THIS IS THE CRUCIAL LINE
-    vendor.markModified('assignedItems');
+    assignedItem.estimateId = estimateIdStr || assignedItem.estimateId;
 
     await vendor.save();
+
     res.json({ message: "Assigned item updated", assignedItem });
   } catch (error) {
     console.error("Error updating assigned item:", error);
