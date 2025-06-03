@@ -1068,22 +1068,40 @@ document.querySelectorAll(".category-title span[contenteditable]").forEach(span 
   }
 }
   // Update Summary Function
-  function updateSummary() {
-    const lineItems = document.querySelectorAll(".line-item-card");
-    let subtotal = 0;
-  
-    lineItems.forEach((card) => {
-      const quantity = parseInt(card.querySelector(".item-quantity").value, 10) || 0;
-      const price = parseFloat(card.querySelector(".item-price").value) || 0;
-      subtotal += quantity * price;
-    });
-  
-    const taxRate = parseFloat(document.getElementById("tax-input").value) || 0;
-    const total = subtotal + (subtotal * taxRate) / 100;
-  
-    document.getElementById("subtotal").textContent = `$${subtotal.toFixed(2)}`;
-    document.getElementById("total").textContent = `$${total.toFixed(2)}`;
-  }
+function updateSummary() {
+  const lineItems = document.querySelectorAll(".line-item-card");
+  let subtotal = 0;
+  let totalLabor = 0;
+  let totalMaterial = 0;
+
+  lineItems.forEach((card) => {
+    // Calculation mode support
+    const calcMode = card.querySelector(".item-calc-mode")?.value || "each";
+    const price = parseFloat(card.querySelector(".item-price").value) || 0;
+    let qty = 0;
+    if (calcMode === "sqft") {
+      qty = parseFloat(card.querySelector(".item-area")?.value) || 0;
+    } else if (calcMode === "lnft") {
+      qty = parseFloat(card.querySelector(".item-length")?.value) || 0;
+    } else {
+      qty = parseFloat(card.querySelector(".item-quantity")?.value) || 0;
+    }
+    subtotal += qty * price;
+
+    totalLabor += parseFloat(card.querySelector(".item-labor-cost").value) || 0;
+    totalMaterial += parseFloat(card.querySelector(".item-material-cost").value) || 0;
+  });
+
+  const taxRate = parseFloat(document.getElementById("tax-input").value) || 0;
+  const total = subtotal + (subtotal * taxRate) / 100;
+  const projectedProfit = total - totalLabor - totalMaterial;
+
+  document.getElementById("subtotal").textContent = `$${subtotal.toFixed(2)}`;
+  document.getElementById("total").textContent = `$${total.toFixed(2)}`;
+  document.getElementById("total-labor-cost").textContent = `$${totalLabor.toFixed(2)}`;
+  document.getElementById("total-material-cost").textContent = `$${totalMaterial.toFixed(2)}`;
+  document.getElementById("projected-profit").textContent = `$${projectedProfit.toFixed(2)}`;
+}
   
 
 // ✅ Function to Calculate and Display Selected Labor Cost
