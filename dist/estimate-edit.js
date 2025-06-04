@@ -772,6 +772,13 @@ function addLineItemCard(item = {}, categoryHeader = null) {
     item.photos = { before: [], after: [] };
   }
 
+  // Calculation mode: each, sqft, lnft
+  const calcMode = item.calcMode || "each";
+  const area = item.area || "";
+  const length = item.length || "";
+  const quantity = item.quantity || 1;
+  const unitPrice = item.unitPrice || 0;
+
   card.innerHTML = `
     <div class="card-header">
       <input type="checkbox" class="line-item-select" ${item.assignedTo ? "disabled" : ""}>
@@ -780,69 +787,73 @@ function addLineItemCard(item = {}, categoryHeader = null) {
       <button class="btn delete-line-item">Delete</button>
       ${item.assignedTo ? `<button class="btn unassign-item">Unassign</button>` : ""}
     </div>
-
     <div class="card-details">
- <div class="detail">
-  <label>Cost Code</label>
-  <input type="text" class="item-cost-code" value="${item.costCode || ''}" placeholder="Cost Code">
-</div>
-
+      <div class="detail">
+        <label>Cost Code</label>
+        <input type="text" class="item-cost-code" value="${item.costCode || ''}" placeholder="Cost Code">
+      </div>
       <div class="detail">
         <label>Description</label>
         <textarea class="item-description" placeholder="Description">${item.description || ""}</textarea>
       </div>
-
-    
       <div class="detail">
+        <label>Calculation Mode</label>
+        <select class="item-calc-mode">
+          <option value="each" ${calcMode === "each" ? "selected" : ""}>Each</option>
+          <option value="sqft" ${calcMode === "sqft" ? "selected" : ""}>Sq Ft</option>
+          <option value="lnft" ${calcMode === "lnft" ? "selected" : ""}>Ln Ft</option>
+        </select>
+      </div>
+      <div class="detail sqft-detail" style="display:${calcMode === "sqft" ? "block" : "none"}">
+        <label>Area (Sq Ft)</label>
+        <input type="number" class="item-area" value="${area}" min="0" step="0.01">
+      </div>
+      <div class="detail lnft-detail" style="display:${calcMode === "lnft" ? "block" : "none"}">
+        <label>Length (Ln Ft)</label>
+        <input type="number" class="item-length" value="${length}" min="0" step="0.01">
+      </div>
+      <div class="detail quantity-detail" style="display:${calcMode === "each" ? "block" : "none"}">
         <label>Quantity</label>
-        <input type="number" class="item-quantity" value="${item.quantity || 1}" min="1">
+        <input type="number" class="item-quantity" value="${quantity}" min="1">
       </div>
       <div class="detail">
         <label>Unit Price</label>
-        <input type="number" class="item-price" value="${item.unitPrice || 0}" min="0" step="0.01">
+        <input type="number" class="item-price" value="${unitPrice}" min="0" step="0.01">
       </div>
-
-                      <div class="detail">
+      <div class="detail">
         <label>Labor Cost</label>
-        <input type="number" class="item-labor-cost" value="${item.laborCost !== undefined ? item.laborCost : ((item.quantity || 1) * (item.unitPrice || 0) * 0.37).toFixed(2)}" min="0" step="0.01">
+        <input type="number" class="item-labor-cost" value="${item.laborCost !== undefined ? item.laborCost : ((quantity || 1) * (unitPrice || 0) * 0.37).toFixed(2)}" min="0" step="0.01">
       </div>
-    
-
-          <div class="detail">
+      <div class="detail">
         <label>Material Cost</label>
-        <input type="number" class="item-material-cost" value="${item.materialCost !== undefined ? item.materialCost : ((item.quantity || 1) * (item.unitPrice || 0) * 0.4).toFixed(2)}" min="0" step="0.01">
+        <input type="number" class="item-material-cost" value="${item.materialCost !== undefined ? item.materialCost : ((quantity || 1) * (unitPrice || 0) * 0.4).toFixed(2)}" min="0" step="0.01">
       </div>
     </div>
-
-
-
     <!-- Collapsible Photo Section -->
-<div class="photo-toggle-section-modern">
-  <button class="toggle-photos-btn-modern">📸 Show Photos</button>
-  <div class="photo-section-modern" style="display: none;">
-    <div class="photo-preview-modern">
-      <h5>Before Photos</h5>
-      <div id="before-photos-${card.getAttribute("data-item-id")}"></div>
-      <label class="upload-btn-modern">
-        <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'before')">
-        <span>＋ Add</span>
-      </label>
+    <div class="photo-toggle-section-modern">
+      <button class="toggle-photos-btn-modern">📸 Show Photos</button>
+      <div class="photo-section-modern" style="display: none;">
+        <div class="photo-preview-modern">
+          <h5>Before Photos</h5>
+          <div id="before-photos-${card.getAttribute("data-item-id")}"></div>
+          <label class="upload-btn-modern">
+            <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'before')">
+            <span>＋ Add</span>
+          </label>
+        </div>
+        <div class="photo-preview-modern">
+          <h5>After Photos</h5>
+          <div id="after-photos-${card.getAttribute("data-item-id")}"></div>
+          <label class="upload-btn-modern">
+            <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'after')">
+            <span>＋ Add</span>
+          </label>
+        </div>
+      </div>
     </div>
-    <div class="photo-preview-modern">
-      <h5>After Photos</h5>
-      <div id="after-photos-${card.getAttribute("data-item-id")}"></div>
-      <label class="upload-btn-modern">
-        <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'after')">
-        <span>＋ Add</span>
-      </label>
-    </div>
-  </div>
-</div>
-
     <div class="status-container">
       <span>Status:<span class="item-status ${statusClass}">${status.toUpperCase()}</span></span>
     </div>
-
     <div class="card-footer">
       <span>
         Assigned to:
@@ -851,7 +862,7 @@ function addLineItemCard(item = {}, categoryHeader = null) {
         </span>
       </span>
       <span class="item-total">
-        $${((item.quantity || 1) * (item.unitPrice || 0)).toFixed(2)}
+        $0.00
       </span>
     </div>
   `;
@@ -1001,7 +1012,10 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
   autoSaveEstimate(); // <-- Auto-save after delete
 });
 
-    // Update Item Total on Quantity or Price Change
+  // Calculation logic for total
+  const calcModeSelect = card.querySelector(".item-calc-mode");
+  const areaInput = card.querySelector(".item-area");
+  const lengthInput = card.querySelector(".item-length");
   const quantityInput = card.querySelector(".item-quantity");
   const priceInput = card.querySelector(".item-price");
   const laborCostInput = card.querySelector(".item-labor-cost");
@@ -1011,9 +1025,18 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
   checkbox.addEventListener("change", updateSelectedLaborCost);
 
   function updateCardValues() {
-    const quantity = parseInt(quantityInput.value, 10) || 0;
-    const price = parseFloat(priceInput.value) || 0;
-    const total = quantity * price;
+    let total = 0;
+    const unitPrice = parseFloat(priceInput.value) || 0;
+    if (calcModeSelect.value === "sqft") {
+      const area = parseFloat(areaInput.value) || 0;
+      total = area * unitPrice;
+    } else if (calcModeSelect.value === "lnft") {
+      const length = parseFloat(lengthInput.value) || 0;
+      total = length * unitPrice;
+    } else {
+      const qty = parseFloat(quantityInput.value) || 0;
+      total = qty * unitPrice;
+    }
 
     // Only auto-update if not manually edited
     if (laborCostInput.getAttribute("data-manual") !== "true") {
@@ -1028,6 +1051,18 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
     updateSummary();
     autoSaveEstimate();
   }
+
+  // Show/hide fields based on calculation mode
+  calcModeSelect.addEventListener("change", () => {
+    card.querySelector(".sqft-detail").style.display = calcModeSelect.value === "sqft" ? "block" : "none";
+    card.querySelector(".lnft-detail").style.display = calcModeSelect.value === "lnft" ? "block" : "none";
+    card.querySelector(".quantity-detail").style.display = calcModeSelect.value === "each" ? "block" : "none";
+    updateCardValues();
+  });
+
+  [areaInput, lengthInput, quantityInput, priceInput].forEach(input => {
+    if (input) input.addEventListener("input", updateCardValues);
+  });
 
   // When user edits labor/material cost, set manual flag
   laborCostInput.addEventListener("input", () => {
@@ -1059,6 +1094,9 @@ document.querySelectorAll(".category-title span[contenteditable]").forEach(span 
     if (input) input.addEventListener("input", autoSaveEstimate);
   });
 
+      // Initial calculation
+  updateCardValues();
+
   // Append the card to the container
   const lineItemsContainer = document.getElementById("line-items-cards");
   if (categoryHeader && categoryHeader.nextSibling) {
@@ -1067,6 +1105,8 @@ document.querySelectorAll(".category-title span[contenteditable]").forEach(span 
     lineItemsContainer.appendChild(card);
   }
 }
+
+  
   // Update Summary Function
 function updateSummary() {
   const lineItems = document.querySelectorAll(".line-item-card");
@@ -1372,6 +1412,9 @@ async function saveEstimate() {
         unitPrice: parseFloat(element.querySelector(".item-price").value) || 0,
         laborCost: parseFloat(element.querySelector(".item-labor-cost").value) || 0,
         materialCost: parseFloat(element.querySelector(".item-material-cost").value) || 0,
+         calcMode: element.querySelector(".item-calc-mode")?.value || "each", // <-- Add this line
+         area: parseFloat(element.querySelector(".item-area")?.value) || 0,     // <-- Add this line
+         length: parseFloat(element.querySelector(".item-length")?.value) || 0, // <-- Add this line
         total: (
           (parseInt(element.querySelector(".item-quantity").value, 10) || 1) *
           (parseFloat(element.querySelector(".item-price").value) || 0)
