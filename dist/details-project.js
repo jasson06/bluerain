@@ -1856,12 +1856,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return index !== -1 ? segments[index + 1] : null;
   }
 
-  function fetchFiles(projectId) {
-    fetch(`${BASE_URL}/api/projects/${projectId}/files`)
-      .then(response => response.json())
-      .then(files => displayFiles(files))
-      .catch(err => console.error('Error fetching files:', err));
-  }
+
 
   // ✅ Unified File Upload Function (Click & Drop)
   function uploadFiles() {
@@ -1907,7 +1902,7 @@ async function handleFileUpload(event) {
   const formData = new FormData();
   Array.from(files).forEach(file => formData.append('files', file));
 
-  showLoader(); // Show loader at the start
+  showFileSectionLoader();
 
   try {
     const response = await fetch(`${BASE_URL}/api/projects/${projectId}/files`, {
@@ -1919,17 +1914,22 @@ async function handleFileUpload(event) {
 
     showToast("✅ Files uploaded successfully.");
 
-    // Show loader while fetching files
-    showLoader();
-    fetchFiles(projectId);
-   
-    hideLoader(); // Hide loader after upload completes
-    const uploadedFiles = await response.json();
-    displayFiles(uploadedFiles.files);
+    // Refresh file list
+    await fetchFiles(projectId);
   } catch (error) {
     console.error("Error uploading files:", error);
-    hideLoader(); // Hide loader on error
+  } finally {
+    hideFileSectionLoader();
   }
+}
+
+function fetchFiles(projectId) {
+  showFileSectionLoader();
+  fetch(`${BASE_URL}/api/projects/${projectId}/files`)
+    .then(response => response.json())
+    .then(files => displayFiles(files))
+    .catch(err => console.error('Error fetching files:', err))
+    .finally(() => hideFileSectionLoader());
 }
 
 // ✅ Display Files with Updated Preview Function
