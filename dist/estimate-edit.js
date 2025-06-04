@@ -863,6 +863,10 @@ function addLineItemCard(item = {}, categoryHeader = null) {
       </span>
     </div>
   `;
+
+    // Inside addLineItemCard, after defining laborCostInput and materialCostInput:
+const laborCostFromBackend = item.laborCost !== undefined;
+const materialCostFromBackend = item.materialCost !== undefined;
   
 // Suggestion Box Logic
 const itemNameInput = card.querySelector(".item-name");
@@ -1029,34 +1033,38 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
   const checkbox = card.querySelector(".line-item-select");
   checkbox.addEventListener("change", updateSelectedLaborCost);
 
-  function updateCardValues() {
-    let total = 0;
-    const unitPrice = parseFloat(priceInput.value) || 0;
-    if (calcModeSelect.value === "sqft") {
-      const area = parseFloat(areaInput.value) || 0;
-      total = area * unitPrice;
-    } else if (calcModeSelect.value === "lnft") {
-      const length = parseFloat(lengthInput.value) || 0;
-      total = length * unitPrice;
-    } else {
-      const qty = parseFloat(quantityInput.value) || 0;
-      total = qty * unitPrice;
-    }
-
-    // Only auto-update if not manually edited
-    if (laborCostInput.getAttribute("data-manual") !== "true") {
-      laborCostInput.value = (total * 0.37).toFixed(2);
-    }
-    if (materialCostInput.getAttribute("data-manual") !== "true") {
-      materialCostInput.value = (total * 0.4).toFixed(2);
-    }
-
-    // Use toLocaleString for commas
-    totalDisplay.textContent = `$${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-    updateSelectedLaborCost();
-    updateSummary();
+ function updateCardValues() {
+  let total = 0;
+  const unitPrice = parseFloat(priceInput.value) || 0;
+  if (calcModeSelect.value === "sqft") {
+    const area = parseFloat(areaInput.value) || 0;
+    total = area * unitPrice;
+  } else if (calcModeSelect.value === "lnft") {
+    const length = parseFloat(lengthInput.value) || 0;
+    total = length * unitPrice;
+  } else {
+    const qty = parseFloat(quantityInput.value) || 0;
+    total = qty * unitPrice;
   }
 
+  // Only auto-update if not manually edited and not from backend
+  if (
+    laborCostInput.getAttribute("data-manual") !== "true" &&
+    !laborCostFromBackend
+  ) {
+    laborCostInput.value = (total * 0.37).toFixed(2);
+  }
+  if (
+    materialCostInput.getAttribute("data-manual") !== "true" &&
+    !materialCostFromBackend
+  ) {
+    materialCostInput.value = (total * 0.4).toFixed(2);
+  }
+
+  totalDisplay.textContent = `$${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  updateSelectedLaborCost();
+  updateSummary();
+}
   // Show/hide fields based on calculation mode
   calcModeSelect.addEventListener("change", () => {
     card.querySelector(".sqft-detail").style.display = calcModeSelect.value === "sqft" ? "block" : "none";
