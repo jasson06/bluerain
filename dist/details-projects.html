@@ -328,10 +328,16 @@
       <label for="edit-project-color">Color:</label>
       <input id="edit-project-color" type="color" />
 
-      <label for="edit-project-type">Type:</label>
-      <input id="edit-project-type" type="text" required />
+<!-- Replace your current Project Type input in the Edit Project Modal with this: -->
+<div class="form-group">
+  <label for="edit-project-type"><strong>Project Type</strong></label>
+  <select id="edit-project-type" class="form-control" required>
+    <option value="Residential">Residential</option>
+    <option value="Multifamily">Multifamily</option>
+  </select>
+</div>
 
-      <label for="edit-project-code">Project Code:</label>
+      <label for="edit-project-code">Lockbox Code:</label>
       <input id="edit-project-code" type="text" required />
 
       <label for="edit-project-addressLine1">Address Line 1:</label>
