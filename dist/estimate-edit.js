@@ -740,13 +740,9 @@ function refreshLineItems(categories) {
 
 
 // Add this near the top, after showToast/hideLoader etc.
-let autoSaveTimeout;
 function autoSaveEstimate() {
-  clearTimeout(autoSaveTimeout);
-  autoSaveTimeout = setTimeout(() => {
-    saveEstimate();
-    showToast("Auto-saved!");
-  }, 2500); // 2.5 seconds debounce
+  saveEstimate();
+  showToast("Auto-saved!");
 }
 
 
@@ -1050,7 +1046,6 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
     totalDisplay.textContent = `$${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     updateSelectedLaborCost();
     updateSummary();
-    autoSaveEstimate();
   }
 
   // Show/hide fields based on calculation mode
@@ -1068,32 +1063,52 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
   // When user edits labor/material cost, set manual flag
   laborCostInput.addEventListener("input", () => {
     laborCostInput.setAttribute("data-manual", "true");
-    autoSaveEstimate();
   });
   materialCostInput.addEventListener("input", () => {
     materialCostInput.setAttribute("data-manual", "true");
-    autoSaveEstimate();
   });
 
-  // When quantity or price changes, recalculate if not manually overridden
-  quantityInput.addEventListener("input", updateCardValues);
-  priceInput.addEventListener("input", updateCardValues);
-// Auto-save when editing estimate title
-document.getElementById("estimate-title").addEventListener("input", autoSaveEstimate);
 
-// Auto-save when editing any category name (contenteditable)
+// Utility to add "smart blur" auto-save to an input or editable element
+function addSmartBlurAutoSave(input) {
+  if (!input) return;
+  let originalValue;
+  // For contenteditable, use textContent; for others, use value
+  const getValue = () =>
+    input.hasAttribute("contenteditable") ? input.textContent : input.value;
+
+  input.addEventListener("focus", () => {
+    originalValue = getValue();
+  });
+
+  input.addEventListener("blur", () => {
+    if (getValue() !== originalValue) {
+      autoSaveEstimate();
+    }
+  });
+}
+
+// In addLineItemCard, replace the previous blur listeners with:
+[
+  card.querySelector(".item-name"),
+  card.querySelector(".item-description"),
+  card.querySelector(".item-cost-code"),
+  quantityInput,
+  priceInput,
+  laborCostInput,
+  materialCostInput,
+  areaInput,
+  lengthInput,
+  calcModeSelect
+].forEach(input => addSmartBlurAutoSave(input));
+
+// For estimate title (outside addLineItemCard, after DOMContentLoaded)
+addSmartBlurAutoSave(document.getElementById("estimate-title"));
+
+// For all category titles (outside addLineItemCard, after DOMContentLoaded)
 document.querySelectorAll(".category-title span[contenteditable]").forEach(span => {
-  span.addEventListener("input", autoSaveEstimate);
+  addSmartBlurAutoSave(span);
 });
-  // Auto-save on all editable fields
-  [
-    
-    card.querySelector(".item-name"),
-    card.querySelector(".item-description"),
-    card.querySelector(".item-cost-code")
-  ].forEach(input => {
-    if (input) input.addEventListener("input", autoSaveEstimate);
-  });
 
       // Initial calculation
   updateCardValues();
