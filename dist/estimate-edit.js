@@ -1046,7 +1046,8 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
       materialCostInput.value = (total * 0.4).toFixed(2);
     }
 
-    totalDisplay.textContent = `$${total.toFixed(2)}`;
+    // Use toLocaleString for commas
+    totalDisplay.textContent = `$${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     updateSelectedLaborCost();
     updateSummary();
     autoSaveEstimate();
