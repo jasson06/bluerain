@@ -736,8 +736,6 @@ function refreshLineItems(categories) {
   }
 }, 100);
 
-    autoSaveEstimate(); // Auto-save when a category is added
-
     return header;
   }
 
