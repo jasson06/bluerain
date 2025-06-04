@@ -896,14 +896,22 @@ itemNameInput.addEventListener("input", () => {
   option.style.borderBottom = "1px solid #eee";
     option.onmouseenter = () => (option.style.background = "#f0f0f0");
     option.onmouseleave = () => (option.style.background = "#fff");
-    option.onclick = () => {
-      itemNameInput.value = match.name;
-      card.querySelector(".item-description").value = match.description;
-      card.querySelector(".item-price").value = match.rate;
-      card.querySelector(".item-cost-code").value = match.costCode || "Uncategorized";
-      suggestionBox.style.display = "none";
-    };
-    suggestionBox.appendChild(option);
+    
+option.onclick = () => {
+  itemNameInput.value = match.name;
+  card.querySelector(".item-description").value = match.description;
+  card.querySelector(".item-price").value = match.rate;
+  card.querySelector(".item-cost-code").value = match.costCode || "Uncategorized";
+  // Set quantity to 1 if empty, zero, or not a number
+  const qtyInput = card.querySelector(".item-quantity");
+  if (qtyInput && (!qtyInput.value || parseInt(qtyInput.value, 10) <= 0)) {
+    qtyInput.value = 1;
+  }
+  suggestionBox.style.display = "none";
+  updateCardValues(); // <-- Move this inside the click handler
+  autoSaveEstimate(); 
+};
+suggestionBox.appendChild(option);
   });
 
   const rect = itemNameInput.getBoundingClientRect();
