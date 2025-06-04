@@ -1136,11 +1136,11 @@ function updateSummary() {
   const total = subtotal + (subtotal * taxRate) / 100;
   const projectedProfit = total - totalLabor - totalMaterial;
 
-  document.getElementById("subtotal").textContent = `$${subtotal.toFixed(2)}`;
-  document.getElementById("total").textContent = `$${total.toFixed(2)}`;
-  document.getElementById("total-labor-cost").textContent = `$${totalLabor.toFixed(2)}`;
-  document.getElementById("total-material-cost").textContent = `$${totalMaterial.toFixed(2)}`;
-  document.getElementById("projected-profit").textContent = `$${projectedProfit.toFixed(2)}`;
+  document.getElementById("subtotal").textContent = `$${subtotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  document.getElementById("total").textContent = `$${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  document.getElementById("total-labor-cost").textContent = `$${totalLabor.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  document.getElementById("total-material-cost").textContent = `$${totalMaterial.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  document.getElementById("projected-profit").textContent = `$${projectedProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 }
   
 
