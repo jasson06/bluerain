@@ -1900,32 +1900,37 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ✅ Handle File Upload
-  async function handleFileUpload(event) {
-    const files = event.target.files;
-    if (!files.length) return;
+async function handleFileUpload(event) {
+  const files = event.target.files;
+  if (!files.length) return;
 
-    const formData = new FormData();
-    Array.from(files).forEach(file => formData.append('files', file));
+  const formData = new FormData();
+  Array.from(files).forEach(file => formData.append('files', file));
 
-    try {
-      const response = await fetch(`${BASE_URL}/api/projects/${projectId}/files`, {
-        method: 'POST',
-        body: formData,
-      });
+  showLoader(); // Show loader at the start
 
-      if (!response.ok) throw new Error("File upload failed");
+  try {
+    const response = await fetch(`${BASE_URL}/api/projects/${projectId}/files`, {
+      method: 'POST',
+      body: formData,
+    });
 
-          showToast("✅ Files uploaded successfully.");
-    
-    // ✅ Refresh the file section to display the new file
+    if (!response.ok) throw new Error("File upload failed");
+
+    showToast("✅ Files uploaded successfully.");
+
+    // Show loader while fetching files
+    showLoader();
     fetchFiles(projectId);
-
-      const uploadedFiles = await response.json();
-      displayFiles(uploadedFiles.files);
-    } catch (error) {
-      console.error("Error uploading files:", error);
-    }
+   
+    hideLoader(); // Hide loader after upload completes
+    const uploadedFiles = await response.json();
+    displayFiles(uploadedFiles.files);
+  } catch (error) {
+    console.error("Error uploading files:", error);
+    hideLoader(); // Hide loader on error
   }
+}
 
 // ✅ Display Files with Updated Preview Function
 function displayFiles(files) {
