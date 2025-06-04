@@ -25,6 +25,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   
  let laborCostList = [];
 
+  let isDeletingLineItem = false;
+
 async function fetchLaborCostList() {
   
   try {
@@ -1015,10 +1017,18 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
     showToast("Unassign line item before deleting.");
     return;
   }
+  isDeletingLineItem = true;
+  // Blur any focused input inside the card to prevent late blur events
+  const focused = card.querySelector(":focus");
+  if (focused) focused.blur();
+
   card.remove();
   updateSummary();
   updateSelectedLaborCost();
-  autoSaveEstimate(); // <-- Auto-save after delete
+  setTimeout(() => {
+    autoSaveEstimate(); // Auto-save after DOM is updated
+    isDeletingLineItem = false;
+  }, 50); // Short delay ensures DOM is updated
 });
 
   // Calculation logic for total
@@ -1090,7 +1100,6 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
 function addSmartBlurAutoSave(input) {
   if (!input) return;
   let originalValue;
-  // For contenteditable, use textContent; for others, use value
   const getValue = () =>
     input.hasAttribute("contenteditable") ? input.textContent : input.value;
 
@@ -1099,6 +1108,7 @@ function addSmartBlurAutoSave(input) {
   });
 
   input.addEventListener("blur", () => {
+    if (isDeletingLineItem) return; // Prevent auto-save if deleting
     if (getValue() !== originalValue) {
       autoSaveEstimate();
     }
