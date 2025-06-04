@@ -1839,7 +1839,12 @@ function downloadTemplate() {
 }
 
 
-
+function showFileSectionLoader() {
+  document.getElementById('file-loader').style.display = 'flex';
+}
+function hideFileSectionLoader() {
+  document.getElementById('file-loader').style.display = 'none';
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   const BASE_URL = "https://node-mongodb-api-1h93.onrender.com";
