@@ -846,6 +846,23 @@ td {
     font-weight: 500;
     color: #b71c1c;
 }
+
+    .toggle-btn {
+  background: #f1f5f9;
+  color: #007bff;
+  border: 1px solid #007bff;
+  border-radius: 6px;
+  padding: 8px 18px;
+  margin-left: 8px;
+  font-size: 15px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+}
+.toggle-btn.active {
+  background: #007bff;
+  color: #fff;
+}
  </style>
 </head>
 <body>
@@ -898,7 +915,10 @@ td {
 
 
   
-  
+    <div id="item-status-toggle" style="margin-bottom: 18px; text-align: right;">
+  <button id="show-active-btn" class="toggle-btn active">Active Items</button>
+  <button id="show-completed-btn" class="toggle-btn">Completed Items</button>
+</div>
   
        <!-- Line Items Section -->
 <!-- Line Items Section -->
@@ -1686,30 +1706,35 @@ function formatDescription(desc) {
 function displayAssignedItems(items) {
     const container = document.getElementById("line-items-list");
     const totalContainer = document.getElementById("total-amount");
+    const toggleActiveBtn = document.getElementById("show-active-btn");
+    const toggleCompletedBtn = document.getElementById("show-completed-btn");
 
     if (!container || !totalContainer) {
         console.error("❌ Error: Elements missing in DOM.");
         return;
     }
 
-    container.innerHTML = ""; 
+    // Split items by status
+    const activeItems = items.filter(item =>
+        item.status === "new" || item.status === "in-progress"
+    );
+    const completedItems = items.filter(item =>
+        item.status === "completed" || item.status === "approved"
+    );
 
-    items.forEach((item) => {
-        const currentStatus = item.status || "new"; // default to 'new'
-
-        // Decide next label
+    // Helper to render a row
+    function renderRow(item) {
+        const currentStatus = item.status || "new";
         let nextLabel = "Mark as In Progress";
         if (currentStatus === "in-progress") nextLabel = "Mark as Completed";
         if (currentStatus === "completed") nextLabel = "Mark as In Progress";
 
-        // Use exact CSS class names
-        let statusClass = "new"; // default red
+        let statusClass = "new";
         if (currentStatus === "in-progress") statusClass = "in-progress";
         if (currentStatus === "completed") statusClass = "completed";
         if (currentStatus === "approved") statusClass = "approved";
 
-        // Rework Notes Display
-        const reworkNotes = item.qualityControl?.status === "rework" 
+        const reworkNotes = item.qualityControl?.status === "rework"
             ? `<div class="rework-notes">
                    <strong>Rework Notes:</strong> ${item.qualityControl.notes || "No notes provided"}
                </div>`
@@ -1722,11 +1747,9 @@ function displayAssignedItems(items) {
                  ${currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)}
               </span> 
             </h6>
-            
             <div class="item-description"><h2>Description</h2>${formatDescription(item.description)}</div>
               ${reworkNotes}
             <td style="display:none">Qty: ${item.quantity || "0"} <h4>Unit Price: $${(item.unitPrice || 0).toFixed(2)}</h4></td>
-
             <td>
                 <div class="photo-preview">
                     <div class="photo-section">
@@ -1751,7 +1774,6 @@ function displayAssignedItems(items) {
                     </div>
                 </div>
             </td>
-
             <td>
                 <button class="toggle-status-btn" data-item-id="${item.itemId}" data-current-status="${currentStatus}">
                     ${nextLabel}
@@ -1759,29 +1781,68 @@ function displayAssignedItems(items) {
                 <h4 style="display:none">Total: $${(item.total || 0).toFixed(2)}</h4>
             </td>
         `;
+        return row;
+    }
 
-        container.appendChild(row);
-    });
+    // --- Render Function for Selected Group ---
+    function renderGroup(group, groupName, color) {
+        container.innerHTML = "";
+        if (group.length === 0) {
+            container.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#888;">No ${groupName.toLowerCase()}.</td></tr>`;
+        } else {
+            const header = document.createElement("tr");
+            header.innerHTML = `<td colspan="3"><h3 style="color:${color};">${groupName}</h3></td>`;
+            container.appendChild(header);
 
-  // 🔹 Ensure Swipe and Dot Indicators Work Correctly
-  enableGlobalSwipeEvents();
+            group.forEach(item => {
+                container.appendChild(renderRow(item));
+            });
 
-  document.querySelectorAll(".toggle-status-btn").forEach(button => {
-        button.addEventListener("click", function () {
-            const itemId = this.getAttribute("data-item-id");
-            const currentStatus = this.getAttribute("data-current-status");
-            toggleItemStatus(localStorage.getItem("vendorId"), itemId, currentStatus);
+
+        }
+        // Update total box for this group only
+        totalContainer.innerHTML = `<strong>${groupName} Total:</strong> $${calculateTotal(group)}`;
+
+        // 🔹 Attach toggle-status-btn event listeners for this group
+        container.querySelectorAll(".toggle-status-btn").forEach(button => {
+            button.addEventListener("click", function () {
+                const itemId = this.getAttribute("data-item-id");
+                const currentStatus = this.getAttribute("data-current-status");
+                toggleItemStatus(localStorage.getItem("vendorId"), itemId, currentStatus);
+            });
         });
-    });
+    }
 
+    // --- Toggle Logic ---
+    function showActive() {
+        toggleActiveBtn.classList.add("active");
+        toggleCompletedBtn.classList.remove("active");
+        renderGroup(activeItems, "Active Items", "#007BFF");
+    }
+    function showCompleted() {
+        toggleActiveBtn.classList.remove("active");
+        toggleCompletedBtn.classList.add("active");
+        renderGroup(completedItems, "Completed Items", "green");
+    }
 
-    // 🔹 Calculate and Display Grand Total
-    const grandTotal = calculateTotal(items);
-    totalContainer.innerHTML = `<strong>Grand Total: </strong> $${grandTotal}`;
+    // Attach event listeners (only once)
+    if (!toggleActiveBtn.hasListener) {
+        toggleActiveBtn.addEventListener("click", showActive);
+        toggleActiveBtn.hasListener = true;
+    }
+    if (!toggleCompletedBtn.hasListener) {
+        toggleCompletedBtn.addEventListener("click", showCompleted);
+        toggleCompletedBtn.hasListener = true;
+    }
 
-    console.log("✅ Items Rendered Successfully! Grand Total: $" + grandTotal);
+    // Default: show active items
+    showActive();
+
+    // 🔹 Ensure Swipe and Dot Indicators Work Correctly
+    enableGlobalSwipeEvents();
+
+    console.log("✅ Items Rendered Successfully!");
 }
-
 
 
 
