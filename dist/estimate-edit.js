@@ -715,6 +715,7 @@ function refreshLineItems(categories) {
         nextSibling = temp;
       }
       header.remove();
+      autoSaveEstimate(); // Auto-save when a category is removed
     });
 
     lineItemsContainer.appendChild(header);
@@ -734,6 +735,8 @@ function refreshLineItems(categories) {
     sel.addRange(range);
   }
 }, 100);
+
+    autoSaveEstimate(); // Auto-save when a category is added
 
     return header;
   }
@@ -1120,6 +1123,16 @@ document.querySelectorAll(".category-title span[contenteditable]").forEach(span 
   } else {
     lineItemsContainer.appendChild(card);
   }
+
+    // ✅ Scroll to and focus new line item
+setTimeout(() => {
+  card.scrollIntoView({ behavior: "smooth", block: "center" });
+  const nameInput = card.querySelector(".item-name");
+  if (nameInput) {
+    nameInput.focus();
+    nameInput.select && nameInput.select();
+  }
+}, 100);
 }
 
   
