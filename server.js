@@ -2167,42 +2167,49 @@ app.get('/api/vendors/:vendorId/assigned-projects', async (req, res) => {
     const rework = [];
     const completed = [];
 
-    for (const proj of vendor.assignedProjects) {
-      const projectId = proj.projectId?._id || proj.projectId;
-      const items = getItemsForProject(projectId);
+for (const proj of vendor.assignedProjects) {
+  const projectId = proj.projectId?._id || proj.projectId;
+  const projectStatus = proj.projectId?.status || proj.status;
+  const items = getItemsForProject(projectId);
 
-      if (!items.length) {
-        // If no assigned items, keep original status
-        if (proj.status === 'new') newJobs.push(proj);
-        else if (proj.status === 'in-progress') inProgress.push(proj);
-        else if (proj.status === 'rework') rework.push(proj);
-        else if (proj.status === 'completed') completed.push(proj);
-        continue;
-      }
+  // ✅ If the actual Project is marked completed, always show as completed
+  if (projectStatus === 'completed') {
+    completed.push(proj);
+    continue;
+  }
 
-      // Status logic
-      if (items.some(item => item.status === 'rework' || item.qualityControl?.status === 'rework')) {
-        rework.push(proj);
-      } else if (items.some(item => item.status === 'new')) {
-        newJobs.push(proj);
-      } else if (items.some(item => item.status === 'in-progress')) {
-        inProgress.push(proj);
-      } else if (
-  items.length > 0 &&
-  items.every(item =>
-    (
-      String(item.status).toLowerCase() === 'completed' ||
-      String(item.status).toLowerCase() === 'approved'
-    ) &&
-    item.qualityControl &&
-    String(item.qualityControl.status).toLowerCase() === 'approved'
-  )
-) {
-  completed.push(proj);
-      } else {
-        inProgress.push(proj);
-      }
-    }
+  if (!items.length) {
+    // If no assigned items, keep original status
+    if (proj.status === 'new') newJobs.push(proj);
+    else if (proj.status === 'in-progress') inProgress.push(proj);
+    else if (proj.status === 'rework') rework.push(proj);
+    else if (proj.status === 'completed') completed.push(proj);
+    continue;
+  }
+
+  // Status logic based on items
+  if (items.some(item => item.status === 'rework' || item.qualityControl?.status === 'rework')) {
+    rework.push(proj);
+  } else if (items.some(item => item.status === 'new')) {
+    newJobs.push(proj);
+  } else if (items.some(item => item.status === 'in-progress')) {
+    inProgress.push(proj);
+  } else if (
+    items.length > 0 &&
+    items.every(item =>
+      (
+        String(item.status).toLowerCase() === 'completed' ||
+        String(item.status).toLowerCase() === 'approved'
+      ) &&
+      item.qualityControl &&
+      String(item.qualityControl.status).toLowerCase() === 'approved'
+    )
+  ) {
+    completed.push(proj);
+  } else {
+    inProgress.push(proj);
+  }
+}
 
     res.status(200).json({ success: true, newJobs, inProgress, rework, completed });
   } catch (error) {
@@ -2261,6 +2268,7 @@ app.put('/api/vendor/update-project-status', async (req, res) => {
 
       // ✅ Update status
       vendor.assignedProjects[projectIndex].status = status;
+    await Project.findByIdAndUpdate(projectId, { status });
       await vendor.save();
 
       // ✅ Fetch project name for logging
