@@ -2141,21 +2141,68 @@ app.get('/api/vendors/:vendorId/assigned-projects', async (req, res) => {
   const { vendorId } = req.params;
 
   try {
-    // Ensure population of project details
     const vendor = await Vendor.findById(vendorId).populate({
       path: 'assignedProjects.projectId',
       model: 'Project',
-      select: 'name status type address' // Ensure these fields are populated
+      select: 'name status type address'
     });
 
     if (!vendor) {
       return res.status(404).json({ message: 'Vendor not found' });
     }
 
-    const newJobs = vendor.assignedProjects.filter(proj => proj.status === 'new');
-    const inProgress = vendor.assignedProjects.filter(proj => proj.status === 'in-progress');
-    const rework = vendor.assignedProjects.filter(proj => proj.status === 'rework');
-    const completed = vendor.assignedProjects.filter(proj => proj.status === 'completed');
+    // Helper to get assigned items for a project (safe)
+    function getItemsForProject(projectId) {
+      return vendor.assignedItems.filter(
+        item =>
+          item.projectId &&
+          projectId &&
+          item.projectId.toString() === projectId.toString()
+      );
+    }
+
+    // Categorize projects
+    const newJobs = [];
+    const inProgress = [];
+    const rework = [];
+    const completed = [];
+
+    for (const proj of vendor.assignedProjects) {
+      const projectId = proj.projectId?._id || proj.projectId;
+      const items = getItemsForProject(projectId);
+
+      if (!items.length) {
+        // If no assigned items, keep original status
+        if (proj.status === 'new') newJobs.push(proj);
+        else if (proj.status === 'in-progress') inProgress.push(proj);
+        else if (proj.status === 'rework') rework.push(proj);
+        else if (proj.status === 'completed') completed.push(proj);
+        continue;
+      }
+
+      // Status logic
+      if (items.some(item => item.status === 'rework' || item.qualityControl?.status === 'rework')) {
+        rework.push(proj);
+      } else if (items.some(item => item.status === 'new')) {
+        newJobs.push(proj);
+      } else if (items.some(item => item.status === 'in-progress')) {
+        inProgress.push(proj);
+      } else if (
+  items.length > 0 &&
+  items.every(item =>
+    (
+      String(item.status).toLowerCase() === 'completed' ||
+      String(item.status).toLowerCase() === 'approved'
+    ) &&
+    item.qualityControl &&
+    String(item.qualityControl.status).toLowerCase() === 'approved'
+  )
+) {
+  completed.push(proj);
+      } else {
+        inProgress.push(proj);
+      }
+    }
 
     res.status(200).json({ success: true, newJobs, inProgress, rework, completed });
   } catch (error) {
