@@ -2381,7 +2381,7 @@ app.patch("/api/vendors/:vendorId/assigned-items/update", async (req, res) => {
     assignedItem.materialCost = typeof item.materialCost === "number" ? item.materialCost : assignedItem.materialCost || 0;
     assignedItem.total = typeof item.total === "number" ? item.total : assignedItem.laborCost || 0; // Use laborCost as total if not provided
     assignedItem.costCode = item.costCode || assignedItem.costCode || "Uncategorized";
-    assignedItem.status = item.status || assignedItem.status || "new";
+    
     assignedItem.photos = item.photos || assignedItem.photos || { before: [], after: [] };
     assignedItem.qualityControl = item.qualityControl || assignedItem.qualityControl || { status: "pending" };
     assignedItem.updatedAt = new Date();
