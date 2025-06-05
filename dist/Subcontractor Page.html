@@ -24,14 +24,26 @@ body {
 }
 
 /* Header */
-header {
-    background-color: #0f4c75;
-    color: white;
-    text-align: center;
-    padding: 15px;
-    font-size: 24px;
-    font-weight: bold;
-    border-radius: 8px;
+header.header {
+  background: linear-gradient(90deg, #2563eb 0%, #0ea5e9 100%);
+  color: #fff;
+  text-align: left;
+  padding: 18px 24px;
+  font-size: 26px;
+  font-weight: 700;
+  border-radius: 0 0 18px 18px;
+  box-shadow: 0 4px 16px rgba(30, 64, 175, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+header.header h1 {
+  margin: 0;
+  font-size: 1.6em;
+  letter-spacing: 1px;
+  font-weight: 700;
 }
 
 /* Section Styling */
@@ -47,15 +59,14 @@ h2 {
     margin-bottom: 20px;
 }
 
-/* Horizontal Scrollable Sections */
 .scroll-container {
     display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
+    flex-direction: column;
     gap: 20px;
     padding-bottom: 10px;
-    scrollbar-width: none; /* Hides scrollbar in Firefox */
-    -ms-overflow-style: none; /* Hides scrollbar in Internet Explorer */
+    overflow-x: unset;
+    overflow-y: unset;
+    scroll-snap-type: none;
 }
 
 /* Hide scrollbar for Chrome, Safari, Edge */
@@ -70,9 +81,10 @@ h2 {
     padding: 15px;
     border-radius: 10px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    min-width: 320px; /* Ensures proper width in horizontal layout */
-    flex-shrink: 0;
-    scroll-snap-align: start;
+    width: 100%;           /* Full width */
+    min-width: 0;           /* Remove min-width for horizontal scroll */
+    flex-shrink: 1;         /* Allow shrinking */
+    margin: 0 auto;         /* Center if container is smaller */
     transition: transform 0.2s ease-in-out, box-shadow 0.3s;
 }
 
@@ -96,22 +108,31 @@ h2 {
 }
 
 /* Buttons */
-button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    font-size: 14px;
-    cursor: pointer;
-    border-radius: 5px;
-    transition: background-color 0.3s ease-in-out;
-    display: block;
-    width: 100%;
-    margin-top: 10px;
+button,
+.btn,
+.logout-button {
+  background: linear-gradient(90deg, #2563eb 0%, #0ea5e9 100%);
+  color: #fff;
+  border: none;
+  padding: 10px 22px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(30, 64, 175, 0.08);
+  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+  margin: 0 4px;
+  outline: none;
+  letter-spacing: 0.5px;
+  display: inline-block;
 }
 
-button:hover {
-    background-color: #0056b3;
+button:hover,
+.btn:hover,
+.logout-button:hover {
+  background: linear-gradient(90deg, #0ea5e9 0%, #2563eb 100%);
+  box-shadow: 0 4px 16px rgba(30, 64, 175, 0.13);
+  transform: translateY(-2px) scale(1.03);
 }
 
 /* Responsive Design */
@@ -125,6 +146,13 @@ button:hover {
     }
 }
 
+@media (max-width: 768px) {
+    .project-card,
+    .item-card {
+        width: 100%;
+        margin: 0 0 12px 0;
+    }
+}
 /* Status Color Styling */
 .status-new {
     color: #ff0000; /* Blue */
@@ -265,42 +293,225 @@ button:hover {
 }
 
 
+#job-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #f4f4f9;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  /* Optional: add a subtle shadow for separation */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+
+.tab-btn {
+  background: #f1f5f9;
+  color: #007bff;
+  border: 1px solid #007bff;
+  border-radius: 6px 6px 0 0;
+  padding: 10px 22px;
+  font-size: 16px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+  margin-bottom: -2px;
+}
+.tab-btn.active {
+  background: #007bff;
+  color: #fff;
+  border-bottom: 2px solid #fff;
+  z-index: 2;
+}
+.section-tab {
+  display: none;
+}
+.section-tab.active {
+  display: block;
+}
+
+.status-new {
+    color: #007bff; /* Blue */
+    font-weight: bold;
+}
+
+.tab-btn:hover {
+  color: #fff;
+  background: #007bff;
+  border-color: #007bff;
+}
+@media (max-width: 768px) {
+  .container {
+    width: 98%;
+    padding: 0 2vw;
+    margin: 10px auto;
+  }
+  header {
+    font-size: 18px;
+    padding: 10px;
+  }
+  h2 {
+    font-size: 18px;
+    padding-bottom: 6px;
+    margin-bottom: 12px;
+  }
+  .tab-btn {
+    font-size: 14px;
+    padding: 8px 10px;
+  }
+  #job-tabs {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+  .project-card,
+  .item-card {
+    padding: 10px;
+    font-size: 14px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+  }
+  .project-card h3,
+  .item-card h4 {
+    font-size: 16px;
+    margin-bottom: 6px;
+  }
+  .project-card p,
+  .item-card p {
+    font-size: 13px;
+    margin: 3px 0;
+  }
+  button,
+  .btn,
+  .logout-button {
+    font-size: 13px;
+    padding: 8px 10px;
+    margin-top: 8px;
+  }
+  .toastify {
+    max-width: 98vw;
+    min-width: 0;
+    padding: 10px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    width: 100%;
+    padding: 0 1vw;
+    margin: 0;
+  }
+  header {
+    font-size: 15px;
+    padding: 8px;
+  }
+  h2 {
+    font-size: 15px;
+    padding-bottom: 4px;
+    margin-bottom: 8px;
+  }
+  .tab-btn {
+    font-size: 12px;
+    padding: 6px 6px;
+  }
+  #job-tabs {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    position: static;
+    box-shadow: none;
+  }
+  .project-card,
+  .item-card {
+    padding: 7px;
+    font-size: 12px;
+    margin-bottom: 7px;
+    border-radius: 6px;
+  }
+  .project-card h3,
+  .item-card h4 {
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .project-card p,
+  .item-card p {
+    font-size: 11px;
+    margin: 2px 0;
+  }
+  button,
+  .btn,
+  .logout-button {
+    font-size: 11px;
+    padding: 6px 6px;
+    margin-top: 6px;
+  }
+  .toastify {
+    max-width: 99vw;
+    min-width: 0;
+    padding: 7px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  header.header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px 8px;
+    font-size: 20px;
+  }
+  header.header h1 {
+    font-size: 1.2em;
+    margin-bottom: 8px;
+  }
+  .btn,
+  .logout-button {
+    width: 100%;
+    margin: 4px 0 0 0;
+    font-size: 14px;
+    padding: 9px 0;
+  }
+}
   </style>
 </head>
 <body>
-    <header class="header">
-        <h1>Subcontractor Dashboard</h1>
-        <div style="display: flex; gap: 10px; align-items: center;">
-          <button class="btn" onclick="goToInvoicePage()">Create Invoice</button>
-          <button class="logout-button" onclick="logout()">Logout</button>
-        </div>
-      </header>
+<header class="header">
+  <h1>Subcontractor Dashboard</h1>
+  <div style="display: flex; gap: 10px; align-items: center;">
+    <button class="btn" onclick="goToInvoicePage()">Create Invoice</button>
+    <button class="logout-button" onclick="logout()">Logout</button>
+  </div>
+</header>
       
+<div id="job-tabs" style="display: flex; gap: 10px; margin: 30px 0 10px 0; justify-content: flex-end;">
+  <button class="tab-btn active" id="tab-new-jobs" data-tab="new-jobs">New Jobs</button>
+  <button class="tab-btn" id="tab-in-progress" data-tab="in-progress">In Progress</button>
+  <button class="tab-btn" id="tab-rework" data-tab="rework">Rework</button>
+  <button class="tab-btn" id="tab-completed" data-tab="completed">Completed</button>
+</div>
 
-  <main class="container">
-    <section id="new-jobs">
-        <h2>New Jobs</h2>
-        <div id="new-jobs-container" class="scroll-container"></div>
-      </section>
-      
-      <section id="in-progress">
-        <h2>In Progress</h2>
-        <div id="in-progress-container" class="scroll-container"></div>
-      </section>
+<main class="container">
+  <section id="new-jobs" class="section-tab active">
+    <h2>New Jobs</h2>
+    <div id="new-jobs-container" class="scroll-container"></div>
+  </section>
+  <section id="in-progress" class="section-tab">
+    <h2>In Progress</h2>
+    <div id="in-progress-container" class="scroll-container"></div>
+  </section>
+  <section id="rework" class="section-tab">
+    <h2>Rework</h2>
+    <div id="rework-container" class="scroll-container"></div>
+  </section>
+  <section id="completed" class="section-tab">
+    <h2>Completed Jobs</h2>
+    <div id="completed-container" class="scroll-container"></div>
+  </section>
+</main>
 
-      <section id="rework">
-        <h2>Rework</h2>
-        <div id="rework-container" class="scroll-container"></div>
-      </section>
-      
-      <section id="completed">
-        <h2>Completed Jobs</h2>
-        <div id="completed-container" class="scroll-container"></div>
-      </section>
-      
-  </main>
 
-      <!-- Toast Notification -->
+    <!-- Toast Notification -->
 <div id="toast" style="
 position: fixed;
 top: 30px;
@@ -354,13 +565,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const vendorId = localStorage.getItem("vendorId");
 
     if (!vendorId) {
-        alert("Vendor not authenticated.");
+        showToast("Vendor not authenticated.");
         window.location.href = "/sign-inpage.html"; // Redirect to sign-in page
         return;
     }
 
     await fetchAssignedProjects(vendorId);
 });
+
 
 
 function showToast(message) {
@@ -377,7 +589,7 @@ function showLoader() {
 function hideLoader() {
   document.getElementById('loader').style.display = 'none';
 }
-    
+
 // Helper function to return a CSS class based on status
 function getStatusClass(status) {
       if (status === "new") return "status-new";
@@ -389,65 +601,94 @@ function getStatusClass(status) {
 
 // ✅ Fetch Assigned Projects
 async function fetchAssignedProjects(vendorId) {
-  showLoader(); // 👈 START
+    showLoader();
     try {
         const response = await fetch(`/api/vendors/${vendorId}/assigned-projects?t=${new Date().getTime()}`);
         if (!response.ok) throw new Error("Failed to fetch assigned projects.");
 
         const data = await response.json();
 
-displayAssignedProjects(data.newJobs, "new-jobs-container");
-displayAssignedProjects(data.inProgress, "in-progress-container");
-displayAssignedProjects(data.completed, "completed-container");
-displayAssignedProjects(data.rework, "rework-container"); // ✅ ADD THIS LINE
+        // Prepare arrays for each section (even if empty)
+        const newJobs = data.newJobs || [];
+        const inProgress = data.inProgress || [];
+        const completed = data.completed || [];
+        const rework = data.rework || [];
 
+        // Display projects
+        await displayAssignedProjects(newJobs, "new-jobs-container");
+        await displayAssignedProjects(inProgress, "in-progress-container");
+        await displayAssignedProjects(completed, "completed-container");
+        await displayAssignedProjects(rework, "rework-container");
 
-        // ✅ Check all projects from all categories
+        // Count the number of cards actually rendered in each container
+        const countNew = document.querySelectorAll("#new-jobs-container .project-card").length;
+        const countInProgress = document.querySelectorAll("#in-progress-container .project-card").length;
+        const countCompleted = document.querySelectorAll("#completed-container .project-card").length;
+        const countRework = document.querySelectorAll("#rework-container .project-card").length;
+
+        // --- Update tab counts ---
+        document.getElementById("tab-new-jobs").innerHTML = `New Jobs <span style="color:#fff;background:#007bff;border-radius:10px;padding:2px 8px;font-size:13px;margin-left:6px;">${countNew}</span>`;
+        document.getElementById("tab-in-progress").innerHTML = `In Progress <span style="color:#fff;background:#007bff;border-radius:10px;padding:2px 8px;font-size:13px;margin-left:6px;">${countInProgress}</span>`;
+        document.getElementById("tab-rework").innerHTML = `Rework <span style="color:#fff;background:#007bff;border-radius:10px;padding:2px 8px;font-size:13px;margin-left:6px;">${countRework}</span>`;
+        document.getElementById("tab-completed").innerHTML = `Completed <span style="color:#fff;background:#007bff;border-radius:10px;padding:2px 8px;font-size:13px;margin-left:6px;">${countCompleted}</span>`;
+
+        // Check/update status as before
         const allProjects = [
-  ...(data.newJobs || []),
-  ...(data.inProgress || []),
-  ...(data.completed || []),
-  ...(data.rework || []) // ✅ INCLUDE REWORK PROJECTS
-];
-
+            ...newJobs,
+            ...inProgress,
+            ...completed,
+            ...rework
+        ];
         allProjects.forEach(p => {
-    if (p.projectId && p.projectId._id) {
-        checkAndUpdateProjectStatus(vendorId, p.projectId._id, p.status);
-    }
-});
-
+            if (p.projectId && p.projectId._id) {
+                checkAndUpdateProjectStatus(vendorId, p.projectId._id, p.status);
+            }
+        });
 
     } catch (error) {
         console.error("Error fetching assigned projects:", error);
-              } finally {
-    hideLoader(); // 👈 END
+    } finally {
+        hideLoader();
     }
 }
 
 
+
 // ✅ Display Projects
-function displayAssignedProjects(projects, containerId) {
-      const container = document.getElementById(containerId);
-      container.innerHTML = "";
-      if (!projects || projects.length === 0) {
-        container.innerHTML = "<p>No projects available.</p>";
-        return;
+async function displayAssignedProjects(projects, containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+  if (!projects || projects.length === 0) {
+    container.innerHTML = "<p>No projects available.</p>";
+    return;
+  }
+  for (const project of projects) {
+    const { projectId } = project;
+    console.log(projectId);
+    if (!projectId) continue;
+    // Fetch project details to get the code
+    let projectCode = "N/A";
+    try {
+      const res = await fetch(`/api/details/projects/${projectId._id}`);
+      if (res.ok) {
+        const data = await res.json();
+        projectCode = data.project?.code || "N/A";
       }
-      projects.forEach((project) => {
-        const { projectId } = project;
-        if (!projectId) return;
-        const card = document.createElement("div");
-        card.classList.add("project-card");
-        card.innerHTML = `
-          <h3>${projectId.name || "Unnamed Project"}</h3>
-          <p><strong>Status:</strong> <span class="${getStatusClass(project.status)}">${project.status}</span></p>
-          <p><strong>Type:</strong> ${projectId.type || "N/A"}</p>
-          <p><strong>Address:</strong> ${projectId.address?.addressLine1 || ""}, ${projectId.address?.city || ""}, ${projectId.address?.state || ""}</p>
-          <button onclick="viewProject('${projectId._id}', '${project.status}')">Line items</button>
-        `;
-        container.appendChild(card);
-      });
-    }
+    } catch (e) {}
+    const card = document.createElement("div");
+    card.classList.add("project-card");
+    card.innerHTML = `
+      <h3>${projectId.name || "Unnamed Project"}</h3>
+      <p><strong>Status:</strong> <span class="${getStatusClass(project.status)}">${project.status}</span></p>
+      <p><strong>Type:</strong> ${projectId.type || "N/A"}</p>
+      <p><strong>Address:</strong> ${projectId.address?.addressLine1 || ""}, ${projectId.address?.city || ""}, ${projectId.address?.state || ""}</p>
+      <p><strong>Lockbox Code:</strong> ${projectCode}</p>
+      <button onclick="viewProject('${projectId._id}', '${project.status}')">Line items</button>
+    `;
+    container.appendChild(card);
+  }
+}
+    
 
 function goToInvoicePage() {
   window.location.href = '/invoice-creater.html';
@@ -482,11 +723,8 @@ async function startProject(projectId) {
     }
 }
 
-
-
-    
 async function checkAndUpdateProjectStatus(vendorId, projectId, currentStatus) {
-  showLoader(); // 👈 START
+     showLoader(); // 👈 START
     try {
         const response = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
 
@@ -511,24 +749,25 @@ async function checkAndUpdateProjectStatus(vendorId, projectId, currentStatus) {
         const anyInProgress = assignedItems.some(item => item.status === "in-progress");
         const allCompleted = assignedItems.every(item => item.status === "completed");
         const allApproved = assignedItems.every(item => item.qualityControl?.status === "approved");
-        const allCompletedAndApproved = assignedItems.every(
-            item => item.status === "completed" && item.qualityControl?.status === "approved"
-        );
+const allCompletedAndApproved = assignedItems.every(
+    item =>
+        (String(item.status).toLowerCase() === "completed" || String(item.status).toLowerCase() === "approved") &&
+        item.qualityControl &&
+        String(item.qualityControl.status).toLowerCase() === "approved"
+);
 
-        let newStatus = currentStatus;
+let newStatus = currentStatus;
 
-        // ✅ Priority Order: Rework > New > In-Progress > Completed
-        if (anyRework) {
-            newStatus = "rework";
-        } else if (anyNew) {
-            newStatus = "new";
-        } else if (anyInProgress) {
-            newStatus = "in-progress";
-        } else if (allCompletedAndApproved) {
-            newStatus = "completed";  // ✅ Completed if all are both completed and approved
-        } else if (allCompleted) {
-            newStatus = "completed";  // ✅ Completed even if not all are approved, but all are completed
-        }
+// ✅ Priority Order: Rework > New > In-Progress > Completed
+if (anyRework) {
+    newStatus = "rework";
+} else if (anyNew) {
+    newStatus = "new";
+} else if (anyInProgress) {
+    newStatus = "in-progress";
+} else if (allCompletedAndApproved) {
+    newStatus = "completed";
+}
 
         // ✅ Update project status only if there is a change
         if (newStatus !== currentStatus) {
@@ -554,15 +793,10 @@ async function checkAndUpdateProjectStatus(vendorId, projectId, currentStatus) {
     } catch (error) {
         console.error("❌ Error in checkAndUpdateProjectStatus:", error);
         return currentStatus;
-              } finally {
+        } finally {
     hideLoader(); // 👈 END
     }
 }
-
-
-
-
-
 
 
 
@@ -606,6 +840,19 @@ async function completeProject(projectId) {
         console.error("Error completing project:", error);
     }
 }
+
+// Tab toggle logic
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    // Remove active from all tabs and sections
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.section-tab').forEach(sec => sec.classList.remove('active'));
+    // Add active to clicked tab and corresponding section
+    this.classList.add('active');
+    document.getElementById(this.getAttribute('data-tab')).classList.add('active');
+  });
+});
+
 
 // ✅ Logout Function
 function logout() {
