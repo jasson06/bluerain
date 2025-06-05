@@ -1715,9 +1715,11 @@ function displayAssignedItems(items) {
     }
 
     // Split items by status
-    const activeItems = items.filter(item =>
-        item.status === "new" || item.status === "in-progress"
-    );
+const activeItems = items.filter(item =>
+    item.status === "new" ||
+    item.status === "in-progress" ||
+    item.status === "rework"
+);
     const completedItems = items.filter(item =>
         item.status === "completed" || item.status === "approved"
     );
