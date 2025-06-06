@@ -1,6 +1,4 @@
-
 document.addEventListener('DOMContentLoaded', () => {
-
     // ✅ Check if managerId is in localStorage, if not, redirect to login page
     const managerId = localStorage.getItem("managerId");
     if (!managerId) {
@@ -10,9 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     console.log(`✅ Manager ID Found: ${managerId}`); // Debugging
-
         
-        setTimeout(() => {
+    setTimeout(() => {
         updateProjectCounts(); // Give time for API responses
     }, 500);
     
@@ -34,10 +31,31 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Initialize to show the first tab content
-        columns.forEach((column, index) => {
-            column.style.display = index === 0 ? 'block' : 'none';
+        // ✅ Find the "Active Projects" tab (typically index 1)
+        let activeProjectsIndex = 0; // Default to first tab
+        
+        // Look for tab with text containing "Active" or "In Progress"
+        tabs.forEach((tab, index) => {
+            if (tab.textContent.includes('Active') || 
+                tab.textContent.includes('In Progress')) {
+                activeProjectsIndex = index;
+            }
         });
+
+        // Initialize to show Active Projects tab
+        tabs.forEach((tab, index) => {
+            if (index === activeProjectsIndex) {
+                tab.classList.add('active');
+            } else {
+                tab.classList.remove('active');
+            }
+        });
+
+        columns.forEach((column, index) => {
+            column.style.display = index === activeProjectsIndex ? 'block' : 'none';
+        });
+        
+        console.log(`✅ Initialized page to Active Projects tab (index: ${activeProjectsIndex})`);
     }
 
     // Drag and Drop for Columns
