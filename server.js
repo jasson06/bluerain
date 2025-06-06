@@ -2214,7 +2214,7 @@ app.put('/api/vendor/update-project-status', async (req, res) => {
 
       // ✅ Update status
       vendor.assignedProjects[projectIndex].status = status;
-    await Project.findByIdAndUpdate(projectId, { status });
+
       await vendor.save();
 
       // ✅ Fetch project name for logging
