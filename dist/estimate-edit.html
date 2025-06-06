@@ -1246,7 +1246,231 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 .profit-row .breakdown-value {
   color: #1a7f37;
 }
-    
+
+
+     /* Modern Filter Panel Styles */
+.filters-container {
+  margin-bottom: 24px;
+  background: linear-gradient(145deg, #ffffff, #f8faff);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), 0 2px 6px rgba(0, 123, 255, 0.04);
+  border: 1px solid rgba(230, 236, 245, 0.7);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filters-container:hover {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 123, 255, 0.06);
+  transform: translateY(-2px);
+}
+
+.filter-panel {
+  width: 100%;
+}
+
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(0, 123, 255, 0.15);
+}
+
+.filter-header h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+}
+
+.filter-header h3::before {
+  content: "🔍";
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.filter-group {
+  flex: 1;
+  min-width: 220px;
+  position: relative;
+}
+
+.filter-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #4b5563;
+  transition: color 0.2s;
+}
+
+.filter-group:hover label {
+  color: #2563eb;
+}
+
+.filter-select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background-color: white;
+  font-size: 14px;
+  color: #374151;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.filter-select:hover {
+  border-color: #93c5fd;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+#clear-filters {
+  padding: 8px 16px;
+  background: white;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+#clear-filters::before {
+  content: "↺";
+  margin-right: 6px;
+  font-weight: bold;
+}
+
+#clear-filters:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  color: #1f2937;
+}
+
+#clear-filters:active {
+  transform: scale(0.98);
+}
+
+/* Active filter indicator */
+.filter-select.has-value {
+  border-color: #3b82f6;
+  background-color: #f0f7ff;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .filters-container {
+    padding: 16px;
+  }
+  
+  .filter-options {
+    gap: 12px;
+  }
+  
+  .filter-group {
+    min-width: 100%;
+  }
+}
+
+/* Add a badge to show active filter count */
+.filter-active-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #3b82f6;
+  color: white;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  margin-left: 8px;
+  font-weight: bold;
+}
+
+/* Filter Badges Styles */
+.filter-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(0, 123, 255, 0.15);
+}
+
+.filter-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #edf5ff;
+  border: 1px solid #d1e4fd;
+  border-radius: 20px;
+  padding: 4px 10px 4px 12px;
+  font-size: 13px;
+  color: #1a56db;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.filter-badge:hover {
+  background: #dceafe;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.filter-badge-name {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.filter-badge-value {
+  color: #2563eb;
+}
+
+.filter-badge-remove {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  padding: 0;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+
+.filter-badge-remove:hover {
+  background: #f3f4f6;
+  color: #ef4444;
+}
 </style> 
 </head>
 <body>
