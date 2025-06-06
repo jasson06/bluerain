@@ -671,6 +671,10 @@ function refreshLineItems(categories) {
       category.items.forEach(item => {
           addLineItemCard(item, categoryHeader);
 
+          // After refreshing line items, update filter options
+  populateFilterOptions();
+  applyFilters();
+
           // ✅ Debugging: Check if photos exist
           console.log("📸 Item Photos Debug:", item);
 
@@ -1738,6 +1742,7 @@ function updatePage() {
     await loadVendors();
     await loadEstimateDetails();
     await fetchLaborCostList();
+    createFilterUI();
   } catch (error) {
     console.error("Initial load failed:", error);
     showToast("⚠️ Failed to load some data");
@@ -1869,3 +1874,388 @@ document.getElementById("assign-vendor-btn").onclick = async function() {
   document.getElementById("tax-input").addEventListener("input", updateSummary);
   document.getElementById("save-estimate").addEventListener("click", saveEstimate);
  });
+
+
+ // Add this right after the document.addEventListener("DOMContentLoaded", async () => {
+// After all your initial variable declarations
+
+// ✅ Create Filter UI - Card View Only
+function createFilterUI() {
+  const filterContainer = document.createElement('div');
+  filterContainer.className = 'filters-container';
+  filterContainer.innerHTML = `
+    <div class="filter-panel">
+      <div class="filter-header">
+        <h3>Filters</h3>
+        <button id="clear-filters" class="btn-secondary">Clear Filters</button>
+      </div>
+      <div class="filter-options">
+        <div class="filter-group">
+          <label for="filter-category">Category</label>
+          <select id="filter-category" class="filter-select">
+            <option value="">All Categories</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filter-status">Status</label>
+          <select id="filter-status" class="filter-select">
+            <option value="">All Statuses</option>
+            <option value="new">New</option>
+            <option value="in-progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="approved">Approved</option>
+            <option value="rework">Rework</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filter-vendor">Assigned To</label>
+          <select id="filter-vendor" class="filter-select">
+            <option value="">All Vendors</option>
+            <option value="unassigned">Unassigned</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Insert at the beginning of the line-items-cards container
+  const lineItemsContainer = document.getElementById('line-items-cards');
+  if (lineItemsContainer) {
+    lineItemsContainer.parentNode.insertBefore(filterContainer, lineItemsContainer);
+    
+    // Initialize event listeners for filter controls
+    initializeFilterListeners();
+  } else {
+    console.error("Line items container not found");
+  }
+}
+
+// ✅ Initialize filter event listeners
+function initializeFilterListeners() {
+  const categoryFilter = document.getElementById('filter-category');
+  const statusFilter = document.getElementById('filter-status');
+  const vendorFilter = document.getElementById('filter-vendor');
+  const clearFiltersButton = document.getElementById('clear-filters');
+  
+  if (!categoryFilter || !statusFilter || !vendorFilter || !clearFiltersButton) {
+    console.error("Filter elements not found");
+    return;
+  }
+  
+  // Populate filter dropdowns
+  populateFilterOptions();
+  
+  // Add event listeners to filter controls
+  [categoryFilter, statusFilter, vendorFilter].forEach(filter => {
+    filter.addEventListener('change', applyFilters);
+  });
+  
+  // Clear filters button
+  clearFiltersButton.addEventListener('click', clearFilters);
+}
+
+// ✅ Populate filter options dynamically
+function populateFilterOptions() {
+  // Get category filter dropdown
+  const categorySelect = document.getElementById('filter-category');
+  if (!categorySelect) return;
+  
+  // Clear existing options except the first one (All Categories)
+  while (categorySelect.options.length > 1) {
+    categorySelect.remove(1);
+  }
+  
+  // Get unique categories from DOM
+  const categories = new Set();
+  document.querySelectorAll('.category-header .category-title span').forEach(el => {
+    if (el && el.textContent) {
+      categories.add(el.textContent.trim());
+    }
+  });
+  
+  // Add category options
+  categories.forEach(category => {
+    if (category) {
+      const option = document.createElement('option');
+      option.value = category;
+      option.textContent = category;
+      categorySelect.appendChild(option);
+    }
+  });
+  
+  // Get vendor filter dropdown
+  const vendorSelect = document.getElementById('filter-vendor');
+  if (!vendorSelect) return;
+  
+  // Clear existing options except the first two (All Vendors, Unassigned)
+  while (vendorSelect.options.length > 2) {
+    vendorSelect.remove(2);
+  }
+  
+  // Populate vendor filter from vendorMap
+  if (window.vendorMap) {
+    Object.values(window.vendorMap).forEach(vendor => {
+      if (vendor && vendor._id && vendor.name) {
+        const option = document.createElement('option');
+        option.value = vendor._id;
+        option.textContent = vendor.name;
+        vendorSelect.appendChild(option);
+      }
+    });
+  }
+}
+
+// ✅ Apply filters to line items - Card View Only
+function applyFilters() {
+  const categoryValue = document.getElementById('filter-category')?.value || '';
+  const statusValue = document.getElementById('filter-status')?.value || '';
+  const vendorValue = document.getElementById('filter-vendor')?.value || '';
+  
+  // Apply filters to cards
+  applyCardViewFilters(categoryValue, statusValue, vendorValue);
+  
+  // Update counts
+  updateFilterCounts();
+}
+
+// ✅ Apply filters to card view
+function applyCardViewFilters(categoryValue, statusValue, vendorValue) {
+  let visibleCount = 0;
+  let hiddenCount = 0;
+  
+  // Process all cards
+  const cards = document.querySelectorAll('.line-item-card');
+  cards.forEach(card => {
+    // Get the category for this card
+    let categoryHeader = card.previousElementSibling;
+    while (categoryHeader && !categoryHeader.classList.contains('category-header')) {
+      categoryHeader = categoryHeader.previousElementSibling;
+    }
+    
+    // Get category name
+    const cardCategory = categoryHeader ? 
+      categoryHeader.querySelector('.category-title span')?.textContent?.trim() || '' : '';
+    
+    // Get item status from the status element's text content
+    const statusElement = card.querySelector('.item-status');
+    const cardStatus = statusElement ? 
+      statusElement.textContent.trim().toLowerCase() : 'new';
+    
+    // Get assigned vendor
+    const assignedTo = card.getAttribute('data-assigned-to') || '';
+    const isAssigned = assignedTo && assignedTo !== '';
+    
+    // Check if card matches all active filters
+    const matchesCategory = !categoryValue || cardCategory === categoryValue;
+    const matchesStatus = !statusValue || cardStatus.includes(statusValue.toLowerCase());
+    const matchesVendor = !vendorValue || 
+                          (vendorValue === 'unassigned' && !isAssigned) || 
+                          (isAssigned && assignedTo === vendorValue);
+    
+    // Show or hide based on filter matches
+    if (matchesCategory && matchesStatus && matchesVendor) {
+      card.style.display = '';
+      visibleCount++;
+    } else {
+      card.style.display = 'none';
+      hiddenCount++;
+    }
+  });
+  
+  // Now handle category headers - only show if they have visible cards
+  const categoryHeaders = document.querySelectorAll('.category-header');
+  categoryHeaders.forEach(header => {
+    let hasVisibleCards = false;
+    
+    // Check next siblings until next category or end
+    let nextEl = header.nextElementSibling;
+    while (nextEl && !nextEl.classList.contains('category-header')) {
+      if (nextEl.classList.contains('line-item-card') && nextEl.style.display !== 'none') {
+        hasVisibleCards = true;
+        break;
+      }
+      nextEl = nextEl.nextElementSibling;
+    }
+    
+    header.style.display = hasVisibleCards ? '' : 'none';
+  });
+  
+  console.log(`Filter applied: ${visibleCount} items shown, ${hiddenCount} items hidden`);
+}
+
+// ✅ Clear all filters
+function clearFilters() {
+  // Reset all filter dropdowns
+  const filterElements = [
+    document.getElementById('filter-category'),
+    document.getElementById('filter-status'),
+    document.getElementById('filter-vendor')
+  ];
+  
+  filterElements.forEach(el => {
+    if (el) el.value = '';
+  });
+  
+  // Show all cards and category headers
+  document.querySelectorAll('.line-item-card, .category-header').forEach(el => {
+    el.style.display = '';
+  });
+  
+  // Reset filter counts
+  updateFilterCounts();
+  
+  console.log('Filters cleared');
+}
+
+// ✅ Update the filter count display - Card View Only
+// ✅ Update the filter count display with filter badges
+function updateFilterCounts() {
+  const items = document.querySelectorAll('.line-item-card');
+  const totalItems = items.length;
+  const visibleItems = Array.from(items).filter(item => item.style.display !== 'none').length;
+  
+  // Update filter header with count
+  const filterHeader = document.querySelector('.filter-header h3');
+  if (!filterHeader) return;
+  
+  // Get active filters
+  const activeFilters = [
+    { 
+      id: 'filter-category', 
+      name: 'Category', 
+      value: document.getElementById('filter-category')?.value || '',
+      label: document.getElementById('filter-category')?.selectedOptions[0]?.textContent || ''
+    },
+    { 
+      id: 'filter-status', 
+      name: 'Status', 
+      value: document.getElementById('filter-status')?.value || '',
+      label: document.getElementById('filter-status')?.selectedOptions[0]?.textContent || ''
+    },
+    { 
+      id: 'filter-vendor', 
+      name: 'Vendor', 
+      value: document.getElementById('filter-vendor')?.value || '',
+      label: document.getElementById('filter-vendor')?.selectedOptions[0]?.textContent || ''
+    }
+  ].filter(f => f.value);
+  
+  // Set the header text
+  filterHeader.textContent = `Filters (${visibleItems}/${totalItems})`;
+  
+  // Add badge count if filters are active
+  if (activeFilters.length > 0) {
+    const badge = document.createElement('span');
+    badge.className = 'filter-active-badge';
+    badge.textContent = activeFilters.length;
+    filterHeader.appendChild(badge);
+  }
+  
+  // Add .has-value class to filters with values
+  document.querySelectorAll('.filter-select').forEach(select => {
+    select.classList.toggle('has-value', select.value !== '');
+  });
+  
+  // Update or create the filter badges container
+  let badgesContainer = document.querySelector('.filter-badges');
+  if (!badgesContainer) {
+    badgesContainer = document.createElement('div');
+    badgesContainer.className = 'filter-badges';
+    const filterPanel = document.querySelector('.filter-panel');
+    filterPanel.insertBefore(badgesContainer, document.querySelector('.filter-options'));
+  }
+  
+  // Clear existing badges
+  badgesContainer.innerHTML = '';
+  
+  // Hide badges container if no active filters
+  badgesContainer.style.display = activeFilters.length ? 'flex' : 'none';
+  
+  // Create badges for each active filter
+  activeFilters.forEach(filter => {
+    const badge = document.createElement('div');
+    badge.className = 'filter-badge';
+    badge.innerHTML = `
+      <span class="filter-badge-name">${filter.name}:</span>
+      <span class="filter-badge-value">${filter.label}</span>
+      <button class="filter-badge-remove" data-filter-id="${filter.id}">×</button>
+    `;
+    badgesContainer.appendChild(badge);
+    
+    // Add click event to remove button
+    badge.querySelector('.filter-badge-remove').addEventListener('click', function() {
+      document.getElementById(filter.id).value = '';
+      applyFilters();
+    });
+  });
+}
+
+// ✅ Update clearFilters to also update badge display
+function clearFilters() {
+  // Reset all filter dropdowns
+  const filterElements = [
+    document.getElementById('filter-category'),
+    document.getElementById('filter-status'),
+    document.getElementById('filter-vendor')
+  ];
+  
+  filterElements.forEach(el => {
+    if (el) el.value = '';
+  });
+  
+  // Show all cards and category headers
+  document.querySelectorAll('.line-item-card, .category-header').forEach(el => {
+    el.style.display = '';
+  });
+  
+  // Hide badges container
+  const badgesContainer = document.querySelector('.filter-badges');
+  if (badgesContainer) {
+    badgesContainer.style.display = 'none';
+    badgesContainer.innerHTML = '';
+  }
+  
+  // Reset filter counts
+  updateFilterCounts();
+  
+  console.log('Filters cleared');
+}
+
+
+// Add this function or modify your existing updateTableFooterTotals
+
+// Update table footer totals, optionally only counting visible rows
+function updateTableFooterTotals(filteredOnly = false) {
+  const rows = document.querySelectorAll('.estimate-table tbody tr');
+  let totalLabor = 0;
+  let totalMaterial = 0;
+  let totalAmount = 0;
+  let totalProfit = 0;
+  
+  rows.forEach(row => {
+    // Skip hidden rows if in filtered mode
+    if (filteredOnly && row.style.display === 'none') return;
+    
+    totalLabor += parseFloat(row.children[8].textContent.replace('$', '')) || 0;
+    totalMaterial += parseFloat(row.children[9].textContent.replace('$', '')) || 0;
+    totalAmount += parseFloat(row.children[10].textContent.replace('$', '')) || 0;
+    totalProfit += parseFloat(row.children[11].textContent.replace('$', '')) || 0;
+  });
+  
+  const footer = document.querySelector('.estimate-table tfoot tr');
+  if (footer) {
+    footer.children[8].textContent = '$' + totalLabor.toFixed(2);
+    footer.children[9].textContent = '$' + totalMaterial.toFixed(2);
+    footer.children[10].textContent = '$' + totalAmount.toFixed(2);
+    footer.children[11].textContent = '$' + totalProfit.toFixed(2);
+    
+    // Add indicator that totals are filtered
+    if (filteredOnly) {
+      footer.setAttribute('data-filtered', 'true');
+      footer.children[0].textContent = 'FILTERED TOTALS:';
+    } else {
+      footer.removeAttribute('data-filtered');
+      footer.children[0].textContent = 'TOTALS:';
+    }
+  }
+}
