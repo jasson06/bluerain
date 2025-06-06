@@ -160,6 +160,21 @@ function submitEditProject() {
     },
   };
 
+  // Frontend validation for required fields
+  const missing = [];
+  if (!updatedProject.name) missing.push('Name');
+  if (!updatedProject.status) missing.push('Status');
+  if (!updatedProject.type) missing.push('Type');
+  if (!updatedProject.code) missing.push('Code');
+  if (!updatedProject.address.city) missing.push('City');
+  if (!updatedProject.address.state) missing.push('State');
+  if (!updatedProject.address.addressLine1) missing.push('Address Line 1');
+
+  if (missing.length) {
+    showToast(`Please fill in: ${missing.join(', ')}`);
+    return;
+  }
+
   fetch(`/api/projects/${projectId}`, {
     method: 'PUT',
     headers: {
@@ -167,8 +182,13 @@ function submitEditProject() {
     },
     body: JSON.stringify(updatedProject),
   })
-    .then((response) => {
-      if (!response.ok) throw new Error('Failed to update project');
+    .then(async (response) => {
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        const msg = data.message || "Failed to update project";
+        showToast(msg);
+        throw new Error(msg);
+      }
       return response.json();
     })
     .then(() => {
@@ -177,7 +197,6 @@ function submitEditProject() {
     })
     .catch((error) => console.error('Error updating project:', error));
 }
-
 
 // Function to delete the project
 async function deleteProject() {
