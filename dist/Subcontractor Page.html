@@ -779,24 +779,25 @@ async function checkAndUpdateProjectStatus(vendorId, projectId, currentStatus) {
     }
 
     // 5. Determine new status with strict conditions
-    let newStatus = normalizedCurrentStatus;
+let newStatus = normalizedCurrentStatus;
 
-    // Status determination with more verbose logging
-    if (statusCounts.rework > 0) {
-      newStatus = "rework";
-      console.log(`🔄 Setting status to rework because ${statusCounts.rework} items need rework`);
-    } else if (statusCounts.new === totalItems) {
-      newStatus = "new";
-      console.log(`🔄 Setting status to new because all ${totalItems} items are new`);
-    } else if (statusCounts.new > 0 || statusCounts.inProgress > 0) {
-      newStatus = "in-progress";
-      console.log(`🔄 Setting status to in-progress because ${statusCounts.new} items are new and ${statusCounts.inProgress} are in progress`);
-    } else if (statusCounts.completed === totalItems) {
-      newStatus = "completed";
-      console.log(`✅ Setting status to completed because all ${totalItems} items are completed`);
-    } else {
-      console.log(`⚠️ Couldn't determine status cleanly - keeping as ${normalizedCurrentStatus}`);
-    }
+// UPDATED STATUS DETERMINATION WITH NEW PRIORITY ORDER
+if (statusCounts.rework > 0) {
+  newStatus = "rework";
+  console.log(`🔄 Setting status to rework because ${statusCounts.rework} items need rework`);
+} else if (statusCounts.new > 0) {
+  // CHANGED: Any new item makes the project "new" (not just when all items are new)
+  newStatus = "new";
+  console.log(`🔄 Setting status to new because ${statusCounts.new} items are new`);
+} else if (statusCounts.inProgress > 0) {
+  newStatus = "in-progress";
+  console.log(`🔄 Setting status to in-progress because ${statusCounts.inProgress} items are in progress`);
+} else if (statusCounts.completed === totalItems) {
+  newStatus = "completed";
+  console.log(`✅ Setting status to completed because all ${totalItems} items are completed`);
+} else {
+  console.log(`⚠️ Couldn't determine status cleanly - keeping as ${normalizedCurrentStatus}`);
+}
 
     // 6. Only update if status changed (using normalized values)
     if (newStatus !== normalizedCurrentStatus) {
