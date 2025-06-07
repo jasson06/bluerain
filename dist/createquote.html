@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+
   <title>Create Quote</title>
   <style>
     body {
@@ -45,6 +47,7 @@
   border-radius: 8px;
   box-sizing: border-box;
     }
+
     input:focus,
 select:focus {
   border-color: var(--primary);
@@ -676,6 +679,7 @@ select:focus {
 textarea {
   transition: height 0.2s ease;
 }
+
   </style>
 </head>
 <body>
@@ -686,12 +690,13 @@ textarea {
       <div class="header-title">BESF</div>
       <div class="dropdown">
         <button class="dropdown-btn">⋮ Actions</button>
-        <div class="dropdown-content">
-          <a href="#" onclick="openQuotePreview()">📄 Preview Quote</a>
-          <a href="#" onclick="saveQuote()">💾 Save Quote</a>
-          <a href="#" onclick="openQuoteHistory()">📜 Quote History</a>
-          <a href="#" onclick="openLaborCostModal()">📜 Labor cost list</a>
-        </div>
+<div class="dropdown-content">
+  <a href="#" onclick="openQuotePreview()">📄 Preview Quote</a>
+  <a href="#" onclick="saveQuote()">💾 Save Quote</a>
+  <a href="#" onclick="openQuoteHistory()">📜 Quote History</a>
+  <a href="#" onclick="openLaborCostModal()">📜 Labor cost list</a>
+  <a href="/quotes.html" style="color: #dc3545;">❌ Cancel</a>
+</div>
       </div>
     </div>
     
@@ -710,13 +715,14 @@ textarea {
       <h3>Quote To</h3>
       <input id="toName" placeholder="Customer Name" oninput="showClientSuggestions()" />
 <div id="clientSuggestionBox" style="position: absolute; background: white; border: 1px solid #ccc; border-radius: 6px; z-index: 1000; display: none; max-height: 150px; overflow-y: auto;"></div>
-      <input 
+<input 
 id="toAddress" 
 placeholder="Address (0000 Street, City, ST ZIP)" 
 onfocus="initAutocomplete()" 
 autocomplete="off" 
 />
 <span id="addressError" style="color: red; display: none;">Invalid address format. Please use: Street, City, ST ZIP</span>
+
       <input id="toEmail" placeholder="Email" />
       <input id="toPhone" placeholder="Phone Number" />
     </div>
@@ -962,8 +968,8 @@ autocomplete="off"
   100% { transform: rotate(360deg); }
 }
 </style>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCvzkKpCkAY2PHwU8I8zZiM_FLMzMj1bbg&libraries=places"></script>
-    
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCvzkKpCkAY2PHwU8I8zZiM_FLMzMj1bbg&libraries=places"></script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script>
@@ -1150,6 +1156,8 @@ function autoResizeTextarea(textarea) {
 }
 
 
+
+
 let autocomplete;
 
 function initAutocomplete() {
@@ -1212,7 +1220,9 @@ function validateAddress(address) {
   }
 }
 
-    
+
+
+
 
 let lineItems = [];
 
@@ -1568,16 +1578,103 @@ const total10 = (total * 0.10).toLocaleString(undefined, { minimumFractionDigits
       alert('Sharing quote (this will work once backend/API is connected).');
     }
 
-    function saveQuote() {
+// Add this inside your script tag, after window.onload
+
+// Check for quoteId parameter when page loads
+document.addEventListener('DOMContentLoaded', async () => {
+  const params = new URLSearchParams(window.location.search);
+  const quoteId = params.get('quoteId');
+  
+  // If quoteId exists, load the quote for editing
+  if (quoteId) {
+    await loadQuoteForEditing(quoteId);
+  }
+});
+
+// Function to load quote data for editing
+async function loadQuoteForEditing(quoteId) {
+  showLoader();
+  try {
+    const response = await fetch(`/api/quotes/${quoteId}`);
+    if (!response.ok) throw new Error('Failed to fetch quote');
+    
+    const quote = await response.json();
+    
+    // Set the quote ID as a data attribute on the body for later use
+    document.body.setAttribute('data-quote-id', quoteId);
+    
+    // Update page title and header to indicate editing mode
+    document.title = `Edit Quote #${quote.quoteNumber}`;
+    document.querySelector('.header-title').textContent = 'Edit Quote';
+    
+    // Fill in "From" information
+    document.getElementById('fromName').value = quote.from.name || '';
+    document.getElementById('fromAddress').value = quote.from.address || '';
+    document.getElementById('fromEmail').value = quote.from.email || '';
+    document.getElementById('fromPhone').value = quote.from.phone || '';
+    document.getElementById('fromLicense').value = quote.from.license || '';
+    
+    // Fill in "To" information
+    document.getElementById('toName').value = quote.to.name || '';
+    document.getElementById('toAddress').value = quote.to.address || '';
+    document.getElementById('toEmail').value = quote.to.email || '';
+    document.getElementById('toPhone').value = quote.to.phone || '';
+    
+    // Fill in quote details
+    document.getElementById('quoteNumber').value = quote.quoteNumber || '';
+    document.getElementById('quoteDate').value = quote.date ? quote.date.split('T')[0] : '';
+    document.getElementById('validTill').value = quote.validTill ? quote.validTill.split('T')[0] : '';
+    document.getElementById('quoteNotes').value = quote.notes || '';
+    
+    // Set discount and tax values
+    document.getElementById('inputDiscount').value = quote.totals?.discount || 0;
+    document.getElementById('inputTax').value = quote.totals?.tax || 0;
+    
+    // Fill in line items
+    lineItems = quote.lineItems.map(item => ({
+      costCode: item.costCode || '',
+      name: item.name,
+      description: item.description || '',
+      rate: parseFloat(item.rate) || 0,
+      qty: parseInt(item.qty) || 0
+    }));
+    
+    // Render the table with the line items
+    renderTable();
+    
+    // If client signature name was stored, restore it
+    if (quote.to.name) {
+      document.getElementById('signatureClientName').value = quote.to.name;
+    }
+    
+    // Update save button text to indicate update mode
+    const saveButtons = document.querySelectorAll('.dropdown-content a[onclick="saveQuote()"]');
+    saveButtons.forEach(btn => {
+      btn.textContent = '💾 Update Quote';
+    });
+    
+    showToast('Quote loaded for editing');
+  } catch (error) {
+    console.error('Error loading quote for editing:', error);
+    showToast('❌ Failed to load quote for editing');
+  } finally {
+    hideLoader();
+  }
+}
+
+// Update the saveQuote function to handle both new quotes and updates
+function saveQuote() {
+  const quoteId = document.body.getAttribute('data-quote-id');
+  const isUpdate = !!quoteId;
+  
   const quote = {
     from: {
-  name: document.getElementById('fromName').value,
-  address: document.getElementById('fromAddress').value,
-  email: document.getElementById('fromEmail').value,
-  phone: document.getElementById('fromPhone').value,
-  license: document.getElementById('fromLicense').value  // ✅ Add this
-},
-
+      name: document.getElementById('fromName').value,
+      address: document.getElementById('fromAddress').value,
+      email: document.getElementById('fromEmail').value,
+      phone: document.getElementById('fromPhone').value,
+      license: document.getElementById('fromLicense').value
+    },
     to: {
       name: document.getElementById('toName').value,
       address: document.getElementById('toAddress').value,
@@ -1590,31 +1687,40 @@ const total10 = (total * 0.10).toLocaleString(undefined, { minimumFractionDigits
     notes: document.getElementById('quoteNotes').value,
     lineItems,
     totals: {
-  subtotal: parseFloat(document.getElementById('subtotal').textContent.replace(/,/g, '')),
-  discount: parseFloat(document.getElementById('discount').textContent.replace(/,/g, '')),
-  tax: parseFloat(document.getElementById('tax').textContent.replace(/,/g, '')),
-  total: parseFloat(document.getElementById('grandTotal').textContent.replace(/,/g, ''))
-}
-
+      subtotal: parseFloat(document.getElementById('subtotal').textContent.replace(/,/g, '')),
+      discount: parseFloat(document.getElementById('discount').textContent.replace(/,/g, '')),
+      tax: parseFloat(document.getElementById('tax').textContent.replace(/,/g, '')),
+      total: parseFloat(document.getElementById('grandTotal').textContent.replace(/,/g, ''))
+    }
   };
-  showLoader(); // 🔵 Show loader at start
-  fetch('/api/quotes', {
-    method: 'POST',
+  
+  showLoader();
+  
+  // Determine if this is a new quote or an update
+  const url = isUpdate ? `/api/quotes/${quoteId}` : '/api/quotes';
+  const method = isUpdate ? 'PUT' : 'POST';
+  
+  fetch(url, {
+    method: method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(quote)
   })
     .then(res => res.json())
     .then(data => {
-      console.log('Quote saved:', data);
-      showToast('✅ Quote saved ');
-      setTimeout(() => location.reload(), 1500); // Reload after 1.5s
+      console.log(`Quote ${isUpdate ? 'updated' : 'saved'}:`, data);
+      showToast(`✅ Quote ${isUpdate ? 'updated' : 'saved'}`);
+      
+      // Redirect back to quotes page after successful save
+      setTimeout(() => {
+        window.location.href = '/quotes.html';
+      }, 1500);
     })
     .catch(err => {
-      console.error('Error saving quote:', err);
-      showToast('❌ Failed to save quote');
+      console.error(`Error ${isUpdate ? 'updating' : 'saving'} quote:`, err);
+      showToast(`❌ Failed to ${isUpdate ? 'update' : 'save'} quote`);
     })
     .finally(() => {
-      hideLoader(); // 🔵 Always hide loader after fetch is done
+      hideLoader();
     });
 }
 
@@ -2075,7 +2181,6 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
 
     let laborCostList = [];
 
-
     function openLaborCostModal() {
   document.getElementById('laborCostModal').style.display = 'flex';
   fetchLaborSuggestions();
@@ -2090,22 +2195,6 @@ function closeLaborCostModal() {
     document.body.classList.remove('sidebar-open');
   }
 }
-
-
-
-if (navigator.userAgent.includes('iPad') || (navigator.userAgent.includes('Macintosh') && 'ontouchend' in document)) {
-  const style = document.createElement('style');
-  style.innerHTML = `
-    #laborCostModal {
-      display: flex !important;
-      justify-content: flex-end !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-  `;
-  document.head.appendChild(style);
-}
-    
 
   async function fetchLaborSuggestions() {
     showLoader(); // 👈 START
@@ -2378,6 +2467,8 @@ async function saveEditedLaborItem() {
 
   
 }
+
+
 
 
  
