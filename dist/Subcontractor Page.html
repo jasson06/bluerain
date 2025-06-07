@@ -724,77 +724,159 @@ async function startProject(projectId) {
 }
 
 async function checkAndUpdateProjectStatus(vendorId, projectId, currentStatus) {
-  showLoader(); // 👈 START
-    try {
-        const response = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
-
-        if (!response.ok) {
-            if (response.status === 404) {
-                console.warn(`⚠️ No assigned items for project ${projectId}`);
-                return currentStatus;
-            }
-            throw new Error("Failed to fetch assigned items.");
-        }
-
-        const data = await response.json();
-        const assignedItems = data.items;
-
-        if (!Array.isArray(assignedItems) || assignedItems.length === 0) {
-            console.warn(`ℹ️ Project ${projectId} has no assigned items.`);
-            return currentStatus;
-        }
-
-        const anyNew = assignedItems.some(item => item.status === "new");
-        const anyRework = assignedItems.some(item => item.status === "rework");
-        const anyInProgress = assignedItems.some(item => item.status === "in-progress");
-        const allCompleted = assignedItems.every(item => item.status === "completed");
-        const allApproved = assignedItems.every(item => item.qualityControl?.status === "approved");
-        const allCompletedAndApproved = assignedItems.every(
-            item => item.status === "completed" && item.qualityControl?.status === "approved"
-        );
-
-        let newStatus = currentStatus;
-
-        // ✅ Priority Order: Rework > New > In-Progress > Completed
-        if (anyRework) {
-            newStatus = "rework";
-        } else if (anyNew) {
-            newStatus = "new";
-        } else if (anyInProgress) {
-            newStatus = "in-progress";
-        } else if (allCompletedAndApproved) {
-            newStatus = "completed";  // ✅ Completed if all are both completed and approved
-        } else if (allCompleted) {
-            newStatus = "completed";  // ✅ Completed even if not all are approved, but all are completed
-        }
-
-        // ✅ Update project status only if there is a change
-        if (newStatus !== currentStatus) {
-            const updateResponse = await fetch('/api/vendor/update-project-status', {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ vendorId, projectId, status: newStatus }),
-            });
-
-            if (!updateResponse.ok) {
-                console.error(`❌ Failed to update project status to ${newStatus}`);
-                return currentStatus;
-            }
-
-            showToast(`✅ Project status updated to ${newStatus}`);
-            window.location.reload(); // Reload to reflect updated status
-        }
-
-        return newStatus;
-
-    } catch (error) {
-        console.error("❌ Error in checkAndUpdateProjectStatus:", error);
-        return currentStatus;
-              } finally {
-    hideLoader(); // 👈 END
+  showLoader();
+  
+  // 1. Normalize the current status for consistent comparison
+  const normalizedCurrentStatus = normalizeStatus(currentStatus);
+  
+  console.log(`🔍 Checking status for Project: ${projectId}, Current: ${currentStatus} (Normalized: ${normalizedCurrentStatus})`);
+  
+  try {
+    // Add delay to ensure database updates are complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Fetch assigned items with cache busting
+    const response = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}?t=${Date.now()}`);
+    
+    if (!response.ok) {
+      console.warn(`⚠️ API Error: ${response.status} for project ${projectId}`);
+      hideLoader();
+      return normalizedCurrentStatus;
     }
+
+    const data = await response.json();
+    const assignedItems = data.items || [];
+
+    if (assignedItems.length === 0) {
+      console.warn(`⚠️ No items found for project ${projectId}`);
+      hideLoader();
+      return normalizedCurrentStatus;
+    }
+
+    // 2. Add detailed logging of every item's status
+    console.log(`📋 Detailed item status for project ${projectId}:`);
+    assignedItems.forEach(item => {
+      console.log(`  - Item ${item.name || item.itemId}: status=${item.status}, qc=${item.qualityControl?.status || 'none'}`);
+    });
+
+    // 3. Count items by normalized status
+    const statusCounts = {
+      new: assignedItems.filter(item => normalizeStatus(item.status) === "new").length,
+      rework: assignedItems.filter(item => normalizeStatus(item.status) === "rework").length,
+      inProgress: assignedItems.filter(item => normalizeStatus(item.status) === "in-progress").length,
+      completed: assignedItems.filter(item => normalizeStatus(item.status) === "completed").length
+    };
+
+    console.log(`📊 Normalized status counts:`, statusCounts);
+    
+    // 4. Check total items to ensure all are accounted for
+    const totalItems = assignedItems.length;
+    const countedItems = statusCounts.new + statusCounts.rework + 
+                         statusCounts.inProgress + statusCounts.completed;
+                         
+    if (totalItems !== countedItems) {
+      console.warn(`⚠️ Item count mismatch: total=${totalItems}, counted=${countedItems}`);
+    }
+
+    // 5. Determine new status with strict conditions
+    let newStatus = normalizedCurrentStatus;
+
+    // Status determination with more verbose logging
+    if (statusCounts.rework > 0) {
+      newStatus = "rework";
+      console.log(`🔄 Setting status to rework because ${statusCounts.rework} items need rework`);
+    } else if (statusCounts.new === totalItems) {
+      newStatus = "new";
+      console.log(`🔄 Setting status to new because all ${totalItems} items are new`);
+    } else if (statusCounts.new > 0 || statusCounts.inProgress > 0) {
+      newStatus = "in-progress";
+      console.log(`🔄 Setting status to in-progress because ${statusCounts.new} items are new and ${statusCounts.inProgress} are in progress`);
+    } else if (statusCounts.completed === totalItems) {
+      newStatus = "completed";
+      console.log(`✅ Setting status to completed because all ${totalItems} items are completed`);
+    } else {
+      console.log(`⚠️ Couldn't determine status cleanly - keeping as ${normalizedCurrentStatus}`);
+    }
+
+    // 6. Only update if status changed (using normalized values)
+    if (newStatus !== normalizedCurrentStatus) {
+      console.log(`🔄 Updating project status from ${normalizedCurrentStatus} to ${newStatus}`);
+      
+      // 7. Add retry logic for the update
+      let updateSuccess = false;
+      let retryCount = 0;
+      
+      while (!updateSuccess && retryCount < 3) {
+        try {
+          const updateResponse = await fetch('/api/vendor/update-project-status', {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ 
+              vendorId, 
+              projectId, 
+              status: newStatus 
+            }),
+          });
+
+          if (updateResponse.ok) {
+            updateSuccess = true;
+            const updateResult = await updateResponse.json();
+            console.log(`✅ Project status updated to ${newStatus}:`, updateResult);
+            
+            showToast(`Project status updated to ${newStatus}`);
+            
+            // Reload the page after a short delay
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+          } else {
+            throw new Error(`Failed with status: ${updateResponse.status}`);
+          }
+        } catch (error) {
+          retryCount++;
+          console.error(`❌ Update attempt ${retryCount} failed:`, error);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait before retry
+        }
+      }
+      
+      if (!updateSuccess) {
+        showToast("Failed to update project status after multiple attempts", "error");
+      }
+    } else {
+      console.log(`ℹ️ No status change needed, staying at "${normalizedCurrentStatus}"`);
+    }
+
+    hideLoader();
+    return newStatus;
+  } catch (error) {
+    console.error(`❌ Error in checkAndUpdateProjectStatus:`, error);
+    showToast("Error checking project status", "error");
+    hideLoader();
+    return normalizedCurrentStatus;
+  }
+}
+
+// Update this helper function for status normalization
+function normalizeStatus(status) {
+  if (!status) return "new";
+  
+  // Convert to lowercase and handle various formats
+  const s = status.toLowerCase().trim();
+  
+  if (s === "in progress" || s === "inprogress" || s === "in-progress") {
+    return "in-progress";
+  } else if (s === "completed" || s === "complete" || s === "done" || s === "approved") {
+    return "completed";  // ✅ Now treats "approved" as "completed"
+  } else if (s === "rework" || s === "needs rework" || s === "fix") {
+    return "rework";
+  } else if (s === "new" || s === "not started") {
+    return "new";
+  }
+  
+  // Default fallback
+  return s;
 }
 
 
