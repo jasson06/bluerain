@@ -2531,60 +2531,7 @@ app.post("/api/assign-items", async (req, res) => {
 
   
 
-app.get("/api/vendors/:vendorId/assigned-items/:projectId", async (req, res) => {
-  try {
-    const { vendorId, projectId } = req.params;
-    console.log(`📌 Fetching assigned items for Vendor: ${vendorId}, Project: ${projectId}`);
 
-    const vendor = await Vendor.findById(vendorId);
-    if (!vendor) {
-      return res.status(404).json({ message: "Vendor not found." });
-    }
-
-    // Find items assigned to this vendor for this project
-    let assignedItems = vendor.assignedItems.filter(item => item.projectId.toString() === projectId);
-
-    if (assignedItems.length === 0) {
-      console.warn("⚠️ No assigned items found for this project and vendor.");
-      return res.status(404).json({ message: "No assigned items found." });
-    }
-
-    // Fetch all relevant estimates for this project
-    const estimates = await require('./server').Estimate.find({ projectId });
-
-    // Build a map of itemId -> laborCost from all estimates
-    const laborCostMap = {};
-    estimates.forEach(est => {
-      est.lineItems.forEach(cat => {
-        cat.items.forEach(item => {
-          if (item._id && typeof item.laborCost !== "undefined") {
-            laborCostMap[item._id.toString()] = item.laborCost;
-          }
-        });
-      });
-    });
-
-    // Ensure Photos Exist and Sync laborCost from Estimate
-    assignedItems = assignedItems.map(item => {
-      if (!item.photos) {
-        item.photos = { before: [], after: [] };
-      }
-      // Always sync laborCost from estimate if available
-      const laborCost = laborCostMap[item.itemId?.toString()];
-      if (typeof laborCost !== "undefined") {
-        item.laborCost = laborCost;
-      }
-      return item;
-    });
-
-    console.log("✅ Assigned Items (with laborCost):", assignedItems);
-
-    res.status(200).json({ items: assignedItems });
-  } catch (error) {
-    console.error("❌ Error fetching assigned items:", error);
-    res.status(500).json({ message: "Failed to fetch assigned items." });
-  }
-});
 
   
 
@@ -2638,15 +2585,17 @@ app.get("/api/vendors/:vendorId/assigned-items/:projectId", async (req, res) => 
   
 
 
-// Fetch Assigned Items for a Vendor by Project
-app.get('/api/vendors/:vendorId/assigned-items/:projectId', async (req, res) => {
-  const { vendorId, projectId } = req.params;
-  const { estimateId } = req.query; // Extract estimateId from query parameters
 
+// COMBINED: Fetch Assigned Items for a Vendor by Project
+app.get('/api/vendors/:vendorId/assigned-items/:projectId', async (req, res) => {
   try {
+    const { vendorId, projectId } = req.params;
+    const { estimateId } = req.query; // Extract estimateId from query parameters
+    
+    console.log(`📌 Fetching assigned items for Vendor: ${vendorId}, Project: ${projectId}${estimateId ? `, Estimate: ${estimateId}` : ''}`);
+
     // Fetch vendor data
     const vendor = await Vendor.findById(vendorId);
-
     if (!vendor) {
       console.error("❌ Vendor not found:", vendorId);
       return res.status(404).json({ message: "Vendor not found." });
@@ -2659,7 +2608,7 @@ app.get('/api/vendors/:vendorId/assigned-items/:projectId', async (req, res) => 
     }
 
     // Filter assigned items for the specific project and estimate
-    const assignedItems = vendor.assignedItems.filter((item) => {
+    let assignedItems = vendor.assignedItems.filter((item) => {
       const isProjectMatch = item.projectId?.toString() === projectId;
       const isEstimateMatch = estimateId ? item.estimateId?.toString() === estimateId : true;
       return isProjectMatch && isEstimateMatch;
@@ -2667,19 +2616,48 @@ app.get('/api/vendors/:vendorId/assigned-items/:projectId', async (req, res) => 
 
     if (assignedItems.length === 0) {
       console.warn("⚠️ No items found for this project and estimate:", projectId, estimateId);
-    } else {
-      console.log(
-        `📌 ${assignedItems.length} assigned items found for Vendor ${vendorId} in Project ${projectId} with Estimate ${estimateId}.`
-      );
+      return res.status(200).json({ items: [] });
     }
 
+    // Fetch all relevant estimates for this project to sync labor costs
+    const estimates = await Estimate.find({ projectId });
+
+    // Build a map of itemId -> laborCost from all estimates
+    const laborCostMap = {};
+    estimates.forEach(est => {
+      est.lineItems.forEach(cat => {
+        cat.items.forEach(item => {
+          if (item._id && typeof item.laborCost !== "undefined") {
+            laborCostMap[item._id.toString()] = item.laborCost;
+          }
+        });
+      });
+    });
+
+    // Ensure Photos Exist and Sync laborCost from Estimate
+    assignedItems = assignedItems.map(item => {
+      // Ensure photos object exists
+      if (!item.photos) {
+        item.photos = { before: [], after: [] };
+      }
+      
+      // Always sync laborCost from estimate if available
+      const laborCost = laborCostMap[item.itemId?.toString()];
+      if (typeof laborCost !== "undefined") {
+        item.laborCost = laborCost;
+      }
+      
+      return item;
+    });
+
+    console.log(`✅ Found ${assignedItems.length} assigned items for Vendor ${vendorId} in Project ${projectId}`);
+    
     res.status(200).json({ items: assignedItems });
   } catch (error) {
     console.error("❌ Error fetching assigned items:", error);
     res.status(500).json({ message: "Failed to fetch assigned items." });
   }
 });
-
 
 
 
