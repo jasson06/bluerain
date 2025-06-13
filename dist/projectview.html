@@ -864,6 +864,21 @@ td {
   background: #007bff;
   color: #fff;
 }
+
+    .rework-badge-estimate {
+    background-color: #dc2626;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+    animation: pulse 2s infinite;
+}
  </style>
 </head>
 <body>
@@ -1153,14 +1168,15 @@ async function fetchProjectDetails(projectId) {
 }
 
 
+// Update the fetchProjectEstimates function
 async function fetchProjectEstimates(projectId) {
   const vendorId = localStorage.getItem("vendorId");
   const tabsContainer = document.getElementById("estimateTabsContainer");
-  showLoader(); // 👈 START
+  showLoader();
+  
   try {
     const res = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
     
-    // Handle no assigned items gracefully
     if (res.status === 404) {
       tabsContainer.innerHTML = `<p style="padding: 12px; color: gray;">No work order have been assigned to you yet.</p>`;
       return;
@@ -1181,7 +1197,7 @@ async function fetchProjectEstimates(projectId) {
     if (!estimateRes.ok) throw new Error("Failed to fetch estimates.");
     const { estimates } = await estimateRes.json();
 
-    tabsContainer.innerHTML = ""; // Clear existing tabs
+    tabsContainer.innerHTML = "";
     let firstTabSelected = false;
     let validEstimateFound = false;
 
@@ -1192,17 +1208,35 @@ async function fetchProjectEstimates(projectId) {
       validEstimateFound = true;
 
       const hasNewItem = assignedItems.some(item =>
-        item.status === 'new' || (item.status === 'in-progress' && !item.viewed)
+        item.status === 'new' || (item.status === '' && !item.viewed)
       );
 
-      const label = est.title ? `${est.title} (${est.invoiceNumber})` : est.invoiceNumber;
+      const hasReworkItem = assignedItems.some(item => 
+        item.status === 'rework' || item.qualityControl?.status === 'rework'
+      );
+
+      const label = est.title ? `${est.title} ` : est.invoiceNumber;
 
       const tab = document.createElement("button");
       tab.className = "estimate-tab";
       tab.dataset.estimateId = est._id;
+      
+      // Add appropriate badge based on status
+      let badgeHtml = '';
+      if (hasReworkItem) {
+        badgeHtml = `
+          <span class="rework-badge-estimate">
+            <i class="fas fa-exclamation-circle"></i>
+            <span class="message">Rework</span>
+          </span>
+        `;
+      } else if (hasNewItem) {
+        badgeHtml = '<span class="new-badge">NEW</span>';
+      }
+
       tab.innerHTML = `
         <span>${label}</span>
-        ${hasNewItem ? '<span class="new-badge">NEW</span>' : ''}
+        ${badgeHtml}
       `;
 
       tab.onclick = () => {
@@ -1226,8 +1260,8 @@ async function fetchProjectEstimates(projectId) {
   } catch (error) {
     console.error("❌ Error fetching project estimates:", error);
     tabsContainer.innerHTML = `<p style="color: red; padding: 10px;">Failed to load work orders.</p>`;
-} finally {
-    hideLoader(); // 👈 END
+  } finally {
+    hideLoader();
   }
 }
 
