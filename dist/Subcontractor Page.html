@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Subcontractor Dashboard</title>
   <!-- Toastify CSS & JS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
@@ -473,6 +474,45 @@ button:hover,
     padding: 9px 0;
   }
 }
+
+    .rework-badge {
+    background-color: #dc2626;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+    animation: pulse 2s infinite;
+}
+
+.rework-badge i {
+    font-size: 0.9rem;
+}
+
+.rework-badge .count {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 24px;
+    text-align: center;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
   </style>
 </head>
 <body>
@@ -487,7 +527,9 @@ button:hover,
 <div id="job-tabs" style="display: flex; gap: 10px; margin: 30px 0 10px 0; justify-content: flex-end;">
   <button class="tab-btn active" id="tab-new-jobs" data-tab="new-jobs">New Jobs</button>
   <button class="tab-btn" id="tab-in-progress" data-tab="in-progress">In Progress</button>
-  <button class="tab-btn" id="tab-rework" data-tab="rework">Rework</button>
+    <button class="tab-btn" id="tab-rework" data-tab="rework">
+        Rework <span class="rework-badge"><i class="fas fa-sync-alt"></i><span class="count">0</span></span>
+    </button>
   <button class="tab-btn" id="tab-completed" data-tab="completed">Completed</button>
 </div>
 
@@ -601,12 +643,15 @@ function getStatusClass(status) {
 
 // ✅ Fetch Assigned Projects
 async function fetchAssignedProjects(vendorId) {
+  let projects = []; // Define projects at the start
     showLoader();
     try {
         const response = await fetch(`/api/vendors/${vendorId}/assigned-projects?t=${new Date().getTime()}`);
         if (!response.ok) throw new Error("Failed to fetch assigned projects.");
 
         const data = await response.json();
+
+        
 
         // Prepare arrays for each section (even if empty)
         const newJobs = data.newJobs || [];
@@ -620,18 +665,44 @@ async function fetchAssignedProjects(vendorId) {
         await displayAssignedProjects(completed, "completed-container");
         await displayAssignedProjects(rework, "rework-container");
 
+        
+
         // Count the number of cards actually rendered in each container
         const countNew = document.querySelectorAll("#new-jobs-container .project-card").length;
         const countInProgress = document.querySelectorAll("#in-progress-container .project-card").length;
         const countCompleted = document.querySelectorAll("#completed-container .project-card").length;
         const countRework = document.querySelectorAll("#rework-container .project-card").length;
+    
+                // Update regular tabs with styled count
+        const countStyle = 'style="color:#fff;background:#007bff;border-radius:10px;padding:2px 8px;font-size:13px;margin-left:6px;"';
 
         // --- Update tab counts ---
         document.getElementById("tab-new-jobs").innerHTML = `New Jobs <span style="color:#fff;background:#007bff;border-radius:10px;padding:2px 8px;font-size:13px;margin-left:6px;">${countNew}</span>`;
         document.getElementById("tab-in-progress").innerHTML = `In Progress <span style="color:#fff;background:#007bff;border-radius:10px;padding:2px 8px;font-size:13px;margin-left:6px;">${countInProgress}</span>`;
-        document.getElementById("tab-rework").innerHTML = `Rework <span style="color:#fff;background:#007bff;border-radius:10px;padding:2px 8px;font-size:13px;margin-left:6px;">${countRework}</span>`;
+       
         document.getElementById("tab-completed").innerHTML = `Completed <span style="color:#fff;background:#007bff;border-radius:10px;padding:2px 8px;font-size:13px;margin-left:6px;">${countCompleted}</span>`;
 
+        // Update rework badge
+        const reworkTab = document.getElementById("tab-rework");
+        if (reworkTab) {
+            if (countRework > 0) {
+                // Show badge with attention-grabbing style when there are rework items
+                const badgeHtml = `
+                    Rework <span class="rework-badge">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span class="message">Needs Review</span>
+                        <span class="count">${countRework}</span>
+                    </span>
+                `;
+                reworkTab.innerHTML = badgeHtml;
+            } else {
+                // Show normal count style when no rework items
+      reworkTab.innerHTML = `Rework <span ${countStyle}>${countRework}</span>`;
+            }
+        }
+
+
+        
         // Check/update status as before
         const allProjects = [
             ...newJobs,
@@ -644,6 +715,8 @@ async function fetchAssignedProjects(vendorId) {
                 checkAndUpdateProjectStatus(vendorId, p.projectId._id, p.status);
             }
         });
+
+        
 
     } catch (error) {
         console.error("Error fetching assigned projects:", error);
