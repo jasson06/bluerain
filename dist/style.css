@@ -175,15 +175,51 @@ button, input, textarea {
     letter-spacing: -0.02em;
 }
 
+/* Update the project item header accent styles */
 .project-item-header p::before {
     content: '';
     position: absolute;
     left: 0;
     width: 6px;
-    height: 70%;
-    background: #0f4c75;
+    height: 75%;
     border-radius: 4px;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Upcoming projects accent */
+#Upcoming-projects-list .project-item-header p::before {
+    background: linear-gradient(to bottom, #818cf8 0%, #6366f1 100%);
+}
+
+#Upcoming-projects-list .item:hover .project-item-header p::before {
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+}
+
+/* In Progress projects accent */
+#projects-list .project-item-header p::before {
+    background: linear-gradient(to bottom, #0ea5e9 0%, #0284c7 100%);
+}
+
+#projects-list .item:hover .project-item-header p::before {
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+}
+
+/* On Market projects accent */
+#on-market-projects-list .project-item-header p::before {
+    background: linear-gradient(to bottom, #ef4444 0%, #dc2626 100%);
+}
+
+#on-market-projects-list .item:hover .project-item-header p::before {
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
+}
+
+/* Completed projects accent */
+#completed-projects-list .project-item-header p::before {
+    background: linear-gradient(to bottom, #22c55e 0%, #16a34a 100%);
+}
+
+#completed-projects-list .item:hover .project-item-header p::before {
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
 }
 
 .project-item-header .project-meta {
@@ -217,15 +253,7 @@ button, input, textarea {
     box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
 }
 
-/* Optional: Add this if you want to show project type/category */
-.project-type-tag {
-    font-size: 0.75rem;
-    padding: 2px 8px;
-    background: #e2e8f0;
-    color: #475569;
-    border-radius: 12px;
-    font-weight: 500;
-}
+
 
 .columns-container {
   display: flex;
@@ -259,12 +287,71 @@ button, input, textarea {
     border-color: #3b82f6;
 }
 
-h3 {
-font-size: 22px;
+
+
+.column h3 {
+    padding: 18px 24px;
+    margin: 0;
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 1.25rem;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.03);
+}
+
+.column h3::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 24px;
+    border-radius: 2px;
+    background: linear-gradient(to bottom, #0f4c75 0%, #3b82f6 100%);
+}
+
+.count-badge {
+    background: linear-gradient(135deg, #0f4c75 0%, #3b82f6 100%);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
     font-weight: 600;
-    color: #333;
-    text-align: center;
-    margin-bottom: 15px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+    transition: all 0.3s ease;
+}
+
+.count-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.25);
+}
+
+/* Column specific accent colors */
+#Upcoming-projects-column h3::before {
+    background: linear-gradient(to bottom, #818cf8 0%, #6366f1 100%);
+}
+
+#projects-column h3::before {
+    background: linear-gradient(to bottom, #0ea5e9 0%, #0284c7 100%);
+}
+
+#on-market-column h3::before {
+    background: linear-gradient(to bottom, #ef4444 0%, #dc2626 100%);
+}
+
+#completed-projects-column h3::before {
+    background: linear-gradient(to bottom, #22c55e 0%, #16a34a 100%);
 }
 
 .item p {
@@ -388,7 +475,6 @@ font-size: 22px;
   font-size: 14px;
   color: #555;
 }
-
 
 /* On Market Projects List Container */
 #on-market-projects-list {
