@@ -1383,10 +1383,18 @@ async function toggleItemStatus(vendorId, itemId, currentStatus) {
             nextLabel = "Mark as Completed";
         }
 
+        // Get the active estimate ID
+        const activeTab = document.querySelector(".estimate-tab.active");
+        const estimateId = activeTab ? activeTab.dataset.estimateId : null;
+
         const response = await fetch(`/api/vendors/${vendorId}/update-item-status`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ itemId, status: newStatus })
+            body: JSON.stringify({ 
+                itemId, 
+                status: newStatus,
+                estimateId: estimateId // Include estimate ID
+            })
         });
 
         if (!response.ok) {
@@ -1394,6 +1402,9 @@ async function toggleItemStatus(vendorId, itemId, currentStatus) {
             console.error(`❌ Failed to update item status: ${errorMessage}`);
             return;
         }
+
+        // Wait for a small delay to ensure server processing completes
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         // ✅ Update the status visually
         const statusElement = document.getElementById(`status-${itemId}`);
@@ -1416,8 +1427,14 @@ async function toggleItemStatus(vendorId, itemId, currentStatus) {
         }
 
         showToast(`✅ Status updated to: ${newStatus}`);
+        
+        // ✅ Re-fetch and re-render items for the current estimate
+        if (activeTab) {
+            await handleEstimateSelection(activeTab.dataset.estimateId);
+        }
     } catch (error) {
-        showToast("❌ Error updating item status:", error);
+        showToast("❌ Error updating item status");
+        console.error("Error:", error);
     }
 }
 
@@ -1705,27 +1722,66 @@ function formatDescription(desc) {
 
 // ✅ Fetch & Render Assigned Items with Photo Upload & Slideshow
 function displayAssignedItems(items) {
-    const container = document.getElementById("line-items-list");
-    const totalContainer = document.getElementById("total-amount");
-    const toggleActiveBtn = document.getElementById("show-active-btn");
-    const toggleCompletedBtn = document.getElementById("show-completed-btn");
-
-    if (!container || !totalContainer) {
+    // Check if the container elements exist first
+    const container = document.querySelector(".line-items-container");
+    
+    // Check if container already has elements to avoid duplicates
+    let lineItemsList = document.getElementById("line-items-list");
+    let totalAmount = document.getElementById("total-amount");
+    
+    // Only create these elements if they don't exist yet
+    if (!lineItemsList || !totalAmount) {
+        // Clean existing content to avoid duplicates
+        container.innerHTML = `
+            <div id="line-items-list"></div>
+            <div id="total-amount" class="total-amount-box"></div>
+        `;
+        
+        lineItemsList = document.getElementById("line-items-list");
+        totalAmount = document.getElementById("total-amount");
+    }
+    
+    // First check if toggle buttons already exist
+    let toggleActiveBtn = document.getElementById("show-active-btn");
+    let toggleCompletedBtn = document.getElementById("show-completed-btn");
+    
+    // Only create toggle buttons if they don't already exist
+    if (!toggleActiveBtn || !toggleCompletedBtn) {
+        const tabsWrapper = document.createElement("div");
+        tabsWrapper.className = "estimate-tabs-wrapper";
+        tabsWrapper.innerHTML = `
+            <button id="show-active-btn" class="toggle-btn active">Active Items</button>
+            <button id="show-completed-btn" class="toggle-btn">Completed Items</button>
+        `;
+        
+        // Insert at the beginning of container
+        container.insertBefore(tabsWrapper, container.firstChild);
+        
+        // Re-assign button references
+        toggleActiveBtn = document.getElementById("show-active-btn");
+        toggleCompletedBtn = document.getElementById("show-completed-btn");
+    }
+    
+    if (!lineItemsList || !totalAmount) {
         console.error("❌ Error: Elements missing in DOM.");
         return;
     }
 
-    // Split items by status
-const activeItems = items.filter(item =>
-    item.status === "new" ||
-    item.status === "in-progress" ||
-    item.status === "rework"
-);
-    const completedItems = items.filter(item =>
-        item.status === "completed" || item.status === "approved"
+    // Split items by status - fixed filter for completed items
+    const activeItems = items.filter(item =>
+        item.status === "new" ||
+        item.status === "in-progress" ||
+        item.status === "rework"
     );
+    
+    const completedItems = items.filter(item =>
+        item.status === "completed" || 
+        item.status === "approved"
+    );
+    
+    console.log(`Found ${activeItems.length} active items and ${completedItems.length} completed items`);
 
-    // Helper to render a row
+    // Helper to render a row - kept exactly as original
     function renderRow(item) {
         const currentStatus = item.status || "new";
         let nextLabel = "Mark as In Progress";
@@ -1789,26 +1845,25 @@ const activeItems = items.filter(item =>
 
     // --- Render Function for Selected Group ---
     function renderGroup(group, groupName, color) {
-        container.innerHTML = "";
+        lineItemsList.innerHTML = "";
         if (group.length === 0) {
-            container.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#888;">No ${groupName.toLowerCase()}.</td></tr>`;
+            lineItemsList.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#888;">No ${groupName.toLowerCase()}.</td></tr>`;
         } else {
             const header = document.createElement("tr");
             header.innerHTML = `<td colspan="3"><h3 style="color:${color};">${groupName}</h3></td>`;
-            container.appendChild(header);
+            lineItemsList.appendChild(header);
 
             group.forEach(item => {
-                container.appendChild(renderRow(item));
+                lineItemsList.appendChild(renderRow(item));
             });
-
-
         }
+        
         // Update total box for this group only
-        totalContainer.innerHTML = `<strong>${groupName} Total:</strong> $${calculateTotal(group)}`;
+        totalAmount.innerHTML = `<strong>${groupName} Total:</strong> $${calculateTotal(group)}`;
 
         // 🔹 Attach toggle-status-btn event listeners for this group
-        container.querySelectorAll(".toggle-status-btn").forEach(button => {
-            button.addEventListener("click", function () {
+        lineItemsList.querySelectorAll(".toggle-status-btn").forEach(button => {
+            button.addEventListener("click", function() {
                 const itemId = this.getAttribute("data-item-id");
                 const currentStatus = this.getAttribute("data-current-status");
                 toggleItemStatus(localStorage.getItem("vendorId"), itemId, currentStatus);
@@ -1822,21 +1877,20 @@ const activeItems = items.filter(item =>
         toggleCompletedBtn.classList.remove("active");
         renderGroup(activeItems, "Active Items", "#007BFF");
     }
+    
     function showCompleted() {
         toggleActiveBtn.classList.remove("active");
         toggleCompletedBtn.classList.add("active");
         renderGroup(completedItems, "Completed Items", "green");
     }
 
-    // Attach event listeners (only once)
-    if (!toggleActiveBtn.hasListener) {
-        toggleActiveBtn.addEventListener("click", showActive);
-        toggleActiveBtn.hasListener = true;
-    }
-    if (!toggleCompletedBtn.hasListener) {
-        toggleCompletedBtn.addEventListener("click", showCompleted);
-        toggleCompletedBtn.hasListener = true;
-    }
+    // Remove any existing listeners to prevent duplicates
+    toggleActiveBtn.removeEventListener("click", showActive);
+    toggleCompletedBtn.removeEventListener("click", showCompleted);
+    
+    // Add fresh event listeners
+    toggleActiveBtn.addEventListener("click", showActive);
+    toggleCompletedBtn.addEventListener("click", showCompleted);
 
     // Default: show active items
     showActive();
