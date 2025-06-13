@@ -75,12 +75,20 @@
         <h1>Welcome BlueRain</h1>
     </div>
       
-    <div class="tab-container">
-      <button class="tab" id="ready-schedule-tab">Upcoming Projects (<span id="upcoming-count">0</span>)</button>
-      <button class="tab" id="projects-tab">In Progress (<span id="in-progress-count">0</span>)</button>
-      <button class="tab" id="on-market-tab">On Market (<span id="on-market-count">0</span>)</button>
-      <button class="tab" id="punch-list-tab">Completed (<span id="completed-count">0</span>)</button>
-  </div>
+<div class="tab-container">
+    <button class="tab active" data-tab="upcoming">
+        Upcoming Projects <span id="upcoming-count">0</span>
+    </button>
+    <button class="tab" data-tab="in-progress">
+        In Progress <span id="in-progress-count">0</span>
+    </button>
+    <button class="tab" data-tab="on-market">
+        On Market <span id="on-market-count">0</span>
+    </button>
+    <button class="tab" data-tab="completed">
+        Completed <span id="completed-count">0</span>
+    </button>
+</div>
     
       <div class="columns-container">
         <div class="column" id="Upcoming-projects-column">
@@ -93,8 +101,7 @@
             <div id="projects-list"></div>
         </div>
 
-
-                <div class="column" id="on-market-column">
+        <div class="column" id="on-market-column">
           <h3>On Market</h3>
           <div id="on-market-projects-list"></div>
       </div>
