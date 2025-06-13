@@ -2018,6 +2018,29 @@ app.post('/api/password-reset', async (req, res) => {
 
 
 
+// Add this near your other API endpoints
+app.get("/api/vendors/:vendorId/debug-items", async (req, res) => {
+  try {
+    const { vendorId } = req.params;
+    
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) {
+      return res.status(404).json({ message: "Vendor not found" });
+    }
+    
+    // Return all items regardless of status for debugging
+    return res.status(200).json({
+      totalItems: vendor.assignedItems.length,
+      activeItems: vendor.assignedItems.filter(i => i.status !== "completed" && i.status !== "approved").length,
+      completedItems: vendor.assignedItems.filter(i => i.status === "completed" || i.status === "approved").length,
+      allStatuses: vendor.assignedItems.map(i => i.status)
+    });
+  } catch (error) {
+    console.error("Debug endpoint error:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
 app.put('/api/vendors/:vendorId/update-item-status', async (req, res) => {
   const { vendorId } = req.params;
   const { itemId, status } = req.body;
