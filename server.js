@@ -797,6 +797,131 @@ const expenseSchema = new mongoose.Schema({
   date: { type: String, required: true }
 }, { timestamps: true });
 
+
+const utilityAccountSchema = new mongoose.Schema({
+    accountNumber: String,
+    provider: String,
+    status: String,
+    under: { type: String, enum: ['tenant', 'landlord', ''], default: '' } // who is under the bill
+}, { _id: false });
+
+const utilityBillSchema = new mongoose.Schema({
+    type: { type: String, enum: ['water', 'gas', 'electricity'], required: true },
+    amount: { type: Number, default: 0 },
+    dueDate: Date,
+    paid: { type: Boolean, default: false },
+    paidBy: { type: String, enum: ['tenant', 'landlord', ''], default: '' }
+}, { _id: false });
+
+const unitSchema = new mongoose.Schema({
+    projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Property', required: true },
+    number: { type: String, required: true },
+    floor: { type: Number, default: 1 },
+    bedrooms: { type: Number, default: 1 },
+    bathrooms: { type: Number, default: 1 },
+    sqft: { type: Number },
+    status: { type: String, enum: ['vacant', 'occupied', 'maintenance'], default: 'vacant' },
+    tenant: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant' },
+
+    // Utility accounts for each type
+    utilityAccounts: {
+        water: { type: utilityAccountSchema, default: {} },
+        gas: { type: utilityAccountSchema, default: {} },
+        electricity: { type: utilityAccountSchema, default: {} }
+    },
+
+    // Utility bills history
+    utilityBills: { type: [utilityBillSchema], default: [] },
+
+    // Add any other fields as needed
+}, { timestamps: true });
+
+
+const tenantSchema = new mongoose.Schema({
+  projectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Project',
+    required: true
+  },
+  name: { type: String, required: true },
+  phone: { type: String, required: true },
+  email: { type: String, required: true },
+  unitId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Unit'
+  },
+  emergencyContact: {
+    name: String,
+    phone: String,
+    email: String,
+    relation: String
+},
+authorizedOccupants: [String],
+pets: {
+    hasPets: { type: Boolean, default: false },
+    count: { type: Number, default: 0 },
+    fee: { type: Number, default: 0 }
+},
+leaseRenewal: { type: String, enum: ['renew', 'terminate'], default: 'renew' },
+  leaseStart: Date,
+  leaseEnd: Date,
+  baseRent: { type: Number, default: 0 },
+leaseType: { type: String, enum: ['fmr', 'section8'], default: 'fmr' },
+fmrNotes: String,
+hubContribution: { type: Number, default: 0 },
+tenantContribution: { type: Number, default: 0 },
+leaseStatus: { type: String, enum: ['active', 'pending', 'expired', 'terminated'], default: 'active' },
+leaseHolders: {
+  type: [{ name: String, phone: String, email: String }],
+  default: []
+}
+
+}, { timestamps: true });
+
+const maintenanceRequestSchema = new mongoose.Schema({
+  projectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Project',
+    required: true
+  },
+  unitId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Unit'
+  },
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  priority: {
+    type: String,
+    enum: ['low', 'medium', 'high', 'urgent'],
+    default: 'medium'
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'in-progress', 'completed'],
+    default: 'pending'
+  },
+  assignedTo: String,
+  completedAt: Date
+}, { timestamps: true });
+
+const documentSchema = new mongoose.Schema({
+  projectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Project',
+    required: true
+  },
+  name: { type: String, required: true },
+  type: {
+    type: String,
+    enum: ['lease', 'notice', 'invoice', 'other'],
+    required: true
+  },
+  filePath: { type: String, required: true },
+  uploadedBy: String
+}, { timestamps: true });
+
+
+
 const Task = mongoose.model('Task', taskSchema);
 const Comment = mongoose.model("Comment", commentSchema);
 const Client = mongoose.model('Client', clientSchema);
@@ -814,7 +939,10 @@ const LaborCost = mongoose.model('LaborCost', laborCostSchema);
 const FileSystem = mongoose.model('FileSystem', folderSchema);
 const Folder = mongoose.model('Folder', folderSchema); // ✅ Add this line
 const Expense = mongoose.model('Expense', expenseSchema);
-
+const Unit = mongoose.model('Unit', unitSchema);
+const Tenant = mongoose.model('Tenant', tenantSchema);
+const MaintenanceRequest = mongoose.model('MaintenanceRequest', maintenanceRequestSchema);
+const Document = mongoose.model('Document', documentSchema);
 
 module.exports = {
   Task,
@@ -826,6 +954,7 @@ module.exports = {
   Manager,
   Invitation,
   Quote,
+  Unit,
 };
 
 
@@ -4725,7 +4854,511 @@ app.get('/api/projects/:projectId/files/:fileId/download', async (req, res) => {
   }
 });
 
+// Property Management API Routes
 
+
+// Add new property
+app.post('/api/properties', async (req, res) => {
+  try {
+    const property = new Property(req.body);
+    await property.save();
+    res.status(201).json(property);
+  } catch (error) {
+    console.error('Error creating property:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get property details
+app.get('/api/properties/:id', async (req, res) => {
+  try {
+    const property = await Property.findById(req.params.id)
+      .populate('units');
+    if (!property) {
+      return res.status(404).json({ message: 'Property not found' });
+    }
+    res.json(property);
+  } catch (error) {
+    console.error('Error fetching property:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update the property routes
+app.get('/api/properties/multifamily', async (req, res) => {
+  try {
+    console.log('Fetching multifamily properties...');
+    
+    const properties = await Property.find({ type: 'Multifamily' })
+      .populate({
+        path: 'units',
+        populate: [
+          { path: 'tenant' },
+          { path: 'lease' }
+        ]
+      });
+
+    console.log(`Found ${properties.length} multifamily properties`);
+    res.json(properties);
+  } catch (error) {
+    console.error('Error fetching properties:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update these routes to handle both Project and Property models
+
+// Get property/project units
+// Update the routes to handle units directly
+app.get('/api/properties/:id/units', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find the project
+    const project = await Project.findById(id);
+    if (!project) {
+      return res.status(404).json({ message: 'Property not found' });
+    }
+
+    // Find all units for this project
+    const units = await Unit.find({ projectId: id });
+
+    res.json({ 
+      property: {
+        _id: project._id,
+        name: project.name,
+        type: "Multifamily",
+        address: {
+          line1: project.address?.addressLine1 || '',
+          line2: project.address?.addressLine2 || '',
+          city: project.address?.city || '',
+          state: project.address?.state || '',
+          zip: project.address?.zip || ''
+        },
+        units: units
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching property units:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.post('/api/properties/:id/units', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { number, floor, bedrooms, bathrooms, sqft, status } = req.body;
+
+        // Validate required fields
+        if (!number || !bedrooms || !bathrooms) {
+            return res.status(400).json({ 
+                message: 'Missing required fields: number, bedrooms, and bathrooms are required' 
+            });
+        }
+
+        // Validate project exists
+        const project = await Project.findById(id);
+        if (!project) {
+            return res.status(404).json({ message: 'Property not found' });
+        }
+
+        // Create new unit with validated data
+        const unit = new Unit({
+            projectId: project._id,
+            number: number.trim(),
+            floor: parseInt(floor) || 1,
+            bedrooms: parseInt(bedrooms),
+            bathrooms: parseInt(bathrooms),
+            sqft: parseInt(sqft) || 0,
+            status: status || 'vacant'
+        });
+
+        await unit.save();
+
+        res.status(201).json({
+            message: 'Unit added successfully',
+            unit: unit
+        });
+    } catch (error) {
+        console.error('Error adding unit:', error);
+        res.status(500).json({ 
+            message: 'Error adding unit',
+            error: error.message 
+        });
+    }
+});
+
+// Add route for updating units
+app.put('/api/properties/:propertyId/units/:unitId', async (req, res) => {
+  try {
+    const { propertyId, unitId } = req.params;
+    const updateData = req.body;
+
+    const unit = await Unit.findOneAndUpdate(
+      { _id: unitId, projectId: propertyId },
+      updateData,
+      { new: true }
+    );
+
+    if (!unit) {
+      return res.status(404).json({ message: 'Unit not found' });
+    }
+
+    res.json({
+      message: 'Unit updated successfully',
+      unit: unit
+    });
+  } catch (error) {
+    console.error('Error updating unit:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Add DELETE endpoint for units
+app.delete('/api/properties/:propertyId/units/:unitId', async (req, res) => {
+    try {
+        const { propertyId, unitId } = req.params;
+
+        // Find and delete the unit
+        const deletedUnit = await Unit.findOneAndDelete({ 
+            _id: unitId, 
+            projectId: propertyId 
+        });
+
+        if (!deletedUnit) {
+            return res.status(404).json({ message: 'Unit not found' });
+        }
+
+        res.json({ message: 'Unit deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting unit:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+
+// Tenant Routes
+app.get('/api/properties/:propertyId/tenants', async (req, res) => {
+  try {
+    const tenants = await Tenant.find({ projectId: req.params.propertyId })
+      .populate('unitId');
+    res.json(tenants);
+  } catch (error) {
+    console.error('Error fetching tenants:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.post('/api/properties/:propertyId/tenants', async (req, res) => {
+  try {
+    // Ensure leaseHolders is always an array of objects
+    const leaseHolders = Array.isArray(req.body.leaseHolders)
+      ? req.body.leaseHolders.filter(h => h && h.name)
+      : [];
+
+    const tenant = new Tenant({
+      projectId: req.params.propertyId,
+      ...req.body,
+      leaseHolders // override with validated array
+    });
+    await tenant.save();
+
+    // Update unit's tenant reference if unitId is provided
+    if (req.body.unitId) {
+      await Unit.findByIdAndUpdate(req.body.unitId, {
+        status: 'occupied',
+        tenant: tenant._id
+      });
+    }
+
+    res.status(201).json(tenant);
+  } catch (error) {
+    console.error('Error creating tenant:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.put('/api/properties/:propertyId/tenants/:tenantId', async (req, res) => {
+  try {
+    // Ensure leaseHolders is always an array of objects
+    const leaseHolders = Array.isArray(req.body.leaseHolders)
+      ? req.body.leaseHolders.filter(h => h && h.name)
+      : [];
+
+    const tenant = await Tenant.findByIdAndUpdate(
+      req.params.tenantId,
+      { ...req.body, leaseHolders }, // override with validated array
+      { new: true }
+    );
+    if (!tenant) {
+      return res.status(404).json({ message: 'Tenant not found' });
+    }
+    res.json(tenant);
+  } catch (error) {
+    console.error('Error updating tenant:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Add this route with your other tenant routes
+app.delete('/api/properties/:propertyId/tenants/:tenantId', async (req, res) => {
+    try {
+        const { propertyId, tenantId } = req.params;
+
+        // Find tenant to get unitId before deletion
+        const tenant = await Tenant.findById(tenantId);
+        if (!tenant) {
+            return res.status(404).json({ message: 'Tenant not found' });
+        }
+
+        // Store unitId for updating unit status
+        const unitId = tenant.unitId;
+
+        // Delete the tenant
+        await Tenant.findByIdAndDelete(tenantId);
+
+        // If tenant was assigned to a unit, update unit status to vacant
+        if (unitId) {
+            await Unit.findByIdAndUpdate(unitId, {
+                status: 'vacant',
+                tenant: null // Remove tenant reference
+            });
+        }
+
+        res.json({ message: 'Tenant deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting tenant:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Maintenance Request Routes
+app.get('/api/properties/:propertyId/maintenance', async (req, res) => {
+  try {
+    const requests = await MaintenanceRequest.find({ projectId: req.params.propertyId })
+      .populate('unitId')
+      .sort({ createdAt: -1 });
+    res.json(requests);
+  } catch (error) {
+    console.error('Error fetching maintenance requests:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.post('/api/properties/:propertyId/maintenance', async (req, res) => {
+  try {
+    const request = new MaintenanceRequest({
+      projectId: req.params.propertyId,
+      ...req.body
+    });
+    await request.save();
+    res.status(201).json(request);
+  } catch (error) {
+    console.error('Error creating maintenance request:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.patch('/api/properties/:propertyId/maintenance/:requestId', async (req, res) => {
+  try {
+    const request = await MaintenanceRequest.findByIdAndUpdate(
+      req.params.requestId,
+      { 
+        status: req.body.status,
+        ...(req.body.status === 'completed' ? { completedAt: new Date() } : {})
+      },
+      { new: true }
+    );
+    if (!request) {
+      return res.status(404).json({ message: 'Maintenance request not found' });
+    }
+    res.json(request);
+  } catch (error) {
+    console.error('Error updating maintenance request:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Add this with your other maintenance request routes
+app.delete('/api/properties/:propertyId/maintenance/:requestId', async (req, res) => {
+    try {
+        const { propertyId, requestId } = req.params;
+
+        // Validate IDs
+        if (!mongoose.Types.ObjectId.isValid(propertyId) || !mongoose.Types.ObjectId.isValid(requestId)) {
+            return res.status(400).json({ message: 'Invalid property or request ID' });
+        }
+
+        // Find and delete the maintenance request
+        const deletedRequest = await MaintenanceRequest.findOneAndDelete({
+            _id: requestId,
+            projectId: propertyId
+        });
+
+        if (!deletedRequest) {
+            return res.status(404).json({ message: 'Maintenance request not found' });
+        }
+
+        // If the request was associated with a unit, update unit status if needed
+        if (deletedRequest.unitId) {
+            // Optional: Update unit status or handle any cleanup
+            await Unit.findByIdAndUpdate(deletedRequest.unitId, {
+                $set: { status: 'vacant' }
+            });
+        }
+
+        res.json({ message: 'Maintenance request deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting maintenance request:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Document Routes
+app.get('/api/properties/:propertyId/documents', async (req, res) => {
+  try {
+    const documents = await Document.find({ projectId: req.params.propertyId })
+      .sort({ createdAt: -1 });
+    res.json(documents);
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.get('/api/properties/:propertyId/documents/:documentId/view', async (req, res) => {
+    try {
+        const { propertyId, documentId } = req.params;
+
+        const doc = await Document.findOne({
+            _id: documentId,
+            projectId: propertyId
+        });
+
+        if (!doc) {
+            return res.status(404).json({ message: 'Document not found' });
+        }
+
+        const filePath = path.join(__dirname, doc.filePath.replace(/^\//, ''));
+
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ message: 'File not found on server' });
+        }
+
+        const ext = path.extname(doc.name).toLowerCase();
+        const contentType = {
+            '.pdf': 'application/pdf',
+            '.doc': 'application/msword',
+            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            '.txt': 'text/plain',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif'
+        }[ext] || 'application/octet-stream';
+
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Disposition', `inline; filename="${doc.name}"`);
+        res.setHeader('Cache-Control', 'public, max-age=0');
+
+        fs.createReadStream(filePath).pipe(res);
+    } catch (error) {
+        console.error('Error serving document:', error);
+        res.status(500).json({ message: 'Error serving document' });
+    }
+});
+
+app.post('/api/properties/:propertyId/documents', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+const originalName = req.file.originalname;
+const ext = path.extname(originalName);
+const baseName = req.body.name ? req.body.name.replace(ext, '') : path.basename(originalName, ext);
+const displayName = baseName + ext; // Always has extension
+
+const document = new Document({
+  projectId: req.params.propertyId,
+  name: displayName,
+  type: req.body.type,
+  filePath: `/uploads/${req.file.filename}`,
+  uploadedBy: req.body.uploadedBy || 'System'
+});
+    await document.save();
+    res.status(201).json(document);
+  } catch (error) {
+    console.error('Error uploading document:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.delete('/api/properties/:propertyId/documents/:documentId', async (req, res) => {
+  try {
+    const document = await Document.findById(req.params.documentId);
+    if (!document) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+
+    // Delete file from filesystem
+    const filePath = path.join(__dirname, document.filePath);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // Use deleteOne instead of remove
+    await Document.deleteOne({ _id: req.params.documentId });
+
+    res.json({ message: 'Document deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting document:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+app.get('/api/properties/:propertyId/documents/:documentId/download', async (req, res) => {
+    try {
+        const { propertyId, documentId } = req.params;
+
+        const doc = await Document.findOne({
+            _id: documentId,
+            projectId: propertyId
+        });
+
+        if (!doc) {
+            return res.status(404).json({ message: 'Document not found' });
+        }
+
+        const filePath = path.join(__dirname, doc.filePath.replace(/^\//, ''));
+
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ message: 'File not found on server' });
+        }
+
+        const ext = path.extname(doc.name).toLowerCase();
+        const contentType = {
+            '.pdf': 'application/pdf',
+            '.doc': 'application/msword',
+            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            '.txt': 'text/plain',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif'
+        }[ext] || 'application/octet-stream';
+
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Disposition', `attachment; filename="${doc.name}"`);
+        res.setHeader('Cache-Control', 'public, max-age=0');
+
+        fs.createReadStream(filePath).pipe(res);
+    } catch (error) {
+        console.error('Error serving document:', error);
+        res.status(500).json({ message: 'Error serving document' });
+    }
+});
 
 // Debugging route to check server deployment status
 app.get('/api/debug', (req, res) => {
