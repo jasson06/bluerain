@@ -1,0 +1,4002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Management</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+   <style>
+    /* Base Styles */
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #34495e;
+    --accent-color: #3498db;
+    --background-color: #f5f6fa;
+    --text-color: #2c3e50;
+    --border-color: #dcdde1;
+    --success-color: #27ae60;
+    --warning-color: #f1c40f;
+    --danger-color: #e74c3c;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+.container {
+    display: flex;
+    
+}
+
+
+
+
+/* Modern Property List Styles */
+.property-item {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.property-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    border-color: var(--accent-color);
+}
+
+.property-item.active {
+    border-color: var(--accent-color);
+    background-color: rgba(52, 152, 219, 0.05);
+}
+
+.property-item h3 {
+    margin: 0 0 8px 0;
+    color: var(--primary-color);
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.property-item p {
+    margin: 0 0 12px 0;
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.property-badges {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.property-type,
+.property-status {
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.property-type {
+    background-color: rgba(52, 152, 219, 0.15);
+    color: var(--accent-color);
+}
+
+.property-status {
+    background-color: rgba(46, 204, 113, 0.15);
+    color: #27ae60;
+}
+
+.property-status.inactive {
+    background-color: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+}
+
+.property-address {
+    display: flex;
+    align-items: start;
+    gap: 8px;
+    margin: 8px 0 12px 0;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.property-address i {
+    color: var(--accent-color);
+    margin-top: 3px;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    width: 300px;
+    background-color: white;
+    border-right: 1px solid var(--border-color);
+    padding: 20px;
+}
+
+.sidebar-header {
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 20px;
+}
+
+/* Main Content Styles */
+.main-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+/* Dashboard Styles */
+.dashboard-header {
+    margin-bottom: 30px;
+}
+
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Tabs Styles */
+.tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+.tab-btn.active {
+    color: var(--accent-color);
+    border-bottom: 2px solid var(--accent-color);
+}
+
+/* Units Grid Styles */
+.unit-card-modern {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(44,62,80,0.07);
+    margin-bottom: 18px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.2s, transform 0.2s;
+    border: 1px solid #e1e8ed;
+}
+.unit-card-modern:hover {
+    box-shadow: 0 6px 18px rgba(44,62,80,0.13);
+    transform: translateY(-2px) scale(1.01);
+}
+.unit-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(90deg, #2c3e50 0%, #2c3e50 100%);
+    color: #fff;
+    padding: 18px 22px;
+    border-radius: 14px 14px 0 0;
+}
+.unit-card-header h3 {
+    margin: 0;
+    font-size: 1.18rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+.unit-card-body {
+    padding: 18px 22px 10px 22px;
+    background: #f8fafd;
+}
+.unit-info-row {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    font-size: 1rem;
+    margin-bottom: 10px;
+    color: #2c3e50;
+}
+.unit-info-row span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.unit-utilities-section {
+    margin-top: 8px;
+}
+.unit-utilities-title {
+    font-weight: 600;
+    color: #2980b9;
+    margin-bottom: 6px;
+    font-size: 1.01rem;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+.unit-utility-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.97rem;
+    margin-bottom: 4px;
+    padding-left: 2px;
+}
+.utility-label {
+    min-width: 70px;
+    font-weight: 500;
+    color: #3498db;
+}
+.utility-account, .utility-provider, .utility-under {
+    color: #555;
+    font-size: 0.96em;
+}
+.badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 0.92rem;
+    font-weight: 500;
+    margin-left: 6px;
+}
+.badge-success { background: #e1f7e1; color: #27ae60; }
+.badge-warning { background: #fff3cd; color: #856404; }
+.badge-danger { background: #ffe1e1; color: #d63031; }
+.badge-default { background: #e0e0e0; color: #888; }
+.unit-card-actions {
+    display: flex;
+    gap: 10px;
+    padding: 14px 22px 16px 22px;
+    background: #f8fafd;
+    border-top: 1px solid #e1e8ed;
+    border-radius: 0 0 14px 14px;
+    justify-content: flex-end;
+}
+.unit-card-actions .btn-secondary {
+    background: #e1e8ed;
+    color: #2980b9;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.97rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.unit-card-actions .btn-secondary:hover {
+    background: #3498db;
+    color: #fff;
+}
+.unit-card-actions .btn-icon.delete-btn {
+    background: none;
+    color: #d63031;
+    font-size: 1.1rem;
+    border: none;
+    padding: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.unit-card-actions .btn-icon.delete-btn:hover {
+    background: #ffe1e1;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1000;
+    overflow-y: auto; /* Enable scrolling on the modal overlay */
+    padding: 20px;
+}
+
+
+.modal-content {
+    background: white;
+    width: 100%;
+    max-width: 750px;
+    margin: 20px auto;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.unit-details-modal .modal-body {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+/* Add smooth scrolling to the page */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Update detail group styles */
+.detail-group {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.form-group input {
+    
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+/* Button Styles */
+.btn-primary {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 15px 25px;
+  border-radius: 4px;
+  color: white;
+  font-weight: 500;
+  transform: translateY(150%);
+  transition: transform 0.3s ease;
+  z-index: 1000;
+}
+
+.notification.show {
+  transform: translateY(0);
+}
+
+.notification.success {
+  background-color: var(--success-color);
+}
+
+.notification.error {
+  background-color: var(--danger-color);
+}
+
+.notification.info {
+  background-color: var(--accent-color);
+}
+
+/* Tab Pane Styles */
+.tab-pane {
+    display: none;
+    padding: 20px 0;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+/* Form Textarea */
+textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    resize: vertical;
+}
+
+/* File Input Styling */
+input[type="file"] {
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    width: 100%;
+}
+
+/* Select Styling */
+select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: white;
+}
+
+/* List Styles */
+/* Add to your existing styles section */
+.maintenance-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 10px;
+}
+
+.maintenance-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.maintenance-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.maintenance-header {
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.maintenance-header h3 {
+    margin: 0;
+    color: var(--text-color);
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.priority-badge {
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.priority-badge.urgent {
+    background-color: #ffe1e1;
+    color: #d63031;
+}
+
+.priority-badge.high {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.priority-badge.medium {
+    background-color: #e1f7e1;
+    color: #2ea12e;
+}
+
+.priority-badge.low {
+    background-color: #e2e8f0;
+    color: #64748b;
+}
+
+.maintenance-content {
+    padding: 15px 20px;
+}
+
+.unit-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0;
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
+.description {
+    margin: 15px 0;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.maintenance-footer {
+    padding: 15px 20px;
+    background: #f8f9fa;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.status-badge.pending {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.in-progress {
+    background-color: #cce5ff;
+    color: #004085;
+}
+
+.status-badge.completed {
+    background-color: #e1f7e1;
+    color: #2ea12e;
+}
+
+.maintenance-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Document Grid */
+.documents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 24px;
+    padding: 20px 0;
+}
+
+.document-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(44, 62, 80, 0.07);
+    padding: 22px 18px 16px 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    transition: box-shadow 0.2s, transform 0.2s;
+    position: relative;
+}
+
+.document-card:hover {
+    box-shadow: 0 6px 18px rgba(44, 62, 80, 0.13);
+    transform: translateY(-2px) scale(1.01);
+}
+
+.document-icon {
+    font-size: 2.5rem;
+    color: var(--accent-color);
+    margin-bottom: 12px;
+    align-self: center;
+}
+
+.document-info h3 {
+    font-size: 1.08rem;
+    margin: 0 0 6px 0;
+    color: var(--primary-color);
+    font-weight: 600;
+    word-break: break-all;
+}
+
+.document-info p {
+    margin: 0 0 4px 0;
+    font-size: 0.93rem;
+    color: var(--text-color);
+    opacity: 0.85;
+}
+
+.document-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    width: 100%;
+    justify-content: flex-end;
+}
+
+.document-actions button {
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 0.93rem;
+    border: none;
+    background: var(--background-color);
+    color: var(--primary-color);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.document-actions button:hover {
+    background: var(--accent-color);
+    color: #fff;
+}
+
+.document-actions .delete-btn {
+    background: none;
+    color: var(--danger-color);
+    padding: 7px 10px;
+}
+
+.document-actions .delete-btn:hover {
+    background: rgba(231, 76, 60, 0.08);
+    color: #fff;
+}
+
+/* Add to your existing styles */
+.unit-card .status {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin: 8px 0;
+}
+
+.unit-card.vacant .status {
+    background-color: var(--warning-color);
+    color: white;
+}
+
+.unit-card.occupied .status {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.unit-card.maintenance .status {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+
+/* Add these styles */
+.unit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.btn-icon:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.delete-btn {
+    color: var(--danger-color);
+}
+
+.delete-btn:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+/* Add to your existing styles */
+.form-row input[type="date"] {
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    width: 100%;
+}
+
+.detail-group .lease-info {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    align-items: center;
+}
+
+.lease-dates {
+    color: var(--text-color);
+    font-size: 0.9em;
+}
+
+.lease-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    background-color: var(--primary-color);
+    color: white;
+    display: inline-block;
+    margin-left: 8px;
+}
+
+/* Lease Information Section Styles */
+.form-row {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.form-group {
+    flex: 1 1 180px;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: var(--primary-color, #2c3e50);
+}
+
+.form-group input[type="number"],
+.form-group input[type="date"],
+.form-group select,
+.form-group textarea {
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    font-size: 1rem;
+    margin-bottom: 2px;
+    background: #f9fafb;
+    transition: border 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: var(--accent-color, #3498db);
+    outline: none;
+}
+
+#fmrSection,
+#section8Section {
+    background: #f6fafd;
+    border: 1px solid #e1e8ed;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    margin-top: -6px;
+}
+
+#fmrSection label,
+#section8Section label {
+    margin-bottom: 4px;
+    color: #2980b9;
+    font-size: 0.97rem;
+}
+
+#section8Section {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+#section8Section .form-group {
+    margin-bottom: 0;
+}
+
+.lease-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 0.92rem;
+    font-weight: 500;
+    background: #eaf6ff;
+    color: #2980b9;
+    margin-left: 6px;
+}
+
+.lease-badge.renew {
+    background: #e1f7e1;
+    color: #27ae60;
+}
+
+.lease-badge.terminate {
+    background: #ffe1e1;
+    color: #d63031;
+}
+
+/* Add to your existing styles */
+.tenants-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px 0;
+}
+
+.tenant-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tenant-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.tenant-card .tenant-header {
+    padding: 20px;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.tenant-avatar-small {
+    width: 40px;
+    height: 40px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.tenant-info {
+    padding: 20px;
+}
+
+.tenant-info h3 {
+    margin: 0;
+    color: var(--text-color);
+    font-size: 1.2rem;
+}
+
+.unit-info {
+    margin: 10px 0;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+}
+
+.contact-info {
+    margin: 15px 0;
+    display: grid;
+    gap: 8px;
+}
+
+.contact-info p {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.tenant-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-top: 10px;
+}
+
+.tenant-status.active {
+    background-color: #e1f7e1;
+    color: #2ea12e;
+}
+
+.tenant-status.inactive {
+    background-color: #ffe1e1;
+    color: #d63031;
+}
+
+.tenant-actions {
+    padding: 15px 20px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: #f8f9fa;
+}
+
+.tenant-actions button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.tenant-lease-info {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
+
+.tenant-section {
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.tenant-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+.tenant-section-title {
+    font-weight: 600;
+    color: var(--accent-color);
+    margin-bottom: 6px;
+    font-size: 1.02rem;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+.tenant-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.97rem;
+    margin-bottom: 3px;
+    gap: 10px;
+}
+.tenant-detail-row span {
+    display: inline-block;
+}
+.tenant-detail-value {
+    color: #888;
+    font-size: 0.97rem;
+}
+.tenant-list {
+    margin: 0 0 0 18px;
+    padding: 0;
+    font-size: 0.97rem;
+}
+.tenant-list li {
+    margin-bottom: 2px;
+}
+
+/* Add these styles to your existing CSS */
+.tenant-details-modal {
+    max-width: 700px !important;
+    border-radius: 12px;
+    background: white;
+    margin: 20px auto;
+    max-height: 90vh; /* Maximum height of 90% of viewport height */
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.tenant-details-header {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1;
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 12px 12px 0 0;
+}
+
+.tenant-details-header h2 {
+    margin: 0;
+    color: var(--primary-color);
+    font-size: 1.8rem;
+}
+
+.tenant-avatar {
+    width: 60px;
+    height: 60px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+}
+
+.tenant-details-content {
+    padding: 20px;
+    overflow-y: auto; /* Enable scrolling for content */
+    flex: 1; /* Allow content to take remaining space */
+}
+
+.detail-group {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.detail-group label {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    display: block;
+}
+
+.detail-group p {
+    margin: 8px 0;
+    font-size: 1rem;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lease-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.lease-badge.active { background: #e1f7e1; color: #27ae60; }
+.lease-badge.pending { background: #fff3cd; color: #856404; }
+.lease-badge.expired { background: #ffe1e1; color: #d63031; }
+.lease-badge.terminated { background: #e0e0e0; color: #888; }
+
+.modal-footer {
+    position: sticky;
+    bottom: 0;
+    background: white;
+    padding: 20px;
+    border-top: 1px solid var(--border-color);
+    border-radius: 0 0 12px 12px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* Add styles for better mobile responsiveness */
+@media (max-width: 768px) {
+    .modal {
+        padding: 10px;
+    }
+    
+    .modal-content,
+    .tenant-details-modal {
+        width: 95%;
+        margin: 10px auto;
+    }
+    
+    .tenant-details-content {
+        padding: 15px;
+    }
+}
+
+
+
+
+
+
+.delete-btn {
+    background: none;
+    border: none;
+    color: var(--danger-color);
+    cursor: pointer;
+    padding: 5px;
+    transition: transform 0.2s ease;
+}
+
+.delete-btn:hover {
+    transform: scale(1.1);
+}
+
+
+
+/* Add to your existing styles section */
+.status-dialog .modal-content {
+    max-width: 400px;
+    padding: 25px;
+    border-radius: 12px;
+}
+
+.status-dialog h3 {
+    color: var(--primary-color);
+    margin-bottom: 20px;
+    font-size: 1.4rem;
+    text-align: center;
+}
+
+.status-options {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.status-option {
+    padding: 15px;
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    background: white;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s ease;
+}
+
+.status-option:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.status-option.active {
+    border-color: var(--accent-color);
+    background-color: rgba(52, 152, 219, 0.05);
+}
+
+.status-option i {
+    font-size: 1.2rem;
+}
+
+.status-option.pending {
+    border-color: #f1c40f;
+}
+
+.status-option.in-progress {
+    border-color: #3498db;
+}
+
+.status-option.completed {
+    border-color: #2ecc71;
+}
+
+.status-option.pending:hover {
+    background-color: rgba(241, 196, 15, 0.1);
+}
+
+.status-option.in-progress:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+}
+
+.status-option.completed:hover {
+    background-color: rgba(46, 204, 113, 0.1);
+}
+
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* Add these styles to your CSS */
+.image-viewer .modal-content {
+    max-width: 90%;
+    max-height: 90vh;
+    margin: 20px auto;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.image-viewer .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: var(--primary-color);
+    color: white;
+}
+
+.image-viewer .modal-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.image-viewer .modal-body {
+    padding: 20px;
+    overflow: auto;
+    text-align: center;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+/* Make the pets checkbox and label inline */
+.form-group > label > input[type="checkbox"] {
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.lease-holder-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.lease-holder-row input {
+    flex: 1;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    font-size: 1rem;
+    background: #f9fafb;
+}
+.lease-holder-remove {
+    background: none;
+    border: none;
+    color: #d63031;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 50%;
+    transition: background 0.15s;
+}
+.lease-holder-remove:hover {
+    background: #ffe1e1;
+}
+
+.btn-add-lease-holder {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(90deg, #3498db 0%, #6dd5fa 100%);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.08);
+    transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+    margin-bottom: 14px;
+}
+.btn-add-lease-holder i {
+    font-size: 1.1em;
+}
+.btn-add-lease-holder:hover, .btn-add-lease-holder:focus {
+    background: linear-gradient(90deg, #217dbb 0%, #4fc3f7 100%);
+    box-shadow: 0 4px 16px rgba(52, 152, 219, 0.15);
+    transform: translateY(-2px) scale(1.03);
+    outline: none;
+}
+
+
+/* Modern Unit Details Modal Styles */
+.unit-details-modal {
+    max-width: 650px !important;
+    border-radius: 14px;
+    background: #fff;
+    margin: 30px auto;
+    box-shadow: 0 8px 32px rgba(44,62,80,0.13);
+    overflow: hidden;
+    font-size: 1rem;
+}
+
+.unit-details-modal .modal-header {
+    background: linear-gradient(90deg, #3498db 0%, #6dd5fa 100%);
+    color: #fff;
+    padding: 24px 28px 18px 28px;
+    border-radius: 14px 14px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.unit-details-modal .modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.unit-details-modal .modal-body {
+    padding: 28px 28px 10px 28px;
+    background: #f8fafd;
+}
+
+.unit-details-modal .unit-section {
+    margin-bottom: 22px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #e1e8ed;
+}
+
+.unit-details-modal .unit-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.unit-details-modal h3 {
+    color: #2980b9;
+    font-size: 1.13rem;
+    margin-bottom: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+.unit-details-modal h4 {
+    color: #3498db;
+    font-size: 1.01rem;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.utility-block {
+    background: #fff;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(44,62,80,0.05);
+    border: 1px solid #e1e8ed;
+}
+
+.utility-block div {
+    font-size: 0.97rem;
+    margin-bottom: 3px;
+    color: #2c3e50;
+}
+
+.utility-block:last-child {
+    margin-bottom: 0;
+}
+
+
+
+.unit-details-modal .modal-footer {
+    background: #f8fafd;
+    padding: 18px 28px;
+    border-radius: 0 0 14px 14px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid #e1e8ed;
+}
+
+.unit-details-modal .btn-primary,
+.unit-details-modal .btn-secondary {
+    min-width: 120px;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+}
+
+.unit-details-modal .btn-primary {
+    background: linear-gradient(90deg, #3498db 0%, #6dd5fa 100%);
+    color: #fff;
+}
+
+.unit-details-modal .btn-primary:hover {
+    background: linear-gradient(90deg, #217dbb 0%, #4fc3f7 100%);
+}
+
+.unit-details-modal .btn-secondary {
+    background: #e1e8ed;
+    color: #2980b9;
+}
+
+.unit-details-modal .btn-secondary:hover {
+    background: #d0d7de;
+    color: #217dbb;
+}
+
+.unit-details-modal .btn-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.6rem;
+    cursor: pointer;
+    padding: 0 8px;
+    transition: color 0.18s;
+}
+
+.unit-details-modal .btn-close:hover {
+    color: #ffe1e1;
+}
+
+@media (max-width: 700px) {
+    .unit-details-modal {
+        max-width: 98vw !important;
+        padding: 0;
+    }
+    .unit-details-modal .modal-header,
+    .unit-details-modal .modal-body,
+    .unit-details-modal .modal-footer {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+}
+
+
+.unit-details-modal .unit-section {
+    margin-bottom: 22px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.unit-details-modal .unit-section:last-child {
+    border-bottom: none;
+}
+
+.modal {
+    z-index: 5000 !important;
+}
+.modal-content {
+    z-index: 5001 !important;
+    position: relative;
+}
+   </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>🏢 Properties</h2>
+                <button class="btn-primary" onclick="window.location.href='/'">
+    <i class="fas fa-home"></i> Home
+</button>
+            </div>
+            <div class="property-list" id="propertyList">
+                <!-- Properties will be listed here -->
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Property Dashboard -->
+            <div class="dashboard" id="propertyDashboard">
+                <div class="dashboard-header">
+                    <h1 id="propertyName">Select a Property</h1>
+                    <div class="stats-container">
+                        <div class="stat-card">
+                            <h3>Occupancy Rate</h3>
+                            <p id="occupancyRate">--%</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Total Units</h3>
+                            <p id="totalUnits">--</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Vacant Units</h3>
+                            <p id="vacantUnits">--</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="units">Units</button>
+                    <button class="tab-btn" data-tab="tenants">Tenants</button>
+                    <button class="tab-btn" data-tab="maintenance">Maintenance</button>
+                    <button class="tab-btn" data-tab="documents">Documents</button>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <!-- Units Tab -->
+                    <div class="tab-pane active" id="units">
+                        <div class="units-header">
+                            <h2>Units</h2>
+                            <button class="btn-secondary" id="addUnitBtn">+ Add Unit</button>
+                        </div>
+                        <div class="units-grid" id="unitsGrid"></div>
+                    </div>
+
+                    <!-- Tenants Tab -->
+                    <div class="tab-pane" id="tenants">
+                        <div class="tenants-header">
+                            <h2>Tenants</h2>
+                            <button class="btn-secondary" id="addTenantBtn">+ Add Tenant</button>
+                        </div>
+                        <div class="tenants-list" id="tenantsList"></div>
+                    </div>
+
+                    <!-- Maintenance Tab -->
+                    <div class="tab-pane" id="maintenance">
+                        <div class="maintenance-header">
+                            <h2>Maintenance Requests</h2>
+                            <button class="btn-secondary" id="addMaintenanceBtn">+ New Request</button>
+                        </div>
+                        <div class="maintenance-list" id="maintenanceList"></div>
+                    </div>
+
+                    <!-- Documents Tab -->
+                    <div class="tab-pane" id="documents">
+                        <div class="documents-header">
+                            <h2>Documents</h2>
+                            <button class="btn-secondary" id="uploadDocumentBtn">+ Upload Document</button>
+                        </div>
+                        <div class="documents-grid" id="documentsGrid"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ===================== MODALS (ONE OF EACH, OUTSIDE MAIN CONTENT) ===================== -->
+
+
+
+<!-- Add Unit Modal -->
+<div class="modal" id="addUnitModal">
+    <div class="modal-content">
+        <h2>Add/Edit Unit</h2>
+        <form id="addUnitForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Unit Number</label>
+                    <input type="text" id="unitNumber" required>
+                </div>
+                <div class="form-group">
+                    <label>Floor</label>
+                    <input type="number" id="unitFloor" min="1" value="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Square Feet</label>
+                    <input type="number" id="unitSqft" min="0">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Bedrooms</label>
+                    <input type="number" id="unitBedrooms" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Bathrooms</label>
+                    <input type="number" id="unitBathrooms" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="unitStatus" required>
+                        <option value="vacant">Vacant</option>
+                        <option value="occupied">Occupied</option>
+                        <option value="maintenance">Maintenance</option>
+                    </select>
+                </div>
+            </div>
+            <h3>Utility Accounts</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Water Account #</label>
+                    <input type="text" id="waterAccountNumber">
+                    <label>Provider</label>
+                    <input type="text" id="waterProvider">
+                    <label>Status</label>
+                    <select id="waterStatus">
+                        <option value="">Select</option>
+                        <option value="active">Active</option>
+                        <option value="disconnected">Disconnected</option>
+                    </select>
+                    <label>Bill Under</label>
+                    <select id="waterUnder">
+                        <option value="">Select</option>
+                        <option value="tenant">Tenant</option>
+                        <option value="landlord">Landlord</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Gas Account #</label>
+                    <input type="text" id="gasAccountNumber">
+                    <label>Provider</label>
+                    <input type="text" id="gasProvider">
+                    <label>Status</label>
+                    <select id="gasStatus">
+                        <option value="">Select</option>
+                        <option value="active">Active</option>
+                        <option value="disconnected">Disconnected</option>
+                    </select>
+                    <label>Bill Under</label>
+                    <select id="gasUnder">
+                        <option value="">Select</option>
+                        <option value="tenant">Tenant</option>
+                        <option value="landlord">Landlord</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Electricity Account #</label>
+                    <input type="text" id="electricityAccountNumber">
+                    <label>Provider</label>
+                    <input type="text" id="electricityProvider">
+                    <label>Status</label>
+                    <select id="electricityStatus">
+                        <option value="">Select</option>
+                        <option value="active">Active</option>
+                        <option value="disconnected">Disconnected</option>
+                    </select>
+                    <label>Bill Under</label>
+                    <select id="electricityUnder">
+                        <option value="">Select</option>
+                        <option value="tenant">Tenant</option>
+                        <option value="landlord">Landlord</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-secondary" onclick="closeModal('addUnitModal')">Cancel</button>
+                <button type="submit" class="btn-primary">Add Unit</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Tenant Modal -->
+<div class="modal" id="addTenantModal">
+    <div class="modal-content">
+        <h2>Add/Edit Tenant</h2>
+        <form id="addTenantForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Tenant Name</label>
+                    <input type="text" id="tenantName" required>
+                </div>
+                <div class="form-group">
+                    <label>Phone</label>
+                    <input type="tel" id="tenantPhone" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="tenantEmail" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Lease Holders</label>
+                <div id="leaseHoldersList"></div>
+                <button type="button" class="btn-add-lease-holder" onclick="addLeaseHolderField()">
+                    <i class="fas fa-user-plus"></i> Add Lease Holder
+                </button>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Lease Start</label>
+                    <input type="date" id="leaseStart" required>
+                </div>
+                <div class="form-group">
+                    <label>Lease End</label>
+                    <input type="date" id="leaseEnd" required>
+                </div>
+                <div class="form-group">
+                    <label>Base Rent ($)</label>
+                    <input type="number" id="baseRent" min="0" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Lease Type</label>
+                    <select id="leaseType" required>
+                        <option value="">Select</option>
+                        <option value="fmr">Free Market Rent</option>
+                        <option value="section8">Section 8</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Lease Status</label>
+                    <select id="leaseStatus" required>
+                        <option value="active">Active</option>
+                        <option value="pending">Pending</option>
+                        <option value="expired">Expired</option>
+                        <option value="terminated">Terminated</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Lease Renewal</label>
+                    <select id="leaseRenewal" required>
+                        <option value="renew">Will Renew</option>
+                        <option value="terminate">Will Terminate</option>
+                    </select>
+                </div>
+            </div>
+            <div id="fmrSection" style="display:none;">
+                <div class="form-group">
+                    <label>FMR Notes</label>
+                    <textarea id="fmrNotes"></textarea>
+                </div>
+            </div>
+            <div id="section8Section" style="display:none;">
+                <div class="form-group">
+                    <label>HUB Contribution ($)</label>
+                    <input type="number" id="hubContribution" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Tenant Contribution ($)</label>
+                    <input type="number" id="tenantContribution" min="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Unit</label>
+                <select id="tenantUnit" required>
+                    <option value="">Select a unit</option>
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Authorized Occupants (one per line)</label>
+                <textarea id="authorizedOccupants"></textarea>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="hasPets"> Has Pets
+                </label>
+                <div id="petDetails" style="display:none;">
+                    <label>Number of Pets</label>
+                    <input type="number" id="petCount" min="0">
+                    <label>Pet Fee ($)</label>
+                    <input type="number" id="petFee" min="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Emergency Contact Name</label>
+                <input type="text" id="emergencyContactName">
+            </div>
+            <div class="form-group">
+                <label>Emergency Contact Phone</label>
+                <input type="tel" id="emergencyContactPhone">
+            </div>
+            <div class="form-group">
+                <label>Emergency Contact Email</label>
+                <input type="email" id="emergencyContactEmail">
+            </div>
+            <div class="form-group">
+                <label>Emergency Contact Relation</label>
+                <input type="text" id="emergencyContactRelation">
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-secondary" onclick="closeModal('addTenantModal')">Cancel</button>
+                <button type="submit" class="btn-primary">Add Tenant</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Maintenance Modal -->
+<div class="modal" id="addMaintenanceModal">
+    <div class="modal-content">
+        <h2>New Maintenance Request</h2>
+        <form id="addMaintenanceForm">
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="maintenanceTitle" required>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="maintenanceDescription" required></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select id="maintenancePriority" required>
+                        <option value="urgent">Urgent</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Unit</label>
+                    <select id="maintenanceUnit">
+                        <option value="">Select a unit</option>
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-secondary" onclick="closeModal('addMaintenanceModal')">Cancel</button>
+                <button type="submit" class="btn-primary">Submit Request</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Upload Document Modal -->
+<div class="modal" id="uploadDocumentModal">
+    <div class="modal-content">
+        <h2>Upload Document</h2>
+        <form id="uploadDocumentForm" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Document Name</label>
+                <input type="text" id="documentName" required>
+            </div>
+            <div class="form-group">
+                <label>Type</label>
+                <input type="text" id="documentType" required>
+            </div>
+            <div class="form-group">
+                <label>File</label>
+                <input type="file" id="documentFile" required>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-secondary" onclick="closeModal('uploadDocumentModal')">Cancel</button>
+                <button type="submit" class="btn-primary">Upload</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+    <!-- View Unit Modal (example) -->
+<div id="viewUnitModal" class="modal">
+  <div class="modal-content unit-details-modal">
+    <div class="modal-header">
+      <h2>Unit Details</h2>
+      <button class="btn-close" onclick="closeModal('viewUnitModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="unitDetailsBody">
+      <!-- Content will be injected by JS -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="exportUtilityReport()">Export Utility Report</button>
+      <button class="btn-primary" onclick="closeModal('viewUnitModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add this just before the closing body tag -->
+<div id="notification" class="notification"></div>
+
+    <script>
+       // Global state management
+const state = {
+    currentProperty: null,
+    properties: [],
+    units: [],
+    tenants: [],
+    maintenanceRequests: [],
+    documents: []
+};
+
+const API_URL = '/api';
+
+// Initialize application
+document.addEventListener('DOMContentLoaded', () => {
+    initializeEventListeners();
+    initializeTabs();
+    loadProperties();
+});
+
+// Event Listeners Setup
+function initializeEventListeners() {
+    // Property management
+    document.getElementById('addPropertyBtn')?.addEventListener('click', () => openModal('addPropertyModal'));
+    document.getElementById('addPropertyForm')?.addEventListener('submit', handleAddProperty);
+    
+    // Unit management
+    document.getElementById('addUnitBtn')?.addEventListener('click', () => openModal('addUnitModal'));
+    document.getElementById('addUnitForm')?.addEventListener('submit', handleAddUnit);
+    
+    // Tenant management
+    document.getElementById('addTenantBtn')?.addEventListener('click', () => {
+    if (!state.currentProperty) {
+        showNotification('Please select a property first', 'error');
+        return;
+    }
+    resetTenantForm(); // <-- Add this line
+    populateUnitSelect();
+    openModal('addTenantModal');
+});
+    document.getElementById('addTenantForm')?.addEventListener('submit', handleAddTenant);
+    
+    // Maintenance management
+    document.getElementById('addMaintenanceBtn')?.addEventListener('click', () => openModal('addMaintenanceModal'));
+    document.getElementById('addMaintenanceForm')?.addEventListener('submit', handleAddMaintenance);
+    
+    // Document management
+    document.getElementById('uploadDocumentBtn')?.addEventListener('click', () => openModal('uploadDocumentModal'));
+    document.getElementById('uploadDocumentForm')?.addEventListener('submit', handleDocumentUpload);
+
+    // Modal close handlers
+    window.onclick = (event) => {
+        if (event.target.classList.contains('modal')) {
+            closeModal(event.target.id);
+        }
+    };
+}
+
+// Tab Management
+function initializeTabs() {
+    const tabs = document.querySelectorAll('.tab-btn');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const tabId = tab.getAttribute('data-tab');
+            showTabContent(tabId);
+            loadTabContent(tabId);
+        });
+    });
+}
+
+document.getElementById('leaseType').addEventListener('change', function() {
+    document.getElementById('fmrSection').style.display = this.value === 'fmr' ? 'block' : 'none';
+    document.getElementById('section8Section').style.display = this.value === 'section8' ? 'flex' : 'none';
+});
+
+function showTabContent(tabId) {
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+        pane.classList.remove('active');
+    });
+    
+    const selectedPane = document.getElementById(tabId);
+    if (selectedPane) {
+        selectedPane.classList.add('active');
+    }
+}
+
+async function loadTabContent(tabId) {
+    if (!state.currentProperty) return;
+
+    try {
+        switch(tabId) {
+            case 'units':
+                await loadUnits(state.currentProperty._id);
+                break;
+            case 'tenants':
+                await loadTenants(state.currentProperty._id);
+                break;
+            case 'maintenance':
+                await loadMaintenanceRequests(state.currentProperty._id);
+                break;
+            case 'documents':
+                await loadDocuments(state.currentProperty._id);
+                break;
+        }
+    } catch (error) {
+        console.error(`Error loading ${tabId} content:`, error);
+        showNotification(`Error loading ${tabId}`, 'error');
+    }
+}
+
+// Property Management
+async function loadProperties() {
+    try {
+        const response = await fetch('/api/projects');
+        if (!response.ok) throw new Error('Failed to fetch projects');
+        
+        const data = await response.json();
+        state.properties = data.projects.filter(project => 
+            project.type?.toLowerCase() === 'multifamily'
+        );
+        
+        renderPropertyList();
+
+        // Auto-select the first property if available
+        if (state.properties.length > 0) {
+            selectProperty(state.properties[0]._id);
+        }
+    } catch (error) {
+        console.error('Error loading properties:', error);
+        showNotification('Error loading properties', 'error');
+    }
+}
+ 
+
+// Update the formatAddress function
+function formatAddress(address) {
+    // Debug log to see the address structure
+    console.log('Address object:', address);
+    
+    // Return early if no address
+    if (!address) return 'No address provided';
+
+    // Check if the address is in the expected format
+    if (typeof address === 'object') {
+        const addressLines = [];
+
+        // Add line1 if exists
+        if (address.line1 || address.addressLine1) {
+            addressLines.push(address.line1 || address.addressLine1);
+        }
+
+        // Add line2 if exists and not empty
+        if ((address.line2 || address.addressLine2) && (address.line2?.trim() || address.addressLine2?.trim())) {
+            addressLines.push(address.line2 || address.addressLine2);
+        }
+
+        // Add city, state, zip
+        const cityLine = [
+            address.city,
+            address.state,
+            address.zip
+        ].filter(Boolean).join(', ');
+        
+        if (cityLine) {
+            addressLines.push(cityLine);
+        }
+
+        // Join with line breaks
+        return addressLines.join('<br>');
+    }
+
+    // If address is a string, return as is
+    if (typeof address === 'string') {
+        return address;
+    }
+
+    return 'No address provided';
+}
+
+// Update renderPropertyList to handle the address properly
+function renderPropertyList() {
+    const propertyList = document.getElementById('propertyList');
+    
+    if (!state.properties.length) {
+        propertyList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-building"></i>
+                <p>No multifamily properties found</p>
+            </div>`;
+        return;
+    }
+
+    propertyList.innerHTML = state.properties.map(property => {
+        const isActive = state.currentProperty && state.currentProperty._id === property._id;
+        
+        return `
+            <div class="property-item ${isActive ? 'active' : ''}" 
+                 onclick="selectProperty('${property._id}')">
+                <h3>${property.name}</h3>
+                <div class="property-address">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <div class="address-text">${formatAddress(property.address)}</div>
+                </div>
+                <div class="property-badges">
+                    <span class="property-type">
+                        <i class="fas fa-building"></i> ${property.type || 'Multifamily'}
+                    </span>
+                    <span class="property-status ${property.status?.toLowerCase() || ''}">
+                        <i class="fas fa-circle"></i> ${property.status || 'Active'}
+                    </span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function selectProperty(propertyId) {
+    try {
+        state.currentProperty = state.properties.find(p => p._id === propertyId);
+        if (!state.currentProperty) throw new Error('Property not found');
+
+        document.getElementById('propertyName').textContent = state.currentProperty.name;
+        
+        // Load all property data in parallel
+        await Promise.all([
+            loadUnits(propertyId),
+            loadTenants(propertyId),
+            loadMaintenanceRequests(propertyId),
+            loadDocuments(propertyId)
+        ]);
+        
+        updatePropertyStats();
+        showNotification('Property loaded successfully', 'success');
+    } catch (error) {
+        console.error('Error selecting property:', error);
+        showNotification('Error loading property details', 'error');
+    }
+}
+
+// Update the loadUnits function
+async function loadUnits(propertyId) {
+    try {
+        const response = await fetch(`${API_URL}/properties/${propertyId}/units`);
+        if (!response.ok) throw new Error('Failed to fetch units');
+        
+        const data = await response.json();
+        // Update this line to correctly access units from the response
+        state.units = data.property.units || [];
+        console.log('Loaded units:', state.units); // Debug log
+
+        renderUnits();
+        updatePropertyStats(); // Update stats after loading units
+        populateUnitSelect();
+         populateMaintenanceUnitSelect();
+
+    } catch (error) {
+        console.error('Error loading units:', error);
+        showNotification('Error loading units', 'error');
+    }
+}
+
+// Update the renderUnits function
+function renderUnits() {
+    const unitsGrid = document.getElementById('unitsGrid');
+    if (!state.units || state.units.length === 0) {
+        unitsGrid.innerHTML = `
+            <div class="empty-state">
+                <p>No units found. Add your first unit!</p>
+            </div>`;
+        return;
+    }
+
+    // Utility icons for visual clarity
+    const utilityIcons = {
+        water: '<i class="fas fa-tint" style="color:#3498db"></i>',
+        gas: '<i class="fas fa-fire" style="color:#e67e22"></i>',
+        electricity: '<i class="fas fa-bolt" style="color:#f1c40f"></i>'
+    };
+
+    unitsGrid.innerHTML = state.units.map(unit => {
+        // Utility account info
+        const utilities = ['water', 'gas', 'electricity'].map(type => {
+            const acc = unit.utilityAccounts?.[type] || {};
+            let statusBadge = '';
+            if (acc.status === 'active') {
+                statusBadge = `<span class="badge badge-success">Active</span>`;
+            } else if (acc.status === 'disconnected') {
+                statusBadge = `<span class="badge badge-danger">Disconnected</span>`;
+            } else {
+                statusBadge = `<span class="badge badge-default">N/A</span>`;
+            }
+            return `
+                <div class="unit-utility-row">
+                    ${utilityIcons[type]}
+                    <span class="utility-label">${type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                    <span class="utility-account">Acct: <strong>${acc.accountNumber || 'N/A'}</strong></span>
+                    <span class="utility-provider">${acc.provider || 'N/A'}</span>
+                    <span class="utility-under">Bill: <strong>${acc.under ? acc.under.charAt(0).toUpperCase() + acc.under.slice(1) : 'N/A'}</strong></span>
+                    ${statusBadge}
+                </div>
+            `;
+        }).join('');
+
+        // Status badge
+        let statusBadge = '';
+        if (unit.status === 'occupied') {
+            statusBadge = `<span class="badge badge-success">Occupied</span>`;
+        } else if (unit.status === 'vacant') {
+            statusBadge = `<span class="badge badge-warning">Vacant</span>`;
+        } else if (unit.status === 'maintenance') {
+            statusBadge = `<span class="badge badge-danger">Maintenance</span>`;
+        } else {
+            statusBadge = `<span class="badge badge-default">${unit.status || 'N/A'}</span>`;
+        }
+
+        return `
+            <div class="unit-card-modern">
+                <div class="unit-card-header">
+                    <h3>Unit ${unit.number}</h3>
+                    ${statusBadge}
+                </div>
+                <div class="unit-card-body">
+                    <div class="unit-info-row">
+                        <span><i class="fas fa-layer-group"></i> Floor: <strong>${unit.floor || '1'}</strong></span>
+                        <span><i class="fas fa-bed"></i> ${unit.bedrooms} Bed</span>
+                        <span><i class="fas fa-bath"></i> ${unit.bathrooms} Bath</span>
+                        <span><i class="fas fa-ruler-combined"></i> ${unit.sqft ? `${unit.sqft} sqft` : 'N/A'}</span>
+                    </div>
+                    <div class="unit-utilities-section">
+                        <div class="unit-utilities-title"><i class="fas fa-plug"></i> Utilities</div>
+                        ${utilities}
+                    </div>
+                </div>
+                <div class="unit-card-actions">
+                    <button onclick="editUnit('${unit._id}')" class="btn-secondary"><i class="fas fa-edit"></i> Edit</button>
+                    <button onclick="viewUnitDetails('${unit._id}')" class="btn-secondary"><i class="fas fa-eye"></i> Details</button>
+                    <button onclick="deleteUnit('${unit._id}')" class="btn-icon delete-btn" title="Delete Unit"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Utility Functions
+function formatAddress(address) {
+    if (!address) return 'No address provided';
+    
+    const parts = [];
+    if (address.line1) parts.push(address.line1);
+    if (address.city) parts.push(address.city);
+    if (address.state) parts.push(address.state);
+    if (address.zip) parts.push(address.zip);
+    
+    return parts.join(', ') || 'No address provided';
+}
+
+
+// Add these functions to your JavaScript code before the window exports
+
+// Property Management Handlers
+async function handleAddProperty(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    const propertyData = {
+        name: formData.get('name'),
+        type: 'Multifamily',
+        address: {
+            line1: formData.get('addressLine1'),
+            line2: formData.get('addressLine2'),
+            city: formData.get('city'),
+            state: formData.get('state'),
+            zip: formData.get('zip')
+        }
+    };
+
+    try {
+        const response = await fetch(`${API_URL}/projects`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(propertyData)
+        });
+
+        if (!response.ok) throw new Error('Failed to add property');
+        
+        const newProperty = await response.json();
+        state.properties.push(newProperty);
+        renderPropertyList();
+        closeModal('addPropertyModal');
+        showNotification('Property added successfully', 'success');
+        event.target.reset();
+    } catch (error) {
+        console.error('Error adding property:', error);
+        showNotification('Error adding property', 'error');
+    }
+}
+
+// Unit Management Handlers
+async function editUnit(unitId) {
+    try {
+        const unit = state.units.find(u => u._id === unitId);
+        if (!unit) throw new Error('Unit not found');
+
+        // Populate the edit form
+        document.getElementById('unitNumber').value = unit.number || '';
+        document.getElementById('unitFloor').value = unit.floor || 1;
+        document.getElementById('unitBedrooms').value = unit.bedrooms || '';
+        document.getElementById('unitBathrooms').value = unit.bathrooms || '';
+        document.getElementById('unitSqft').value = unit.sqft || '';
+        document.getElementById('unitStatus').value = unit.status || 'vacant';
+
+        // Populate utility account fields
+        const acc = unit.utilityAccounts || {};
+        const water = acc.water || {};
+        const gas = acc.gas || {};
+        const electricity = acc.electricity || {};
+
+        document.getElementById('waterAccountNumber').value = water.accountNumber || '';
+        document.getElementById('waterProvider').value = water.provider || '';
+        document.getElementById('waterStatus').value = water.status || '';
+        document.getElementById('waterUnder').value = water.under || '';
+
+        document.getElementById('gasAccountNumber').value = gas.accountNumber || '';
+        document.getElementById('gasProvider').value = gas.provider || '';
+        document.getElementById('gasStatus').value = gas.status || '';
+        document.getElementById('gasUnder').value = gas.under || '';
+
+        document.getElementById('electricityAccountNumber').value = electricity.accountNumber || '';
+        document.getElementById('electricityProvider').value = electricity.provider || '';
+        document.getElementById('electricityStatus').value = electricity.status || '';
+        document.getElementById('electricityUnder').value = electricity.under || '';
+
+        // Open the modal in edit mode
+        openModal('addUnitModal');
+        
+        // Change the form submission handler and button text
+        const form = document.getElementById('addUnitForm');
+        const submitButton = form.querySelector('button[type="submit"]');
+        submitButton.textContent = 'Update Unit';
+        
+        // Store the unitId for update
+        form.dataset.editMode = 'true';
+        form.dataset.unitId = unitId;
+        
+        // Update the form submission handler
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            handleUpdateUnit(unitId);
+        };
+    } catch (error) {
+        console.error('Error editing unit:', error);
+        showNotification('Error editing unit', 'error');
+    }
+}
+
+async function handleUpdateUnit(unitId) {
+    if (!state.currentProperty) {
+        showNotification('Please select a property first', 'error');
+        return;
+    }
+
+    const unitData = {
+        number: document.getElementById('unitNumber').value,
+        bedrooms: Number(document.getElementById('unitBedrooms').value),
+        bathrooms: Number(document.getElementById('unitBathrooms').value),
+        status: document.getElementById('unitStatus').value,
+        utilityAccounts: {
+            water: {
+                accountNumber: document.getElementById('waterAccountNumber').value,
+                provider: document.getElementById('waterProvider').value,
+                status: document.getElementById('waterStatus').value,
+                under: document.getElementById('waterUnder').value
+            },
+            gas: {
+                accountNumber: document.getElementById('gasAccountNumber').value,
+                provider: document.getElementById('gasProvider').value,
+                status: document.getElementById('gasStatus').value,
+                under: document.getElementById('gasUnder').value
+            },
+            electricity: {
+                accountNumber: document.getElementById('electricityAccountNumber').value,
+                provider: document.getElementById('electricityProvider').value,
+                status: document.getElementById('electricityStatus').value,
+                under: document.getElementById('electricityUnder').value
+            }
+        }
+        // Add other fields as needed
+    };
+
+    // Validate required fields
+    if (!unitData.number || !unitData.bedrooms || !unitData.bathrooms) {
+        showNotification('Please fill in all required fields', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${unitId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(unitData)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to update unit');
+        }
+
+        // Reset form and close modal
+        const form = document.getElementById('addUnitForm');
+        form.reset();
+        form.dataset.editMode = 'false';
+        form.dataset.unitId = '';
+        const submitButton = form.querySelector('button[type="submit"]');
+        submitButton.textContent = 'Add Unit';
+        
+        // Reset the form submission handler
+        form.onsubmit = handleAddUnit;
+
+        // Reload units and close modal
+        await loadUnits(state.currentProperty._id);
+        closeModal('addUnitModal');
+        showNotification('Unit updated successfully', 'success');
+    } catch (error) {
+        console.error('Error updating unit:', error);
+        showNotification(error.message || 'Error updating unit', 'error');
+    }
+}
+
+function viewUnitDetails(unitId) {
+    const unit = state.units.find(u => u._id === unitId);
+    if (!unit) {
+        showNotification('Unit not found', 'error');
+        return;
+    }
+
+    // Set the current unit ID for export
+    state.currentUnitId = unitId;
+
+    // Utility account info and bills (example structure)
+    const utilities = [
+        { type: 'Water', key: 'water' },
+        { type: 'Gas', key: 'gas' },
+        { type: 'Electricity', key: 'electricity' }
+    ];
+
+    // Example: unit.utilityAccounts = { water: {...}, gas: {...}, electricity: {...} }
+    // Example: unit.utilityBills = [{type: 'water', amount: 50, dueDate: '2025-07-01', paid: true, paidBy: 'tenant'}]
+
+    let html = `
+      <div class="unit-section">
+        <h3>Unit: ${unit.number || ''}</h3>
+        <p><strong>Status:</strong> ${unit.status || 'N/A'}</p>
+        <p><strong>Bedrooms:</strong> ${unit.bedrooms || 'N/A'} | <strong>Bathrooms:</strong> ${unit.bathrooms || 'N/A'}</p>
+      </div>
+      <div class="unit-section">
+        <h3>Utilities</h3>
+        ${utilities.map(util => {
+            const acc = unit.utilityAccounts?.[util.key] || {};
+            return `
+              <div class="utility-block">
+                <h4>${util.type}</h4>
+                <div><strong>Account #:</strong> ${acc.accountNumber || 'N/A'}</div>
+                <div><strong>Provider:</strong> ${acc.provider || 'N/A'}</div>
+                <div><strong>Status:</strong> ${acc.status || 'N/A'}</div>
+                <div><strong>Bill Under:</strong> ${acc.under || 'N/A'}</div>
+              </div>
+            `;
+        }).join('')}
+      </div>
+      
+    `;
+
+    document.getElementById('unitDetailsBody').innerHTML = html;
+    openModal('viewUnitModal');
+}
+
+function exportUtilityReport() {
+    const unit = state.units.find(u => u._id === state.currentUnitId);
+    if (!unit) {
+        showNotification('Unit not found', 'error');
+        return;
+    }
+
+    // Prepare CSV header
+    let csv = 'Utility,Account Number,Provider,Status,Bill Under\n';
+
+    // List of utilities
+    const utilities = [
+        { type: 'Water', key: 'water' },
+        { type: 'Gas', key: 'gas' },
+        { type: 'Electricity', key: 'electricity' }
+    ];
+
+    // Add each utility's account info
+    utilities.forEach(util => {
+        const acc = unit.utilityAccounts?.[util.key] || {};
+        csv += [
+            util.type,
+            acc.accountNumber || '',
+            acc.provider || '',
+            acc.status || '',
+            acc.under || ''
+        ].join(',') + '\n';
+    });
+
+    // Download as CSV
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `utility_accounts_unit_${unit.number || unit._id}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+
+// Update the handleAddUnit function
+async function handleAddUnit(event) {
+    event.preventDefault();
+
+     const form = event.target;
+    
+    // If in edit mode, don't proceed with add
+    if (form.dataset.editMode === 'true') {
+        return;
+    }
+    
+    if (!state.currentProperty) {
+        showNotification('Please select a property first', 'error');
+        return;
+    }
+
+    const unitData = {
+        number: document.getElementById('unitNumber').value,
+        bedrooms: Number(document.getElementById('unitBedrooms').value),
+        bathrooms: Number(document.getElementById('unitBathrooms').value),
+        status: document.getElementById('unitStatus').value,
+        utilityAccounts: {
+            water: {
+                accountNumber: document.getElementById('waterAccountNumber').value,
+                provider: document.getElementById('waterProvider').value,
+                status: document.getElementById('waterStatus').value,
+                under: document.getElementById('waterUnder').value
+            },
+            gas: {
+                accountNumber: document.getElementById('gasAccountNumber').value,
+                provider: document.getElementById('gasProvider').value,
+                status: document.getElementById('gasStatus').value,
+                under: document.getElementById('gasUnder').value
+            },
+            electricity: {
+                accountNumber: document.getElementById('electricityAccountNumber').value,
+                provider: document.getElementById('electricityProvider').value,
+                status: document.getElementById('electricityStatus').value,
+                under: document.getElementById('electricityUnder').value
+            }
+        }
+        // Add other fields as needed
+    };
+
+    // Validate required fields
+    if (!unitData.number || !unitData.bedrooms || !unitData.bathrooms) {
+        showNotification('Please fill in all required fields', 'error');
+        return;
+    }
+
+    try {
+        console.log('Sending unit data:', unitData); // Debug log
+
+        const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/units`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(unitData)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to add unit');
+        }
+        
+        const result = await response.json();
+        console.log('Unit added successfully:', result); // Debug log
+
+        // Reload units to get updated list
+        await loadUnits(state.currentProperty._id);
+        closeModal('addUnitModal');
+        showNotification('Unit added successfully', 'success');
+        event.target.reset();
+    } catch (error) {
+        console.error('Error adding unit:', error);
+        showNotification(error.message || 'Error adding unit', 'error');
+    }
+}
+
+
+async function deleteUnit(unitId) {
+    if (!confirm('Are you sure you want to delete this unit?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${unitId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to delete unit');
+        }
+
+        // Remove unit from state and re-render
+        state.units = state.units.filter(u => u._id !== unitId);
+        renderUnits();
+        updatePropertyStats();
+        showNotification('Unit deleted successfully', 'success');
+    } catch (error) {
+        console.error('Error deleting unit:', error);
+        showNotification('Error deleting unit', 'error');
+    }
+}
+
+function addLeaseHolderField(holder = {}) {
+    const list = document.getElementById('leaseHoldersList');
+    const holderDiv = document.createElement('div');
+    holderDiv.className = 'lease-holder-row';
+    holderDiv.innerHTML = `
+        <input type="text" class="lease-holder-name" placeholder="Full Name" value="${holder.name || ''}" required>
+        <input type="tel" class="lease-holder-phone" placeholder="Phone" value="${holder.phone || ''}">
+        <input type="email" class="lease-holder-email" placeholder="Email" value="${holder.email || ''}">
+        <button type="button" class="btn-icon lease-holder-remove" title="Remove" onclick="removeLeaseHolderField(this)">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    list.appendChild(holderDiv);
+}
+
+function removeLeaseHolderField(btn) {
+    btn.parentElement.remove();
+}
+
+function getLeaseHoldersFromForm() {
+    return Array.from(document.querySelectorAll('#leaseHoldersList .lease-holder-row')).map(row => ({
+        name: row.querySelector('.lease-holder-name').value.trim(),
+        phone: row.querySelector('.lease-holder-phone').value.trim(),
+        email: row.querySelector('.lease-holder-email').value.trim()
+    })).filter(holder => holder.name); // Only keep if name is filled
+}
+
+function populateLeaseHolders(holders = []) {
+    const list = document.getElementById('leaseHoldersList');
+    list.innerHTML = '';
+    holders.forEach(holder => addLeaseHolderField(holder));
+}
+
+
+function resetTenantForm() {
+    document.getElementById('addTenantForm').reset();
+    // Clear dynamic lease holders
+    populateLeaseHolders([]);
+    // Hide pets section
+    document.getElementById('petDetails').style.display = 'none';
+    // Hide lease type sections
+    document.getElementById('fmrSection').style.display = 'none';
+    document.getElementById('section8Section').style.display = 'none';
+    // Reset submit button text
+    const submitButton = document.getElementById('addTenantForm').querySelector('button[type="submit"]');
+    if (submitButton) submitButton.textContent = 'Add Tenant';
+    // Remove edit mode flags
+    const form = document.getElementById('addTenantForm');
+    form.dataset.editMode = 'false';
+    form.dataset.tenantId = '';
+}
+
+
+// Tenant Management
+async function handleAddTenant(event) {
+    event.preventDefault();
+    
+    // Check if we're in edit mode - if so, don't proceed
+    const form = event.target;
+    if (form.dataset.editMode === 'true') {
+        return;
+    }
+    
+    if (!state.currentProperty) {
+        showNotification('Please select a property first', 'error');
+        return;
+    }
+
+    const tenantData = {
+        name: document.getElementById('tenantName').value,
+        phone: document.getElementById('tenantPhone').value,
+        email: document.getElementById('tenantEmail').value,
+
+        leaseHolders: getLeaseHoldersFromForm(),
+
+      emergencyContact: {
+    name: document.getElementById('emergencyContactName').value,
+    phone: document.getElementById('emergencyContactPhone').value,
+    email: document.getElementById('emergencyContactEmail').value,
+    relation: document.getElementById('emergencyContactRelation').value
+},
+
+        authorizedOccupants: document.getElementById('authorizedOccupants').value
+            .split('\n')
+            .map(s => s.trim())
+            .filter(Boolean),
+        pets: {
+            hasPets: document.getElementById('hasPets').checked,
+            count: document.getElementById('hasPets').checked ? Number(document.getElementById('petCount').value) : 0,
+            fee: document.getElementById('hasPets').checked ? Number(document.getElementById('petFee').value) : 0
+        },
+        leaseRenewal: document.getElementById('leaseRenewal').value,
+        unitId: document.getElementById('tenantUnit').value,
+    leaseStart: document.getElementById('leaseStart').value,
+    leaseEnd: document.getElementById('leaseEnd').value,
+    baseRent: Number(document.getElementById('baseRent').value),
+    leaseType: document.getElementById('leaseType').value,
+    fmrNotes: document.getElementById('leaseType').value === 'fmr' ? document.getElementById('fmrNotes').value : '',
+    hubContribution: document.getElementById('leaseType').value === 'section8' ? Number(document.getElementById('hubContribution').value) : 0,
+    tenantContribution: document.getElementById('leaseType').value === 'section8' ? Number(document.getElementById('tenantContribution').value) : 0,
+        leaseStatus: document.getElementById('leaseStatus').value,
+    };
+
+    // Validate lease dates
+    if (new Date(tenantData.leaseStart) > new Date(tenantData.leaseEnd)) {
+        showNotification('Lease end date must be after start date', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/tenants`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(tenantData)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to add tenant');
+        }
+
+        // Update unit status to occupied if a unit was assigned
+        if (tenantData.unitId) {
+            await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${tenantData.unitId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: 'occupied' })
+            });
+        }
+
+        await Promise.all([
+            loadTenants(state.currentProperty._id),
+            loadUnits(state.currentProperty._id)
+        ]);
+        
+        closeModal('addTenantModal');
+        showNotification('Tenant added successfully', 'success');
+        event.target.reset();
+    } catch (error) {
+        console.error('Error adding tenant:', error);
+        showNotification(error.message || 'Error adding tenant', 'error');
+    }
+}
+
+
+// Show/hide pet details
+document.getElementById('hasPets').addEventListener('change', function() {
+    document.getElementById('petDetails').style.display = this.checked ? 'block' : 'none';
+});
+
+// Update the loadTenants function
+async function loadTenants(propertyId) {
+    try {
+        const response = await fetch(`${API_URL}/properties/${propertyId}/tenants`);
+        if (!response.ok) throw new Error('Failed to fetch tenants');
+        
+        const tenants = await response.json();
+        // Update state with tenant data
+        state.tenants = tenants;
+        console.log('Loaded tenants:', state.tenants); // Debug log
+        renderTenants();
+    } catch (error) {
+        console.error('Error loading tenants:', error);
+        showNotification('Error loading tenants', 'error');
+    }
+}
+
+// Update the renderTenants function
+function renderTenants() {
+    const tenantsList = document.getElementById('tenantsList');
+    
+    if (!state.tenants || !state.tenants.length) {
+        tenantsList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-users"></i>
+                <p>No tenants found</p>
+                <button onclick="openModal('addTenantModal')" class="btn-primary">
+                    Add Your First Tenant
+                </button>
+            </div>`;
+        return;
+    }
+
+    tenantsList.innerHTML = state.tenants.map(tenant => {
+        // Get tenant initials for avatar
+        const initials = tenant.name
+            .split(' ')
+            .map(n => n[0])
+            .join('')
+            .toUpperCase();
+
+            const leaseHolders = (tenant.leaseHolders && tenant.leaseHolders.length)
+    ? `<ul class="tenant-list">${tenant.leaseHolders.map(holder => `
+        <li>
+            <strong>${holder.name}</strong>
+            ${holder.phone ? ` | <i class="fas fa-phone"></i> ${holder.phone}` : ''}
+            ${holder.email ? ` | <i class="fas fa-envelope"></i> ${holder.email}` : ''}
+        </li>
+    `).join('')}</ul>`
+    : '<span class="tenant-detail-value">None listed</span>';
+
+        // Find the associated unit
+        const assignedUnit = typeof tenant.unitId === 'object' ? tenant.unitId : 
+            state.units.find(u => u._id === tenant.unitId || u._id.toString() === tenant.unitId?.toString());
+
+        // Format lease dates
+        const leaseStart = tenant.leaseStart ? 
+            new Date(tenant.leaseStart).toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+            }) : 'Not set';
+        
+        const leaseEnd = tenant.leaseEnd ? 
+            new Date(tenant.leaseEnd).toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+            }) : 'Not set';
+
+        // Lease type details
+        let leaseTypeDetails = '';
+        if (tenant.leaseType === 'fmr') {
+            leaseTypeDetails = `<div class="tenant-detail-row"><span>FMR Notes:</span> <span>${tenant.fmrNotes || 'None'}</span></div>`;
+        } else if (tenant.leaseType === 'section8') {
+            leaseTypeDetails = `
+                <div class="tenant-detail-row"><span>HUB:</span> <span>$${tenant.hubContribution?.toFixed(2) || '0.00'}</span></div>
+                <div class="tenant-detail-row"><span>Tenant:</span> <span>$${tenant.tenantContribution?.toFixed(2) || '0.00'}</span></div>
+            `;
+        }
+
+        // Authorized occupants
+        const occupants = (tenant.authorizedOccupants || []).length
+            ? `<ul class="tenant-list">${tenant.authorizedOccupants.map(o => `<li>${o}</li>`).join('')}</ul>`
+            : '<span class="tenant-detail-value">None listed</span>';
+
+        // Pets
+        const pets = tenant.pets?.hasPets
+            ? `Yes (${tenant.pets.count} pet${tenant.pets.count > 1 ? 's' : ''}), Fee: $${tenant.pets.fee}`
+            : 'No';
+
+        // Emergency contact
+
+const emergency = tenant.emergencyContact
+    ? `<div class="tenant-detail-row">
+            <span><i class="fas fa-user-shield"></i> ${tenant.emergencyContact.name || 'N/A'}</span>
+            <span><i class="fas fa-phone"></i> ${tenant.emergencyContact.phone || 'N/A'}</span>
+            <span><i class="fas fa-envelope"></i> ${tenant.emergencyContact.email || 'N/A'}</span>
+            <span><i class="fas fa-user-friends"></i> ${tenant.emergencyContact.relation || 'N/A'}</span>
+        </div>`
+    : '<span class="tenant-detail-value">N/A</span>';
+
+        return `
+            <div class="tenant-card">
+                <div class="tenant-header">
+                    <div class="tenant-avatar-small">${initials}</div>
+                    <h3>${tenant.name}</h3>
+                </div>
+                <div class="tenant-info">
+                    <div class="tenant-section">
+                        <div class="tenant-section-title"><i class="fas fa-home"></i> Unit</div>
+                        <div class="tenant-detail-row">
+                            ${assignedUnit ? 
+                                `Unit ${assignedUnit.number} (${assignedUnit.bedrooms} bed, ${assignedUnit.bathrooms} bath)` : 
+                                'No unit assigned'}
+                        </div>
+                    </div>
+                    <div class="tenant-section">
+                        <div class="tenant-section-title"><i class="fas fa-address-book"></i> Contact</div>
+                        <div class="tenant-detail-row"><span><i class="fas fa-phone"></i> ${tenant.phone}</span></div>
+                        <div class="tenant-detail-row"><span><i class="fas fa-envelope"></i> ${tenant.email}</span></div>
+                    </div>
+
+                    <div class="tenant-section">
+    <div class="tenant-section-title"><i class="fas fa-user"></i>Additional Lease Holders</div>
+    ${leaseHolders}
+</div>
+                    <div class="tenant-section">
+                        <div class="tenant-section-title"><i class="fas fa-file-contract"></i> Lease</div>
+                        <div class="tenant-detail-row"><span>Lease:</span> <span>${leaseStart} - ${leaseEnd}</span></div>
+                        <div class="tenant-detail-row"><span>Rent:</span> <span>$${tenant.baseRent?.toFixed(2) || '0.00'}</span></div>
+                        <div class="tenant-detail-row"><span>Type:</span> <span>${tenant.leaseType === 'fmr' ? 'Free Market Rent' : tenant.leaseType === 'section8' ? 'Section 8' : 'N/A'}</span></div>
+                        ${leaseTypeDetails}
+                        <div class="tenant-detail-row">
+                            <span>Status:</span>
+                            <span class="lease-badge ${tenant.leaseStatus || 'active'}">
+                                <i class="fas fa-circle"></i>
+                                ${(tenant.leaseStatus || 'active').charAt(0).toUpperCase() + (tenant.leaseStatus || 'active').slice(1)}
+                            </span>
+                        </div>
+                        <div class="tenant-detail-row"><span>Renewal:</span> <span>${tenant.leaseRenewal === 'renew' ? 'Will Renew' : 'Will Terminate'}</span></div>
+                    </div>
+                    <div class="tenant-section">
+                        <div class="tenant-section-title"><i class="fas fa-user-shield"></i> Emergency Contact</div>
+                        ${emergency}
+                    </div>
+                    <div class="tenant-section">
+                        <div class="tenant-section-title"><i class="fas fa-users"></i> Authorized Occupants</div>
+                        ${occupants}
+                    </div>
+                    <div class="tenant-section">
+                        <div class="tenant-section-title"><i class="fas fa-paw"></i> Pets</div>
+                        <div class="tenant-detail-row">${pets}</div>
+                    </div>
+                </div>
+                <div class="tenant-actions">
+                    <button onclick="viewTenantDetails('${tenant._id}')" class="btn-secondary">
+                        <i class="fas fa-eye"></i> Details
+                    </button>
+                    <button onclick="editTenant('${tenant._id}')" class="btn-secondary">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button onclick="deleteTenant('${tenant._id}')" class="btn-icon delete-btn" title="Delete Tenant">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+// Also update the viewTenantDetails function to handle the same data structure
+async function viewTenantDetails(tenantId) {
+    try {
+        const tenant = state.tenants.find(t => t._id === tenantId);
+        if (!tenant) throw new Error('Tenant not found');
+
+        // Get tenant initials for avatar
+        const initials = tenant.name
+            .split(' ')
+            .map(n => n[0])
+            .join('')
+            .toUpperCase();
+
+
+            const leaseHoldersHtml = (tenant.leaseHolders && tenant.leaseHolders.length)
+    ? `<ul>
+        ${tenant.leaseHolders.map(holder => `
+            <li>
+                <strong>${holder.name}</strong>
+                ${holder.phone ? ` | <i class="fas fa-phone"></i> ${holder.phone}` : ''}
+                ${holder.email ? ` | <i class="fas fa-envelope"></i> ${holder.email}` : ''}
+            </li>
+        `).join('')}
+      </ul>`
+    : '<span class="tenant-detail-value">None listed</span>';
+
+        // Format dates
+        const leaseStart = tenant.leaseStart ? 
+            new Date(tenant.leaseStart).toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            }) : 'Not set';
+        
+        const leaseEnd = tenant.leaseEnd ? 
+            new Date(tenant.leaseEnd).toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            }) : 'Not set';
+
+        // Calculate lease status
+        const today = new Date();
+        const endDate = tenant.leaseEnd ? new Date(tenant.leaseEnd) : null;
+        let leaseStatus = 'no';
+        let leaseStatusText = 'No Lease';
+        
+        if (endDate) {
+            if (endDate < today) {
+                leaseStatus = 'expired';
+                leaseStatusText = 'Expired';
+            } else if (endDate > today) {
+                leaseStatus = 'active';
+                leaseStatusText = 'Active';
+            }
+        }
+
+        const detailsHtml = `
+            <div class="modal-content tenant-details-modal">
+                <div class="tenant-details-header">
+                    <div class="tenant-avatar">${initials}</div>
+                    <h2>${tenant.name}</h2>
+                </div>
+                
+                <div class="tenant-details-content">
+                    <div class="detail-group">
+                        <label>Contact Information</label>
+                        <p><i class="fas fa-phone"></i> ${tenant.phone}</p>
+                        <p><i class="fas fa-envelope"></i> ${tenant.email}</p>
+                    </div>
+
+                      <div class="detail-group">
+    <label>Additional Lease Holders</label>
+    ${leaseHoldersHtml}
+</div>
+
+                    <div class="detail-group">
+                        <label>Unit Information</label>
+                        ${tenant.unitId ? `
+                            <p><i class="fas fa-home"></i> Unit ${tenant.unitId.number}</p>
+                            <p><i class="fas fa-bed"></i> ${tenant.unitId.bedrooms} Bedrooms, ${tenant.unitId.bathrooms} Bathrooms</p>
+                            <p><i class="fas fa-ruler-combined"></i> ${tenant.unitId.sqft || 'N/A'} sq ft</p>
+                            <p><i class="fas fa-building"></i> Floor ${tenant.unitId.floor || '1'}</p>
+                        ` : '<p>No unit assigned</p>'}
+                    </div>
+
+<div class="detail-group">
+    <label>Lease Information</label>
+    <p><i class="fas fa-calendar-alt"></i> Start Date: ${leaseStart}</p>
+    <p><i class="fas fa-calendar-check"></i> End Date: ${leaseEnd}</p>
+    <p><i class="fas fa-dollar-sign"></i> Base Rent: $${tenant.baseRent?.toFixed(2) || '0.00'}</p>
+    <p><i class="fas fa-file-contract"></i> Lease Type: 
+        ${tenant.leaseType === 'fmr' ? 'Free Market Rent' : tenant.leaseType === 'section8' ? 'Section 8' : 'N/A'}
+    </p>
+    ${tenant.leaseType === 'fmr' ? `
+        <p><i class="fas fa-sticky-note"></i> FMR Notes: ${tenant.fmrNotes || 'None'}</p>
+    ` : ''}
+    ${tenant.leaseType === 'section8' ? `
+        <p><i class="fas fa-building"></i> HUB Contribution: $${tenant.hubContribution?.toFixed(2) || '0.00'}</p>
+        <p><i class="fas fa-user"></i> Tenant Contribution: $${tenant.tenantContribution?.toFixed(2) || '0.00'}</p>
+    ` : ''}
+<p>
+  <i class="fas fa-info-circle"></i> Lease Status:
+  <span class="lease-badge ${tenant.leaseStatus || 'active'}">
+    ${(tenant.leaseStatus || 'active').charAt(0).toUpperCase() + (tenant.leaseStatus || 'active').slice(1)}
+  </span>
+</p>
+</div>
+
+<div class="detail-group">
+    <label>Emergency Contact</label>
+    <p><i class="fas fa-user-shield"></i> ${tenant.emergencyContact?.name || 'N/A'}</p>
+    <p><i class="fas fa-phone"></i> ${tenant.emergencyContact?.phone || 'N/A'}</p>
+    <p><i class="fas fa-envelope"></i> ${tenant.emergencyContact?.email || 'N/A'}</p>
+    <p><i class="fas fa-user-friends"></i> Relation: ${tenant.emergencyContact?.relation || 'N/A'}</p>
+</div>
+<div class="detail-group">
+    <label>Authorized Occupants</label>
+    <ul>
+        ${(tenant.authorizedOccupants || []).map(o => `<li>${o}</li>`).join('') || '<li>None listed</li>'}
+    </ul>
+</div>
+<div class="detail-group">
+    <label>Pets</label>
+    <p>${tenant.pets?.hasPets ? `Yes (${tenant.pets.count} pet(s)), Fee: $${tenant.pets.fee}` : 'No'}</p>
+</div>
+<div class="detail-group">
+    <label>Lease Renewal</label>
+    <p>${tenant.leaseRenewal === 'renew' ? 'Will Renew' : 'Will Terminate'}</p>
+</div>
+
+                    <div class="detail-group">
+                        <label>Additional Information</label>
+                        <p><i class="fas fa-clock"></i> Added: ${new Date(tenant.createdAt).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                        })}</p>
+                        <p><i class="fas fa-sync"></i> Last Updated: ${new Date(tenant.updatedAt).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric'
+                        })}</p>
+                    </div>
+                </div>
+
+                
+
+                <div class="modal-footer">
+                    <button onclick="editTenant('${tenant._id}')" class="btn-primary">
+                        <i class="fas fa-edit"></i> Edit Tenant
+                    </button>
+                    <button onclick="closeModal('tenantDetailsModal')" class="btn-secondary">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
+            </div>
+        `;
+
+        let modal = document.getElementById('tenantDetailsModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'tenantDetailsModal';
+            modal.className = 'modal';
+            document.body.appendChild(modal);
+        }
+
+        modal.innerHTML = detailsHtml;
+        openModal('tenantDetailsModal');
+
+    } catch (error) {
+        console.error('Error viewing tenant details:', error);
+        showNotification('Error loading tenant details', 'error');
+    }
+}
+
+async function editTenant(tenantId) {
+    try {
+        const tenant = state.tenants.find(t => t._id === tenantId);
+        if (!tenant) throw new Error('Tenant not found');
+
+        // Populate form fields
+        document.getElementById('tenantName').value = tenant.name || '';
+        document.getElementById('tenantPhone').value = tenant.phone || '';
+        document.getElementById('tenantEmail').value = tenant.email || '';
+
+        populateLeaseHolders(tenant.leaseHolders || []);
+
+        // Lease info fields
+        document.getElementById('leaseStart').value = tenant.leaseStart ? new Date(tenant.leaseStart).toISOString().split('T')[0] : '';
+        document.getElementById('leaseEnd').value = tenant.leaseEnd ? new Date(tenant.leaseEnd).toISOString().split('T')[0] : '';
+        document.getElementById('baseRent').value = tenant.baseRent ?? '';
+        document.getElementById('leaseType').value = tenant.leaseType ?? '';
+        document.getElementById('leaseStatus').value = tenant.leaseStatus || 'active';
+
+        // Show/hide lease type sections and populate their fields
+        if (tenant.leaseType === 'fmr') {
+            document.getElementById('fmrSection').style.display = 'block';
+            document.getElementById('section8Section').style.display = 'none';
+            document.getElementById('fmrNotes').value = tenant.fmrNotes ?? '';
+        } else if (tenant.leaseType === 'section8') {
+            document.getElementById('fmrSection').style.display = 'none';
+            document.getElementById('section8Section').style.display = 'flex';
+            document.getElementById('hubContribution').value = tenant.hubContribution ?? '';
+            document.getElementById('tenantContribution').value = tenant.tenantContribution ?? '';
+        } else {
+            document.getElementById('fmrSection').style.display = 'none';
+            document.getElementById('section8Section').style.display = 'none';
+            document.getElementById('fmrNotes').value = '';
+            document.getElementById('hubContribution').value = '';
+            document.getElementById('tenantContribution').value = '';
+        }
+
+        // Emergency contact
+        document.getElementById('emergencyContactName').value = tenant.emergencyContact?.name || '';
+        document.getElementById('emergencyContactPhone').value = tenant.emergencyContact?.phone || '';
+        document.getElementById('emergencyContactEmail').value = tenant.emergencyContact?.email || '';
+        document.getElementById('emergencyContactRelation').value = tenant.emergencyContact?.relation || '';
+
+        // Authorized occupants
+        document.getElementById('authorizedOccupants').value = (tenant.authorizedOccupants || []).join('\n');
+
+        // Pets
+        document.getElementById('hasPets').checked = !!(tenant.pets && tenant.pets.hasPets);
+        document.getElementById('petDetails').style.display = (tenant.pets && tenant.pets.hasPets) ? 'block' : 'none';
+        document.getElementById('petCount').value = tenant.pets?.count || '';
+        document.getElementById('petFee').value = tenant.pets?.fee || '';
+
+        // Lease renewal
+        document.getElementById('leaseRenewal').value = tenant.leaseRenewal || 'renew';
+
+        
+
+        // Get vacant units plus the tenant's current unit
+        const availableUnits = state.units.filter(unit => 
+            unit.status === 'vacant' || (tenant.unitId && (unit._id === tenant.unitId._id || unit._id === tenant.unitId))
+        );
+
+        // Populate unit select
+        const unitSelect = document.getElementById('tenantUnit');
+        unitSelect.innerHTML = `
+            <option value="">Select a unit</option>
+            ${availableUnits.map(unit => `
+                <option value="${unit._id}" ${(tenant.unitId && (unit._id === tenant.unitId._id || unit._id === tenant.unitId)) ? 'selected' : ''}>
+                    Unit ${unit.number} - ${unit.bedrooms} bed, ${unit.bathrooms} bath
+                </option>
+            `).join('')}
+        `;
+
+        // Open modal in edit mode
+        openModal('addTenantModal');
+        
+        
+
+        // Update form handler for edit mode
+        const form = document.getElementById('addTenantForm');
+        const submitButton = form.querySelector('button[type="submit"]');
+        submitButton.textContent = 'Update Tenant';
+        
+        // Store the tenantId for update and mark as edit mode
+        form.dataset.editMode = 'true';
+        form.dataset.tenantId = tenantId;
+        
+        // Remove the previous event listener and add new one
+        form.onsubmit = null;
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await handleUpdateTenant(tenantId);
+        }, { once: true }); // Use once: true to auto-remove after submission
+    } catch (error) {
+        console.error('Error editing tenant:', error);
+        showNotification('Error editing tenant', 'error');
+    }
+}
+
+// Update the handleUpdateTenant function to not take event parameter
+async function handleUpdateTenant(tenantId) {
+    const tenant = state.tenants.find(t => t._id === tenantId);
+    if (!tenant) {
+        showNotification('Tenant not found', 'error');
+        return;
+    }
+
+    const newUnitId = document.getElementById('tenantUnit').value;
+    const oldUnitId = tenant.unitId?._id || tenant.unitId;
+
+const tenantData = {
+    name: document.getElementById('tenantName').value,
+    phone: document.getElementById('tenantPhone').value,
+    email: document.getElementById('tenantEmail').value,
+
+    leaseHolders: getLeaseHoldersFromForm(),
+
+emergencyContact: {
+    name: document.getElementById('emergencyContactName').value,
+    phone: document.getElementById('emergencyContactPhone').value,
+    email: document.getElementById('emergencyContactEmail').value,
+    relation: document.getElementById('emergencyContactRelation').value
+},
+
+    authorizedOccupants: document.getElementById('authorizedOccupants').value
+        .split('\n')
+        .map(s => s.trim())
+        .filter(Boolean),
+    pets: {
+        hasPets: document.getElementById('hasPets').checked,
+        count: document.getElementById('hasPets').checked ? Number(document.getElementById('petCount').value) : 0,
+        fee: document.getElementById('hasPets').checked ? Number(document.getElementById('petFee').value) : 0
+    },
+    leaseRenewal: document.getElementById('leaseRenewal').value,
+    unitId: newUnitId,
+    leaseStart: document.getElementById('leaseStart').value,
+    leaseEnd: document.getElementById('leaseEnd').value,
+    baseRent: Number(document.getElementById('baseRent').value),
+    leaseType: document.getElementById('leaseType').value,
+    fmrNotes: document.getElementById('leaseType').value === 'fmr' ? document.getElementById('fmrNotes').value : '',
+    hubContribution: document.getElementById('leaseType').value === 'section8' ? Number(document.getElementById('hubContribution').value) : 0,
+    tenantContribution: document.getElementById('leaseType').value === 'section8' ? Number(document.getElementById('tenantContribution').value) : 0,
+    leaseStatus: document.getElementById('leaseStatus').value, // <-- ADD THIS LINE
+    status: tenant.status || 'active'
+};
+
+    // Validate lease dates
+    if (new Date(tenantData.leaseStart) > new Date(tenantData.leaseEnd)) {
+        showNotification('Lease end date must be after start date', 'error');
+        return;
+    }
+
+    try {
+        // Update tenant
+        const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/tenants/${tenantId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(tenantData)
+        });
+
+        if (!response.ok) throw new Error('Failed to update tenant');
+
+        // Handle unit status changes
+        if (oldUnitId !== newUnitId) {
+            // Set old unit to vacant if exists
+            if (oldUnitId) {
+                await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${oldUnitId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'vacant' })
+                });
+            }
+
+            // Set new unit to occupied if selected
+            if (newUnitId) {
+                await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${newUnitId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'occupied' })
+                });
+            }
+        }
+
+        await Promise.all([
+            loadTenants(state.currentProperty._id),
+            loadUnits(state.currentProperty._id)
+        ]);
+        
+        // Reset form and close modal
+        const form = document.getElementById('addTenantForm');
+        form.reset();
+        form.dataset.editMode = 'false';
+        form.dataset.tenantId = '';
+        
+        // Reset the submit button text
+        const submitButton = form.querySelector('button[type="submit"]');
+        submitButton.textContent = 'Add Tenant';
+        
+        // Reset the form handler to add mode
+        form.onsubmit = handleAddTenant;
+        
+        closeModal('addTenantModal');
+        showNotification('Tenant updated successfully', 'success');
+    } catch (error) {
+        console.error('Error updating tenant:', error);
+        showNotification('Error updating tenant', 'error');
+    }
+}
+
+// Add this function to populate unit select when opening the tenant modal
+function populateUnitSelect() {
+    const unitSelect = document.getElementById('tenantUnit');
+    if (!unitSelect || !state.units) return;
+    
+    // Get only vacant units
+    const vacantUnits = state.units.filter(unit => unit.status === 'vacant');
+    
+    console.log('Vacant units:', vacantUnits); // Debug log
+    
+    // Clear existing options and add new ones
+    unitSelect.innerHTML = `
+        <option value="">Select a unit</option>
+        ${vacantUnits.map(unit => `
+            <option value="${unit._id}">
+                Unit ${unit.number} - ${unit.bedrooms} bed, ${unit.bathrooms} bath
+            </option>
+        `).join('')}
+    `;
+}
+
+// Update the add tenant button event listener
+document.getElementById('addTenantBtn')?.addEventListener('click', () => {
+    if (!state.currentProperty) {
+        showNotification('Please select a property first', 'error');
+        return;
+    }
+    
+    populateUnitSelect();
+    openModal('addTenantModal');
+});
+
+
+
+//  deleteTenant function
+async function deleteTenant(tenantId) {
+    if (!confirm('Are you sure you want to delete this tenant?')) {
+        return;
+    }
+
+    try {
+        const tenant = state.tenants.find(t => t._id === tenantId);
+        if (!tenant) throw new Error('Tenant not found');
+
+        const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/tenants/${tenantId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) throw new Error('Failed to delete tenant');
+
+        // If tenant was assigned to a unit, update unit status to vacant
+        if (tenant.unitId) {
+            await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${tenant.unitId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'vacant' })
+            });
+        }
+
+        // Reload both tenants and units
+        await Promise.all([
+            loadTenants(state.currentProperty._id),
+            loadUnits(state.currentProperty._id)
+        ]);
+
+        showNotification('Tenant deleted successfully', 'success');
+    } catch (error) {
+        console.error('Error deleting tenant:', error);
+        showNotification('Error deleting tenant', 'error');
+    }
+}
+
+
+// Maintenance Request Management
+async function handleAddMaintenance(event) {
+    event.preventDefault();
+
+    if (!state.currentProperty) {
+        showNotification('Please select a property first', 'error');
+        return;
+    }
+
+    const maintenanceData = {
+        title: document.getElementById('maintenanceTitle').value.trim(),
+        description: document.getElementById('maintenanceDescription').value.trim(),
+        priority: document.getElementById('maintenancePriority').value,
+        unitId: document.getElementById('maintenanceUnit').value,
+        status: 'pending'
+    };
+
+    try {
+        const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/maintenance`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(maintenanceData)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to create maintenance request');
+        }
+
+        // Reset form before loading new data
+        event.target.reset();
+        closeModal('addMaintenanceModal');
+        
+        await loadMaintenanceRequests(state.currentProperty._id);
+        showNotification('Maintenance request created successfully', 'success');
+        
+
+    } catch (error) {
+        console.error('Error creating maintenance request:', error);
+        showNotification(error.message || 'Error creating maintenance request', 'error');
+    }
+}
+
+async function loadMaintenanceRequests(propertyId) {
+    try {
+        const response = await fetch(`${API_URL}/properties/${propertyId}/maintenance`);
+        if (!response.ok) throw new Error('Failed to fetch maintenance requests');
+        
+        const requests = await response.json();
+        state.maintenanceRequests = requests;
+        console.log('Loaded maintenance requests:', state.maintenanceRequests);
+        renderMaintenanceRequests();
+    } catch (error) {
+        console.error('Error loading maintenance requests:', error);
+        showNotification('Error loading maintenance requests', 'error');
+    }
+}
+
+// Update the renderMaintenanceRequests function
+function renderMaintenanceRequests() {
+    const maintenanceList = document.getElementById('maintenanceList');
+    if (!state.maintenanceRequests?.length) {
+        maintenanceList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-tools"></i>
+                <p>No maintenance requests found</p>
+                <button onclick="openModal('addMaintenanceModal')" class="btn-primary">
+                    Create New Request
+                </button>
+            </div>`;
+        return;
+    }
+
+    maintenanceList.innerHTML = state.maintenanceRequests.map(request => {
+        // Find the associated unit
+        const unit = typeof request.unitId === 'object' ? request.unitId : 
+            state.units.find(u => u._id === request.unitId);
+
+        // Format creation date
+        const createdDate = new Date(request.createdAt).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+
+        return `
+            <div class="maintenance-card">
+                <div class="maintenance-header">
+                    <div class="header-content">
+                        <h3>${request.title}</h3>
+                        <span class="priority-badge ${request.priority}">
+                            <i class="fas fa-exclamation-circle"></i>
+                            ${request.priority.charAt(0).toUpperCase() + request.priority.slice(1)} Priority
+                        </span>
+                    </div>
+                    <div class="maintenance-actions">
+                        <button onclick="updateMaintenanceStatus('${request._id}')" class="btn-secondary">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteMaintenance('${request._id}')" class="btn-icon delete-btn" title="Delete Request">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="maintenance-content">
+                    <div class="unit-info">
+                        <i class="fas fa-home"></i>
+                        ${unit ? 
+                            `Unit ${unit.number} (${unit.bedrooms}bed/${unit.bathrooms}bath)` : 
+                            'No unit assigned'}
+                    </div>
+                    <div class="description">
+                        <p>${request.description}</p>
+                    </div>
+                </div>
+
+                <div class="maintenance-footer">
+                    <div class="request-meta">
+                        <span class="status-badge ${request.status}">
+                            <i class="fas fa-circle"></i>
+                            ${request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                        </span>
+                        <span class="created-date">
+                            <i class="fas fa-calendar-alt"></i>
+                            Created: ${createdDate}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Add this function to populate maintenance unit select
+function populateMaintenanceUnitSelect() {
+    const unitSelect = document.getElementById('maintenanceUnit');
+    if (!unitSelect || !state.units) return;
+    
+    // Get all units (we want to allow maintenance requests for any unit)
+    console.log('Available units for maintenance:', state.units); // Debug log
+    
+    // Clear existing options and add new ones
+    unitSelect.innerHTML = `
+        <option value="">Select a unit</option>
+        ${state.units.map(unit => `
+            <option value="${unit._id}">
+                Unit ${unit.number} - ${unit.status}
+                (${unit.bedrooms} bed, ${unit.bathrooms} bath)
+            </option>
+        `).join('')}
+    `;
+}
+
+// Update the maintenance button event listener
+document.getElementById('addMaintenanceBtn')?.addEventListener('click', () => {
+    if (!state.currentProperty) {
+        showNotification('Please select a property first', 'error');
+        return;
+    }
+    
+    populateMaintenanceUnitSelect();
+    openModal('addMaintenanceModal');
+});
+
+// Add before the window exports
+
+async function deleteMaintenance(requestId) {
+    if (!confirm('Are you sure you want to delete this maintenance request?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/maintenance/${requestId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) throw new Error('Failed to delete maintenance request');
+
+        await loadMaintenanceRequests(state.currentProperty._id);
+        showNotification('Maintenance request deleted successfully', 'success');
+    } catch (error) {
+        console.error('Error deleting maintenance request:', error);
+        showNotification('Error deleting maintenance request', 'error');
+    }
+}
+
+
+async function updateMaintenanceStatus(requestId) {
+    try {
+        const request = state.maintenanceRequests.find(r => r._id === requestId);
+        if (!request) throw new Error('Maintenance request not found');
+
+        // Create status selection dialog
+        const newStatus = await showStatusDialog(request.status);
+        if (!newStatus) return; // User cancelled
+
+        const response = await fetch(
+            `${API_URL}/properties/${state.currentProperty._id}/maintenance/${requestId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            }
+        );
+
+        if (!response.ok) throw new Error('Failed to update maintenance status');
+        
+        await loadMaintenanceRequests(state.currentProperty._id);
+        showNotification('Maintenance status updated successfully', 'success');
+    } catch (error) {
+        console.error('Error updating maintenance status:', error);
+        showNotification('Error updating maintenance status', 'error');
+    }
+}
+
+// Update the showStatusDialog function
+function showStatusDialog(currentStatus) {
+    return new Promise(resolve => {
+        const statuses = [
+            { value: 'pending', icon: 'clock', label: 'Pending' },
+            { value: 'in-progress', icon: 'tools', label: 'In Progress' },
+            { value: 'completed', icon: 'check-circle', label: 'Completed' }
+        ];
+
+        const dialog = document.createElement('div');
+        dialog.className = 'modal status-dialog';
+        
+        dialog.innerHTML = `
+            <div class="modal-content">
+                <h3>Update Maintenance Status</h3>
+                <div class="status-options">
+                    ${statuses.map(status => `
+                        <button class="status-option ${status.value} ${status.value === currentStatus ? 'active' : ''}"
+                                onclick="updateStatus('${status.value}')">
+                            <i class="fas fa-${status.icon}"></i>
+                            ${status.label}
+                            ${status.value === currentStatus ? 
+                                '<i class="fas fa-check" style="margin-left: auto"></i>' : 
+                                ''}
+                        </button>
+                    `).join('')}
+                </div>
+                <div class="dialog-footer">
+                    <button onclick="cancelStatusUpdate()" class="btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+        dialog.style.display = 'block';
+
+        // Close dialog if clicking outside
+        dialog.addEventListener('click', (e) => {
+            if (e.target === dialog) {
+                cancelStatusUpdate();
+            }
+        });
+
+        window.updateStatus = (status) => {
+            document.body.removeChild(dialog);
+            delete window.updateStatus;
+            delete window.cancelStatusUpdate;
+            resolve(status);
+        };
+
+        window.cancelStatusUpdate = () => {
+            document.body.removeChild(dialog);
+            delete window.updateStatus;
+            delete window.cancelStatusUpdate;
+            resolve(null);
+        };
+    });
+}
+
+
+
+
+// Document Management
+async function handleDocumentUpload(event) {
+    event.preventDefault();
+    
+    if (!state.currentProperty) {
+        showNotification('Please select a property first', 'error');
+        return;
+    }
+
+    const formData = new FormData();
+    const fileInput = document.getElementById('documentFile');
+    const nameInput = document.getElementById('documentName');
+    const typeInput = document.getElementById('documentType');
+    
+    if (!fileInput.files[0]) {
+        showNotification('Please select a file to upload', 'error');
+        return;
+    }
+
+    try {
+        // Add file and metadata to FormData
+        formData.append('file', fileInput.files[0]);
+        formData.append('name', nameInput.value);
+        formData.append('type', typeInput.value);
+        formData.append('propertyId', state.currentProperty._id);
+
+        console.log('Uploading file:', fileInput.files[0]); // Debug log
+
+        const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/documents`, {
+            method: 'POST',
+            body: formData // Don't set Content-Type header, let browser set it with boundary
+        });
+
+        if (!response.ok) throw new Error('Failed to upload document');
+        
+        await loadDocuments(state.currentProperty._id);
+        closeModal('uploadDocumentModal');
+        showNotification('Document uploaded successfully', 'success');
+        event.target.reset();
+    } catch (error) {
+        console.error('Error uploading document:', error);
+        showNotification('Error uploading document', 'error');
+    }
+}
+
+async function loadDocuments(propertyId) {
+    try {
+        const response = await fetch(`${API_URL}/properties/${propertyId}/documents`);
+        if (!response.ok) throw new Error('Failed to fetch documents');
+        
+        const documents = await response.json();
+        state.documents = documents;
+        console.log('Loaded documents:', state.documents);
+        renderDocuments();
+    } catch (error) {
+        console.error('Error loading documents:', error);
+        showNotification('Error loading documents', 'error');
+    }
+}
+
+function renderDocuments() {
+    const documentsGrid = document.getElementById('documentsGrid');
+    
+    if (!state.documents?.length) {
+        documentsGrid.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-file"></i>
+                <p>No documents found</p>
+                <button onclick="openModal('uploadDocumentModal')" class="btn-primary">
+                    Upload Your First Document
+                </button>
+            </div>`;
+        return;
+    }
+
+    documentsGrid.innerHTML = state.documents.map(doc => `
+        <div class="document-card">
+            <div class="document-icon">
+                <i class="fas fa-file-${getFileIcon(doc.name)}"></i>
+            </div>
+            <div class="document-info">
+                <h3>${doc.name}</h3>
+                <p>Type: ${doc.type}</p>
+                <p>Added: ${new Date(doc.createdAt).toLocaleDateString()}</p>
+            </div>
+            <div class="document-actions">
+                <button onclick="viewDocument('${doc._id}')" title="View">
+                    <i class="fas fa-eye"></i> View
+                </button>
+                <button onclick="downloadDocument('${doc._id}')" title="Download">
+                    <i class="fas fa-download"></i> Download
+                </button>
+                <button onclick="deleteDocument('${doc._id}')" class="delete-btn" title="Delete">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Helper function to determine file icon
+function getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    switch (ext) {
+        case 'pdf': return 'pdf';
+        case 'doc':
+        case 'docx': return 'word';
+        case 'jpg':
+        case 'jpeg':
+        case 'png': return 'image';
+        default: return 'alt';
+    }
+}
+
+// Document utility functions
+async function viewDocument(documentId) {
+    try {
+        if (!state.currentProperty) {
+            showNotification('Please select a property first', 'error');
+            return;
+        }
+
+        const docFile = state.documents.find(d => d._id === documentId);
+        if (!docFile) {
+            throw new Error('Document not found in state');
+        }
+
+        // Check file type based on extension
+        const fileExtension = docFile.name.split('.').pop().toLowerCase();
+        const url = `${API_URL}/properties/${state.currentProperty._id}/documents/${documentId}/view`;
+
+        if (['jpg', 'jpeg', 'png', 'gif'].includes(fileExtension)) {
+            // Show images in modal
+            const modal = document.createElement('div');
+            modal.className = 'modal image-viewer';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>${docFile.name}</h3>
+                        <button onclick="closeImageViewer(this)" class="btn-close">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <img src="${url}" alt="${docFile.name}" style="max-width: 100%; height: auto;">
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
+        } else {
+            // For PDFs and other docs, open the direct URL in a new tab
+            window.open(url, '_blank');
+        }
+    } catch (error) {
+        console.error('Error viewing document:', error);
+        showNotification('Error viewing document', 'error');
+    }
+}
+
+
+
+
+async function downloadDocument(docId) {
+    try {
+        const doc = state.documents.find(d => d._id === docId);
+        if (!doc) throw new Error('Document not found');
+
+        // Construct the download URL (use the /view endpoint for inline, or create a /download endpoint for attachment)
+        const url = `${API_URL}/properties/${state.currentProperty._id}/documents/${docId}/download`;
+
+        // Fetch the file as a blob
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to download document');
+
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = doc.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+        console.error('Error downloading document:', error);
+        showNotification('Error downloading document', 'error');
+    }
+}
+
+async function deleteDocument(docId) {
+    if (!confirm('Are you sure you want to delete this document?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/documents/${docId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) throw new Error('Failed to delete document');
+        
+        await loadDocuments(state.currentProperty._id);
+        showNotification('Document deleted successfully', 'success');
+    } catch (error) {
+        console.error('Error deleting document:', error);
+        showNotification('Error deleting document', 'error');
+    }
+}
+
+function updatePropertyStats() {
+    if (!state.currentProperty) return;
+
+    const stats = {
+        totalUnits: state.units.length,
+        vacantUnits: state.units.filter(u => u.status === 'vacant').length,
+        occupancyRate: calculateOccupancyRate(state.units)
+    };
+
+    document.getElementById('totalUnits').textContent = stats.totalUnits;
+    document.getElementById('vacantUnits').textContent = stats.vacantUnits;
+    document.getElementById('occupancyRate').textContent = stats.occupancyRate;
+}
+
+function calculateOccupancyRate(units) {
+    if (!units?.length) return '0%';
+    const occupiedUnits = units.filter(u => u.status === 'occupied').length;
+    return `${Math.round((occupiedUnits / units.length) * 100)}%`;
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.getElementById('notification');
+    notification.textContent = message;
+    notification.className = `notification ${type}`;
+    notification.classList.add('show');
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 3000);
+}
+
+// This is a completely rewritten approach to modal handling
+function openModal(modalId) {
+    // First verify the modal exists
+    const modal = document.getElementById(modalId);
+    if (!modal) {
+        console.error(`Modal with ID "${modalId}" not found`);
+        return;
+    }
+    
+    console.log(`Opening modal: ${modalId}`);
+    
+    // Close all modals first
+    document.querySelectorAll('.modal').forEach(m => {
+        m.style.display = 'none';
+    });
+    
+    // Make modal visible using basic display property
+    modal.style.display = 'block';
+    
+    // Add event listener for clicks outside the modal content
+    modal.onclick = function(event) {
+        if (event.target === modal) {
+            closeModal(modalId);
+        }
+    };
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Export functions for global access
+window.selectProperty = selectProperty;
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.editUnit = editUnit;
+window.viewUnitDetails = viewUnitDetails;
+window.editTenant = editTenant;
+window.viewTenantDetails = viewTenantDetails;
+window.updateMaintenanceStatus = updateMaintenanceStatus;
+window.viewDocument = viewDocument;
+window.downloadDocument = downloadDocument;
+window.deleteDocument = deleteDocument;
+window.deleteTenant = deleteTenant;
+
+
+    </script>
+</body>
+</html>
