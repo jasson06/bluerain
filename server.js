@@ -920,6 +920,17 @@ const documentSchema = new mongoose.Schema({
   uploadedBy: String
 }, { timestamps: true });
 
+const paymentSchema = new mongoose.Schema({
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
+  tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit' }, // <-- Add this line
+  type: { type: String, enum: ['rent', 'hub'], required: true },
+  amount: { type: Number, required: true },
+  method: { type: String, enum: ['cash', 'check', 'bank', 'online'], required: true },
+  date: { type: Date, required: true },
+  lateFee: { type: Number, default: 0 },
+  balance: { type: Number, default: 0 }
+}, { timestamps: true });
 
 
 const Task = mongoose.model('Task', taskSchema);
@@ -943,6 +954,7 @@ const Unit = mongoose.model('Unit', unitSchema);
 const Tenant = mongoose.model('Tenant', tenantSchema);
 const MaintenanceRequest = mongoose.model('MaintenanceRequest', maintenanceRequestSchema);
 const Document = mongoose.model('Document', documentSchema);
+const Payment = mongoose.model('Payment', paymentSchema);
 
 module.exports = {
   Task,
@@ -5358,6 +5370,149 @@ app.get('/api/properties/:propertyId/documents/:documentId/download', async (req
         console.error('Error serving document:', error);
         res.status(500).json({ message: 'Error serving document' });
     }
+});
+
+// GET all payments for a property
+app.get('/api/properties/:propertyId/payments', async (req, res) => {
+  try {
+    const payments = await Payment.find({ projectId: req.params.propertyId }).sort({ date: -1 });
+    res.json(payments);
+  } catch (error) {
+    console.error('Error fetching payments:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+// GET a single payment (for exporting receipt)
+app.get('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
+  try {
+    const payment = await Payment.findOne({
+      _id: req.params.paymentId,
+      projectId: req.params.propertyId
+    });
+    if (!payment) return res.status(404).json({ message: 'Payment not found' });
+    res.json(payment);
+  } catch (error) {
+    console.error('Error fetching payment:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// DELETE a payment
+app.delete('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
+  try {
+    const payment = await Payment.findOneAndDelete({
+      _id: req.params.paymentId,
+      projectId: req.params.propertyId
+    });
+    if (!payment) return res.status(404).json({ message: 'Payment not found' });
+    res.json({ message: 'Payment deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting payment:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+// POST a new payment (rent or HUB)
+app.post('/api/properties/:propertyId/payments', async (req, res) => {
+  try {
+    const { tenantId, unitId, type, amount, method, date, lateFee } = req.body;
+    if (!tenantId || !type || !amount || !method || !date) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Calculate balance (baseRent + totalLateFees - totalPaid for this tenant this month)
+    let balance = 0;
+    const paymentDate = new Date(date);
+    const monthStart = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), 1);
+    const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
+    const paymentsThisMonth = await Payment.find({
+      tenantId,
+      date: { $gte: monthStart, $lte: monthEnd }
+    });
+
+    // Calculate total paid (amounts only, including this payment)
+    const totalPaid = paymentsThisMonth.reduce(
+      (sum, p) => sum + p.amount, 0
+    ) + Number(amount);
+
+    // Calculate total late fees (including this payment)
+    const totalLateFees = paymentsThisMonth.reduce(
+      (sum, p) => sum + (p.lateFee || 0), 0
+    ) + Number(lateFee || 0);
+
+    // Fetch tenant's rent amount for more accurate balance
+    const tenant = await Tenant.findById(tenantId);
+    if (tenant && tenant.baseRent) {
+      balance = tenant.baseRent + totalLateFees - totalPaid;
+    }
+
+    const payment = new Payment({
+      projectId: req.params.propertyId,
+      tenantId,
+      unitId,
+      type,
+      amount,
+      method,
+      date,
+      lateFee: lateFee || 0,
+      balance
+    });
+    await payment.save();
+    res.status(201).json(payment);
+  } catch (error) {
+    console.error('Error recording payment:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// PUT (edit) a payment
+app.put('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
+  try {
+    const { tenantId, unitId, type, amount, method, date, lateFee } = req.body;
+
+    // Calculate balance for the month (excluding this payment, then add the new amount and late fee)
+    let balance = 0;
+    const paymentDate = new Date(date);
+    const monthStart = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), 1);
+    const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    // Exclude the current payment from the sum
+    const paymentsThisMonth = await Payment.find({
+      tenantId,
+      date: { $gte: monthStart, $lte: monthEnd },
+      _id: { $ne: req.params.paymentId }
+    });
+
+    // Calculate total paid (amounts only, including this payment)
+    const totalPaid = paymentsThisMonth.reduce(
+      (sum, p) => sum + p.amount, 0
+    ) + Number(amount);
+
+    // Calculate total late fees (including this payment)
+    const totalLateFees = paymentsThisMonth.reduce(
+      (sum, p) => sum + (p.lateFee || 0), 0
+    ) + Number(lateFee || 0);
+
+    // Fetch tenant's rent amount for more accurate balance
+    const tenant = await Tenant.findById(tenantId);
+    if (tenant && tenant.baseRent) {
+      balance = tenant.baseRent + totalLateFees - totalPaid;
+    }
+
+    const payment = await Payment.findOneAndUpdate(
+      { _id: req.params.paymentId, projectId: req.params.propertyId },
+      { tenantId, unitId, type, amount, method, date, lateFee, balance },
+      { new: true }
+    );
+    if (!payment) return res.status(404).json({ message: 'Payment not found' });
+    res.json(payment);
+  } catch (error) {
+    console.error('Error updating payment:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 // Debugging route to check server deployment status
