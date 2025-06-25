@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Property Management</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
    <style>
     /* Base Styles */
 :root {
@@ -1506,6 +1507,53 @@ select {
     z-index: 5001 !important;
     position: relative;
 }
+
+.payments-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(44,62,80,0.04);
+    margin-top: 18px;
+}
+.payments-table th, .payments-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e1e8ed;
+    text-align: left;
+    font-size: 0.98rem;
+}
+.payments-table th {
+    background: #f6fafd;
+    font-weight: 600;
+    color: #2980b9;
+}
+.payments-table tr:last-child td {
+    border-bottom: none;
+}
+
+.payment-row {
+    cursor: pointer;
+    transition: background 0.18s, box-shadow 0.18s;
+}
+
+.payment-row:hover {
+    background: #d6ecfc !important;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.10);
+}
+
+.download-btn {
+    color: #4e4e4e;
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    margin-right: 4px;
+    transition: background 0.15s, color 0.15s;
+}
+.download-btn:hover {
+    background: #eaf6ff;
+    color: #217dbb;
+}
    </style>
 </head>
 <body>
@@ -1551,6 +1599,7 @@ select {
                     <button class="tab-btn" data-tab="tenants">Tenants</button>
                     <button class="tab-btn" data-tab="maintenance">Maintenance</button>
                     <button class="tab-btn" data-tab="documents">Documents</button>
+                    <button class="tab-btn" data-tab="payments">Payments</button>
                 </div>
 
                 <!-- Tab Content -->
@@ -1590,6 +1639,17 @@ select {
                         </div>
                         <div class="documents-grid" id="documentsGrid"></div>
                     </div>
+
+                    <!-- Payments Tab -->
+<div class="tab-pane" id="payments">
+    <div class="payments-header">
+        <h2>Payments</h2>
+        <button class="btn-secondary" id="addPaymentBtn">+ Record Payment</button>
+    </div>
+    <div class="payments-list" id="paymentsList">
+        <!-- Payments will be listed here -->
+    </div>
+</div>
                 </div>
             </div>
         </main>
@@ -1877,10 +1937,16 @@ select {
                 <label>Document Name</label>
                 <input type="text" id="documentName" required>
             </div>
-            <div class="form-group">
-                <label>Type</label>
-                <input type="text" id="documentType" required>
-            </div>
+<div class="form-group">
+    <label>Type</label>
+    <select id="documentType" required>
+        <option value="">Select Type</option>
+        <option value="lease">Lease</option>
+        <option value="notice">Notice</option>
+        <option value="invoice">Invoice</option>
+        <option value="other">Other</option>
+    </select>
+</div>
             <div class="form-group">
                 <label>File</label>
                 <input type="file" id="documentFile" required>
@@ -1890,6 +1956,63 @@ select {
                 <button type="submit" class="btn-primary">Upload</button>
             </div>
         </form>
+    </div>
+</div>
+
+<div class="modal" id="addPaymentModal">
+    <div class="modal-content">
+        <h2>Record Payment</h2>
+       <form id="addPaymentForm">
+    <div class="form-row">
+        <div class="form-group">
+            <label>Tenant</label>
+            <select id="paymentTenant" required>
+                <option value="">Select Tenant</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Payment Type</label>
+            <select id="paymentType" required>
+                <option value="rent">Rent</option>
+                <option value="hub">HUB</option>
+            </select>
+        </div>
+        <div class="form-group">
+    <label>Late Fee (%)</label>
+    <input type="number" id="paymentLateFee" min="0" step="0.01" placeholder="Enter late fee percent">
+</div>
+        <div class="form-group">
+            <label>Amount ($)</label>
+            <input type="number" id="paymentAmount" min="0" step="0.01" required>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group">
+            <label>Unit #</label>
+            <select id="paymentUnit" required>
+                <option value="">Select Unit</option>
+                <!-- Populated dynamically -->
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Payment Method</label>
+            <select id="paymentMethod" required>
+                <option value="cash">Cash</option>
+                <option value="check">Check</option>
+                <option value="bank">Bank Transfer</option>
+                <option value="online">Online</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="paymentDate" required>
+        </div>
+    </div>
+    <div class="modal-buttons">
+        <button type="button" class="btn-secondary" onclick="closeModal('addPaymentModal')">Cancel</button>
+        <button type="submit" class="btn-primary">Save Payment</button>
+    </div>
+</form>
     </div>
 </div>
 
@@ -1921,7 +2044,8 @@ const state = {
     units: [],
     tenants: [],
     maintenanceRequests: [],
-    documents: []
+    documents: [],
+    payments: []
 };
 
 const API_URL = '/api';
@@ -1962,6 +2086,23 @@ function initializeEventListeners() {
     // Document management
     document.getElementById('uploadDocumentBtn')?.addEventListener('click', () => openModal('uploadDocumentModal'));
     document.getElementById('uploadDocumentForm')?.addEventListener('submit', handleDocumentUpload);
+
+    // Add event listeners for payments tab and modal
+document.getElementById('addPaymentBtn')?.addEventListener('click', () => {
+    // Reset the form fields
+    const form = document.getElementById('addPaymentForm');
+    form.reset();
+    form.dataset.editMode = 'false';
+    form.dataset.paymentId = '';
+    form.querySelector('button[type="submit"]').textContent = 'Save Payment';
+
+    // Populate selects
+    populatePaymentTenantSelect();
+    populatePaymentUnitSelect();
+
+    openModal('addPaymentModal');
+});
+document.getElementById('addPaymentForm')?.addEventListener('submit', handleAddPayment);
 
     // Modal close handlers
     window.onclick = (event) => {
@@ -2017,6 +2158,9 @@ async function loadTabContent(tabId) {
                 break;
             case 'documents':
                 await loadDocuments(state.currentProperty._id);
+                break;
+                        case 'payments':
+                await loadPayments(state.currentProperty._id);
                 break;
         }
     } catch (error) {
@@ -2679,6 +2823,13 @@ function populateLeaseHolders(holders = []) {
     holders.forEach(holder => addLeaseHolderField(holder));
 }
 
+// Auto-capitalize each word in the tenant name input
+document.getElementById('tenantName')?.addEventListener('input', function() {
+    this.value = this.value
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+});
 
 function resetTenantForm() {
     document.getElementById('addTenantForm').reset();
@@ -3732,10 +3883,8 @@ async function handleDocumentUpload(event) {
         // Add file and metadata to FormData
         formData.append('file', fileInput.files[0]);
         formData.append('name', nameInput.value);
-        formData.append('type', typeInput.value);
+        formData.append('type', typeInput.value); // <-- Save the selected document type
         formData.append('propertyId', state.currentProperty._id);
-
-        console.log('Uploading file:', fileInput.files[0]); // Debug log
 
         const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/documents`, {
             method: 'POST',
@@ -3917,6 +4066,294 @@ async function deleteDocument(docId) {
     }
 }
 
+
+// Load payments when Payments tab is selected
+async function loadPayments(propertyId) {
+    try {
+        const response = await fetch(`${API_URL}/properties/${propertyId}/payments`);
+        if (!response.ok) throw new Error('Failed to fetch payments');
+        state.payments = await response.json();
+        renderPayments();
+    } catch (error) {
+        console.error('Error loading payments:', error);
+        showNotification('Error loading payments', 'error');
+    }
+}
+
+// Render payments list
+function renderPayments() {
+    const paymentsList = document.getElementById('paymentsList');
+    if (!state.payments.length) {
+        paymentsList.innerHTML = `<div class="empty-state"><i class="fas fa-money-check-alt"></i><p>No payments recorded</p></div>`;
+        return;
+    }
+    paymentsList.innerHTML = `
+        <table class="payments-table">
+            <thead>
+                <tr>
+                    <th>Tenant</th>
+                    <th>Unit #</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Date</th>
+                    <th>Late Fee</th>
+                    <th>Balance</th>
+                    <th>Receipt</th>
+                    <th>Delete</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${state.payments.map(payment => {
+                    const tenant = state.tenants.find(t => t._id === payment.tenantId);
+                    const unit = state.units.find(u => u._id === payment.unitId);
+                    return `
+                        <tr class="payment-row" onclick="editPayment('${payment._id}')">
+                            <td>${tenant ? tenant.name : 'N/A'}</td>
+                            <td>${unit ? unit.number : 'N/A'}</td>
+                            <td>${payment.type === 'rent' ? 'Rent' : 'HUB'}</td>
+                            <td>$${payment.amount.toFixed(2)}</td>
+                            <td>${payment.method.charAt(0).toUpperCase() + payment.method.slice(1)}</td>
+                            <td>${new Date(payment.date).toLocaleDateString()}</td>
+                            <td>$${payment.lateFee?.toFixed(2) || '0.00'}</td>
+                            <td>$${payment.balance?.toFixed(2) || '0.00'}</td>
+                            <td>
+                               <button class="btn-icon download-btn" title="Download Receipt" onclick="event.stopPropagation();exportReceipt('${payment._id}')">
+                               <i class="fas fa-file-arrow-down"></i>
+                                  </button>
+                            </td>
+                            <td>
+                                <button class="btn-icon delete-btn" onclick="event.stopPropagation();deletePayment('${payment._id}')"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+// Populate tenant select in payment modal
+function populatePaymentTenantSelect() {
+    const select = document.getElementById('paymentTenant');
+    if (!select) return;
+    select.innerHTML = `<option value="">Select Tenant</option>` +
+        state.tenants.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
+}
+
+function populatePaymentUnitSelect() {
+    const select = document.getElementById('paymentUnit');
+    if (!select) return;
+    select.innerHTML = `<option value="">Select Unit</option>` +
+        state.units.map(u => `<option value="${u._id}">Unit ${u.number}</option>`).join('');
+}
+
+// Auto-select assigned unit when tenant is selected in payment form
+document.getElementById('paymentTenant')?.addEventListener('change', function() {
+    const tenantId = this.value;
+    const tenant = state.tenants.find(t => t._id === tenantId);
+    if (!tenant) return;
+    // Try to get the assigned unitId (could be object or string)
+    const unitId = tenant.unitId?._id || tenant.unitId;
+    if (unitId) {
+        document.getElementById('paymentUnit').value = unitId;
+    } else {
+        document.getElementById('paymentUnit').value = '';
+    }
+});
+
+// Auto-select assigned tenant when unit is selected in payment form
+document.getElementById('paymentUnit')?.addEventListener('change', function() {
+    const unitId = this.value;
+    // Find the tenant assigned to this unit
+    const tenant = state.tenants.find(t => {
+        // t.unitId could be an object or a string
+        const tUnitId = t.unitId?._id || t.unitId;
+        return tUnitId === unitId;
+    });
+    if (tenant) {
+        document.getElementById('paymentTenant').value = tenant._id;
+    }
+});
+
+
+
+function editPayment(paymentId) {
+    const payment = state.payments.find(p => p._id === paymentId);
+    if (!payment) return showNotification('Payment not found', 'error');
+
+    // Populate selects before setting values
+    populatePaymentTenantSelect();
+    populatePaymentUnitSelect();
+
+    // Populate modal fields
+    document.getElementById('paymentTenant').value = payment.tenantId;
+    document.getElementById('paymentUnit').value = payment.unitId;
+    document.getElementById('paymentType').value = payment.type;
+    document.getElementById('paymentAmount').value = payment.amount;
+    document.getElementById('paymentMethod').value = payment.method;
+    document.getElementById('paymentDate').value = payment.date ? new Date(payment.date).toISOString().split('T')[0] : '';
+    document.getElementById('paymentLateFee').value = payment.lateFee || 0;
+
+    // Store edit mode and paymentId
+    const form = document.getElementById('addPaymentForm');
+    form.dataset.editMode = 'true';
+    form.dataset.paymentId = paymentId;
+    form.querySelector('button[type="submit"]').textContent = 'Update Payment';
+
+    openModal('addPaymentModal');
+}
+
+// Handle add payment
+async function handleAddPayment(event) {
+    event.preventDefault();
+    if (!state.currentProperty) {
+        showNotification('Please select a property first', 'error');
+        return;
+    }
+    const amount = Number(document.getElementById('paymentAmount').value);
+    const lateFeePercent = Number(document.getElementById('paymentLateFee').value) || 0;
+    const lateFee = amount * (lateFeePercent / 100);
+
+    const paymentData = {
+        tenantId: document.getElementById('paymentTenant').value,
+        unitId: document.getElementById('paymentUnit').value,
+        type: document.getElementById('paymentType').value,
+        amount,
+        method: document.getElementById('paymentMethod').value,
+        date: document.getElementById('paymentDate').value,
+        lateFee
+    };
+
+    const form = event.target;
+    const isEdit = form.dataset.editMode === 'true';
+    const paymentId = form.dataset.paymentId;
+
+    try {
+        let response;
+        if (isEdit && paymentId) {
+            response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/payments/${paymentId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(paymentData)
+            });
+        } else {
+            response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/payments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(paymentData)
+            });
+        }
+        if (!response.ok) throw new Error('Failed to save payment');
+        await loadPayments(state.currentProperty._id);
+        closeModal('addPaymentModal');
+        showNotification(isEdit ? 'Payment updated successfully' : 'Payment recorded successfully', 'success');
+        event.target.reset();
+        // Reset form mode
+        form.dataset.editMode = 'false';
+        form.dataset.paymentId = '';
+        form.querySelector('button[type="submit"]').textContent = 'Save Payment';
+    } catch (error) {
+        console.error('Error saving payment:', error);
+        showNotification('Error saving payment', 'error');
+    }
+}
+
+async function deletePayment(paymentId) {
+    if (!confirm('Are you sure you want to delete this payment?')) return;
+    try {
+        const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/payments/${paymentId}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) throw new Error('Failed to delete payment');
+        await loadPayments(state.currentProperty._id);
+        showNotification('Payment deleted successfully', 'success');
+    } catch (error) {
+        console.error('Error deleting payment:', error);
+        showNotification('Error deleting payment', 'error');
+    }
+}
+
+// Export receipt (simple CSV for now)
+function exportReceipt(paymentId) {
+    const payment = state.payments.find(p => p._id === paymentId);
+    if (!payment) return;
+    const tenant = state.tenants.find(t => t._id === payment.tenantId);
+    const unit = state.units.find(u => u._id === payment.unitId);
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFillColor(52, 152, 219); // #3498db
+    doc.rect(0, 0, 210, 30, 'F');
+    doc.setFontSize(22);
+    doc.setTextColor(255, 255, 255);
+    doc.text("Payment Receipt", 105, 18, { align: "center" });
+
+    // Company/Property Info (customize as needed)
+    doc.setFontSize(11);
+    doc.setTextColor(255, 255, 255);
+    doc.text("Property Management System", 105, 26, { align: "center" });
+
+    // Main body
+    let y = 40;
+    doc.setFontSize(13);
+    doc.setTextColor(44, 62, 80); // #2c3e50
+
+    doc.setFont(undefined, 'bold');
+    doc.text("Receipt Details", 14, y);
+    doc.setFont(undefined, 'normal');
+    y += 8;
+
+    // Draw a light line
+    doc.setDrawColor(230, 230, 230);
+    doc.line(14, y, 196, y);
+    y += 6;
+
+    // Info rows
+    const infoRows = [
+        ["Tenant", tenant ? tenant.name : 'N/A'],
+        ["Unit", unit ? unit.number : 'N/A'],
+        ["Type", payment.type === 'rent' ? 'Rent' : 'HUB'],
+        ["Amount", `$${payment.amount.toFixed(2)}`],
+        ["Method", payment.method.charAt(0).toUpperCase() + payment.method.slice(1)],
+        ["Date", new Date(payment.date).toLocaleDateString()],
+        ["Late Fee", `$${payment.lateFee?.toFixed(2) || '0.00'}`],
+        ["Balance", `$${payment.balance?.toFixed(2) || '0.00'}`]
+    ];
+
+    infoRows.forEach(([label, value]) => {
+        doc.setFont(undefined, 'bold');
+        doc.text(`${label}:`, 18, y);
+        doc.setFont(undefined, 'normal');
+        doc.text(`${value}`, 60, y);
+        y += 9;
+    });
+
+    // Thank you section
+    y += 8;
+    doc.setDrawColor(52, 152, 219);
+    doc.setLineWidth(0.7);
+    doc.line(14, y, 196, y);
+    y += 12;
+    doc.setFontSize(12);
+    doc.setTextColor(52, 152, 219);
+    doc.setFont(undefined, 'bold');
+    doc.text("Thank you for your payment!", 105, y, { align: "center" });
+
+    // Footer
+    y += 14;
+    doc.setFontSize(10);
+    doc.setTextColor(150, 150, 150);
+    doc.setFont(undefined, 'normal');
+    doc.text("Generated by Property Management System", 105, y, { align: "center" });
+
+    // Download the PDF
+    const filename = `receipt_${tenant ? tenant.name.replace(/\s+/g, '_') : paymentId}.pdf`;
+    doc.save(filename);
+}
+
 function updatePropertyStats() {
     if (!state.currentProperty) return;
 
@@ -3995,6 +4432,8 @@ window.viewDocument = viewDocument;
 window.downloadDocument = downloadDocument;
 window.deleteDocument = deleteDocument;
 window.deleteTenant = deleteTenant;
+window.editPayment = editPayment;
+window.deletePayment = deletePayment;
 
 
     </script>
