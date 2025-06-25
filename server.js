@@ -5241,7 +5241,6 @@ app.get('/api/properties/:propertyId/documents', async (req, res) => {
 app.get('/api/properties/:propertyId/documents/:documentId/view', async (req, res) => {
     try {
         const { propertyId, documentId } = req.params;
-
         const doc = await Document.findOne({
             _id: documentId,
             projectId: propertyId
@@ -5251,9 +5250,7 @@ app.get('/api/properties/:propertyId/documents/:documentId/view', async (req, re
             return res.status(404).json({ message: 'Document not found' });
         }
 
-        const filePath = path.join(__dirname, doc.filePath.replace(/^\//, ''));
-
-        if (!fs.existsSync(filePath)) {
+        if (!fs.existsSync(doc.filePath)) {
             return res.status(404).json({ message: 'File not found on server' });
         }
 
@@ -5273,7 +5270,7 @@ app.get('/api/properties/:propertyId/documents/:documentId/view', async (req, re
         res.setHeader('Content-Disposition', `inline; filename="${doc.name}"`);
         res.setHeader('Cache-Control', 'public, max-age=0');
 
-        fs.createReadStream(filePath).pipe(res);
+        fs.createReadStream(doc.filePath).pipe(res);
     } catch (error) {
         console.error('Error serving document:', error);
         res.status(500).json({ message: 'Error serving document' });
@@ -5281,29 +5278,30 @@ app.get('/api/properties/:propertyId/documents/:documentId/view', async (req, re
 });
 
 app.post('/api/properties/:propertyId/documents', upload.single('file'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+
+        const originalName = req.file.originalname;
+        const ext = path.extname(originalName);
+        const baseName = req.body.name ? req.body.name.replace(ext, '') : path.basename(originalName, ext);
+        const displayName = baseName + ext; // Always has extension
+
+        // Save absolute file path in MongoDB
+        const document = new Document({
+            projectId: req.params.propertyId,
+            name: displayName,
+            type: req.body.type,
+            filePath: req.file.path, // Absolute path
+            uploadedBy: req.body.uploadedBy || 'System'
+        });
+        await document.save();
+        res.status(201).json(document);
+    } catch (error) {
+        console.error('Error uploading document:', error);
+        res.status(500).json({ message: 'Server error' });
     }
-
-const originalName = req.file.originalname;
-const ext = path.extname(originalName);
-const baseName = req.body.name ? req.body.name.replace(ext, '') : path.basename(originalName, ext);
-const displayName = baseName + ext; // Always has extension
-
-const document = new Document({
-  projectId: req.params.propertyId,
-  name: displayName,
-  type: req.body.type,
-  filePath: `/uploads/${req.file.filename}`,
-  uploadedBy: req.body.uploadedBy || 'System'
-});
-    await document.save();
-    res.status(201).json(document);
-  } catch (error) {
-    console.error('Error uploading document:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
 });
 
 app.delete('/api/properties/:propertyId/documents/:documentId', async (req, res) => {
@@ -5333,7 +5331,6 @@ app.delete('/api/properties/:propertyId/documents/:documentId', async (req, res)
 app.get('/api/properties/:propertyId/documents/:documentId/download', async (req, res) => {
     try {
         const { propertyId, documentId } = req.params;
-
         const doc = await Document.findOne({
             _id: documentId,
             projectId: propertyId
@@ -5343,29 +5340,11 @@ app.get('/api/properties/:propertyId/documents/:documentId/download', async (req
             return res.status(404).json({ message: 'Document not found' });
         }
 
-        const filePath = path.join(__dirname, doc.filePath.replace(/^\//, ''));
-
-        if (!fs.existsSync(filePath)) {
+        if (!fs.existsSync(doc.filePath)) {
             return res.status(404).json({ message: 'File not found on server' });
         }
 
-        const ext = path.extname(doc.name).toLowerCase();
-        const contentType = {
-            '.pdf': 'application/pdf',
-            '.doc': 'application/msword',
-            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            '.txt': 'text/plain',
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.png': 'image/png',
-            '.gif': 'image/gif'
-        }[ext] || 'application/octet-stream';
-
-        res.setHeader('Content-Type', contentType);
-        res.setHeader('Content-Disposition', `attachment; filename="${doc.name}"`);
-        res.setHeader('Cache-Control', 'public, max-age=0');
-
-        fs.createReadStream(filePath).pipe(res);
+        res.download(doc.filePath, doc.name);
     } catch (error) {
         console.error('Error serving document:', error);
         res.status(500).json({ message: 'Error serving document' });
