@@ -1560,6 +1560,100 @@ select {
     background: #eaf6ff;
     color: #217dbb;
 }
+
+     .main-summary-section {
+    background: linear-gradient(90deg, #eaf6ff 0%, #f6fafd 100%);
+    border-bottom: 2px solid #e1e8ed;
+    box-shadow: 0 2px 12px rgba(52,152,219,0.07);
+    padding: 0 0 18px 0;
+    margin-bottom: 18px;
+}
+
+.main-summary-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    padding: 24px 32px 0 32px;
+    letter-spacing: 0.5px;
+}
+
+.main-summary-header i {
+    font-size: 1.5em;
+    color: var(--accent-color);
+}
+
+.main-summary-header {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+}
+
+.summary-toggle-icon {
+    margin-left: auto;
+    font-size: 1.1em;
+    transition: transform 0.2s;
+}
+
+.main-summary-section.collapsed .main-summary {
+    display: none;
+}
+
+.main-summary-section.collapsed .summary-toggle-icon {
+    transform: rotate(-180deg);
+}
+
+.main-summary {
+    display: flex;
+    gap: 24px;
+    padding: 18px 32px 0 32px;
+    background: none;
+    border: none;
+    margin-bottom: 0;
+    flex-wrap: wrap;
+}
+
+.summary-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(52,152,219,0.09);
+    padding: 20px 32px;
+    min-width: 170px;
+    flex: 1 1 170px;
+    text-align: center;
+    border: 1.5px solid #e1e8ed;
+    transition: box-shadow 0.18s, border 0.18s;
+}
+.summary-card h4 {
+    margin: 0 0 8px 0;
+    color: var(--accent-color);
+    font-size: 1.08rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+.summary-card p {
+    margin: 0;
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    letter-spacing: 0.5px;
+}
+@media (max-width: 900px) {
+    .main-summary {
+        flex-direction: column;
+        gap: 12px;
+        padding: 14px 8px 0 8px;
+    }
+    .main-summary-header {
+        padding: 18px 12px 0 12px;
+        font-size: 1.1rem;
+    }
+    .summary-card {
+        padding: 14px 12px;
+    }
+}  
    </style>
 </head>
 <body>
@@ -1579,6 +1673,40 @@ select {
 
         <!-- Main Content -->
         <main class="main-content">
+
+
+
+            <section class="main-summary-section collapsed">
+    <div class="main-summary-header" id="mainSummaryToggle">
+        <i class="fas fa-chart-bar"></i>
+        <span>Main Summary</span>
+        <i class="fas fa-chevron-up summary-toggle-icon" id="mainSummaryChevron"></i>
+    </div>
+    <div class="main-summary" id="mainSummary">
+            <div class="summary-card">
+                <h4>Total Properties</h4>
+                <p id="summaryTotalProperties">--</p>
+            </div>
+            <div class="summary-card">
+                <h4>Total Units</h4>
+                <p id="summaryTotalUnits">--</p>
+            </div>
+            <div class="summary-card">
+                <h4>Total Tenants</h4>
+                <p id="summaryTotalTenants">--</p>
+            </div>
+            <div class="summary-card">
+                <h4>Overall Occupancy</h4>
+                <p id="summaryOccupancyRate">--%</p>
+            </div>
+            <div class="summary-card">
+                <h4>Est. Monthly Income</h4>
+                <p id="summaryMonthlyIncome">$--</p>
+            </div>
+        </div>
+    </section>
+           
+            
             <!-- Property Dashboard -->
             <div class="dashboard" id="propertyDashboard">
                 <div class="dashboard-header">
@@ -2187,6 +2315,10 @@ async function loadProperties() {
         );
         
         renderPropertyList();
+
+
+        // Load all units and tenants for summary
+        await loadAllUnitsAndTenants();
 
         // Auto-select the first property if available
         if (state.properties.length > 0) {
@@ -4429,6 +4561,60 @@ function closeModal(modalId) {
         modal.style.display = 'none';
     }
 }
+
+    async function loadAllUnitsAndTenants() {
+    let allUnits = [];
+    let allTenants = [];
+    for (const property of state.properties) {
+        // Fetch units
+        try {
+            const unitsRes = await fetch(`${API_URL}/properties/${property._id}/units`);
+            if (unitsRes.ok) {
+                const unitsData = await unitsRes.json();
+                if (unitsData.property && Array.isArray(unitsData.property.units)) {
+                    allUnits = allUnits.concat(unitsData.property.units);
+                }
+            }
+        } catch (e) {
+            console.error(`Error loading units for property ${property._id}:`, e);
+        }
+        // Fetch tenants
+        try {
+            const tenantsRes = await fetch(`${API_URL}/properties/${property._id}/tenants`);
+            if (tenantsRes.ok) {
+                const tenantsData = await tenantsRes.json();
+                if (Array.isArray(tenantsData)) {
+                    allTenants = allTenants.concat(tenantsData);
+                }
+            }
+        } catch (e) {
+            console.error(`Error loading tenants for property ${property._id}:`, e);
+        }
+    }
+    state.allUnits = allUnits;
+    state.allTenants = allTenants;
+    renderMainSummary();
+}
+
+function renderMainSummary() {
+    const totalProperties = state.properties.length;
+    const totalUnits = state.allUnits ? state.allUnits.length : 0;
+    const totalTenants = state.allTenants ? state.allTenants.length : 0;
+    const totalOccupiedUnits = state.allUnits ? state.allUnits.filter(u => u.status === 'occupied').length : 0;
+    const totalMonthlyIncome = state.allTenants ? state.allTenants.reduce((sum, t) => sum + (Number(t.baseRent) || 0), 0) : 0;
+    const occupancyRate = totalUnits > 0 ? Math.round((totalOccupiedUnits / totalUnits) * 100) : 0;
+
+    document.getElementById('summaryTotalProperties').textContent = totalProperties;
+    document.getElementById('summaryTotalUnits').textContent = totalUnits;
+    document.getElementById('summaryTotalTenants').textContent = totalTenants;
+    document.getElementById('summaryOccupancyRate').textContent = `${occupancyRate}%`;
+    document.getElementById('summaryMonthlyIncome').textContent = `$${totalMonthlyIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+}
+
+document.getElementById('mainSummaryToggle').addEventListener('click', function() {
+    const section = document.querySelector('.main-summary-section');
+    section.classList.toggle('collapsed');
+});    
 
 // Export functions for global access
 window.selectProperty = selectProperty;
