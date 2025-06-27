@@ -2495,20 +2495,20 @@ async function editUnit(unitId) {
 
         // Open the modal in edit mode
         openModal('addUnitModal');
-        
-        // Change the form submission handler and button text
+
+        // Set form to edit mode and store unitId
         const form = document.getElementById('addUnitForm');
         const submitButton = form.querySelector('button[type="submit"]');
         submitButton.textContent = 'Update Unit';
-        
-        // Store the unitId for update
         form.dataset.editMode = 'true';
         form.dataset.unitId = unitId;
-        
-        // Update the form submission handler
-        form.onsubmit = (e) => {
+
+        // Remove any previous submit event listeners (if any)
+        form.removeEventListener('submit', handleAddUnit);
+        // Add a one-time submit handler for update
+        form.onsubmit = async function(e) {
             e.preventDefault();
-            handleUpdateUnit(unitId);
+            await handleUpdateUnit(unitId);
         };
     } catch (error) {
         console.error('Error editing unit:', error);
@@ -2524,6 +2524,8 @@ async function handleUpdateUnit(unitId) {
 
     const unitData = {
         number: document.getElementById('unitNumber').value,
+        floor: Number(document.getElementById('unitFloor').value),
+        sqft: Number(document.getElementById('unitSqft').value),
         bedrooms: Number(document.getElementById('unitBedrooms').value),
         bathrooms: Number(document.getElementById('unitBathrooms').value),
         status: document.getElementById('unitStatus').value,
@@ -2547,7 +2549,6 @@ async function handleUpdateUnit(unitId) {
                 under: document.getElementById('electricityUnder').value
             }
         }
-        // Add other fields as needed
     };
 
     // Validate required fields
@@ -2577,11 +2578,10 @@ async function handleUpdateUnit(unitId) {
         form.dataset.unitId = '';
         const submitButton = form.querySelector('button[type="submit"]');
         submitButton.textContent = 'Add Unit';
-        
-        // Reset the form submission handler
+
+        // Restore the add handler and remove the custom update handler
         form.onsubmit = handleAddUnit;
 
-        // Reload units and close modal
         await loadUnits(state.currentProperty._id);
         closeModal('addUnitModal');
         showNotification('Unit updated successfully', 'success');
@@ -2699,6 +2699,8 @@ async function handleAddUnit(event) {
 
     const unitData = {
         number: document.getElementById('unitNumber').value,
+        floor: Number(document.getElementById('unitFloor').value),
+        sqft: Number(document.getElementById('unitSqft').value),
         bedrooms: Number(document.getElementById('unitBedrooms').value),
         bathrooms: Number(document.getElementById('unitBathrooms').value),
         status: document.getElementById('unitStatus').value,
@@ -2760,7 +2762,6 @@ async function handleAddUnit(event) {
         showNotification(error.message || 'Error adding unit', 'error');
     }
 }
-
 
 async function deleteUnit(unitId) {
     if (!confirm('Are you sure you want to delete this unit?')) {
