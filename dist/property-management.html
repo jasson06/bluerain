@@ -60,7 +60,13 @@ body {
 
 .property-item.active {
     border-color: var(--accent-color);
-    background-color: rgba(52, 152, 219, 0.05);
+    background-color: rgba(52, 152, 219, 0.08);
+    box-shadow: 0 4px 16px rgba(52, 152, 219, 0.10);
+    transition: background 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.property-item.active h3 {
+    color: var(--accent-color);
 }
 
 .property-item h3 {
@@ -2292,6 +2298,10 @@ async function selectProperty(propertyId) {
         
         updatePropertyStats();
         showNotification('Property loaded successfully', 'success');
+
+           // Re-render the property list to update the active class
+        renderPropertyList();
+        
     } catch (error) {
         console.error('Error selecting property:', error);
         showNotification('Error loading property details', 'error');
