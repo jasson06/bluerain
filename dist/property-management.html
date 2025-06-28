@@ -733,6 +733,21 @@ select {
     color: white;
 }
 
+.tab-badge {
+    display: inline-block;
+    background: #fff3cd;
+    color: #856404;
+    font-weight: bold;
+    border-radius: 50%;
+    padding: 2px 8px;
+    font-size: 0.95em;
+    margin-left: 8px;
+    border: 1.5px solid #f1c40f;
+    box-shadow: 0 0 8px 2px #ffe066;
+    vertical-align: middle;
+    animation: attentionPulse 1.2s infinite alternate;
+}
+       
 
 /* Add these styles */
 .unit-header {
@@ -1743,7 +1758,10 @@ select {
                 <div class="tabs">
                     <button class="tab-btn active" data-tab="units">Units</button>
                     <button class="tab-btn" data-tab="tenants">Tenants</button>
-                    <button class="tab-btn" data-tab="maintenance">Maintenance</button>
+                    <button class="tab-btn" data-tab="maintenance">
+                     Maintenance
+                    <span id="maintenancePendingBadge" class="tab-badge" style="display:none;">!</span>
+                    </button>
                     <button class="tab-btn" data-tab="documents">Documents</button>
                     <button class="tab-btn" data-tab="payments">Payments</button>
                 </div>
@@ -3790,6 +3808,17 @@ async function handleAddMaintenance(event) {
     }
 }
 
+    function updateMaintenanceTabBadge() {
+    const badge = document.getElementById('maintenancePendingBadge');
+    const pendingCount = state.maintenanceRequests.filter(r => r.status === 'pending').length;
+    if (pendingCount > 0) {
+        badge.textContent = pendingCount > 9 ? '9+' : pendingCount;
+        badge.style.display = '';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
 async function loadMaintenanceRequests(propertyId) {
     try {
         const response = await fetch(`${API_URL}/properties/${propertyId}/maintenance`);
@@ -3799,6 +3828,7 @@ async function loadMaintenanceRequests(propertyId) {
         state.maintenanceRequests = requests;
         console.log('Loaded maintenance requests:', state.maintenanceRequests);
         renderMaintenanceRequests();
+        updateMaintenanceTabBadge();
     } catch (error) {
         console.error('Error loading maintenance requests:', error);
         showNotification('Error loading maintenance requests', 'error');
