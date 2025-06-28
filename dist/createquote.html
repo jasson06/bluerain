@@ -591,7 +591,7 @@ select:focus {
 
 
   .summary-box {
-  position: sticky;
+  
   bottom: 0;
   background: #f5faff;
   z-index: 999;
@@ -1289,57 +1289,86 @@ descField.addEventListener('input', function () {
 });
 
 
+function groupLineItemsByCategory(items) {
+  const groups = {};
+  items.forEach(item => {
+    let category = 'General';
+    if (item.name && item.name.includes('-')) {
+      category = item.name.split('-').slice(1).join('-').trim();
+      if (!category) category = 'General';
+    }
+    if (!groups[category]) groups[category] = [];
+    groups[category].push(item);
+  });
+  return groups;
+}
+
+
+
 function renderTable() {
   const table = document.getElementById('lineItemsTable');
   table.innerHTML = '';
   let subtotal = 0;
 
-  lineItems.forEach((item, index) => {
-    const total = item.rate * item.qty;
-    subtotal += total;
+  // Group items by category
+  const grouped = groupLineItemsByCategory(lineItems);
 
-    const row = document.createElement('tr');
-    row.setAttribute('data-index', index);
+  let flatIndex = 0;
 
-    const isEditing = item.isEditing;
-
-    row.innerHTML = isEditing ? `
-      <td style="text-align:center;"><span class="drag-handle">☰</span></td>
-      <td><input type="text" value="${item.costCode || ''}" id="editCode-${index}" readonly style="background: #f1f5f9; cursor: not-allowed;" /></td> 
-      <td><input type="text" value="${item.name}" id="editName-${index}" /></td>
-      <td><textarea id="editDesc-${index}" oninput="autoResizeTextarea(this)">${item.description}</textarea></td>
-
-      <td><input type="number" value="${item.rate}" id="editRate-${index}" /></td>
-      <td><input type="number" value="${item.qty}" id="editQty-${index}" /></td>
-      <td>${formatCurrency(item.rate * item.qty)}</td>
-      <td>
-        <button class="btn" onclick="saveLineItem(${index})">✅</button>
-        <button class="btn" onclick="cancelEditLineItem(${index})">❌</button>
-      </td>
-    ` : `
-      <td style="text-align:center;"><span class="drag-handle">☰</span></td>
-      <td>${item.costCode || '-'}</td>
-      <td>${item.name}</td>
-      <td>${item.description}</td>
-      <td>${formatCurrency(item.rate)}</td>
-      <td>${item.qty}</td>
-      <td>${formatCurrency(total)}</td>
-      <td>
-        <div class="action-dropdown">
-          <button class="dots" onclick="toggleLineItemMenu(event, ${index})">⋯</button>
-          <div class="action-dropdown-content" id="lineitem-menu-${index}">
-            <button onclick="editLineItem(${index})">✏️ Edit</button>
-            <button onclick="deleteLineItem(${index})" style="color: red;">🗑️ Delete</button>
-          </div>
-        </div>
+  Object.keys(grouped).forEach(category => {
+    // Add a group/category row
+    const groupRow = document.createElement('tr');
+    groupRow.innerHTML = `
+      <td colspan="8" style="background:#f0f4f8;font-weight:bold;color:#007bff;font-size:1.08rem;">
+        ${category}
       </td>
     `;
+    table.appendChild(groupRow);
 
-    table.appendChild(row);
+    grouped[category].forEach((item, index) => {
+      const total = item.rate * item.qty;
+      subtotal += total;
+
+      const row = document.createElement('tr');
+      row.setAttribute('data-flat-index', flatIndex); 
+
+      const isEditing = item.isEditing;
+
+      row.innerHTML = isEditing ? `
+        <td style="text-align:center;"><span class="drag-handle">☰</span></td>
+        <td><input type="text" value="${item.costCode || ''}" id="editCode-${index}" readonly style="background: #f1f5f9; cursor: not-allowed;" /></td> 
+        <td><input type="text" value="${item.name}" id="editName-${index}" /></td>
+        <td><textarea id="editDesc-${index}" oninput="autoResizeTextarea(this)">${item.description}</textarea></td>
+        <td><input type="number" value="${item.rate}" id="editRate-${index}" /></td>
+        <td><input type="number" value="${item.qty}" id="editQty-${index}" /></td>
+        <td>${formatCurrency(item.rate * item.qty)}</td>
+        <td>
+          <button class="btn" onclick="saveLineItem(${lineItems.indexOf(item)})">✅</button>
+          <button class="btn" onclick="cancelEditLineItem(${lineItems.indexOf(item)})">❌</button>
+        </td>
+      ` : `
+        <td style="text-align:center;"><span class="drag-handle">☰</span></td>
+        <td>${item.costCode || '-'}</td>
+        <td>${item.name}</td>
+        <td>${item.description}</td>
+        <td>${formatCurrency(item.rate)}</td>
+        <td>${item.qty}</td>
+        <td>${formatCurrency(total)}</td>
+        <td>
+          <div class="action-dropdown">
+            <button class="dots" onclick="toggleLineItemMenu(event, ${lineItems.indexOf(item)})">⋯</button>
+            <div class="action-dropdown-content" id="lineitem-menu-${lineItems.indexOf(item)}">
+              <button onclick="editLineItem(${lineItems.indexOf(item)})">✏️ Edit</button>
+              <button onclick="deleteLineItem(${lineItems.indexOf(item)})" style="color: red;">🗑️ Delete</button>
+            </div>
+          </div>
+        </td>
+      `;
+
+      table.appendChild(row);
+      flatIndex++;
+    });
   });
-
-    // ✅ After all rows added, auto adjust textareas
-    document.querySelectorAll('textarea[id^="editDesc-"]').forEach(autoResizeTextarea);
 
   const discount = parseFloat(document.getElementById('inputDiscount').value || 0);
   const taxRate = parseFloat(document.getElementById('inputTax').value || 0);
@@ -1355,25 +1384,27 @@ function renderTable() {
 
 
   // ✅ Enable drag and drop on tbody
-  document.addEventListener('DOMContentLoaded', () => {
-    const tableBody = document.getElementById('lineItemsTable');
+document.addEventListener('DOMContentLoaded', () => {
+  const tableBody = document.getElementById('lineItemsTable');
 
-    Sortable.create(tableBody, {
-      handle: '.drag-handle',
-      animation: 150,
-      onEnd: function (evt) {
-        const oldIndex = evt.oldIndex;
-        const newIndex = evt.newIndex;
+  Sortable.create(tableBody, {
+    handle: '.drag-handle',
+    animation: 150,
+    onEnd: function (evt) {
+      // Only rows with data-flat-index are draggable (skip group headers)
+      const rows = Array.from(tableBody.querySelectorAll('tr[data-flat-index]'));
+      const oldIndex = parseInt(rows[evt.oldIndex]?.getAttribute('data-flat-index'));
+      const newIndex = parseInt(rows[evt.newIndex]?.getAttribute('data-flat-index'));
 
-        if (oldIndex !== newIndex) {
-          const movedItem = lineItems.splice(oldIndex, 1)[0];
-          lineItems.splice(newIndex, 0, movedItem);
-          renderTable(); // Re-render to update indexes
-        }
-      }
-    });
+      // If dropped on a group header or invalid, do nothing
+      if (isNaN(oldIndex) || isNaN(newIndex) || oldIndex === newIndex) return;
+
+      const movedItem = lineItems.splice(oldIndex, 1)[0];
+      lineItems.splice(newIndex, 0, movedItem);
+      renderTable(); // Re-render to update indexes
+    }
   });
-
+});
 
 
   function editLineItem(index) {
