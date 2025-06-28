@@ -102,13 +102,25 @@ body {
 }
 
 .property-status {
-    background-color: rgba(46, 204, 113, 0.15);
+    background-color: rgba(46, 204, 113, 0.15); /* default green */
     color: #27ae60;
 }
 
 .property-status.inactive {
     background-color: rgba(231, 76, 60, 0.15);
     color: #e74c3c;
+}
+
+.property-status.completed {
+    background-color: rgba(46, 204, 113, 0.15); /* green */
+    color: #27ae60;
+}
+
+.property-status.in-progress,
+.property-status.inprogress,
+.property-status.in\ progress {
+    background-color: #fff3cd; /* yellow */
+    color: #856404;
 }
 
 .property-address {
@@ -2306,16 +2318,27 @@ async function loadTabContent(tabId) {
 // Property Management
 async function loadProperties() {
     try {
+        // Fetch active properties
         const response = await fetch('/api/projects');
         if (!response.ok) throw new Error('Failed to fetch projects');
-        
         const data = await response.json();
-        state.properties = data.projects.filter(project => 
+        // Only multifamily properties
+        const activeProperties = data.projects.filter(project =>
             project.type?.toLowerCase() === 'multifamily'
         );
-        
-        renderPropertyList();
 
+        // Fetch completed properties
+        const completedRes = await fetch('/api/completed-projects');
+        if (!completedRes.ok) throw new Error('Failed to fetch completed projects');
+        const completedData = await completedRes.json();
+        const completedProperties = (completedData.projects || []).filter(project =>
+            project.type?.toLowerCase() === 'multifamily'
+        );
+
+        // Combine both lists
+        state.properties = [...activeProperties, ...completedProperties];
+
+        renderPropertyList();
 
         // Load all units and tenants for summary
         await loadAllUnitsAndTenants();
@@ -2404,9 +2427,9 @@ function renderPropertyList() {
                     <span class="property-type">
                         <i class="fas fa-building"></i> ${property.type || 'Multifamily'}
                     </span>
-                    <span class="property-status ${property.status?.toLowerCase() || ''}">
-                        <i class="fas fa-circle"></i> ${property.status || 'Active'}
-                    </span>
+                    <span class="property-status ${property.status?.toLowerCase().replace(/\s+/g, '-') || ''}">
+                     <i class="fas fa-circle"></i> ${property.status || 'Active'}
+                       </span>
                 </div>
             </div>
         `;
