@@ -201,6 +201,21 @@ body {
     border-bottom: 2px solid var(--accent-color);
 }
 
+ .tab-count-badge {
+    display: inline-block;
+    background: #eaf6ff;
+    color: #217dbb;
+    font-weight: 600;
+    border-radius: 12px;
+    padding: 2px 10px;
+    font-size: 0.95em;
+    margin-left: 7px;
+    min-width: 24px;
+    text-align: center;
+    border: 1.5px solid #b8e0fa;
+    vertical-align: middle;
+}
+
 /* Units Grid Styles */
 .unit-card-modern {
     background: #fff;
@@ -1755,16 +1770,24 @@ select {
                 </div>
 
                 <!-- Tabs -->
-                <div class="tabs">
-                    <button class="tab-btn active" data-tab="units">Units</button>
-                    <button class="tab-btn" data-tab="tenants">Tenants</button>
-                    <button class="tab-btn" data-tab="maintenance">
-                     Maintenance
-                    <span id="maintenancePendingBadge" class="tab-badge" style="display:none;">!</span>
-                    </button>
-                    <button class="tab-btn" data-tab="documents">Documents</button>
-                    <button class="tab-btn" data-tab="payments">Payments</button>
-                </div>
+<div class="tabs">
+    <button class="tab-btn active" data-tab="units">
+        Units <span class="tab-count-badge" id="tabCountUnits"></span>
+    </button>
+    <button class="tab-btn" data-tab="tenants">
+        Tenants <span class="tab-count-badge" id="tabCountTenants"></span>
+    </button>
+    <button class="tab-btn" data-tab="maintenance">
+        Maintenance
+        <span id="maintenancePendingBadge" class="tab-badge" style="display:none;">!</span>
+    </button>
+    <button class="tab-btn" data-tab="documents">
+        Documents <span class="tab-count-badge" id="tabCountDocuments"></span>
+    </button>
+    <button class="tab-btn" data-tab="payments">
+        Payments <span class="tab-count-badge" id="tabCountPayments"></span>
+    </button>
+</div>
 
                 <!-- Tab Content -->
                 <div class="tab-content">
@@ -2306,6 +2329,19 @@ function showTabContent(tabId) {
     }
 }
 
+
+
+        function updateTabCounts() {
+    // Units
+    document.getElementById('tabCountUnits').textContent = state.units?.length || 0;
+    // Tenants
+    document.getElementById('tabCountTenants').textContent = state.tenants?.length || 0;
+    // Documents
+    document.getElementById('tabCountDocuments').textContent = state.documents?.length || 0;
+    // Payments
+    document.getElementById('tabCountPayments').textContent = state.payments?.length || 0;
+}
+
 async function loadTabContent(tabId) {
     if (!state.currentProperty) return;
 
@@ -2496,6 +2532,7 @@ async function loadUnits(propertyId) {
         updatePropertyStats(); // Update stats after loading units
         populateUnitSelect();
          populateMaintenanceUnitSelect();
+        updateTabCounts(); 
 
     } catch (error) {
         console.error('Error loading units:', error);
@@ -3146,6 +3183,7 @@ async function loadTenants(propertyId) {
         state.tenants = tenants;
         console.log('Loaded tenants:', state.tenants); // Debug log
         renderTenants();
+        updateTabCounts(); 
     } catch (error) {
         console.error('Error loading tenants:', error);
         showNotification('Error loading tenants', 'error');
@@ -4108,6 +4146,7 @@ async function loadDocuments(propertyId) {
         state.documents = documents;
         console.log('Loaded documents:', state.documents);
         renderDocuments();
+        updateTabCounts(); 
     } catch (error) {
         console.error('Error loading documents:', error);
         showNotification('Error loading documents', 'error');
@@ -4270,6 +4309,7 @@ async function loadPayments(propertyId) {
         if (!response.ok) throw new Error('Failed to fetch payments');
         state.payments = await response.json();
         renderPayments();
+        updateTabCounts(); 
     } catch (error) {
         console.error('Error loading payments:', error);
         showNotification('Error loading payments', 'error');
