@@ -751,21 +751,7 @@ autocomplete="off"
       </div>
 
       <div class="table-responsive-sm">
-        <table>
-          <thead>
-            <tr>
-              <th></th>
-              <th>Cost Code</th>
-              <th>Item</th>
-              <th>Description</th>
-              <th>Rate</th>
-              <th>Quantity</th>
-              <th>Total</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="lineItemsTable"></tbody>
-        </table>
+        <div id="lineItemsTableContainer"></div>
       </div>
       
       
@@ -1306,41 +1292,79 @@ function groupLineItemsByCategory(items) {
 
 
 function renderTable() {
-  const table = document.getElementById('lineItemsTable');
-  table.innerHTML = '';
+  const container = document.getElementById('lineItemsTableContainer');
+  container.innerHTML = '';
+
+  // Build the table
+  const table = document.createElement('table');
+  table.className = 'quote-table';
+  table.style.width = '100%';
+  table.style.borderCollapse = 'collapse';
+
+  // Table header
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th></th>
+        <th>Cost Code</th>
+        <th>Item</th>
+        <th>Description</th>
+        <th>Rate</th>
+        <th>Quantity</th>
+        <th>Total</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+  `;
+
   let subtotal = 0;
-
-  // Group items by category
   const grouped = groupLineItemsByCategory(lineItems);
+  const categoryOrder = Object.keys(grouped);
 
-  let flatIndex = 0;
-
-  Object.keys(grouped).forEach(category => {
-    // Add a group/category row
+  categoryOrder.forEach((category) => {
+    // --- Category/group header row (draggable) ---
     const groupRow = document.createElement('tr');
-    groupRow.innerHTML = `
-      <td colspan="8" style="background:#f0f4f8;font-weight:bold;color:#007bff;font-size:1.08rem;">
-        ${category}
-      </td>
-    `;
-    table.appendChild(groupRow);
+    groupRow.className = 'category-group-row';
+groupRow.innerHTML = `
+  <td style="width:36px;text-align:center;">
+    <span class="drag-handle-group" style="cursor:grab;">☰</span>
+  </td>
+  <td colspan="7" style="
+    background: linear-gradient(90deg, #fafdff 80%, #eaf6ff 100%);
+    font-weight: 600;
+    color: #007bff;
+    font-size: 1.08rem;
+    font-weight:bold;
+    border-left: 6px solid #007bff;
+    letter-spacing: 0.5px;
+    padding: 12px 0 12px 16px;
+    margin-top: 8px;
+    user-select: none;
+  ">
+    ${capitalizeCategory(category)}
+  </td>
+`;
+    // Create a <tbody> for this category
+    const tbody = document.createElement('tbody');
+    tbody.setAttribute('data-category', category);
+    tbody.appendChild(groupRow);
 
     grouped[category].forEach((item, index) => {
       const total = item.rate * item.qty;
       subtotal += total;
 
       const row = document.createElement('tr');
-      row.setAttribute('data-flat-index', flatIndex); 
+      row.setAttribute('data-flat-index', lineItems.indexOf(item)); // For editing/deleting
 
       const isEditing = item.isEditing;
 
       row.innerHTML = isEditing ? `
         <td style="text-align:center;"><span class="drag-handle">☰</span></td>
-        <td><input type="text" value="${item.costCode || ''}" id="editCode-${index}" readonly style="background: #f1f5f9; cursor: not-allowed;" /></td> 
-        <td><input type="text" value="${item.name}" id="editName-${index}" /></td>
-        <td><textarea id="editDesc-${index}" oninput="autoResizeTextarea(this)">${item.description}</textarea></td>
-        <td><input type="number" value="${item.rate}" id="editRate-${index}" /></td>
-        <td><input type="number" value="${item.qty}" id="editQty-${index}" /></td>
+        <td><input type="text" value="${item.costCode || ''}" id="editCode-${lineItems.indexOf(item)}" readonly style="background: #f1f5f9; cursor: not-allowed;" /></td> 
+        <td><input type="text" value="${item.name}" id="editName-${lineItems.indexOf(item)}" /></td>
+        <td><textarea id="editDesc-${lineItems.indexOf(item)}" oninput="autoResizeTextarea(this)">${item.description}</textarea></td>
+        <td><input type="number" value="${item.rate}" id="editRate-${lineItems.indexOf(item)}" /></td>
+        <td><input type="number" value="${item.qty}" id="editQty-${lineItems.indexOf(item)}" /></td>
         <td>${formatCurrency(item.rate * item.qty)}</td>
         <td>
           <button class="btn" onclick="saveLineItem(${lineItems.indexOf(item)})">✅</button>
@@ -1365,11 +1389,63 @@ function renderTable() {
         </td>
       `;
 
-      table.appendChild(row);
-      flatIndex++;
+      tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+
+    // Enable Sortable for items within this category (tbody)
+    Sortable.create(tbody, {
+      handle: '.drag-handle',
+      animation: 150,
+      draggable: 'tr:not(.category-group-row)',
+      group: 'line-items',
+onEnd: function (evt) {
+  // Get all rows (excluding group header) in this tbody
+  const rows = Array.from(tbody.querySelectorAll('tr:not(.category-group-row)'));
+  const indexes = rows.map(row => parseInt(row.getAttribute('data-flat-index')));
+  // Find all indexes in lineItems for this category
+  const categoryIndexes = lineItems
+    .map((item, idx) => {
+      let cat = 'General';
+      if (item.name && item.name.includes('-')) {
+        cat = item.name.split('-').slice(1).join('-').trim() || 'General';
+      }
+      return cat === category ? idx : -1;
+    })
+    .filter(idx => idx !== -1);
+
+  // Replace the items in lineItems at these indexes with the reordered ones
+  indexes.forEach((itemIdx, i) => {
+    lineItems[categoryIndexes[i]] = lineItems[itemIdx];
+  });
+
+  renderTable();
+}
     });
   });
 
+  container.appendChild(table);
+
+  // Enable Sortable for categories (tbodys)
+  Sortable.create(table, {
+    handle: '.drag-handle-group',
+    animation: 150,
+    draggable: 'tbody',
+    filter: 'tr:not(.category-group-row)', // Prevent dragging rows
+    onEnd: function (evt) {
+      const tbodys = Array.from(table.querySelectorAll('tbody'));
+      let newLineItems = [];
+      tbodys.forEach(tbody => {
+        const cat = tbody.getAttribute('data-category');
+        newLineItems = newLineItems.concat(groupLineItemsByCategory(lineItems)[cat]);
+      });
+      lineItems = newLineItems;
+      renderTable();
+    }
+  });
+
+  // Totals
   const discount = parseFloat(document.getElementById('inputDiscount').value || 0);
   const taxRate = parseFloat(document.getElementById('inputTax').value || 0);
   const tax = (subtotal - discount) * (taxRate / 100);
@@ -1381,30 +1457,11 @@ function renderTable() {
   document.getElementById('grandTotal').textContent = formatCurrency(total).replace('$', '');
 }
 
-
-
-  // ✅ Enable drag and drop on tbody
-document.addEventListener('DOMContentLoaded', () => {
-  const tableBody = document.getElementById('lineItemsTable');
-
-  Sortable.create(tableBody, {
-    handle: '.drag-handle',
-    animation: 150,
-    onEnd: function (evt) {
-      // Only rows with data-flat-index are draggable (skip group headers)
-      const rows = Array.from(tableBody.querySelectorAll('tr[data-flat-index]'));
-      const oldIndex = parseInt(rows[evt.oldIndex]?.getAttribute('data-flat-index'));
-      const newIndex = parseInt(rows[evt.newIndex]?.getAttribute('data-flat-index'));
-
-      // If dropped on a group header or invalid, do nothing
-      if (isNaN(oldIndex) || isNaN(newIndex) || oldIndex === newIndex) return;
-
-      const movedItem = lineItems.splice(oldIndex, 1)[0];
-      lineItems.splice(newIndex, 0, movedItem);
-      renderTable(); // Re-render to update indexes
-    }
-  });
-});
+function capitalizeCategory(category) {
+  return category.replace(/\w\S*/g, (txt) =>
+    txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+  );
+}
 
 
   function editLineItem(index) {
