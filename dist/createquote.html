@@ -1277,17 +1277,31 @@ descField.addEventListener('input', function () {
 
 function groupLineItemsByCategory(items) {
   const groups = {};
+  const displayNames = {}; // Map normalized -> display name (first encountered, for pretty display)
   items.forEach(item => {
     let category = 'General';
     if (item.name && item.name.includes('-')) {
       category = item.name.split('-').slice(1).join('-').trim();
       if (!category) category = 'General';
     }
-    if (!groups[category]) groups[category] = [];
-    groups[category].push(item);
+    const normalized = category.toLowerCase().trim();
+    if (!groups[normalized]) {
+      groups[normalized] = [];
+      displayNames[normalized] = category; // Save the first encountered display version
+    }
+    groups[normalized].push(item);
   });
+
+  // Attach display name for each group
+  Object.keys(groups).forEach(norm => {
+    groups[norm]._displayName = displayNames[norm];
+  });
+
   return groups;
 }
+
+
+
 
 
 
@@ -1300,6 +1314,8 @@ function renderTable() {
   table.className = 'quote-table';
   table.style.width = '100%';
   table.style.borderCollapse = 'collapse';
+
+  
 
   // Table header
   table.innerHTML = `
@@ -1358,38 +1374,48 @@ groupRow.innerHTML = `
 
       const isEditing = item.isEditing;
 
-      row.innerHTML = isEditing ? `
-        <td style="text-align:center;"><span class="drag-handle">☰</span></td>
-        <td><input type="text" value="${item.costCode || ''}" id="editCode-${lineItems.indexOf(item)}" readonly style="background: #f1f5f9; cursor: not-allowed;" /></td> 
-        <td><input type="text" value="${item.name}" id="editName-${lineItems.indexOf(item)}" /></td>
-        <td><textarea id="editDesc-${lineItems.indexOf(item)}" oninput="autoResizeTextarea(this)">${item.description}</textarea></td>
-        <td><input type="number" value="${item.rate}" id="editRate-${lineItems.indexOf(item)}" /></td>
-        <td><input type="number" value="${item.qty}" id="editQty-${lineItems.indexOf(item)}" /></td>
-        <td>${formatCurrency(item.rate * item.qty)}</td>
-        <td>
-          <button class="btn" onclick="saveLineItem(${lineItems.indexOf(item)})">✅</button>
-          <button class="btn" onclick="cancelEditLineItem(${lineItems.indexOf(item)})">❌</button>
-        </td>
-      ` : `
-        <td style="text-align:center;"><span class="drag-handle">☰</span></td>
-        <td>${item.costCode || '-'}</td>
-        <td>${item.name}</td>
-        <td>${item.description}</td>
-        <td>${formatCurrency(item.rate)}</td>
-        <td>${item.qty}</td>
-        <td>${formatCurrency(total)}</td>
-        <td>
-          <div class="action-dropdown">
-            <button class="dots" onclick="toggleLineItemMenu(event, ${lineItems.indexOf(item)})">⋯</button>
-            <div class="action-dropdown-content" id="lineitem-menu-${lineItems.indexOf(item)}">
-              <button onclick="editLineItem(${lineItems.indexOf(item)})">✏️ Edit</button>
-              <button onclick="deleteLineItem(${lineItems.indexOf(item)})" style="color: red;">🗑️ Delete</button>
-            </div>
-          </div>
-        </td>
-      `;
+row.innerHTML = isEditing ? `
+  <td style="text-align:center;"><span class="drag-handle">☰</span></td>
+  <td><input type="text" value="${item.costCode || ''}" id="editCode-${lineItems.indexOf(item)}" readonly style="background: #f1f5f9; cursor: not-allowed;" /></td>
+  <td><input type="text" value="${item.name}" id="editName-${lineItems.indexOf(item)}" /></td>
+  <td><textarea id="editDesc-${lineItems.indexOf(item)}" oninput="autoResizeTextarea(this)" style="width:100%;">${item.description}</textarea></td>
+  <td><input type="number" value="${item.rate}" id="editRate-${lineItems.indexOf(item)}" /></td>
+  <td><input type="number" value="${item.qty}" id="editQty-${lineItems.indexOf(item)}" /></td>
+  <td>${formatCurrency(item.rate * item.qty)}</td>
+  <td>
+    <button class="btn" onclick="saveLineItem(${lineItems.indexOf(item)})">✅</button>
+    <button class="btn" onclick="cancelEditLineItem(${lineItems.indexOf(item)})">❌</button>
+  </td>
+` : `
+  <td style="text-align:center;"><span class="drag-handle">☰</span></td>
+  <td>${item.costCode || '-'}</td>
+  <td>${item.name}</td>
+  <td>${item.description}</td>
+  <td>${formatCurrency(item.rate)}</td>
+  <td>${item.qty}</td>
+  <td>${formatCurrency(total)}</td>
+  <td>
+    <div class="action-dropdown">
+      <button class="dots" onclick="toggleLineItemMenu(event, ${lineItems.indexOf(item)})">⋯</button>
+      <div class="action-dropdown-content" id="lineitem-menu-${lineItems.indexOf(item)}">
+        <button onclick="editLineItem(${lineItems.indexOf(item)})">✏️ Edit</button>
+        <button onclick="deleteLineItem(${lineItems.indexOf(item)})" style="color: red;">🗑️ Delete</button>
+      </div>
+    </div>
+  </td>
+`;
 
       tbody.appendChild(row);
+      tbody.addEventListener('pointerdown', function(e) {
+  if (
+    e.target.tagName === 'INPUT' ||
+    e.target.tagName === 'TEXTAREA' ||
+    e.target.tagName === 'SELECT'
+  ) {
+    e.stopPropagation();
+  }
+}, true);
+
     });
 
     table.appendChild(tbody);
@@ -1399,28 +1425,35 @@ groupRow.innerHTML = `
       handle: '.drag-handle',
       animation: 150,
       draggable: 'tr:not(.category-group-row)',
-      group: 'line-items',
+       group: { name: 'line-items', put: false },
 onEnd: function (evt) {
-  // Get all rows (excluding group header) in this tbody
-  const rows = Array.from(tbody.querySelectorAll('tr:not(.category-group-row)'));
-  const indexes = rows.map(row => parseInt(row.getAttribute('data-flat-index')));
-  // Find all indexes in lineItems for this category
-  const categoryIndexes = lineItems
-    .map((item, idx) => {
-      let cat = 'General';
-      if (item.name && item.name.includes('-')) {
-        cat = item.name.split('-').slice(1).join('-').trim() || 'General';
-      }
-      return cat === category ? idx : -1;
-    })
-    .filter(idx => idx !== -1);
+  // Only reorder if the item was moved within the same category
+  if (evt.from === evt.to && evt.oldIndex !== evt.newIndex) {
+    // Get all rows (excluding group header) in this tbody
+    const rows = Array.from(tbody.querySelectorAll('tr:not(.category-group-row)'));
+    const newOrderIndexes = rows.map(row => parseInt(row.getAttribute('data-flat-index')));
 
-  // Replace the items in lineItems at these indexes with the reordered ones
-  indexes.forEach((itemIdx, i) => {
-    lineItems[categoryIndexes[i]] = lineItems[itemIdx];
-  });
+    // Find all indexes in lineItems for this category
+    const categoryIndexes = lineItems
+      .map((item, idx) => {
+        let cat = 'General';
+        if (item.name && item.name.includes('-')) {
+          cat = item.name.split('-').slice(1).join('-').trim() || 'General';
+        }
+        return cat.toLowerCase() === category.toLowerCase() ? idx : -1;
+      })
+      .filter(idx => idx !== -1);
 
-  renderTable();
+    // Build a new array for this category in the new order
+    const reorderedCategoryItems = newOrderIndexes.map(i => lineItems[i]);
+
+    // Replace the items in lineItems at the categoryIndexes with the reordered ones
+    categoryIndexes.forEach((lineIdx, i) => {
+      lineItems[lineIdx] = reorderedCategoryItems[i];
+    });
+
+    renderTable();
+  }
 }
     });
   });
@@ -1462,7 +1495,6 @@ function capitalizeCategory(category) {
     txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
   );
 }
-
 
   function editLineItem(index) {
   lineItems[index].isEditing = true;
