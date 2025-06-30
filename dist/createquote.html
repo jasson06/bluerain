@@ -231,11 +231,23 @@ select:focus {
     }
 
     .line-item-row {
-  display: flex;
+ 
   flex-wrap: wrap;
   gap: 4px;
   margin-top: 10px;
   justify-content: space-between;
+}
+
+    .line-item-row {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: #f7f8fa;
+  border: 1px solid #707a86;
+  border-radius: 8px;
+  padding: 12px 10px;
+  margin-bottom: 18px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
 }
 
 .line-item-row input {
@@ -680,6 +692,9 @@ textarea {
   transition: height 0.2s ease;
 }
 
+    #suggestionBox{
+  width: 400px !important;
+}
   </style>
 </head>
 <body>
@@ -714,7 +729,7 @@ textarea {
     <div class="section">
       <h3>Quote To</h3>
       <input id="toName" placeholder="Customer Name" oninput="showClientSuggestions()" />
-<div id="clientSuggestionBox" style="position: absolute; background: white; border: 1px solid #ccc; border-radius: 6px; z-index: 1000; display: none; max-height: 150px; overflow-y: auto;"></div>
+<div id="clientSuggestionBox" style="position: absolute; background: white; border: 1px solid #ccc; border-radius: 6px; z-index: 1000; display: none; max-height: 350px; overflow-y: auto;"></div>
 <input 
 id="toAddress" 
 placeholder="Address (0000 Street, City, ST ZIP)" 
@@ -743,11 +758,11 @@ autocomplete="off"
       <div class="line-item-row">
         <input id="itemCode" placeholder="Cost Code" />
         <input id="itemName" placeholder="Item Name" />
-        <div id="suggestionBox" style="position: absolute; background: #fff; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000; display: none; max-height: 150px; overflow-y: auto;"></div>
-        <textarea id="itemDesc" placeholder="Description" rows="2"></textarea>
+        <div id="suggestionBox" style="position: absolute; background: #fff; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000; display: none; max-height: 350px; overflow-y: auto;"></div>
         <input id="itemQty" type="number" placeholder="Quantity" />
         <input id="itemRate" type="number" placeholder="Rate" />
         <button class="btn" onclick="addLineItem()">Add</button>
+        <textarea id="itemDesc" placeholder="Description" rows="2"></textarea>
       </div>
 
       <div class="table-responsive-sm">
