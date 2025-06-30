@@ -1111,14 +1111,17 @@ function showClientSuggestions() {
     option.style.cursor = 'pointer';
     option.onmouseenter = () => option.style.background = '#f0f0f0';
     option.onmouseleave = () => option.style.background = '#fff';
-    option.onclick = () => {
-      document.getElementById('toName').value = client.name;
-      document.getElementById('toAddress').value = client.address;
-      document.getElementById('toEmail').value = client.email;
-      document.getElementById('toPhone').value = client.phone;
-      document.getElementById('signatureClientName').value = client.name;
-      box.style.display = 'none';
-    };
+    
+option.onclick = () => {
+  const capitalizedName = capitalizeClientName(client.name);
+  document.getElementById('toName').value = capitalizedName;
+  document.getElementById('toAddress').value = client.address;
+  document.getElementById('toEmail').value = client.email;
+  document.getElementById('toPhone').value = client.phone;
+  document.getElementById('signatureClientName').value = capitalizedName;
+  box.style.display = 'none';
+};
+    
     box.appendChild(option);
   });
 
@@ -1134,6 +1137,18 @@ document.addEventListener('click', e => {
       e.target !== document.getElementById('toName')) {
     document.getElementById('clientSuggestionBox').style.display = 'none';
   }
+});
+
+
+    function capitalizeClientName(name) {
+  return name.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+
+  document.getElementById('toName').addEventListener('input', function(e) {
+  const caret = this.selectionStart;
+  this.value = capitalizeClientName(this.value);
+  this.setSelectionRange(caret, caret); // keep caret position
 });
 
 function autoResizeTextarea(textarea) {
