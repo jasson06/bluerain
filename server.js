@@ -5533,7 +5533,17 @@ app.get('/api/room-packages/:key', async (req, res) => {
 // Update or create a room package
 app.put('/api/room-packages/:key', async (req, res) => {
   try {
-    co
+    const { name, items } = req.body;
+    const pkg = await RoomPackage.findOneAndUpdate(
+      { key: req.params.key },
+      { name, items },
+      { upsert: true, new: true }
+    );
+    res.json(pkg);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save room package' });
+  }
+});
 
 // Debugging route to check server deployment status
 app.get('/api/debug', (req, res) => {
