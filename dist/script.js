@@ -119,8 +119,33 @@ const projectFilters = {
 };
 
     
- function showToast(message) {
-      const toast = document.getElementById('toast');
+    function showToast(message) {
+      let toast = document.getElementById('toast');
+      
+      // If toast element doesn't exist, create it dynamically
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        toast.style.cssText = `
+          position: fixed;
+          top: 30px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: linear-gradient(to right, #0ea5e9, #3b82f6);
+          color: white;
+          padding: 14px 24px;
+          border-radius: 8px;
+          display: none;
+          z-index: 9999;
+          font-weight: 500;
+          font-size: 15px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          transition: opacity 0.3s ease, transform 0.3s ease;
+          pointer-events: none;
+        `;
+        document.body.appendChild(toast);
+      }
+      
       toast.textContent = message;
       toast.style.display = 'block';
       setTimeout(() => { toast.style.display = 'none'; }, 3000);
