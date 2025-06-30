@@ -932,6 +932,20 @@ const paymentSchema = new mongoose.Schema({
   balance: { type: Number, default: 0 }
 }, { timestamps: true });
 
+const roomPackageSchema = new mongoose.Schema({
+  key: { type: String, required: true, unique: true }, // e.g., 'kitchen'
+  name: { type: String, required: true },
+  items: [
+    {
+      costCode: String,
+      name: String,
+      description: String,
+      rate: Number,
+      qty: Number
+    }
+  ]
+}, { timestamps: true });
+
 
 const Task = mongoose.model('Task', taskSchema);
 const Comment = mongoose.model("Comment", commentSchema);
@@ -955,6 +969,7 @@ const Tenant = mongoose.model('Tenant', tenantSchema);
 const MaintenanceRequest = mongoose.model('MaintenanceRequest', maintenanceRequestSchema);
 const Document = mongoose.model('Document', documentSchema);
 const Payment = mongoose.model('Payment', paymentSchema);
+const RoomPackage = mongoose.model('RoomPackage', roomPackageSchema);
 
 module.exports = {
   Task,
@@ -5493,6 +5508,32 @@ app.put('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// Get all room packages
+app.get('/api/room-packages', async (req, res) => {
+  try {
+    const packages = await RoomPackage.find();
+    res.json(packages);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch room packages' });
+  }
+});
+
+// Get a single room package by key
+app.get('/api/room-packages/:key', async (req, res) => {
+  try {
+    const pkg = await RoomPackage.findOne({ key: req.params.key });
+    if (!pkg) return res.status(404).json({ error: 'Not found' });
+    res.json(pkg);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch room package' });
+  }
+});
+
+// Update or create a room package
+app.put('/api/room-packages/:key', async (req, res) => {
+  try {
+    co
 
 // Debugging route to check server deployment status
 app.get('/api/debug', (req, res) => {
