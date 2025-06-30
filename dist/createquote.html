@@ -778,6 +778,35 @@ textarea {
   user-select: text !important;
 }
 
+/* iOS Touch Screen Improvements */
+#lineItemsTableContainer {
+  -webkit-overflow-scrolling: touch; /* Smooth momentum scrolling on iOS */
+  overflow-x: auto;
+  overflow-y: visible;
+  touch-action: pan-x pan-y; /* Allow scrolling in both directions */
+}
+
+#lineItemsTableContainer table {
+  touch-action: manipulation; /* Improve tap response */
+}
+
+#lineItemsTableContainer input,
+#lineItemsTableContainer textarea,
+#lineItemsTableContainer button {
+  touch-action: manipulation; /* Prevent zoom on double tap */
+  -webkit-touch-callout: none; /* Disable callout on long press */
+  -webkit-user-select: text; /* Allow text selection */
+  user-select: text; /* Standard property for compatibility */
+  min-height: 44px; /* iOS recommended minimum touch target */
+  font-size: 16px; /* Prevent zoom on focus in iOS Safari */
+}
+
+#lineItemsTableContainer .drag-handle,
+#lineItemsTableContainer .drag-handle-group {
+  touch-action: none; /* Allow drag functionality */
+  -webkit-touch-callout: none;
+}
+    
 .edit-icon {
   float: right;
   margin-left: 10px;
