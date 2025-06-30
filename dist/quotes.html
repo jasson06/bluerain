@@ -1650,6 +1650,59 @@ async function downloadQuoteAsPDF(id) {
     const total30 = (q.totals.total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
     const total10 = (q.totals.total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
     const clientNameSafe = q.to.name.replace(/[^a-z0-9]/gi, '_'); // sanitize for safe filename
+
+    // --- Group line items by category ---
+    function groupLineItemsByCategory(items) {
+      const groups = {};
+      items.forEach(item => {
+        let category = 'General';
+        if (item.name && item.name.includes('-')) {
+          category = item.name.split('-').slice(1).join('-').trim();
+          if (!category) category = 'General';
+        }
+        if (!groups[category]) groups[category] = [];
+        groups[category].push(item);
+      });
+      return groups;
+    }
+    const grouped = groupLineItemsByCategory(q.lineItems);
+
+    function capitalizeCategory(str) {
+  if (!str) return '';
+  return str.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+    // --- Render grouped line items as HTML ---
+    let groupedLineItemsHTML = '';
+    Object.keys(grouped).forEach(category => {
+  groupedLineItemsHTML += `
+    <tr>
+      <td colspan="5" style="
+        background: #f1f5f9;
+        font-weight: 500;
+        color: #217dbb;
+        font-size: 1.06rem;
+        letter-spacing: 0.5px;
+        padding: 12px 0 12px 16px;
+        margin-top: 8px;
+        ">
+        ${capitalizeCategory(category)}
+      </td>
+    </tr>
+  `;
+      grouped[category].forEach(item => {
+        groupedLineItemsHTML += `
+          <tr>
+            <td>${item.name}</td>
+            <td>${item.description}</td>
+            <td>$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+            <td>${item.qty}</td>
+            <td>$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+          </tr>
+        `;
+      });
+    });
+
     const styledHTML = `
       <html>
         <head>
@@ -1668,21 +1721,22 @@ async function downloadQuoteAsPDF(id) {
             h2 {
               color: #0ea5e9;
             }
-            .line-item-grid {
-              display: grid;
-              grid-template-columns: 1.5fr 3fr 1fr 0.7fr 1fr;
-              padding: 10px 0;
+            table {
+              width: 100%;
+              margin-top: 20px;
+              border-collapse: collapse;
+              font-size: 0.95rem;
+              background-color: #ffffff;
+              color: #0f172a;
             }
-            .line-item-header {
-              font-weight: 600;
-              background: #f3f4f6;
-              border-bottom: 1px solid #ccc;
+            th, td {
+              padding: 12px;
+              border: 1px solid #e2e8f0;
             }
-            .line-item-row {
-              border-bottom: 1px solid #e5e7eb;
-            }
-            .line-item-cell {
-              padding: 0 6px;
+            th {
+              background: #f1f5f9;
+              color: #0f172a;
+              text-align: left;
             }
             .totals p {
               margin: 4px 0;
@@ -1735,24 +1789,16 @@ async function downloadQuoteAsPDF(id) {
             </div>
 
             <h3 style="margin-top: 30px;">Line Items</h3>
-            <div style="display: flex; flex-direction: column; font-size: 14px; margin-top: 10px;">
-              <div style="display: grid; grid-template-columns: 1.5fr 3fr 1fr 0.7fr 1fr; font-weight: 600; background: #f3f4f6; padding: 10px 0; border-bottom: 1px solid #ccc;">
-                <div style="padding: 0 6px;">Item</div>
-                <div style="padding: 0 6px;">Description</div>
-                <div style="padding: 0 6px;">Rate</div>
-                <div style="padding: 0 6px;">Qty</div>
-                <div style="padding: 0 6px;">Total</div>
-              </div>
-              ${q.lineItems.map(item => `
-                <div style="display: grid; grid-template-columns: 1.5fr 3fr 1fr 0.7fr 1fr; border-bottom: 1px solid #e5e7eb; padding: 10px 0;">
-                  <div style="padding: 0 6px;">${item.name}</div>
-                  <div style="padding: 0 6px;">${item.description}</div>
-                  <div style="padding: 0 6px;">$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                  <div style="padding: 0 6px;">${item.qty}</div>
-                  <div style="padding: 0 6px;">$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                </div>
-              `).join('')}
-            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th><th>Description</th><th>Rate</th><th>Qty</th><th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${groupedLineItemsHTML}
+              </tbody>
+            </table>
 
           <div style="margin-top: 20px; text-align: right;">
            <p><strong>Subtotal:</strong> $${parseFloat(q.totals.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
@@ -1764,9 +1810,9 @@ async function downloadQuoteAsPDF(id) {
 
           </div>
 
-            <div class="section">
-              <h4>Notes</h4>
-              <p>${q.notes || 'N/A'}</p>
+            <div class="section" style="margin-top: 20px;">
+              <strong>Notes:</strong>
+              <p>${q.notes || 'None'}</p>
             </div>
 
             <h4>Payment Terms</h4>
@@ -1778,7 +1824,7 @@ async function downloadQuoteAsPDF(id) {
             </ul>
             <p>All payments are due within 7 days of invoice unless otherwise agreed in writing. Late payments may be subject to additional fees.</p>
 
-            <div class="section">
+            <div class="section" style="margin-top: 30px;">
               <h4>Agreement</h4>
               <p>If you accept this quote, please sign and return.</p>
               <p><strong>Client Name:</strong> ${q.to.name || 'Client Name'}</p>
@@ -1820,7 +1866,24 @@ async function downloadQuoteAsPDF(id) {
   }
 }
 
-
+// Helper functions (add once, outside the main functions if not already present)
+function groupLineItemsByCategory(items) {
+  const groups = {};
+  items.forEach(item => {
+    let category = 'General';
+    if (item.name && item.name.includes('-')) {
+      category = item.name.split('-').slice(1).join('-').trim();
+      if (!category) category = 'General';
+    }
+    if (!groups[category]) groups[category] = [];
+    groups[category].push(item);
+  });
+  return groups;
+}
+function capitalizeCategory(str) {
+  if (!str) return '';
+  return str.replace(/\b\w/g, c => c.toUpperCase());
+}
 
 // ✅ downloadReceiptAsPDF() — same structure as invoice, labeled "Receipt"
 async function downloadReceiptAsPDF(id) {
@@ -1834,91 +1897,67 @@ async function downloadReceiptAsPDF(id) {
     const receiptNumber = `R-${new Date().getTime()}`;
     const clientNameSafe = q.to.name.replace(/[^a-z0-9]/gi, '_'); // sanitize filename
 
+    // --- Group and render line items ---
+    const grouped = groupLineItemsByCategory(q.lineItems);
+    let groupedLineItemsHTML = '';
+    Object.keys(grouped).forEach(category => {
+      groupedLineItemsHTML += `
+        <tr>
+          <td colspan="5" style="
+            background: #f1f5f9;
+            font-weight: 500;
+            color: #217dbb;
+            font-size: 1.06rem;
+            letter-spacing: 0.5px;
+            padding: 12px 0 12px 16px;
+            margin-top: 8px;
+            ">
+            ${capitalizeCategory(category)}
+          </td>
+        </tr>
+      `;
+      grouped[category].forEach(item => {
+        groupedLineItemsHTML += `
+          <tr>
+            <td>${item.name}</td>
+            <td>${item.description}</td>
+            <td>$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+            <td>${item.qty}</td>
+            <td>$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+          </tr>
+        `;
+      });
+    });
+
     const styledHTML = `
       <html>
         <head>
           <meta charset="UTF-8">
           <title>Receipt PDF</title>
           <style>
-            body {
-              font-family: 'Segoe UI', Tahoma, sans-serif;
-              margin: 0 auto;
-              padding: 40px;
-              color: #000;
-              font-size: 14px;
-              max-width: 800px;
-            }
-            h1, h2, h3, h4 {
-              margin: 0;
-              padding: 0;
-            }
-            .company {
-              color: #0ea5e9;
-              font-size: 20px;
-              font-weight: bold;
-              margin-bottom: 8px;
-            }
-            .info-grid {
-              display: flex;
-              justify-content: space-between;
-              margin: 20px 0;
-            }
-            .info-section {
-              width: 48%;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 20px;
-            }
-            thead {
-              background: #f3f4f6;
-            }
-            th, td {
-              padding: 8px;
-              text-align: left;
-              border: 1px solid #ddd;
-            }
-            .totals {
-              margin-top: 20px;
-              text-align: right;
-            }
-            .totals p {
-              margin: 4px 0;
-            }
-            .totals strong {
-              color: #0ea5e9;
-            }
-            .section {
-              margin-top: 40px;
-            }
-            .signature-line {
-              display: flex;
-              gap: 50px;
-              margin-top: 20px;
-            }
-            .signature-line p {
-              border-top: 1px solid #333;
-              width: 200px;
-              text-align: center;
-              margin-top: 20px;
-              padding-top: 4px;
-            }
-            hr {
-              margin: 30px 0;
-              border: none;
-              border-top: 1px solid #ccc;
-            }
+            body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0 auto; padding: 40px; color: #000; font-size: 14px; max-width: 800px; }
+            h1, h2, h3, h4 { margin: 0; padding: 0; }
+            .company { color: #0ea5e9; font-size: 20px; font-weight: bold; margin-bottom: 8px; }
+            .info-grid { display: flex; justify-content: space-between; margin: 20px 0; }
+            .info-section { width: 48%; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            thead { background: #f3f4f6; }
+            th, td { padding: 8px; text-align: left; border: 1px solid #ddd; }
+            .totals { margin-top: 20px; text-align: right; }
+            .totals p { margin: 4px 0; }
+            .totals strong { color: #0ea5e9; }
+            .section { margin-top: 40px; }
+            .signature-line { display: flex; gap: 50px; margin-top: 20px; }
+            .signature-line p { border-top: 1px solid #333; width: 200px; text-align: center; margin-top: 20px; padding-top: 4px; }
+            hr { margin: 30px 0; border: none; border-top: 1px solid #ccc; }
           </style>
         </head>
         <body>
           <div style="font-family: 'Segoe UI', sans-serif; padding: 40px; max-width: 800px; color: #000; font-size: 14px;">
             <h2 style="color:#0ea5e9;">BESF LLC</h2>
             <p><strong>Receipt #:</strong> ${receiptNumber}</p>
-
             <p><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</p>
             <p><strong>Due Date:</strong> ${new Date(q.validTill).toLocaleDateString()}</p>
-
             <div style="display: flex; justify-content: space-between;">
               <div style="width:48%">
                 <h4>Receipt From</h4>
@@ -1940,27 +1979,17 @@ async function downloadReceiptAsPDF(id) {
                 </p>
               </div>
             </div>
-
             <h3 style="margin-top: 30px;">Line Items</h3>
-            <div style="display: flex; flex-direction: column; font-size: 14px; margin-top: 10px;">
-              <div style="display: grid; grid-template-columns: 1.5fr 3fr 1fr 0.7fr 1fr; font-weight: 600; background: #f3f4f6; padding: 10px 0; border-bottom: 1px solid #ccc;">
-                <div style="padding: 0 6px;">Item</div>
-                <div style="padding: 0 6px;">Description</div>
-                <div style="padding: 0 6px;">Rate</div>
-                <div style="padding: 0 6px;">Qty</div>
-                <div style="padding: 0 6px;">Total</div>
-              </div>
-              ${q.lineItems.map(item => `
-                <div style="display: grid; grid-template-columns: 1.5fr 3fr 1fr 0.7fr 1fr; border-bottom: 1px solid #e5e7eb; padding: 10px 0;">
-                  <div style="padding: 0 6px;">${item.name}</div>
-                  <div style="padding: 0 6px;">${item.description}</div>
-                  <div style="padding: 0 6px;">$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                  <div style="padding: 0 6px;">${item.qty}</div>
-                  <div style="padding: 0 6px;">$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                </div>
-              `).join('')}
-            </div>
-
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th><th>Description</th><th>Rate</th><th>Qty</th><th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${groupedLineItemsHTML}
+              </tbody>
+            </table>
             <div style="margin-top: 20px; text-align: right;">
               <p><strong>Subtotal:</strong> $${parseFloat(q.totals.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               <p><strong>Discount:</strong> $${parseFloat(q.totals.discount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
@@ -1988,7 +2017,6 @@ async function downloadReceiptAsPDF(id) {
     await html2pdf().set({
       margin: 0,
       filename: `Receipt-${receiptNumber}-${clientNameSafe}.pdf`,
-
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, scrollY: 0, backgroundColor: '#ffffff' },
       jsPDF: { unit: 'pt', format: 'letter', orientation: 'portrait' },
@@ -2048,6 +2076,38 @@ async function downloadInvoiceWithSchedule(q, selectedPayments) {
   try {
     const invoiceNumber = `INV-${new Date().getTime()}`;
     const clientNameSafe = q.to.name.replace(/[^a-z0-9]/gi, '_');
+
+    // --- Group and render line items ---
+    const grouped = groupLineItemsByCategory(q.lineItems);
+    let groupedLineItemsHTML = '';
+    Object.keys(grouped).forEach(category => {
+      groupedLineItemsHTML += `
+        <tr>
+          <td colspan="5" style="
+            background: #f1f5f9;
+            font-weight: 500;
+            color: #217dbb;
+            font-size: 1.06rem;
+            letter-spacing: 0.5px;
+            padding: 12px 0 12px 16px;
+            margin-top: 8px;
+            ">
+            ${capitalizeCategory(category)}
+          </td>
+        </tr>
+      `;
+      grouped[category].forEach(item => {
+        groupedLineItemsHTML += `
+          <tr>
+            <td>${item.name}</td>
+            <td>${item.description}</td>
+            <td>$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+            <td>${item.qty}</td>
+            <td>$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+          </tr>
+        `;
+      });
+    });
 
     // Gather all payments from all schedules
     let allPayments = [];
@@ -2157,85 +2217,29 @@ async function downloadInvoiceWithSchedule(q, selectedPayments) {
           <meta charset="UTF-8">
           <title>Invoice PDF</title>
           <style>
-            body {
-              font-family: 'Segoe UI', Tahoma, sans-serif;
-              margin: 0 auto;
-              padding: 40px;
-              color: #000;
-              font-size: 14px;
-              max-width: 800px;
-            }
-            h1, h2, h3, h4 {
-              margin: 0;
-              padding: 0;
-            }
-            .company {
-              color: #0ea5e9;
-              font-size: 20px;
-              font-weight: bold;
-              margin-bottom: 8px;
-            }
-            .info-grid {
-              display: flex;
-              justify-content: space-between;
-              margin: 20px 0;
-            }
-            .info-section {
-              width: 48%;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 20px;
-            }
-            thead {
-              background: #f3f4f6;
-            }
-            th, td {
-              padding: 8px;
-              text-align: left;
-              border: 1px solid #ddd;
-            }
-            .totals {
-              margin-top: 20px;
-              text-align: right;
-            }
-            .totals p {
-              margin: 4px 0;
-            }
-            .totals strong {
-              color: #0ea5e9;
-            }
-            .section {
-              margin-top: 40px;
-            }
-            .signature-line {
-              display: flex;
-              gap: 50px;
-              margin-top: 20px;
-            }
-            .signature-line p {
-              border-top: 1px solid #333;
-              width: 200px;
-              text-align: center;
-              margin-top: 20px;
-              padding-top: 4px;
-            }
-            hr {
-              margin: 30px 0;
-              border: none;
-              border-top: 1px solid #ccc;
-            }
+            body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0 auto; padding: 40px; color: #000; font-size: 14px; max-width: 800px; }
+            h1, h2, h3, h4 { margin: 0; padding: 0; }
+            .company { color: #0ea5e9; font-size: 20px; font-weight: bold; margin-bottom: 8px; }
+            .info-grid { display: flex; justify-content: space-between; margin: 20px 0; }
+            .info-section { width: 48%; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            thead { background: #f3f4f6; }
+            th, td { padding: 8px; text-align: left; border: 1px solid #ddd; }
+            .totals { margin-top: 20px; text-align: right; }
+            .totals p { margin: 4px 0; }
+            .totals strong { color: #0ea5e9; }
+            .section { margin-top: 40px; }
+            .signature-line { display: flex; gap: 50px; margin-top: 20px; }
+            .signature-line p { border-top: 1px solid #333; width: 200px; text-align: center; margin-top: 20px; padding-top: 4px; }
+            hr { margin: 30px 0; border: none; border-top: 1px solid #ccc; }
           </style>
         </head>
         <body>
           <div style="font-family: 'Segoe UI', sans-serif; padding: 40px; max-width: 800px; color: #000; font-size: 14px;">
             <h2 style="color:#0ea5e9;">BESF LLC</h2>
             <p><strong>Invoice #:</strong> ${invoiceNumber}</p>
-
             <p><strong>Date:</strong> ${new Date(q.date).toLocaleDateString()}</p>
             <p><strong>Due Date:</strong> ${new Date(q.validTill).toLocaleDateString()}</p>
-
             <div style="display: flex; justify-content: space-between;">
               <div style="width:48%">
                 <h4>Invoice From</h4>
@@ -2257,28 +2261,17 @@ async function downloadInvoiceWithSchedule(q, selectedPayments) {
                 </p>
               </div>
             </div>
-
             <h3 style="margin-top: 30px;">Line Items</h3>
-            <div style="display: flex; flex-direction: column; font-size: 14px; margin-top: 10px;">
-              <div style="display: grid; grid-template-columns: 1.5fr 3fr 1fr 0.7fr 1fr; font-weight: 600; background: #f1f5f9; padding: 10px 0; border-bottom: 1px solid #ccc; border-radius: 5px;">
-                <div style="padding: 0 6px;">Item</div>
-                <div style="padding: 0 6px;">Description</div>
-                <div style="padding: 0 6px;">Rate</div>
-                <div style="padding: 0 6px;">Qty</div>
-                <div style="padding: 0 6px;">Total</div>
-              </div>
-              
-              ${q.lineItems.map(item => `
-                <div style="display: grid; grid-template-columns: 1.5fr 3fr 1fr 0.7fr 1fr; border-bottom: 1px solid #e5e7eb; padding: 10px 0;">
-                  <div style="padding: 0 6px;">${item.name}</div>
-                  <div style="padding: 0 6px;">${item.description}</div>
-                  <div style="padding: 0 6px;">$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                  <div style="padding: 0 6px;">${item.qty}</div>
-                  <div style="padding: 0 6px;">$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                </div>
-              `).join('')}
-            </div>
-
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th><th>Description</th><th>Rate</th><th>Qty</th><th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${groupedLineItemsHTML}
+              </tbody>
+            </table>
             <div style="margin-top: 20px; text-align: right;">
               <p><strong>Subtotal:</strong> $${parseFloat(q.totals.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               <p><strong>Discount:</strong> $${parseFloat(q.totals.discount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
