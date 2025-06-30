@@ -783,11 +783,20 @@ textarea {
   -webkit-overflow-scrolling: touch; /* Smooth momentum scrolling on iOS */
   overflow-x: auto;
   overflow-y: visible;
-  touch-action: pan-x pan-y; /* Allow scrolling in both directions */
+  touch-action: pan-x pan-y !important; /* Force scrolling - override SortableJS */
 }
 
 #lineItemsTableContainer table {
   touch-action: manipulation; /* Improve tap response */
+}
+
+#lineItemsTableContainer tr,
+#lineItemsTableContainer td {
+  touch-action: pan-x pan-y !important; /* Allow scrolling on table cells */
+}
+
+#lineItemsTableContainer tbody {
+  touch-action: pan-x pan-y !important; /* Allow scrolling on tbody elements */
 }
 
 #lineItemsTableContainer input,
@@ -805,6 +814,12 @@ textarea {
 #lineItemsTableContainer .drag-handle-group {
   touch-action: none; /* Allow drag functionality */
   -webkit-touch-callout: none;
+}
+
+/* Override SortableJS touch-action on non-handle elements */
+#lineItemsTableContainer .sortable-ghost,
+#lineItemsTableContainer .sortable-chosen {
+  touch-action: pan-x pan-y !important;
 }
     
 .edit-icon {
