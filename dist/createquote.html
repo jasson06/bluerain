@@ -231,14 +231,15 @@ select:focus {
     }
 
     .line-item-row {
- 
+  
   flex-wrap: wrap;
   gap: 4px;
   margin-top: 10px;
   justify-content: space-between;
+  
 }
 
-    .line-item-row {
+.line-item-row {
   position: sticky;
   top: 0;
   z-index: 1000;
@@ -589,13 +590,16 @@ select:focus {
 
 
 .drag-handle {
-  touch-action: none;
+  
   cursor: grab;
   font-size: 18px;
   padding: 4px;
   display: inline-block;
 }
 
+input, textarea {
+  pointer-events: auto !important;
+}
 
   .drag-handle:active {
     cursor: grabbing;
@@ -692,18 +696,95 @@ textarea {
   transition: height 0.2s ease;
 }
 
-    #suggestionBox{
+/* Add these styles to your existing CSS */
+.package-dropdown {
+    position: relative;
+    width: 100%;
+}
+
+.package-select-btn {
+    width: 100%;
+    padding: 12px 15px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    color: #333;
+    transition: all 0.2s ease;
+}
+
+.package-select-btn:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.dropdown-arrow {
+    font-size: 12px;
+    transition: transform 0.2s ease;
+}
+
+.package-dropdown-content {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    margin-top: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+.package-dropdown-content.show {
+    display: block;
+}
+
+.package-option {
+    width: 100%;
+    padding: 10px 15px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+    color: #333;
+    transition: background 0.2s ease;
+}
+
+.package-option:hover {
+    background: #f8f9fa;
+}
+
+.package-option:not(:last-child) {
+    border-bottom: 1px solid #eee;
+}
+
+#suggestionBox{
   width: 400px !important;
 }
 
 
-    /* Allow text selection in the line items table */
+
+/* Allow text selection in the line items table */
 #lineItemsTableContainer,
 #lineItemsTableContainer * {
   user-select: text !important;
 }
 
-    
+.edit-icon {
+  float: right;
+  margin-left: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #007bff;
+}
   </style>
 </head>
 <body>
@@ -738,7 +819,7 @@ textarea {
     <div class="section">
       <h3>Quote To</h3>
       <input id="toName" placeholder="Customer Name" oninput="showClientSuggestions()" />
-<div id="clientSuggestionBox" style="position: absolute; background: white; border: 1px solid #ccc; border-radius: 6px; z-index: 1000; display: none; max-height: 350px; overflow-y: auto;"></div>
+<div id="clientSuggestionBox" style="position: absolute; background: white; border: 1px solid #ccc; border-radius: 6px; z-index: 1000; display: none; max-height: 150px; overflow-y: auto;"></div>
 <input 
 id="toAddress" 
 placeholder="Address (0000 Street, City, ST ZIP)" 
@@ -895,6 +976,41 @@ autocomplete="off"
       <h3>Labor Cost Suggestions</h3>
       <span class="close-modal" onclick="closeLaborCostModal()" style="font-size: 24px; cursor: pointer;">&times;</span>
     </div>
+
+       <!-- Add Room Packages Section -->
+<!-- Replace the existing room-packages-section in the laborCostModal div -->
+<div class="room-packages-section">
+    <div class="package-dropdown">
+        <button class="package-select-btn" onclick="togglePackageDropdown()">
+            🏗️ Add Room Package
+            <span class="dropdown-arrow">▼</span>
+        </button>
+<div id="packageDropdownContent" class="package-dropdown-content">
+    <button onclick="addRoomPackage('kitchen')" class="package-option">
+        🏘️ Kitchen Remodel Package
+        <span class="edit-icon" onclick="event.stopPropagation(); openEditRoomPackageModal('kitchen')">✏️</span>
+    </button>
+    <button onclick="addRoomPackage('bathroom')" class="package-option">
+        🚽 Bathroom Remodel Package
+        <span class="edit-icon" onclick="event.stopPropagation(); openEditRoomPackageModal('bathroom')">✏️</span>
+    </button>
+    <button onclick="addRoomPackage('mainbathroom')" class="package-option">
+        🛁 Main Bathroom Remodel Package
+        <span class="edit-icon" onclick="event.stopPropagation(); openEditRoomPackageModal('mainbathroom')">✏️</span>
+    </button>
+    <button onclick="addRoomPackage('interior')" class="package-option">
+        🏠 Interior Overall Remodel Package
+        <span class="edit-icon" onclick="event.stopPropagation(); openEditRoomPackageModal('interior')">✏️</span>
+    </button>
+    <button onclick="addRoomPackage('exterior')" class="package-option">
+        🏡 Exterior Overall Remodel Package
+        <span class="edit-icon" onclick="event.stopPropagation(); openEditRoomPackageModal('exterior')">✏️</span>
+    </button>  
+            <!-- Add more package options here -->
+        </div>
+    </div>
+</div>
+
     <input type="text" id="laborSearchInput" placeholder="Search labor task..." oninput="renderLaborSuggestions()" style="width: 100%; padding: 8px; margin: 10px 0;">
     <ul id="laborSuggestionList" style="list-style: none; padding: 0; max-height: 400px; overflow-y: auto;"></ul>
     <div style="margin-top: 10px;">
@@ -928,6 +1044,23 @@ autocomplete="off"
   </div>
 </div>
 
+
+<div id="editRoomPackageModal" class="modal">
+  <div class="modal-content" style="max-width: 600px;">
+    <div class="modal-header">
+      <h3>Edit Room Package</h3>
+      <span class="close-modal" onclick="closeEditRoomPackageModal()" style="font-size: 24px; cursor: pointer;">&times;</span>
+    </div>
+    <div id="editRoomPackageContent"></div>
+    <div style="margin-top: 20px;">
+      <input id="laborSearchForPackage" placeholder="Search labor task..." style="width: 100%; padding: 8px; margin-bottom: 10px;" oninput="renderLaborSuggestionsForPackage()" />
+      <ul id="laborSuggestionListForPackage" style="list-style: none; padding: 0; max-height: 200px; overflow-y: auto;"></ul>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="saveRoomPackageEdits()">Save Changes</button>
+    </div>
+  </div>
+</div>
 
 <!-- Toast Notification -->
 <div id="toast" style="
@@ -1004,6 +1137,7 @@ autocomplete="off"
       loadQuoteHistory();
       fetchLaborSuggestions()
       fetchClients();
+      loadRoomPackages();
 
 
         // Enable suggestions on item name input
@@ -1101,8 +1235,24 @@ function hideLoader() {
   document.getElementById('loader').style.display = 'none';
 }
 
-
+let roomPackages = {};
+let editingPackageKey = null;
+let editingPackageItems = [];
 let clientList = [];
+
+
+async function loadRoomPackages() {
+  try {
+    const res = await fetch('/api/room-packages');
+    const pkgs = await res.json();
+    roomPackages = {};
+    pkgs.forEach(pkg => {
+      roomPackages[pkg.key] = { name: pkg.name, items: pkg.items };
+    });
+  } catch (err) {
+    showToast('Failed to load room packages');
+  }
+}
 
 async function fetchClients() {
   showLoader(); // 👈 START
@@ -1135,7 +1285,7 @@ function showClientSuggestions() {
     option.style.cursor = 'pointer';
     option.onmouseenter = () => option.style.background = '#f0f0f0';
     option.onmouseleave = () => option.style.background = '#fff';
-    
+
 option.onclick = () => {
   const capitalizedName = capitalizeClientName(client.name);
   document.getElementById('toName').value = capitalizedName;
@@ -1145,7 +1295,7 @@ option.onclick = () => {
   document.getElementById('signatureClientName').value = capitalizedName;
   box.style.display = 'none';
 };
-    
+
     box.appendChild(option);
   });
 
@@ -1163,8 +1313,7 @@ document.addEventListener('click', e => {
   }
 });
 
-
-    function capitalizeClientName(name) {
+function capitalizeClientName(name) {
   return name.replace(/\b\w/g, c => c.toUpperCase());
 }
 
@@ -1174,6 +1323,7 @@ document.addEventListener('click', e => {
   this.value = capitalizeClientName(this.value);
   this.setSelectionRange(caret, caret); // keep caret position
 });
+
 
 function autoResizeTextarea(textarea) {
   textarea.style.height = 'auto'; // Reset
@@ -1455,7 +1605,7 @@ row.innerHTML = isEditing ? `
   }
 }, true);
 
-      // Allow text selection in the line items table, even with SortableJS
+// Allow text selection in the line items table, even with SortableJS
 document.getElementById('lineItemsTableContainer').addEventListener('pointerdown', function(e) {
   // Only stop propagation for drag handles, not for normal text selection
   if (
@@ -2622,6 +2772,9 @@ async function saveEditedLaborItem() {
     }
   }
 
+
+
+
   function useSuggestedLabor(index) {
   const item = laborCostList[index];
 
@@ -2644,6 +2797,137 @@ async function saveEditedLaborItem() {
 
 
 
+function openEditRoomPackageModal(packageKey) {
+  // If the package doesn't exist, create a new one with an empty items array
+  if (!roomPackages[packageKey]) {
+    roomPackages[packageKey] = {
+      name: packageKey
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, str => str.toUpperCase())
+        .replace(/\s+/, ' ')
+        .trim() + " Package",
+      items: []
+    };
+  }
+  editingPackageKey = packageKey;
+  editingPackageItems = JSON.parse(JSON.stringify(roomPackages[packageKey].items)); // Deep copy
+  renderEditRoomPackageModal();
+  document.getElementById('editRoomPackageModal').style.display = 'flex';
+  // Load labor costs if not already loaded
+  if (!laborCostList.length) fetchLaborSuggestions();
+  renderLaborSuggestionsForPackage();
+}
+
+function closeEditRoomPackageModal() {
+  document.getElementById('editRoomPackageModal').style.display = 'none';
+  editingPackageKey = null;
+  editingPackageItems = [];
+}
+
+function renderEditRoomPackageModal() {
+  const content = document.getElementById('editRoomPackageContent');
+  content.innerHTML = `
+    <h4>${roomPackages[editingPackageKey].name}</h4>
+    <table style="width:100%;margin-bottom:10px;">
+      <thead>
+        <tr>
+          <th>Cost Code</th>
+          <th>Item</th>
+          <th>Description</th>
+          <th>Rate</th>
+          <th>Qty</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${editingPackageItems.map((item, idx) => `
+          <tr>
+            <td><input value="${item.costCode || ''}" onchange="updateEditingPackageItem(${idx}, 'costCode', this.value)" style="width:90px;" /></td>
+            <td><input value="${item.name}" onchange="updateEditingPackageItem(${idx}, 'name', this.value)" style="width:120px;" /></td>
+            <td><input value="${item.description}" onchange="updateEditingPackageItem(${idx}, 'description', this.value)" style="width:180px;" /></td>
+            <td><input type="number" value="${item.rate}" onchange="updateEditingPackageItem(${idx}, 'rate', this.value)" style="width:70px;" /></td>
+            <td><input type="number" value="${item.qty}" onchange="updateEditingPackageItem(${idx}, 'qty', this.value)" style="width:50px;" /></td>
+            <td><button onclick="removeEditingPackageItem(${idx})" style="color:red;">🗑️</button></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function updateEditingPackageItem(idx, field, value) {
+  if (field === 'rate' || field === 'qty') value = Number(value);
+  editingPackageItems[idx][field] = value;
+}
+
+function removeEditingPackageItem(idx) {
+  editingPackageItems.splice(idx, 1);
+  renderEditRoomPackageModal();
+}
+
+async function saveRoomPackageEdits() {
+  if (editingPackageKey && roomPackages[editingPackageKey]) {
+    // Save to backend
+    try {
+      showLoader();
+      const res = await fetch(`/api/room-packages/${editingPackageKey}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: roomPackages[editingPackageKey].name,
+          items: editingPackageItems
+        })
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      const updated = await res.json();
+      roomPackages[editingPackageKey] = { name: updated.name, items: updated.items };
+      showToast('Room package updated!');
+      closeEditRoomPackageModal();
+    } catch (err) {
+      showToast('Failed to save room package');
+    } finally {
+      hideLoader();
+    }
+  }
+}
+
+// --- Labor cost suggestion for package modal ---
+function renderLaborSuggestionsForPackage() {
+  const query = document.getElementById('laborSearchForPackage').value.toLowerCase();
+  const list = document.getElementById('laborSuggestionListForPackage');
+  list.innerHTML = '';
+  const matches = laborCostList.filter(item =>
+    item.name.toLowerCase().includes(query) ||
+    (item.description && item.description.toLowerCase().includes(query))
+  );
+  matches.forEach(item => {
+    const li = document.createElement('li');
+    li.style.marginBottom = '6px';
+    li.innerHTML = `
+      <div style="border:1px solid #eee; border-radius:6px; padding:6px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <strong>${item.name}</strong><br>
+          <small>${item.description || ''}</small><br>
+          <span style="color:#007bff;">$${item.rate}</span>
+        </div>
+        <button class="btn" style="padding:4px 10px; font-size:13px;" onclick="addLaborToEditingPackage('${item.costCode || ''}', '${item.name.replace(/'/g,"\\'")}', '${(item.description||'').replace(/'/g,"\\'")}', ${item.rate})">Add</button>
+      </div>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function addLaborToEditingPackage(costCode, name, description, rate) {
+  editingPackageItems.push({
+    costCode,
+    name,
+    description,
+    rate: Number(rate),
+    qty: 1
+  });
+  renderEditRoomPackageModal();
+}
+
  
   window.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
@@ -2657,6 +2941,59 @@ async function saveEditedLaborItem() {
 
   window.openLaborCostModal = openLaborCostModal;
 
+
+  // Add this after your existing script tag content
+
+// Define room packages with their line items
+
+
+
+
+// Function to add package items
+function addRoomPackage(packageType) {
+  const package = roomPackages[packageType];
+  if (!package) {
+    showToast('Package not found');
+    return;
+  }
+
+  // Add all items from the package to lineItems array
+  package.items.forEach(item => {
+    lineItems.push({
+      costCode: item.costCode,
+      name: item.name,
+      description: item.description,
+      rate: item.rate,
+      qty: item.qty
+    });
+  });
+
+  // Render the updated table
+  renderTable();
+  showToast(`✅ Added ${package.name} package`);
+}
+
+// Add this to your HTML in the dropdown menu section
+
+
+// Add these functions to your JavaScript
+function togglePackageDropdown() {
+    const content = document.getElementById('packageDropdownContent');
+    const arrow = document.querySelector('.dropdown-arrow');
+    content.classList.toggle('show');
+    arrow.style.transform = content.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0)';
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    const dropdown = document.querySelector('.package-dropdown');
+    const content = document.getElementById('packageDropdownContent');
+    
+    if (!dropdown?.contains(e.target)) {
+        content?.classList.remove('show');
+        document.querySelector('.dropdown-arrow').style.transform = 'rotate(0)';
+    }
+});
   </script>
 </body>
 </html>
