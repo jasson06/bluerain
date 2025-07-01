@@ -1762,26 +1762,26 @@ function renderTable() {
 
   // Enable Sortable for categories (tbodys) if enabled
   if (sortableEnabled) {
-    const s = Sortable.create(table, {
-      handle: '.drag-handle-group',
-      animation: 150,
-      draggable: 'tbody',
-      filter: 'tr:not(.category-group-row)', // Prevent dragging rows
-      onEnd: function (evt) {
-        const tbodys = Array.from(table.querySelectorAll('tbody'));
-        let newLineItems = [];
-        tbodys.forEach(tbody => {
-          const cat = tbody.getAttribute('data-category');
-          newLineItems = newLineItems.concat(groupLineItemsByCategory(lineItems)[cat]);
-        });
-        lineItems = newLineItems;
-        // Auto-disable Sortable after drag
-        sortableEnabled = false;
-        renderTable();
-      }
-    });
-    window.sortables.push(s);
-  }
+  const s = Sortable.create(table, {
+    handle: '.drag-handle-group',
+    animation: 150,
+    draggable: 'tbody',
+    filter: 'tr:not(.category-group-row)', // Prevent dragging rows
+    onEnd: function (evt) {
+      const tbodys = Array.from(table.querySelectorAll('tbody'));
+      let newLineItems = [];
+      tbodys.forEach(tbody => {
+        const cat = tbody.getAttribute('data-category');
+        newLineItems = newLineItems.concat(groupLineItemsByCategory(lineItems)[cat]);
+      });
+      lineItems = newLineItems;
+      // Auto-disable Sortable after drag
+      sortableEnabled = false;
+      renderTable();
+    }
+  });
+  window.sortables.push(s);
+}
 
   // Totals
   const discount = parseFloat(document.getElementById('inputDiscount').value || 0);
