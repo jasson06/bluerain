@@ -1749,12 +1749,14 @@ function renderTable() {
             categoryIndexes.forEach((lineIdx, i) => {
               lineItems[lineIdx] = reorderedCategoryItems[i];
             });
-
-            renderTable();
-          }
         }
-      });
-      window.sortables.push(s);
+
+      // Auto-disable Sortable after drag
+      sortableEnabled = false;
+      renderTable();
+    }
+  });
+  window.sortables.push(s);
     }
   });
 
