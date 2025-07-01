@@ -58,16 +58,7 @@ select:focus {
   outline: none;
 }
 
-.drag-handle, .drag-handle-group {
-  touch-action: none !important;
-  -webkit-user-select: none !important;
-  user-select: none !important;
-}
-td, th, tr, .action-dropdown, .action-dropdown * {
-  touch-action: manipulation !important;
-  -webkit-user-select: text !important;
-  user-select: text !important;
-}
+
     
     #line-items-cards textarea,
 .line-item-row textarea {
@@ -849,6 +840,19 @@ textarea {
   cursor: pointer;
   font-size: 16px;
   color: #007bff;
+}
+
+    /* Only allow drag handle to block touch, not the whole row */
+.drag-handle, .drag-handle-group {
+  touch-action: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+tbody tr, tbody td {
+  touch-action: manipulation !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
 }
   </style>
 </head>
@@ -1682,6 +1686,21 @@ function renderTable() {
           </div>
         </td>
       `;
+
+            // PATCH: Fix pointer/touch for iOS
+Array.from(row.children).forEach(td => {
+  if (!td.querySelector('.drag-handle')) {
+    td.style.touchAction = 'manipulation';
+    td.style.webkitUserSelect = 'text';
+    td.style.userSelect = 'text';
+    td.style.pointerEvents = 'auto';
+  } else {
+    td.style.touchAction = 'none';
+    td.style.webkitUserSelect = 'none';
+    td.style.userSelect = 'none';
+    td.style.pointerEvents = 'auto';
+  }
+});
 
       tbody.appendChild(row);
 
