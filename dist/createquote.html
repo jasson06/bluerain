@@ -1560,9 +1560,6 @@ function groupLineItemsByCategory(items) {
 
 
 
-
-
-
 function renderTable() {
   const container = document.getElementById('lineItemsTableContainer');
   container.innerHTML = '';
@@ -1572,8 +1569,6 @@ function renderTable() {
   table.className = 'quote-table';
   table.style.width = '100%';
   table.style.borderCollapse = 'collapse';
-
-  
 
   // Table header
   table.innerHTML = `
@@ -1599,25 +1594,25 @@ function renderTable() {
     // --- Category/group header row (draggable) ---
     const groupRow = document.createElement('tr');
     groupRow.className = 'category-group-row';
-groupRow.innerHTML = `
-  <td style="width:36px;text-align:center;">
-    <span class="drag-handle-group" style="cursor:grab;">☰</span>
-  </td>
-  <td colspan="7" style="
-    background: linear-gradient(90deg, #fafdff 80%, #eaf6ff 100%);
-    font-weight: 600;
-    color: #007bff;
-    font-size: 1.08rem;
-    font-weight:bold;
-    border-left: 6px solid #007bff;
-    letter-spacing: 0.5px;
-    padding: 12px 0 12px 16px;
-    margin-top: 8px;
-    user-select: none;
-  ">
-    ${capitalizeCategory(category)}
-  </td>
-`;
+    groupRow.innerHTML = `
+      <td style="width:36px;text-align:center;">
+        <span class="drag-handle-group" style="cursor:grab;">☰</span>
+      </td>
+      <td colspan="7" style="
+        background: linear-gradient(90deg, #fafdff 80%, #eaf6ff 100%);
+        font-weight: 600;
+        color: #007bff;
+        font-size: 1.08rem;
+        font-weight:bold;
+        border-left: 6px solid #007bff;
+        letter-spacing: 0.5px;
+        padding: 12px 0 12px 16px;
+        margin-top: 8px;
+        user-select: none;
+      ">
+        ${capitalizeCategory(category)}
+      </td>
+    `;
     // Create a <tbody> for this category
     const tbody = document.createElement('tbody');
     tbody.setAttribute('data-category', category);
@@ -1632,62 +1627,38 @@ groupRow.innerHTML = `
 
       const isEditing = item.isEditing;
 
-row.innerHTML = isEditing ? `
-  <td style="text-align:center;"><span class="drag-handle">☰</span></td>
-  <td><input type="text" value="${item.costCode || ''}" id="editCode-${lineItems.indexOf(item)}" readonly style="background: #f1f5f9; cursor: not-allowed;" /></td>
-  <td><input type="text" value="${item.name}" id="editName-${lineItems.indexOf(item)}" /></td>
-  <td><textarea id="editDesc-${lineItems.indexOf(item)}" oninput="autoResizeTextarea(this)" style="width:100%;">${item.description}</textarea></td>
-  <td><input type="number" value="${item.rate}" id="editRate-${lineItems.indexOf(item)}" /></td>
-  <td><input type="number" value="${item.qty}" id="editQty-${lineItems.indexOf(item)}" /></td>
-  <td>${formatCurrency(item.rate * item.qty)}</td>
-  <td>
-    <button class="btn" onclick="saveLineItem(${lineItems.indexOf(item)})">✅</button>
-    <button class="btn" onclick="cancelEditLineItem(${lineItems.indexOf(item)})">❌</button>
-  </td>
-` : `
-  <td style="text-align:center;"><span class="drag-handle">☰</span></td>
-  <td>${item.costCode || '-'}</td>
-  <td>${item.name}</td>
-  <td>${item.description}</td>
-  <td>${formatCurrency(item.rate)}</td>
-  <td>${item.qty}</td>
-  <td>${formatCurrency(total)}</td>
-  <td>
-    <div class="action-dropdown">
-      <button class="dots" onclick="toggleLineItemMenu(event, ${lineItems.indexOf(item)})">⋯</button>
-      <div class="action-dropdown-content" id="lineitem-menu-${lineItems.indexOf(item)}">
-        <button onclick="editLineItem(${lineItems.indexOf(item)})">✏️ Edit</button>
-        <button onclick="deleteLineItem(${lineItems.indexOf(item)})" style="color: red;">🗑️ Delete</button>
-      </div>
-    </div>
-  </td>
-`;
+      row.innerHTML = isEditing ? `
+        <td style="text-align:center;"><span class="drag-handle">☰</span></td>
+        <td><input type="text" value="${item.costCode || ''}" id="editCode-${lineItems.indexOf(item)}" readonly style="background: #f1f5f9; cursor: not-allowed;" /></td>
+        <td><input type="text" value="${item.name}" id="editName-${lineItems.indexOf(item)}" /></td>
+        <td><textarea id="editDesc-${lineItems.indexOf(item)}" oninput="autoResizeTextarea(this)" style="width:100%;">${item.description}</textarea></td>
+        <td><input type="number" value="${item.rate}" id="editRate-${lineItems.indexOf(item)}" /></td>
+        <td><input type="number" value="${item.qty}" id="editQty-${lineItems.indexOf(item)}" /></td>
+        <td>${formatCurrency(item.rate * item.qty)}</td>
+        <td>
+          <button class="btn" onclick="saveLineItem(${lineItems.indexOf(item)})">✅</button>
+          <button class="btn" onclick="cancelEditLineItem(${lineItems.indexOf(item)})">❌</button>
+        </td>
+      ` : `
+        <td style="text-align:center;"><span class="drag-handle">☰</span></td>
+        <td>${item.costCode || '-'}</td>
+        <td>${item.name}</td>
+        <td>${item.description}</td>
+        <td>${formatCurrency(item.rate)}</td>
+        <td>${item.qty}</td>
+        <td>${formatCurrency(total)}</td>
+        <td>
+          <div class="action-dropdown">
+            <button class="dots" onclick="toggleLineItemMenu(event, ${lineItems.indexOf(item)})">⋯</button>
+            <div class="action-dropdown-content" id="lineitem-menu-${lineItems.indexOf(item)}">
+              <button onclick="editLineItem(${lineItems.indexOf(item)})">✏️ Edit</button>
+              <button onclick="deleteLineItem(${lineItems.indexOf(item)})" style="color: red;">🗑️ Delete</button>
+            </div>
+          </div>
+        </td>
+      `;
 
       tbody.appendChild(row);
-      tbody.addEventListener('pointerdown', function(e) {
-  if (
-    e.target.tagName === 'INPUT' ||
-    e.target.tagName === 'TEXTAREA' ||
-    e.target.tagName === 'SELECT'
-  ) {
-    e.stopPropagation();
-  }
-}, true);
-
-// Allow text selection in the line items table, even with SortableJS
-document.getElementById('lineItemsTableContainer').addEventListener('pointerdown', function(e) {
-  // Only stop propagation for drag handles, not for normal text selection
-  if (
-    e.target.classList.contains('drag-handle') ||
-    e.target.classList.contains('drag-handle-group')
-  ) {
-    // Let Sortable handle drag
-  } else {
-    // Prevent Sortable from hijacking pointer events for selection
-    e.stopPropagation();
-  }
-}, true);
-
     });
 
     table.appendChild(tbody);
@@ -1697,67 +1668,50 @@ document.getElementById('lineItemsTableContainer').addEventListener('pointerdown
       handle: '.drag-handle',
       animation: 150,
       draggable: 'tr:not(.category-group-row)',
-       group: { name: 'line-items', put: false },
-onEnd: function (evt) {
-  // Only reorder if the item was moved within the same category
-  if (evt.from === evt.to && evt.oldIndex !== evt.newIndex) {
-    // Get all rows (excluding group header) in this tbody
-    const rows = Array.from(tbody.querySelectorAll('tr:not(.category-group-row)'));
-    const newOrderIndexes = rows.map(row => parseInt(row.getAttribute('data-flat-index')));
+      group: { name: 'line-items', put: false },
+      filter: 'td:not(:first-child), input, textarea, button, select, .action-dropdown, .action-dropdown *',
+      preventOnFilter: false,
+      onEnd: function (evt) {
+        // Only reorder if the item was moved within the same category
+        if (evt.from === evt.to && evt.oldIndex !== evt.newIndex) {
+          // Get all rows (excluding group header) in this tbody
+          const rows = Array.from(tbody.querySelectorAll('tr:not(.category-group-row)'));
+          const newOrderIndexes = rows.map(row => parseInt(row.getAttribute('data-flat-index')));
 
-    // Find all indexes in lineItems for this category
-    const categoryIndexes = lineItems
-      .map((item, idx) => {
-        let cat = 'General';
-        if (item.name && item.name.includes('-')) {
-          cat = item.name.split('-').slice(1).join('-').trim() || 'General';
+          // Find all indexes in lineItems for this category
+          const categoryIndexes = lineItems
+            .map((item, idx) => {
+              let cat = 'General';
+              if (item.name && item.name.includes('-')) {
+                cat = item.name.split('-').slice(1).join('-').trim() || 'General';
+              }
+              return cat.toLowerCase() === category.toLowerCase() ? idx : -1;
+            })
+            .filter(idx => idx !== -1);
+
+          // Build a new array for this category in the new order
+          const reorderedCategoryItems = newOrderIndexes.map(i => lineItems[i]);
+
+          // Replace the items in lineItems at the categoryIndexes with the reordered ones
+          categoryIndexes.forEach((lineIdx, i) => {
+            lineItems[lineIdx] = reorderedCategoryItems[i];
+          });
+
+          renderTable();
         }
-        return cat.toLowerCase() === category.toLowerCase() ? idx : -1;
-      })
-      .filter(idx => idx !== -1);
-
-    // Build a new array for this category in the new order
-    const reorderedCategoryItems = newOrderIndexes.map(i => lineItems[i]);
-
-    // Replace the items in lineItems at the categoryIndexes with the reordered ones
-    categoryIndexes.forEach((lineIdx, i) => {
-      lineItems[lineIdx] = reorderedCategoryItems[i];
-    });
-
-      // iOS Touch Screen Support - Add event listeners to prevent SortableJS interference
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  if (isIOS) {
-    // Add touch event handlers for iOS devices
-    table.addEventListener('touchstart', function(e) {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-        e.stopPropagation();
       }
-    }, { passive: true });
-
-    table.addEventListener('touchend', function(e) {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-        e.stopPropagation();
-      }
-    }, { passive: true });
-  }
-
-    renderTable();
-  }
-}
     });
   });
 
   container.appendChild(table);
 
   // Enable Sortable for categories (tbodys)
-Sortable.create(tbody, {
-  handle: '.drag-handle',
-  animation: 150,
-  draggable: 'tr:not(.category-group-row)',
-  group: { name: 'line-items', put: false },
-  filter: 'td:not(:first-child), input, textarea, button, select, .action-dropdown, .action-dropdown *',
-  preventOnFilter: false, // allow normal events on filtered elements
-  onEnd: function (evt) {
+  Sortable.create(table, {
+    handle: '.drag-handle-group',
+    animation: 150,
+    draggable: 'tbody',
+    filter: 'tr:not(.category-group-row)', // Prevent dragging rows
+    onEnd: function (evt) {
       const tbodys = Array.from(table.querySelectorAll('tbody'));
       let newLineItems = [];
       tbodys.forEach(tbody => {
@@ -1768,8 +1722,6 @@ Sortable.create(tbody, {
       renderTable();
     }
   });
-
-
 
   // Totals
   const discount = parseFloat(document.getElementById('inputDiscount').value || 0);
@@ -1782,6 +1734,9 @@ Sortable.create(tbody, {
   document.getElementById('tax').textContent = formatCurrency(tax).replace('$', '');
   document.getElementById('grandTotal').textContent = formatCurrency(total).replace('$', '');
 }
+
+
+
 
 function capitalizeCategory(category) {
   return category.replace(/\w\S*/g, (txt) =>
