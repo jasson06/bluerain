@@ -58,6 +58,17 @@ select:focus {
   outline: none;
 }
 
+.drag-handle, .drag-handle-group {
+  touch-action: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+td, th, tr, .action-dropdown, .action-dropdown * {
+  touch-action: manipulation !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+}
+    
     #line-items-cards textarea,
 .line-item-row textarea {
   resize: vertical;           /* ✅ Enables manual drag */
