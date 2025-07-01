@@ -1686,15 +1686,19 @@ function renderTable() {
       tbody.appendChild(row);
 
       // Prevent Sortable from hijacking pointer events for inputs/textareas/selects
-      tbody.addEventListener('pointerdown', function(e) {
-        if (
-          e.target.tagName === 'INPUT' ||
-          e.target.tagName === 'TEXTAREA' ||
-          e.target.tagName === 'SELECT'
-        ) {
-          e.stopPropagation();
-        }
-      }, true);
+tbody.addEventListener('pointerdown', function(e) {
+  // Only stop propagation for drag handles
+  if (
+    e.target.classList.contains('drag-handle') ||
+    e.target.classList.contains('drag-handle-group')
+  ) {
+    // Let Sortable handle drag
+  } else {
+    // Allow normal touch/tap/selection
+    return;
+  }
+}, true);
+
 
       // Allow text selection in the line items table, even with SortableJS
       document.getElementById('lineItemsTableContainer').addEventListener('pointerdown', function(e) {
