@@ -926,6 +926,7 @@ autocomplete="off"
 
       <div class="table-responsive-sm">
         <div id="lineItemsTableContainer"></div>
+        <button id="toggleSortableBtn" class="btn" style="margin-bottom: 10px;">Disable Drag & Drop</button>
       </div>
       
       
@@ -1560,9 +1561,30 @@ function groupLineItemsByCategory(items) {
 
 
 
+let sortableEnabled = true;
+let sortables = []; // Store Sortable instances
+
+function toggleSortable() {
+  sortableEnabled = !sortableEnabled;
+  document.getElementById('toggleSortableBtn').textContent = sortableEnabled ? 'Disable Drag & Drop' : 'Enable Drag & Drop';
+  renderTable();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const btn = document.getElementById('toggleSortableBtn');
+  if (btn) btn.onclick = toggleSortable;
+});
+
+
 function renderTable() {
   const container = document.getElementById('lineItemsTableContainer');
   container.innerHTML = '';
+
+  // Destroy previous Sortables
+  if (window.sortables && Array.isArray(window.sortables)) {
+    window.sortables.forEach(s => s && s.destroy && s.destroy());
+  }
+  window.sortables = [];
 
   // Build the table
   const table = document.createElement('table');
@@ -1642,7 +1664,7 @@ function renderTable() {
       ` : `
         <td style="text-align:center;"><span class="drag-handle">☰</span></td>
         <td>${item.costCode || '-'}</td>
-        <td>${item.name}</td>
+        <td ontouchstart="console.log('touch!')">${item.name}</td>
         <td>${item.description}</td>
         <td>${formatCurrency(item.rate)}</td>
         <td>${item.qty}</td>
@@ -1663,65 +1685,71 @@ function renderTable() {
 
     table.appendChild(tbody);
 
-    // Enable Sortable for items within this category (tbody)
-    Sortable.create(tbody, {
-      handle: '.drag-handle',
-      animation: 150,
-      draggable: 'tr:not(.category-group-row)',
-      group: { name: 'line-items', put: false },
-      filter: 'td:not(:first-child), input, textarea, button, select, .action-dropdown, .action-dropdown *',
-      preventOnFilter: false,
-      onEnd: function (evt) {
-        // Only reorder if the item was moved within the same category
-        if (evt.from === evt.to && evt.oldIndex !== evt.newIndex) {
-          // Get all rows (excluding group header) in this tbody
-          const rows = Array.from(tbody.querySelectorAll('tr:not(.category-group-row)'));
-          const newOrderIndexes = rows.map(row => parseInt(row.getAttribute('data-flat-index')));
+    // Enable Sortable for items within this category (tbody) if enabled
+if (sortableEnabled) {
+  const s = Sortable.create(tbody, {
+    handle: '.drag-handle',
+    animation: 150,
+    draggable: 'tr:not(.category-group-row)',
+    group: { name: 'line-items', put: false },
+    filter: 'td:not(:first-child), input, textarea, button, select, .action-dropdown, .action-dropdown *',
+    preventOnFilter: false,
+    onEnd: function (evt) {
+          // Only reorder if the item was moved within the same category
+          if (evt.from === evt.to && evt.oldIndex !== evt.newIndex) {
+            // Get all rows (excluding group header) in this tbody
+            const rows = Array.from(tbody.querySelectorAll('tr:not(.category-group-row)'));
+            const newOrderIndexes = rows.map(row => parseInt(row.getAttribute('data-flat-index')));
 
-          // Find all indexes in lineItems for this category
-          const categoryIndexes = lineItems
-            .map((item, idx) => {
-              let cat = 'General';
-              if (item.name && item.name.includes('-')) {
-                cat = item.name.split('-').slice(1).join('-').trim() || 'General';
-              }
-              return cat.toLowerCase() === category.toLowerCase() ? idx : -1;
-            })
-            .filter(idx => idx !== -1);
+            // Find all indexes in lineItems for this category
+            const categoryIndexes = lineItems
+              .map((item, idx) => {
+                let cat = 'General';
+                if (item.name && item.name.includes('-')) {
+                  cat = item.name.split('-').slice(1).join('-').trim() || 'General';
+                }
+                return cat.toLowerCase() === category.toLowerCase() ? idx : -1;
+              })
+              .filter(idx => idx !== -1);
 
-          // Build a new array for this category in the new order
-          const reorderedCategoryItems = newOrderIndexes.map(i => lineItems[i]);
+            // Build a new array for this category in the new order
+            const reorderedCategoryItems = newOrderIndexes.map(i => lineItems[i]);
 
-          // Replace the items in lineItems at the categoryIndexes with the reordered ones
-          categoryIndexes.forEach((lineIdx, i) => {
-            lineItems[lineIdx] = reorderedCategoryItems[i];
-          });
+            // Replace the items in lineItems at the categoryIndexes with the reordered ones
+            categoryIndexes.forEach((lineIdx, i) => {
+              lineItems[lineIdx] = reorderedCategoryItems[i];
+            });
 
-          renderTable();
+            renderTable();
+          }
         }
-      }
-    });
+      });
+      window.sortables.push(s);
+    }
   });
 
   container.appendChild(table);
 
-  // Enable Sortable for categories (tbodys)
-  Sortable.create(table, {
+  // Enable Sortable for categories (tbodys) if enabled
+if (sortableEnabled) {
+  const s = Sortable.create(table, {
     handle: '.drag-handle-group',
     animation: 150,
     draggable: 'tbody',
     filter: 'tr:not(.category-group-row)', // Prevent dragging rows
     onEnd: function (evt) {
-      const tbodys = Array.from(table.querySelectorAll('tbody'));
-      let newLineItems = [];
-      tbodys.forEach(tbody => {
-        const cat = tbody.getAttribute('data-category');
-        newLineItems = newLineItems.concat(groupLineItemsByCategory(lineItems)[cat]);
-      });
-      lineItems = newLineItems;
-      renderTable();
-    }
-  });
+        const tbodys = Array.from(table.querySelectorAll('tbody'));
+        let newLineItems = [];
+        tbodys.forEach(tbody => {
+          const cat = tbody.getAttribute('data-category');
+          newLineItems = newLineItems.concat(groupLineItemsByCategory(lineItems)[cat]);
+        });
+        lineItems = newLineItems;
+        renderTable();
+      }
+    });
+    window.sortables.push(s);
+  }
 
   // Totals
   const discount = parseFloat(document.getElementById('inputDiscount').value || 0);
