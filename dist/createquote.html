@@ -854,6 +854,36 @@ tbody tr, tbody td {
   -webkit-user-select: text !important;
   user-select: text !important;
 }
+
+/* Add or update in your <style> */
+.drag-handle-group {
+  cursor: grab;
+  font-size: 19px;
+  display: inline-block;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  touch-action: none !important;
+}
+
+
+.drag-handle {
+  cursor: grab;
+  display: inline-block;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  touch-action: none !important;
+}
+
+.drag-handle.active-drag-handle {
+  background: #dbeafe !important;
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+.drag-handle-group.active-drag-handle {
+  background: #dbeafe !important;
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+    
   </style>
 </head>
 <body>
@@ -925,7 +955,7 @@ autocomplete="off"
       </div>
 
       <div class="table-responsive-sm">
-      <button id="toggleSortableBtn" class="btn" style="margin-bottom: 10px;">Disable Drag & Drop</button>
+      
        <div id="lineItemsTableContainer"></div>
       </div>
       
@@ -1561,7 +1591,7 @@ function groupLineItemsByCategory(items) {
 
 
 
-let sortableEnabled = true;
+let sortableEnabled = false;
 let sortables = []; // Store Sortable instances
 
 function toggleSortable() {
@@ -1664,7 +1694,7 @@ function renderTable() {
       ` : `
         <td style="text-align:center;"><span class="drag-handle">☰</span></td>
         <td>${item.costCode || '-'}</td>
-        <td ontouchstart="console.log('touch!')">${item.name}</td>
+        <td>${item.name}</td>
         <td>${item.description}</td>
         <td>${formatCurrency(item.rate)}</td>
         <td>${item.qty}</td>
@@ -1686,15 +1716,15 @@ function renderTable() {
     table.appendChild(tbody);
 
     // Enable Sortable for items within this category (tbody) if enabled
-if (sortableEnabled) {
-  const s = Sortable.create(tbody, {
-    handle: '.drag-handle',
-    animation: 150,
-    draggable: 'tr:not(.category-group-row)',
-    group: { name: 'line-items', put: false },
-    filter: 'td:not(:first-child), input, textarea, button, select, .action-dropdown, .action-dropdown *',
-    preventOnFilter: false,
-    onEnd: function (evt) {
+    if (sortableEnabled) {
+      const s = Sortable.create(tbody, {
+        handle: '.drag-handle',
+        animation: 150,
+        draggable: 'tr:not(.category-group-row)',
+        group: { name: 'line-items', put: false },
+        filter: 'td:not(:first-child), input, textarea, button, select, .action-dropdown, .action-dropdown *',
+        preventOnFilter: false,
+        onEnd: function (evt) {
           // Only reorder if the item was moved within the same category
           if (evt.from === evt.to && evt.oldIndex !== evt.newIndex) {
             // Get all rows (excluding group header) in this tbody
@@ -1731,13 +1761,13 @@ if (sortableEnabled) {
   container.appendChild(table);
 
   // Enable Sortable for categories (tbodys) if enabled
-if (sortableEnabled) {
-  const s = Sortable.create(table, {
-    handle: '.drag-handle-group',
-    animation: 150,
-    draggable: 'tbody',
-    filter: 'tr:not(.category-group-row)', // Prevent dragging rows
-    onEnd: function (evt) {
+  if (sortableEnabled) {
+    const s = Sortable.create(table, {
+      handle: '.drag-handle-group',
+      animation: 150,
+      draggable: 'tbody',
+      filter: 'tr:not(.category-group-row)', // Prevent dragging rows
+      onEnd: function (evt) {
         const tbodys = Array.from(table.querySelectorAll('tbody'));
         let newLineItems = [];
         tbodys.forEach(tbody => {
@@ -1745,6 +1775,8 @@ if (sortableEnabled) {
           newLineItems = newLineItems.concat(groupLineItemsByCategory(lineItems)[cat]);
         });
         lineItems = newLineItems;
+        // Auto-disable Sortable after drag
+        sortableEnabled = false;
         renderTable();
       }
     });
@@ -3066,6 +3098,37 @@ document.addEventListener('click', (e) => {
         content?.classList.remove('show');
         document.querySelector('.dropdown-arrow').style.transform = 'rotate(0)';
     }
+});
+
+    const lineItemsTableContainer = document.getElementById('lineItemsTableContainer');
+
+['pointerdown', 'touchstart', 'mousedown'].forEach(evtName => {
+  lineItemsTableContainer.addEventListener(evtName, function(e) {
+    const handle = e.target.closest('.drag-handle-group');
+    if (handle && !sortableEnabled) {
+      e.preventDefault();
+      window.getSelection()?.removeAllRanges();
+      handle.classList.add('active-drag-handle');
+      sortableEnabled = true;
+      renderTable();
+      setTimeout(() => handle.classList.remove('active-drag-handle'), 600); // Remove highlight after 600ms
+    }
+  }, { passive: false });
+});
+
+['pointerdown', 'touchstart', 'mousedown'].forEach(evtName => {
+  lineItemsTableContainer.addEventListener(evtName, function(e) {
+    const handle = e.target.closest('.drag-handle');
+    // Only activate if not already enabled and not a group handle
+    if (handle && !sortableEnabled && !e.target.closest('.drag-handle-group')) {
+      e.preventDefault();
+      window.getSelection()?.removeAllRanges();
+      handle.classList.add('active-drag-handle');
+      sortableEnabled = true;
+      renderTable();
+      setTimeout(() => handle.classList.remove('active-drag-handle'), 600);
+    }
+  }, { passive: false });
 });
   </script>
 </body>
