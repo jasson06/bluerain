@@ -1709,6 +1709,24 @@ onEnd: function (evt) {
       lineItems[lineIdx] = reorderedCategoryItems[i];
     });
 
+
+      // iOS Touch Screen Support - Add event listeners to prevent SortableJS interference
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if (isIOS) {
+    // Add touch event handlers for iOS devices
+    table.addEventListener('touchstart', function(e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        e.stopPropagation();
+      }
+    }, { passive: true });
+
+    table.addEventListener('touchend', function(e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        e.stopPropagation();
+      }
+    }, { passive: true });
+  }
+
     renderTable();
   }
 }
@@ -1735,22 +1753,7 @@ onEnd: function (evt) {
     }
   });
 
-  // iOS Touch Screen Support - Add event listeners to prevent SortableJS interference
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  if (isIOS) {
-    // Add touch event handlers for iOS devices
-    table.addEventListener('touchstart', function(e) {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-        e.stopPropagation();
-      }
-    }, { passive: true });
 
-    table.addEventListener('touchend', function(e) {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-        e.stopPropagation();
-      }
-    }, { passive: true });
-  }
 
   // Totals
   const discount = parseFloat(document.getElementById('inputDiscount').value || 0);
