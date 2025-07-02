@@ -1610,6 +1610,76 @@ function groupLineItemsByCategory(items) {
 
 
 
+function setupMobileSortableActivation() {
+  // Remove any previous listeners to avoid duplicates
+  if (window._mobileSortableListeners) {
+    window._mobileSortableListeners.forEach(({evt, fn}) => {
+      lineItemsTableContainer.removeEventListener(evt, fn);
+    });
+  }
+  window._mobileSortableListeners = [];
+
+  if (!isDesktop()) {
+    ['pointerdown', 'touchstart', 'mousedown'].forEach(evtName => {
+      const fnGroup = function(e) {
+        const handle = e.target.closest('.drag-handle-group');
+        if (handle && !sortableEnabled) {
+          e.preventDefault();
+          window.getSelection()?.removeAllRanges();
+          handle.classList.add('active-drag-handle');
+          sortableEnabled = true;
+          renderTable();
+          setTimeout(() => handle.classList.remove('active-drag-handle'), 600);
+        }
+      };
+      lineItemsTableContainer.addEventListener(evtName, fnGroup, { passive: false });
+      window._mobileSortableListeners.push({evt: evtName, fn: fnGroup});
+    });
+
+    ['pointerdown', 'touchstart', 'mousedown'].forEach(evtName => {
+      const fnLine = function(e) {
+        const handle = e.target.closest('.drag-handle');
+        if (handle && !sortableEnabled && !e.target.closest('.drag-handle-group')) {
+          e.preventDefault();
+          window.getSelection()?.removeAllRanges();
+          handle.classList.add('active-drag-handle');
+          sortableEnabled = true;
+          renderTable();
+          setTimeout(() => handle.classList.remove('active-drag-handle'), 600);
+        }
+      };
+      lineItemsTableContainer.addEventListener(evtName, fnLine, { passive: false });
+      window._mobileSortableListeners.push({evt: evtName, fn: fnLine});
+    });
+  }
+}
+
+function isDesktop() {
+  return window.innerWidth >= 1024; // You can adjust this breakpoint as needed
+}
+
+function updateSortableMode() {
+  if (isDesktop()) {
+    sortableEnabled = true;
+    renderTable();
+  } else {
+    sortableEnabled = false;
+    renderTable();
+    setupMobileSortableActivation();
+  }
+}
+
+// Call on load
+window.addEventListener('DOMContentLoaded', updateSortableMode);
+// Call on resize
+window.addEventListener('resize', () => {
+  // Only update if the mode actually changes
+  const shouldBeEnabled = isDesktop();
+  if (shouldBeEnabled !== sortableEnabled) {
+    updateSortableMode();
+  }
+});
+
 let sortableEnabled = false;
 let sortables = []; // Store Sortable instances
 
@@ -1768,12 +1838,13 @@ function renderTable() {
             categoryIndexes.forEach((lineIdx, i) => {
               lineItems[lineIdx] = reorderedCategoryItems[i];
             });
-        }
+}
+  if (!isDesktop()) {
+    sortableEnabled = false;
+    renderTable();
+  }
+}
 
-      // Auto-disable Sortable after drag
-      sortableEnabled = false;
-      renderTable();
-    }
   });
   window.sortables.push(s);
     }
@@ -1796,10 +1867,12 @@ function renderTable() {
         newLineItems = newLineItems.concat(groupLineItemsByCategory(lineItems)[cat]);
       });
       lineItems = newLineItems;
-      // Auto-disable Sortable after drag
-      sortableEnabled = false;
-      renderTable();
-    }
+
+  if (!isDesktop()) {
+    sortableEnabled = false;
+    renderTable();
+  }
+}
   });
   window.sortables.push(s);
 }
@@ -3142,36 +3215,7 @@ document.addEventListener('click', (e) => {
     }
 });
 
-    const lineItemsTableContainer = document.getElementById('lineItemsTableContainer');
 
-['pointerdown', 'touchstart', 'mousedown'].forEach(evtName => {
-  lineItemsTableContainer.addEventListener(evtName, function(e) {
-    const handle = e.target.closest('.drag-handle-group');
-    if (handle && !sortableEnabled) {
-      e.preventDefault();
-      window.getSelection()?.removeAllRanges();
-      handle.classList.add('active-drag-handle');
-      sortableEnabled = true;
-      renderTable();
-      setTimeout(() => handle.classList.remove('active-drag-handle'), 600); // Remove highlight after 600ms
-    }
-  }, { passive: false });
-});
-
-['pointerdown', 'touchstart', 'mousedown'].forEach(evtName => {
-  lineItemsTableContainer.addEventListener(evtName, function(e) {
-    const handle = e.target.closest('.drag-handle');
-    // Only activate if not already enabled and not a group handle
-    if (handle && !sortableEnabled && !e.target.closest('.drag-handle-group')) {
-      e.preventDefault();
-      window.getSelection()?.removeAllRanges();
-      handle.classList.add('active-drag-handle');
-      sortableEnabled = true;
-      renderTable();
-      setTimeout(() => handle.classList.remove('active-drag-handle'), 600);
-    }
-  }, { passive: false });
-});
   </script>
 </body>
 </html>
