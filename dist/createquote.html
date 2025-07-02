@@ -1146,7 +1146,7 @@ autocomplete="off"
 
 
 <div id="editRoomPackageModal" class="modal">
-  <div class="modal-content" style="max-width: 600px;">
+  <div class="modal-content" style="max-width: 800px;">
     <div class="modal-header">
       <h3>Edit Room Package</h3>
       <span class="close-modal" onclick="closeEditRoomPackageModal()" style="font-size: 24px; cursor: pointer;">&times;</span>
@@ -2920,6 +2920,12 @@ function openEditRoomPackageModal(packageKey) {
   editingPackageItems = JSON.parse(JSON.stringify(roomPackages[packageKey].items)); // Deep copy
   renderEditRoomPackageModal();
   document.getElementById('editRoomPackageModal').style.display = 'flex';
+
+    // Auto-resize all textareas after modal is shown
+  setTimeout(() => {
+    document.querySelectorAll('#editRoomPackageContent textarea').forEach(autoResizeTextarea);
+  }, 0);
+  
   // Load labor costs if not already loaded
   if (!laborCostList.length) fetchLaborSuggestions();
   renderLaborSuggestionsForPackage();
@@ -2929,6 +2935,11 @@ function closeEditRoomPackageModal() {
   document.getElementById('editRoomPackageModal').style.display = 'none';
   editingPackageKey = null;
   editingPackageItems = [];
+}
+
+function autoResizeTextarea(textarea) {
+  textarea.style.height = 'auto'; // Reset height
+  textarea.style.height = textarea.scrollHeight + 'px'; // Set to scroll height
 }
 
 function renderEditRoomPackageModal() {
@@ -2951,7 +2962,14 @@ function renderEditRoomPackageModal() {
           <tr>
             <td><input value="${item.costCode || ''}" onchange="updateEditingPackageItem(${idx}, 'costCode', this.value)" style="width:90px;" /></td>
             <td><input value="${item.name}" onchange="updateEditingPackageItem(${idx}, 'name', this.value)" style="width:120px;" /></td>
-            <td><input value="${item.description}" onchange="updateEditingPackageItem(${idx}, 'description', this.value)" style="width:180px;" /></td>
+            <td>
+              <textarea
+                onchange="updateEditingPackageItem(${idx}, 'description', this.value)"
+                oninput="autoResizeTextarea(this)"
+                style="min-width:120px; width:280px; overflow:hidden; min-height:30px;"
+                rows="1"
+              >${item.description || ''}</textarea>
+            </td>
             <td><input type="number" value="${item.rate}" onchange="updateEditingPackageItem(${idx}, 'rate', this.value)" style="width:70px;" /></td>
             <td><input type="number" value="${item.qty}" onchange="updateEditingPackageItem(${idx}, 'qty', this.value)" style="width:50px;" /></td>
             <td><button onclick="removeEditingPackageItem(${idx})" style="color:red;">🗑️</button></td>
@@ -2960,6 +2978,9 @@ function renderEditRoomPackageModal() {
       </tbody>
     </table>
   `;
+
+  // Auto-resize all textareas after rendering
+  content.querySelectorAll('textarea').forEach(textarea => autoResizeTextarea(textarea));
 }
 
 function updateEditingPackageItem(idx, field, value) {
