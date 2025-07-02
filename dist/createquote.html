@@ -1086,26 +1086,29 @@ autocomplete="off"
             <span class="dropdown-arrow">▼</span>
         </button>
 <div id="packageDropdownContent" class="package-dropdown-content">
+      <button onclick="addRoomPackage('exterior')" class="package-option">
+        🏡 Exterior Overall Remodel Package
+        <span class="edit-icon" onclick="event.stopPropagation(); openEditRoomPackageModal('exterior')">✏️</span>
+    </button> 
+      <button onclick="addRoomPackage('interior')" class="package-option">
+        🏠 Interior Overall Remodel Package
+        <span class="edit-icon" onclick="event.stopPropagation(); openEditRoomPackageModal('interior')">✏️</span>
+    </button>
     <button onclick="addRoomPackage('kitchen')" class="package-option">
         🏘️ Kitchen Remodel Package
         <span class="edit-icon" onclick="event.stopPropagation(); openEditRoomPackageModal('kitchen')">✏️</span>
+    </button>
+      <button onclick="addRoomPackage('mainbathroom')" class="package-option">
+        🛁 Main Bathroom Remodel Package
+        <span class="edit-icon" onclick="event.stopPropagation(); openEditRoomPackageModal('mainbathroom')">✏️</span>
     </button>
     <button onclick="addRoomPackage('bathroom')" class="package-option">
         🚽 Bathroom Remodel Package
         <span class="edit-icon" onclick="event.stopPropagation(); openEditRoomPackageModal('bathroom')">✏️</span>
     </button>
-    <button onclick="addRoomPackage('mainbathroom')" class="package-option">
-        🛁 Main Bathroom Remodel Package
-        <span class="edit-icon" onclick="event.stopPropagation(); openEditRoomPackageModal('mainbathroom')">✏️</span>
-    </button>
-    <button onclick="addRoomPackage('interior')" class="package-option">
-        🏠 Interior Overall Remodel Package
-        <span class="edit-icon" onclick="event.stopPropagation(); openEditRoomPackageModal('interior')">✏️</span>
-    </button>
-    <button onclick="addRoomPackage('exterior')" class="package-option">
-        🏡 Exterior Overall Remodel Package
-        <span class="edit-icon" onclick="event.stopPropagation(); openEditRoomPackageModal('exterior')">✏️</span>
-    </button>  
+
+
+ 
             <!-- Add more package options here -->
         </div>
     </div>
