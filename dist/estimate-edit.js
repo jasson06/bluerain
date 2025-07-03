@@ -685,6 +685,9 @@ function refreshLineItems(categories) {
   populateFilterOptions();
   applyFilters();
 
+    // Auto-resize all item-description textareas after rendering
+lineItemsContainer.querySelectorAll('.item-description').forEach(autoResizeTextarea);
+
   // Focus the first line item's name input (first in DOM, always first in first category)
   const firstItemInput = lineItemsContainer.querySelector('.line-item-card .item-name');
   if (firstItemInput) {
@@ -755,7 +758,10 @@ function autoSaveEstimate() {
   showToast("Auto-saved!");
 }
 
-
+function autoResizeTextarea(textarea) {
+  textarea.style.height = 'auto';
+  textarea.style.height = textarea.scrollHeight + 'px';
+}
 
 // Add Line Item Card Function
 function addLineItemCard(item = {}, categoryHeader = null) {
@@ -800,7 +806,7 @@ function addLineItemCard(item = {}, categoryHeader = null) {
       </div>
       <div class="detail">
         <label>Description</label>
-        <textarea class="item-description" placeholder="Description">${item.description || ""}</textarea>
+        <textarea class="item-description" placeholder="Description"style="min-width:350px; overflow:hidden;">${item.description || ""}</textarea>
       </div>
       <div class="detail">
         <label>Calculation Mode</label>
