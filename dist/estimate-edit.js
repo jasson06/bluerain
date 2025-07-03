@@ -667,31 +667,34 @@ function refreshLineItems(categories) {
   lineItemsContainer.innerHTML = "";
 
   categories.forEach(category => {
-      const categoryHeader = addCategoryHeader(category);
-      category.items.forEach(item => {
-          addLineItemCard(item, categoryHeader);
+    const categoryHeader = addCategoryHeader(category);
+    category.items.forEach(item => {
+      addLineItemCard(item, categoryHeader);
 
-          // After refreshing line items, update filter options
+      // Ensure photos are displayed and swipe is enabled
+      if (item.photos) {
+        updatePhotoSection(item._id, "before");
+        updatePhotoSection(item._id, "after");
+        enableSwipe(item._id, "before");
+        enableSwipe(item._id, "after");
+      }
+    });
+  });
+
+  // Update filters after rendering
   populateFilterOptions();
   applyFilters();
 
-          // ✅ Debugging: Check if photos exist
-          console.log("📸 Item Photos Debug:", item);
-
-          // ✅ Ensure photos are displayed
-          if (item.photos) {
-              updatePhotoSection(item._id, "before");
-              updatePhotoSection(item._id, "after");
-
-
-            // ✅ Ensure swipe is enabled for all items
-              enableSwipe(item._id, "before");
-              enableSwipe(item._id, "after");
-          }
-      });
-  });
+  // Focus the first line item's name input (first in DOM, always first in first category)
+  const firstItemInput = lineItemsContainer.querySelector('.line-item-card .item-name');
+  if (firstItemInput) {
+    setTimeout(() => {
+      firstItemInput.focus();
+      if (firstItemInput.select) firstItemInput.select();
+      firstItemInput.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
+  }
 }
-
 
 
 
@@ -1891,6 +1894,10 @@ function createFilterUI() {
       </div>
       <div class="filter-options">
         <div class="filter-group">
+          <label for="filter-item-name">Item Name</label>
+          <input type="text" id="filter-item-name" class="filter-input" placeholder="Search by item name">
+        </div>
+        <div class="filter-group">
           <label for="filter-category">Category</label>
           <select id="filter-category" class="filter-select">
             <option value="">All Categories</option>
@@ -1922,8 +1929,6 @@ function createFilterUI() {
   const lineItemsContainer = document.getElementById('line-items-cards');
   if (lineItemsContainer) {
     lineItemsContainer.parentNode.insertBefore(filterContainer, lineItemsContainer);
-    
-    // Initialize event listeners for filter controls
     initializeFilterListeners();
   } else {
     console.error("Line items container not found");
@@ -1932,24 +1937,26 @@ function createFilterUI() {
 
 // ✅ Initialize filter event listeners
 function initializeFilterListeners() {
+  const itemNameFilter = document.getElementById('filter-item-name');
   const categoryFilter = document.getElementById('filter-category');
   const statusFilter = document.getElementById('filter-status');
   const vendorFilter = document.getElementById('filter-vendor');
   const clearFiltersButton = document.getElementById('clear-filters');
-  
-  if (!categoryFilter || !statusFilter || !vendorFilter || !clearFiltersButton) {
+
+  if (!itemNameFilter || !categoryFilter || !statusFilter || !vendorFilter || !clearFiltersButton) {
     console.error("Filter elements not found");
     return;
   }
-  
+
   // Populate filter dropdowns
   populateFilterOptions();
-  
+
   // Add event listeners to filter controls
-  [categoryFilter, statusFilter, vendorFilter].forEach(filter => {
+  [itemNameFilter, categoryFilter, statusFilter, vendorFilter].forEach(filter => {
+    filter.addEventListener('input', applyFilters);
     filter.addEventListener('change', applyFilters);
   });
-  
+
   // Clear filters button
   clearFiltersButton.addEventListener('click', clearFilters);
 }
@@ -2020,10 +2027,10 @@ function applyFilters() {
 
 // ✅ Apply filters to card view
 function applyCardViewFilters(categoryValue, statusValue, vendorValue) {
+  const itemNameValue = document.getElementById('filter-item-name')?.value.trim().toLowerCase() || '';
   let visibleCount = 0;
   let hiddenCount = 0;
-  
-  // Process all cards
+
   const cards = document.querySelectorAll('.line-item-card');
   cards.forEach(card => {
     // Get the category for this card
@@ -2031,29 +2038,33 @@ function applyCardViewFilters(categoryValue, statusValue, vendorValue) {
     while (categoryHeader && !categoryHeader.classList.contains('category-header')) {
       categoryHeader = categoryHeader.previousElementSibling;
     }
-    
+
     // Get category name
-    const cardCategory = categoryHeader ? 
+    const cardCategory = categoryHeader ?
       categoryHeader.querySelector('.category-title span')?.textContent?.trim() || '' : '';
-    
+
     // Get item status from the status element's text content
     const statusElement = card.querySelector('.item-status');
-    const cardStatus = statusElement ? 
+    const cardStatus = statusElement ?
       statusElement.textContent.trim().toLowerCase() : 'new';
-    
+
     // Get assigned vendor
     const assignedTo = card.getAttribute('data-assigned-to') || '';
     const isAssigned = assignedTo && assignedTo !== '';
-    
+
+    // Get item name
+    const itemName = card.querySelector('.item-name')?.value.trim().toLowerCase() || '';
+
     // Check if card matches all active filters
+    const matchesItemName = !itemNameValue || itemName.includes(itemNameValue);
     const matchesCategory = !categoryValue || cardCategory === categoryValue;
     const matchesStatus = !statusValue || cardStatus.includes(statusValue.toLowerCase());
-    const matchesVendor = !vendorValue || 
-                          (vendorValue === 'unassigned' && !isAssigned) || 
-                          (isAssigned && assignedTo === vendorValue);
-    
+    const matchesVendor = !vendorValue ||
+      (vendorValue === 'unassigned' && !isAssigned) ||
+      (isAssigned && assignedTo === vendorValue);
+
     // Show or hide based on filter matches
-    if (matchesCategory && matchesStatus && matchesVendor) {
+    if (matchesItemName && matchesCategory && matchesStatus && matchesVendor) {
       card.style.display = '';
       visibleCount++;
     } else {
@@ -2061,12 +2072,12 @@ function applyCardViewFilters(categoryValue, statusValue, vendorValue) {
       hiddenCount++;
     }
   });
-  
+
   // Now handle category headers - only show if they have visible cards
   const categoryHeaders = document.querySelectorAll('.category-header');
   categoryHeaders.forEach(header => {
     let hasVisibleCards = false;
-    
+
     // Check next siblings until next category or end
     let nextEl = header.nextElementSibling;
     while (nextEl && !nextEl.classList.contains('category-header')) {
@@ -2076,10 +2087,10 @@ function applyCardViewFilters(categoryValue, statusValue, vendorValue) {
       }
       nextEl = nextEl.nextElementSibling;
     }
-    
+
     header.style.display = hasVisibleCards ? '' : 'none';
   });
-  
+
   console.log(`Filter applied: ${visibleCount} items shown, ${hiddenCount} items hidden`);
 }
 
