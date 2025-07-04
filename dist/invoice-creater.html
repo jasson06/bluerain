@@ -430,6 +430,10 @@ td:nth-child(3) {
   color: white;
   border: 1px solid #b91c1c;
 }
+
+#help-fab:hover {
+  background: #0056b3;
+}
   </style>
 </head>
 <body>
@@ -558,6 +562,68 @@ td:nth-child(3) {
     <button onclick="printInvoice()" id="printBtn">Print</button>
   </div>
 </div>
+
+
+<!-- Floating Help Icon -->
+<div id="help-fab" style="
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  z-index: 99999;
+  background: #007bff;
+  color: #fff;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  cursor: pointer;
+  transition: background 0.2s;
+">
+  ?
+</div>
+
+<!-- Help Modal -->
+<div id="helpModal" style="
+  display: none;
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.35);
+  z-index: 100000;
+  align-items: center;
+  justify-content: center;
+">
+  <div id="helpModalContent" style="
+    background: #fff;
+    border-radius: 12px;
+    max-width: 420px;
+    width: 90%;
+    margin: auto;
+    padding: 32px 24px 24px 24px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    position: relative;
+    text-align: center;
+  ">
+    <button onclick="closeHelpModal()" style="
+      position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 22px; color: #888; cursor: pointer;">&times;</button>
+    <h3 style="margin-top:0;">How can we help?</h3>
+    <div id="helpOptions">
+      <button class="btn" style="width:100%;margin-bottom:12px;" onclick="showHelpVideo('import')">How to import a line item</button>
+      <button class="btn" style="width:100%;" onclick="showHelpVideo('submit')">How to submit an invoice</button>
+    </div>
+    <div id="helpVideoContainer" style="display:none;">
+      <video id="helpVideo" width="100%" controls style="border-radius:8px; margin-top:10px;">
+        <source id="helpVideoSource" src="" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+      <button class="btn" style="margin-top:16px;" onclick="closeHelpVideo()">Back to Help Options</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- Toast Notification -->
 <div id="toast" style="
@@ -1855,7 +1921,40 @@ async function deleteInvoice(invoiceId, element) {
 }
 
 
+// Floating Help Button Logic
+document.getElementById('help-fab').onclick = function() {
+  document.getElementById('helpModal').style.display = 'flex';
+  document.getElementById('helpOptions').style.display = 'block';
+  document.getElementById('helpVideoContainer').style.display = 'none';
+};
 
+function closeHelpModal() {
+  document.getElementById('helpModal').style.display = 'none';
+  // Pause video if open
+  const vid = document.getElementById('helpVideo');
+  if (vid) vid.pause();
+}
+
+function showHelpVideo(type) {
+  const videoMap = {
+    import: '/files/submmit.mp4', // Replace with your actual video URL
+    submit: 'files/submmit.mp4'    // Replace with your actual video URL
+  };
+  document.getElementById('helpOptions').style.display = 'none';
+  document.getElementById('helpVideoContainer').style.display = 'block';
+  const vid = document.getElementById('helpVideo');
+  const src = document.getElementById('helpVideoSource');
+  src.src = videoMap[type] || '';
+  vid.load();
+  vid.play();
+}
+
+function closeHelpVideo() {
+  document.getElementById('helpOptions').style.display = 'block';
+  document.getElementById('helpVideoContainer').style.display = 'none';
+  const vid = document.getElementById('helpVideo');
+  if (vid) vid.pause();
+}
   </script>
 </body>
 </html>
