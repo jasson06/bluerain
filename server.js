@@ -5545,6 +5545,34 @@ app.put('/api/room-packages/:key', async (req, res) => {
   }
 });
 
+// GET all previously submitted line item IDs for a vendor
+app.get('/api/vendors/:vendorId/used-line-item-ids', async (req, res) => {
+  try {
+    const { vendorId } = req.params;
+    if (!vendorId) {
+      return res.status(400).json({ message: "Missing vendorId" });
+    }
+
+    // Find all invoices for this vendor
+    const invoices = await Invoice.find({ vendorId });
+
+    // Collect all unique line item IDs (_id or itemId)
+    const usedIds = new Set();
+    invoices.forEach(inv => {
+      (inv.lineItems || []).forEach(item => {
+        // Support both _id (ObjectId) and itemId (string)
+        if (item._id) usedIds.add(item._id.toString());
+        if (item.itemId) usedIds.add(item.itemId.toString());
+      });
+    });
+
+    res.json({ usedIds: Array.from(usedIds) });
+  } catch (err) {
+    console.error("Error fetching used line item IDs:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // Debugging route to check server deployment status
 app.get('/api/debug', (req, res) => {
   res.json({
