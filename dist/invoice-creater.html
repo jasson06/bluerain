@@ -240,7 +240,12 @@ td:nth-child(3) {
   background-color: #f1f5f9;
 }
 
-.dropdown:hover .dropdown-content {
+
+
+.dropdown-content {
+  display: none;
+}
+.dropdown.open .dropdown-content {
   display: block;
 }
 
@@ -405,7 +410,26 @@ td:nth-child(3) {
   pointer-events: none;
 }
 
-
+.toast-warning {
+  background: linear-gradient(to right, #f59e42, #fbbf24); /* orange/yellow */
+  color: #fff;
+  border: 1px solid #f59e42;
+}
+.toast-info {
+  background: linear-gradient(to right, #0ea5e9, #3b82f6);
+  color: white;
+  border: 1px solid #0ea5e9;
+}
+.toast-success {
+  background: linear-gradient(to right, #22c55e, #16a34a);
+  color: white;
+  border: 1px solid #16a34a;
+}
+.toast-error {
+  background: linear-gradient(to right, #ef4444, #b91c1c);
+  color: white;
+  border: 1px solid #b91c1c;
+}
   </style>
 </head>
 <body>
@@ -457,10 +481,9 @@ td:nth-child(3) {
   </select>
 
   <!-- Step 3: Line Items -->
-  <label for="lineItemSelect"><strong>Import Line Items:</strong></label>
-  <select id="lineItemSelect" multiple size="5" style="width: 100%; padding: 10px; margin-bottom: 15px;"></select>
-
-  <button onclick="importLineItems()" class="btn">Import Selected Items</button>
+<label><strong>Import Line Items:</strong></label>
+<div id="lineItemCheckboxList" style="max-height: 220px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; margin-bottom: 15px;"></div>
+<button onclick="importLineItems()" class="btn">Import Selected Items</button>
 </div>
 
 
@@ -542,8 +565,6 @@ td:nth-child(3) {
   top: 30px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(to right, #0ea5e9, #3b82f6);
-  color: white;
   padding: 14px 24px;
   border-radius: 8px;
   display: none;
@@ -630,10 +651,17 @@ window.onload = async () => {
   }
 }
 
-function showToast(message) {
+function showToast(message, type = "info") {
   const toast = document.getElementById('toast');
   toast.textContent = message;
   toast.style.display = 'block';
+
+  // Remove any previous type classes
+  toast.classList.remove('toast-success', 'toast-error', 'toast-warning', 'toast-info');
+
+  // Add class based on type
+  toast.classList.add(`toast-${type}`);
+
   setTimeout(() => { toast.style.display = 'none'; }, 3000);
 }
 
@@ -711,9 +739,9 @@ async function fetchAssignedProjects(vendorId) {
 async function fetchEstimatesForProject(vendorId, projectId) {
   try {
     const estimateSelect = document.getElementById('estimateSelect');
-    const lineItemSelect = document.getElementById('lineItemSelect');
+    const lineItemCheckboxList = document.getElementById('lineItemCheckboxList');
     estimateSelect.innerHTML = `<option value="">-- Select Estimate --</option>`;
-    lineItemSelect.innerHTML = '';
+    if (lineItemCheckboxList) lineItemCheckboxList.innerHTML = '';
 
     // 1. Fetch assigned items
     const itemsRes = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
@@ -811,35 +839,91 @@ async function fetchEstimatesForProject(vendorId, projectId) {
   }
 }
 
-function importLineItems() {
-  const selected = Array.from(document.getElementById('lineItemSelect').selectedOptions);
 
-  selected.forEach(opt => {
-    const item = JSON.parse(opt.dataset.details);
 
-   
-    
-    // Apply the 37% calculation only for imported items
+async function importLineItems() {
+  const checkboxes = Array.from(document.querySelectorAll('#lineItemCheckboxList input[type="checkbox"]:checked'));
+  if (checkboxes.length === 0) {
+    showToast("Please select at least one line item to import.", "warning");
+    return;
+  }
+  const vendorId = localStorage.getItem("vendorId");
+  if (!vendorId) {
+    showToast("Missing vendor ID");
+    return;
+  }
+
+  // Fetch all previously submitted line item IDs for this vendor
+  const usedIds = await getPreviouslySubmittedLineItemIds(vendorId);
+
+  let duplicateCount = 0;
+  checkboxes.forEach(box => {
+    const item = JSON.parse(box.dataset.details);
+
+    // Only check for duplicates if the item has a unique _id
+    if (item._id && usedIds.has(item._id)) {
+      duplicateCount++;
+      showToast(`⚠️  "${item.name}" already Submitted.`, "error");
+      return;
+    }
+
+    // Prevent adding the same item twice in the same invoice
+    const alreadyInCurrent = lineItems.some(existing =>
+      existing._id && item._id && existing._id === item._id
+    );
+    if (alreadyInCurrent) {
+      duplicateCount++;
+      showToast(`⚠️ "${item.name}" already Submitted.`, "error");
+      return;
+    }
+
     addItemToTable(item, true);
   });
 
-  showToast('Imported selected line items.');
+  if (duplicateCount === 0) {
+    showToast('Imported selected line items.');
+  }
 }
 
 
-
+async function getPreviouslySubmittedLineItemIds(vendorId) {
+  try {
+    const res = await fetch(`/api/vendors/${vendorId}/used-line-item-ids`);
+    if (!res.ok) throw new Error("Failed to fetch previous line item IDs");
+    const data = await res.json();
+    // data.usedIds is an array of IDs (strings)
+    return new Set(data.usedIds || []);
+  } catch (err) {
+    console.error("❌ Error fetching previous line item IDs:", err);
+    return new Set();
+  }
+}
 
 
 function displayLineItems(items) {
-  const lineItemSelect = document.getElementById('lineItemSelect');
-  lineItemSelect.innerHTML = '';
+  const container = document.getElementById('lineItemCheckboxList');
+  container.innerHTML = '';
   items.forEach((item, idx) => {
-    const option = document.createElement("option");
-    option.value = idx;
-    const costCode = item.costCode || 'Uncategorized';
-    option.textContent = `[${costCode}] ${item.name || 'Unnamed'} - ${item.description || 'No description'}`;
-    option.dataset.details = JSON.stringify(item);
-    lineItemSelect.appendChild(option);
+    const id = `lineitem-checkbox-${idx}`;
+    const total = typeof item.total !== "undefined"
+      ? parseFloat(item.total)
+      : (typeof item.laborCost !== "undefined"
+          ? parseFloat(item.laborCost)
+          : (parseFloat(item.unitPrice) * parseFloat(item.quantity) || 0));
+    const label = `
+      <span><strong>${item.name || 'Unnamed'}</strong></span>
+      <span style="color:#64748b; margin-left:8px;">${item.description || 'No description'}</span>
+      
+    `;
+    const wrapper = document.createElement('div');
+    wrapper.style.marginBottom = '6px';
+    wrapper.style.display = 'flex';
+    wrapper.style.alignItems = 'center';
+    wrapper.innerHTML = `
+      <input type="checkbox" id="${id}" data-details='${JSON.stringify(item)}' style="margin-right: 8px;">
+      <label for="${id}" style="cursor:pointer; flex:1; display:flex; align-items:center; gap:10px;">${label}</label>
+    `;
+    container.appendChild(wrapper);
   });
 }
 
@@ -960,6 +1044,7 @@ function addManualItem() {
 
 function addItemToTable(item, isImported = false) {
   const cleaned = {
+    _id: item._id, // <-- preserve the unique line item ID
     name: item.name,
     description: item.description,
     quantity: Number(item.quantity) || 0,
@@ -1490,7 +1575,15 @@ async function fetchInvoiceHistory(vendorId) {
 
 
 
-
+document.addEventListener('click', function(e) {
+  document.querySelectorAll('.dropdown').forEach(drop => {
+    if (drop.contains(e.target)) {
+      drop.classList.toggle('open');
+    } else {
+      drop.classList.remove('open');
+    }
+  });
+});
 
 
 let currentSort = { column: null, direction: 1 };
