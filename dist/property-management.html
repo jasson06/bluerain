@@ -5145,33 +5145,18 @@ function updatePropertyStats() {
     document.getElementById('vacantUnits').textContent = stats.vacantUnits;
     document.getElementById('occupancyRate').textContent = stats.occupancyRate;
 
-    // Calculate and display estimated monthly income for this property
+    // Calculate and display estimated monthly income for this property (including additional fees and pet fee)
     const activeTenants = (state.tenants || []).filter(
         t => t.leaseStatus !== 'terminated' && t.leaseStatus !== 'expired'
     );
-    
-    // Updated calculation that includes HUB contributions
-    const propertyMonthlyIncome = activeTenants.reduce((sum, t) => {
-        // For Section 8 tenants, include both HUB and tenant contributions
-        if (t.leaseType === 'section8') {
-            return sum + 
-                (Number(t.hubContribution) || 0) + 
-                (Number(t.tenantContribution) || 0) +
-                (Number(t.waterFee) || 0) +
-                (Number(t.trashFee) || 0) +
-                (Number(t.adminFee) || 0) +
-                (t.pets?.hasPets ? (Number(t.pets.fee) || 0) : 0);
-        } else {
-            // For regular tenants, include base rent and fees
-            return sum +
-                (Number(t.baseRent) || 0) +
-                (Number(t.waterFee) || 0) +
-                (Number(t.trashFee) || 0) +
-                (Number(t.adminFee) || 0) +
-                (t.pets?.hasPets ? (Number(t.pets.fee) || 0) : 0);
-        }
-    }, 0);
-    
+    const propertyMonthlyIncome = activeTenants.reduce((sum, t) =>
+        sum +
+        (Number(t.baseRent) || 0) +
+        (Number(t.waterFee) || 0) +
+        (Number(t.trashFee) || 0) +
+        (Number(t.adminFee) || 0) +
+        (t.pets?.hasPets ? (Number(t.pets.fee) || 0) : 0)
+    , 0);
     const incomeElem = document.getElementById('propertyMonthlyIncome');
     if (incomeElem) {
         incomeElem.textContent = `$${propertyMonthlyIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
@@ -5304,29 +5289,15 @@ function renderMainSummary() {
         const totalOccupiedUnits = state.allUnits
             ? state.allUnits.filter(u => activeTenantUnitIds.has(u._id)).length
             : 0;
-        
-        // Calculate total monthly income including additional fees, pet fee, and HUB contributions
-        const totalMonthlyIncome = activeTenants.reduce((sum, t) => {
-            // For Section 8 tenants, include both HUB and tenant contributions
-            if (t.leaseType === 'section8') {
-                return sum + 
-                    (Number(t.hubContribution) || 0) + 
-                    (Number(t.tenantContribution) || 0) +
-                    (Number(t.waterFee) || 0) +
-                    (Number(t.trashFee) || 0) +
-                    (Number(t.adminFee) || 0) +
-                    (t.pets?.hasPets ? (Number(t.pets.fee) || 0) : 0);
-            } else {
-                // For regular tenants, include base rent and fees
-                return sum +
-                    (Number(t.baseRent) || 0) +
-                    (Number(t.waterFee) || 0) +
-                    (Number(t.trashFee) || 0) +
-                    (Number(t.adminFee) || 0) +
-                    (t.pets?.hasPets ? (Number(t.pets.fee) || 0) : 0);
-            }
-        }, 0);
-        
+        // Calculate total monthly income including additional fees and pet fee
+        const totalMonthlyIncome = activeTenants.reduce((sum, t) =>
+            sum +
+            (Number(t.baseRent) || 0) +
+            (Number(t.waterFee) || 0) +
+            (Number(t.trashFee) || 0) +
+            (Number(t.adminFee) || 0) +
+            (t.pets?.hasPets ? (Number(t.pets.fee) || 0) : 0)
+        , 0);
         const occupancyRate = totalUnits > 0 ? Math.round((totalOccupiedUnits / totalUnits) * 100) : 0;
 
         elTotalProperties.textContent = totalProperties;
@@ -5334,6 +5305,8 @@ function renderMainSummary() {
         elTotalTenants.textContent = totalTenants;
         elOccupancyRate.textContent = `${occupancyRate}%`;
         elMonthlyIncome.textContent = `$${totalMonthlyIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+        // Total Units Occupied section has been removed
     } catch (error) {
         // Catch any errors that might occur during summary rendering
         console.warn('Error rendering main summary:', error);
