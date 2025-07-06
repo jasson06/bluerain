@@ -1828,7 +1828,7 @@ select {
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(52,152,219,0.09);
     padding: 20px 32px;
-    min-width: 220px;
+    min-width: 120px;
     flex: 1 1 170px;
     text-align: center;
     border: 1.5px solid #e1e8ed;
@@ -5145,18 +5145,33 @@ function updatePropertyStats() {
     document.getElementById('vacantUnits').textContent = stats.vacantUnits;
     document.getElementById('occupancyRate').textContent = stats.occupancyRate;
 
-    // Calculate and display estimated monthly income for this property (including additional fees and pet fee)
+    // Calculate and display estimated monthly income for this property
     const activeTenants = (state.tenants || []).filter(
         t => t.leaseStatus !== 'terminated' && t.leaseStatus !== 'expired'
     );
-    const propertyMonthlyIncome = activeTenants.reduce((sum, t) =>
-        sum +
-        (Number(t.baseRent) || 0) +
-        (Number(t.waterFee) || 0) +
-        (Number(t.trashFee) || 0) +
-        (Number(t.adminFee) || 0) +
-        (t.pets?.hasPets ? (Number(t.pets.fee) || 0) : 0)
-    , 0);
+    
+    // Updated calculation that includes HUB contributions
+    const propertyMonthlyIncome = activeTenants.reduce((sum, t) => {
+        // For Section 8 tenants, include both HUB and tenant contributions
+        if (t.leaseType === 'section8') {
+            return sum + 
+                (Number(t.hubContribution) || 0) + 
+                (Number(t.tenantContribution) || 0) +
+                (Number(t.waterFee) || 0) +
+                (Number(t.trashFee) || 0) +
+                (Number(t.adminFee) || 0) +
+                (t.pets?.hasPets ? (Number(t.pets.fee) || 0) : 0);
+        } else {
+            // For regular tenants, include base rent and fees
+            return sum +
+                (Number(t.baseRent) || 0) +
+                (Number(t.waterFee) || 0) +
+                (Number(t.trashFee) || 0) +
+                (Number(t.adminFee) || 0) +
+                (t.pets?.hasPets ? (Number(t.pets.fee) || 0) : 0);
+        }
+    }, 0);
+    
     const incomeElem = document.getElementById('propertyMonthlyIncome');
     if (incomeElem) {
         incomeElem.textContent = `$${propertyMonthlyIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
@@ -5261,56 +5276,67 @@ async function loadAllUnitsAndTenants() {
 }
 
 function renderMainSummary() {
-    const totalProperties = state.properties.length;
-
-    // Only count tenants that are not terminated or expired
-    const activeTenants = (state.allTenants || []).filter(
-        t => t.leaseStatus !== 'terminated' && t.leaseStatus !== 'expired'
-    );
-
-    // Only count units as occupied if they are assigned to an active tenant
-    const activeTenantUnitIds = new Set(
-        activeTenants.map(t => t.unitId?._id || t.unitId).filter(Boolean)
-    );
-
-    const totalUnits = state.allUnits ? state.allUnits.length : 0;
-    const totalTenants = activeTenants.length;
-    const totalOccupiedUnits = state.allUnits
-        ? state.allUnits.filter(u => activeTenantUnitIds.has(u._id)).length
-        : 0;
-    // Calculate total monthly income including additional fees and pet fee
-    const totalMonthlyIncome = activeTenants.reduce((sum, t) =>
-        sum +
-        (Number(t.baseRent) || 0) +
-        (Number(t.waterFee) || 0) +
-        (Number(t.trashFee) || 0) +
-        (Number(t.adminFee) || 0) +
-        (t.pets?.hasPets ? (Number(t.pets.fee) || 0) : 0)
-    , 0);
-    const occupancyRate = totalUnits > 0 ? Math.round((totalOccupiedUnits / totalUnits) * 100) : 0;
-
-    document.getElementById('summaryTotalProperties').textContent = totalProperties;
-    document.getElementById('summaryTotalUnits').textContent = totalUnits;
-    document.getElementById('summaryTotalTenants').textContent = totalTenants;
-    document.getElementById('summaryOccupancyRate').textContent = `${occupancyRate}%`;
-    document.getElementById('summaryMonthlyIncome').textContent = `$${totalMonthlyIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-
-    // Add/update total occupied units in summary if element exists
-    let occupiedElem = document.getElementById('summaryTotalOccupiedUnits');
-    if (!occupiedElem) {
-        // Try to insert after total units card
-        const summaryCards = document.querySelectorAll('.main-summary .summary-card');
-        if (summaryCards.length >= 2) {
-            occupiedElem = document.createElement('div');
-            occupiedElem.className = 'summary-card';
-            occupiedElem.innerHTML = `
-                <h4>Total Units Occupied</h4>
-                <p id="summaryTotalOccupiedUnits">${totalOccupiedUnits}</p>
-            `;
-            summaryCards[1].after(occupiedElem);
+    try {
+        const elTotalProperties = document.getElementById('summaryTotalProperties');
+        const elTotalUnits = document.getElementById('summaryTotalUnits');
+        const elTotalTenants = document.getElementById('summaryTotalTenants');
+        const elOccupancyRate = document.getElementById('summaryOccupancyRate');
+        const elMonthlyIncome = document.getElementById('summaryMonthlyIncome');
+        if (!elTotalProperties || !elTotalUnits || !elTotalTenants || !elOccupancyRate || !elMonthlyIncome) {
+            // Elements not found, skip rendering summary
+            return;
         }
-    } else {
-        occupiedElem.querySelector('p').textContent = totalOccupiedUnits;
+
+        const totalProperties = state.properties.length;
+
+        // Only count tenants that are not terminated or expired
+        const activeTenants = (state.allTenants || []).filter(
+            t => t.leaseStatus !== 'terminated' && t.leaseStatus !== 'expired'
+        );
+
+        // Only count units as occupied if they are assigned to an active tenant
+        const activeTenantUnitIds = new Set(
+            activeTenants.map(t => t.unitId?._id || t.unitId).filter(Boolean)
+        );
+
+        const totalUnits = state.allUnits ? state.allUnits.length : 0;
+        const totalTenants = activeTenants.length;
+        const totalOccupiedUnits = state.allUnits
+            ? state.allUnits.filter(u => activeTenantUnitIds.has(u._id)).length
+            : 0;
+        
+        // Calculate total monthly income including additional fees, pet fee, and HUB contributions
+        const totalMonthlyIncome = activeTenants.reduce((sum, t) => {
+            // For Section 8 tenants, include both HUB and tenant contributions
+            if (t.leaseType === 'section8') {
+                return sum + 
+                    (Number(t.hubContribution) || 0) + 
+                    (Number(t.tenantContribution) || 0) +
+                    (Number(t.waterFee) || 0) +
+                    (Number(t.trashFee) || 0) +
+                    (Number(t.adminFee) || 0) +
+                    (t.pets?.hasPets ? (Number(t.pets.fee) || 0) : 0);
+            } else {
+                // For regular tenants, include base rent and fees
+                return sum +
+                    (Number(t.baseRent) || 0) +
+                    (Number(t.waterFee) || 0) +
+                    (Number(t.trashFee) || 0) +
+                    (Number(t.adminFee) || 0) +
+                    (t.pets?.hasPets ? (Number(t.pets.fee) || 0) : 0);
+            }
+        }, 0);
+        
+        const occupancyRate = totalUnits > 0 ? Math.round((totalOccupiedUnits / totalUnits) * 100) : 0;
+
+        elTotalProperties.textContent = totalProperties;
+        elTotalUnits.textContent = totalUnits;
+        elTotalTenants.textContent = totalTenants;
+        elOccupancyRate.textContent = `${occupancyRate}%`;
+        elMonthlyIncome.textContent = `$${totalMonthlyIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    } catch (error) {
+        // Catch any errors that might occur during summary rendering
+        console.warn('Error rendering main summary:', error);
     }
 }
 
