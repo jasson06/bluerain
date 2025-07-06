@@ -34,7 +34,8 @@ body {
 
 .container {
     display: flex;
-    
+    height: 100vh;
+    overflow: hidden;
 }
 
 /* --- Modern Modal Styles (Apply Globally) --- */
@@ -272,6 +273,13 @@ body {
     background-color: white;
     border-right: 1px solid var(--border-color);
     padding: 20px;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    overflow-y: auto;
+    z-index: 100;
 }
 
 .sidebar-header {
@@ -283,8 +291,11 @@ body {
 /* Main Content Styles */
 .main-content {
     flex: 1;
+    margin-left: 300px;
     padding: 20px;
+    height: 100vh;
     overflow-y: auto;
+    background: var(--background-color);
 }
 
 /* Dashboard Styles */
@@ -313,6 +324,10 @@ body {
     margin-bottom: 20px;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 10px;
+    position: sticky;
+    top: -21px;
+    z-index: 10;
+    background: var(--background-color);
 }
 
 .tab-btn {
