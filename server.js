@@ -854,7 +854,8 @@ const tenantSchema = new mongoose.Schema({
     name: String,
     phone: String,
     email: String,
-    relation: String
+    relation: String,
+    address: String
 },
 authorizedOccupants: [String],
 pets: {
@@ -862,10 +863,24 @@ pets: {
     count: { type: Number, default: 0 },
     fee: { type: Number, default: 0 }
 },
+  cars: {
+    hasCar: { type: Boolean, default: false },
+    count: { type: Number, default: 0 },
+    details: [{
+      make: String,
+      model: String,
+      color: String,
+      licensePlate: String,
+      year: String
+    }]
+  },
 leaseRenewal: { type: String, enum: ['renew', 'terminate'], default: 'renew' },
   leaseStart: Date,
   leaseEnd: Date,
   baseRent: { type: Number, default: 0 },
+  waterFee: { type: Number, default: 0 },      // <-- Add this line
+  trashFee: { type: Number, default: 0 },      // <-- Add this line
+  adminFee: { type: Number, default: 0 }, 
 leaseType: { type: String, enum: ['fmr', 'section8'], default: 'fmr' },
 fmrNotes: String,
 hubContribution: { type: Number, default: 0 },
