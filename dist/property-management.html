@@ -37,7 +37,127 @@ body {
     
 }
 
+/* --- Modern Modal Styles (Apply Globally) --- */
+.modal .modal-content {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(44,62,80,0.13);
+    padding: 32px 32px 24px 32px;
+    max-width: 700px;
+    margin: 32px auto;
+    position: relative;
+    font-size: 1.05rem;
+}
 
+.modal h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 24px;
+    letter-spacing: 0.5px;
+    text-align: center;
+}
+
+.modal form .form-row {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 0;
+}
+
+.modal form .form-group {
+    flex: 1 1 180px;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 18px;
+}
+
+.modal form .form-group label {
+    font-weight: 600;
+    margin-bottom: 7px;
+    color: var(--primary-color, #2c3e50);
+    font-size: 1.01rem;
+    letter-spacing: 0.1px;
+}
+
+.modal form .form-group input,
+.modal form .form-group select,
+.modal form .form-group textarea {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1.5px solid #e1e8ed;
+    font-size: 1.05rem;
+    background: #f9fafb;
+    transition: border 0.2s;
+    margin-bottom: 2px;
+}
+
+.modal form .form-group input:focus,
+.modal form .form-group select:focus,
+.modal form .form-group textarea:focus {
+    border-color: var(--accent-color, #3498db);
+    outline: none;
+}
+
+.modal form textarea {
+    min-height: 38px;
+    resize: vertical;
+}
+
+.modal form .modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 14px;
+    margin-top: 24px;
+}
+
+.modal form .btn-primary,
+.modal form .btn-secondary {
+    min-width: 120px;
+    font-size: 1.07rem;
+    font-weight: 600;
+    padding: 11px 22px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+}
+
+.modal form .btn-primary {
+    background: linear-gradient(90deg, #3498db 0%, #6dd5fa 100%);
+    color: #fff;
+}
+
+.modal form .btn-primary:hover {
+    background: linear-gradient(90deg, #217dbb 0%, #4fc3f7 100%);
+}
+
+.modal form .btn-secondary {
+    background: #e1e8ed;
+    color: #2980b9;
+}
+
+.modal form .btn-secondary:hover {
+    background: #d0d7de;
+    color: #217dbb;
+}
+
+@media (max-width: 900px) {
+    .modal .modal-content {
+        padding: 12px 4px 10px 4px;
+        max-width: 99vw;
+    }
+    .modal form .form-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+    .modal form .form-group {
+        min-width: 0;
+    }
+    .modal form fieldset {
+        padding: 10px 6px 6px 6px;
+    }
+}
 
 
 /* Modern Property List Styles */
@@ -102,6 +222,13 @@ body {
 }
 
 .property-status {
+    background-color: rgba(46, 204, 113, 0.15);
+    color: #27ae60;
+}
+
+
+
+.property-status {
     background-color: rgba(46, 204, 113, 0.15); /* default green */
     color: #27ae60;
 }
@@ -122,6 +249,7 @@ body {
     background-color: #fff3cd; /* yellow */
     color: #856404;
 }
+
 
 .property-address {
     display: flex;
@@ -201,7 +329,7 @@ body {
     border-bottom: 2px solid var(--accent-color);
 }
 
- .tab-count-badge {
+.tab-count-badge {
     display: inline-block;
     background: #eaf6ff;
     color: #217dbb;
@@ -413,22 +541,44 @@ html {
 }
 
 /* Button Styles */
+/* Modernized Button Styles - Keep Current Colors */
 .btn-primary {
-    background-color: var(--accent-color);
-    color: white;
+    background: linear-gradient(90deg, var(--accent-color) 0%, #6dd5fa 100%);
+    color: #fff;
     border: none;
-    padding: 10px 20px;
-    border-radius: 4px;
+    padding: 11px 24px;
+    border-radius: 8px;
+    font-size: 1.07rem;
+    font-weight: 600;
     cursor: pointer;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.08);
+    transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.1s;
+}
+.btn-primary:hover, .btn-primary:focus {
+    background: linear-gradient(90deg, #217dbb 0%, #4fc3f7 100%);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(52, 152, 219, 0.15);
+    transform: translateY(-2px) scale(1.03);
+    outline: none;
 }
 
 .btn-secondary {
-    background-color: var(--secondary-color);
-    color: white;
+    background: var(--secondary-color);
+    color: #fff;
     border: none;
-    padding: 10px 20px;
-    border-radius: 4px;
+    padding: 11px 24px;
+    border-radius: 8px;
+    font-size: 1.07rem;
+    font-weight: 600;
     cursor: pointer;
+    transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.1s;
+}
+.btn-secondary:hover, .btn-secondary:focus {
+    background: #232e39;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(44, 62, 80, 0.10);
+    transform: translateY(-1px) scale(1.02);
+    outline: none;
 }
 
 /* Responsive Design */
@@ -762,7 +912,7 @@ select {
     vertical-align: middle;
     animation: attentionPulse 1.2s infinite alternate;
 }
-       
+
 
 /* Add these styles */
 .unit-header {
@@ -1603,7 +1753,7 @@ select {
     color: #217dbb;
 }
 
-     .main-summary-section {
+.main-summary-section {
     background: linear-gradient(90deg, #eaf6ff 0%, #f6fafd 100%);
     border-bottom: 2px solid #e1e8ed;
     box-shadow: 0 2px 12px rgba(52,152,219,0.07);
@@ -1617,7 +1767,7 @@ select {
     gap: 12px;
     font-size: 1.35rem;
     font-weight: 700;
-    color: var(--accent-color);
+    
     padding: 24px 32px 0 32px;
     letter-spacing: 0.5px;
 }
@@ -1647,6 +1797,7 @@ select {
     transform: rotate(-180deg);
 }
 
+/* --- Main Summary List Report Style --- */
 .main-summary {
     display: flex;
     gap: 24px;
@@ -1662,7 +1813,7 @@ select {
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(52,152,219,0.09);
     padding: 20px 32px;
-    min-width: 170px;
+    min-width: 220px;
     flex: 1 1 170px;
     text-align: center;
     border: 1.5px solid #e1e8ed;
@@ -1696,29 +1847,56 @@ select {
         padding: 14px 12px;
     }
 }  
+
+.sidebar .btn-primary {
+    margin-left: 60px;
+        margin-top: 18px;
+    margin-bottom: 10px;
+}
+
+/* Modern style for the sidebar Properties heading */
+.sidebar-header h2 {
+    font-size: 1.45rem;
+    font-weight: 800;
+    
+    letter-spacing: 0.5px;
+    margin-bottom: 0px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(90deg, #eaf6ff 0%, #f6fafd 100%);
+    padding: 12px 18px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(52,152,219,0.07);
+    margin-left: 15px;
+}
    </style>
 </head>
 <body>
+
+
+
     <div class="container">
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>🏢 Properties</h2>
                 <button class="btn-primary" onclick="window.location.href='/'">
-    <i class="fas fa-home"></i> Home
-</button>
+                <i class="fas fa-home"></i> Home
+                </button>
             </div>
             <div class="property-list" id="propertyList">
                 <!-- Properties will be listed here -->
             </div>
         </aside>
 
+
+
+        
         <!-- Main Content -->
         <main class="main-content">
 
-
-
-            <section class="main-summary-section collapsed">
+<section class="main-summary-section collapsed">
     <div class="main-summary-header" id="mainSummaryToggle">
         <i class="fas fa-chart-bar"></i>
         <span>Main Summary</span>
@@ -1747,8 +1925,8 @@ select {
             </div>
         </div>
     </section>
-           
-            
+
+
             <!-- Property Dashboard -->
             <div class="dashboard" id="propertyDashboard">
                 <div class="dashboard-header">
@@ -1766,9 +1944,16 @@ select {
                             <h3>Vacant Units</h3>
                             <p id="vacantUnits">--</p>
                         </div>
+                        <div class="stat-card">
+                          <h3>Est. Monthly Income</h3>
+                          <p id="propertyMonthlyIncome">$--</p>
+                          </div>
                     </div>
                 </div>
 
+
+
+                
                 <!-- Tabs -->
 <div class="tabs">
     <button class="tab-btn active" data-tab="units">
@@ -1841,6 +2026,11 @@ select {
             </div>
         </main>
     </div>
+
+
+
+
+ 
 
     <!-- ===================== MODALS (ONE OF EACH, OUTSIDE MAIN CONTENT) ===================== -->
 
@@ -1950,98 +2140,122 @@ select {
 
 <!-- Add Tenant Modal -->
 <div class="modal" id="addTenantModal">
-    <div class="modal-content">
-        <h2>Add/Edit Tenant</h2>
-        <form id="addTenantForm">
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Tenant Name</label>
-                    <input type="text" id="tenantName" required>
-                </div>
-                <div class="form-group">
-                    <label>Phone</label>
-                    <input type="tel" id="tenantPhone" required>
-                </div>
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="tenantEmail" required>
-                </div>
+<div class="modal-content">
+    <h2>Add/Edit Tenant</h2>
+    <form id="addTenantForm">
+        <!-- Row 1: Name, Phone, Email -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>Tenant Name</label>
+                <input type="text" id="tenantName" required>
             </div>
             <div class="form-group">
-                <label>Lease Holders</label>
-                <div id="leaseHoldersList"></div>
-                <button type="button" class="btn-add-lease-holder" onclick="addLeaseHolderField()">
-                    <i class="fas fa-user-plus"></i> Add Lease Holder
-                </button>
+                <label>Phone</label>
+                <input type="tel" id="tenantPhone" required>
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Lease Start</label>
-                    <input type="date" id="leaseStart" required>
-                </div>
-                <div class="form-group">
-                    <label>Lease End</label>
-                    <input type="date" id="leaseEnd" required>
-                </div>
-                <div class="form-group">
-                    <label>Base Rent ($)</label>
-                    <input type="number" id="baseRent" min="0" required>
-                </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="tenantEmail" required>
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Lease Type</label>
-                    <select id="leaseType" required>
-                        <option value="">Select</option>
-                        <option value="fmr">Free Market Rent</option>
-                        <option value="section8">Section 8</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Lease Status</label>
-                    <select id="leaseStatus" required>
-                        <option value="active">Active</option>
-                        <option value="pending">Pending</option>
-                        <option value="expired">Expired</option>
-                        <option value="terminated">Terminated</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Lease Renewal</label>
-                    <select id="leaseRenewal" required>
-                        <option value="renew">Will Renew</option>
-                        <option value="terminate">Will Terminate</option>
-                    </select>
-                </div>
+        </div>
+        <!-- Lease Holders -->
+        <div class="form-group">
+            <label>Lease Holders</label>
+            <div id="leaseHoldersList"></div>
+            <button type="button" class="btn-add-lease-holder" onclick="addLeaseHolderField()">
+                <i class="fas fa-user-plus"></i> Add Lease Holder
+            </button>
+        </div>
+        <!-- Row 2: Lease Dates -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>Lease Start</label>
+                <input type="date" id="leaseStart" required>
             </div>
-            <div id="fmrSection" style="display:none;">
-                <div class="form-group">
-                    <label>FMR Notes</label>
-                    <textarea id="fmrNotes"></textarea>
-                </div>
+            <div class="form-group">
+                <label>Lease End</label>
+                <input type="date" id="leaseEnd" required>
             </div>
-            <div id="section8Section" style="display:none;">
-                <div class="form-group">
-                    <label>HUB Contribution ($)</label>
-                    <input type="number" id="hubContribution" min="0">
-                </div>
-                <div class="form-group">
-                    <label>Tenant Contribution ($)</label>
-                    <input type="number" id="tenantContribution" min="0">
-                </div>
+        </div>
+        <!-- Row 3: Rent & Fees -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>Base Rent ($)</label>
+                <input type="number" id="baseRent" min="0" required>
             </div>
+            <div class="form-group">
+                <label>Water Fee ($)</label>
+                <input type="number" id="waterFee" min="0" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>Trash Fee ($)</label>
+                <input type="number" id="trashFee" min="0" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>Admin Fee ($)</label>
+                <input type="number" id="adminFee" min="0" step="0.01">
+            </div>
+        </div>
+        <!-- Row 4: Lease Type, Status, Renewal -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>Lease Type</label>
+                <select id="leaseType" required>
+                    <option value="">Select</option>
+                    <option value="fmr">Free Market Rent</option>
+                    <option value="section8">Section 8</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Lease Status</label>
+                <select id="leaseStatus" required>
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                    <option value="expired">Expired</option>
+                    <option value="terminated">Terminated</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Lease Renewal</label>
+                <select id="leaseRenewal" required>
+                    <option value="renew">Will Renew</option>
+                    <option value="terminate">Will Terminate</option>
+                </select>
+            </div>
+        </div>
+        <!-- Lease Type Details -->
+        <div id="fmrSection" style="display:none;">
+            <div class="form-group">
+                <label>FMR Notes</label>
+                <textarea id="fmrNotes"></textarea>
+            </div>
+        </div>
+        <div id="section8Section" style="display:none;">
+            <div class="form-group">
+                <label>HUB Contribution ($)</label>
+                <input type="number" id="hubContribution" min="0">
+            </div>
+            <div class="form-group">
+                <label>Tenant Contribution ($)</label>
+                <input type="number" id="tenantContribution" min="0">
+            </div>
+        </div>
+        <!-- Row 5: Unit, Occupants -->
+        <div class="form-row">
             <div class="form-group">
                 <label>Unit</label>
                 <select id="tenantUnit" required>
                     <option value="">Select a unit</option>
-                    <!-- Populated dynamically -->
                 </select>
             </div>
             <div class="form-group">
                 <label>Authorized Occupants (one per line)</label>
                 <textarea id="authorizedOccupants"></textarea>
             </div>
-            <div class="form-group">
+        </div>
+        <!-- Row 6: Pets & Cars -->
+        <div class="form-row">
+            <div class="form-group" style="min-width:180px;">
                 <label>
                     <input type="checkbox" id="hasPets"> Has Pets
                 </label>
@@ -2052,28 +2266,53 @@ select {
                     <input type="number" id="petFee" min="0">
                 </div>
             </div>
-            <div class="form-group">
-                <label>Emergency Contact Name</label>
-                <input type="text" id="emergencyContactName">
+            <div class="form-group" style="min-width:180px;">
+                <label>
+                    <input type="checkbox" id="hasCar"> Has Car(s)
+                </label>
+                <div id="carDetails" style="display:none;">
+                    <label>Number of Cars</label>
+                    <input type="number" id="carCount" min="1" value="1">
+                    <div id="carFieldsContainer"></div>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Emergency Contact Phone</label>
-                <input type="tel" id="emergencyContactPhone">
+        </div>
+        <!-- Emergency Contact Section -->
+        <fieldset style="margin-top:18px; border:1px solid #e1e8ed; border-radius:8px; padding:14px 18px;">
+            <legend style="font-weight:600; color:#2980b9; font-size:1.01rem;">Emergency Contact</legend>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="emergencyContactName">
+                </div>
+                <div class="form-group">
+                    <label>Phone</label>
+                    <input type="tel" id="emergencyContactPhone">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="emergencyContactEmail">
+                </div>
             </div>
-            <div class="form-group">
-                <label>Emergency Contact Email</label>
-                <input type="email" id="emergencyContactEmail">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Address</label>
+                    <input type="text" id="emergencyContactAddress">
+                </div>
+                <div class="form-group">
+                    <label>Relation</label>
+                    <input type="text" id="emergencyContactRelation">
+                </div>
             </div>
-            <div class="form-group">
-                <label>Emergency Contact Relation</label>
-                <input type="text" id="emergencyContactRelation">
-            </div>
-            <div class="modal-buttons">
-                <button type="button" class="btn-secondary" onclick="closeModal('addTenantModal')">Cancel</button>
-                <button type="submit" class="btn-primary">Add Tenant</button>
-            </div>
-        </form>
-    </div>
+        </fieldset>
+        <!-- Form Buttons -->
+        <div class="modal-buttons" style="margin-top:18px;">
+            <button type="button" class="btn-secondary" onclick="closeModal('addTenantModal')">Cancel</button>
+            <button type="submit" class="btn-primary">Add Tenant</button>
+        </div>
+    </form>
+</div>
+</div>
 </div>
 
 <!-- Add Maintenance Modal -->
@@ -2223,6 +2462,37 @@ select {
 <!-- Add this just before the closing body tag -->
 <div id="notification" class="notification"></div>
 
+
+<!-- Loader Spinner -->
+<div id="loader" style="
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: 9999;
+  display: none;
+  justify-content: center;
+  align-items: center;
+">
+  <div style="
+    border: 5px solid #e5e7eb;
+    border-top: 5px solid #3b82f6;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    animation: spin 0.8s linear infinite;
+  "></div>
+</div>
+
+<!-- Add this to your <style> block or <head> -->
+<style>
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
+
     <script>
        // Global state management
 const state = {
@@ -2232,6 +2502,8 @@ const state = {
     tenants: [],
     maintenanceRequests: [],
     documents: [],
+    allUnits: [],
+allTenants: [],
     payments: []
 };
 
@@ -2267,26 +2539,39 @@ function initializeEventListeners() {
     document.getElementById('addTenantForm')?.addEventListener('submit', handleAddTenant);
     
     // Maintenance management
-    document.getElementById('addMaintenanceBtn')?.addEventListener('click', () => openModal('addMaintenanceModal'));
+    document.getElementById('addMaintenanceBtn')?.addEventListener('click', () => {
+    if (!state.currentProperty) {
+        showNotification('Please select a property first', 'error');
+        return;
+    }
+    populateMaintenanceUnitSelect();
+    openModal('addMaintenanceModal');
+});
     document.getElementById('addMaintenanceForm')?.addEventListener('submit', handleAddMaintenance);
     
     // Document management
-    document.getElementById('uploadDocumentBtn')?.addEventListener('click', () => openModal('uploadDocumentModal'));
+    document.getElementById('uploadDocumentBtn')?.addEventListener('click', () => {
+    if (!state.currentProperty) {
+        showNotification('Please select a property first', 'error');
+        return;
+    }
+    openModal('uploadDocumentModal');
+});
     document.getElementById('uploadDocumentForm')?.addEventListener('submit', handleDocumentUpload);
 
     // Add event listeners for payments tab and modal
 document.getElementById('addPaymentBtn')?.addEventListener('click', () => {
-    // Reset the form fields
+    if (!state.currentProperty) {
+        showNotification('Please select a property first', 'error');
+        return;
+    }
     const form = document.getElementById('addPaymentForm');
     form.reset();
     form.dataset.editMode = 'false';
     form.dataset.paymentId = '';
     form.querySelector('button[type="submit"]').textContent = 'Save Payment';
-
-    // Populate selects
     populatePaymentTenantSelect();
     populatePaymentUnitSelect();
-
     openModal('addPaymentModal');
 });
 document.getElementById('addPaymentForm')?.addEventListener('submit', handleAddPayment);
@@ -2329,9 +2614,7 @@ function showTabContent(tabId) {
     }
 }
 
-
-
-        function updateTabCounts() {
+function updateTabCounts() {
     // Units
     document.getElementById('tabCountUnits').textContent = state.units?.length || 0;
     // Tenants
@@ -2371,6 +2654,7 @@ async function loadTabContent(tabId) {
 
 // Property Management
 async function loadProperties() {
+    showLoader();
     try {
         // Fetch active properties
         const response = await fetch('/api/projects');
@@ -2404,6 +2688,9 @@ async function loadProperties() {
     } catch (error) {
         console.error('Error loading properties:', error);
         showNotification('Error loading properties', 'error');
+            } finally {
+        hideLoader();
+    
     }
 }
  
@@ -2481,9 +2768,9 @@ function renderPropertyList() {
                     <span class="property-type">
                         <i class="fas fa-building"></i> ${property.type || 'Multifamily'}
                     </span>
-                    <span class="property-status ${property.status?.toLowerCase().replace(/\s+/g, '-') || ''}">
-                     <i class="fas fa-circle"></i> ${property.status || 'Active'}
-                       </span>
+                  <span class="property-status ${property.status?.toLowerCase().replace(/\s+/g, '-') || ''}">
+                 <i class="fas fa-circle"></i> ${property.status || 'Active'}
+                 </span>
                 </div>
             </div>
         `;
@@ -2491,6 +2778,7 @@ function renderPropertyList() {
 }
 
 async function selectProperty(propertyId) {
+    showLoader();
     try {
         state.currentProperty = state.properties.find(p => p._id === propertyId);
         if (!state.currentProperty) throw new Error('Property not found');
@@ -2502,23 +2790,27 @@ async function selectProperty(propertyId) {
             loadUnits(propertyId),
             loadTenants(propertyId),
             loadMaintenanceRequests(propertyId),
-            loadDocuments(propertyId)
+            loadDocuments(propertyId),
+            loadPayments(propertyId)
         ]);
         
         updatePropertyStats();
         showNotification('Property loaded successfully', 'success');
 
-           // Re-render the property list to update the active class
+            // Re-render the property list to update the active class
         renderPropertyList();
-        
+
     } catch (error) {
         console.error('Error selecting property:', error);
         showNotification('Error loading property details', 'error');
+            } finally {
+        hideLoader();
     }
 }
 
 // Update the loadUnits function
 async function loadUnits(propertyId) {
+    
     try {
         const response = await fetch(`${API_URL}/properties/${propertyId}/units`);
         if (!response.ok) throw new Error('Failed to fetch units');
@@ -2532,11 +2824,12 @@ async function loadUnits(propertyId) {
         updatePropertyStats(); // Update stats after loading units
         populateUnitSelect();
          populateMaintenanceUnitSelect();
-        updateTabCounts(); 
+         updateTabCounts(); 
 
     } catch (error) {
         console.error('Error loading units:', error);
         showNotification('Error loading units', 'error');
+
     }
 }
 
@@ -2636,8 +2929,6 @@ function formatAddress(address) {
 }
 
 
-// Add these functions to your JavaScript code before the window exports
-
 // Property Management Handlers
 async function handleAddProperty(event) {
     event.preventDefault();
@@ -2654,7 +2945,7 @@ async function handleAddProperty(event) {
             zip: formData.get('zip')
         }
     };
-
+showLoader();
     try {
         const response = await fetch(`${API_URL}/projects`, {
             method: 'POST',
@@ -2675,6 +2966,8 @@ async function handleAddProperty(event) {
     } catch (error) {
         console.error('Error adding property:', error);
         showNotification('Error adding property', 'error');
+            } finally {
+        hideLoader();
     }
 }
 
@@ -2777,6 +3070,8 @@ async function handleUpdateUnit(unitId) {
         return;
     }
 
+    showLoader();
+
     try {
         const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${unitId}`, {
             method: 'PUT',
@@ -2808,6 +3103,8 @@ async function handleUpdateUnit(unitId) {
     } catch (error) {
         console.error('Error updating unit:', error);
         showNotification(error.message || 'Error updating unit', 'error');
+            } finally {
+        hideLoader();
     }
 }
 
@@ -2952,7 +3249,7 @@ async function handleAddUnit(event) {
         showNotification('Please fill in all required fields', 'error');
         return;
     }
-
+showLoader();
     try {
         console.log('Sending unit data:', unitData); // Debug log
 
@@ -2980,14 +3277,17 @@ async function handleAddUnit(event) {
     } catch (error) {
         console.error('Error adding unit:', error);
         showNotification(error.message || 'Error adding unit', 'error');
+            } finally {
+        hideLoader();
     }
 }
+
 
 async function deleteUnit(unitId) {
     if (!confirm('Are you sure you want to delete this unit?')) {
         return;
     }
-
+    showLoader();
     try {
         const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${unitId}`, {
             method: 'DELETE',
@@ -3008,6 +3308,8 @@ async function deleteUnit(unitId) {
     } catch (error) {
         console.error('Error deleting unit:', error);
         showNotification('Error deleting unit', 'error');
+            } finally {
+        hideLoader();
     }
 }
 
@@ -3052,12 +3354,16 @@ document.getElementById('tenantName')?.addEventListener('input', function() {
         .join(' ');
 });
 
+// Reset car fields on form reset
 function resetTenantForm() {
     document.getElementById('addTenantForm').reset();
     // Clear dynamic lease holders
     populateLeaseHolders([]);
     // Hide pets section
     document.getElementById('petDetails').style.display = 'none';
+    // Hide car section
+    document.getElementById('carDetails').style.display = 'none';
+    document.getElementById('carFieldsContainer').innerHTML = '';
     // Hide lease type sections
     document.getElementById('fmrSection').style.display = 'none';
     document.getElementById('section8Section').style.display = 'none';
@@ -3086,20 +3392,33 @@ async function handleAddTenant(event) {
         return;
     }
 
+    // Gather car info if "Has Car(s)" is checked
+    let cars = [];
+    if (document.getElementById('hasCar').checked) {
+        const carCount = parseInt(document.getElementById('carCount').value) || 0;
+        for (let i = 0; i < carCount; i++) {
+            cars.push({
+                make: document.querySelector(`.car-make[data-index="${i}"]`)?.value || '',
+                model: document.querySelector(`.car-model[data-index="${i}"]`)?.value || '',
+                color: document.querySelector(`.car-color[data-index="${i}"]`)?.value || '',
+                licensePlate: document.querySelector(`.car-plate[data-index="${i}"]`)?.value || '',
+                year: document.querySelector(`.car-year[data-index="${i}"]`)?.value || ''
+            });
+        }
+    }
+
     const tenantData = {
         name: document.getElementById('tenantName').value,
         phone: document.getElementById('tenantPhone').value,
         email: document.getElementById('tenantEmail').value,
-
         leaseHolders: getLeaseHoldersFromForm(),
-
-      emergencyContact: {
-    name: document.getElementById('emergencyContactName').value,
-    phone: document.getElementById('emergencyContactPhone').value,
-    email: document.getElementById('emergencyContactEmail').value,
-    relation: document.getElementById('emergencyContactRelation').value
-},
-
+        emergencyContact: {
+            name: document.getElementById('emergencyContactName').value,
+            phone: document.getElementById('emergencyContactPhone').value,
+            email: document.getElementById('emergencyContactEmail').value,
+            address: document.getElementById('emergencyContactAddress').value,
+            relation: document.getElementById('emergencyContactRelation').value
+        },
         authorizedOccupants: document.getElementById('authorizedOccupants').value
             .split('\n')
             .map(s => s.trim())
@@ -3109,16 +3428,24 @@ async function handleAddTenant(event) {
             count: document.getElementById('hasPets').checked ? Number(document.getElementById('petCount').value) : 0,
             fee: document.getElementById('hasPets').checked ? Number(document.getElementById('petFee').value) : 0
         },
+        cars: {
+            hasCar: document.getElementById('hasCar').checked,
+            count: document.getElementById('hasCar').checked ? (parseInt(document.getElementById('carCount').value) || 0) : 0,
+            details: cars
+        },
         leaseRenewal: document.getElementById('leaseRenewal').value,
         unitId: document.getElementById('tenantUnit').value,
-    leaseStart: document.getElementById('leaseStart').value,
-    leaseEnd: document.getElementById('leaseEnd').value,
-    baseRent: Number(document.getElementById('baseRent').value),
-    leaseType: document.getElementById('leaseType').value,
-    fmrNotes: document.getElementById('leaseType').value === 'fmr' ? document.getElementById('fmrNotes').value : '',
-    hubContribution: document.getElementById('leaseType').value === 'section8' ? Number(document.getElementById('hubContribution').value) : 0,
-    tenantContribution: document.getElementById('leaseType').value === 'section8' ? Number(document.getElementById('tenantContribution').value) : 0,
-        leaseStatus: document.getElementById('leaseStatus').value,
+        leaseStart: document.getElementById('leaseStart').value,
+        leaseEnd: document.getElementById('leaseEnd').value,
+        baseRent: Number(document.getElementById('baseRent').value),
+        waterFee: Number(document.getElementById('waterFee').value) || 0,
+        trashFee: Number(document.getElementById('trashFee').value) || 0,
+        adminFee: Number(document.getElementById('adminFee').value) || 0,
+        leaseType: document.getElementById('leaseType').value,
+        fmrNotes: document.getElementById('leaseType').value === 'fmr' ? document.getElementById('fmrNotes').value : '',
+        hubContribution: document.getElementById('leaseType').value === 'section8' ? Number(document.getElementById('hubContribution').value) : 0,
+        tenantContribution: document.getElementById('leaseType').value === 'section8' ? Number(document.getElementById('tenantContribution').value) : 0,
+        leaseStatus: document.getElementById('leaseStatus').value
     };
 
     // Validate lease dates
@@ -3126,7 +3453,7 @@ async function handleAddTenant(event) {
         showNotification('Lease end date must be after start date', 'error');
         return;
     }
-
+    showLoader();
     try {
         const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/tenants`, {
             method: 'POST',
@@ -3160,20 +3487,57 @@ async function handleAddTenant(event) {
         closeModal('addTenantModal');
         showNotification('Tenant added successfully', 'success');
         event.target.reset();
+        await loadAllUnitsAndTenants();
     } catch (error) {
         console.error('Error adding tenant:', error);
         showNotification(error.message || 'Error adding tenant', 'error');
+    } finally {
+        hideLoader();
     }
 }
-
 
 // Show/hide pet details
 document.getElementById('hasPets').addEventListener('change', function() {
     document.getElementById('petDetails').style.display = this.checked ? 'block' : 'none';
 });
 
+// Show/hide car details and dynamic car fields
+document.getElementById('hasCar').addEventListener('change', function() {
+    const carDetails = document.getElementById('carDetails');
+    carDetails.style.display = this.checked ? 'block' : 'none';
+    if (this.checked) {
+        updateCarFields();
+    }
+});
+
+// Update car fields when car count changes
+document.getElementById('carCount').addEventListener('input', updateCarFields);
+
+function updateCarFields() {
+    const count = parseInt(document.getElementById('carCount').value) || 0;
+    const container = document.getElementById('carFieldsContainer');
+    container.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+        container.innerHTML += `
+            <div class="car-field-group" style="margin-bottom:10px; padding:8px; background:#f8f9fa; border-radius:6px;">
+                <label>Car #${i + 1} Make</label>
+                <input type="text" class="car-make" data-index="${i}">
+                <label>Model</label>
+                <input type="text" class="car-model" data-index="${i}">
+                <label>Color</label>
+                <input type="text" class="car-color" data-index="${i}">
+                <label>License Plate</label>
+                <input type="text" class="car-plate" data-index="${i}">
+                <label>Year</label>
+                <input type="number" class="car-year" data-index="${i}" min="1900" max="2100">
+            </div>
+        `;
+    }
+}
+
 // Update the loadTenants function
 async function loadTenants(propertyId) {
+    
     try {
         const response = await fetch(`${API_URL}/properties/${propertyId}/tenants`);
         if (!response.ok) throw new Error('Failed to fetch tenants');
@@ -3187,6 +3551,7 @@ async function loadTenants(propertyId) {
     } catch (error) {
         console.error('Error loading tenants:', error);
         showNotification('Error loading tenants', 'error');
+
     }
 }
 
@@ -3214,19 +3579,20 @@ function renderTenants() {
             .join('')
             .toUpperCase();
 
-            const leaseHolders = (tenant.leaseHolders && tenant.leaseHolders.length)
-    ? `<ul class="tenant-list">${tenant.leaseHolders.map(holder => `
-        <li>
-            <strong>${holder.name}</strong>
-            ${holder.phone ? ` | <i class="fas fa-phone"></i> ${holder.phone}` : ''}
-            ${holder.email ? ` | <i class="fas fa-envelope"></i> ${holder.email}` : ''}
-        </li>
-    `).join('')}</ul>`
-    : '<span class="tenant-detail-value">None listed</span>';
+        // Lease holders
+        const leaseHolders = (tenant.leaseHolders && tenant.leaseHolders.length)
+            ? `<ul class="tenant-list">${tenant.leaseHolders.map(holder => `
+                <li>
+                    <strong>${holder.name}</strong>
+                    ${holder.phone ? ` | <i class="fas fa-phone"></i> ${holder.phone}` : ''}
+                    ${holder.email ? ` | <i class="fas fa-envelope"></i> ${holder.email}` : ''}
+                </li>
+            `).join('')}</ul>`
+            : '<span class="tenant-detail-value">None listed</span>';
 
         // Find the associated unit
         const assignedUnit = typeof tenant.unitId === 'object' ? tenant.unitId : 
-            state.units.find(u => u._id === tenant.unitId || u._id.toString() === tenant.unitId?.toString());
+            state.units.find(u => u._id === tenant.unitId || u._id?.toString() === tenant.unitId?.toString());
 
         // Format lease dates
         const leaseStart = tenant.leaseStart ? 
@@ -3264,16 +3630,42 @@ function renderTenants() {
             ? `Yes (${tenant.pets.count} pet${tenant.pets.count > 1 ? 's' : ''}), Fee: $${tenant.pets.fee}`
             : 'No';
 
-        // Emergency contact
+        // Cars
+        let cars = '<span class="tenant-detail-value">No cars listed</span>';
+        if (tenant.cars?.hasCar && Array.isArray(tenant.cars.details) && tenant.cars.details.length) {
+            cars = `<ul class="tenant-list">${tenant.cars.details.map((car, idx) => `
+                <li>
+                    <strong>Car #${idx + 1}:</strong>
+                    ${car.year || ''} ${car.make || ''} ${car.model || ''} (${car.color || ''}) - Plate: ${car.licensePlate || ''}
+                </li>
+            `).join('')}</ul>`;
+        }
 
-const emergency = tenant.emergencyContact
-    ? `<div class="tenant-detail-row">
-            <span><i class="fas fa-user-shield"></i> ${tenant.emergencyContact.name || 'N/A'}</span>
-            <span><i class="fas fa-phone"></i> ${tenant.emergencyContact.phone || 'N/A'}</span>
-            <span><i class="fas fa-envelope"></i> ${tenant.emergencyContact.email || 'N/A'}</span>
-            <span><i class="fas fa-user-friends"></i> ${tenant.emergencyContact.relation || 'N/A'}</span>
-        </div>`
-    : '<span class="tenant-detail-value">N/A</span>';
+        // Emergency contact (scrollable)
+        const emergency = tenant.emergencyContact
+            ? `<div class="tenant-detail-row" style="overflow-x:auto; white-space:nowrap; gap:18px;">
+                    <span><i class="fas fa-user-shield"></i> ${tenant.emergencyContact.name || 'N/A'}</span>
+                    <span><i class="fas fa-phone"></i> ${tenant.emergencyContact.phone || 'N/A'}</span>
+                    <span><i class="fas fa-envelope"></i> ${tenant.emergencyContact.email || 'N/A'}</span>
+                    <span><i class="fas fa-map-marker-alt"></i> ${tenant.emergencyContact?.address || 'N/A'}</span>
+                    <span><i class="fas fa-user-friends"></i> ${tenant.emergencyContact.relation || 'N/A'}</span>
+                </div>`
+            : '<span class="tenant-detail-value">N/A</span>';
+
+        // Additional fees
+        const additionalFees = `
+            <div class="tenant-detail-row"><span>Water Fee:</span> <span>$${tenant.waterFee?.toFixed(2) || '0.00'}</span></div>
+            <div class="tenant-detail-row"><span>Trash Fee:</span> <span>$${tenant.trashFee?.toFixed(2) || '0.00'}</span></div>
+            <div class="tenant-detail-row"><span>Admin Fee:</span> <span>$${tenant.adminFee?.toFixed(2) || '0.00'}</span></div>
+        `;
+
+        // Total rent calculation (base rent + additional fees)
+const totalRent = 
+    (Number(tenant.baseRent) || 0) +
+    (Number(tenant.waterFee) || 0) +
+    (Number(tenant.trashFee) || 0) +
+    (Number(tenant.adminFee) || 0) +
+    (tenant.pets?.hasPets ? (Number(tenant.pets.fee) || 0) : 0);
 
         return `
             <div class="tenant-card">
@@ -3295,15 +3687,16 @@ const emergency = tenant.emergencyContact
                         <div class="tenant-detail-row"><span><i class="fas fa-phone"></i> ${tenant.phone}</span></div>
                         <div class="tenant-detail-row"><span><i class="fas fa-envelope"></i> ${tenant.email}</span></div>
                     </div>
-
                     <div class="tenant-section">
-    <div class="tenant-section-title"><i class="fas fa-user"></i>Additional Lease Holders</div>
-    ${leaseHolders}
-</div>
+                        <div class="tenant-section-title"><i class="fas fa-user"></i> Additional Lease Holders</div>
+                        ${leaseHolders}
+                    </div>
                     <div class="tenant-section">
                         <div class="tenant-section-title"><i class="fas fa-file-contract"></i> Lease</div>
                         <div class="tenant-detail-row"><span>Lease:</span> <span>${leaseStart} - ${leaseEnd}</span></div>
                         <div class="tenant-detail-row"><span>Rent:</span> <span>$${tenant.baseRent?.toFixed(2) || '0.00'}</span></div>
+                        ${additionalFees}
+                        <div class="tenant-detail-row"><span><strong>Total Rent:</strong></span> <span><strong>$${totalRent.toFixed(2)}</strong></span></div>
                         <div class="tenant-detail-row"><span>Type:</span> <span>${tenant.leaseType === 'fmr' ? 'Free Market Rent' : tenant.leaseType === 'section8' ? 'Section 8' : 'N/A'}</span></div>
                         ${leaseTypeDetails}
                         <div class="tenant-detail-row">
@@ -3327,6 +3720,10 @@ const emergency = tenant.emergencyContact
                         <div class="tenant-section-title"><i class="fas fa-paw"></i> Pets</div>
                         <div class="tenant-detail-row">${pets}</div>
                     </div>
+                    <div class="tenant-section">
+                        <div class="tenant-section-title"><i class="fas fa-car"></i> Cars</div>
+                        ${cars}
+                    </div>
                 </div>
                 <div class="tenant-actions">
                     <button onclick="viewTenantDetails('${tenant._id}')" class="btn-secondary">
@@ -3343,7 +3740,7 @@ const emergency = tenant.emergencyContact
         `;
     }).join('');
 }
-// Also update the viewTenantDetails function to handle the same data structure
+
 async function viewTenantDetails(tenantId) {
     try {
         const tenant = state.tenants.find(t => t._id === tenantId);
@@ -3356,49 +3753,114 @@ async function viewTenantDetails(tenantId) {
             .join('')
             .toUpperCase();
 
-
-            const leaseHoldersHtml = (tenant.leaseHolders && tenant.leaseHolders.length)
-    ? `<ul>
-        ${tenant.leaseHolders.map(holder => `
-            <li>
-                <strong>${holder.name}</strong>
-                ${holder.phone ? ` | <i class="fas fa-phone"></i> ${holder.phone}` : ''}
-                ${holder.email ? ` | <i class="fas fa-envelope"></i> ${holder.email}` : ''}
-            </li>
-        `).join('')}
-      </ul>`
-    : '<span class="tenant-detail-value">None listed</span>';
+        // Lease holders
+        const leaseHoldersHtml = (tenant.leaseHolders && tenant.leaseHolders.length)
+            ? `<ul>
+                ${tenant.leaseHolders.map(holder => `
+                    <li>
+                        <strong>${holder.name}</strong>
+                        ${holder.phone ? ` | <i class="fas fa-phone"></i> ${holder.phone}` : ''}
+                        ${holder.email ? ` | <i class="fas fa-envelope"></i> ${holder.email}` : ''}
+                    </li>
+                `).join('')}
+              </ul>`
+            : '<span class="tenant-detail-value">None listed</span>';
 
         // Format dates
-        const leaseStart = tenant.leaseStart ? 
-            new Date(tenant.leaseStart).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-            }) : 'Not set';
-        
-        const leaseEnd = tenant.leaseEnd ? 
-            new Date(tenant.leaseEnd).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+        const leaseStart = tenant.leaseStart ?
+            new Date(tenant.leaseStart).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
             }) : 'Not set';
 
-        // Calculate lease status
-        const today = new Date();
-        const endDate = tenant.leaseEnd ? new Date(tenant.leaseEnd) : null;
-        let leaseStatus = 'no';
-        let leaseStatusText = 'No Lease';
-        
-        if (endDate) {
-            if (endDate < today) {
-                leaseStatus = 'expired';
-                leaseStatusText = 'Expired';
-            } else if (endDate > today) {
-                leaseStatus = 'active';
-                leaseStatusText = 'Active';
-            }
+        const leaseEnd = tenant.leaseEnd ?
+            new Date(tenant.leaseEnd).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }) : 'Not set';
+
+        // Unit info
+        let unitInfoHtml = '<p>No unit assigned</p>';
+        if (tenant.unitId && typeof tenant.unitId === 'object') {
+            unitInfoHtml = `
+                <p><i class="fas fa-home"></i> Unit ${tenant.unitId.number}</p>
+                <p><i class="fas fa-bed"></i> ${tenant.unitId.bedrooms} Bedrooms, ${tenant.unitId.bathrooms} Bathrooms</p>
+                <p><i class="fas fa-ruler-combined"></i> ${tenant.unitId.sqft || 'N/A'} sq ft</p>
+                <p><i class="fas fa-building"></i> Floor ${tenant.unitId.floor || '1'}</p>
+            `;
         }
+
+        // Lease type details
+        let leaseTypeDetails = '';
+        if (tenant.leaseType === 'fmr') {
+            leaseTypeDetails = `<p><i class="fas fa-sticky-note"></i> FMR Notes: ${tenant.fmrNotes || 'None'}</p>`;
+        } else if (tenant.leaseType === 'section8') {
+            leaseTypeDetails = `
+                <p><i class="fas fa-building"></i> HUB Contribution: $${tenant.hubContribution?.toFixed(2) || '0.00'}</p>
+                <p><i class="fas fa-user"></i> Tenant Contribution: $${tenant.tenantContribution?.toFixed(2) || '0.00'}</p>
+            `;
+        }
+
+        // Additional fees
+        const additionalFeesHtml = `
+            <p><i class="fas fa-tint"></i> Water Fee: $${tenant.waterFee?.toFixed(2) || '0.00'}</p>
+            <p><i class="fas fa-trash"></i> Trash Fee: $${tenant.trashFee?.toFixed(2) || '0.00'}</p>
+            <p><i class="fas fa-user-cog"></i> Admin Fee: $${tenant.adminFee?.toFixed(2) || '0.00'}</p>
+        `;
+
+        // Total rent calculation (base rent + additional fees)
+const totalRent = 
+    (Number(tenant.baseRent) || 0) +
+    (Number(tenant.waterFee) || 0) +
+    (Number(tenant.trashFee) || 0) +
+    (Number(tenant.adminFee) || 0) +
+    (tenant.pets?.hasPets ? (Number(tenant.pets.fee) || 0) : 0);
+
+        // Authorized occupants
+        const occupantsHtml = (tenant.authorizedOccupants || []).length
+            ? `<ul>${tenant.authorizedOccupants.map(o => `<li>${o}</li>`).join('')}</ul>`
+            : '<li>None listed</li>';
+
+        // Pets
+        const petsHtml = tenant.pets?.hasPets
+            ? `Yes (${tenant.pets.count} pet${tenant.pets.count > 1 ? 's' : ''}), Fee: $${tenant.pets.fee}`
+            : 'No';
+
+        // Cars
+        let carsHtml = '<span class="tenant-detail-value">No cars listed</span>';
+        if (tenant.cars?.hasCar && Array.isArray(tenant.cars.details) && tenant.cars.details.length) {
+            carsHtml = `<ul class="tenant-list">${tenant.cars.details.map((car, idx) => `
+                <li>
+                    <strong>Car #${idx + 1}:</strong>
+                    ${car.year || ''} ${car.make || ''} ${car.model || ''} (${car.color || ''}) - Plate: ${car.licensePlate || ''}
+                </li>
+            `).join('')}</ul>`;
+        }
+
+        // Emergency contact
+        const emergencyHtml = tenant.emergencyContact
+            ? `
+                <p><i class="fas fa-user-shield"></i> ${tenant.emergencyContact.name || 'N/A'}</p>
+                <p><i class="fas fa-phone"></i> ${tenant.emergencyContact.phone || 'N/A'}</p>
+                <p><i class="fas fa-envelope"></i> ${tenant.emergencyContact.email || 'N/A'}</p>
+                <p><i class="fas fa-map-marker-alt"></i> ${tenant.emergencyContact.address || 'N/A'}</p>
+                <p><i class="fas fa-user-friends"></i> Relation: ${tenant.emergencyContact.relation || 'N/A'}</p>
+            `
+            : '<span class="tenant-detail-value">N/A</span>';
+
+        // Lease status badge
+        const leaseStatus = tenant.leaseStatus || 'active';
+        const leaseStatusText = leaseStatus.charAt(0).toUpperCase() + leaseStatus.slice(1);
+
+        // Dates for created/updated
+        const createdAt = tenant.createdAt ? new Date(tenant.createdAt).toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        }) : '';
+        const updatedAt = tenant.updatedAt ? new Date(tenant.updatedAt).toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        }) : '';
 
         const detailsHtml = `
             <div class="modal-content tenant-details-modal">
@@ -3406,91 +3868,63 @@ async function viewTenantDetails(tenantId) {
                     <div class="tenant-avatar">${initials}</div>
                     <h2>${tenant.name}</h2>
                 </div>
-                
                 <div class="tenant-details-content">
                     <div class="detail-group">
                         <label>Contact Information</label>
                         <p><i class="fas fa-phone"></i> ${tenant.phone}</p>
                         <p><i class="fas fa-envelope"></i> ${tenant.email}</p>
                     </div>
-
-                      <div class="detail-group">
-    <label>Additional Lease Holders</label>
-    ${leaseHoldersHtml}
-</div>
-
+                    <div class="detail-group">
+                        <label>Additional Lease Holders</label>
+                        ${leaseHoldersHtml}
+                    </div>
                     <div class="detail-group">
                         <label>Unit Information</label>
-                        ${tenant.unitId ? `
-                            <p><i class="fas fa-home"></i> Unit ${tenant.unitId.number}</p>
-                            <p><i class="fas fa-bed"></i> ${tenant.unitId.bedrooms} Bedrooms, ${tenant.unitId.bathrooms} Bathrooms</p>
-                            <p><i class="fas fa-ruler-combined"></i> ${tenant.unitId.sqft || 'N/A'} sq ft</p>
-                            <p><i class="fas fa-building"></i> Floor ${tenant.unitId.floor || '1'}</p>
-                        ` : '<p>No unit assigned</p>'}
+                        ${unitInfoHtml}
                     </div>
-
-<div class="detail-group">
-    <label>Lease Information</label>
-    <p><i class="fas fa-calendar-alt"></i> Start Date: ${leaseStart}</p>
-    <p><i class="fas fa-calendar-check"></i> End Date: ${leaseEnd}</p>
-    <p><i class="fas fa-dollar-sign"></i> Base Rent: $${tenant.baseRent?.toFixed(2) || '0.00'}</p>
-    <p><i class="fas fa-file-contract"></i> Lease Type: 
-        ${tenant.leaseType === 'fmr' ? 'Free Market Rent' : tenant.leaseType === 'section8' ? 'Section 8' : 'N/A'}
-    </p>
-    ${tenant.leaseType === 'fmr' ? `
-        <p><i class="fas fa-sticky-note"></i> FMR Notes: ${tenant.fmrNotes || 'None'}</p>
-    ` : ''}
-    ${tenant.leaseType === 'section8' ? `
-        <p><i class="fas fa-building"></i> HUB Contribution: $${tenant.hubContribution?.toFixed(2) || '0.00'}</p>
-        <p><i class="fas fa-user"></i> Tenant Contribution: $${tenant.tenantContribution?.toFixed(2) || '0.00'}</p>
-    ` : ''}
-<p>
-  <i class="fas fa-info-circle"></i> Lease Status:
-  <span class="lease-badge ${tenant.leaseStatus || 'active'}">
-    ${(tenant.leaseStatus || 'active').charAt(0).toUpperCase() + (tenant.leaseStatus || 'active').slice(1)}
-  </span>
-</p>
-</div>
-
-<div class="detail-group">
-    <label>Emergency Contact</label>
-    <p><i class="fas fa-user-shield"></i> ${tenant.emergencyContact?.name || 'N/A'}</p>
-    <p><i class="fas fa-phone"></i> ${tenant.emergencyContact?.phone || 'N/A'}</p>
-    <p><i class="fas fa-envelope"></i> ${tenant.emergencyContact?.email || 'N/A'}</p>
-    <p><i class="fas fa-user-friends"></i> Relation: ${tenant.emergencyContact?.relation || 'N/A'}</p>
-</div>
-<div class="detail-group">
-    <label>Authorized Occupants</label>
-    <ul>
-        ${(tenant.authorizedOccupants || []).map(o => `<li>${o}</li>`).join('') || '<li>None listed</li>'}
-    </ul>
-</div>
-<div class="detail-group">
-    <label>Pets</label>
-    <p>${tenant.pets?.hasPets ? `Yes (${tenant.pets.count} pet(s)), Fee: $${tenant.pets.fee}` : 'No'}</p>
-</div>
-<div class="detail-group">
-    <label>Lease Renewal</label>
-    <p>${tenant.leaseRenewal === 'renew' ? 'Will Renew' : 'Will Terminate'}</p>
-</div>
-
+                    <div class="detail-group">
+                        <label>Lease Information</label>
+                        <p><i class="fas fa-calendar-alt"></i> Start Date: ${leaseStart}</p>
+                        <p><i class="fas fa-calendar-check"></i> End Date: ${leaseEnd}</p>
+                        <p><i class="fas fa-dollar-sign"></i> Base Rent: $${tenant.baseRent?.toFixed(2) || '0.00'}</p>
+                        ${additionalFeesHtml}
+                        <p><strong><i class="fas fa-calculator"></i> Total Rent:</strong> <strong>$${totalRent.toFixed(2)}</strong></p>
+                        <p><i class="fas fa-file-contract"></i> Lease Type: 
+                            ${tenant.leaseType === 'fmr' ? 'Free Market Rent' : tenant.leaseType === 'section8' ? 'Section 8' : 'N/A'}
+                        </p>
+                        ${leaseTypeDetails}
+                        <p>
+                          <i class="fas fa-info-circle"></i> Lease Status:
+                          <span class="lease-badge ${leaseStatus}">
+                            ${leaseStatusText}
+                          </span>
+                        </p>
+                        <p><i class="fas fa-redo"></i> Renewal: ${tenant.leaseRenewal === 'renew' ? 'Will Renew' : 'Will Terminate'}</p>
+                    </div>
+                    <div class="detail-group">
+                        <label>Emergency Contact</label>
+                        ${emergencyHtml}
+                    </div>
+                    <div class="detail-group">
+                        <label>Authorized Occupants</label>
+                        <ul>
+                            ${occupantsHtml}
+                        </ul>
+                    </div>
+                    <div class="detail-group">
+                        <label>Pets</label>
+                        <p>${petsHtml}</p>
+                    </div>
+                    <div class="detail-group">
+                        <label>Cars</label>
+                        ${carsHtml}
+                    </div>
                     <div class="detail-group">
                         <label>Additional Information</label>
-                        <p><i class="fas fa-clock"></i> Added: ${new Date(tenant.createdAt).toLocaleDateString('en-US', { 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                        })}</p>
-                        <p><i class="fas fa-sync"></i> Last Updated: ${new Date(tenant.updatedAt).toLocaleDateString('en-US', { 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric'
-                        })}</p>
+                        <p><i class="fas fa-clock"></i> Added: ${createdAt}</p>
+                        <p><i class="fas fa-sync"></i> Last Updated: ${updatedAt}</p>
                     </div>
                 </div>
-
-                
-
                 <div class="modal-footer">
                     <button onclick="editTenant('${tenant._id}')" class="btn-primary">
                         <i class="fas fa-edit"></i> Edit Tenant
@@ -3519,6 +3953,7 @@ async function viewTenantDetails(tenantId) {
     }
 }
 
+
 async function editTenant(tenantId) {
     try {
         const tenant = state.tenants.find(t => t._id === tenantId);
@@ -3535,6 +3970,9 @@ async function editTenant(tenantId) {
         document.getElementById('leaseStart').value = tenant.leaseStart ? new Date(tenant.leaseStart).toISOString().split('T')[0] : '';
         document.getElementById('leaseEnd').value = tenant.leaseEnd ? new Date(tenant.leaseEnd).toISOString().split('T')[0] : '';
         document.getElementById('baseRent').value = tenant.baseRent ?? '';
+        document.getElementById('waterFee').value = tenant.waterFee ?? '';
+        document.getElementById('trashFee').value = tenant.trashFee ?? '';
+        document.getElementById('adminFee').value = tenant.adminFee ?? '';
         document.getElementById('leaseType').value = tenant.leaseType ?? '';
         document.getElementById('leaseStatus').value = tenant.leaseStatus || 'active';
 
@@ -3560,6 +3998,7 @@ async function editTenant(tenantId) {
         document.getElementById('emergencyContactName').value = tenant.emergencyContact?.name || '';
         document.getElementById('emergencyContactPhone').value = tenant.emergencyContact?.phone || '';
         document.getElementById('emergencyContactEmail').value = tenant.emergencyContact?.email || '';
+        document.getElementById('emergencyContactAddress').value = tenant.emergencyContact?.address || '';
         document.getElementById('emergencyContactRelation').value = tenant.emergencyContact?.relation || '';
 
         // Authorized occupants
@@ -3574,10 +4013,23 @@ async function editTenant(tenantId) {
         // Lease renewal
         document.getElementById('leaseRenewal').value = tenant.leaseRenewal || 'renew';
 
-        
+        // Cars
+        document.getElementById('hasCar').checked = !!(tenant.cars && tenant.cars.hasCar);
+        document.getElementById('carDetails').style.display = (tenant.cars && tenant.cars.hasCar) ? 'block' : 'none';
+        document.getElementById('carCount').value = tenant.cars?.count || 1;
+        updateCarFields();
+        if (tenant.cars && Array.isArray(tenant.cars.details)) {
+            tenant.cars.details.forEach((car, i) => {
+                document.querySelector(`.car-make[data-index="${i}"]`).value = car.make || '';
+                document.querySelector(`.car-model[data-index="${i}"]`).value = car.model || '';
+                document.querySelector(`.car-color[data-index="${i}"]`).value = car.color || '';
+                document.querySelector(`.car-plate[data-index="${i}"]`).value = car.licensePlate || '';
+                document.querySelector(`.car-year[data-index="${i}"]`).value = car.year || '';
+            });
+        }
 
         // Get vacant units plus the tenant's current unit
-        const availableUnits = state.units.filter(unit => 
+        const availableUnits = state.units.filter(unit =>
             unit.status === 'vacant' || (tenant.unitId && (unit._id === tenant.unitId._id || unit._id === tenant.unitId))
         );
 
@@ -3594,23 +4046,42 @@ async function editTenant(tenantId) {
 
         // Open modal in edit mode
         openModal('addTenantModal');
-        
-        
 
         // Update form handler for edit mode
         const form = document.getElementById('addTenantForm');
         const submitButton = form.querySelector('button[type="submit"]');
         submitButton.textContent = 'Update Tenant';
-        
+
         // Store the tenantId for update and mark as edit mode
         form.dataset.editMode = 'true';
         form.dataset.tenantId = tenantId;
-        
+
         // Remove the previous event listener and add new one
         form.onsubmit = null;
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             await handleUpdateTenant(tenantId);
+
+            // After update, handle unit status based on leaseStatus
+            const leaseStatus = document.getElementById('leaseStatus').value;
+            const unitId = document.getElementById('tenantUnit').value;
+            if (unitId) {
+                if (leaseStatus === 'terminated' || leaseStatus === 'expired') {
+                    await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${unitId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'vacant' })
+                    });
+                    await loadUnits(state.currentProperty._id);
+                } else if (leaseStatus === 'active') {
+                    await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${unitId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'occupied' })
+                    });
+                    await loadUnits(state.currentProperty._id);
+                }
+            }
         }, { once: true }); // Use once: true to auto-remove after submission
     } catch (error) {
         console.error('Error editing tenant:', error);
@@ -3629,48 +4100,69 @@ async function handleUpdateTenant(tenantId) {
     const newUnitId = document.getElementById('tenantUnit').value;
     const oldUnitId = tenant.unitId?._id || tenant.unitId;
 
-const tenantData = {
-    name: document.getElementById('tenantName').value,
-    phone: document.getElementById('tenantPhone').value,
-    email: document.getElementById('tenantEmail').value,
+    // Gather car info if "Has Car(s)" is checked
+    let cars = [];
+    if (document.getElementById('hasCar').checked) {
+        const carCount = parseInt(document.getElementById('carCount').value) || 0;
+        for (let i = 0; i < carCount; i++) {
+            cars.push({
+                make: document.querySelector(`.car-make[data-index="${i}"]`)?.value || '',
+                model: document.querySelector(`.car-model[data-index="${i}"]`)?.value || '',
+                color: document.querySelector(`.car-color[data-index="${i}"]`)?.value || '',
+                licensePlate: document.querySelector(`.car-plate[data-index="${i}"]`)?.value || '',
+                year: document.querySelector(`.car-year[data-index="${i}"]`)?.value || ''
+            });
+        }
+    }
 
-    leaseHolders: getLeaseHoldersFromForm(),
-
-emergencyContact: {
-    name: document.getElementById('emergencyContactName').value,
-    phone: document.getElementById('emergencyContactPhone').value,
-    email: document.getElementById('emergencyContactEmail').value,
-    relation: document.getElementById('emergencyContactRelation').value
-},
-
-    authorizedOccupants: document.getElementById('authorizedOccupants').value
-        .split('\n')
-        .map(s => s.trim())
-        .filter(Boolean),
-    pets: {
-        hasPets: document.getElementById('hasPets').checked,
-        count: document.getElementById('hasPets').checked ? Number(document.getElementById('petCount').value) : 0,
-        fee: document.getElementById('hasPets').checked ? Number(document.getElementById('petFee').value) : 0
-    },
-    leaseRenewal: document.getElementById('leaseRenewal').value,
-    unitId: newUnitId,
-    leaseStart: document.getElementById('leaseStart').value,
-    leaseEnd: document.getElementById('leaseEnd').value,
-    baseRent: Number(document.getElementById('baseRent').value),
-    leaseType: document.getElementById('leaseType').value,
-    fmrNotes: document.getElementById('leaseType').value === 'fmr' ? document.getElementById('fmrNotes').value : '',
-    hubContribution: document.getElementById('leaseType').value === 'section8' ? Number(document.getElementById('hubContribution').value) : 0,
-    tenantContribution: document.getElementById('leaseType').value === 'section8' ? Number(document.getElementById('tenantContribution').value) : 0,
-    leaseStatus: document.getElementById('leaseStatus').value, // <-- ADD THIS LINE
-    status: tenant.status || 'active'
-};
+    const tenantData = {
+        name: document.getElementById('tenantName').value,
+        phone: document.getElementById('tenantPhone').value,
+        email: document.getElementById('tenantEmail').value,
+        leaseHolders: getLeaseHoldersFromForm(),
+        emergencyContact: {
+            name: document.getElementById('emergencyContactName').value,
+            phone: document.getElementById('emergencyContactPhone').value,
+            email: document.getElementById('emergencyContactEmail').value,
+            address: document.getElementById('emergencyContactAddress').value, 
+            relation: document.getElementById('emergencyContactRelation').value
+        },
+        authorizedOccupants: document.getElementById('authorizedOccupants').value
+            .split('\n')
+            .map(s => s.trim())
+            .filter(Boolean),
+        pets: {
+            hasPets: document.getElementById('hasPets').checked,
+            count: document.getElementById('hasPets').checked ? Number(document.getElementById('petCount').value) : 0,
+            fee: document.getElementById('hasPets').checked ? Number(document.getElementById('petFee').value) : 0
+        },
+        cars: {
+            hasCar: document.getElementById('hasCar').checked,
+            count: document.getElementById('hasCar').checked ? (parseInt(document.getElementById('carCount').value) || 0) : 0,
+            details: cars
+        },
+        leaseRenewal: document.getElementById('leaseRenewal').value,
+        unitId: newUnitId,
+        leaseStart: document.getElementById('leaseStart').value,
+        leaseEnd: document.getElementById('leaseEnd').value,
+        baseRent: Number(document.getElementById('baseRent').value),
+        waterFee: Number(document.getElementById('waterFee').value) || 0,
+        trashFee: Number(document.getElementById('trashFee').value) || 0,
+        adminFee: Number(document.getElementById('adminFee').value) || 0,
+        leaseType: document.getElementById('leaseType').value,
+        fmrNotes: document.getElementById('leaseType').value === 'fmr' ? document.getElementById('fmrNotes').value : '',
+        hubContribution: document.getElementById('leaseType').value === 'section8' ? Number(document.getElementById('hubContribution').value) : 0,
+        tenantContribution: document.getElementById('leaseType').value === 'section8' ? Number(document.getElementById('tenantContribution').value) : 0,
+        leaseStatus: document.getElementById('leaseStatus').value,
+        status: tenant.status || 'active'
+    };
 
     // Validate lease dates
     if (new Date(tenantData.leaseStart) > new Date(tenantData.leaseEnd)) {
         showNotification('Lease end date must be after start date', 'error');
         return;
     }
-
+    showLoader();
     try {
         // Update tenant
         const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/tenants/${tenantId}`, {
@@ -3702,6 +4194,30 @@ emergencyContact: {
             }
         }
 
+        // If leaseStatus is 'terminated' or 'expired', set the unit to vacant
+        if (
+            (tenantData.leaseStatus === 'terminated' || tenantData.leaseStatus === 'expired') &&
+            newUnitId
+        ) {
+            await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${newUnitId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'vacant' })
+            });
+        }
+
+        // If leaseStatus is 'active', set the unit to occupied
+        if (
+            tenantData.leaseStatus === 'active' &&
+            newUnitId
+        ) {
+            await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${newUnitId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'occupied' })
+            });
+        }
+
         await Promise.all([
             loadTenants(state.currentProperty._id),
             loadUnits(state.currentProperty._id)
@@ -3722,12 +4238,14 @@ emergencyContact: {
         
         closeModal('addTenantModal');
         showNotification('Tenant updated successfully', 'success');
+        await loadAllUnitsAndTenants();
     } catch (error) {
         console.error('Error updating tenant:', error);
         showNotification('Error updating tenant', 'error');
+    } finally {
+        hideLoader();
     }
 }
-
 // Add this function to populate unit select when opening the tenant modal
 function populateUnitSelect() {
     const unitSelect = document.getElementById('tenantUnit');
@@ -3749,16 +4267,6 @@ function populateUnitSelect() {
     `;
 }
 
-// Update the add tenant button event listener
-document.getElementById('addTenantBtn')?.addEventListener('click', () => {
-    if (!state.currentProperty) {
-        showNotification('Please select a property first', 'error');
-        return;
-    }
-    
-    populateUnitSelect();
-    openModal('addTenantModal');
-});
 
 
 
@@ -3767,7 +4275,7 @@ async function deleteTenant(tenantId) {
     if (!confirm('Are you sure you want to delete this tenant?')) {
         return;
     }
-
+   showLoader();
     try {
         const tenant = state.tenants.find(t => t._id === tenantId);
         if (!tenant) throw new Error('Tenant not found');
@@ -3797,6 +4305,8 @@ async function deleteTenant(tenantId) {
     } catch (error) {
         console.error('Error deleting tenant:', error);
         showNotification('Error deleting tenant', 'error');
+           } finally {
+        hideLoader(); 
     }
 }
 
@@ -3817,7 +4327,7 @@ async function handleAddMaintenance(event) {
         unitId: document.getElementById('maintenanceUnit').value,
         status: 'pending'
     };
-
+showLoader();
     try {
         const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/maintenance`, {
             method: 'POST',
@@ -3843,10 +4353,12 @@ async function handleAddMaintenance(event) {
     } catch (error) {
         console.error('Error creating maintenance request:', error);
         showNotification(error.message || 'Error creating maintenance request', 'error');
+            } finally {
+        hideLoader();
     }
 }
 
-    function updateMaintenanceTabBadge() {
+function updateMaintenanceTabBadge() {
     const badge = document.getElementById('maintenancePendingBadge');
     const pendingCount = state.maintenanceRequests.filter(r => r.status === 'pending').length;
     if (pendingCount > 0) {
@@ -3857,7 +4369,9 @@ async function handleAddMaintenance(event) {
     }
 }
 
+
 async function loadMaintenanceRequests(propertyId) {
+    
     try {
         const response = await fetch(`${API_URL}/properties/${propertyId}/maintenance`);
         if (!response.ok) throw new Error('Failed to fetch maintenance requests');
@@ -3870,6 +4384,7 @@ async function loadMaintenanceRequests(propertyId) {
     } catch (error) {
         console.error('Error loading maintenance requests:', error);
         showNotification('Error loading maintenance requests', 'error');
+
     }
 }
 
@@ -3969,16 +4484,6 @@ function populateMaintenanceUnitSelect() {
     `;
 }
 
-// Update the maintenance button event listener
-document.getElementById('addMaintenanceBtn')?.addEventListener('click', () => {
-    if (!state.currentProperty) {
-        showNotification('Please select a property first', 'error');
-        return;
-    }
-    
-    populateMaintenanceUnitSelect();
-    openModal('addMaintenanceModal');
-});
 
 // Add before the window exports
 
@@ -3986,7 +4491,7 @@ async function deleteMaintenance(requestId) {
     if (!confirm('Are you sure you want to delete this maintenance request?')) {
         return;
     }
-
+     showLoader();
     try {
         const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/maintenance/${requestId}`, {
             method: 'DELETE'
@@ -3999,11 +4504,14 @@ async function deleteMaintenance(requestId) {
     } catch (error) {
         console.error('Error deleting maintenance request:', error);
         showNotification('Error deleting maintenance request', 'error');
+            } finally {
+        hideLoader();
     }
 }
 
 
 async function updateMaintenanceStatus(requestId) {
+    showLoader();
     try {
         const request = state.maintenanceRequests.find(r => r._id === requestId);
         if (!request) throw new Error('Maintenance request not found');
@@ -4027,6 +4535,8 @@ async function updateMaintenanceStatus(requestId) {
     } catch (error) {
         console.error('Error updating maintenance status:', error);
         showNotification('Error updating maintenance status', 'error');
+            } finally {
+        hideLoader();
     }
 }
 
@@ -4112,7 +4622,7 @@ async function handleDocumentUpload(event) {
         showNotification('Please select a file to upload', 'error');
         return;
     }
-
+    showLoader();
     try {
         // Add file and metadata to FormData
         formData.append('file', fileInput.files[0]);
@@ -4134,10 +4644,13 @@ async function handleDocumentUpload(event) {
     } catch (error) {
         console.error('Error uploading document:', error);
         showNotification('Error uploading document', 'error');
+            } finally {
+        hideLoader();
     }
 }
 
 async function loadDocuments(propertyId) {
+    
     try {
         const response = await fetch(`${API_URL}/properties/${propertyId}/documents`);
         if (!response.ok) throw new Error('Failed to fetch documents');
@@ -4150,6 +4663,7 @@ async function loadDocuments(propertyId) {
     } catch (error) {
         console.error('Error loading documents:', error);
         showNotification('Error loading documents', 'error');
+
     }
 }
 
@@ -4255,6 +4769,7 @@ async function viewDocument(documentId) {
 
 
 async function downloadDocument(docId) {
+    showLoader();
     try {
         const doc = state.documents.find(d => d._id === docId);
         if (!doc) throw new Error('Document not found');
@@ -4278,6 +4793,8 @@ async function downloadDocument(docId) {
     } catch (error) {
         console.error('Error downloading document:', error);
         showNotification('Error downloading document', 'error');
+           } finally {
+        hideLoader(); 
     }
 }
 
@@ -4285,7 +4802,7 @@ async function deleteDocument(docId) {
     if (!confirm('Are you sure you want to delete this document?')) {
         return;
     }
-
+showLoader();
     try {
         const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/documents/${docId}`, {
             method: 'DELETE'
@@ -4298,12 +4815,15 @@ async function deleteDocument(docId) {
     } catch (error) {
         console.error('Error deleting document:', error);
         showNotification('Error deleting document', 'error');
+            } finally {
+        hideLoader();
     }
 }
 
 
 // Load payments when Payments tab is selected
 async function loadPayments(propertyId) {
+
     try {
         const response = await fetch(`${API_URL}/properties/${propertyId}/payments`);
         if (!response.ok) throw new Error('Failed to fetch payments');
@@ -4313,6 +4833,7 @@ async function loadPayments(propertyId) {
     } catch (error) {
         console.error('Error loading payments:', error);
         showNotification('Error loading payments', 'error');
+
     }
 }
 
@@ -4464,7 +4985,7 @@ async function handleAddPayment(event) {
     const form = event.target;
     const isEdit = form.dataset.editMode === 'true';
     const paymentId = form.dataset.paymentId;
-
+    showLoader();
     try {
         let response;
         if (isEdit && paymentId) {
@@ -4492,11 +5013,14 @@ async function handleAddPayment(event) {
     } catch (error) {
         console.error('Error saving payment:', error);
         showNotification('Error saving payment', 'error');
+            } finally {
+        hideLoader();
     }
 }
 
 async function deletePayment(paymentId) {
     if (!confirm('Are you sure you want to delete this payment?')) return;
+    showLoader();
     try {
         const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/payments/${paymentId}`, {
             method: 'DELETE'
@@ -4507,8 +5031,11 @@ async function deletePayment(paymentId) {
     } catch (error) {
         console.error('Error deleting payment:', error);
         showNotification('Error deleting payment', 'error');
+            } finally {
+        hideLoader();
     }
 }
+
 
 // Export receipt (simple CSV for now)
 function exportReceipt(paymentId) {
@@ -4602,6 +5129,23 @@ function updatePropertyStats() {
     document.getElementById('totalUnits').textContent = stats.totalUnits;
     document.getElementById('vacantUnits').textContent = stats.vacantUnits;
     document.getElementById('occupancyRate').textContent = stats.occupancyRate;
+
+    // Calculate and display estimated monthly income for this property (including additional fees and pet fee)
+    const activeTenants = (state.tenants || []).filter(
+        t => t.leaseStatus !== 'terminated' && t.leaseStatus !== 'expired'
+    );
+    const propertyMonthlyIncome = activeTenants.reduce((sum, t) =>
+        sum +
+        (Number(t.baseRent) || 0) +
+        (Number(t.waterFee) || 0) +
+        (Number(t.trashFee) || 0) +
+        (Number(t.adminFee) || 0) +
+        (t.pets?.hasPets ? (Number(t.pets.fee) || 0) : 0)
+    , 0);
+    const incomeElem = document.getElementById('propertyMonthlyIncome');
+    if (incomeElem) {
+        incomeElem.textContent = `$${propertyMonthlyIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
 }
 
 function calculateOccupancyRate(units) {
@@ -4619,6 +5163,17 @@ function showNotification(message, type = 'info') {
     setTimeout(() => {
         notification.classList.remove('show');
     }, 3000);
+}
+
+
+
+function showLoader() {
+    const loader = document.getElementById('loader');
+    if (loader) loader.style.display = 'flex';
+}
+function hideLoader() {
+    const loader = document.getElementById('loader');
+    if (loader) loader.style.display = 'none';
 }
 
 // This is a completely rewritten approach to modal handling
@@ -4655,7 +5210,8 @@ function closeModal(modalId) {
     }
 }
 
-    async function loadAllUnitsAndTenants() {
+
+async function loadAllUnitsAndTenants() {
     let allUnits = [];
     let allTenants = [];
     for (const property of state.properties) {
@@ -4691,10 +5247,31 @@ function closeModal(modalId) {
 
 function renderMainSummary() {
     const totalProperties = state.properties.length;
+
+    // Only count tenants that are not terminated or expired
+    const activeTenants = (state.allTenants || []).filter(
+        t => t.leaseStatus !== 'terminated' && t.leaseStatus !== 'expired'
+    );
+
+    // Only count units as occupied if they are assigned to an active tenant
+    const activeTenantUnitIds = new Set(
+        activeTenants.map(t => t.unitId?._id || t.unitId).filter(Boolean)
+    );
+
     const totalUnits = state.allUnits ? state.allUnits.length : 0;
-    const totalTenants = state.allTenants ? state.allTenants.length : 0;
-    const totalOccupiedUnits = state.allUnits ? state.allUnits.filter(u => u.status === 'occupied').length : 0;
-    const totalMonthlyIncome = state.allTenants ? state.allTenants.reduce((sum, t) => sum + (Number(t.baseRent) || 0), 0) : 0;
+    const totalTenants = activeTenants.length;
+    const totalOccupiedUnits = state.allUnits
+        ? state.allUnits.filter(u => activeTenantUnitIds.has(u._id)).length
+        : 0;
+    // Calculate total monthly income including additional fees and pet fee
+    const totalMonthlyIncome = activeTenants.reduce((sum, t) =>
+        sum +
+        (Number(t.baseRent) || 0) +
+        (Number(t.waterFee) || 0) +
+        (Number(t.trashFee) || 0) +
+        (Number(t.adminFee) || 0) +
+        (t.pets?.hasPets ? (Number(t.pets.fee) || 0) : 0)
+    , 0);
     const occupancyRate = totalUnits > 0 ? Math.round((totalOccupiedUnits / totalUnits) * 100) : 0;
 
     document.getElementById('summaryTotalProperties').textContent = totalProperties;
@@ -4702,12 +5279,31 @@ function renderMainSummary() {
     document.getElementById('summaryTotalTenants').textContent = totalTenants;
     document.getElementById('summaryOccupancyRate').textContent = `${occupancyRate}%`;
     document.getElementById('summaryMonthlyIncome').textContent = `$${totalMonthlyIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+    // Add/update total occupied units in summary if element exists
+    let occupiedElem = document.getElementById('summaryTotalOccupiedUnits');
+    if (!occupiedElem) {
+        // Try to insert after total units card
+        const summaryCards = document.querySelectorAll('.main-summary .summary-card');
+        if (summaryCards.length >= 2) {
+            occupiedElem = document.createElement('div');
+            occupiedElem.className = 'summary-card';
+            occupiedElem.innerHTML = `
+                <h4>Total Units Occupied</h4>
+                <p id="summaryTotalOccupiedUnits">${totalOccupiedUnits}</p>
+            `;
+            summaryCards[1].after(occupiedElem);
+        }
+    } else {
+        occupiedElem.querySelector('p').textContent = totalOccupiedUnits;
+    }
 }
+
 
 document.getElementById('mainSummaryToggle').addEventListener('click', function() {
     const section = document.querySelector('.main-summary-section');
     section.classList.toggle('collapsed');
-});    
+});
 
 // Export functions for global access
 window.selectProperty = selectProperty;
