@@ -1141,9 +1141,27 @@ function enableGlobalSwipeEvents() {
     }
 }
 
-function showToast(message) {
+function showToast(message, type) {
   const toast = document.getElementById('toast');
-  toast.textContent = message;
+  toast.textContent = ""; // Clear previous content
+
+  // Default style
+  toast.style.background = "linear-gradient(to right, #0ea5e9, #3b82f6)";
+  toast.style.color = "white";
+  toast.style.border = "none";
+  toast.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+  toast.style.pointerEvents = "none";
+
+  if (type === "warning") {
+    toast.style.background = "linear-gradient(to right, #fbbf24, #f59e42)";
+    toast.style.color = "white";
+    toast.style.border = "1.5px solid #f59e42";
+    toast.style.boxShadow = "0 4px 16px rgba(251,191,36,0.18)";
+    toast.innerHTML = `<span style="font-size:18px;vertical-align:middle;margin-right:8px;">&#9888;</span> ${message}`;
+  } else {
+    toast.textContent = message;
+  }
+
   toast.style.display = 'block';
   setTimeout(() => { toast.style.display = 'none'; }, 3000);
 }
@@ -1438,6 +1456,18 @@ async function toggleItemStatus(vendorId, itemId, currentStatus) {
             newStatus = "in-progress";
             nextLabel = "Mark as Completed";
         } else if (currentStatus === "in-progress") {
+            // --- ADD: Require at least one after photo to mark as completed ---
+            const afterPhotosContainer = document.getElementById(`after-photos-${itemId}`);
+            let hasAfterPhoto = false;
+            if (afterPhotosContainer) {
+                // Try to find at least one <img> inside the after photos container
+                hasAfterPhoto = !!afterPhotosContainer.querySelector("img");
+            }
+            if (!hasAfterPhoto) {
+                showToast("You need to upload at least one AFTER photo to mark this item as completed.", "warning");
+                return;
+            }
+            // ---------------------------------------------------------------
             newStatus = "completed";
             nextLabel = "Mark as In Progress";
         } else if (currentStatus === "completed") {
