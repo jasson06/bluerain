@@ -219,10 +219,12 @@ tr{
 }
 
 .photo-preview {
-        
-        
-        align-items: center;
-    }
+  display: flex;
+  flex-direction: row;
+  gap: 100px;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
 
 .photo-container img {
         width: 60px;
@@ -541,6 +543,35 @@ button, .upload-btn {
 }
 }
 
+/* ✅ Mobile-Specific Adjustments (Phones < 768px) */
+.toggle-status-btn {
+  background: linear-gradient(90deg, #007bff 60%, #0ea5e9 100%);
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 10px 22px;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0,123,255,0.10);
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+  outline: none;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+  display: inline-block;
+}
+.toggle-status-btn:hover, .toggle-status-btn:focus {
+  background: linear-gradient(90deg, #0056b3 60%, #0ea5e9 100%);
+  box-shadow: 0 4px 16px rgba(0,123,255,0.18);
+  transform: translateY(-2px) scale(1.04);
+}
+.toggle-status-btn:active {
+  background: linear-gradient(90deg, #0056b3 60%, #0ea5e9 100%);
+  box-shadow: 0 1px 4px rgba(0,123,255,0.10);
+  transform: scale(0.98);
+}
+    
 /* ✅ Mobile-Specific Adjustments (Phones < 768px) */
 @media (max-width: 768px) {
     /* ✅ Stack Table Rows for Better Mobile View */
