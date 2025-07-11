@@ -143,20 +143,91 @@ body {
     color: #217dbb;
 }
 
+
+/* Enhanced mobile responsiveness for all modals and content */
 @media (max-width: 900px) {
+    .modal {
+        padding: 4vw 0 0 0;
+        align-items: flex-end;
+        justify-content: center;
+        display: flex;
+    }
     .modal .modal-content {
-        padding: 12px 4px 10px 4px;
-        max-width: 99vw;
+        padding: 10px 2vw 10px 2vw;
+        max-width: 100vw;
+        width: 100vw;
+        min-height: 30vh;
+        border-radius: 18px 18px 0 0;
+        margin: 0;
+        font-size: 1.01rem;
+        box-shadow: 0 -4px 24px rgba(44,62,80,0.13);
+    }
+    .modal h2 {
+        font-size: 1.3rem;
+        margin-bottom: 16px;
     }
     .modal form .form-row {
-        flex-direction: column;
+        flex-direction: column !important;
         gap: 8px;
     }
     .modal form .form-group {
         min-width: 0;
+        width: 100%;
     }
     .modal form fieldset {
-        padding: 10px 6px 6px 6px;
+        padding: 8px 2vw 6px 2vw;
+    }
+    .modal form .modal-buttons {
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 18px;
+    }
+    .modal form .btn-primary,
+    .modal form .btn-secondary {
+        width: 100%;
+        min-width: 0;
+        padding: 12px 0;
+        font-size: 1.08rem;
+    }
+    .modal-content input,
+    .modal-content select,
+    .modal-content textarea {
+        font-size: 1.08rem;
+    }
+    .modal-content label {
+        font-size: 1.01rem;
+    }
+    .modal-content {
+        overflow-y: auto;
+        max-height: 90vh;
+    }
+    .documents-grid {
+        grid-template-columns: 1fr !important;
+        gap: 14px;
+        padding: 10px 0;
+    }
+    .tab-pane {
+        padding: 10px 0;
+    }
+    .property-item {
+        padding: 10px;
+        font-size: 0.98rem;
+    }
+    .maintenance-list {
+        padding: 4px;
+        gap: 8px;
+    }
+    .maintenance-card {
+        padding: 10px 6px;
+    }
+    .unit-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    .form-row {
+        grid-template-columns: 1fr !important;
+        gap: 10px;
     }
 }
 
