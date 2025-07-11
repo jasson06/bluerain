@@ -269,7 +269,7 @@ body {
 
 /* Sidebar Styles */
 .sidebar {
-    width: 300px;
+    width: 305px;
     background-color: white;
     border-right: 1px solid var(--border-color);
     padding: 20px;
@@ -280,6 +280,30 @@ body {
     bottom: 0;
     overflow-y: auto;
     z-index: 100;
+    transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 100vw;
+    max-width: 100vw;
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    height: 50vh;
+    max-height: 60vh;
+    border-radius: 18px 18px 0 0;
+    border-right: none;
+    border-top: 2px solid var(--border-color);
+    box-shadow: 0 -4px 24px rgba(44,62,80,0.13);
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+    padding-bottom: 32px;
+  }
+  .sidebar.visible {
+    transform: translateY(0);
+  }
 }
 
 .sidebar-header {
@@ -504,7 +528,7 @@ body {
 .modal-content {
     background: white;
     width: 100%;
-    max-width: 750px;
+    
     margin: 20px auto;
     padding: 20px;
     border-radius: 8px;
@@ -1885,15 +1909,211 @@ select {
     box-shadow: 0 2px 8px rgba(52,152,219,0.07);
     margin-left: 15px;
 }
+
+
+/* Responsive adjustments for mobile devices */
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 10px 4px;
+    height: auto;
+    min-height: 70vh;
+  }
+  .main-summary-header,
+  .main-summary {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  .summary-card {
+    padding: 12px 8px;
+  }
+  .units-grid,
+  .documents-grid,
+  .tenants-list {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    padding: 0 !important;
+  }
+  .tab-btn {
+    font-size: 15px;
+    padding: 8px 8px;
+  }
+  .tab-count-badge {
+    min-width: 18px;
+    font-size: 0.9em;
+    padding: 2px 6px;
+  }
+  .modal-content,
+  .tenant-details-modal,
+  .unit-details-modal {
+    width: 98vw !important;
+    max-width: 98vw !important;
+    margin: 8px auto !important;
+    padding: 10px 4px !important;
+    border-radius: 10px !important;
+  }
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  .form-row {
+    flex-direction: column !important;
+    gap: 8px !important;
+    display: flex !important;
+  }
+  .form-group {
+    min-width: 0 !important;
+    margin-bottom: 12px !important;
+  }
+  .payments-table th,
+  .payments-table td {
+    padding: 7px 4px;
+    font-size: 0.95rem;
+  }
+  .payments-table {
+    font-size: 0.95rem;
+    overflow-x: auto;
+    display: block;
+  }
+  .payments-table thead,
+  .payments-table tbody,
+  .payments-table tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+  }
+  .payments-table {
+    width: 100%;
+    min-width: 600px;
+  }
+  .sidebar-header h2 {
+    font-size: 1.1rem;
+    padding: 8px 10px;
+    margin-left: 0;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 500px) {
+  .sidebar-header h2 {
+    font-size: 1rem;
+    padding: 6px 6px;
+  }
+  .btn-primary,
+  .btn-secondary {
+    font-size: 0.97rem;
+    padding: 8px 12px;
+    min-width: 90px;
+  }
+  .modal-content,
+  .tenant-details-modal,
+  .unit-details-modal {
+    padding: 4px 2px !important;
+  }
+  .main-summary-header,
+  .main-summary {
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+}
+
+
+/* Remove old horizontal slide for mobile, now handled above */
+
+/* Overlay for sidebar on mobile */
+#sidebarOverlay {
+    display: none;
+    position: fixed;
+    z-index: 99;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.25);
+}
+
+/* Show overlay when sidebar is visible */
+.sidebar.visible ~ #sidebarOverlay {
+    display: block;
+}
+
+
+/* Sidebar toggle tab for mobile (bottom center) */
+@media (max-width: 900px) {
+  #sidebarToggleBtn {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: 100vw;
+    transform: none;
+    z-index: 120;
+    background: linear-gradient(90deg, #2c3e50 0%, #2c3e50 100%);
+    color: #fff;
+    border: none;
+    border-radius: 18px 18px 0 0;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    box-shadow: 0 2px 8px rgba(44,62,80,0.13);
+    cursor: pointer;
+    transition: background 0.18s;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    gap: 12px;
+    border-bottom: 2px solid #e0e0e0;
+  }
+  #sidebarToggleBtn i {
+    font-size: 1.3em;
+  }
+  #sidebarToggleBtn:hover {
+    background: #217dbb;
+  }
+}
+
+/* Hide toggle button on desktop */
+@media (min-width: 901px) {
+    #sidebarToggleBtn, #sidebarOverlay {
+        display: none !important;
+    }
+    .sidebar {
+        transform: none !important;
+        position: fixed;
+    }
+}
+/* Always show overlay when sidebar is visible on mobile */
+@media (max-width: 900px) {
+  #sidebarOverlay {
+    display: none;
+  }
+  .sidebar.visible + #sidebarOverlay {
+    display: block;
+  }
+}
    </style>
 </head>
 <body>
 
 
 
+<!-- Sidebar toggle tab for mobile (bottom center) -->
+<button id="sidebarToggleBtn" aria-label="Open sidebar">
+    <i class="fas fa-chevron-up"></i>
+    <span style="font-size:1.05em;">Properties</span>
+</button>
+
+
     <div class="container">
         <!-- Sidebar -->
         <aside class="sidebar">
+            
             <div class="sidebar-header">
                 <h2>🏢 Properties</h2>
                 <button class="btn-primary" onclick="window.location.href='/'">
@@ -1904,7 +2124,7 @@ select {
                 <!-- Properties will be listed here -->
             </div>
         </aside>
-
+               <div id="sidebarOverlay"></div>
 
 
         
@@ -3594,17 +3814,6 @@ function renderTenants() {
             .join('')
             .toUpperCase();
 
-        // Lease holders
-        const leaseHolders = (tenant.leaseHolders && tenant.leaseHolders.length)
-            ? `<ul class="tenant-list">${tenant.leaseHolders.map(holder => `
-                <li>
-                    <strong>${holder.name}</strong>
-                    ${holder.phone ? ` | <i class="fas fa-phone"></i> ${holder.phone}` : ''}
-                    ${holder.email ? ` | <i class="fas fa-envelope"></i> ${holder.email}` : ''}
-                </li>
-            `).join('')}</ul>`
-            : '<span class="tenant-detail-value">None listed</span>';
-
         // Find the associated unit
         const assignedUnit = typeof tenant.unitId === 'object' ? tenant.unitId : 
             state.units.find(u => u._id === tenant.unitId || u._id?.toString() === tenant.unitId?.toString());
@@ -3624,63 +3833,21 @@ function renderTenants() {
                 year: 'numeric' 
             }) : 'Not set';
 
-        // Lease type details
-        let leaseTypeDetails = '';
-        if (tenant.leaseType === 'fmr') {
-            leaseTypeDetails = `<div class="tenant-detail-row"><span>FMR Notes:</span> <span>${tenant.fmrNotes || 'None'}</span></div>`;
-        } else if (tenant.leaseType === 'section8') {
-            leaseTypeDetails = `
-                <div class="tenant-detail-row"><span>HUB:</span> <span>$${tenant.hubContribution?.toFixed(2) || '0.00'}</span></div>
-                <div class="tenant-detail-row"><span>Tenant:</span> <span>$${tenant.tenantContribution?.toFixed(2) || '0.00'}</span></div>
-            `;
-        }
+        // Total rent calculation (base rent + additional fees)
+        const totalRent = 
+            (Number(tenant.baseRent) || 0) +
+            (Number(tenant.waterFee) || 0) +
+            (Number(tenant.trashFee) || 0) +
+            (Number(tenant.adminFee) || 0) +
+            (tenant.pets?.hasPets ? (Number(tenant.pets.fee) || 0) : 0);
 
-        // Authorized occupants
-        const occupants = (tenant.authorizedOccupants || []).length
-            ? `<ul class="tenant-list">${tenant.authorizedOccupants.map(o => `<li>${o}</li>`).join('')}</ul>`
-            : '<span class="tenant-detail-value">None listed</span>';
-
-        // Pets
-        const pets = tenant.pets?.hasPets
-            ? `Yes (${tenant.pets.count} pet${tenant.pets.count > 1 ? 's' : ''}), Fee: $${tenant.pets.fee}`
-            : 'No';
-
-        // Cars
-        let cars = '<span class="tenant-detail-value">No cars listed</span>';
-        if (tenant.cars?.hasCar && Array.isArray(tenant.cars.details) && tenant.cars.details.length) {
-            cars = `<ul class="tenant-list">${tenant.cars.details.map((car, idx) => `
-                <li>
-                    <strong>Car #${idx + 1}:</strong>
-                    ${car.year || ''} ${car.make || ''} ${car.model || ''} (${car.color || ''}) - Plate: ${car.licensePlate || ''}
-                </li>
-            `).join('')}</ul>`;
-        }
-
-        // Emergency contact (scrollable)
+        // Emergency contact (just name and phone)
         const emergency = tenant.emergencyContact
             ? `<div class="tenant-detail-row" style="overflow-x:auto; white-space:nowrap; gap:18px;">
                     <span><i class="fas fa-user-shield"></i> ${tenant.emergencyContact.name || 'N/A'}</span>
                     <span><i class="fas fa-phone"></i> ${tenant.emergencyContact.phone || 'N/A'}</span>
-                    <span><i class="fas fa-envelope"></i> ${tenant.emergencyContact.email || 'N/A'}</span>
-                    <span><i class="fas fa-map-marker-alt"></i> ${tenant.emergencyContact?.address || 'N/A'}</span>
-                    <span><i class="fas fa-user-friends"></i> ${tenant.emergencyContact.relation || 'N/A'}</span>
                 </div>`
             : '<span class="tenant-detail-value">N/A</span>';
-
-        // Additional fees
-        const additionalFees = `
-            <div class="tenant-detail-row"><span>Water Fee:</span> <span>$${tenant.waterFee?.toFixed(2) || '0.00'}</span></div>
-            <div class="tenant-detail-row"><span>Trash Fee:</span> <span>$${tenant.trashFee?.toFixed(2) || '0.00'}</span></div>
-            <div class="tenant-detail-row"><span>Admin Fee:</span> <span>$${tenant.adminFee?.toFixed(2) || '0.00'}</span></div>
-        `;
-
-        // Total rent calculation (base rent + additional fees)
-const totalRent = 
-    (Number(tenant.baseRent) || 0) +
-    (Number(tenant.waterFee) || 0) +
-    (Number(tenant.trashFee) || 0) +
-    (Number(tenant.adminFee) || 0) +
-    (tenant.pets?.hasPets ? (Number(tenant.pets.fee) || 0) : 0);
 
         return `
             <div class="tenant-card">
@@ -3698,22 +3865,9 @@ const totalRent =
                         </div>
                     </div>
                     <div class="tenant-section">
-                        <div class="tenant-section-title"><i class="fas fa-address-book"></i> Contact</div>
-                        <div class="tenant-detail-row"><span><i class="fas fa-phone"></i> ${tenant.phone}</span></div>
-                        <div class="tenant-detail-row"><span><i class="fas fa-envelope"></i> ${tenant.email}</span></div>
-                    </div>
-                    <div class="tenant-section">
-                        <div class="tenant-section-title"><i class="fas fa-user"></i> Additional Lease Holders</div>
-                        ${leaseHolders}
-                    </div>
-                    <div class="tenant-section">
-                        <div class="tenant-section-title"><i class="fas fa-file-contract"></i> Lease</div>
+                        <div class="tenant-section-title"><i class="fas fa-calendar-alt"></i> Lease</div>
                         <div class="tenant-detail-row"><span>Lease:</span> <span>${leaseStart} - ${leaseEnd}</span></div>
-                        <div class="tenant-detail-row"><span>Rent:</span> <span>$${tenant.baseRent?.toFixed(2) || '0.00'}</span></div>
-                        ${additionalFees}
-                        <div class="tenant-detail-row"><span><strong>Total Rent:</strong></span> <span><strong>$${totalRent.toFixed(2)}</strong></span></div>
-                        <div class="tenant-detail-row"><span>Type:</span> <span>${tenant.leaseType === 'fmr' ? 'Free Market Rent' : tenant.leaseType === 'section8' ? 'Section 8' : 'N/A'}</span></div>
-                        ${leaseTypeDetails}
+                        <div class="tenant-detail-row"><span>Total Rent:</span> <span>$${totalRent.toFixed(2)}</span></div>
                         <div class="tenant-detail-row">
                             <span>Status:</span>
                             <span class="lease-badge ${tenant.leaseStatus || 'active'}">
@@ -3721,23 +3875,10 @@ const totalRent =
                                 ${(tenant.leaseStatus || 'active').charAt(0).toUpperCase() + (tenant.leaseStatus || 'active').slice(1)}
                             </span>
                         </div>
-                        <div class="tenant-detail-row"><span>Renewal:</span> <span>${tenant.leaseRenewal === 'renew' ? 'Will Renew' : 'Will Terminate'}</span></div>
                     </div>
                     <div class="tenant-section">
-                        <div class="tenant-section-title"><i class="fas fa-user-shield"></i> Emergency Contact</div>
+                        <div class="tenant-section-title"><i class="fas fa-user-shield"></i> Emergency</div>
                         ${emergency}
-                    </div>
-                    <div class="tenant-section">
-                        <div class="tenant-section-title"><i class="fas fa-users"></i> Authorized Occupants</div>
-                        ${occupants}
-                    </div>
-                    <div class="tenant-section">
-                        <div class="tenant-section-title"><i class="fas fa-paw"></i> Pets</div>
-                        <div class="tenant-detail-row">${pets}</div>
-                    </div>
-                    <div class="tenant-section">
-                        <div class="tenant-section-title"><i class="fas fa-car"></i> Cars</div>
-                        ${cars}
                     </div>
                 </div>
                 <div class="tenant-actions">
@@ -5260,6 +5401,8 @@ async function loadAllUnitsAndTenants() {
     renderMainSummary();
 }
 
+
+
 function renderMainSummary() {
     try {
         const elTotalProperties = document.getElementById('summaryTotalProperties');
@@ -5317,6 +5460,40 @@ function renderMainSummary() {
 document.getElementById('mainSummaryToggle').addEventListener('click', function() {
     const section = document.querySelector('.main-summary-section');
     section.classList.toggle('collapsed');
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const sidebar = document.querySelector('.sidebar');
+    const toggleBtn = document.getElementById('sidebarToggleBtn');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    // Hide sidebar by default on mobile
+    function setSidebarInitial() {
+        if (window.innerWidth <= 900) {
+            sidebar.classList.remove('visible');
+        } else {
+            sidebar.classList.add('visible');
+        }
+    }
+    setSidebarInitial();
+
+    toggleBtn.addEventListener('click', () => {
+        // Toggle sidebar open/close for mobile
+        if (window.innerWidth <= 900) {
+            sidebar.classList.toggle('visible');
+        } else {
+            sidebar.classList.add('visible');
+        }
+    });
+
+    overlay.addEventListener('click', () => {
+        sidebar.classList.remove('visible');
+    });
+
+    // Hide sidebar on resize if needed
+    window.addEventListener('resize', () => {
+        setSidebarInitial();
+    });
 });
 
 // Export functions for global access
