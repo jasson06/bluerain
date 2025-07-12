@@ -4738,15 +4738,15 @@ async function deleteMaintenance(requestId) {
 
 
 async function updateMaintenanceStatus(requestId) {
-    showLoader();
     try {
         const request = state.maintenanceRequests.find(r => r._id === requestId);
         if (!request) throw new Error('Maintenance request not found');
 
-        // Create status selection dialog
+        // Wait for user to select a status (no loader here)
         const newStatus = await showStatusDialog(request.status);
         if (!newStatus) return; // User cancelled
 
+        showLoader(); // Only show loader for the network request
         const response = await fetch(
             `${API_URL}/properties/${state.currentProperty._id}/maintenance/${requestId}`, {
                 method: 'PATCH',
@@ -4762,7 +4762,7 @@ async function updateMaintenanceStatus(requestId) {
     } catch (error) {
         console.error('Error updating maintenance status:', error);
         showNotification('Error updating maintenance status', 'error');
-            } finally {
+    } finally {
         hideLoader();
     }
 }
