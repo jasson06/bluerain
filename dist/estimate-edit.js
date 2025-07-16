@@ -844,6 +844,16 @@ function addLineItemCard(item = {}, categoryHeader = null) {
     <!-- Collapsible Photo Section -->
     <div class="photo-toggle-section-modern">
       <button class="toggle-photos-btn-modern">📸 Show Photos</button>
+              <span class="photo-count" style="margin-left:10px; font-weight:500; color:#2563eb;">
+    ${
+      (() => {
+        const beforeCount = Array.isArray(item.photos?.before) ? item.photos.before.length : 0;
+        const afterCount = Array.isArray(item.photos?.after) ? item.photos.after.length : 0;
+        const total = beforeCount + afterCount;
+        return `${total} photo${total === 1 ? '' : 's'} (${beforeCount} before, ${afterCount} after)`;
+      })()
+    }
+  </span>
       <div class="photo-section-modern" style="display: none;">
         <div class="photo-preview-modern">
           <h5>Before Photos</h5>
@@ -1263,6 +1273,48 @@ function updateSelectedLaborCost() {
       showToast("Missing project or estimate ID!");
       return;
     }
+
+     // ✅ Check if vendor is already invited to the project
+  let vendorIsInvited = false;
+  try {
+    // Fetch vendor details
+    const vendorRes = await fetch(`/api/vendors/${vendorId}`);
+    if (vendorRes.ok) {
+      const vendor = await vendorRes.json();
+      // Check assignedProjects for this project
+      vendorIsInvited = Array.isArray(vendor.assignedProjects) &&
+        vendor.assignedProjects.some(p => p.projectId?.toString() === projectId);
+    }
+  } catch (err) {
+    console.warn("Error checking vendor invitation:", err);
+  }
+
+  // If not invited, send invite first
+  if (!vendorIsInvited) {
+    try {
+      showToast("Inviting vendor to project...");
+      const inviteRes = await fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          emails: [window.vendorMap[vendorId]?.email || ""],
+          role: "vendor",
+          projectId
+        })
+      });
+      if (!inviteRes.ok) {
+        showToast("Failed to invite vendor. Please try again.");
+        return;
+      }
+      showToast("Vendor invited! Proceeding to assign item...");
+      // Optionally wait for backend to update vendor assignment
+      await new Promise(r => setTimeout(r, 600));
+    } catch (err) {
+      console.error("Error sending invite:", err);
+      showToast("Error inviting vendor.");
+      return;
+    }
+  }
   
 const selectedItems = Array.from(document.querySelectorAll(".line-item-select:checked")).map((checkbox) => {
   const card = checkbox.closest(".line-item-card");
