@@ -873,20 +873,23 @@ function addLineItemCard(item = {}, categoryHeader = null) {
         </div>
       </div>
     </div>
-    <div class="status-container">
-      <span>Status:<span class="item-status ${statusClass}">${status.toUpperCase()}</span></span>
-    </div>
-    <div class="card-footer">
-      <span>
-        Assigned to:
-        <span class="vendor-name tooltip-click" data-fullname="${assignedToName}">
-          ${assignedToInitials}
-        </span>
+<div class="card-footer">
+  <div class="status-assigned-container" style="display:flex; align-items:center; gap:24px;">
+    <span>
+      Status:
+      <span class="item-status ${statusClass}">${status.toUpperCase()}</span>
+    </span>
+    <span>
+      Assigned to:
+      <span class="vendor-name tooltip-click" data-fullname="${assignedToName}">
+        ${assignedToInitials}
       </span>
-      <span class="item-total">
-        $0.00
-      </span>
-    </div>
+    </span>
+  </div>
+  <span class="item-total">
+    $0.00
+  </span>
+</div>
   `;
 
     // Inside addLineItemCard, after defining laborCostInput and materialCostInput:
