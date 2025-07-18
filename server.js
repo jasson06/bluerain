@@ -833,6 +833,9 @@ const unitSchema = new mongoose.Schema({
     // Utility bills history
     utilityBills: { type: [utilityBillSchema], default: [] },
 
+        // Amenities/features checklist
+    amenities: [{ type: String }],
+
     // Add any other fields as needed
 }, { timestamps: true });
 
@@ -858,11 +861,23 @@ const tenantSchema = new mongoose.Schema({
     address: String
 },
 authorizedOccupants: [String],
-pets: {
+  pets: {
     hasPets: { type: Boolean, default: false },
     count: { type: Number, default: 0 },
-    fee: { type: Number, default: 0 }
-},
+    fee: { type: Number, default: 0 },
+    nonRefundableFee: { type: Number, default: 0 },      // Non-refundable pet fee
+    monthlyRent: { type: Number, default: 0 },           // Monthly pet rent
+    depositIncrease: { type: Number, default: 0 },       // Increased security deposit
+    details: [{
+      type: { type: String },        // e.g. dog, cat, etc.
+      name: String,
+      breed: String,
+      weight: String,
+      age: String,
+      gender: { type: String, enum: ['male', 'female', ''] },
+      vaccination: String
+    }]
+  },
   cars: {
     hasCar: { type: Boolean, default: false },
     count: { type: Number, default: 0 },
@@ -878,9 +893,18 @@ leaseRenewal: { type: String, enum: ['renew', 'terminate'], default: 'renew' },
   leaseStart: Date,
   leaseEnd: Date,
   baseRent: { type: Number, default: 0 },
+  deposit: { type: Number, default: 0 },
   waterFee: { type: Number, default: 0 },      // <-- Add this line
   trashFee: { type: Number, default: 0 },      // <-- Add this line
   adminFee: { type: Number, default: 0 }, 
+  additionalFee: {
+    type: {
+      type: String, // e.g. 'parking', 'storage', 'other'
+      default: ''
+    },
+    label: { type: String, default: '' }, // Custom label if "Other"
+    amount: { type: Number, default: 0 }
+  },
 leaseType: { type: String, enum: ['fmr', 'section8'], default: 'fmr' },
 fmrNotes: String,
 hubContribution: { type: Number, default: 0 },
