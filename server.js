@@ -5467,20 +5467,20 @@ app.post('/api/properties/:propertyId/payments', async (req, res) => {
     let calculatedLateFee = 0;
 
     if (type === 'rent') {
-      // For regular rent payment, include base rent and all fees
+      // For regular rent payment, include base rent and all recurring monthly fees
       expectedAmount = 
         (Number(tenant.baseRent) || 0) +
         (Number(tenant.waterFee) || 0) +
         (Number(tenant.trashFee) || 0) +
         (Number(tenant.adminFee) || 0) +
-        (tenant.pets?.hasPets ? (Number(tenant.pets.fee) || 0) : 0);
+        (tenant.additionalFee?.amount || 0) +
+        (tenant.pets?.hasPets ? (Number(tenant.pets.monthlyRent) || 0) : 0);
 
       // Calculate late fee if provided as percentage
       if (lateFee && lateFee > 0) {
-        // If lateFee is provided as a percentage
-        if (lateFee < 1) { // Assuming percentages under 1 (e.g., 0.05 for 5%)
+        if (lateFee < 1) { // e.g., 0.05 for 5%
           calculatedLateFee = expectedAmount * lateFee;
-        } else if (lateFee <= 100) { // Percentage between 1-100
+        } else if (lateFee <= 100) { // e.g., 5 for 5%
           calculatedLateFee = expectedAmount * (lateFee / 100);
         } else { // Absolute amount
           calculatedLateFee = lateFee;
@@ -5499,7 +5499,7 @@ app.post('/api/properties/:propertyId/payments', async (req, res) => {
     const paymentDate = new Date(date);
     const monthStart = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), 1);
     const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
-    
+
     // Get all payments for this tenant in the current month
     const paymentsThisMonth = await Payment.find({
       tenantId,
@@ -5508,7 +5508,7 @@ app.post('/api/properties/:propertyId/payments', async (req, res) => {
 
     // Calculate total paid (excluding this payment)
     const totalPaid = paymentsThisMonth.reduce((sum, p) => sum + p.amount, 0);
-    
+
     // Calculate total late fees (excluding this payment)
     const totalLateFees = paymentsThisMonth.reduce((sum, p) => sum + (p.lateFee || 0), 0);
 
@@ -5528,9 +5528,9 @@ app.post('/api/properties/:propertyId/payments', async (req, res) => {
       lateFee: finalLateFee,
       balance: balance > 0 ? balance : 0 // Don't show negative balance
     });
-    
+
     await payment.save();
-    
+
     res.status(201).json({
       payment,
       calculationDetails: {
@@ -5547,7 +5547,7 @@ app.post('/api/properties/:propertyId/payments', async (req, res) => {
   }
 });
 
-// PUT (edit) a payment
+// --- Update PUT /api/properties/:propertyId/payments/:paymentId ---
 app.put('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
   try {
     const { tenantId, unitId, type, amount, method, date, lateFee } = req.body;
@@ -5566,39 +5566,34 @@ app.put('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
     let calculatedLateFee = 0;
 
     if (type === 'rent') {
-      // For regular rent payment, include base rent and all fees
       expectedAmount = 
         (Number(tenant.baseRent) || 0) +
         (Number(tenant.waterFee) || 0) +
         (Number(tenant.trashFee) || 0) +
         (Number(tenant.adminFee) || 0) +
-        (tenant.pets?.hasPets ? (Number(tenant.pets.fee) || 0) : 0);
+        (tenant.additionalFee?.amount || 0) +
+        (tenant.pets?.hasPets ? (Number(tenant.pets.monthlyRent) || 0) : 0);
 
-      // Calculate late fee if provided as percentage
       if (lateFee && lateFee > 0) {
-        // If lateFee is provided as a percentage
-        if (lateFee < 1) { // Assuming percentages under 1 (e.g., 0.05 for 5%)
+        if (lateFee < 1) {
           calculatedLateFee = expectedAmount * lateFee;
-        } else if (lateFee <= 100) { // Percentage between 1-100
+        } else if (lateFee <= 100) {
           calculatedLateFee = expectedAmount * (lateFee / 100);
-        } else { // Absolute amount
+        } else {
           calculatedLateFee = lateFee;
         }
       }
     } else if (type === 'hub') {
-      // For HUB payments, use the HUB contribution amount
       expectedAmount = Number(tenant.hubContribution) || 0;
     }
 
-    // Use provided amount if specified, otherwise use calculated amount
     const finalAmount = amount || expectedAmount;
     const finalLateFee = calculatedLateFee;
 
-    // Calculate balance (expected - paid for this month)
     const paymentDate = new Date(date);
     const monthStart = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), 1);
     const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
-    
+
     // Get all payments for this tenant in the current month (excluding this payment)
     const paymentsThisMonth = await Payment.find({
       tenantId,
@@ -5606,14 +5601,9 @@ app.put('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
       _id: { $ne: req.params.paymentId }
     });
 
-    // Calculate total paid (excluding this payment)
     const totalPaid = paymentsThisMonth.reduce((sum, p) => sum + p.amount, 0);
-    
-    // Calculate total late fees (excluding this payment)
     const totalLateFees = paymentsThisMonth.reduce((sum, p) => sum + (p.lateFee || 0), 0);
 
-    // Calculate balance:
-    // (Expected amount + total late fees) - (already paid + current payment + current late fee)
     const totalMonthlyCharges = expectedAmount + totalLateFees + finalLateFee;
     const balance = totalMonthlyCharges - (totalPaid + finalAmount);
 
@@ -5627,7 +5617,7 @@ app.put('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
         method, 
         date, 
         lateFee: finalLateFee,
-        balance: balance > 0 ? balance : 0 // Don't show negative balance
+        balance: balance > 0 ? balance : 0
       },
       { new: true }
     );
@@ -5635,7 +5625,7 @@ app.put('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
     if (!payment) {
       return res.status(404).json({ message: 'Payment not found' });
     }
-    
+
     res.json({
       payment,
       calculationDetails: {
@@ -5651,7 +5641,6 @@ app.put('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 
 // Get all room packages
 app.get('/api/room-packages', async (req, res) => {
