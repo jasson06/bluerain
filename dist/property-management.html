@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Property Management</title>
+    <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
    <style>
@@ -12,7 +13,7 @@
     --primary-color: #2c3e50;
     --secondary-color: #34495e;
     --accent-color: #3498db;
-    --background-color: #f5f6fa;
+    --background-color: #ffffff;
     --text-color: #2c3e50;
     --border-color: #dcdde1;
     --success-color: #27ae60;
@@ -26,17 +27,19 @@
     box-sizing: border-box;
 }
 
+/* Body and container */
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: var(--background-color);
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(120deg, #f7f7ff 0%, #e0ecff 100%);
     color: var(--text-color);
+    min-height: 100vh;
+    letter-spacing: 0.01em;
 }
 
 .container {
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
+    background: transparent;
 }
+
 
 /* --- Modern Modal Styles (Apply Globally) --- */
 .modal .modal-content {
@@ -143,91 +146,20 @@ body {
     color: #217dbb;
 }
 
-
-/* Enhanced mobile responsiveness for all modals and content */
 @media (max-width: 900px) {
-    .modal {
-        padding: 4vw 0 0 0;
-        align-items: flex-end;
-        justify-content: center;
-        display: flex;
-    }
     .modal .modal-content {
-        padding: 10px 2vw 10px 2vw;
-        max-width: 100vw;
-        width: 100vw;
-        min-height: 30vh;
-        border-radius: 18px 18px 0 0;
-        margin: 0;
-        font-size: 1.01rem;
-        box-shadow: 0 -4px 24px rgba(44,62,80,0.13);
-    }
-    .modal h2 {
-        font-size: 1.3rem;
-        margin-bottom: 16px;
+        padding: 12px 4px 10px 4px;
+        max-width: 99vw;
     }
     .modal form .form-row {
-        flex-direction: column !important;
+        flex-direction: column;
         gap: 8px;
     }
     .modal form .form-group {
         min-width: 0;
-        width: 100%;
     }
     .modal form fieldset {
-        padding: 8px 2vw 6px 2vw;
-    }
-    .modal form .modal-buttons {
-        flex-direction: column;
-        gap: 10px;
-        margin-top: 18px;
-    }
-    .modal form .btn-primary,
-    .modal form .btn-secondary {
-        width: 100%;
-        min-width: 0;
-        padding: 12px 0;
-        font-size: 1.08rem;
-    }
-    .modal-content input,
-    .modal-content select,
-    .modal-content textarea {
-        font-size: 1.08rem;
-    }
-    .modal-content label {
-        font-size: 1.01rem;
-    }
-    .modal-content {
-        overflow-y: auto;
-        max-height: 90vh;
-    }
-    .documents-grid {
-        grid-template-columns: 1fr !important;
-        gap: 14px;
-        padding: 10px 0;
-    }
-    .tab-pane {
-        padding: 10px 0;
-    }
-    .property-item {
-        padding: 10px;
-        font-size: 0.98rem;
-    }
-    .maintenance-list {
-        padding: 4px;
-        gap: 8px;
-    }
-    .maintenance-card {
-        padding: 10px 6px;
-    }
-    .unit-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
-    }
-    .form-row {
-        grid-template-columns: 1fr !important;
-        gap: 10px;
+        padding: 10px 6px 6px 6px;
     }
 }
 
@@ -340,9 +272,10 @@ body {
 
 /* Sidebar Styles */
 .sidebar {
-    width: 305px;
+    width: 310px;
     background-color: white;
     border-right: 1px solid var(--border-color);
+    box-shadow: 2px 0 16px 0 rgba(61,169,252,0.06);
     padding: 20px;
     height: 100vh;
     position: fixed;
@@ -353,6 +286,8 @@ body {
     z-index: 100;
     transition: transform 0.3s cubic-bezier(.4,0,.2,1);
 }
+
+
 
 @media (max-width: 900px) {
   .sidebar {
@@ -474,7 +409,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: linear-gradient(90deg, #2c3e50 0%, #2c3e50 100%);
+    background: var(--primary-color);
     color: #fff;
     padding: 18px 22px;
     border-radius: 14px 14px 0 0;
@@ -653,7 +588,7 @@ html {
 /* Button Styles */
 /* Modernized Button Styles - Keep Current Colors */
 .btn-primary {
-    background: linear-gradient(90deg, var(--accent-color) 0%, #6dd5fa 100%);
+    background: linear-gradient(90deg, var(--accent-color) 0%, var(--secondary-color) 100%);
     color: #fff;
     border: none;
     padding: 11px 24px;
@@ -665,9 +600,9 @@ html {
     transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.1s;
 }
 .btn-primary:hover, .btn-primary:focus {
-    background: linear-gradient(90deg, #217dbb 0%, #4fc3f7 100%);
+    background: linear-gradient(90deg, #232946 0%, #3da9fc 100%);
     color: #fff;
-    box-shadow: 0 4px 16px rgba(52, 152, 219, 0.15);
+    box-shadow: 0 4px 16px rgba(61,169,252,0.15);
     transform: translateY(-2px) scale(1.03);
     outline: none;
 }
@@ -1651,7 +1586,7 @@ select {
 
 /* Modern Unit Details Modal Styles */
 .unit-details-modal {
-    max-width: 650px !important;
+    
     border-radius: 14px;
     background: #fff;
     margin: 30px auto;
@@ -1661,7 +1596,7 @@ select {
 }
 
 .unit-details-modal .modal-header {
-    background: linear-gradient(90deg, #3498db 0%, #6dd5fa 100%);
+    background: linear-gradient(90deg, #edf5fa 0%, #6dd5fa 100%);
     color: #fff;
     padding: 24px 28px 18px 28px;
     border-radius: 14px 14px 0 0;
@@ -1863,39 +1798,45 @@ select {
     color: #217dbb;
 }
 
+/* Improved .main-summary-section style for a modern, vibrant look */
 .main-summary-section {
-    background: linear-gradient(90deg, #eaf6ff 0%, #f6fafd 100%);
-    border-bottom: 2px solid #e1e8ed;
-    box-shadow: 0 2px 12px rgba(52,152,219,0.07);
-    padding: 0 0 18px 0;
-    margin-bottom: 18px;
+    background: linear-gradient(90deg, #f7fbff 0%, #f7f7ff 100%);
+    border-bottom: 2.5px solid var(--accent-color);
+    box-shadow: 0 4px 24px rgba(61,169,252,0.10);
+    padding: 0 0 22px 0;
+    margin-bottom: 28px;
+    border-radius: 18px;
+    transition: box-shadow 0.2s, background 0.2s;
+    position: relative;
+    overflow: visible;
 }
 
 .main-summary-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-size: 1.35rem;
-    font-weight: 700;
-    
-    padding: 24px 32px 0 32px;
-    letter-spacing: 0.5px;
-}
-
-.main-summary-header i {
-    font-size: 1.5em;
-    color: var(--accent-color);
-}
-
-.main-summary-header {
+    gap: 14px;
+    font-size: 1.45rem;
+    font-weight: 800;
+    padding: 32px 44px 0 44px;
+    letter-spacing: 0.7px;
+    background: none;
+    color: var(--primary-color);
+    border-radius: 18px 18px 0 0;
     cursor: pointer;
     user-select: none;
     position: relative;
 }
 
-.summary-toggle-icon {
+.main-summary-header i.fas.fa-chart-bar {
+    font-size: 1.7em;
+    color: var(--accent-color);
+    margin-right: 6px;
+}
+
+.main-summary-header .summary-toggle-icon {
     margin-left: auto;
-    font-size: 1.1em;
+    font-size: 1.2em;
+    color: var(--accent-color);
     transition: transform 0.2s;
 }
 
@@ -1907,54 +1848,73 @@ select {
     transform: rotate(-180deg);
 }
 
-/* --- Main Summary List Report Style --- */
 .main-summary {
     display: flex;
-    gap: 24px;
-    padding: 18px 32px 0 32px;
+    gap: 32px;
+    padding: 22px 44px 0 44px;
     background: none;
     border: none;
     margin-bottom: 0;
     flex-wrap: wrap;
+    transition: padding 0.2s;
 }
 
 .summary-card {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(52,152,219,0.09);
-    padding: 20px 32px;
-    min-width: 120px;
-    flex: 1 1 170px;
+    background: linear-gradient(120deg, #fff 70%, #eaf6ff 100%);
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(61,169,252,0.09);
+    padding: 28px 38px;
+    min-width: 140px;
+    flex: 1 1 180px;
     text-align: center;
-    border: 1.5px solid #e1e8ed;
-    transition: box-shadow 0.18s, border 0.18s;
+    border: 2px solid var(--border-color);
+    transition: box-shadow 0.18s, border 0.18s, background 0.18s;
+    margin-bottom: 0;
+    position: relative;
+    z-index: 1;
 }
+
 .summary-card h4 {
-    margin: 0 0 8px 0;
+    margin: 0 0 10px 0;
     color: var(--accent-color);
-    font-size: 1.08rem;
-    font-weight: 600;
+    font-size: 1.13rem;
+    font-weight: 700;
     letter-spacing: 0.2px;
+    text-shadow: 0 1px 0 #fff;
 }
+
 .summary-card p {
     margin: 0;
-    font-size: 1.45rem;
-    font-weight: 700;
+    font-size: 1.65rem;
+    font-weight: 900;
     color: var(--primary-color);
-    letter-spacing: 0.5px;
+    letter-spacing: 0.7px;
+    text-shadow: 0 1px 0 #fff;
 }
+
+.summary-card:hover {
+    box-shadow: 0 6px 24px rgba(61,169,252,0.13);
+    border-color: var(--accent-color);
+    background: linear-gradient(120deg, hsl(200, 100%, 99%) 0%, #eaf6ff 100%);
+}
+
 @media (max-width: 900px) {
+    .main-summary-header,
+    .main-summary {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
     .main-summary {
         flex-direction: column;
-        gap: 12px;
+        gap: 14px;
         padding: 14px 8px 0 8px;
     }
-    .main-summary-header {
-        padding: 18px 12px 0 12px;
-        font-size: 1.1rem;
-    }
     .summary-card {
-        padding: 14px 12px;
+        padding: 16px 10px;
+    }
+    .main-summary-section {
+        border-radius: 12px;
+        margin-bottom: 16px;
     }
 }  
 
@@ -2168,6 +2128,104 @@ select {
     display: block;
   }
 }
+
+
+
+#addUnitModal .form-group label {
+    font-weight: 600;
+    margin-bottom: 7px;
+    color: var(--primary-color, #2c3e50);
+    font-size: 1.01rem;
+    letter-spacing: 0.1px;
+}
+
+#addUnitModal .form-group label > input[type="checkbox"] {
+    margin-right: 7px;
+    vertical-align: middle;
+}
+
+#unitAmenitiesChecklist {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 22px;
+    background: #f8fafd;
+    border-radius: 8px;
+    padding: 12px 10px 6px 10px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    border: 1px solid #e1e8ed;
+    font-size: 0.99em;
+}
+
+#unitAmenitiesChecklist label {
+    font-weight: 500;
+    color: #2980b9;
+    margin-bottom: 0;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
+}
+
+#unitAmenitiesChecklist label:hover {
+    color: #217dbb;
+}
+
+
+/* Stat cards */
+.stat-card, .summary-card {
+    background: linear-gradient(120deg, #fff 70%, #f6fbff 100%);
+    border-radius: 16px;
+    border: 1.5px solid var(--border-color);
+    box-shadow: 0 2px 12px rgba(61,169,252,0.07);
+    transition: box-shadow 0.2s, border 0.2s;
+}
+.stat-card h3, .summary-card h4 {
+    color: var(--accent-color);
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+.stat-card p, .summary-card p {
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+
+/* Avatars */
+.tenant-avatar, .tenant-avatar-small {
+    background: var(--accent-color);
+    color: #fff;
+    font-weight: 700;
+    border: 2.5px solid #fff;
+    box-shadow: 0 2px 8px rgba(61,169,252,0.10);
+}
+
+
+
+
+.unit-card-header h3 {
+    margin: 0;
+    font-size: 1.22rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    color: #fff;
+    text-shadow: 0 1px 4px rgba(44,62,80,0.10);
+}
+
+.unit-card-header .badge {
+    margin-left: 18px;
+    font-size: 1.01rem;
+    font-weight: 600;
+    border-radius: 12px;
+    padding: 5px 16px;
+    background: rgba(255,255,255,0.13);
+    color: #fff;
+    border: 1.5px solid #fff;
+    box-shadow: 0 1px 4px rgba(61,169,252,0.07);
+}
+
+
+
    </style>
 </head>
 <body>
@@ -2362,6 +2420,41 @@ select {
                 </div>
             </div>
             <div class="form-row">
+                <div class="form-group" style="flex: 1 1 100%;">
+                    <label>Unit Amenities & Features</label>
+                    <div id="unitAmenitiesChecklist" style="display: flex; flex-wrap: wrap; gap: 18px;">
+                        <label><input type="checkbox" name="amenities" value="washerDryer"> Washer & Dryer</label>
+                        <label><input type="checkbox" name="amenities" value="washerDryerHookup"> Washer/Dryer Hookup</label>
+                        <label><input type="checkbox" name="amenities" value="centralAC"> Central AC/Heat</label>
+                        <label><input type="checkbox" name="amenities" value="miniSplit"> Mini Split AC</label>
+                        <label><input type="checkbox" name="amenities" value="windowUnit"> Window AC Unit</label>
+                        <label><input type="checkbox" name="amenities" value="dishwasher"> Dishwasher</label>
+                        <label><input type="checkbox" name="amenities" value="refrigerator"> Refrigerator</label>
+                        <label><input type="checkbox" name="amenities" value="stoveOven"> Stove/Oven</label>
+                        <label><input type="checkbox" name="amenities" value="microwave"> Microwave</label>
+                        <label><input type="checkbox" name="amenities" value="garbageDisposal"> Garbage Disposal</label>
+                        <label><input type="checkbox" name="amenities" value="balcony"> Balcony/Patio</label>
+                        <label><input type="checkbox" name="amenities" value="walkInCloset"> Walk-in Closet</label>
+                        <label><input type="checkbox" name="amenities" value="ceilingFan"> Ceiling Fan</label>
+                        <label><input type="checkbox" name="amenities" value="hardwoodFloor"> Hardwood Floor</label>
+                        <label><input type="checkbox" name="amenities" value="tileFloor"> Tile Floor</label>
+                        <label><input type="checkbox" name="amenities" value="carpetFloor"> Carpet Floor</label>
+                        <label><input type="checkbox" name="amenities" value="fireplace"> Fireplace</label>
+                        <label><input type="checkbox" name="amenities" value="privateEntrance"> Private Entrance</label>
+                        <label><input type="checkbox" name="amenities" value="storageUnit"> Storage Unit</label>
+                        <label><input type="checkbox" name="amenities" value="garage"> Garage</label>
+                        <label><input type="checkbox" name="amenities" value="coveredParking"> Covered Parking</label>
+                        <label><input type="checkbox" name="amenities" value="securitySystem"> Security System</label>
+                        <label><input type="checkbox" name="amenities" value="internetReady"> Internet Ready</label>
+                        <label><input type="checkbox" name="amenities" value="cableReady"> Cable Ready</label>
+                        <label><input type="checkbox" name="amenities" value="furnished"> Furnished</label>
+                        <label><input type="checkbox" name="amenities" value="petFriendly"> Pet Friendly</label>
+                        <label><input type="checkbox" name="amenities" value="smokeFree"> Smoke Free</label>
+                        <label><input type="checkbox" name="amenities" value="wheelchairAccessible"> Wheelchair Accessible</label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
                 <div class="form-group">
                     <label>Bedrooms</label>
                     <input type="number" id="unitBedrooms" min="0" required>
@@ -2485,6 +2578,10 @@ select {
         </div>
         <!-- Row 3: Rent & Fees -->
         <div class="form-row">
+                <div class="form-group">
+             <label>Deposit ($)</label>
+             <input type="number" id="deposit" min="0" step="0.01">
+            </div>
             <div class="form-group">
                 <label>Base Rent ($)</label>
                 <input type="number" id="baseRent" min="0" required>
@@ -2501,6 +2598,24 @@ select {
                 <label>Admin Fee ($)</label>
                 <input type="number" id="adminFee" min="0" step="0.01">
             </div>
+            <!-- In the Row 3: Rent & Fees section of your tenant form -->
+<div class="form-group">
+    <label>Additional Fee Type</label>
+    <select id="additionalFeeType">
+        <option value="">None</option>
+        <option value="parking">Parking</option>
+        <option value="storage">Storage</option>
+        <option value="other">Other</option>
+    </select>
+</div>
+<div class="form-group" id="additionalFeeLabelGroup" style="display:none;">
+    <label>Other Fee Label</label>
+    <input type="text" id="additionalFeeLabel" placeholder="Describe fee (e.g. Garage)">
+</div>
+<div class="form-group" id="additionalFeeAmountGroup" style="display:none;">
+    <label>Additional Fee Amount ($)</label>
+    <input type="number" id="additionalFeeAmount" min="0" step="0.01">
+</div>
         </div>
         <!-- Row 4: Lease Type, Status, Renewal -->
         <div class="form-row">
@@ -2565,13 +2680,18 @@ select {
                 <label>
                     <input type="checkbox" id="hasPets"> Has Pets
                 </label>
-                <div id="petDetails" style="display:none;">
+                    <div id="petDetails" style="display:none; margin-top:10px;">
                     <label>Number of Pets</label>
                     <input type="number" id="petCount" min="0">
-                    <label>Pet Fee ($)</label>
-                    <input type="number" id="petFee" min="0">
-                </div>
-            </div>
+                    <div id="petFieldsContainer"></div>
+                    <label>Non-refundable Pet Fee ($)</label>
+                    <input type="number" id="petNonRefundableFee" min="0" step="0.01">
+                    <label>Monthly Pet Rent ($)</label>
+                     <input type="number" id="petMonthlyRent" min="0" step="0.01">
+                   <label>Increased Security Deposit ($)</label>
+                      <input type="number" id="petDepositIncrease" min="0" step="0.01">
+                 </div>
+               </div>
             <div class="form-group" style="min-width:180px;">
                 <label>
                     <input type="checkbox" id="hasCar"> Has Car(s)
@@ -2829,7 +2949,10 @@ function initializeEventListeners() {
     document.getElementById('addPropertyForm')?.addEventListener('submit', handleAddProperty);
     
     // Unit management
-    document.getElementById('addUnitBtn')?.addEventListener('click', () => openModal('addUnitModal'));
+    document.getElementById('addUnitBtn')?.addEventListener('click', () => {
+    resetUnitForm();
+    openModal('addUnitModal');
+});
     document.getElementById('addUnitForm')?.addEventListener('submit', handleAddUnit);
     
     // Tenant management
@@ -3291,6 +3414,12 @@ async function editUnit(unitId) {
         document.getElementById('unitSqft').value = unit.sqft || '';
         document.getElementById('unitStatus').value = unit.status || 'vacant';
 
+        // Populate amenities/features checklist
+        const amenities = unit.amenities || [];
+        document.querySelectorAll('#unitAmenitiesChecklist input[type="checkbox"]').forEach(cb => {
+            cb.checked = amenities.includes(cb.value);
+        });
+
         // Populate utility account fields
         const acc = unit.utilityAccounts || {};
         const water = acc.water || {};
@@ -3341,6 +3470,10 @@ async function handleUpdateUnit(unitId) {
         return;
     }
 
+    // Collect amenities/features from checklist
+    const amenities = Array.from(document.querySelectorAll('#unitAmenitiesChecklist input[type="checkbox"]:checked'))
+        .map(cb => cb.value);
+
     const unitData = {
         number: document.getElementById('unitNumber').value,
         floor: Number(document.getElementById('unitFloor').value),
@@ -3348,6 +3481,7 @@ async function handleUpdateUnit(unitId) {
         bedrooms: Number(document.getElementById('unitBedrooms').value),
         bathrooms: Number(document.getElementById('unitBathrooms').value),
         status: document.getElementById('unitStatus').value,
+        amenities, // <-- Add amenities array
         utilityAccounts: {
             water: {
                 accountNumber: document.getElementById('waterAccountNumber').value,
@@ -3409,7 +3543,7 @@ async function handleUpdateUnit(unitId) {
     } catch (error) {
         console.error('Error updating unit:', error);
         showNotification(error.message || 'Error updating unit', 'error');
-            } finally {
+    } finally {
         hideLoader();
     }
 }
@@ -3424,38 +3558,82 @@ function viewUnitDetails(unitId) {
     // Set the current unit ID for export
     state.currentUnitId = unitId;
 
-    // Utility account info and bills (example structure)
+    // Utility account info and bills
     const utilities = [
         { type: 'Water', key: 'water' },
         { type: 'Gas', key: 'gas' },
         { type: 'Electricity', key: 'electricity' }
     ];
 
-    // Example: unit.utilityAccounts = { water: {...}, gas: {...}, electricity: {...} }
-    // Example: unit.utilityBills = [{type: 'water', amount: 50, dueDate: '2025-07-01', paid: true, paidBy: 'tenant'}]
+    // Amenities/features checklist
+    const amenitiesList = [
+        { key: 'washerDryer', label: 'Washer & Dryer' },
+        { key: 'washerDryerHookup', label: 'Washer/Dryer Hookup' },
+        { key: 'centralAC', label: 'Central AC/Heat' },
+        { key: 'miniSplit', label: 'Mini Split AC' },
+        { key: 'windowUnit', label: 'Window AC Unit' },
+        { key: 'dishwasher', label: 'Dishwasher' },
+        { key: 'refrigerator', label: 'Refrigerator' },
+        { key: 'stoveOven', label: 'Stove/Oven' },
+        { key: 'microwave', label: 'Microwave' },
+        { key: 'garbageDisposal', label: 'Garbage Disposal' },
+        { key: 'balcony', label: 'Balcony/Patio' },
+        { key: 'walkInCloset', label: 'Walk-in Closet' },
+        { key: 'ceilingFan', label: 'Ceiling Fan' },
+        { key: 'hardwoodFloor', label: 'Hardwood Floor' },
+        { key: 'tileFloor', label: 'Tile Floor' },
+        { key: 'carpetFloor', label: 'Carpet Floor' },
+        { key: 'fireplace', label: 'Fireplace' },
+        { key: 'privateEntrance', label: 'Private Entrance' },
+        { key: 'storageUnit', label: 'Storage Unit' },
+        { key: 'garage', label: 'Garage' },
+        { key: 'coveredParking', label: 'Covered Parking' },
+        { key: 'securitySystem', label: 'Security System' },
+        { key: 'internetReady', label: 'Internet Ready' },
+        { key: 'cableReady', label: 'Cable Ready' },
+        { key: 'furnished', label: 'Furnished' },
+        { key: 'petFriendly', label: 'Pet Friendly' },
+        { key: 'smokeFree', label: 'Smoke Free' },
+        { key: 'wheelchairAccessible', label: 'Wheelchair Accessible' }
+    ];
 
-    let html = `
-      <div class="unit-section">
-        <h3>Unit: ${unit.number || ''}</h3>
-        <p><strong>Status:</strong> ${unit.status || 'N/A'}</p>
-        <p><strong>Bedrooms:</strong> ${unit.bedrooms || 'N/A'} | <strong>Bathrooms:</strong> ${unit.bathrooms || 'N/A'}</p>
-      </div>
-      <div class="unit-section">
-        <h3>Utilities</h3>
-        ${utilities.map(util => {
-            const acc = unit.utilityAccounts?.[util.key] || {};
-            return `
-              <div class="utility-block">
+    // Amenities HTML
+    const amenitiesHtml = unit.amenities && unit.amenities.length
+        ? `<ul style="margin:0 0 0 18px; padding:0;">
+            ${amenitiesList.filter(a => unit.amenities.includes(a.key)).map(a => `<li>${a.label}</li>`).join('')}
+           </ul>`
+        : '<span class="tenant-detail-value">No amenities listed</span>';
+
+    // Utility accounts HTML
+    const utilitiesHtml = utilities.map(util => {
+        const acc = unit.utilityAccounts?.[util.key] || {};
+        return `
+            <div class="utility-block">
                 <h4>${util.type}</h4>
                 <div><strong>Account #:</strong> ${acc.accountNumber || 'N/A'}</div>
                 <div><strong>Provider:</strong> ${acc.provider || 'N/A'}</div>
                 <div><strong>Status:</strong> ${acc.status || 'N/A'}</div>
                 <div><strong>Bill Under:</strong> ${acc.under || 'N/A'}</div>
-              </div>
-            `;
-        }).join('')}
+            </div>
+        `;
+    }).join('');
+
+    // Main HTML
+    let html = `
+      <div class="unit-section">
+        <h3>Unit: ${unit.number || ''}</h3>
+        <p><strong>Status:</strong> ${unit.status || 'N/A'}</p>
+        <p><strong>Bedrooms:</strong> ${unit.bedrooms || 'N/A'} | <strong>Bathrooms:</strong> ${unit.bathrooms || 'N/A'}</p>
+        <p><strong>Floor:</strong> ${unit.floor || 'N/A'} | <strong>Square Feet:</strong> ${unit.sqft || 'N/A'}</p>
       </div>
-      
+      <div class="unit-section">
+        <h3>Amenities & Features</h3>
+        ${amenitiesHtml}
+      </div>
+      <div class="unit-section">
+        <h3>Utilities</h3>
+        ${utilitiesHtml}
+      </div>
     `;
 
     document.getElementById('unitDetailsBody').innerHTML = html;
@@ -3508,17 +3686,21 @@ function exportUtilityReport() {
 async function handleAddUnit(event) {
     event.preventDefault();
 
-     const form = event.target;
-    
+    const form = event.target;
+
     // If in edit mode, don't proceed with add
     if (form.dataset.editMode === 'true') {
         return;
     }
-    
+
     if (!state.currentProperty) {
         showNotification('Please select a property first', 'error');
         return;
     }
+
+    // Collect amenities/features from checklist
+    const amenities = Array.from(document.querySelectorAll('#unitAmenitiesChecklist input[type="checkbox"]:checked'))
+        .map(cb => cb.value);
 
     const unitData = {
         number: document.getElementById('unitNumber').value,
@@ -3527,6 +3709,7 @@ async function handleAddUnit(event) {
         bedrooms: Number(document.getElementById('unitBedrooms').value),
         bathrooms: Number(document.getElementById('unitBathrooms').value),
         status: document.getElementById('unitStatus').value,
+        amenities, // <-- Add amenities array
         utilityAccounts: {
             water: {
                 accountNumber: document.getElementById('waterAccountNumber').value,
@@ -3547,7 +3730,6 @@ async function handleAddUnit(event) {
                 under: document.getElementById('electricityUnder').value
             }
         }
-        // Add other fields as needed
     };
 
     // Validate required fields
@@ -3555,10 +3737,8 @@ async function handleAddUnit(event) {
         showNotification('Please fill in all required fields', 'error');
         return;
     }
-showLoader();
+    showLoader();
     try {
-        console.log('Sending unit data:', unitData); // Debug log
-
         const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/units`, {
             method: 'POST',
             headers: {
@@ -3571,11 +3751,7 @@ showLoader();
             const error = await response.json();
             throw new Error(error.message || 'Failed to add unit');
         }
-        
-        const result = await response.json();
-        console.log('Unit added successfully:', result); // Debug log
 
-        // Reload units to get updated list
         await loadUnits(state.currentProperty._id);
         closeModal('addUnitModal');
         showNotification('Unit added successfully', 'success');
@@ -3583,8 +3759,23 @@ showLoader();
     } catch (error) {
         console.error('Error adding unit:', error);
         showNotification(error.message || 'Error adding unit', 'error');
-            } finally {
+    } finally {
         hideLoader();
+    }
+}
+
+function resetUnitForm() {
+    const form = document.getElementById('addUnitForm');
+    if (form) {
+        form.reset();
+        // Uncheck all amenities checkboxes
+        document.querySelectorAll('#unitAmenitiesChecklist input[type="checkbox"]').forEach(cb => cb.checked = false);
+        // Reset submit button text
+        const submitButton = form.querySelector('button[type="submit"]');
+        if (submitButton) submitButton.textContent = 'Add Unit';
+        // Remove edit mode flags
+        form.dataset.editMode = 'false';
+        form.dataset.unitId = '';
     }
 }
 
@@ -3686,13 +3877,13 @@ function resetTenantForm() {
 // Tenant Management
 async function handleAddTenant(event) {
     event.preventDefault();
-    
+
     // Check if we're in edit mode - if so, don't proceed
     const form = event.target;
     if (form.dataset.editMode === 'true') {
         return;
     }
-    
+
     if (!state.currentProperty) {
         showNotification('Please select a property first', 'error');
         return;
@@ -3708,9 +3899,31 @@ async function handleAddTenant(event) {
                 model: document.querySelector(`.car-model[data-index="${i}"]`)?.value || '',
                 color: document.querySelector(`.car-color[data-index="${i}"]`)?.value || '',
                 licensePlate: document.querySelector(`.car-plate[data-index="${i}"]`)?.value || '',
-                year: document.querySelector(`.car-year[data-index="${i}"]`)?.value || ''
+                year: document.querySelector(`.car-year[data-index="${i}"]`).value || ''
             });
         }
+    }
+
+    // Gather pet info if "Has Pets" is checked
+    let pets = {
+        hasPets: document.getElementById('hasPets').checked,
+        count: document.getElementById('hasPets').checked ? Number(document.getElementById('petCount').value) : 0,
+        fee: document.getElementById('hasPets').checked ? Number(document.getElementById('petFee')?.value) || 0 : 0,
+        nonRefundableFee: document.getElementById('hasPets').checked ? Number(document.getElementById('petNonRefundableFee')?.value) || 0 : 0,
+        monthlyRent: document.getElementById('hasPets').checked ? Number(document.getElementById('petMonthlyRent')?.value) || 0 : 0,
+        depositIncrease: document.getElementById('hasPets').checked ? Number(document.getElementById('petDepositIncrease')?.value) || 0 : 0,
+        details: []
+    };
+    if (pets.hasPets) {
+        pets.details = Array.from(document.querySelectorAll('.pet-field-group')).map((group, i) => ({
+            type: group.querySelector('.pet-type')?.value || '',
+            name: group.querySelector('.pet-name')?.value || '',
+            breed: group.querySelector('.pet-breed')?.value || '',
+            weight: group.querySelector('.pet-weight')?.value || '',
+            age: group.querySelector('.pet-age')?.value || '',
+            gender: group.querySelector('.pet-gender')?.value || '',
+            vaccination: group.querySelector('.pet-vaccination')?.value || ''
+        }));
     }
 
     const tenantData = {
@@ -3729,21 +3942,23 @@ async function handleAddTenant(event) {
             .split('\n')
             .map(s => s.trim())
             .filter(Boolean),
-        pets: {
-            hasPets: document.getElementById('hasPets').checked,
-            count: document.getElementById('hasPets').checked ? Number(document.getElementById('petCount').value) : 0,
-            fee: document.getElementById('hasPets').checked ? Number(document.getElementById('petFee').value) : 0
-        },
+        pets,
         cars: {
             hasCar: document.getElementById('hasCar').checked,
             count: document.getElementById('hasCar').checked ? (parseInt(document.getElementById('carCount').value) || 0) : 0,
             details: cars
+        },
+        additionalFee: {
+            type: document.getElementById('additionalFeeType').value,
+            label: document.getElementById('additionalFeeLabel').value,
+            amount: Number(document.getElementById('additionalFeeAmount').value) || 0
         },
         leaseRenewal: document.getElementById('leaseRenewal').value,
         unitId: document.getElementById('tenantUnit').value,
         leaseStart: document.getElementById('leaseStart').value,
         leaseEnd: document.getElementById('leaseEnd').value,
         baseRent: Number(document.getElementById('baseRent').value),
+        deposit: Number(document.getElementById('deposit').value) || 0,
         waterFee: Number(document.getElementById('waterFee').value) || 0,
         trashFee: Number(document.getElementById('trashFee').value) || 0,
         adminFee: Number(document.getElementById('adminFee').value) || 0,
@@ -3802,10 +4017,8 @@ async function handleAddTenant(event) {
     }
 }
 
-// Show/hide pet details
-document.getElementById('hasPets').addEventListener('change', function() {
-    document.getElementById('petDetails').style.display = this.checked ? 'block' : 'none';
-});
+
+
 
 // Show/hide car details and dynamic car fields
 document.getElementById('hasCar').addEventListener('change', function() {
@@ -3841,6 +4054,46 @@ function updateCarFields() {
     }
 }
 
+// Add/replace this function to dynamically render pet fields for each pet:
+function updatePetFields() {
+    const count = parseInt(document.getElementById('petCount').value) || 0;
+    const container = document.getElementById('petFieldsContainer');
+    container.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+        container.innerHTML += `
+            <div class="pet-field-group" style="margin-bottom:10px; padding:8px; background:#f8f9fa; border-radius:6px;">
+                <label>Pet #${i + 1} Type</label>
+                <input type="text" class="pet-type" data-index="${i}" placeholder="e.g. Dog, Cat">
+                <label>Name</label>
+                <input type="text" class="pet-name" data-index="${i}">
+                <label>Breed</label>
+                <input type="text" class="pet-breed" data-index="${i}">
+                <label>Weight/Size</label>
+                <input type="text" class="pet-weight" data-index="${i}" placeholder="e.g. 25 lbs, Medium">
+                <label>Age</label>
+                <input type="text" class="pet-age" data-index="${i}">
+                <label>Gender</label>
+                <select class="pet-gender" data-index="${i}">
+                    <option value="">Select</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                </select>
+                <label>Vaccination/Licensing #</label>
+                <input type="text" class="pet-vaccination" data-index="${i}">
+            </div>
+        `;
+    }
+}
+
+// Update event listeners for pets
+document.getElementById('hasPets').addEventListener('change', function() {
+    document.getElementById('petDetails').style.display = this.checked ? 'block' : 'none';
+    if (this.checked) updatePetFields();
+});
+document.getElementById('petCount').addEventListener('input', updatePetFields);
+
+
+
 // Update the loadTenants function
 async function loadTenants(propertyId) {
     
@@ -3864,7 +4117,6 @@ async function loadTenants(propertyId) {
 // Update the renderTenants function
 function renderTenants() {
     const tenantsList = document.getElementById('tenantsList');
-    
     if (!state.tenants || !state.tenants.length) {
         tenantsList.innerHTML = `
             <div class="empty-state">
@@ -3904,13 +4156,19 @@ function renderTenants() {
                 year: 'numeric' 
             }) : 'Not set';
 
-        // Total rent calculation (base rent + additional fees)
-        const totalRent = 
-            (Number(tenant.baseRent) || 0) +
+        // Only sum monthly pet rent for totals
+        const petFees = (tenant.pets?.hasPets ? (Number(tenant.pets.monthlyRent) || 0) : 0);
+
+        // Calculate additional fees (including custom "Other" fee)
+        const additionalFees = 
             (Number(tenant.waterFee) || 0) +
             (Number(tenant.trashFee) || 0) +
             (Number(tenant.adminFee) || 0) +
-            (tenant.pets?.hasPets ? (Number(tenant.pets.fee) || 0) : 0);
+            (tenant.additionalFee?.amount || 0) +
+            petFees;
+
+        // Total rent calculation (base rent + additional fees)
+        const totalRent = (Number(tenant.baseRent) || 0) + additionalFees;
 
         // Emergency contact (just name and phone)
         const emergency = tenant.emergencyContact
@@ -3938,7 +4196,15 @@ function renderTenants() {
                     <div class="tenant-section">
                         <div class="tenant-section-title"><i class="fas fa-calendar-alt"></i> Lease</div>
                         <div class="tenant-detail-row"><span>Lease:</span> <span>${leaseStart} - ${leaseEnd}</span></div>
-                        <div class="tenant-detail-row"><span>Total Rent:</span> <span>$${totalRent.toFixed(2)}</span></div>
+                        <div class="tenant-detail-row"><span>Deposit:</span> <span>$${(tenant.deposit ?? 0).toFixed(2)}</span></div>
+                        <div class="tenant-detail-row"><span>Base Rent:</span> <span>$${(Number(tenant.baseRent) || 0).toFixed(2)}</span></div>
+                        <div class="tenant-detail-row"><span>Total Fees:</span> <span style="font-weight:600; color:#2980b9;">$${additionalFees.toFixed(2)}</span></div>
+                        <div class="tenant-detail-row">
+                            <span>Total Rent:</span>
+                            <span style="font-weight:700; color:#217dbb; font-size:1.08em; letter-spacing:0.5px; background:#eaf6ff; padding:3px 12px; border-radius:12px;">
+                                $${totalRent.toFixed(2)}
+                            </span>
+                        </div>
                         <div class="tenant-detail-row">
                             <span>Status:</span>
                             <span class="lease-badge ${tenant.leaseStatus || 'active'}">
@@ -3967,6 +4233,7 @@ function renderTenants() {
         `;
     }).join('');
 }
+
 
 async function viewTenantDetails(tenantId) {
     try {
@@ -4030,20 +4297,45 @@ async function viewTenantDetails(tenantId) {
             `;
         }
 
-        // Additional fees
+        // Only sum monthly pet rent for totals
+        const petFees = (tenant.pets?.hasPets ? (Number(tenant.pets.monthlyRent) || 0) : 0);
+
+        // Calculate additional fees (including custom "Other" fee)
+        const additionalFees = 
+            (Number(tenant.waterFee) || 0) +
+            (Number(tenant.trashFee) || 0) +
+            (Number(tenant.adminFee) || 0) +
+            (tenant.additionalFee?.amount || 0) +
+            petFees;
+
+        // Additional fees HTML
         const additionalFeesHtml = `
             <p><i class="fas fa-tint"></i> Water Fee: $${tenant.waterFee?.toFixed(2) || '0.00'}</p>
             <p><i class="fas fa-trash"></i> Trash Fee: $${tenant.trashFee?.toFixed(2) || '0.00'}</p>
             <p><i class="fas fa-user-cog"></i> Admin Fee: $${tenant.adminFee?.toFixed(2) || '0.00'}</p>
+            ${
+                tenant.additionalFee?.amount
+                    ? `<p><i class="fas fa-coins"></i> ${
+                        tenant.additionalFee.type === 'other' && tenant.additionalFee.label
+                            ? tenant.additionalFee.label
+                            : tenant.additionalFee.type === 'parking'
+                                ? 'Parking Fee'
+                                : tenant.additionalFee.type === 'storage'
+                                    ? 'Storage Fee'
+                                    : (tenant.additionalFee.label || 'Other Fee')
+                    }: $${Number(tenant.additionalFee.amount).toFixed(2)}</p>`
+                    : ''
+            }
+            ${tenant.pets?.hasPets && tenant.pets.monthlyRent ? `<p><i class="fas fa-dog"></i> Monthly Pet Rent: $${(Number(tenant.pets.monthlyRent) || 0).toFixed(2)}</p>` : ''}
+            <p style="margin-top:8px; font-weight:600; color:#2980b9;">
+              <i class="fas fa-plus-circle"></i> Total Fees: $${additionalFees.toFixed(2)}
+            </p>
         `;
 
-        // Total rent calculation (base rent + additional fees)
-const totalRent = 
-    (Number(tenant.baseRent) || 0) +
-    (Number(tenant.waterFee) || 0) +
-    (Number(tenant.trashFee) || 0) +
-    (Number(tenant.adminFee) || 0) +
-    (tenant.pets?.hasPets ? (Number(tenant.pets.fee) || 0) : 0);
+        // Total rent calculation (base rent + all additional fees)
+        const totalRent =
+            (Number(tenant.baseRent) || 0) +
+            additionalFees;
 
         // Authorized occupants
         const occupantsHtml = (tenant.authorizedOccupants || []).length
@@ -4051,9 +4343,32 @@ const totalRent =
             : '<li>None listed</li>';
 
         // Pets
-        const petsHtml = tenant.pets?.hasPets
-            ? `Yes (${tenant.pets.count} pet${tenant.pets.count > 1 ? 's' : ''}), Fee: $${tenant.pets.fee}`
-            : 'No';
+        let petsHtml = 'No';
+        if (tenant.pets?.hasPets) {
+            petsHtml = `<div>
+                Yes (${tenant.pets.count} pet${tenant.pets.count > 1 ? 's' : ''})
+                ${tenant.pets.fee ? `, Fee: $${tenant.pets.fee}` : ''}
+                ${tenant.pets.nonRefundableFee ? `<br>Non-refundable Fee: $${tenant.pets.nonRefundableFee}` : ''}
+                ${tenant.pets.monthlyRent ? `<br>Monthly Pet Rent: $${tenant.pets.monthlyRent}` : ''}
+                ${tenant.pets.depositIncrease ? `<br>Deposit Increase: $${tenant.pets.depositIncrease}` : ''}
+                ${Array.isArray(tenant.pets.details) && tenant.pets.details.length ? `
+                    <ul>
+                        ${tenant.pets.details.map((pet, idx) => `
+                            <li>
+                                <strong>Pet #${idx + 1}:</strong>
+                                ${pet.type ? `Type: ${pet.type}, ` : ''}
+                                ${pet.name ? `Name: ${pet.name}, ` : ''}
+                                ${pet.breed ? `Breed: ${pet.breed}, ` : ''}
+                                ${pet.weight ? `Weight/Size: ${pet.weight}, ` : ''}
+                                ${pet.age ? `Age: ${pet.age}, ` : ''}
+                                ${pet.gender ? `Gender: ${pet.gender}, ` : ''}
+                                ${pet.vaccination ? `Vaccination/Licensing #: ${pet.vaccination}` : ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                ` : ''}
+            </div>`;
+        }
 
         // Cars
         let carsHtml = '<span class="tenant-detail-value">No cars listed</span>';
@@ -4113,9 +4428,15 @@ const totalRent =
                         <label>Lease Information</label>
                         <p><i class="fas fa-calendar-alt"></i> Start Date: ${leaseStart}</p>
                         <p><i class="fas fa-calendar-check"></i> End Date: ${leaseEnd}</p>
+                        <p><i class="fas fa-dollar-sign"></i> Deposit: $${tenant.deposit?.toFixed(2) || '0.00'}</p>
                         <p><i class="fas fa-dollar-sign"></i> Base Rent: $${tenant.baseRent?.toFixed(2) || '0.00'}</p>
                         ${additionalFeesHtml}
-                        <p><strong><i class="fas fa-calculator"></i> Total Rent:</strong> <strong>$${totalRent.toFixed(2)}</strong></p>
+                        <p style="margin-top:10px;">
+                          <strong><i class="fas fa-calculator"></i> Total Rent:</strong>
+                          <span style="font-weight:700; color:#217dbb; font-size:1.08em; letter-spacing:0.5px; background:#eaf6ff; padding:3px 12px; border-radius:12px;">
+                            $${totalRent.toFixed(2)}
+                          </span>
+                        </p>
                         <p><i class="fas fa-file-contract"></i> Lease Type: 
                             ${tenant.leaseType === 'fmr' ? 'Free Market Rent' : tenant.leaseType === 'section8' ? 'Section 8' : 'N/A'}
                         </p>
@@ -4180,78 +4501,117 @@ const totalRent =
     }
 }
 
-
 async function editTenant(tenantId) {
     try {
         const tenant = state.tenants.find(t => t._id === tenantId);
         if (!tenant) throw new Error('Tenant not found');
 
-        // Populate form fields
-        document.getElementById('tenantName').value = tenant.name || '';
-        document.getElementById('tenantPhone').value = tenant.phone || '';
-        document.getElementById('tenantEmail').value = tenant.email || '';
+        // Populate form fields (defensive: check if element exists before setting value)
+        const setVal = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.value = val ?? '';
+        };
+
+        setVal('tenantName', tenant.name);
+        setVal('tenantPhone', tenant.phone);
+        setVal('tenantEmail', tenant.email);
 
         populateLeaseHolders(tenant.leaseHolders || []);
 
-        // Lease info fields
-        document.getElementById('leaseStart').value = tenant.leaseStart ? new Date(tenant.leaseStart).toISOString().split('T')[0] : '';
-        document.getElementById('leaseEnd').value = tenant.leaseEnd ? new Date(tenant.leaseEnd).toISOString().split('T')[0] : '';
-        document.getElementById('baseRent').value = tenant.baseRent ?? '';
-        document.getElementById('waterFee').value = tenant.waterFee ?? '';
-        document.getElementById('trashFee').value = tenant.trashFee ?? '';
-        document.getElementById('adminFee').value = tenant.adminFee ?? '';
-        document.getElementById('leaseType').value = tenant.leaseType ?? '';
-        document.getElementById('leaseStatus').value = tenant.leaseStatus || 'active';
+        setVal('leaseStart', tenant.leaseStart ? new Date(tenant.leaseStart).toISOString().split('T')[0] : '');
+        setVal('leaseEnd', tenant.leaseEnd ? new Date(tenant.leaseEnd).toISOString().split('T')[0] : '');
+        setVal('baseRent', tenant.baseRent);
+        setVal('deposit', tenant.deposit);
+        setVal('waterFee', tenant.waterFee);
+        setVal('trashFee', tenant.trashFee);
+        setVal('adminFee', tenant.adminFee);
+        setVal('leaseType', tenant.leaseType);
+        setVal('leaseStatus', tenant.leaseStatus || 'active');
 
-        // Show/hide lease type sections and populate their fields
+        // Additional Fee fields
+        setVal('additionalFeeType', tenant.additionalFee?.type || '');
+        setVal('additionalFeeLabel', tenant.additionalFee?.label || '');
+        setVal('additionalFeeAmount', tenant.additionalFee?.amount || '');
+        document.getElementById('additionalFeeType')?.dispatchEvent(new Event('change'));
+
+        // Lease type sections
         if (tenant.leaseType === 'fmr') {
             document.getElementById('fmrSection').style.display = 'block';
             document.getElementById('section8Section').style.display = 'none';
-            document.getElementById('fmrNotes').value = tenant.fmrNotes ?? '';
+            setVal('fmrNotes', tenant.fmrNotes);
         } else if (tenant.leaseType === 'section8') {
             document.getElementById('fmrSection').style.display = 'none';
             document.getElementById('section8Section').style.display = 'flex';
-            document.getElementById('hubContribution').value = tenant.hubContribution ?? '';
-            document.getElementById('tenantContribution').value = tenant.tenantContribution ?? '';
+            setVal('hubContribution', tenant.hubContribution);
+            setVal('tenantContribution', tenant.tenantContribution);
         } else {
             document.getElementById('fmrSection').style.display = 'none';
             document.getElementById('section8Section').style.display = 'none';
-            document.getElementById('fmrNotes').value = '';
-            document.getElementById('hubContribution').value = '';
-            document.getElementById('tenantContribution').value = '';
+            setVal('fmrNotes', '');
+            setVal('hubContribution', '');
+            setVal('tenantContribution', '');
         }
 
         // Emergency contact
-        document.getElementById('emergencyContactName').value = tenant.emergencyContact?.name || '';
-        document.getElementById('emergencyContactPhone').value = tenant.emergencyContact?.phone || '';
-        document.getElementById('emergencyContactEmail').value = tenant.emergencyContact?.email || '';
-        document.getElementById('emergencyContactAddress').value = tenant.emergencyContact?.address || '';
-        document.getElementById('emergencyContactRelation').value = tenant.emergencyContact?.relation || '';
+        setVal('emergencyContactName', tenant.emergencyContact?.name || '');
+        setVal('emergencyContactPhone', tenant.emergencyContact?.phone || '');
+        setVal('emergencyContactEmail', tenant.emergencyContact?.email || '');
+        setVal('emergencyContactAddress', tenant.emergencyContact?.address || '');
+        setVal('emergencyContactRelation', tenant.emergencyContact?.relation || '');
 
         // Authorized occupants
-        document.getElementById('authorizedOccupants').value = (tenant.authorizedOccupants || []).join('\n');
+        setVal('authorizedOccupants', (tenant.authorizedOccupants || []).join('\n'));
 
         // Pets
-        document.getElementById('hasPets').checked = !!(tenant.pets && tenant.pets.hasPets);
-        document.getElementById('petDetails').style.display = (tenant.pets && tenant.pets.hasPets) ? 'block' : 'none';
-        document.getElementById('petCount').value = tenant.pets?.count || '';
-        document.getElementById('petFee').value = tenant.pets?.fee || '';
+        const hasPets = !!(tenant.pets && tenant.pets.hasPets);
+        const petsCheckbox = document.getElementById('hasPets');
+        if (petsCheckbox) petsCheckbox.checked = hasPets;
+        const petDetailsDiv = document.getElementById('petDetails');
+        if (petDetailsDiv) petDetailsDiv.style.display = hasPets ? 'block' : 'none';
+        setVal('petCount', tenant.pets?.count || '');
+        setVal('petFee', tenant.pets?.fee || '');
+        setVal('petNonRefundableFee', tenant.pets?.nonRefundableFee || '');
+        setVal('petMonthlyRent', tenant.pets?.monthlyRent || '');
+        setVal('petDepositIncrease', tenant.pets?.depositIncrease || '');
+        updatePetFields();
+        if (tenant.pets && Array.isArray(tenant.pets.details)) {
+            tenant.pets.details.forEach((pet, i) => {
+                const setPetVal = (cls, val) => {
+                    const el = document.querySelector(`.${cls}[data-index="${i}"]`);
+                    if (el) el.value = val ?? '';
+                };
+                setPetVal('pet-type', pet.type);
+                setPetVal('pet-name', pet.name);
+                setPetVal('pet-breed', pet.breed);
+                setPetVal('pet-weight', pet.weight);
+                setPetVal('pet-age', pet.age);
+                setPetVal('pet-gender', pet.gender);
+                setPetVal('pet-vaccination', pet.vaccination);
+            });
+        }
 
         // Lease renewal
-        document.getElementById('leaseRenewal').value = tenant.leaseRenewal || 'renew';
+        setVal('leaseRenewal', tenant.leaseRenewal || 'renew');
 
         // Cars
-        document.getElementById('hasCar').checked = !!(tenant.cars && tenant.cars.hasCar);
-        document.getElementById('carDetails').style.display = (tenant.cars && tenant.cars.hasCar) ? 'block' : 'none';
-        document.getElementById('carCount').value = tenant.cars?.count || 1;
+        const hasCar = !!(tenant.cars && tenant.cars.hasCar);
+        const hasCarCheckbox = document.getElementById('hasCar');
+        if (hasCarCheckbox) hasCarCheckbox.checked = hasCar;
+        const carDetailsDiv = document.getElementById('carDetails');
+        if (carDetailsDiv) carDetailsDiv.style.display = hasCar ? 'block' : 'none';
+        setVal('carCount', tenant.cars?.count || 1);
         updateCarFields();
         if (tenant.cars && Array.isArray(tenant.cars.details)) {
             tenant.cars.details.forEach((car, i) => {
-                document.querySelector(`.car-make[data-index="${i}"]`).value = car.make || '';
-                document.querySelector(`.car-model[data-index="${i}"]`).value = car.model || '';
-                document.querySelector(`.car-color[data-index="${i}"]`).value = car.color || '';
-                document.querySelector(`.car-plate[data-index="${i}"]`).value = car.licensePlate || '';
-                document.querySelector(`.car-year[data-index="${i}"]`).value = car.year || '';
+                const setCarVal = (cls, val) => {
+                    const el = document.querySelector(`.${cls}[data-index="${i}"]`);
+                    if (el) el.value = val ?? '';
+                };
+                setCarVal('car-make', car.make);
+                setCarVal('car-model', car.model);
+                setCarVal('car-color', car.color);
+                setCarVal('car-plate', car.licensePlate);
+                setCarVal('car-year', car.year);
             });
         }
 
@@ -4259,17 +4619,17 @@ async function editTenant(tenantId) {
         const availableUnits = state.units.filter(unit =>
             unit.status === 'vacant' || (tenant.unitId && (unit._id === tenant.unitId._id || unit._id === tenant.unitId))
         );
-
-        // Populate unit select
         const unitSelect = document.getElementById('tenantUnit');
-        unitSelect.innerHTML = `
-            <option value="">Select a unit</option>
-            ${availableUnits.map(unit => `
-                <option value="${unit._id}" ${(tenant.unitId && (unit._id === tenant.unitId._id || unit._id === tenant.unitId)) ? 'selected' : ''}>
-                    Unit ${unit.number} - ${unit.bedrooms} bed, ${unit.bathrooms} bath
-                </option>
-            `).join('')}
-        `;
+        if (unitSelect) {
+            unitSelect.innerHTML = `
+                <option value="">Select a unit</option>
+                ${availableUnits.map(unit => `
+                    <option value="${unit._id}" ${(tenant.unitId && (unit._id === tenant.unitId._id || unit._id === tenant.unitId)) ? 'selected' : ''}>
+                        Unit ${unit.number} - ${unit.bedrooms} bed, ${unit.bathrooms} bath
+                    </option>
+                `).join('')}
+            `;
+        }
 
         // Open modal in edit mode
         openModal('addTenantModal');
@@ -4277,7 +4637,7 @@ async function editTenant(tenantId) {
         // Update form handler for edit mode
         const form = document.getElementById('addTenantForm');
         const submitButton = form.querySelector('button[type="submit"]');
-        submitButton.textContent = 'Update Tenant';
+        if (submitButton) submitButton.textContent = 'Update Tenant';
 
         // Store the tenantId for update and mark as edit mode
         form.dataset.editMode = 'true';
@@ -4316,7 +4676,7 @@ async function editTenant(tenantId) {
     }
 }
 
-// Update the handleUpdateTenant function to not take event parameter
+
 async function handleUpdateTenant(tenantId) {
     const tenant = state.tenants.find(t => t._id === tenantId);
     if (!tenant) {
@@ -4337,9 +4697,31 @@ async function handleUpdateTenant(tenantId) {
                 model: document.querySelector(`.car-model[data-index="${i}"]`)?.value || '',
                 color: document.querySelector(`.car-color[data-index="${i}"]`)?.value || '',
                 licensePlate: document.querySelector(`.car-plate[data-index="${i}"]`)?.value || '',
-                year: document.querySelector(`.car-year[data-index="${i}"]`)?.value || ''
+                year: document.querySelector(`.car-year[data-index="${i}"]`).value || ''
             });
         }
+    }
+
+    // Gather pet info if "Has Pets" is checked
+    let pets = {
+        hasPets: document.getElementById('hasPets').checked,
+        count: document.getElementById('hasPets').checked ? Number(document.getElementById('petCount').value) : 0,
+        fee: document.getElementById('hasPets').checked ? Number(document.getElementById('petFee')?.value) || 0 : 0,
+        nonRefundableFee: document.getElementById('hasPets').checked ? Number(document.getElementById('petNonRefundableFee')?.value) || 0 : 0,
+        monthlyRent: document.getElementById('hasPets').checked ? Number(document.getElementById('petMonthlyRent')?.value) || 0 : 0,
+        depositIncrease: document.getElementById('hasPets').checked ? Number(document.getElementById('petDepositIncrease')?.value) || 0 : 0,
+        details: []
+    };
+    if (pets.hasPets) {
+        pets.details = Array.from(document.querySelectorAll('.pet-field-group')).map((group, i) => ({
+            type: group.querySelector('.pet-type')?.value || '',
+            name: group.querySelector('.pet-name')?.value || '',
+            breed: group.querySelector('.pet-breed')?.value || '',
+            weight: group.querySelector('.pet-weight')?.value || '',
+            age: group.querySelector('.pet-age')?.value || '',
+            gender: group.querySelector('.pet-gender')?.value || '',
+            vaccination: group.querySelector('.pet-vaccination')?.value || ''
+        }));
     }
 
     const tenantData = {
@@ -4358,21 +4740,23 @@ async function handleUpdateTenant(tenantId) {
             .split('\n')
             .map(s => s.trim())
             .filter(Boolean),
-        pets: {
-            hasPets: document.getElementById('hasPets').checked,
-            count: document.getElementById('hasPets').checked ? Number(document.getElementById('petCount').value) : 0,
-            fee: document.getElementById('hasPets').checked ? Number(document.getElementById('petFee').value) : 0
-        },
+        pets,
         cars: {
             hasCar: document.getElementById('hasCar').checked,
             count: document.getElementById('hasCar').checked ? (parseInt(document.getElementById('carCount').value) || 0) : 0,
             details: cars
+        },
+        additionalFee: {
+            type: document.getElementById('additionalFeeType').value,
+            label: document.getElementById('additionalFeeLabel').value,
+            amount: Number(document.getElementById('additionalFeeAmount').value) || 0
         },
         leaseRenewal: document.getElementById('leaseRenewal').value,
         unitId: newUnitId,
         leaseStart: document.getElementById('leaseStart').value,
         leaseEnd: document.getElementById('leaseEnd').value,
         baseRent: Number(document.getElementById('baseRent').value),
+        deposit: Number(document.getElementById('deposit').value) || 0,
         waterFee: Number(document.getElementById('waterFee').value) || 0,
         trashFee: Number(document.getElementById('trashFee').value) || 0,
         adminFee: Number(document.getElementById('adminFee').value) || 0,
@@ -4473,6 +4857,8 @@ async function handleUpdateTenant(tenantId) {
         hideLoader();
     }
 }
+
+
 // Add this function to populate unit select when opening the tenant modal
 function populateUnitSelect() {
     const unitSelect = document.getElementById('tenantUnit');
@@ -5344,36 +5730,7 @@ function exportReceipt(paymentId) {
     doc.save(filename);
 }
 
-function updatePropertyStats() {
-    if (!state.currentProperty) return;
 
-    const stats = {
-        totalUnits: state.units.length,
-        vacantUnits: state.units.filter(u => u.status === 'vacant').length,
-        occupancyRate: calculateOccupancyRate(state.units)
-    };
-
-    document.getElementById('totalUnits').textContent = stats.totalUnits;
-    document.getElementById('vacantUnits').textContent = stats.vacantUnits;
-    document.getElementById('occupancyRate').textContent = stats.occupancyRate;
-
-    // Calculate and display estimated monthly income for this property (including additional fees and pet fee)
-    const activeTenants = (state.tenants || []).filter(
-        t => t.leaseStatus !== 'terminated' && t.leaseStatus !== 'expired'
-    );
-    const propertyMonthlyIncome = activeTenants.reduce((sum, t) =>
-        sum +
-        (Number(t.baseRent) || 0) +
-        (Number(t.waterFee) || 0) +
-        (Number(t.trashFee) || 0) +
-        (Number(t.adminFee) || 0) +
-        (t.pets?.hasPets ? (Number(t.pets.fee) || 0) : 0)
-    , 0);
-    const incomeElem = document.getElementById('propertyMonthlyIncome');
-    if (incomeElem) {
-        incomeElem.textContent = `$${propertyMonthlyIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-    }
-}
 
 function calculateOccupancyRate(units) {
     if (!units?.length) return '0%';
@@ -5474,6 +5831,38 @@ async function loadAllUnitsAndTenants() {
 
 
 
+function updatePropertyStats() {
+    if (!state.currentProperty) return;
+
+    const stats = {
+        totalUnits: state.units.length,
+        vacantUnits: state.units.filter(u => u.status === 'vacant').length,
+        occupancyRate: calculateOccupancyRate(state.units)
+    };
+
+    document.getElementById('totalUnits').textContent = stats.totalUnits;
+    document.getElementById('vacantUnits').textContent = stats.vacantUnits;
+    document.getElementById('occupancyRate').textContent = stats.occupancyRate;
+
+    // Calculate and display estimated monthly income for this property (including all additional fees and monthly pet rent only)
+    const activeTenants = (state.tenants || []).filter(
+        t => t.leaseStatus !== 'terminated' && t.leaseStatus !== 'expired'
+    );
+    const propertyMonthlyIncome = activeTenants.reduce((sum, t) =>
+        sum +
+        (Number(t.baseRent) || 0) +
+        (Number(t.waterFee) || 0) +
+        (Number(t.trashFee) || 0) +
+        (Number(t.adminFee) || 0) +
+        (t.additionalFee?.amount || 0) +
+        (t.pets?.hasPets ? (Number(t.pets.monthlyRent) || 0) : 0)
+    , 0);
+    const incomeElem = document.getElementById('propertyMonthlyIncome');
+    if (incomeElem) {
+        incomeElem.textContent = `$${propertyMonthlyIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
+}
+
 function renderMainSummary() {
     try {
         const elTotalProperties = document.getElementById('summaryTotalProperties');
@@ -5503,14 +5892,16 @@ function renderMainSummary() {
         const totalOccupiedUnits = state.allUnits
             ? state.allUnits.filter(u => activeTenantUnitIds.has(u._id)).length
             : 0;
-        // Calculate total monthly income including additional fees and pet fee
+
+        // Calculate total monthly income including all additional fees and monthly pet rent only
         const totalMonthlyIncome = activeTenants.reduce((sum, t) =>
             sum +
             (Number(t.baseRent) || 0) +
             (Number(t.waterFee) || 0) +
             (Number(t.trashFee) || 0) +
             (Number(t.adminFee) || 0) +
-            (t.pets?.hasPets ? (Number(t.pets.fee) || 0) : 0)
+            (t.additionalFee?.amount || 0) +
+            (t.pets?.hasPets ? (Number(t.pets.monthlyRent) || 0) : 0)
         , 0);
         const occupancyRate = totalUnits > 0 ? Math.round((totalOccupiedUnits / totalUnits) * 100) : 0;
 
@@ -5519,8 +5910,6 @@ function renderMainSummary() {
         elTotalTenants.textContent = totalTenants;
         elOccupancyRate.textContent = `${occupancyRate}%`;
         elMonthlyIncome.textContent = `$${totalMonthlyIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-
-        // Total Units Occupied section has been removed
     } catch (error) {
         // Catch any errors that might occur during summary rendering
         console.warn('Error rendering main summary:', error);
@@ -5565,6 +5954,16 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', () => {
         setSidebarInitial();
     });
+});
+
+// Show/hide additional fee fields based on selection
+document.getElementById('additionalFeeType').addEventListener('change', function() {
+    const type = this.value;
+    document.getElementById('additionalFeeLabelGroup').style.display = type === 'other' ? 'block' : 'none';
+    document.getElementById('additionalFeeAmountGroup').style.display = type ? 'block' : 'none';
+    if (type !== 'other') {
+        document.getElementById('additionalFeeLabel').value = '';
+    }
 });
 
 // Export functions for global access
