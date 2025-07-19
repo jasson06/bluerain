@@ -575,6 +575,26 @@ const projectSchema = new mongoose.Schema({
     zip: { type: String },
   },
   description: { type: String },
+  utilityAccounts: { // <-- Add this block
+    water: {
+      accountNumber: { type: String, default: "" },
+      provider: { type: String, default: "" },
+      status: { type: String, default: "unknown" } // "active", "on", "off", "disconnected"
+      
+    },
+    gas: {
+      accountNumber: { type: String, default: "" },
+      provider: { type: String, default: "" },
+      status: { type: String, default: "unknown" }
+      
+    },
+    electricity: {
+      accountNumber: { type: String, default: "" },
+      provider: { type: String, default: "" },
+      status: { type: String, default: "unknown" }
+      
+    }
+  },
   estimates: [
     {
       type: mongoose.Schema.Types.ObjectId,
@@ -587,6 +607,7 @@ const projectSchema = new mongoose.Schema({
     mimetype: String,
   }],
 });
+
 
 
 const invitationSchema = new mongoose.Schema({
@@ -5702,6 +5723,38 @@ app.get('/api/vendors/:vendorId/used-line-item-ids', async (req, res) => {
     res.json({ usedIds: Array.from(usedIds) });
   } catch (err) {
     console.error("Error fetching used line item IDs:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+// GET utilities for a project
+app.get('/api/projects/:projectId/utilities', async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.projectId).select('utilityAccounts');
+    if (!project) return res.status(404).json({ message: "Project not found" });
+    res.json({ utilityAccounts: project.utilityAccounts });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// PUT update utilities for a project
+app.put('/api/projects/:projectId/utilities', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { utilityAccounts } = req.body;
+    if (!utilityAccounts) {
+      return res.status(400).json({ message: "Missing utilityAccounts in request body" });
+    }
+    const project = await Project.findByIdAndUpdate(
+      projectId,
+      { $set: { utilityAccounts } },
+      { new: true, runValidators: true }
+    );
+    if (!project) return res.status(404).json({ message: "Project not found" });
+    res.json({ success: true, utilityAccounts: project.utilityAccounts });
+  } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 });
