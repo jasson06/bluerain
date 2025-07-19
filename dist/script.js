@@ -268,6 +268,29 @@ const projectFilters = {
     
 
 
+function renderUtilityIconsForProject(project) {
+  // Example: expects project.utilityAccounts = { water: {status}, gas: {status}, electricity: {status} }
+  if (!project.utilityAccounts) return '';
+  const utilities = [
+    { key: 'water', icon: 'fa-tint', label: 'Water' },
+    { key: 'gas', icon: 'fa-fire', label: 'Gas' },
+    { key: 'electricity', icon: 'fa-bolt', label: 'Electricity' }
+  ];
+  return `
+    <span class="project-utilities-icons" style="display:inline-flex;gap:8px;vertical-align:middle;">
+      ${utilities.map(util => {
+        const acc = project.utilityAccounts[util.key] || {};
+        let color = '#bdbdbd'; // default gray
+        if (acc.status === 'active' || acc.status === 'on') color = '#27ae60'; // green
+        else if (acc.status === 'disconnected' || acc.status === 'off') color = '#e74c3c'; // red
+        return `<i class="fas ${util.icon}" title="${util.label}" style="color:${color};font-size:1.2em;"></i>`;
+      }).join('')}
+    </span>
+  `;
+}
+
+
+
 // Function to navigate to the details page
 function navigateToDetails(section, id) {
     const baseURL = window.location.origin; // Automatically detects the current base URL
@@ -276,14 +299,16 @@ function navigateToDetails(section, id) {
     window.location.href = fullURL; // Navigate to the constructed URL
   }
   
-   // Function to load projects dynamically
+  // Function to load projects dynamically
 async function loadProjects() {
     const projectsList = document.getElementById('projects-list');
     projectsList.innerHTML = '<p>Loading...</p>';
   
     // 📅 Get today's date in YYYY-MM-DD
     const today = new Date().toISOString().split("T")[0];
-  showLoader(); // 👈 START
+    
+    showLoader(); // 👈 START
+
     try {
       // Fetch both projects and today's updates
       const [projectsRes, updatesRes] = await Promise.all([
@@ -317,16 +342,18 @@ async function loadProjects() {
   
           itemDiv.innerHTML = `
             <div class="project-item-header">
-              <p>${project.name}</p>
-              ${count > 0 ? `
-                <span class="activity-badge" data-tooltip="${count} update${count > 1 ? 's' : ''} today">
-                  ${count}
-                </span>` : ''
-              }
+              <p>${project.name} ${renderUtilityIconsForProject(project)}</p>
+    ${count > 0 ? `
+      <span class="activity-badge" style="position:absolute;top:10px;right:55px;z-index:2;" data-tooltip="${count} update${count > 1 ? 's' : ''} today">
+        ${count}
+      </span>` : ''
+    }
             </div>
             <small>${project.address.addressLine1}, ${project.address.city}, ${project.address.state}, ${project.address.zip}</small>
             <small>Lockbox Code: ${project.code || 'N/A'}</small>
           `;
+
+          addEditIconToProjectCard(itemDiv, project);
           projectsList.appendChild(itemDiv);
         });
   
@@ -348,10 +375,12 @@ async function loadProjects() {
     } catch (error) {
       console.error('Error loading projects:', error);
       projectsList.innerHTML = '<p>Error loading projects. Please try again later.</p>';
-           } finally {
+    } finally {
       hideLoader(); // 👈 END
     }
   }
+  
+  
   
 
 
@@ -363,7 +392,9 @@ async function loadUpcomingProjects() {
     projectsList.innerHTML = "<p>Loading...</p>";
   
     const today = new Date().toISOString().split("T")[0];
-  showLoader(); // 👈 START
+  
+    showLoader(); // 👈 START
+
     try {
       // Fetch upcoming projects and today's updates
       const [projectsRes, updatesRes] = await Promise.all([
@@ -402,16 +433,17 @@ async function loadUpcomingProjects() {
         itemDiv.innerHTML = `
           <div class="project-item-header">
             <p>${project.name}</p>
-            ${count > 0 ? `
-              <span class="activity-badge" data-tooltip="${count} update${count > 1 ? 's' : ''} today">
-                ${count}
-              </span>` : ''
-            }
+    ${count > 0 ? `
+      <span class="activity-badge" style="position:absolute;top:10px;right:55px;z-index:2;" data-tooltip="${count} update${count > 1 ? 's' : ''} today">
+        ${count}
+      </span>` : ''
+    }
           </div>
           <small>${fullAddress}</small>
           <small>Lockbox Code: ${project.code || 'N/A'}</small>
         `;
-  
+        
+        addEditIconToProjectCard(itemDiv, project);
         projectsList.appendChild(itemDiv);
       });
   
@@ -432,18 +464,21 @@ async function loadUpcomingProjects() {
     } catch (error) {
       console.error("❌ Error loading upcoming projects:", error);
       projectsList.innerHTML = "<p>Error loading upcoming projects. Please try again later.</p>";
-            } finally {
-             hideLoader(); // 👈 END
+    } finally {
+      hideLoader(); // 👈 END
     }
   }
   
+  
   // ✅ Function to Load on market Projects Dynamically
- async function loadOnMarketProjects() {
+  async function loadOnMarketProjects() {
     const projectsList = document.getElementById("on-market-projects-list");
     projectsList.innerHTML = "<p>Loading...</p>";
   
     const today = new Date().toISOString().split("T")[0];
-  showLoader(); // 👈 START
+  
+    showLoader(); // 👈 START
+
     try {
       const [projectsRes, updatesRes] = await Promise.all([
         fetch("/api/on-market-projects"),
@@ -480,17 +515,18 @@ async function loadUpcomingProjects() {
   
         itemDiv.innerHTML = `
           <div class="project-item-header">
-            <p>${project.name}</p>
-            ${count > 0 ? `
-              <span class="activity-badge" data-tooltip="${count} update${count > 1 ? 's' : ''} today">
-                ${count}
-              </span>` : ''
-            }
+            <p>${project.name} ${renderUtilityIconsForProject(project)}</p>
+    ${count > 0 ? `
+      <span class="activity-badge" style="position:absolute;top:10px;right:55px;z-index:2;" data-tooltip="${count} update${count > 1 ? 's' : ''} today">
+        ${count}
+      </span>` : ''
+    }
           </div>
           <small>${fullAddress}</small>
           <small>Lockbox Code: ${project.code || 'N/A'}</small>
         `;
-  
+        
+        addEditIconToProjectCard(itemDiv, project);
         projectsList.appendChild(itemDiv);
       });
   
@@ -511,10 +547,11 @@ async function loadUpcomingProjects() {
     } catch (error) {
       console.error("❌ Error loading 'On Market' projects:", error);
       projectsList.innerHTML = "<p>Error loading 'On Market' projects. Please try again later.</p>";
-            } finally {
-               hideLoader(); // 👈 END
+    } finally {
+      hideLoader(); // 👈 END
     }
   }
+  
 
 
   // ✅ Function to Load Completed Projects Dynamically
@@ -523,7 +560,9 @@ async function loadUpcomingProjects() {
     projectsList.innerHTML = "<p>Loading...</p>"; // Show loading message
   
     const today = new Date().toISOString().split("T")[0];
-  showLoader(); // 👈 START
+  
+    showLoader(); // 👈 START
+
     try {
       // Fetch completed projects and today's updates
       const [projectsRes, updatesRes] = await Promise.all([
@@ -557,18 +596,19 @@ async function loadUpcomingProjects() {
   
           itemDiv.innerHTML = `
             <div class="project-item-header">
-              <p>${project.name}</p>
-              ${count > 0 ? `
-                <span class="activity-badge" data-tooltip="${count} update${count > 1 ? 's' : ''} today">
-                  ${count}
-                </span>` : ''
-              }
+              <p>${project.name} ${renderUtilityIconsForProject(project)}</p>
+    ${count > 0 ? `
+      <span class="activity-badge" style="position:absolute;top:10px;right:55px;z-index:2;" data-tooltip="${count} update${count > 1 ? 's' : ''} today">
+        ${count}
+      </span>` : ''
+    }
             </div>
             <small>${project.address.addressLine1}, ${project.address.city}, ${project.address.state}, ${project.address.zip}</small>
             <small>Lockbox Code: ${project.code || 'N/A'}</small>
             <span class="status">✔ Completed</span>
           `;
-  
+
+          addEditIconToProjectCard(itemDiv, project);
           projectsList.appendChild(itemDiv);
         });
   
@@ -589,15 +629,194 @@ async function loadUpcomingProjects() {
     } catch (error) {
       console.error("❌ Error loading completed projects:", error);
       projectsList.innerHTML = "<p>Error loading completed projects. Please try again later.</p>";
-            } finally {
-             hideLoader(); // 👈 END
+    } finally {
+      hideLoader(); // 👈 END
     }
   }
+  
 
 // ✅ Call function on page load
 document.addEventListener("DOMContentLoaded", () => {
     loadCompletedProjects();
 });
+
+
+
+// --- Add this function to open the edit modal ---
+function openProjectEditModal(project) {
+  // Use the same modal and form IDs as before
+  let modal = document.getElementById('projectEditModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'projectEditModal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width:850px;">
+        <span class="close" id="closeProjectEditModal" style="position:absolute;top:12px;right:18px;font-size:1.5rem;cursor:pointer;">&times;</span>
+        <h3>Edit Project & Utilities</h3>
+        <form id="projectEditForm">
+          <label for="editProjectName">Name:</label>
+          <input id="editProjectName" type="text" required />
+
+          <label for="editProjectStatus">Status:</label>
+          <select id="editProjectStatus" required>
+            <option value="Upcoming">Upcoming</option>
+            <option value="In Progress">In Progress</option>
+            <option value="On Market">On Market</option>
+            <option value="completed">Completed</option>
+          </select>
+
+          <label for="editProjectColor">Color:</label>
+          <input id="editProjectColor" type="color" />
+
+          <div class="form-group">
+            <label for="editProjectType"><strong>Project Type</strong></label>
+            <select id="editProjectType" class="form-control" required>
+              <option value="Residential">Residential</option>
+              <option value="Multifamily">Multifamily</option>
+            </select>
+          </div>
+
+          <label for="editProjectCode">Lockbox Code:</label>
+          <input id="editProjectCode" type="text" required />
+
+          <label for="editProjectAddressLine1">Address Line 1:</label>
+          <input id="editProjectAddressLine1" type="text" />
+
+          <label for="editProjectAddressLine2">Address Line 2:</label>
+          <input id="editProjectAddressLine2" type="text" />
+
+          <label for="editProjectCity">City:</label>
+          <input id="editProjectCity" type="text" required />
+
+          <label for="editProjectState">State:</label>
+          <input id="editProjectState" type="text" required />
+
+          <label for="editProjectZip">Zip Code:</label>
+          <input id="editProjectZip" type="text" />
+
+          <label for="editProjectDescription">Description:</label>
+          <textarea id="editProjectDescription"></textarea>
+
+          <hr>
+          <label>Water Status:
+            <select id="editWaterStatus">
+              <option value="unknown">Unknown</option>
+              <option value="active">Active</option>
+
+              <option value="disconnected">Disconnected</option>
+            </select>
+          </label>
+          <label>Gas Status:
+            <select id="editGasStatus">
+              <option value="unknown">Unknown</option>
+              <option value="active">Active</option>
+
+              <option value="disconnected">Disconnected</option>
+            </select>
+          </label>
+          <label>Electricity Status:
+            <select id="editElectricityStatus">
+              <option value="unknown">Unknown</option>
+              <option value="active">Active</option>
+
+              <option value="disconnected">Disconnected</option>
+            </select>
+          </label>
+          <br><br>
+          <button type="submit" class="btn-primary">Save</button>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Close logic
+    document.getElementById('closeProjectEditModal').onclick = () => modal.style.display = 'none';
+    modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+  }
+
+  // Populate form with project data
+  document.getElementById('editProjectName').value = project.name || '';
+  document.getElementById('editProjectStatus').value = project.status || 'Upcoming';
+  document.getElementById('editProjectColor').value = project.color || '#2563eb';
+  document.getElementById('editProjectType').value = project.type || 'Residential';
+  document.getElementById('editProjectCode').value = project.code || '';
+  document.getElementById('editProjectAddressLine1').value = project.address?.addressLine1 || '';
+  document.getElementById('editProjectAddressLine2').value = project.address?.addressLine2 || '';
+  document.getElementById('editProjectCity').value = project.address?.city || '';
+  document.getElementById('editProjectState').value = project.address?.state || '';
+  document.getElementById('editProjectZip').value = project.address?.zip || '';
+  document.getElementById('editProjectDescription').value = project.description || '';
+  document.getElementById('editWaterStatus').value = project.utilityAccounts?.water?.status || 'unknown';
+  document.getElementById('editGasStatus').value = project.utilityAccounts?.gas?.status || 'unknown';
+  document.getElementById('editElectricityStatus').value = project.utilityAccounts?.electricity?.status || 'unknown';
+
+  // Submit handler
+  document.getElementById('projectEditForm').onsubmit = async function(e) {
+    e.preventDefault();
+    const updatedProject = {
+      name: document.getElementById('editProjectName').value,
+      status: document.getElementById('editProjectStatus').value,
+      color: document.getElementById('editProjectColor').value,
+      type: document.getElementById('editProjectType').value,
+      code: document.getElementById('editProjectCode').value,
+      address: {
+        addressLine1: document.getElementById('editProjectAddressLine1').value,
+        addressLine2: document.getElementById('editProjectAddressLine2').value,
+        city: document.getElementById('editProjectCity').value,
+        state: document.getElementById('editProjectState').value,
+        zip: document.getElementById('editProjectZip').value
+      },
+      description: document.getElementById('editProjectDescription').value,
+      utilityAccounts: {
+        water: { ...project.utilityAccounts?.water, status: document.getElementById('editWaterStatus').value },
+        gas: { ...project.utilityAccounts?.gas, status: document.getElementById('editGasStatus').value },
+        electricity: { ...project.utilityAccounts?.electricity, status: document.getElementById('editElectricityStatus').value }
+      }
+    };
+    try {
+      await fetch(`/api/projects/${project._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedProject)
+      });
+      // Optionally update only utilityAccounts (if you have a dedicated endpoint)
+      await fetch(`/api/projects/${project._id}/utilities`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ utilityAccounts: updatedProject.utilityAccounts })
+      });
+      modal.style.display = 'none';
+      showToast('Project updated!');
+      loadProjects();
+      loadUpcomingProjects();
+      loadOnMarketProjects();
+      loadCompletedProjects();
+    } catch (err) {
+      showToast('Failed to update project.');
+    }
+  };
+
+  modal.style.display = 'block';
+}
+
+// --- Add the edit icon to each project card (upper right corner) ---
+// Example for main projects list (repeat for other lists as needed)
+function addEditIconToProjectCard(itemDiv, project) {
+  const editIcon = document.createElement('span');
+  editIcon.innerHTML = '<i class="fas fa-edit"></i>';
+  editIcon.title = 'Edit Project & Utilities';
+  editIcon.style.cssText = `
+    position: absolute; top: 10px; right: 14px; color: #2563eb; font-size: 1.3em; cursor: pointer; z-index: 2;
+    background: #fff; border-radius: 50%; padding: 4px 7px; box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  `;
+  editIcon.onclick = (e) => {
+    e.stopPropagation();
+    openProjectEditModal(project);
+  };
+  itemDiv.style.position = 'relative';
+  itemDiv.appendChild(editIcon);
+}
 
 
 
