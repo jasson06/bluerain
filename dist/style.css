@@ -1598,3 +1598,115 @@ input, textarea {
   font-size: 12px;
   font-weight: bold;
 }
+
+
+.project-utilities-icons i {
+  margin-right: 2px;
+  transition: color 0.2s;
+}
+
+
+/* Project Edit Modal Styles */
+#projectEditModal.modal {
+  display: none;
+  position: fixed;
+  z-index: 99999;
+  left: 0; top: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(30,41,59,0.25);
+  justify-content: center;
+  align-items: center;
+}
+
+#projectEditModal .modal-content {
+  background: #fff;
+  border-radius: 12px;
+  padding: 32px 32px 18px 32px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  position: relative;
+  max-width: 600px;
+  margin: 40px auto;
+  animation: fadeIn 0.2s;
+}
+
+#projectEditModal h3 {
+  margin-top: 0;
+  margin-bottom: 18px;
+  font-size: 1.5rem;
+  color: #2563eb;
+  text-align: center;
+}
+
+#projectEditModal label {
+  display: block;
+  margin-top: 12px;
+  margin-bottom: 4px;
+  font-weight: 500;
+  color: #22223b;
+}
+
+#projectEditModal input[type="text"],
+#projectEditModal input[type="color"],
+#projectEditModal select,
+#projectEditModal textarea {
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  font-size: 1rem;
+  background: #f8fafc;
+  box-sizing: border-box;
+  transition: border 0.2s;
+}
+
+#projectEditModal input[type="color"] {
+  padding: 0;
+  height: 36px;
+  width: 60px;
+  border: none;
+  background: none;
+}
+
+#projectEditModal textarea {
+  min-height: 60px;
+  resize: vertical;
+}
+
+#projectEditModal .form-group {
+  margin-bottom: 10px;
+}
+
+#projectEditModal .btn-primary {
+  background: linear-gradient(to right, #2563eb, #3b82f6);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background 0.2s;
+}
+
+#projectEditModal .btn-primary:hover {
+  background: linear-gradient(to right, #1d4ed8, #2563eb);
+}
+
+#closeProjectEditModal {
+  position: absolute;
+  right: 18px;
+  top: 12px;
+  font-size: 1.5rem;
+  color: #888;
+  cursor: pointer;
+  font-weight: bold;
+  z-index: 2;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-30px);}
+  to { opacity: 1; transform: translateY(0);}
+}
+
