@@ -522,7 +522,7 @@ button, input, textarea {
 
 /* Projects List Container */
 #projects-list {
-  max-height: 450px; /* Limit height */
+  max-height: 665px; /* Limit height */
   overflow-y: scroll; /* Enable vertical scrolling */
   padding: 15px;
   background-color: #fbfcfd;
@@ -572,7 +572,7 @@ button, input, textarea {
 
 /* Upcoming Projects List Container */
 #Upcoming-projects-list {
-  max-height: 450px; /* Match the height limit */
+  max-height: 665px; /* Match the height limit */
   overflow-y: scroll; /* Enable vertical scrolling */
   padding: 15px;
   background-color: #fbfcfd;
@@ -622,7 +622,7 @@ button, input, textarea {
 
 /* On Market Projects List Container */
 #on-market-projects-list {
-  max-height: 450px;
+  max-height: 665px;
   overflow-y: scroll;
   padding: 15px;
   background-color: #fbfcfd;
@@ -673,7 +673,7 @@ button, input, textarea {
 
 /* Completed Projects List */
 #completed-projects-list {
-  max-height: 450px;
+  max-height: 665px;
   overflow-y: scroll;
   padding: 15px;
   background-color: #fbfcfd;
@@ -1598,6 +1598,200 @@ input, textarea {
   font-size: 12px;
   font-weight: bold;
 }
+
+
+
+/* Assignments Section Styles */
+#assignments-section {
+  background: var(--card-bg, #fff);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 24px 18px 18px 18px;
+  margin: 20px auto;
+  max-width: 100%;
+  overflow-x: auto;
+  /* Add max height and vertical scroll */
+  max-height: 780px;
+  overflow-y: auto;
+}
+
+
+#assignments-section h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 18px;
+  color: var(--primary, #2563eb);
+  letter-spacing: 0.5px;
+}
+
+#assignments-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: transparent;
+  font-size: 0.98rem;
+}
+
+#assignments-table th,
+#assignments-table td {
+  padding: 10px 8px;
+  text-align: left;
+}
+
+#assignments-table th {
+  background: var(--table-header-bg, #f3f4f6);
+  color: var(--primary, #2563eb);
+  font-weight: 600;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+#assignments-table thead {
+  position: sticky;
+  top: -25px;
+  z-index: 2;
+  background: var(--table-header-bg, #f3f4f6);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  
+}
+
+
+#assignments-table tr {
+  border-bottom: 1px solid #e5e7eb;
+  transition: background 0.15s;
+}
+
+#assignments-table tr:hover {
+  background: var(--table-row-hover, #f1f5f9);
+}
+
+#assignments-table td {
+  color: var(--text, #22223b);
+}
+
+#assignments-table a.line-items-link {
+  color: var(--accent, #0ea5e9);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+#assignments-table a.line-items-link:hover {
+  color: var(--primary, #2563eb);
+  text-decoration: underline;
+}
+
+/* Modal Styles for Line Items */
+#lineItemsModal.modal {
+  display: none;
+  position: fixed;
+  z-index: 99999;
+  left: 0; top: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(30, 41, 59, 0.25);
+  justify-content: center;
+  align-items: center;
+}
+
+#lineItemsModal .modal-content {
+  background: #fff;
+  border-radius: 10px;
+  padding: 28px 24px 18px 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  position: relative;
+  animation: fadeIn 0.2s;
+}
+
+#lineItemsModal .close {
+  position: absolute;
+  right: 18px;
+  top: 12px;
+  font-size: 1.5rem;
+  color: #888;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+#lineItemsDetailsTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+#lineItemsDetailsTable th,
+#lineItemsDetailsTable td {
+  padding: 8px 6px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.97rem;
+}
+
+#lineItemsDetailsTable th {
+  background: #f3f4f6;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+#lineItemsDetailsTable tr:last-child td {
+  border-bottom: none;
+}
+
+
+#assignments-filters {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  margin-bottom: 18px;
+  align-items: center;
+  
+}
+
+
+
+
+#assignments-filters input[type="text"] {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 1rem;
+  background: #f8fafc;
+  color: #22223b;
+  transition: border 0.2s, box-shadow 0.2s;
+  min-width: 180px;
+  outline: none;
+}
+
+#assignments-filters input[type="text"]:focus {
+  border-color: #2563eb;
+  background: #fff;
+  box-shadow: 0 0 0 2px #2563eb22;
+}
+
+/* Responsive: stack filters vertically on small screens */
+@media (max-width: 600px) {
+  #assignments-filters {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+  #assignments-filters input[type="text"] {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 700px) {
+  #assignments-section {
+    padding: 12px 4px;
+  }
+  #assignments-table th, #assignments-table td {
+    padding: 7px 4px;
+    font-size: 0.93rem;
+  }
+  #lineItemsModal .modal-content {
+    padding: 14px 6px 10px 6px;
+    max-width: 98vw;
+  }
+}
+
+.lineitem-details-row {
+ 
 
 
 .project-utilities-icons i {
