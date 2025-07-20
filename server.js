@@ -2189,12 +2189,21 @@ app.post('/api/password-reset/request', async (req, res) => {
     vendor.passwordResetExpires = Date.now() + 3600000; // 1 hour expiry
     await vendor.save();
 
-    // Send the reset token via email
+    // Construct the reset link
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5500';
+    const resetLink = `${baseUrl}/sign-inpage.html?email=${encodeURIComponent(email)}&token=${encodeURIComponent(resetToken)}`;
+
+    // Send the reset token and link via email
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: vendor.email,
       subject: 'Password Reset Request',
-      text: `Your password reset token is: ${resetToken}`,
+      text: `Your password reset token is: ${resetToken}\n\nOr click the link below to reset your password:\n${resetLink}`,
+      html: `
+        <p>Your password reset token is: <b>${resetToken}</b></p>
+        <p>Or click the link below to reset your password:</p>
+        <a href="${resetLink}">${resetLink}</a>
+      `
     });
 
     res.status(200).json({ success: true, message: 'Password reset token sent to email.' });
@@ -3214,11 +3223,20 @@ app.post('/api/manager/reset-password', async (req, res) => {
     manager.passwordResetExpires = Date.now() + 3600000; // 1 hour expiry
     await manager.save();
 
+    // Construct the reset link
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5500';
+    const resetLink = `${baseUrl}/project-manager-auth.html?role=manager&email=${encodeURIComponent(email)}&token=${encodeURIComponent(resetToken)}`;
+
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: manager.email,
       subject: 'Password Reset Request',
-      text: `Your password reset token is: ${resetToken}`
+      text: `Your password reset token is: ${resetToken}\n\nOr click the link below to reset your password:\n${resetLink}`,
+      html: `
+        <p>Your password reset token is: <b>${resetToken}</b></p>
+        <p>Or click the link below to reset your password:</p>
+        <a href="${resetLink}">${resetLink}</a>
+      `
     });
 
     res.status(200).json({ success: true, message: 'Password reset token sent to email.' });
