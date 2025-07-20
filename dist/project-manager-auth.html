@@ -5,73 +5,74 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Project Manager Authentication</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #e9ecef;
-      margin: 0;
-      padding: 0;
-    }
-    .container {
-      max-width: 400px;
-      margin: 50px auto;
-      background: white;
-      padding: 20px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-      border-radius: 8px;
-    }
-    .form-header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .form-header h2 {
-      margin: 0;
-    }
-    form {
-      display: none;
-    }
-    form.active {
-      display: block;
-    }
-    input[type="email"],
-    input[type="password"],
-    input[type="text"] {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    button {
-      width: 100%;
-      padding: 10px;
-      background-color: #28a745;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    button:hover {
-      background-color: #218838;
-    }
-    .toggle-link {
-      color: #28a745;
-      cursor: pointer;
-      display: block;
-      text-align: center;
-      margin-top: 10px;
-      text-decoration: none;
-    }
-    .toggle-link:hover {
-      text-decoration: underline;
-    }
-    .error-message {
-      color: red;
-      font-size: 14px;
-      margin-top: -5px;
-      margin-bottom: 10px;
-    }
-  </style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #e9ecef;
+    margin: 0;
+    padding: 0;
+  }
+  .container {
+    max-width: 400px;
+    margin: 50px auto;
+    background: white;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+  }
+  .form-header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .form-header h2 {
+    margin: 0;
+  }
+  form {
+    display: none;
+  }
+  form.active {
+    display: block;
+  }
+  input[type="email"],
+  input[type="password"],
+  input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box; /* Ensures padding doesn't make input wider than form */
+  }
+  button {
+    width: 100%;
+    padding: 10px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  button:hover {
+    background-color: #218838;
+  }
+  .toggle-link {
+    color: #28a745;
+    cursor: pointer;
+    display: block;
+    text-align: center;
+    margin-top: 10px;
+    text-decoration: none;
+  }
+  .toggle-link:hover {
+    text-decoration: underline;
+  }
+  .error-message {
+    color: red;
+    font-size: 14px;
+    margin-top: -5px;
+    margin-bottom: 10px;
+  }
+</style>
 </head>
 <body>
   <div class="container">
@@ -80,22 +81,15 @@
     </div>
 
     <!-- Project Manager Sign In Form -->
-    <form id="signin-form" class="active">
+    <form id="signin-form">
       <input type="email" id="signin-email" placeholder="Email" required>
       <input type="password" id="signin-password" placeholder="Password" required>
       <button type="button" onclick="handleManagerSignIn()">Sign In</button>
       <p class="toggle-link" onclick="toggleForm('reset')">Forgot Password?</p>
-      <p class="toggle-link" onclick="toggleForm('signup')">Don't have an account? Sign Up</p>
+      
     </form>
 
-    <!-- Project Manager Sign Up Form -->
-    <form id="signup-form">
-      <input type="text" id="signup-name" placeholder="Full Name" required>
-      <input type="email" id="signup-email" placeholder="Email" required>
-      <input type="password" id="signup-password" placeholder="Password" required>
-      <button type="button" onclick="handleManagerSignUp()">Sign Up</button>
-      <p class="toggle-link" onclick="toggleForm('signin')">Already have an account? Sign In</p>
-    </form>
+
 
     <!-- Reset Password Form -->
     <form id="reset-request-form">
@@ -103,135 +97,195 @@
       <button type="button" onclick="handlePasswordResetRequest()">Reset Password</button>
       <p class="toggle-link" onclick="toggleForm('signin')">Back to Sign In</p>
     </form>
+
+
+      <form id="set-password-form">
+  <input type="email" id="setpw-email" placeholder="Email" required>
+  <input type="text" id="setpw-token" placeholder="Reset Token" required>
+  <input type="password" id="setpw-new" placeholder="New Password" required>
+  <button type="button" onclick="handleSetNewPassword()">Set New Password</button>
+  <p class="toggle-link" onclick="toggleForm('signin')">Back to Sign In</p>
+ </form>
+
+
+     <form id="activate-form">
+      <input type="text" id="activate-name" placeholder="Full Name" required>
+      <input type="password" id="activate-password" placeholder="Password" required>
+      <button type="submit">Activate Account</button>
+      <p class="toggle-link" onclick="toggleForm('signin')">Back to Sign In</p>
+    </form>
+
+
   </div>
 
-  <script>
-    function toggleForm(formType) {
-      const forms = document.querySelectorAll('form');
-      forms.forEach(form => form.classList.remove('active'));
 
-      document.getElementById(`${formType}-form`).classList.add('active');
 
-      const formTitle = {
-        signin: 'Project Manager Sign In',
-        signup: 'Project Manager Sign Up',
-        reset: 'Reset Password'
-      };
+<script>
+  function toggleForm(formType) {
+    const formIdMap = {
+      signin: 'signin-form',
+      reset: 'reset-request-form',
+      setpw: 'set-password-form',
+      activate: 'activate-form'
+    };
+    Object.values(formIdMap).forEach(id => {
+      const form = document.getElementById(id);
+      if (form) form.classList.remove('active');
+    });
+    const targetFormId = formIdMap[formType];
+    const targetForm = document.getElementById(targetFormId);
+    if (targetForm) targetForm.classList.add('active');
 
+    const formTitle = {
+      signin: 'Project Manager Sign In',
+      reset: 'Reset Password',
+      setpw: 'Set New Password',
+      activate: 'Activate Account'
+    };
+    if (document.getElementById('form-title') && formTitle[formType]) {
       document.getElementById('form-title').textContent = formTitle[formType];
     }
-
-     async function handleManagerSignIn() {
-  const email = document.getElementById('signin-email').value.trim();
-  const password = document.getElementById('signin-password').value.trim();
-
-  // Input validation
-  if (!email || !password) {
-    alert('Please fill out all fields.');
-    return;
   }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    alert('Please enter a valid email address.');
-    return;
-  }
+  document.addEventListener("DOMContentLoaded", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("token");
+    const email = urlParams.get("email");
 
-  if (password.length < 6) {
-    alert('Password must be at least 6 characters long.');
-    return;
-  }
+    if (token && email) {
+      toggleForm("setpw");
+      document.getElementById("setpw-email").value = email;
+      document.getElementById("setpw-token").value = token;
+    } else if (token) {
+      toggleForm("activate");
+      document.getElementById("activate-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const name = document.getElementById("activate-name").value.trim();
+        const password = document.getElementById("activate-password").value.trim();
 
-  try {
-    const response = await fetch('/api/manager/signin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+        if (!name || !password) {
+          alert("All fields are required.");
+          return;
+        }
 
-    const data = await response.json();
+        try {
+          const response = await fetch("/api/manager/invite/accept", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token, name, password }),
+          });
 
-    if (response.ok) {
-      // Store data securely
-      localStorage.setItem('token', data.token); // Token for authentication
-      localStorage.setItem('managerName', data.managerName); // Display in UI
-      localStorage.setItem('managerId', data.managerId); // Save manager ID
-      
-      window.location.href = '/index.html'; // Redirect to home or dashboard
+          const result = await response.json();
+
+          if (!response.ok) throw new Error(result.message);
+
+          alert("Account activated successfully!");
+          window.location.href = "/project-manager-auth.html";
+        } catch (error) {
+          console.error("Activation Error:", error);
+          alert("Failed to activate account. Please try again.");
+        }
+      });
     } else {
-      // Handle different error statuses
-      if (response.status === 401) {
-        alert('Invalid email or password. Please try again.');
-      } else if (response.status === 500) {
-        alert('Server error. Please try again later.');
+      toggleForm("signin");
+    }
+
+    // Fallback: If no form is active, show sign-in form
+    if (!document.querySelector('form.active')) {
+      document.getElementById('signin-form').classList.add('active');
+    }
+  });
+
+  async function handleSetNewPassword() {
+    const email = document.getElementById('setpw-email').value.trim();
+    const token = document.getElementById('setpw-token').value.trim();
+    const newPassword = document.getElementById('setpw-new').value.trim();
+
+    if (!email || !token || !newPassword) {
+      alert('Please fill out all fields.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/manager/password-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, token, newPassword })
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        alert('Password updated successfully! You can now sign in.');
+        toggleForm('signin');
+      } else {
+        alert(result.message || 'Failed to reset password.');
+      }
+    } catch (error) {
+      console.error('Error setting new password:', error);
+      alert('An error occurred. Please try again.');
+    }
+  }
+
+  async function handleManagerSignIn() {
+    const email = document.getElementById('signin-email').value.trim();
+    const password = document.getElementById('signin-password').value.trim();
+
+    if (!email || !password) {
+      alert('Please fill out all fields.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/manager/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('managerName', data.managerName);
+        localStorage.setItem('managerId', data.managerId); // Save manager ID
+        alert('Project Manager sign-in successful! Redirecting...');
+        window.location.href = '/index.html';
       } else {
         alert(data.message || 'Sign-in failed!');
       }
+    } catch (error) {
+      console.error('Error signing in:', error);
+      alert('An error occurred. Please try again.');
     }
-  } catch (error) {
-    console.error('Error signing in:', error);
-    alert('An error occurred. Please try again.');
   }
-}
 
-    async function handleManagerSignUp() {
-      const name = document.getElementById('signup-name').value.trim();
-      const email = document.getElementById('signup-email').value.trim();
-      const password = document.getElementById('signup-password').value.trim();
+  async function handlePasswordResetRequest() {
+    const email = document.getElementById('reset-email').value.trim();
 
-      if (!name || !email || !password) {
-        alert('Please fill out all fields.');
-        return;
-      }
-
-      try {
-        const response = await fetch('/api/manager/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, password })
-        });
-
-        const result = await response.json();
-        if (response.ok) {
-          alert('Sign-up successful! You can now sign in.');
-          toggleForm('signin');
-        } else {
-          alert(result.message || 'Sign-up failed!');
-        }
-      } catch (error) {
-        console.error('Error signing up:', error);
-        alert('An error occurred. Please try again.');
-      }
+    if (!email) {
+      alert('Please enter your email.');
+      return;
     }
 
-    async function handlePasswordResetRequest() {
-      const email = document.getElementById('reset-email').value.trim();
+    try {
+      const response = await fetch('/api/manager/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
 
-      if (!email) {
-        alert('Please enter your email.');
-        return;
+      const result = await response.json();
+      if (response.ok) {
+        alert('Password reset link sent to your email.');
+        toggleForm('setpw');
+      } else {
+        alert(result.message || 'Failed to send password reset link.');
       }
-
-      try {
-        const response = await fetch('/api/manager/reset-password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email })
-        });
-
-        const result = await response.json();
-        if (response.ok) {
-          alert('Password reset link sent to your email.');
-          toggleForm('signin');
-        } else {
-          alert(result.message || 'Failed to send password reset link.');
-        }
-      } catch (error) {
-        console.error('Error resetting password:', error);
-        alert('An error occurred. Please try again.');
-      }
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      alert('An error occurred. Please try again.');
     }
-  </script>
+  }
+</script>
 </body>
 </html>
-
