@@ -1381,6 +1381,311 @@ function showVendorDetails(vendor) {
   `;
 }
 
- 
+
+// --- Assignments Section Logic ---
+
+const sidebarNav = document.querySelector('.sidebar nav ul');
+if (sidebarNav && !document.getElementById('assignment-nav-item')) {
+  const assignmentLi = document.createElement('li');
+  assignmentLi.id = 'assignment-nav-item';
+  assignmentLi.innerHTML = `<a href="#" id="open-assignment-section"><i class="fas fa-tasks"></i> Assignments</a>`;
+  sidebarNav.insertBefore(assignmentLi, sidebarNav.lastElementChild);
+}
+
+  // --- Assignment Section Show/Hide Logic ---
+  const mainContent = document.querySelector('.main-content');
+  const assignmentSection = document.getElementById('assignments-section');
+  const columnsContainer = document.querySelector('.columns-container');
+  const mapSection = document.getElementById('map-section');
+  const dailyUpdatesPanel = document.getElementById('daily-updates-panel');
+
+  // Hide assignment section by default
+  if (assignmentSection) assignmentSection.style.display = 'none';
+
+  // Show assignments and hide main dashboard when clicked
+document.getElementById('open-assignment-section').addEventListener('click', (e) => {
+    e.preventDefault();
+    // Hide dashboard columns and other main sections
+    if (columnsContainer) columnsContainer.style.display = 'none';
+    if (mapSection) mapSection.style.display = 'none';
+    if (dailyUpdatesPanel) dailyUpdatesPanel.style.display = 'none';
+    // Hide project tabs and map filter tab
+    const tabContainer = document.querySelector('.tab-container');
+    if (tabContainer) tabContainer.style.display = 'none';
+    const mapFilter = document.getElementById('projectFilters');
+    if (mapFilter) mapFilter.style.display = 'none';
+    // Show assignments
+    if (assignmentSection) assignmentSection.style.display = 'block';
+    // Optionally reload assignments
+    loadAssignments();
+});
+
+// Optionally, add a way to go back to dashboard (e.g., clicking "Home" or another tab)
+document.querySelectorAll('.sidebar nav ul li a').forEach(link => {
+    if (link.id !== 'open-assignment-section') {
+      link.addEventListener('click', () => {
+        // Show dashboard columns and other main sections
+        if (columnsContainer) columnsContainer.style.display = '';
+        if (mapSection) mapSection.style.display = '';
+        if (dailyUpdatesPanel) dailyUpdatesPanel.style.display = '';
+        // Show project tabs and map filter tab
+        const tabContainer = document.querySelector('.tab-container');
+        if (tabContainer) tabContainer.style.display = '';
+        const mapFilter = document.getElementById('projectFilters');
+        if (mapFilter) mapFilter.style.display = '';
+        // Hide assignments
+        if (assignmentSection) assignmentSection.style.display = 'none';
+      });
+    }
+});
+
+
+document.getElementById('filter-assignment-name').addEventListener('input', filterAssignmentsTable);
+document.getElementById('filter-assignment-address').addEventListener('input', filterAssignmentsTable);
+
+function filterAssignmentsTable() {
+  const nameVal = document.getElementById('filter-assignment-name').value.toLowerCase();
+  const addressVal = document.getElementById('filter-assignment-address').value.toLowerCase();
+  const rows = document.querySelectorAll('#assignments-table tbody tr');
+  rows.forEach(row => {
+    const name = row.children[0]?.textContent.toLowerCase() || '';
+    const address = row.children[1]?.textContent.toLowerCase() || '';
+    if (
+      name.includes(nameVal) &&
+      address.includes(addressVal)
+    ) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+
+async function loadAssignments() {
+  const tableBody = document.querySelector("#assignments-table tbody");
+  tableBody.innerHTML = `<tr><td colspan="8">Loading...</td></tr>`;
+
+  try {
+    // Fetch all vendors with their assigned projects/items
+    const res = await fetch('/api/vendors');
+    const vendors = await res.json();
+
+    // Fetch all projects for address lookup
+    const projectsRes = await fetch('/api/projects');
+    const projectsData = await projectsRes.json();
+    const projects = projectsData.projects || [];
+
+    // Build a map for quick project lookup
+    const projectMap = {};
+    projects.forEach(p => projectMap[p._id] = p);
+
+    let rows = [];
+
+    vendors.forEach(vendor => {
+      if (!vendor.assignedProjects || vendor.assignedProjects.length === 0) return;
+
+      vendor.assignedProjects.forEach(assignedProj => {
+        const project = projectMap[assignedProj.projectId?._id || assignedProj.projectId];
+        if (!project) return;
+
+        // Filter assignedItems for this project
+        const items = (vendor.assignedItems || []).filter(i => i.projectId == (project._id || assignedProj.projectId));
+        const totalAssignment = items.reduce((sum, i) => sum + (i.total || 0), 0);
+
+        // Assignment-level dates (across all items in this assignment)
+        const requestedDates = items.map(i => i.createdAt).filter(Boolean).map(d => new Date(d));
+        const startDates = items.map(i => i.startDate).filter(Boolean).map(d => new Date(d));
+        const endDates = items.map(i => i.endDate).filter(Boolean).map(d => new Date(d));
+
+        const assignmentRequestedDate = requestedDates.length
+          ? new Date(Math.min(...requestedDates)).toLocaleDateString()
+          : '';
+        const assignmentStartDate = startDates.length
+          ? new Date(Math.min(...startDates)).toLocaleDateString()
+          : '';
+        const assignmentEndDate = endDates.length
+          ? new Date(Math.max(...endDates)).toLocaleDateString()
+          : '';
+
+        // Assignment duration in days (if both start and end exist)
+        let duration = '';
+        if (startDates.length && endDates.length) {
+          const minStart = Math.min(...startDates);
+          const maxEnd = Math.max(...endDates);
+          duration = Math.max(1, Math.ceil((maxEnd - minStart) / (1000 * 60 * 60 * 24)));
+        }
+
+        rows.push(`
+          <tr>
+            <td>${vendor.name}</td>
+            <td>${project.address?.addressLine1 || ''}, ${project.address?.city || ''}, ${project.address?.state || ''}</td>
+            <td>
+              <a href="#" class="line-items-link" data-vendor="${vendor._id}" data-project="${project._id}">
+                ${items.length}
+              </a>
+            </td>
+            <td>${assignmentRequestedDate}</td>
+            <td>${assignmentStartDate}</td>
+            <td>${assignmentEndDate}</td>
+            <td>${duration}</td>
+            <td>$${totalAssignment.toFixed(2)}</td>
+          </tr>
+        `);
+      });
+    });
+
+    tableBody.innerHTML = rows.length ? rows.join('') : `<tr><td colspan="8">No assignments found.</td></tr>`;
+
+    // Add click listeners for line items
+    document.querySelectorAll('.line-items-link').forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        showLineItemsModal(this.dataset.vendor, this.dataset.project);
+      });
+    });
+
+  } catch (err) {
+    tableBody.innerHTML = `<tr><td colspan="8">Error loading assignments.</td></tr>`;
+    console.error(err);
+  }
+}
+
+// Modal logic for line item details
+function showLineItemsModal(vendorId, projectId) {
+  const modal = document.getElementById('lineItemsModal');
+  const table = document.getElementById('lineItemsDetailsTable').querySelector('tbody');
+  table.innerHTML = `<tr><td colspan="7">Loading...</td></tr>`;
+  modal.style.display = 'block';
+
+  fetch(`/api/vendors/${vendorId}`)
+    .then(res => res.json())
+    .then(vendor => {
+      const items = (vendor.assignedItems || []).filter(i => i.projectId == projectId);
+      if (!items.length) {
+        table.innerHTML = `<tr><td colspan="7">No line items found.</td></tr>`;
+        return;
+      }
+      table.innerHTML = items.map((item, idx) => {
+        // Calculate duration in days if both dates exist
+        let duration = '';
+        if (item.startDate && item.endDate) {
+          const start = new Date(item.startDate);
+          const end = new Date(item.endDate);
+          duration = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24))); // At least 1 day
+        }
+        // Prepare photos HTML
+        let photosHtml = '';
+        if (item.photos && (item.photos.before?.length || item.photos.after?.length)) {
+          photosHtml += '<div class="lineitem-photos">';
+          if (item.photos.before?.length) {
+            photosHtml += `<div><strong>Before:</strong> ${item.photos.before.map(url => `<img src="${url}" class="lineitem-photo-thumb" />`).join(' ')}</div>`;
+          }
+          if (item.photos.after?.length) {
+            photosHtml += `<div><strong>After:</strong> ${item.photos.after.map(url => `<img src="${url}" class="lineitem-photo-thumb" />`).join(' ')}</div>`;
+          }
+          photosHtml += '</div>';
+        }
+        // Details row (hidden by default)
+        const detailsRow = `
+          <tr class="lineitem-details-row" id="details-row-${idx}" style="display:none;">
+            <td colspan="7" style="background:#f8fafc;">
+              <div style="padding:10px 8px;">
+                <strong>Description:</strong> ${item.description || 'No description.'}<br>
+                ${photosHtml}
+              </div>
+            </td>
+          </tr>
+        `;
+        // Main row with hover/click
+        return `
+          <tr class="lineitem-main-row" data-details-row="details-row-${idx}" style="cursor:pointer;">
+            <td>${item.name || ''}</td>
+            <td>${item.status || ''}</td>
+            <td>${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}</td>
+            <td>${item.startDate ? new Date(item.startDate).toLocaleDateString() : ''}</td>
+            <td>${item.endDate ? new Date(item.endDate).toLocaleDateString() : ''}</td>
+            <td>${duration}</td>
+            <td>$${item.total?.toFixed(2) || '0.00'}</td>
+          </tr>
+          ${detailsRow}
+        `;
+      }).join('');
+
+      // Add hover and click events for slide down details
+            document.querySelectorAll('.lineitem-main-row').forEach(row => {
+        row.addEventListener('mouseenter', function() {
+          this.style.background = '#e0e7ef';
+        });
+        row.addEventListener('mouseleave', function() {
+          this.style.background = '';
+        });
+        row.addEventListener('click', function() {
+          const detailsId = this.getAttribute('data-details-row');
+          const detailsRow = document.getElementById(detailsId);
+          if (detailsRow) {
+            if (detailsRow.style.display === 'none') {
+              detailsRow.style.display = '';
+              detailsRow.style.animation = 'slideDown 0.2s';
+            } else {
+              detailsRow.style.display = 'none';
+            }
+          }
+        });
+      });
+
+      // Add click event for photo thumbs to open full view modal
+      document.querySelectorAll('.lineitem-photo-thumb').forEach(img => {
+        img.style.cursor = 'zoom-in';
+        img.addEventListener('click', function(e) {
+          e.stopPropagation();
+          openPhotoFullView(this.src);
+        });
+      });
+
+    })
+    .catch(() => {
+      table.innerHTML = `<tr><td colspan="7">Error loading line items.</td></tr>`;
+    });
+}
+
+// --- Add this function at the end of your script.js ---
+function openPhotoFullView(src) {
+  // Create modal if not exists
+  let photoModal = document.getElementById('photoFullViewModal');
+  if (!photoModal) {
+    photoModal = document.createElement('div');
+    photoModal.id = 'photoFullViewModal';
+    photoModal.style.cssText = `
+      position: fixed; z-index: 99999; left: 0; top: 0; width: 100vw; height: 100vh;
+      background: rgba(30,41,59,0.85); display: flex; align-items: center; justify-content: center;
+    `;
+    photoModal.innerHTML = `
+      <img id="photoFullViewImg" src="" style="max-width:90vw; max-height:90vh; border-radius:10px; box-shadow:0 8px 32px rgba(0,0,0,0.25);" />
+      <span id="photoFullViewClose" style="position:absolute;top:24px;right:40px;font-size:2.5rem;color:#fff;cursor:pointer;font-weight:bold;z-index:2;">&times;</span>
+    `;
+    document.body.appendChild(photoModal);
+    // Close logic
+    document.getElementById('photoFullViewClose').onclick = () => photoModal.style.display = 'none';
+    photoModal.onclick = (e) => {
+      if (e.target === photoModal) photoModal.style.display = 'none';
+    };
+  }
+  document.getElementById('photoFullViewImg').src = src;
+  photoModal.style.display = 'flex';
+}
+
+
+// Modal close logic
+document.getElementById('closeLineItemsModal').onclick = function() {
+  document.getElementById('lineItemsModal').style.display = 'none';
+};
+window.onclick = function(event) {
+  if (event.target == document.getElementById('lineItemsModal')) {
+    document.getElementById('lineItemsModal').style.display = 'none';
+  }
+};
+
+// Load assignments on page load
+document.addEventListener('DOMContentLoaded', loadAssignments);
 
 
