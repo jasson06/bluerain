@@ -486,24 +486,25 @@ const vendorSchema = new mongoose.Schema({
 
   role: { type: String, enum: ["vendor", "project-manager"], default: "vendor" }, 
 
-  assignedItems: [
-    {
-      itemId: { type: String, required: true }, 
-      projectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project" },
-      estimateId: { type: mongoose.Schema.Types.ObjectId, ref: "Estimate" },
-      costCode: { type: String, default: "Uncategorized" },
-      name: { type: String, required: true },
-      description: { type: String, default: "No description provided" },
-      quantity: { type: Number, required: true, min: 1 },
-      unitPrice: { type: Number, required: true, min: 0 },
-      total: { type: Number, required: true },
-      status: { type: String, enum: ["new", "in-progress", "completed", "approved", "rework"], default: "new" },
-      photos: {
-        before: [{ type: String }],
-        after: [{ type: String }],
-      },
-
-        // ✅ Quality Control Section
+assignedItems: [
+  {
+    itemId: { type: String, required: true },
+    projectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project" },
+    estimateId: { type: mongoose.Schema.Types.ObjectId, ref: "Estimate" },
+    costCode: { type: String, default: "Uncategorized" },
+    name: { type: String, required: true },
+    description: { type: String, default: "No description provided" },
+    quantity: { type: Number, required: true, min: 1 },
+    unitPrice: { type: Number, required: true, min: 0 },
+    calcMode: { type: String, enum: ['each', 'sqft', 'lnft'], default: 'each' },
+    area: { type: Number, default: 0 },
+    length: { type: Number, default: 0 },
+    total: { type: Number, required: true },
+    status: { type: String, enum: ["new", "in-progress", "completed", "approved", "rework"], default: "new" },
+    photos: {
+      before: [{ type: String }],
+      after: [{ type: String }],
+    },
     qualityControl: {
       status: {
         type: String,
@@ -512,12 +513,20 @@ const vendorSchema = new mongoose.Schema({
       },
       notes: { type: String },
       reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Manager" },
-      reviewedAt: { type: Date }
+      reviewedAt: { type: Date },
+      rework: {
+        note: { type: String },
+        managerId: { type: mongoose.Schema.Types.ObjectId, ref: "Manager" },
+        photos: [{ type: String }],
+        requestedAt: { type: Date }
+      }
     },
-      createdAt: { type: Date, default: Date.now },
-      updatedAt: { type: Date, default: Date.now },
-    }
-  ],
+    startDate: { type: Date, default: null },   // <-- ADD THIS
+    endDate: { type: Date, default: null },     // <-- ADD THIS
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+  }
+],
 
   assignedProjects: [
     {
@@ -2286,19 +2295,47 @@ app.put('/api/vendors/:vendorId/update-item-status', async (req, res) => {
       return res.status(404).json({ message: "Project not found." });
     }
 
+    // --- Set Dates Based on Status ---
+    const now = new Date();
+    if (status === "in-progress" && !item.startDate) {
+      item.startDate = now;
+    }
+    if (status === "completed" && !item.endDate) {
+      item.endDate = now;
+    }
+    // If reverting to "in-progress", clear endDate
+    if (status === "in-progress" && item.endDate) {
+      item.endDate = null;
+    }
+    // If reverting to "new", clear both dates
+    if (status === "new") {
+      item.startDate = null;
+      item.endDate = null;
+    }
+
     // ✅ Update status in Vendor assignedItems
     item.status = status;
     await vendor.save();
-    console.log("✅ Vendor Item Status Updated Successfully:", item);
+    console.log("✅ Vendor Item Status & Dates Updated Successfully:", item);
 
-    // ✅ Update the corresponding item status in the Estimate
+    // ✅ Update the corresponding item status and dates in the Estimate
+    const estimateUpdate = {};
+    estimateUpdate["lineItems.$[].items.$[elem].status"] = status;
+    if (status === "in-progress") {
+      estimateUpdate["lineItems.$[].items.$[elem].startDate"] = item.startDate || now;
+      estimateUpdate["lineItems.$[].items.$[elem].endDate"] = null;
+    }
+    if (status === "completed") {
+      estimateUpdate["lineItems.$[].items.$[elem].endDate"] = item.endDate || now;
+    }
+    if (status === "new") {
+      estimateUpdate["lineItems.$[].items.$[elem].startDate"] = null;
+      estimateUpdate["lineItems.$[].items.$[elem].endDate"] = null;
+    }
+
     const estimateUpdateResult = await Estimate.updateOne(
       { "lineItems.items._id": itemId },
-      {
-        $set: {
-          "lineItems.$[].items.$[elem].status": status
-        }
-      },
+      { $set: estimateUpdate },
       {
         arrayFilters: [{ "elem._id": new mongoose.Types.ObjectId(itemId) }]
       }
@@ -2312,7 +2349,7 @@ app.put('/api/vendors/:vendorId/update-item-status', async (req, res) => {
       `Item "${item.name}" status updated to "${status}" by Vendor "${vendor.name}" for Project "${project.name}".`
     );
 
-    res.status(200).json({ message: "Item status updated successfully in both vendor and estimate.", item });
+    res.status(200).json({ message: "Item status and dates updated successfully in both vendor and estimate.", item });
 
   } catch (error) {
     console.error("❌ Error updating item status:", error);
@@ -2494,7 +2531,13 @@ app.post('/api/vendors/:vendorId/assign-item', async (req, res) => {
       return res.status(404).json({ message: 'Project not found.' });
     }
 
-    // ✅ Assign the item to a specific project
+    // ✅ Check if item is already assigned (prevent duplicates)
+    let existingItem = vendor.assignedItems.find(i => i.itemId.toString() === itemId.toString());
+    if (existingItem) {
+      return res.status(400).json({ message: 'Item already assigned to this vendor.' });
+    }
+
+    // ✅ Assign the item to a specific project, always set createdAt
     vendor.assignedItems.push({
       itemId,
       projectId, // ✅ Ensure projectId is stored
@@ -2503,7 +2546,9 @@ app.post('/api/vendors/:vendorId/assign-item', async (req, res) => {
       quantity,
       unitPrice,
       total,
-      status: 'new'
+      status: 'new',
+      createdAt: new Date(), // <-- Always set date requested
+      updatedAt: new Date()
     });
 
     await vendor.save();
