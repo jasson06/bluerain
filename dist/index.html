@@ -117,6 +117,54 @@
     </div>
 
 
+ <section id="assignments-section" style="margin-top: 40px;">
+  <h2>Assignments</h2>
+  <div id="assignments-filters">
+  <input type="text" id="filter-assignment-name" placeholder="Filter by Subcontractor Name">
+  <input type="text" id="filter-assignment-address" placeholder="Filter by Address">
+</div>
+  <table id="assignments-table" style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th>Subcontractor</th>
+        <th>Project Address</th>
+        <th>Line Items (<span title="Click to view details">#</span>)</th>
+        <th>Date Requested</th>
+        <th>Start Date</th>
+        <th>End Date</th>
+        <th>Duration (days)</th>
+        <th>Total Assignment</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Populated by JS -->
+    </tbody>
+  </table>
+</section>
+
+<!-- Modal for Line Item Details -->
+<div id="lineItemsModal" class="modal">
+  <div class="modal-content" style="max-width:950px;">
+    <span class="close" id="closeLineItemsModal">&times;</span>
+    <h3>Line Item Details</h3>
+    <table id="lineItemsDetailsTable" style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Status</th>
+          <th>Date Requested</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th>Duration (days)</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Populated by JS -->
+      </tbody>
+    </table>
+  </div>
+</div>
 
 
       
