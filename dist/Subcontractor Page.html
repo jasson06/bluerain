@@ -517,7 +517,10 @@ button:hover,
 </head>
 <body>
 <header class="header">
-  <h1>Subcontractor Dashboard</h1>
+  <div style="display: flex; flex-direction: column;">
+    <h1>Subcontractor Dashboard</h1>
+    <span id="vendor-name-label" style="font-size:16px;font-weight:500;background:#e0e7ff;color:#2563eb;padding:7px 16px;border-radius:8px;margin-top:8px;"></span>
+  </div>
   <div style="display: flex; gap: 10px; align-items: center;">
     <button class="btn" onclick="goToInvoicePage()">Create Invoice</button>
     <button class="logout-button" onclick="logout()">Logout</button>
@@ -606,9 +609,23 @@ align-items: center;
 document.addEventListener("DOMContentLoaded", async () => {
     const vendorId = localStorage.getItem("vendorId");
 
+    // Fetch vendor name and display below dashboard title (left)
+    if (vendorId) {
+      try {
+        const res = await fetch(`/api/vendors/${vendorId}?t=${Date.now()}`);
+        if (res.ok) {
+          const data = await res.json();
+          const name = data.name || data.vendorname || data.vendor?.name || data.vendor?.vendorname || "";
+          if (name) {
+            document.getElementById("vendor-name-label").textContent = `Welcome (${name})`;
+          }
+        }
+      } catch (e) {}
+    }
+
     if (!vendorId) {
         showToast("Vendor not authenticated.");
-        window.location.href = "/sign-inpage.html"; // Redirect to sign-in page
+        window.location.href = "/sign-inpage.html";
         return;
     }
 
