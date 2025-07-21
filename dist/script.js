@@ -1445,17 +1445,21 @@ document.querySelectorAll('.sidebar nav ul li a').forEach(link => {
 
 document.getElementById('filter-assignment-name').addEventListener('input', filterAssignmentsTable);
 document.getElementById('filter-assignment-address').addEventListener('input', filterAssignmentsTable);
+document.getElementById('filter-assignment-estimate').addEventListener('input', filterAssignmentsTable);
 
 function filterAssignmentsTable() {
   const nameVal = document.getElementById('filter-assignment-name').value.toLowerCase();
   const addressVal = document.getElementById('filter-assignment-address').value.toLowerCase();
+  const estimateVal = document.getElementById('filter-assignment-estimate').value.toLowerCase();
   const rows = document.querySelectorAll('#assignments-table tbody tr');
   rows.forEach(row => {
     const name = row.children[0]?.textContent.toLowerCase() || '';
     const address = row.children[1]?.textContent.toLowerCase() || '';
+    const estimate = row.children[2]?.textContent.toLowerCase() || '';
     if (
       name.includes(nameVal) &&
-      address.includes(addressVal)
+      address.includes(addressVal) &&
+      estimate.includes(estimateVal)
     ) {
       row.style.display = '';
     } else {
@@ -1467,7 +1471,8 @@ function filterAssignmentsTable() {
 async function loadAssignments() {
   const tableBody = document.querySelector("#assignments-table tbody");
   tableBody.innerHTML = `<tr><td colspan="8">Loading...</td></tr>`;
-showLoader(); // 👈 START
+  showLoader();
+
   try {
     // Fetch all vendors with their assigned projects/items
     const res = await fetch('/api/vendors');
@@ -1478,24 +1483,52 @@ showLoader(); // 👈 START
     const projectsData = await projectsRes.json();
     const projects = projectsData.projects || [];
 
-    // Build a map for quick project lookup
-    const projectMap = {};
-    projects.forEach(p => projectMap[p._id] = p);
+    // Fetch all estimates for lookup
+    const estimatesRes = await fetch('/api/estimates');
+    const estimatesData = await estimatesRes.json();
+    const estimates = estimatesData.estimates || [];
+
+    // Build lookup maps
+const projectMap = {};
+projects.forEach(p => projectMap[p._id.toString()] = p);
+
+const estimateMap = {};
+estimates.forEach(e => estimateMap[e._id.toString()] = e);
 
     let rows = [];
 
     vendors.forEach(vendor => {
-      if (!vendor.assignedProjects || vendor.assignedProjects.length === 0) return;
+      if (!vendor.assignedItems || vendor.assignedItems.length === 0) return;
 
-      vendor.assignedProjects.forEach(assignedProj => {
-        const project = projectMap[assignedProj.projectId?._id || assignedProj.projectId];
-        if (!project) return;
+      // Group assigned items by estimateId
+      const itemsByEstimate = {};
+      vendor.assignedItems.forEach(item => {
+        if (!item.estimateId) return;
+        const key = item.estimateId.toString();
+        if (!itemsByEstimate[key]) itemsByEstimate[key] = [];
+        itemsByEstimate[key].push(item);
+      });
 
-        // Filter assignedItems for this project
-        const items = (vendor.assignedItems || []).filter(i => i.projectId == (project._id || assignedProj.projectId));
+        // Debug: log what is found
+  console.log('Vendor:', vendor.name, 'Items by Estimate:', itemsByEstimate);
+
+Object.entries(itemsByEstimate).forEach(([estimateId, items]) => {
+  const estimate = estimateMap[estimateId.toString()];
+  if (!estimate) return;
+
+  // Handle populated projectId or plain ObjectId
+  let projectId = '';
+  if (estimate.projectId && typeof estimate.projectId === 'object' && estimate.projectId._id) {
+    projectId = estimate.projectId._id.toString();
+  } else if (estimate.projectId) {
+    projectId = estimate.projectId.toString();
+  }
+  const project = projectMap[projectId];
+  if (!project) return;
+
         const totalAssignment = items.reduce((sum, i) => sum + (i.total || 0), 0);
 
-        // Assignment-level dates (across all items in this assignment)
+        // Assignment-level dates (across all items in this estimate)
         const requestedDates = items.map(i => i.createdAt).filter(Boolean).map(d => new Date(d));
         const startDates = items.map(i => i.startDate).filter(Boolean).map(d => new Date(d));
         const endDates = items.map(i => i.endDate).filter(Boolean).map(d => new Date(d));
@@ -1522,8 +1555,9 @@ showLoader(); // 👈 START
           <tr>
             <td>${vendor.name}</td>
             <td>${project.address?.addressLine1 || ''}, ${project.address?.city || ''}, ${project.address?.state || ''}</td>
+            <td>${estimate.title || estimate.invoiceNumber || 'Untitled Estimate'}</td>
             <td>
-              <a href="#" class="line-items-link" data-vendor="${vendor._id}" data-project="${project._id}">
+              <a href="#" class="line-items-link" data-vendor="${vendor._id}" data-project="${project._id}" data-estimate="${estimate._id}">
                 ${items.length}
               </a>
             </td>
@@ -1537,26 +1571,26 @@ showLoader(); // 👈 START
       });
     });
 
-    tableBody.innerHTML = rows.length ? rows.join('') : `<tr><td colspan="8">No assignments found.</td></tr>`;
+    tableBody.innerHTML = rows.length ? rows.join('') : `<tr><td colspan="9">No assignments found.</td></tr>`;
 
     // Add click listeners for line items
     document.querySelectorAll('.line-items-link').forEach(link => {
       link.addEventListener('click', function(e) {
         e.preventDefault();
-        showLineItemsModal(this.dataset.vendor, this.dataset.project);
+        showLineItemsModal(this.dataset.vendor, this.dataset.project, this.dataset.estimate);
       });
     });
 
   } catch (err) {
-    tableBody.innerHTML = `<tr><td colspan="8">Error loading assignments.</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="9">Error loading assignments.</td></tr>`;
     console.error(err);
-              } finally {
-      hideLoader(); // 👈 END
+  } finally {
+    hideLoader();
   }
 }
 
 // Modal logic for line item details
-function showLineItemsModal(vendorId, projectId) {
+function showLineItemsModal(vendorId, projectId, estimateId) {
   const modal = document.getElementById('lineItemsModal');
   const table = document.getElementById('lineItemsDetailsTable').querySelector('tbody');
   table.innerHTML = `<tr><td colspan="7">Loading...</td></tr>`;
@@ -1565,7 +1599,11 @@ function showLineItemsModal(vendorId, projectId) {
   fetch(`/api/vendors/${vendorId}`)
     .then(res => res.json())
     .then(vendor => {
-      const items = (vendor.assignedItems || []).filter(i => i.projectId == projectId);
+      // Filter items by both projectId and estimateId
+      const items = (vendor.assignedItems || []).filter(i =>
+        i.projectId?.toString() === projectId?.toString() &&
+        i.estimateId?.toString() === estimateId?.toString()
+      );
       if (!items.length) {
         table.innerHTML = `<tr><td colspan="7">No line items found.</td></tr>`;
         return;
@@ -1576,7 +1614,7 @@ function showLineItemsModal(vendorId, projectId) {
         if (item.startDate && item.endDate) {
           const start = new Date(item.startDate);
           const end = new Date(item.endDate);
-          duration = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24))); // At least 1 day
+          duration = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
         }
         // Prepare photos HTML
         let photosHtml = '';
@@ -1617,7 +1655,7 @@ function showLineItemsModal(vendorId, projectId) {
       }).join('');
 
       // Add hover and click events for slide down details
-            document.querySelectorAll('.lineitem-main-row').forEach(row => {
+      document.querySelectorAll('.lineitem-main-row').forEach(row => {
         row.addEventListener('mouseenter', function() {
           this.style.background = '#e0e7ef';
         });
@@ -1652,6 +1690,7 @@ function showLineItemsModal(vendorId, projectId) {
       table.innerHTML = `<tr><td colspan="7">Error loading line items.</td></tr>`;
     });
 }
+
 
 // --- Add this function at the end of your script.js ---
 function openPhotoFullView(src) {
