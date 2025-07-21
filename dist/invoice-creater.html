@@ -969,7 +969,14 @@ async function getPreviouslySubmittedLineItemIds(vendorId) {
 function displayLineItems(items) {
   const container = document.getElementById('lineItemCheckboxList');
   container.innerHTML = '';
-  items.forEach((item, idx) => {
+  items
+    
+          .filter(item => {
+      const status = String(item.status || '').toLowerCase();
+      return status === 'approved' || status === 'completed';
+    })
+    
+    .forEach((item, idx) => {
     const id = `lineitem-checkbox-${idx}`;
     const total = typeof item.total !== "undefined"
       ? parseFloat(item.total)
