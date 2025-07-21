@@ -1201,16 +1201,14 @@ app.get('/api/estimates/:id', async (req, res) => {
 app.get('/api/estimates', async (req, res) => {
   const { projectId } = req.query;
 
-  if (!projectId || !mongoose.Types.ObjectId.isValid(projectId)) {
-    return res.status(400).json({ success: false, message: 'Invalid or missing Project ID.' });
-  }
-
   try {
-    // Find all estimates linked to the projectId
-    const estimates = await Estimate.find({ projectId }).populate('projectId', 'name address');
-
-    if (!estimates || estimates.length === 0) {
-      return res.status(200).json({ success: true, estimates: [] });  // Return empty array if no estimates found
+    let estimates;
+    if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
+      // Return estimates for a specific project
+      estimates = await Estimate.find({ projectId }).populate('projectId', 'name address');
+    } else {
+      // Return all estimates
+      estimates = await Estimate.find().populate('projectId', 'name address');
     }
 
     res.status(200).json({ success: true, estimates });
