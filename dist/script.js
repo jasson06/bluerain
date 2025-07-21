@@ -1,3 +1,45 @@
+    function showToast(message) {
+      let toast = document.getElementById('toast');
+      
+      // If toast element doesn't exist, create it dynamically
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        toast.style.cssText = `
+          position: fixed;
+          top: 30px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: linear-gradient(to right, #0ea5e9, #3b82f6);
+          color: white;
+          padding: 14px 24px;
+          border-radius: 8px;
+          display: none;
+          z-index: 9999;
+          font-weight: 500;
+          font-size: 15px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          transition: opacity 0.3s ease, transform 0.3s ease;
+          pointer-events: none;
+        `;
+        document.body.appendChild(toast);
+      }
+      
+      toast.textContent = message;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
+    
+    function showLoader() {
+      document.getElementById('loader').style.display = 'flex';
+    }
+    
+    function hideLoader() {
+      document.getElementById('loader').style.display = 'none';
+    }
+
+
+
 document.addEventListener('DOMContentLoaded', () => {
     // ✅ Check if managerId is in localStorage, if not, redirect to login page
     const managerId = localStorage.getItem("managerId");
@@ -119,47 +161,6 @@ const projectFilters = {
 };
 
     
-    function showToast(message) {
-      let toast = document.getElementById('toast');
-      
-      // If toast element doesn't exist, create it dynamically
-      if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'toast';
-        toast.style.cssText = `
-          position: fixed;
-          top: 30px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: linear-gradient(to right, #0ea5e9, #3b82f6);
-          color: white;
-          padding: 14px 24px;
-          border-radius: 8px;
-          display: none;
-          z-index: 9999;
-          font-weight: 500;
-          font-size: 15px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-          transition: opacity 0.3s ease, transform 0.3s ease;
-          pointer-events: none;
-        `;
-        document.body.appendChild(toast);
-      }
-      
-      toast.textContent = message;
-      toast.style.display = 'block';
-      setTimeout(() => { toast.style.display = 'none'; }, 3000);
-    }
-    
-    function showLoader() {
-      document.getElementById('loader').style.display = 'flex';
-    }
-    
-    function hideLoader() {
-      document.getElementById('loader').style.display = 'none';
-    }
-
-
     // Form Submissions
     const formConfigurations = [
         { formId: 'add-project-form', apiEndpoint: '/api/add-project' },
@@ -1276,7 +1277,7 @@ addVendorForm.addEventListener('submit', async (e) => {
     email: document.getElementById("vendorEmail").value,
     phone: document.getElementById("vendorPhone").value
   };
-
+showLoader(); // 👈 START
   try {
     // Step 1: Add the vendor
     const addRes = await fetch('/api/add-vendor', {
@@ -1299,14 +1300,16 @@ addVendorForm.addEventListener('submit', async (e) => {
         })
       });
 
-      console.log("✅ Invite sent to new vendor");
+      showToast("✅ Invite sent to new vendor");
     }
 
     addVendorForm.reset();
     fetchVendors();
   } catch (error) {
     console.error("❌ Error adding vendor or sending invite:", error);
-    alert("Failed to add vendor or send invite.");
+    showToast("Failed to add vendor or send invite.");
+              } finally {
+      hideLoader(); // 👈 END
   }
 });
 
@@ -1338,7 +1341,7 @@ async function deleteVendor(id) {
       const response = await fetch(`/api/vendors/${id}`, { method: 'DELETE' });
       
       if (response.ok) {
-        alert("Vendor deleted successfully.");
+       showToast("Vendor deleted successfully.");
         fetchVendors();
       } else {
         const errorData = await response.json();
@@ -1348,7 +1351,7 @@ async function deleteVendor(id) {
 
     } catch (error) {
       console.error("Error:", error);
-      alert("An error occurred while deleting the vendor.");
+      showToast("An error occurred while deleting the vendor.");
     }
   }
 }
@@ -1464,7 +1467,7 @@ function filterAssignmentsTable() {
 async function loadAssignments() {
   const tableBody = document.querySelector("#assignments-table tbody");
   tableBody.innerHTML = `<tr><td colspan="8">Loading...</td></tr>`;
-
+showLoader(); // 👈 START
   try {
     // Fetch all vendors with their assigned projects/items
     const res = await fetch('/api/vendors');
@@ -1547,6 +1550,8 @@ async function loadAssignments() {
   } catch (err) {
     tableBody.innerHTML = `<tr><td colspan="8">Error loading assignments.</td></tr>`;
     console.error(err);
+              } finally {
+      hideLoader(); // 👈 END
   }
 }
 
