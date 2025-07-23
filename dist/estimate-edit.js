@@ -2331,3 +2331,48 @@ function updateTableFooterTotals(filteredOnly = false) {
     }
   }
 }
+
+
+let allEstimateIds = [];
+let currentEstimateIndex = -1;
+
+// Fetch all estimates for this project and set up navigation
+async function setupEstimateNavigation() {
+  const projectId = new URLSearchParams(window.location.search).get("projectId");
+  const estimateId = new URLSearchParams(window.location.search).get("estimateId");
+  if (!projectId) return;
+
+  try {
+    const res = await fetch(`/api/estimates?projectId=${projectId}`);
+    const data = await res.json();
+    if (!data.estimates) return;
+
+    allEstimateIds = data.estimates.map(e => e._id);
+    currentEstimateIndex = allEstimateIds.indexOf(estimateId);
+
+    // Enable/disable buttons
+    document.getElementById("prev-estimate").disabled = currentEstimateIndex <= 0;
+    document.getElementById("next-estimate").disabled = currentEstimateIndex === -1 || currentEstimateIndex >= allEstimateIds.length - 1;
+  } catch (err) {
+    console.warn("Estimate navigation fetch failed", err);
+  }
+}
+
+// Navigation button handlers
+function goToEstimate(offset) {
+  if (allEstimateIds.length === 0 || currentEstimateIndex === -1) return;
+  const newIndex = currentEstimateIndex + offset;
+  if (newIndex < 0 || newIndex >= allEstimateIds.length) return;
+  const projectId = new URLSearchParams(window.location.search).get("projectId");
+  const newEstimateId = allEstimateIds[newIndex];
+  // Navigate to the new estimate
+  window.location.href = `?projectId=${projectId}&estimateId=${newEstimateId}`;
+}
+
+// Attach event listeners after DOMContentLoaded
+document.addEventListener("DOMContentLoaded", () => {
+  setupEstimateNavigation();
+  document.getElementById("prev-estimate").addEventListener("click", () => goToEstimate(-1));
+  document.getElementById("next-estimate").addEventListener("click", () => goToEstimate(1));
+});
+
