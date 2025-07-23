@@ -63,7 +63,8 @@
 
         
         <li><a href="files.html"><i class="fas fa-folder-open"></i> Files</a></li>
-       
+
+        <li><a href="#" id="openCustomReport"><i class="fas fa-chart-line"></i> Reports</a></li>
     
         <li><a href="Selection-Board.html"><i class="fas fa-list-alt"></i> Selection Boards</a></li>
 
@@ -215,6 +216,30 @@
   </div>
 </div>
 
+<!-- Custom Report Modal -->
+<div id="customReportModal" class="modal">
+  <div class="modal-content" style="max-width:900px;">
+    <span class="close" id="closeCustomReportModal">&times;</span>
+    <h2>Generate Custom Report</h2>
+    <form id="customReportForm">
+      <label for="reportProjectSelect">Select Project:</label>
+      <select id="reportProjectSelect" required>
+        <option value="">-- Select Project --</option>
+      </select>
+      <br><br>
+      <label>Select Columns:</label>
+      <label><input type="checkbox" name="columns" value="name" checked> Item Name</label>
+      <label><input type="checkbox" name="columns" value="description" checked> Description</label>
+      <label><input type="checkbox" name="columns" value="status" checked> Status</label>
+      <label><input type="checkbox" name="columns" value="subcontractor" checked> Subcontractor</label>
+      <label><input type="checkbox" name="columns" value="total" checked> Total</label>
+      <br><br>
+      <button type="submit">Generate Report</button>
+    </form>
+    <div id="customReportResult" style="margin-top:24px;"></div>
+  </div>
+</div>
+      
 
 <!-- Toast Notification -->
 <div id="toast" style="
