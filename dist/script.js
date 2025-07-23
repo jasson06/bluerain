@@ -1733,3 +1733,224 @@ window.onclick = function(event) {
 document.addEventListener('DOMContentLoaded', loadAssignments);
 
 
+
+// --- Custom Report Modal Logic ---
+const customReportModal = document.getElementById('customReportModal');
+const closeCustomReportModal = document.getElementById('closeCustomReportModal');
+const openCustomReportBtn = document.getElementById('openCustomReport');
+const reportProjectSelect = document.getElementById('reportProjectSelect');
+const customReportForm = document.getElementById('customReportForm');
+const customReportResult = document.getElementById('customReportResult');
+
+// Open modal
+openCustomReportBtn.onclick = async function() {
+  customReportModal.style.display = 'block';
+  customReportResult.innerHTML = '';
+  // Load projects
+  reportProjectSelect.innerHTML = `<option value="">-- Select Project --</option>`;
+  const res = await fetch('/api/projects');
+  const data = await res.json();
+  (data.projects || []).forEach(p => {
+    reportProjectSelect.innerHTML += `<option value="${p._id}">${p.name}</option>`;
+  });
+};
+
+// Close modal
+closeCustomReportModal.onclick = () => customReportModal.style.display = 'none';
+window.onclick = (e) => { if (e.target === customReportModal) customReportModal.style.display = 'none'; };
+
+// Handle report form submit
+customReportForm.onsubmit = async function(e) {
+  e.preventDefault();
+  customReportResult.innerHTML = 'Loading...';
+  const projectId = reportProjectSelect.value;
+  if (!projectId) return customReportResult.innerHTML = 'Please select a project.';
+  // Get selected columns
+  const columns = Array.from(customReportForm.querySelectorAll('input[name="columns"]:checked')).map(cb => cb.value);
+
+  // Fetch all estimates for this project
+  const res = await fetch(`/api/estimates?projectId=${projectId}`);
+  const data = await res.json();
+  const estimates = data.estimates || [];
+  let lineItems = [];
+  let totalBudget = 0;
+
+
+
+
+  // Flatten all line items
+  estimates.forEach(est => {
+    est.lineItems.forEach(cat => {
+      (cat.items || []).forEach(item => {
+        lineItems.push(item);
+        totalBudget += Number(item.total) || 0;
+      });
+    });
+  });
+
+  // Summary calculations
+  const completed = lineItems.filter(i => i.status === 'completed' || i.status === 'approved');
+  const inProgress = lineItems.filter(i => i.status === 'in-progress');
+  const completedCount = completed.length;
+  const inProgressCount = inProgress.length;
+  const percentComplete = lineItems.length ? Math.round((completedCount / lineItems.length) * 100) : 0;
+  const actualCost = completed.reduce((sum, i) => sum + (Number(i.total) || 0), 0);
+  const budgetRemaining = totalBudget - actualCost;
+
+// Fetch all vendors for lookup
+const vendorsRes = await fetch('/api/vendors');
+let vendorsData = await vendorsRes.json();
+let vendors = vendorsData.vendors || vendorsData || [];
+const vendorMap = {};
+vendors.forEach(v => {
+  vendorMap[String(v._id)] = v.name;
+});
+
+  // Table
+let table = `<table border="1" style="border-collapse:collapse;width:100%;margin-top:12px;">
+  <thead><tr>${columns.map(col => `<th>${col.charAt(0).toUpperCase() + col.slice(1)}</th>`).join('')}</tr></thead>
+  <tbody>
+    ${lineItems.map(item => `<tr>
+      ${columns.includes('name') ? `<td>${item.name || ''}</td>` : ''}
+      ${columns.includes('description') ? `<td>${item.description || ''}</td>` : ''}
+      ${columns.includes('status') ? `<td>${item.status || ''}</td>` : ''}
+      ${columns.includes('subcontractor') ? `<td>${
+        item.assignedTo
+          ? vendorMap[
+              typeof item.assignedTo === 'object' && item.assignedTo._id
+                ? String(item.assignedTo._id)
+                : String(item.assignedTo)
+            ] || ''
+          : ''
+      }</td>` : ''}
+      ${columns.includes('total') ? `<td>$${Number(item.total || 0).toFixed(2)}</td>` : ''}
+    </tr>`).join('')}
+  </tbody>
+</table>`;
+
+  // Fetch all projects to get the selected project's address
+  const projectsRes = await fetch('/api/projects');
+  const projectsData = await projectsRes.json();
+  const selectedProject = (projectsData.projects || []).find(p => p._id === projectId);
+  const projectAddress = selectedProject && selectedProject.address
+    ? `${selectedProject.address.addressLine1 || ''} ${selectedProject.address.addressLine2 || ''}, ${selectedProject.address.city || ''}, ${selectedProject.address.state || ''} ${selectedProject.address.zip || ''}`
+    : '';
+    
+
+  // Summary
+let summary = `
+  <div class="summary">
+    <div class="summary-address">
+      <span class="summary-address-label"><i class="fas fa-map-marker-alt"></i> Project Address:</span>
+      <span class="summary-address-value">${projectAddress}</span>
+    </div>
+    <div class="summary-metric">
+      <span class="metric-icon"><i class="fas fa-tasks"></i></span>
+      <span class="metric-value">${lineItems.length.toLocaleString()}</span>
+      <span class="metric-label">Total Items</span>
+    </div>
+    <div class="summary-metric">
+      <span class="metric-icon" style="color:#22c55e;background:#e7fbe9;"><i class="fas fa-check-circle"></i></span>
+      <span class="metric-value" style="color:#22c55e;">${completedCount.toLocaleString()}</span>
+      <span class="metric-label">Completed</span>
+    </div>
+    <div class="summary-metric">
+      <span class="metric-icon" style="color:#f59e42;background:#fff7e6;"><i class="fas fa-spinner"></i></span>
+      <span class="metric-value" style="color:#f59e42;">${inProgressCount.toLocaleString()}</span>
+      <span class="metric-label">In Progress</span>
+    </div>
+    <div class="summary-metric">
+      <span class="metric-icon" style="color:#0284c7;background:#e0f2fe;"><i class="fas fa-dollar-sign"></i></span>
+      <span class="metric-value">$${actualCost.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+      <span class="metric-label">Actual Cost</span>
+    </div>
+    <div class="summary-metric">
+      <span class="metric-icon" style="color:#6366f1;background:#e0e7ff;"><i class="fas fa-coins"></i></span>
+      <span class="metric-value">$${totalBudget.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+      <span class="metric-label">Total Budget</span>
+    </div>
+    <div class="summary-metric">
+      <span class="metric-icon" style="color:#ef4444;background:#fee2e2;"><i class="fas fa-wallet"></i></span>
+      <span class="metric-value">$${budgetRemaining.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+      <span class="metric-label">Budget Left</span>
+    </div>
+    <div class="summary-progress">
+      <div class="summary-progress-bar">
+        <div class="summary-progress-bar-inner" style="width:${percentComplete}%;"></div>
+      </div>
+      <span class="summary-progress-label">${percentComplete}% Complete</span>
+    </div>
+  </div>
+`;
+
+  // Add Download PDF button
+  let pdfBtn = `<button id="downloadReportPdf" style="margin-bottom:12px;">Download PDF</button>`;
+
+  customReportResult.innerHTML = pdfBtn + summary + table;
+
+  // PDF generation logic
+ document.getElementById('downloadReportPdf').onclick = async function() {
+  const { jsPDF } = window.jspdf;
+
+  // 1. Render summary as image (for the header)
+  const summaryNode = customReportResult.querySelector('.summary');
+  const summaryClone = summaryNode.cloneNode(true);
+  const summaryWrapper = document.createElement('div');
+  summaryWrapper.style.background = '#fff';
+  summaryWrapper.style.padding = '24px';
+  summaryWrapper.style.width = '800px';
+  summaryWrapper.appendChild(summaryClone);
+  document.body.appendChild(summaryWrapper);
+  summaryWrapper.style.position = 'fixed';
+  summaryWrapper.style.left = '-9999px';
+  const summaryCanvas = await html2canvas(summaryWrapper, { scale: 2, useCORS: true });
+  const summaryImg = summaryCanvas.toDataURL('image/png');
+  document.body.removeChild(summaryWrapper);
+
+  // 2. Prepare table data for AutoTable
+  const tableNode = customReportResult.querySelector('table');
+  const headers = Array.from(tableNode.querySelectorAll('thead th')).map(th => th.textContent);
+  const rows = Array.from(tableNode.querySelectorAll('tbody tr')).map(tr =>
+    Array.from(tr.querySelectorAll('td')).map(td => td.textContent)
+  );
+
+  // 3. Create PDF and add summary (first page)
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'pt',
+    format: 'a4'
+  });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+
+  // Add summary image at the top
+  const summaryImgWidth = pageWidth - 40;
+  const summaryImgHeight = summaryCanvas.height * summaryImgWidth / summaryCanvas.width;
+  pdf.addImage(summaryImg, 'PNG', 20, 20, summaryImgWidth, summaryImgHeight);
+
+  // Add table using autoTable
+  pdf.autoTable({
+    head: [headers],
+    body: rows,
+    startY: 40 + summaryImgHeight,
+    margin: { left: 20, right: 20 },
+    styles: {
+      fontSize: 10,
+      cellPadding: 4,
+      overflow: 'linebreak',
+      valign: 'middle'
+    },
+    headStyles: {
+      fillColor: [37, 99, 235],
+      textColor: 255,
+      fontStyle: 'bold'
+    },
+    alternateRowStyles: { fillColor: [243, 246, 250] },
+    tableLineColor: [224, 231, 235],
+    tableLineWidth: 0.5,
+    theme: 'striped'
+  });
+
+  const safeProjectName = (selectedProject?.name || "project").replace(/[^a-z0-9_\-]+/gi, "_");
+pdf.save(`project-report-${safeProjectName}.pdf`);
+};
+};
