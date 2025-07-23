@@ -425,7 +425,7 @@ const estimateSchema = new mongoose.Schema({
           description: { type: String },
           costCode: { type: String, default: 'Uncategorized' }, // ✅ Added Cost Code
           quantity: { type: Number, required: true, min: 1 },
-          unitPrice: { type: Number, required: true, min: 0 },
+          unitPrice: { type: Number, required: true },
            calcMode: { type: String, enum: ['each', 'sqft', 'lnft'], default: 'each' }, // <-- Add this line
            area: Number,    // <-- Add this line
            length: Number,  // <-- Add this line
