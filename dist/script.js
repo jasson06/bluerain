@@ -1691,7 +1691,6 @@ function showLineItemsModal(vendorId, projectId, estimateId) {
     });
 }
 
-
 // --- Add this function at the end of your script.js ---
 function openPhotoFullView(src) {
   // Create modal if not exists
@@ -1775,9 +1774,6 @@ customReportForm.onsubmit = async function(e) {
   let lineItems = [];
   let totalBudget = 0;
 
-
-
-
   // Flatten all line items
   estimates.forEach(est => {
     est.lineItems.forEach(cat => {
@@ -1796,37 +1792,75 @@ customReportForm.onsubmit = async function(e) {
   const percentComplete = lineItems.length ? Math.round((completedCount / lineItems.length) * 100) : 0;
   const actualCost = completed.reduce((sum, i) => sum + (Number(i.total) || 0), 0);
   const budgetRemaining = totalBudget - actualCost;
+  const laborCostToDate = completed.reduce((sum, i) => sum + (Number(i.laborCost) || 0), 0);
+  const materialCostToDate = completed.reduce((sum, i) => sum + (Number(i.materialCost) || 0), 0);
+  const totalProfit = completed.reduce((sum, i) =>
+    sum + ((Number(i.total) || 0) - (Number(i.laborCost) || 0) - (Number(i.materialCost) || 0)), 0);
 
-// Fetch all vendors for lookup
-const vendorsRes = await fetch('/api/vendors');
-let vendorsData = await vendorsRes.json();
-let vendors = vendorsData.vendors || vendorsData || [];
-const vendorMap = {};
-vendors.forEach(v => {
-  vendorMap[String(v._id)] = v.name;
-});
+  // Fetch all vendors for lookup
+  const vendorsRes = await fetch('/api/vendors');
+  let vendorsData = await vendorsRes.json();
+  let vendors = vendorsData.vendors || vendorsData || [];
+  const vendorMap = {};
+  vendors.forEach(v => {
+    vendorMap[String(v._id)] = v.name;
+  });
 
-  // Table
-let table = `<table border="1" style="border-collapse:collapse;width:100%;margin-top:12px;">
-  <thead><tr>${columns.map(col => `<th>${col.charAt(0).toUpperCase() + col.slice(1)}</th>`).join('')}</tr></thead>
-  <tbody>
-    ${lineItems.map(item => `<tr>
-      ${columns.includes('name') ? `<td>${item.name || ''}</td>` : ''}
-      ${columns.includes('description') ? `<td>${item.description || ''}</td>` : ''}
-      ${columns.includes('status') ? `<td>${item.status || ''}</td>` : ''}
-      ${columns.includes('subcontractor') ? `<td>${
-        item.assignedTo
-          ? vendorMap[
-              typeof item.assignedTo === 'object' && item.assignedTo._id
-                ? String(item.assignedTo._id)
-                : String(item.assignedTo)
-            ] || ''
-          : ''
-      }</td>` : ''}
-      ${columns.includes('total') ? `<td>$${Number(item.total || 0).toFixed(2)}</td>` : ''}
-    </tr>`).join('')}
-  </tbody>
-</table>`;
+  // Group line items by estimate
+  const estimateMap = {};
+  estimates.forEach(est => {
+    estimateMap[est._id] = est;
+  });
+
+  let table = `<table border="1" style="border-collapse:collapse;width:100%;margin-top:12px;">
+    <thead>
+      <tr>${
+  columns.map(col => {
+    if (col === 'laborCost') return `<th>Labor AC</th>`;
+    if (col === 'materialCost') return `<th>Material AC</th>`;
+    return `<th>${col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1').trim()}</th>`;
+  }).join('')
+}</tr>
+    </thead>
+    <tbody>
+      ${
+        estimates.map(est => {
+          const items = [];
+          est.lineItems.forEach(cat => {
+            (cat.items || []).forEach(item => items.push(item));
+          });
+          if (!items.length) return '';
+          let estimateHeader = `<tr style="background:#e0e7ef;">
+            <td colspan="${columns.length}" style="font-weight:bold;color:#2563eb;font-size:1.08rem;">
+              EST: ${est.title || est.name || est.invoiceNumber || est._id}
+            </td>
+          </tr>`;
+          let itemRows = items.map(item => {
+            const profit = (Number(item.total || 0) - Number(item.laborCost || 0) - Number(item.materialCost || 0));
+            return `<tr>
+              ${columns.includes('name') ? `<td>${item.name || ''}</td>` : ''}
+              ${columns.includes('description') ? `<td>${item.description || ''}</td>` : ''}
+              ${columns.includes('status') ? `<td>${item.status || ''}</td>` : ''}
+              ${columns.includes('subcontractor') ? `<td>${
+                item.assignedTo
+                  ? vendorMap[
+                      typeof item.assignedTo === 'object' && item.assignedTo._id
+                        ? String(item.assignedTo._id)
+                        : String(item.assignedTo)
+                    ] || ''
+                  : ''
+              }</td>` : ''}
+              ${columns.includes('laborCost') ? `<td>$${Number(item.laborCost || 0).toFixed(2)}</td>` : ''}
+              ${columns.includes('materialCost') ? `<td>$${Number(item.materialCost || 0).toFixed(2)}</td>` : ''}
+              ${columns.includes('total') ? `<td>$${Number(item.total || 0).toFixed(2)}</td>` : ''}
+              ${columns.includes('profit') ? `<td>$${profit.toFixed(2)}</td>` : ''}
+            </tr>`;
+          }).join('');
+          return estimateHeader + itemRows;
+        }).join('')
+      }
+    </tbody>
+  </table>`;
 
   // Fetch all projects to get the selected project's address
   const projectsRes = await fetch('/api/projects');
@@ -1835,53 +1869,73 @@ let table = `<table border="1" style="border-collapse:collapse;width:100%;margin
   const projectAddress = selectedProject && selectedProject.address
     ? `${selectedProject.address.addressLine1 || ''} ${selectedProject.address.addressLine2 || ''}, ${selectedProject.address.city || ''}, ${selectedProject.address.state || ''} ${selectedProject.address.zip || ''}`
     : '';
-    
 
   // Summary
-let summary = `
-  <div class="summary">
-    <div class="summary-address">
-      <span class="summary-address-label"><i class="fas fa-map-marker-alt"></i> Project Address:</span>
-      <span class="summary-address-value">${projectAddress}</span>
-    </div>
-    <div class="summary-metric">
-      <span class="metric-icon"><i class="fas fa-tasks"></i></span>
-      <span class="metric-value">${lineItems.length.toLocaleString()}</span>
-      <span class="metric-label">Total Items</span>
-    </div>
-    <div class="summary-metric">
-      <span class="metric-icon" style="color:#22c55e;background:#e7fbe9;"><i class="fas fa-check-circle"></i></span>
-      <span class="metric-value" style="color:#22c55e;">${completedCount.toLocaleString()}</span>
-      <span class="metric-label">Completed</span>
-    </div>
-    <div class="summary-metric">
-      <span class="metric-icon" style="color:#f59e42;background:#fff7e6;"><i class="fas fa-spinner"></i></span>
-      <span class="metric-value" style="color:#f59e42;">${inProgressCount.toLocaleString()}</span>
-      <span class="metric-label">In Progress</span>
-    </div>
-    <div class="summary-metric">
-      <span class="metric-icon" style="color:#0284c7;background:#e0f2fe;"><i class="fas fa-dollar-sign"></i></span>
-      <span class="metric-value">$${actualCost.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-      <span class="metric-label">Actual Cost</span>
-    </div>
-    <div class="summary-metric">
-      <span class="metric-icon" style="color:#6366f1;background:#e0e7ff;"><i class="fas fa-coins"></i></span>
-      <span class="metric-value">$${totalBudget.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-      <span class="metric-label">Total Budget</span>
-    </div>
-    <div class="summary-metric">
-      <span class="metric-icon" style="color:#ef4444;background:#fee2e2;"><i class="fas fa-wallet"></i></span>
-      <span class="metric-value">$${budgetRemaining.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-      <span class="metric-label">Budget Left</span>
-    </div>
-    <div class="summary-progress">
-      <div class="summary-progress-bar">
-        <div class="summary-progress-bar-inner" style="width:${percentComplete}%;"></div>
+  let summary = `
+    <div class="summary">
+      <div class="summary-address">
+        <span class="summary-address-label"><i class="fas fa-map-marker-alt"></i> Project Address:</span>
+        <span class="summary-address-value">${projectAddress}</span>
       </div>
-      <span class="summary-progress-label">${percentComplete}% Complete</span>
+      <div class="summary-metric">
+        <span class="metric-icon"><i class="fas fa-tasks"></i></span>
+        <span class="metric-value">${lineItems.length.toLocaleString()}</span>
+        <span class="metric-label">Total Items</span>
+      </div>
+      <div class="summary-metric">
+        <span class="metric-icon" style="color:#22c55e;background:#e7fbe9;"><i class="fas fa-check-circle"></i></span>
+        <span class="metric-value" style="color:#22c55e;">${completedCount.toLocaleString()}</span>
+        <span class="metric-label">Completed</span>
+      </div>
+      <div class="summary-metric">
+        <span class="metric-icon" style="color:#f59e42;background:#fff7e6;"><i class="fas fa-spinner"></i></span>
+        <span class="metric-value" style="color:#f59e42;">${inProgressCount.toLocaleString()}</span>
+        <span class="metric-label">In Progress</span>
+      </div>
+      ${columns.includes('laborCost') ? `
+      <div class="summary-metric">
+        <span class="metric-icon" style="color:#0ea5e9;background:#e0f7fa;"><i class="fas fa-user-cog"></i></span>
+        <span class="metric-value">$${laborCostToDate.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+        <span class="metric-label">Total Labor Cost to Date</span>
+      </div>
+      ` : ''}
+      ${columns.includes('materialCost') ? `
+      <div class="summary-metric">
+        <span class="metric-icon" style="color:#f59e42;background:#fff7e6;"><i class="fas fa-cubes"></i></span>
+        <span class="metric-value">$${materialCostToDate.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+        <span class="metric-label">Total Material Cost to Date</span>
+      </div>
+      ` : ''}
+      ${columns.includes('profit') ? `
+      <div class="summary-metric">
+        <span class="metric-icon" style="color:#22c55e;background:#e7fbe9;"><i class="fas fa-chart-line"></i></span>
+        <span class="metric-value">$${totalProfit.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+        <span class="metric-label">Total Profit</span>
+      </div>
+      ` : ''}
+      <div class="summary-metric">
+        <span class="metric-icon" style="color:#0284c7;background:#e0f2fe;"><i class="fas fa-dollar-sign"></i></span>
+        <span class="metric-value">$${actualCost.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+        <span class="metric-label">Completed Budget to Date</span>
+      </div>
+      <div class="summary-metric">
+        <span class="metric-icon" style="color:#6366f1;background:#e0e7ff;"><i class="fas fa-coins"></i></span>
+        <span class="metric-value">$${totalBudget.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+        <span class="metric-label">Estimate At Completion</span>
+      </div>
+      <div class="summary-metric">
+        <span class="metric-icon" style="color:#ef4444;background:#fee2e2;"><i class="fas fa-wallet"></i></span>
+        <span class="metric-value">$${budgetRemaining.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+        <span class="metric-label">Budget Remaining</span>
+      </div>
+      <div class="summary-progress">
+        <div class="summary-progress-bar">
+          <div class="summary-progress-bar-inner" style="width:${percentComplete}%;"></div>
+        </div>
+        <span class="summary-progress-label">${percentComplete}% Completed</span>
+      </div>
     </div>
-  </div>
-`;
+  `;
 
   // Add Download PDF button
   let pdfBtn = `<button id="downloadReportPdf" style="margin-bottom:12px;">Download PDF</button>`;
@@ -1947,10 +2001,12 @@ let summary = `
     alternateRowStyles: { fillColor: [243, 246, 250] },
     tableLineColor: [224, 231, 235],
     tableLineWidth: 0.5,
-    theme: 'striped'
+    theme: 'striped' ,
+    showHead: 'firstPage'
   });
 
   const safeProjectName = (selectedProject?.name || "project").replace(/[^a-z0-9_\-]+/gi, "_");
 pdf.save(`project-report-${safeProjectName}.pdf`);
 };
 };
+
