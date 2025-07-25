@@ -54,6 +54,10 @@
         </li>
         
            <li><a href="clients.html"><i class="fas fa-list-alt"></i>Clients</a></li>
+
+                 <li id="assignment-nav-item">
+    <a href="#" id="open-assignment-section"><i class="fas fa-tasks"></i> Assignments</a>
+        </li>
         
         <li>
           <a href="#" onclick="openSubcontractorsModal()">
@@ -64,7 +68,7 @@
         
         <li><a href="files.html"><i class="fas fa-folder-open"></i> Files</a></li>
 
-        <li><a href="#" id="openCustomReport"><i class="fas fa-chart-line"></i> Reports</a></li>
+    <li><a href="#" id="openCustomReport"><i class="fas fa-chart-line"></i> Reports</a></li>
     
         <li><a href="Selection-Board.html"><i class="fas fa-list-alt"></i> Selection Boards</a></li>
 
@@ -118,11 +122,12 @@
     </div>
 
 
- <section id="assignments-section" style="margin-top: 40px;">
+    <section id="assignments-section" style="margin-top: 40px;">
   <h2>Assignments</h2>
   <div id="assignments-filters">
   <input type="text" id="filter-assignment-name" placeholder="Filter by Subcontractor Name">
   <input type="text" id="filter-assignment-address" placeholder="Filter by Address">
+  <input type="text" id="filter-assignment-estimate" placeholder="Filter by Estimate">
 </div>
   <table id="assignments-table" style="width:100%; border-collapse:collapse;">
     <thead>
@@ -218,7 +223,7 @@
 
 <!-- Custom Report Modal -->
 <div id="customReportModal" class="modal">
-  <div class="modal-content" style="max-width:900px;">
+  <div class="modal-content" style="max-width:1050px;">
     <span class="close" id="closeCustomReportModal">&times;</span>
     <h2>Generate Custom Report</h2>
     <form id="customReportForm">
@@ -232,7 +237,10 @@
       <label><input type="checkbox" name="columns" value="description" checked> Description</label>
       <label><input type="checkbox" name="columns" value="status" checked> Status</label>
       <label><input type="checkbox" name="columns" value="subcontractor" checked> Subcontractor</label>
+      <label><input type="checkbox" name="columns" value="laborCost" checked> Labor Cost to Date</label>
+      <label><input type="checkbox" name="columns" value="materialCost" checked> Material Cost to Date</label>
       <label><input type="checkbox" name="columns" value="total" checked> Total</label>
+<label><input type="checkbox" name="columns" value="profit" checked> Profit</label>
       <br><br>
       <button type="submit">Generate Report</button>
     </form>
