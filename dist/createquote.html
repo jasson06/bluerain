@@ -1766,7 +1766,7 @@ function renderTable() {
       const row = document.createElement('tr');
       row.setAttribute('data-flat-index', lineItems.indexOf(item)); // For editing/deleting
 
-      const isEditing = item.isEditing;
+     const isEditing = item.isEditing;
 
       row.innerHTML = isEditing ? `
         <td style="text-align:center;"><span class="drag-handle">☰</span></td>
@@ -1811,9 +1811,13 @@ function renderTable() {
         animation: 150,
         draggable: 'tr:not(.category-group-row)',
         group: { name: 'line-items', put: false },
-        filter: 'td:not(:first-child), input, textarea, button, select, .action-dropdown, .action-dropdown *',
+        filter: 'input, textarea, button, select, .action-dropdown, .action-dropdown *',
         preventOnFilter: false,
+        onStart: function () {
+          document.body.classList.add('dragging');
+        },
         onEnd: function (evt) {
+          document.body.classList.remove('dragging');
           // Only reorder if the item was moved within the same category
           if (evt.from === evt.to && evt.oldIndex !== evt.newIndex) {
             // Get all rows (excluding group header) in this tbody
@@ -1838,15 +1842,14 @@ function renderTable() {
             categoryIndexes.forEach((lineIdx, i) => {
               lineItems[lineIdx] = reorderedCategoryItems[i];
             });
-}
-  if (!isDesktop()) {
-    sortableEnabled = false;
-    renderTable();
-  }
-}
-
-  });
-  window.sortables.push(s);
+          }
+          if (!isDesktop()) {
+            sortableEnabled = false;
+            renderTable();
+          }
+        }
+      });
+      window.sortables.push(s);
     }
   });
 
@@ -1854,28 +1857,33 @@ function renderTable() {
 
   // Enable Sortable for categories (tbodys) if enabled
   if (sortableEnabled) {
-  const s = Sortable.create(table, {
-    handle: '.drag-handle-group',
-    animation: 150,
-    draggable: 'tbody',
-    filter: 'tr:not(.category-group-row)', // Prevent dragging rows
-    onEnd: function (evt) {
-      const tbodys = Array.from(table.querySelectorAll('tbody'));
-      let newLineItems = [];
-      tbodys.forEach(tbody => {
-        const cat = tbody.getAttribute('data-category');
-        newLineItems = newLineItems.concat(groupLineItemsByCategory(lineItems)[cat]);
-      });
-      lineItems = newLineItems;
+    const s = Sortable.create(table, {
+      handle: '.drag-handle-group',
+      animation: 150,
+      draggable: 'tbody',
+      filter: 'tr:not(.category-group-row)', // Prevent dragging rows
+      preventOnFilter: false,
+      onStart: function () {
+        document.body.classList.add('dragging');
+      },
+      onEnd: function (evt) {
+        document.body.classList.remove('dragging');
+        const tbodys = Array.from(table.querySelectorAll('tbody'));
+        let newLineItems = [];
+        tbodys.forEach(tbody => {
+          const cat = tbody.getAttribute('data-category');
+          newLineItems = newLineItems.concat(groupLineItemsByCategory(lineItems)[cat]);
+        });
+        lineItems = newLineItems;
 
-  if (!isDesktop()) {
-    sortableEnabled = false;
-    renderTable();
-  }
-}
-  });
-  window.sortables.push(s);
-}
+        if (!isDesktop()) {
+          sortableEnabled = false;
+          renderTable();
+        }
+      }
+    });
+    window.sortables.push(s);
+  } 
 
   // Totals
   const discount = parseFloat(document.getElementById('inputDiscount').value || 0);
