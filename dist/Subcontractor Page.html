@@ -513,6 +513,30 @@ button:hover,
         transform: scale(1);
     }
 }
+
+  .start-job-btn {
+  background: linear-gradient(90deg, #ffc107 0%, #d7a203 100%);
+  color: #fff;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.18);
+  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+  margin: 18px 0 0 0;
+  letter-spacing: 1px;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+  outline: none;
+  position: relative;
+}
+
+.start-job-btn:hover {
+  background: linear-gradient(90deg, #d7a203 0%, #ffc107 100%);
+  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.22);
+  transform: translateY(-2px) scale(1.04);
+}
+  
   </style>
 </head>
 <body>
@@ -767,6 +791,15 @@ async function displayAssignedProjects(projects, containerId) {
     } catch (e) {}
     const card = document.createElement("div");
     card.classList.add("project-card");
+
+
+    
+    // Only show "Start Job" button in the New Jobs section
+let startJobBtn = "";
+if (containerId === "new-jobs-container") {
+  startJobBtn = `<button class="start-job-btn" onclick="startJob('${projectId._id}')"><i class="fas fa-play" style="margin-right:8px;"></i>Start Job</button>`;
+}
+
     card.innerHTML = `
       <h3>${projectId.name || "Unnamed Project"}</h3>
       <p><strong>Status:</strong> <span class="${getStatusClass(project.status)}">${project.status}</span></p>
@@ -774,6 +807,7 @@ async function displayAssignedProjects(projects, containerId) {
       <p><strong>Address:</strong> ${projectId.address?.addressLine1 || ""}, ${projectId.address?.city || ""}, ${projectId.address?.state || ""}</p>
       <p><strong>Lockbox Code:</strong> ${projectCode}</p>
       <button onclick="viewProject('${projectId._id}', '${project.status}')">Line items</button>
+      ${startJobBtn}
     `;
     container.appendChild(card);
   }
@@ -1035,6 +1069,42 @@ function logout() {
         window.location.href = '/sign-inpage.html';
     }, 1500);
 }
+
+async function startJob(projectId) {
+  showLoader();
+  try {
+    const vendorId = localStorage.getItem("vendorId");
+    // Fetch all assigned items for this project
+    const response = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
+    if (!response.ok) throw new Error("Failed to fetch assigned items.");
+    const data = await response.json();
+    const assignedItems = data.items || [];
+    if (assignedItems.length === 0) {
+      showToast("No line items found for this project.", "error");
+      hideLoader();
+      return;
+    }
+    // Update each item's status to "in-progress"
+for (const item of assignedItems) {
+  await fetch(`/api/vendors/${vendorId}/update-item-status`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      itemId: item.itemId, 
+      status: "in-progress"
+    })
+  });
+}
+    showToast("All line items set to In Progress!", "success");
+    // Optionally, refresh projects
+    await fetchAssignedProjects(vendorId);
+  } catch (error) {
+    showToast("Failed to start job.", "error");
+    console.error(error);
+  } finally {
+    hideLoader();
+  }
+}    
   </script>
 </body>
 </html>
