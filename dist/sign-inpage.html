@@ -6,18 +6,22 @@
   <title>Vendor Authentication</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f5f7;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background:
+        linear-gradient(135deg, rgba(227,240,255,0.7) 0%, rgba(245,250,255,0.7) 100%),
+        url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80') center/cover no-repeat;
+      background-blend-mode: overlay, lighten;
       margin: 0;
       padding: 0;
     }
     .container {
       max-width: 400px;
       margin: 50px auto;
-      background: white;
-      padding: 20px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-      border-radius: 8px;
+      background: #fff;
+      padding: 28px 24px 24px 24px;
+      box-shadow: 0 8px 32px rgba(0, 60, 180, 0.10);
+      border-radius: 16px;
+      border: 1px solid #e3eafc;
     }
     .form-header {
       text-align: center;
@@ -25,6 +29,9 @@
     }
     .form-header h2 {
       margin: 0;
+      font-size: 2rem;
+      color: #1a4fa3;
+      font-weight: 600;
     }
     form {
       display: none;
@@ -36,40 +43,107 @@
     input[type="password"],
     input[type="text"] {
       width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+      padding: 12px;
+      margin: 12px 0;
+      border: 1px solid #b3c9e7;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 1rem;
+      background: #f7faff;
+      transition: border-color 0.2s;
+    }
+    input[type="email"]:focus,
+    input[type="password"]:focus,
+    input[type="text"]:focus {
+      border-color: #1a4fa3;
     }
     button {
       width: 100%;
-      padding: 10px;
-      background-color: #007bff;
-      color: white;
+      padding: 12px;
+      background: linear-gradient(90deg, #1a4fa3 0%, #3b82f6 100%);
+      color: #fff;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 16px;
+      font-size: 1.1rem;
+      font-weight: 500;
+      box-shadow: 0 2px 8px rgba(26, 79, 163, 0.08);
+      transition: background 0.2s;
     }
     button:hover {
-      background-color: #0056b3;
+      background: linear-gradient(90deg, #1651b7 0%, #2563eb 100%);
     }
     .toggle-link {
-      color: #007bff;
+      color: #2563eb;
       cursor: pointer;
       display: block;
       text-align: center;
       margin-top: 10px;
       text-decoration: none;
+      font-size: 0.98rem;
     }
     .toggle-link:hover {
       text-decoration: underline;
+      color: #1a4fa3;
     }
     .error-message {
-      color: red;
+      color: #dc3545;
       font-size: 14px;
       margin-top: -5px;
       margin-bottom: 10px;
+    }
+    /* Toast styles */
+    #toast {
+      visibility: hidden;
+      min-width: 250px;
+      margin-left: -125px;
+      background-color: #1a4fa3;
+      color: #fff;
+      text-align: center;
+      border-radius: 4px;
+      padding: 16px;
+      position: fixed;
+      z-index: 9999;
+      left: 50%;
+      bottom: 30px;
+      font-size: 17px;
+      opacity: 0;
+      transition: opacity 0.4s, visibility 0.4s;
+    }
+    #toast.show {
+      visibility: visible;
+      opacity: 1;
+    }
+    #toast.success {
+      background-color: #2563eb;
+    }
+    #toast.error {
+      background-color: #dc3545;
+    }
+    /* Spinner styles */
+    #spinner-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.2);
+      z-index: 9998;
+      justify-content: center;
+      align-items: center;
+    }
+    #spinner {
+      border: 8px solid #e3eafc;
+      border-top: 8px solid #2563eb;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
 </head>
@@ -78,6 +152,11 @@
     <div class="form-header">
       <h2 id="form-title">Sign In</h2>
     </div>
+
+  <!-- Toast Notification -->
+  <div id="toast"></div>
+  <!-- Spinner Overlay -->
+  <div id="spinner-overlay"><div id="spinner"></div></div>
 
     <!-- Sign In Form -->
 <form id="signin-form">
@@ -114,6 +193,23 @@
 </form>
 
   <script>
+  // Toast utility
+  function showToast(message, type = "") {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.className = "show" + (type ? " " + type : "");
+    setTimeout(() => {
+      toast.className = toast.className.replace("show", "");
+    }, 3000);
+  }
+
+  // Spinner utility
+  function showSpinner() {
+    document.getElementById("spinner-overlay").style.display = "flex";
+  }
+  function hideSpinner() {
+    document.getElementById("spinner-overlay").style.display = "none";
+  }
 
   document.addEventListener("DOMContentLoaded", async () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -134,32 +230,32 @@
         const password = document.getElementById("activate-password").value.trim();
 
         if (!name || !password) {
-          alert("All fields are required.");
+          showToast("All fields are required.", "error");
           return;
         }
 
         try {
+          showSpinner();
           const response = await fetch("/api/invite/accept", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ token, name, password }),
           });
-
           const result = await response.json();
-
           if (!response.ok) throw new Error(result.message);
-
-          alert("Account activated successfully!");
-
-          // Redirect based on role
-          if (result.role === "project-manager") {
-            window.location.href = "/project-manager-auth.html";
-          } else {
-            window.location.href = "/sign-inpage.html";
-          }
+          showToast("Account activated successfully!", "success");
+          setTimeout(() => {
+            if (result.role === "project-manager") {
+              window.location.href = "/project-manager-auth.html";
+            } else {
+              window.location.href = "/sign-inpage.html";
+            }
+          }, 1200);
         } catch (error) {
           console.error("Activation Error:", error);
-          alert("Failed to activate account. Please try again.");
+          showToast("Failed to activate account. Please try again.", "error");
+        } finally {
+          hideSpinner();
         }
       });
     } else {
@@ -202,7 +298,7 @@
 
     // Update form title
     const formTitle = {
-      signin: 'Sign In',
+      signin: 'Vendor Sign In',
       reset: 'Reset Password',
       setpw: 'Set New Password',
       activate: 'Activate Account'
@@ -219,28 +315,32 @@
   const password = document.getElementById('signin-password').value.trim();
 
   if (!email || !password) {
-    alert('Please fill out all fields.');
+    showToast('Please fill out all fields.', 'error');
     return;
   }
 
   try {
+    showSpinner();
     const response = await fetch('/api/signin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
-
     const data = await response.json();
     if (response.ok) {
-      alert('Sign-in successful!');
+      showToast('Sign-in successful!', 'success');
       localStorage.setItem('vendorId', data.vendorId); // Store vendor ID for further use
-      window.location.href = '/Subcontractor%20Page.html';
+      setTimeout(() => {
+        window.location.href = '/Subcontractor%20page.html';
+      }, 1200);
     } else {
-      alert(data.message || 'Sign-in failed!');
+      showToast(data.message || 'Sign-in failed!', 'error');
     }
   } catch (error) {
     console.error('Error signing in:', error);
-    alert('An error occurred. Please try again.');
+    showToast('An error occurred. Please try again.', 'error');
+  } finally {
+    hideSpinner();
   }
 }
 
@@ -252,27 +352,29 @@
       const password = document.getElementById('signup-password').value.trim();
 
       if (!name || !email || !password) {
-        alert('Please fill out all fields.');
+        showToast('Please fill out all fields.', 'error');
         return;
       }
 
       try {
+        showSpinner();
         const response = await fetch('/api/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, password })
         });
-
         const result = await response.json();
         if (response.ok) {
-          alert('Sign-up successful! You can now sign in.');
-          toggleForm('signin');
+          showToast('Sign-up successful! You can now sign in.', 'success');
+          setTimeout(() => toggleForm('signin'), 1200);
         } else {
-          alert(result.message || 'Sign-up failed!');
+          showToast(result.message || 'Sign-up failed!', 'error');
         }
       } catch (error) {
         console.error('Error signing up:', error);
-        alert('An error occurred. Please try again.');
+        showToast('An error occurred. Please try again.', 'error');
+      } finally {
+        hideSpinner();
       }
     }
 
@@ -281,27 +383,29 @@ async function handlePasswordResetRequest() {
   const email = document.getElementById('reset-email').value.trim();
 
   if (!email) {
-    alert('Please enter your email.');
+    showToast('Please enter your email.', 'error');
     return;
   }
 
   try {
+    showSpinner();
     const response = await fetch('/api/password-reset/request', { // <-- FIXED ENDPOINT
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
     });
-
     const result = await response.json();
     if (response.ok) {
-      alert('Password reset link sent to your email.');
-      toggleForm('setpw');
+      showToast('Password reset link sent to your email.', 'success');
+      setTimeout(() => toggleForm('setpw'), 1200);
     } else {
-      alert(result.message || 'Failed to send password reset link.');
+      showToast(result.message || 'Failed to send password reset link.', 'error');
     }
   } catch (error) {
     console.error('Error resetting password:', error);
-    alert('An error occurred. Please try again.');
+    showToast('An error occurred. Please try again.', 'error');
+  } finally {
+    hideSpinner();
   }
 }
 
@@ -311,27 +415,29 @@ async function handleSetNewPassword() {
   const newPassword = document.getElementById('setpw-new').value.trim();
 
   if (!email || !token || !newPassword) {
-    alert('Please fill out all fields.');
+    showToast('Please fill out all fields.', 'error');
     return;
   }
 
   try {
+    showSpinner();
     const response = await fetch('/api/password-reset', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, token, newPassword })
     });
-
     const result = await response.json();
     if (response.ok) {
-      alert('Password updated successfully! You can now sign in.');
-      toggleForm('signin');
+      showToast('Password updated successfully! You can now sign in.', 'success');
+      setTimeout(() => toggleForm('signin'), 1200);
     } else {
-      alert(result.message || 'Failed to reset password.');
+      showToast(result.message || 'Failed to reset password.', 'error');
     }
   } catch (error) {
     console.error('Error setting new password:', error);
-    alert('An error occurred. Please try again.');
+    showToast('An error occurred. Please try again.', 'error');
+  } finally {
+    hideSpinner();
   }
 }
 
@@ -339,4 +445,3 @@ async function handleSetNewPassword() {
   </script>
 </body>
 </html>
-
