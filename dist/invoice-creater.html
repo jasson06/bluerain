@@ -1117,7 +1117,7 @@ function addManualItem() {
 
 function addItemToTable(item, isImported = false) {
   const cleaned = {
-    _id: item._id, // <-- preserve the unique line item ID
+    _id: item._id, // preserve unique line item ID
     name: item.name,
     description: item.description,
     quantity: Number(item.quantity) || 0,
@@ -1125,13 +1125,16 @@ function addItemToTable(item, isImported = false) {
     unitPrice: parseFloat(item.unitPrice) || 0,
     total: isImported
       ? (typeof item.laborCost !== "undefined" ? parseFloat(item.laborCost) || 0 : 0)
-      : (Number(item.quantity) * (parseFloat(item.unitPrice) || 0))
+      : (Number(item.quantity) * (parseFloat(item.unitPrice) || 0)),
+    estimateId: item.estimateId || undefined, // <-- ADD
+    itemId: item.itemId || item._id || undefined // <-- ADD (itemId or fallback to _id)
   };
 
   console.log(`✅ Item Added - ${isImported ? "Imported" : "Manual"}:`, cleaned);
   lineItems.push(cleaned);
   renderLineItems();
 }
+
 
 
 
@@ -1455,14 +1458,16 @@ async function submitInvoice() {
   const todayISO = new Date().toISOString();
   const invoiceDate = inputDate || todayISO;
 
-  // Ensure each line item has a total property
+  // Ensure each line item has a total property and includes estimateId/itemId
   const lineItemsWithTotal = lineItems.map(item => ({
     ...item,
     total: typeof item.total !== "undefined"
       ? Number(item.total)
       : (typeof item.laborCost !== "undefined"
           ? Number(item.laborCost)
-          : (Number(item.quantity) * (parseFloat(item.unitPrice) || 0)))
+          : (Number(item.quantity) * (parseFloat(item.unitPrice) || 0))),
+    estimateId: item.estimateId || undefined, // <-- ADD
+    itemId: item.itemId || item._id || undefined // <-- ADD
   }));
 
   const invoiceData = {
