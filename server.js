@@ -717,8 +717,9 @@ const invoiceSchema = new mongoose.Schema({
       quantity: Number,
       unitPrice: Number,
       costCode: String,
-      total: { type: Number, required: true }
-            estimateId: { type: mongoose.Schema.Types.ObjectId, ref: 'Estimate' },
+      total: { type: Number, required: true },
+      // 👇 Add these fields for tracking
+      estimateId: { type: mongoose.Schema.Types.ObjectId, ref: 'Estimate' },
       itemId: { type: mongoose.Schema.Types.ObjectId } // or String if you use string IDs
     }
   ],
