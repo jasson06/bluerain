@@ -897,9 +897,58 @@
   <div id="quoteDetailContent" style="display: none;"></div>
 
   
-  <button id="addQuoteBtn" onclick="location.href='/createquote.html'" title="New Quote">
+<div style="position: fixed; bottom: 20px; right: 20px; z-index: 10001;">
+  <button id="addQuoteBtn" title="New Quote" style="position: relative;">
     ＋
   </button>
+  <div id="addQuoteMenu" style="
+    display: none;
+    position: absolute;
+    bottom: 72px;
+    right: 0;
+    background: #fff;
+    border: 1.5px solid #bae6fd;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(14,165,233,0.13), 0 1.5px 8px rgba(0,0,0,0.08);
+    min-width: 210px;
+    padding: 10px 0;
+    flex-direction: column;
+    gap: 0;
+    animation: fadeInScale 0.18s;
+    z-index: 10002;
+  ">
+    <button id="startFromScratchBtn" style="
+      background: none;
+      border: none;
+      width: 100%;
+      text-align: left;
+      padding: 14px 26px;
+      font-size: 1.08rem;
+      color: #0ea5e9;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 1px solid #e0f2fe;
+      transition: background 0.13s, color 0.13s;
+    " onmouseover="this.style.background='#f0f9ff';this.style.color='#0284c7';" onmouseout="this.style.background='none';this.style.color='#0ea5e9';">
+      <span style="margin-right:10px;"></span> Start from Scratch
+    </button>
+    <button id="importQuoteBtn" style="
+      background: none;
+      border: none;
+      width: 100%;
+      text-align: left;
+      padding: 14px 26px;
+      font-size: 1.08rem;
+      color: #0ea5e9;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.13s, color 0.13s;
+    " onmouseover="this.style.background='#f0f9ff';this.style.color='#0284c7';" onmouseout="this.style.background='none';this.style.color='#0ea5e9';">
+      <span style="margin-right:10px;"></span> Import Quote
+    </button>
+    <input type="file" id="importQuoteFile" accept=".xlsx,.xls" style="display:none;">
+  </div>
+</div>
 
 <div id="paymentsModal" class="modal">
   <div class="modal-content" style="max-width: 700px;">
@@ -924,6 +973,37 @@
   </div>
 </div>
 
+<!-- Import Quote Modal -->
+<div id="importQuoteModal" class="modal" style="display:none; z-index:20001;">
+  <div class="modal-content" style="max-width:600px;">
+    <div class="modal-header" style="margin-bottom:18px;">
+      <h3 style="margin:0; color:#0ea5e9;">Import Quote Details</h3>
+      <span class="close-modal" onclick="closeImportQuoteModal()" style="font-size:2rem; color:#64748b; cursor:pointer;">&times;</span>
+    </div>
+    <form id="importQuoteForm">
+      <label for="importQuoteNumber"><strong>Quote Number</strong></label>
+      <input type="text" id="importQuoteNumber" required style="margin-bottom:12px;" />
+
+      <label for="importClientName"><strong>Client Name</strong></label>
+      <input type="text" id="importClientName" required style="margin-bottom:12px;" />
+
+      <label for="importClientAddress"><strong>Client Address</strong></label>
+      <input type="text" id="importClientAddress" style="margin-bottom:12px;" />
+
+      <label for="importClientEmail"><strong>Client Email</strong></label>
+      <input type="email" id="importClientEmail" style="margin-bottom:12px;" />
+
+      <label for="importClientPhone"><strong>Client Phone</strong></label>
+      <input type="text" id="importClientPhone" style="margin-bottom:12px;" />
+
+      <label for="importNotes"><strong>Notes</strong></label>
+      <textarea id="importNotes" rows="2" style="margin-bottom:18px;"></textarea>
+
+      <button type="submit" style="width:100%; background:#0ea5e9;">Import Quote</button>
+    </form>
+  </div>
+</div>
+  
 <!-- Toast Notification -->
 <div id="toast" style="
   position: fixed;
@@ -1001,9 +1081,15 @@ document.addEventListener('click', (e) => {
 
 function showToast(message) {
   const toast = document.getElementById('toast');
-  toast.textContent = message;
+  toast.innerHTML = message; // Allow HTML content
   toast.style.display = 'block';
-  setTimeout(() => { toast.style.display = 'none'; }, 3000);
+  toast.style.opacity = '1';
+  toast.style.pointerEvents = 'auto';
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.pointerEvents = 'none';
+    setTimeout(() => { toast.style.display = 'none'; toast.innerHTML = ''; }, 350);
+  }, 3000);
 }
 
 function showLoader() {
@@ -3106,7 +3192,217 @@ function closePaymentsModal() {
   document.getElementById('paymentsModal').style.display = 'none';
 }
 
+// Toggle menu on + button click
+  document.getElementById('addQuoteBtn').onclick = function(e) {
+    e.stopPropagation();
+    const menu = document.getElementById('addQuoteMenu');
+    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+    menu.style.flexDirection = 'column';
+  };
 
+  // Hide menu when clicking outside
+  document.addEventListener('click', function(e) {
+    const menu = document.getElementById('addQuoteMenu');
+    if (menu && !menu.contains(e.target) && e.target.id !== 'addQuoteBtn') {
+      menu.style.display = 'none';
+    }
+  });
+
+  // Start from scratch
+  document.getElementById('startFromScratchBtn').onclick = function() {
+    window.location.href = '/createquote.html';
+  };
+
+  // Import Quote
+  document.getElementById('importQuoteBtn').onclick = function() {
+    document.getElementById('importQuoteFile').click();
+  };
+
+  // Import handler (reuse importQuoteFromExcel from previous answer)
+  document.getElementById('importQuoteFile').onchange = function(e) {
+    if (e.target.files && e.target.files[0]) {
+      importQuoteFromExcel(e.target.files[0]);
+      e.target.value = '';
+      document.getElementById('addQuoteMenu').style.display = 'none';
+    }
+  };
+
+// Add this function near your other main functions (e.g., after exportQuoteToExcel)
+async function importQuoteFromExcel(file) {
+  showLoader();
+  try {
+    const reader = new FileReader();
+    reader.onload = async function (e) {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      // Expecting header: ["Category", "Cost Code", "Name", "Description", "Quantity", "Unit Price"]
+      const header = rows[0].map(h => h.trim());
+      const expected = ["Category", "Cost Code", "Name", "Description", "Quantity", "Unit Price"];
+if (header.join() !== expected.join()) {
+  showToast(
+    "Invalid file format. Please use the following header order:<br><br>" +
+    "<b>Category, Cost Code, Name, Description, Quantity, Unit Price</b><br><br>" +
+    "Download a sample template from the Export function for reference."
+  );
+  hideLoader();
+  return;
+}
+
+      // Parse line items
+      const lineItems = rows.slice(1).filter(row => row.length >= 6 && row[2]).map(row => ({
+        category: row[0] || "General",
+        costCode: row[1] || "",
+        name: row[2] || "",
+        description: row[3] || "",
+        qty: parseFloat(row[4]) || 0,
+        rate: parseFloat(row[5]) || 0
+      }));
+
+      if (lineItems.length === 0) {
+        showToast("No line items found in file.");
+        hideLoader();
+        return;
+      }
+
+      openImportQuoteModal(lineItems);
+      hideLoader(); // Hide loader until user submits modal
+      return;
+
+      // Calculate totals
+      const subtotal = lineItems.reduce((sum, item) => sum + (item.qty * item.rate), 0);
+      const discount = 0;
+      const tax = 0;
+      const total = subtotal - discount + tax;
+
+      // Build quote object
+      const quote = {
+        quoteNumber,
+        from: {
+          name: "BESF LLC",
+          address: "",
+          email: "",
+          phone: "",
+          license: ""
+        },
+        to: {
+          name: clientName,
+          address: clientAddress,
+          email: clientEmail,
+          phone: clientPhone
+        },
+        date: new Date().toISOString(),
+        validTill: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        notes,
+        lineItems,
+        totals: { subtotal, discount, tax, total }
+      };
+
+      // Save to server
+      const res = await fetch('/api/quotes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(quote)
+      });
+
+      if (res.ok) {
+        showToast("Quote imported successfully!");
+        fetchQuotes();
+      } else {
+        showToast("Failed to import quote.");
+      }
+      hideLoader();
+    };
+    reader.readAsArrayBuffer(file);
+  } catch (err) {
+    console.error("Import failed:", err);
+    showToast("Failed to import quote.");
+    hideLoader();
+  }
+}
+
+
+function openImportQuoteModal(lineItems) {
+  _importQuoteModalLineItems = lineItems;
+  document.getElementById('importQuoteNumber').value = "Q-" + Date.now();
+  document.getElementById('importClientName').value = "";
+  document.getElementById('importClientAddress').value = "";
+  document.getElementById('importClientEmail').value = "";
+  document.getElementById('importClientPhone').value = "";
+  document.getElementById('importNotes').value = "";
+  document.getElementById('importQuoteModal').style.display = 'flex';
+}
+
+function closeImportQuoteModal() {
+  document.getElementById('importQuoteModal').style.display = 'none';
+  _importQuoteModalLineItems = null;
+}
+
+document.getElementById('importQuoteForm').onsubmit = async function(e) {
+  e.preventDefault();
+  if (!_importQuoteModalLineItems) return;
+
+  showLoader();
+
+  const quoteNumber = document.getElementById('importQuoteNumber').value.trim();
+  const clientName = document.getElementById('importClientName').value.trim();
+  const clientAddress = document.getElementById('importClientAddress').value.trim();
+  const clientEmail = document.getElementById('importClientEmail').value.trim();
+  const clientPhone = document.getElementById('importClientPhone').value.trim();
+  const notes = document.getElementById('importNotes').value.trim();
+
+  // Calculate totals
+  const subtotal = _importQuoteModalLineItems.reduce((sum, item) => sum + (item.qty * item.rate), 0);
+  const discount = 0;
+  const tax = 0;
+  const total = subtotal - discount + tax;
+
+  // Build quote object
+   const quote = {
+    quoteNumber,
+    from: {
+      name: "BESF LLC",
+      address: "7 CYPRESS POINT CT",
+      email: "besfllc@gmail.com",
+      phone: "7252603319",
+      license: "RBC-2400049"
+    },
+    to: {
+      name: clientName,
+      address: clientAddress,
+      email: clientEmail,
+      phone: clientPhone
+    },
+    date: new Date().toISOString(),
+    validTill: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    notes,
+    lineItems: _importQuoteModalLineItems,
+    totals: { subtotal, discount, tax, total }
+  };
+
+  try {
+    const res = await fetch('/api/quotes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(quote)
+    });
+
+    if (res.ok) {
+      showToast("Quote imported successfully!");
+      closeImportQuoteModal();
+      fetchQuotes();
+    } else {
+      showToast("Failed to import quote.");
+    }
+  } catch (err) {
+    showToast("Failed to import quote.");
+  } finally {
+    hideLoader();
+  }
+};
 
   </script>
 </body>
