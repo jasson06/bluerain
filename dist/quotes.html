@@ -2905,8 +2905,8 @@ async function shareQuote(id) {
 
 
 
-    async function exportQuoteToExcel(id) {
-      showLoader(); // 👈 START   
+async function exportQuoteToExcel(id) {
+  showLoader(); // 👈 START   
   try {
     const res = await fetch(`/api/quotes/${id}`);
     const q = await res.json();
@@ -2916,17 +2916,31 @@ async function shareQuote(id) {
       return;
     }
 
-    // Prepare flattened line items
+    // Prepare flattened line items in the correct order
     const rows = q.lineItems.map(item => ({
-      "Category": item.category || "",     // Assumes item.category exists
+      "Category": item.category || (() => {
+        // Try to infer category from name if not present
+        if (item.name && item.name.includes('-')) {
+          const cat = item.name.split('-').slice(1).join('-').trim();
+          return cat || "General";
+        }
+        return "General";
+      })(),
+      "Cost Code": item.costCode || "",
       "Name": item.name || "",
       "Description": item.description || "",
       "Quantity": item.qty || 0,
       "Unit Price": item.rate || 0
     }));
 
+    // Ensure column order
+    const header = ["Category", "Cost Code", "Name", "Description", "Quantity", "Unit Price"];
+    const data = [header].concat(
+      rows.map(row => header.map(h => row[h]))
+    );
+
     // Convert to Excel sheet
-    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
 
     // Create workbook and download
     const workbook = XLSX.utils.book_new();
