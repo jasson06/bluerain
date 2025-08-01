@@ -1084,18 +1084,21 @@ async function startJob(projectId) {
       hideLoader();
       return;
     }
-    // Update each item's status to "in-progress"
-for (const item of assignedItems) {
-  await fetch(`/api/vendors/${vendorId}/update-item-status`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      itemId: item.itemId, 
-      status: "in-progress"
-    })
-  });
-}
-    showToast("All line items set to In Progress!", "success");
+    // Only update items with status "new"
+    for (const item of assignedItems) {
+      const status = (item.status || "").toLowerCase();
+      if (status === "new") {
+        await fetch(`/api/vendors/${vendorId}/update-item-status`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            itemId: item.itemId, 
+            status: "in-progress"
+          })
+        });
+      }
+    }
+    showToast("All new line items set to In Progress!", "success");
     // Optionally, refresh projects
     await fetchAssignedProjects(vendorId);
   } catch (error) {
@@ -1104,7 +1107,7 @@ for (const item of assignedItems) {
   } finally {
     hideLoader();
   }
-}    
+}
   </script>
 </body>
 </html>
