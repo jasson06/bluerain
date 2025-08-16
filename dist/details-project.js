@@ -1442,38 +1442,7 @@ function createNewTask() {
 }
 
 
-// Enable drag-and-drop functionality for sections
-function enableDragAndDrop() {
-  const sections = document.querySelectorAll('.details-section');
 
-  sections.forEach((section) => {
-    section.setAttribute('draggable', true);
-
-    section.addEventListener('dragstart', (event) => {
-      event.dataTransfer.setData('text/plain', section.id);
-      section.style.opacity = '0.5';
-    });
-
-    section.addEventListener('dragend', () => {
-      section.style.opacity = '1';
-    });
-
-    section.addEventListener('dragover', (event) => {
-      event.preventDefault();
-    });
-
-    section.addEventListener('drop', (event) => {
-      event.preventDefault();
-      const draggedId = event.dataTransfer.getData('text/plain');
-      const draggedElement = document.getElementById(draggedId);
-
-      if (draggedElement && section !== draggedElement) {
-        const container = document.querySelector('.container');
-        container.insertBefore(draggedElement, section.nextSibling);
-      }
-    });
-  });
-}
 
 // Dynamically load projects into the sidebar
 async function loadSidebarProjects() {
@@ -1539,52 +1508,199 @@ async function loadSidebarProjects() {
  
 
 // Function to load estimates for the current project with edit and assignment options
-  async function loadEstimates(projectId) {
-    const estimatesList = document.getElementById("estimates-list");
-    const estimatesCount = document.getElementById("estimates-count");
-    const totalBudgetEl = document.getElementById("total-budget"); // 👈 new
-    showLoader();
-  
-    try {
-      const response = await fetch(`/api/estimates?projectId=${projectId}`);
-      if (!response.ok) throw new Error("Failed to fetch estimates");
-  
-      const { estimates } = await response.json();
-  
-      if (!estimates || estimates.length === 0) {
-        estimatesList.innerHTML = "<p>No estimates found.</p>";
-        estimatesCount.textContent = "(0)";
-        totalBudgetEl.textContent = "$0.00"; // 👈 reset
-      } else {
-        estimatesCount.textContent = `(${estimates.length})`;
-  
-        let totalBudget = 0;
-        estimatesList.innerHTML = estimates.map((estimate) => {
-          totalBudget += estimate.total || 0;
-          return `
-            <div class="estimate-item">
-              ${estimate.title ? `<h3 class="estimate-title">${estimate.title}</h3>` : ""}
-              <p><strong>Invoice #:</strong> ${estimate.invoiceNumber}</p>
-              <p><strong>Total:</strong> $${estimate.total.toFixed(2)}</p>
-              <button class="view-estimate-button" onclick="viewEstimate('${estimate._id}')">View</button>
-              <button class="edit-estimate-button" onclick="editEstimate('${projectId}', '${estimate._id}')">Edit</button>
-              <button class="delete-estimate-button" onclick="deleteEstimate('${estimate._id}')">Delete</button>
-            </div>
-          `;
-        }).join("");
-  
-        totalBudgetEl.textContent = `$${totalBudget.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-      }
-  
-      loadTasks(projectId);
-    } catch (error) {
-      console.error("Error loading estimates:", error);
-      estimatesList.innerHTML = "<p>An error occurred while loading estimates.</p>";
-      totalBudgetEl.textContent = "$0.00"; // fallback
-    } finally {
-      hideLoader();
+async function loadEstimates(projectId) {
+  const estimatesList = document.getElementById("estimates-list");
+  const estimatesCount = document.getElementById("estimates-count");
+  const totalBudgetEl = document.getElementById("total-budget");
+  showLoader();
+
+  try {
+    const response = await fetch(`/api/estimates?projectId=${projectId}`);
+    if (!response.ok) throw new Error("Failed to fetch estimates");
+
+    const { estimates } = await response.json();
+
+    if (!estimates || estimates.length === 0) {
+      estimatesList.innerHTML = `
+        <div class="empty-estimates modern-card">
+          <i class="fas fa-file-invoice-dollar" style="font-size: 2.5rem; color: #3b82f6;"></i>
+          <p style="margin-top: 10px; color: #64748b;">No estimates found for this project.</p>
+        </div>
+      `;
+      estimatesCount.textContent = "(0)";
+      totalBudgetEl.textContent = "$0.00";
+    } else {
+      estimatesCount.textContent = `(${estimates.length})`;
+
+      let totalBudget = 0;
+estimatesList.innerHTML = estimates.map((estimate) => {
+  totalBudget += estimate.total || 0;
+  const createdDate = estimate.createdAt
+    ? new Date(estimate.createdAt).toLocaleDateString()
+    : "N/A";
+  return `
+    <div class="estimate-item modern-card">
+      <div class="estimate-header">
+        <div>
+          ${estimate.title ? `<h3 class="estimate-title">${estimate.title}</h3>` : ""}
+          <span class="estimate-date"><i class="far fa-calendar-alt"></i> ${createdDate}</span>
+        </div>
+        <div class="estimate-actions">
+          <button class="view-estimate-button smart-btn" onclick="viewEstimate('${estimate._id}')">
+            <i class="fas fa-eye"></i> View
+          </button>
+          <button class="edit-estimate-button smart-btn" onclick="editEstimate('${projectId}', '${estimate._id}')">
+            <i class="fas fa-edit"></i> Edit
+          </button>
+          <button class="delete-estimate-button smart-btn danger" onclick="deleteEstimate('${estimate._id}')">
+            <i class="fas fa-trash"></i> Delete
+          </button>
+        </div>
+      </div>
+      <div class="estimate-details">
+        <p><strong>Invoice #:</strong> <span class="mono">${estimate.invoiceNumber}</span></p>
+        <p><strong>Total:</strong> <span class="mono" style="color:#10b981;">$${estimate.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></p>
+      </div>
+    </div>
+  `;
+}).join("");
+
+      totalBudgetEl.textContent = `$${totalBudget.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     }
+
+    loadTasks(projectId);
+  } catch (error) {
+    console.error("Error loading estimates:", error);
+    estimatesList.innerHTML = "<p>An error occurred while loading estimates.</p>";
+    totalBudgetEl.textContent = "$0.00";
+  } finally {
+    hideLoader();
   }
+}
+
+// Add modern styles for the estimates section
+if (!document.getElementById("modern-estimate-styles")) {
+  const style = document.createElement("style");
+  style.id = "modern-estimate-styles";
+  style.innerHTML = `
+    .modern-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(59,130,246,0.07), 0 1.5px 6px rgba(0,0,0,0.04);
+      margin-bottom: 18px;
+      padding: 0px 28px;
+      transition: box-shadow 0.2s;
+      border: 1px solid #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .modern-card:hover {
+      box-shadow: 0 4px 24px rgba(59,130,246,0.13), 0 3px 12px rgba(0,0,0,0.08);
+      border-color: #3b82f6;
+    }
+    .estimate-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .estimate-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #0f172a;
+      margin: 0;
+    }
+    .estimate-date {
+      font-size: 0.95rem;
+      color: #64748b;
+      margin-top: 2px;
+      display: inline-block;
+    }
+    .estimate-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .smart-btn {
+      background: #f3f4f6;
+      border: none;
+      border-radius: 6px;
+      padding: 7px 14px;
+      font-size: 0.98rem;
+      color: #007bff;
+      cursor: pointer;
+      transition: background 0.18s, color 0.18s;
+      display: flex;
+      align-items: center;
+      gap: 0px;
+    }
+    .smart-btn:hover {
+      background: #e0e7ff;
+      color: #0063f7ff;
+      
+    }
+    .smart-btn.danger {
+      color: #ef4444;
+      background: #fef2f2;
+    }
+    .smart-btn.danger:hover {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+    .estimate-details {
+      display: flex;
+      gap: 32px;
+      font-size: 1.05rem;
+      color: #334155;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .mono {
+      font-family: 'Roboto Mono', 'Menlo', 'Consolas', monospace;
+      font-size: 1.05em;
+      letter-spacing: 0.5px;
+    }
+    .empty-estimates {
+      text-align: center;
+      padding: 40px 0;
+      color: #64748b;
+      font-size: 1.1rem;
+    }
+      /* --- Responsive styles for mobile devices --- */
+    @media (max-width: 600px) {
+      .modern-card {
+        padding: 12px 8px;
+        margin-bottom: 14px;
+        border-radius: 8px;
+      }
+      .estimate-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+      .estimate-title {
+        font-size: 1.05rem;
+      }
+      .estimate-date {
+        font-size: 0.85rem;
+      }
+      .estimate-details {
+        flex-direction: column;
+        gap: 10px;
+        font-size: 0.98rem;
+      }
+      .smart-btn {
+        font-size: 0.95rem;
+        padding: 6px 10px;
+        gap: 4px;
+      }
+      .estimate-actions {
+        gap: 4px;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
   function openFinancialReport(projectId) {
     if (!projectId) {
@@ -1961,13 +2077,47 @@ function displayFiles(files) {
   const container = document.getElementById('uploaded-files-container');
   container.innerHTML = '';
 
+  // Add file count styled like the estimate section
+  let fileCountEl = document.getElementById('files-count');
+  if (!fileCountEl) {
+    fileCountEl = document.createElement('span');
+    fileCountEl.id = 'files-count';
+    fileCountEl.style.fontWeight = 'bold';
+    fileCountEl.style.color = '#0f4c75';
+    fileCountEl.style.marginLeft = '8px';
+    // Try to insert after the section title if available
+    const sectionTitle = document.querySelector('#files-section h2');
+    if (sectionTitle) {
+      sectionTitle.appendChild(fileCountEl);
+    } else if (container.parentNode) {
+      container.parentNode.insertBefore(fileCountEl, container);
+    }
+  }
+  fileCountEl.textContent = `(${files.length})`;
+  
+
+  // Enable scroll if more than 10 files
+  if (files.length > 10) {
+    container.style.maxHeight = '440px';
+    container.style.overflowY = 'auto';
+  } else {
+    container.style.maxHeight = '';
+    container.style.overflowY = '';
+  }
+
+
   files.forEach(file => {
     const fileItem = document.createElement('div');
     fileItem.className = 'file-item';
 
-    // Extract the filename from the path
-    const filename = file.path.split('/').pop();
-    const fileUrl = `${UPLOADS_PATH}${encodeURIComponent(filename)}`;
+    // Extract the filename for display (remove any timestamp prefix)
+    // Example: "1753712159161-WEBB FIRE PLAN.pdf" → "WEBB FIRE PLAN.pdf"
+    let filename = file.filename || file.path.split('/').pop();
+    if (/^\d{10,}-/.test(filename)) {
+      filename = filename.replace(/^\d{10,}-/, '');
+    }
+
+    const fileUrl = `${UPLOADS_PATH}${encodeURIComponent(file.path.split('/').pop())}`;
 
     // Checkbox for Selection
     const checkbox = document.createElement('input');
@@ -1984,9 +2134,9 @@ function displayFiles(files) {
     // File Name (Clickable to Open in New Tab)
     const fileName = document.createElement('a');
     fileName.href = fileUrl;
-    fileName.textContent = filename;
+    fileName.textContent = filename; // Show cleaned filename
     fileName.className = 'file-name';
-    fileName.target = '_blank'; // ✅ Open in a new tab
+    fileName.target = '_blank';
     fileName.style.cursor = 'pointer';
 
     // Download Icon
@@ -2001,12 +2151,12 @@ function displayFiles(files) {
     deleteIcon.title = 'Delete';
     deleteIcon.addEventListener('click', () => deleteFile(file._id, fileItem));
 
-            // --- Preview on Hover ---
-fileItem.addEventListener('mouseenter', (e) => showFilePreview(e, fileUrl, file.mimetype));
-fileItem.addEventListener('mousemove', (e) => {
-  if (!isMouseOverPopup) moveFilePreview(e);
-});
-fileItem.addEventListener('mouseleave', hideFilePreview);
+    // --- Preview on Hover ---
+    fileItem.addEventListener('mouseenter', (e) => showFilePreview(e, fileUrl, file.mimetype));
+    fileItem.addEventListener('mousemove', (e) => {
+      if (!isMouseOverPopup) moveFilePreview(e);
+    });
+    fileItem.addEventListener('mouseleave', hideFilePreview);
 
     fileItem.appendChild(checkbox);
     fileItem.appendChild(fileIcon);
@@ -2271,7 +2421,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadProjectDetails(projectId);
   loadTasks(projectId);
   loadEstimates(projectId);
-  enableDragAndDrop();
+ 
   loadSidebarProjects();
   setupManageTeamModal();
   renderQualityControlItems(projectId);
