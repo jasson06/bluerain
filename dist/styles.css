@@ -1767,7 +1767,7 @@ body {
 }
 
 .estimate-actions button {
-  padding: 10px 15px;
+  
   border: none;
   border-radius: 5px;
   cursor: pointer;
@@ -1935,8 +1935,8 @@ li.completed span {
 
 .dropdown-menu {
   position: absolute;
-  top: 28px;
-  right: 0;
+  top: 48px;
+  
   background: white;
   border: 1px solid #ccc;
   border-radius: 8px;
@@ -2295,7 +2295,7 @@ li.completed span {
 
 
 #files-section {
-  width: 90%;
+  width: 95%;
   max-width: 1200px;
   margin: 30px auto;
   padding: 20px;
