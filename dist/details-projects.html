@@ -236,9 +236,9 @@
 </section>
 
 
-      <!-- ✅ Dedicated Quality Control Review Section -->
+  <!-- ✅ Dedicated Quality Control Review Section -->
 
-<section id="quality-control-section" style="margin-top: 60px; padding: 20px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 10px;">
+<section id="quality-control-section" style="margin-top: 30px; padding: 20px; background: #ffffff; border: 1px solid #ddd; border-radius: 10px;">
   <h2 style="color: #0f4c75; font-size: 24px; margin-bottom: 10px;">🛠️ Quality Control Review</h2>
   <p style="color: #666; font-size: 14px;">Review summary of completed work below. Navigate to the QC Control page for detailed review and actions.</p>
   
@@ -251,15 +251,13 @@
 <!-- Files Section -->
 <section id="files-section" class="details-section">
   <h2>Files & Photos</h2>
-
   <div class="upload-box">
     <button class="upload-button" onclick="uploadFiles()">Upload Files ▼</button>
     <p>Upload images, files, and more to share with your team.</p>
   </div>
   <div id="dropzone" class="dropzone" ondrop="handleDrop(event)" ondragover="event.preventDefault();">
-  Drag and drop files here or click to upload
-</div>
-
+    Drag and drop files here or click to upload
+  </div>
 
   <!-- Action Dropdown -->
   <div id="file-actions" class="action-dropdown" style="display: none;">
@@ -278,18 +276,14 @@
     </label>
   </div>
 
-
   <div id="file-section">
-  <div id="file-loader" style="display:none;justify-content:center;align-items:center;height:60px;">
-    <div class="spinner"></div>
+    <div id="file-loader" style="display:none;justify-content:center;align-items:center;height:60px;">
+      <div class="spinner"></div>
+    </div>
+    <div id="uploaded-files-container"></div>
   </div>
-  <div id="uploaded-files-container"></div>
-</div>
-
-  <!-- Files Container -->
-  <div id="uploaded-files-container" class="files-container"></div>
   <div id="file-preview-popup" class="file-preview-popup"></div>
-
+</section>
 
 
 
