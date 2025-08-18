@@ -6074,6 +6074,19 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebar.classList.remove('visible');
     });
 
+           // Touch support for maintenance-card hover effect on iOS/mobile
+    document.querySelectorAll('.maintenance-card').forEach(card => {
+        card.addEventListener('touchstart', function() {
+            this.classList.add('active');
+        });
+        card.addEventListener('touchend', function() {
+            this.classList.remove('active');
+        });
+        card.addEventListener('touchcancel', function() {
+            this.classList.remove('active');
+        });
+    });
+
     // Hide sidebar on resize if needed
     window.addEventListener('resize', () => {
         setSidebarInitial();
@@ -6110,6 +6123,7 @@ window.deletePayment = deletePayment;
     </script>
 </body>
 </html>
+
 
 
 
