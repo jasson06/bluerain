@@ -1456,18 +1456,6 @@ async function toggleItemStatus(vendorId, itemId, currentStatus) {
             newStatus = "in-progress";
             nextLabel = "Mark as Completed";
         } else if (currentStatus === "in-progress") {
-            // --- ADD: Require at least one after photo to mark as completed ---
-            const afterPhotosContainer = document.getElementById(`after-photos-${itemId}`);
-            let hasAfterPhoto = false;
-            if (afterPhotosContainer) {
-                // Try to find at least one <img> inside the after photos container
-                hasAfterPhoto = !!afterPhotosContainer.querySelector("img");
-            }
-            if (!hasAfterPhoto) {
-                showToast("You need to upload at least one AFTER photo to mark this item as completed.", "warning");
-                return;
-            }
-            // ---------------------------------------------------------------
             newStatus = "completed";
             nextLabel = "Mark as In Progress";
         } else if (currentStatus === "completed") {
@@ -1482,6 +1470,7 @@ async function toggleItemStatus(vendorId, itemId, currentStatus) {
         const activeTab = document.querySelector(".estimate-tab.active");
         const estimateId = activeTab ? activeTab.dataset.estimateId : null;
 
+        // Update vendor item status (preserve existing functionality)
         const response = await fetch(`/api/vendors/${vendorId}/update-item-status`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
@@ -1496,6 +1485,18 @@ async function toggleItemStatus(vendorId, itemId, currentStatus) {
             const errorMessage = await response.text();
             console.error(`❌ Failed to update item status: ${errorMessage}`);
             return;
+        }
+
+        // 🔹 NEW: Sync maintenance request status via PATCH
+        // This will update the maintenance request status automatically
+        try {
+            await fetch(`/api/estimates/line-items/${itemId}/status`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: newStatus })
+            });
+        } catch (err) {
+            console.warn("Maintenance request status sync failed:", err);
         }
 
         // Wait for a small delay to ensure server processing completes
@@ -1532,7 +1533,6 @@ async function toggleItemStatus(vendorId, itemId, currentStatus) {
         console.error("Error:", error);
     }
 }
-
 
 
 
