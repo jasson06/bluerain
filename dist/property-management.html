@@ -724,10 +724,19 @@ select {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.maintenance-card:hover {
+.maintenance-card:hover,
+.maintenance-card.active {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(6, 79, 206, 0.737);
     background-color: #eaf6ff;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .maintenance-card:active {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(6, 79, 206, 0.737);
+    background-color: #eaf6ff;
+  }
 }
 
 .maintenance-header {
@@ -6096,4 +6105,5 @@ window.deletePayment = deletePayment;
     </script>
 </body>
 </html>
+
 
