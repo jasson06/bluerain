@@ -1121,7 +1121,7 @@ app.post('/api/estimates', async (req, res) => {
             unitPrice: item.unitPrice,
             total: item.total || item.quantity * item.unitPrice,
             status: item.status || 'in-progress',
-            assignedTo: item.assignedTo || null
+            assignedTo: item.assignedTo || null,
             maintenanceRequestId: item.maintenanceRequestId 
           };
         });
