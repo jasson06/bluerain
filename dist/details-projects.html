@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Project Details</title>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -16,7 +14,7 @@
 <body>
   <div class="sidebar">
     <div class="sidebar-header">
-      <h2 class="home-option"><a href="/">Home</a></h2>
+      <h2 class="home-option"><a href="/dashboard">Home</a></h2>
     </div>
   
     <ul id="sidebar-projects-list">
@@ -42,6 +40,8 @@
     </ul>
     
   </div>
+  
+  
 
   <!-- Main Container -->
   <div class="container">
@@ -67,6 +67,19 @@
       <button class="manage-btn" onclick="openModal()">
         <i class="fas fa-users-cog"></i> Manage Vendors
       </button>
+
+      <div class="maintenance-notification-wrapper" style="position: relative;">
+  <button id="maintenanceNotifBtn" class="notif-icon-btn" style="position: relative;">
+    <i class="fas fa-tools"></i>
+    <span id="maintenanceNotifCount" class="notif-count-badge" style="display:none;">0</span>
+  </button>
+  <div id="maintenanceNotifDropdown" class="notif-dropdown" style="display:none;">
+    <div class="notif-dropdown-header">
+      <strong>Maintenance Requests</strong>
+    </div>
+    <div id="maintenanceNotifList" class="notif-list"></div>
+  </div>
+</div>
     </div>
 
     <div id="project-details">
@@ -236,6 +249,7 @@
 </section>
 
 
+
   <!-- ✅ Dedicated Quality Control Review Section -->
 
 <section id="quality-control-section" style="margin-top: 30px; padding: 20px; background: #ffffff; border: 1px solid #ddd; border-radius: 10px;">
@@ -246,6 +260,8 @@
     <p style="color:#aaa;">Loading summary...</p>
   </div>
 </section>
+
+
 
 
 <!-- Files Section -->
@@ -288,12 +304,14 @@
 
 
 
+
     <!-- Schedule Section -->
     <section id="schedule-section" class="details-section">
       <h2>Schedule</h2>
       <button class="create-schedule-button" onclick="createSchedule()">Create Schedule</button>
       <p>Start building out your project schedule.</p>
     </section>
+    
 
     <!-- Selection Boards Section -->
     <section id="selection-boards-section" class="details-section">
@@ -302,6 +320,9 @@
       <button class="selection-button" onclick="customizeSelection()">Customize Selection Boards</button>
     </section>
   </div>
+
+
+
 
       <!-- Edit Project Modal -->
 <div id="edit-project-modal" class="modal" style="display: none;">
@@ -315,8 +336,8 @@
       <select id="edit-project-status" required>
         <option value="Upcoming">Upcoming</option>
         <option value="In Progress">In Progress</option>
-         <option value="On Market">On Market</option>
-        <option value="completed">Completed</option> 
+        <option value="On Market">On Market</option>
+        <option value="completed">Completed</option>  
       </select>
 
       <label for="edit-project-color">Color:</label>
@@ -494,4 +515,3 @@
  
 </body>
 </html>
-
