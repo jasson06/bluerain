@@ -2224,7 +2224,65 @@ select {
     box-shadow: 0 1px 4px rgba(61,169,252,0.07);
 }
 
+.tenant-tabs {
+    display: flex;
+    margin-top: 20px;
+    gap: 0;
+    margin-bottom: 18px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(44,62,80,0.07);
+    background: #f8fafd;
+    border: 1.5px solid #e1e8ed;
+}
 
+.tenant-tab-btn {
+    flex: 1 1 0;
+    padding: 13px 0;
+    font-size: 1.07rem;
+    font-weight: 600;
+    border: none;
+    background: none;
+    color: #2980b9;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+    outline: none;
+    border-right: 1px solid #e1e8ed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+.tenant-tab-btn:last-child {
+    border-right: none;
+}
+.tenant-tab-btn.active {
+    background: linear-gradient(90deg, #2c3e50 0%, #2c3e50 100%);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(52,152,219,0.10);
+    z-index: 1;
+}
+.tenant-tab-btn:not(.active):hover {
+    background: #eaf6ff;
+    color: #217dbb;
+}
+
+@media (max-width: 600px) {
+    .tenant-tabs {
+        flex-direction: column;
+        box-shadow: none;
+        border-radius: 8px;
+    }
+    .tenant-tab-btn {
+        border-right: none;
+        border-bottom: 1px solid #e1e8ed;
+        padding: 12px 0;
+        font-size: 1rem;
+    }
+    .tenant-tab-btn:last-child {
+        border-bottom: none;
+    }
+}
 
    </style>
 </head>
@@ -2350,13 +2408,21 @@ select {
                     </div>
 
                     <!-- Tenants Tab -->
-                    <div class="tab-pane" id="tenants">
-                        <div class="tenants-header">
-                            <h2>Tenants</h2>
-                            <button class="btn-secondary" id="addTenantBtn">+ Add Tenant</button>
-                        </div>
-                        <div class="tenants-list" id="tenantsList"></div>
-                    </div>
+<div class="tab-pane" id="tenants">
+    <div class="tenants-header">
+        <h2>Tenants</h2>
+        <button class="btn-secondary" id="addTenantBtn">+ Add Tenant</button>
+    </div>
+<div class="tenant-tabs">
+    <button class="tenant-tab-btn active" id="activeTenantsTab">
+        <i class="fas fa-user-check"></i> Active Tenants
+    </button>
+    <button class="tenant-tab-btn" id="inactiveTenantsTab">
+        <i class="fas fa-user-slash"></i> Inactive Tenants
+    </button>
+</div>
+    <div class="tenants-list" id="tenantsList"></div>
+</div>
 
                     <!-- Maintenance Tab -->
                     <div class="tab-pane" id="maintenance">
@@ -3046,8 +3112,11 @@ function showTabContent(tabId) {
 function updateTabCounts() {
     // Units
     document.getElementById('tabCountUnits').textContent = state.units?.length || 0;
-    // Tenants
-    document.getElementById('tabCountTenants').textContent = state.tenants?.length || 0;
+    // Tenants (only active or pending)
+    const activeOrPendingTenants = (state.tenants || []).filter(
+        t => t.leaseStatus === 'active' || t.leaseStatus === 'pending'
+    );
+    document.getElementById('tabCountTenants').textContent = activeOrPendingTenants.length;
     // Documents
     document.getElementById('tabCountDocuments').textContent = state.documents?.length || 0;
     // Payments
@@ -4114,22 +4183,42 @@ async function loadTenants(propertyId) {
     }
 }
 
+// Add tenant tab switching logic
+let currentTenantTab = 'active';
+
+document.getElementById('activeTenantsTab').addEventListener('click', function() {
+    currentTenantTab = 'active';
+    renderTenants();
+    this.classList.add('active');
+    document.getElementById('inactiveTenantsTab').classList.remove('active');
+});
+document.getElementById('inactiveTenantsTab').addEventListener('click', function() {
+    currentTenantTab = 'inactive';
+    renderTenants();
+    this.classList.add('active');
+    document.getElementById('activeTenantsTab').classList.remove('active');
+});
+
 // Update the renderTenants function
 function renderTenants() {
     const tenantsList = document.getElementById('tenantsList');
-    if (!state.tenants || !state.tenants.length) {
+    let tenantsToShow = [];
+    if (currentTenantTab === 'active') {
+        tenantsToShow = (state.tenants || []).filter(t => t.leaseStatus !== 'terminated' && t.leaseStatus !== 'expired');
+    } else {
+        tenantsToShow = (state.tenants || []).filter(t => t.leaseStatus === 'terminated' || t.leaseStatus === 'expired');
+    }
+    if (!tenantsToShow.length) {
         tenantsList.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-users"></i>
-                <p>No tenants found</p>
-                <button onclick="openModal('addTenantModal')" class="btn-primary">
-                    Add Your First Tenant
-                </button>
+                <p>No ${currentTenantTab === 'active' ? 'active' : 'inactive'} tenants found</p>
+                ${currentTenantTab === 'active' ? `<button onclick="openModal('addTenantModal')" class="btn-primary">Add Your First Tenant</button>` : ''}
             </div>`;
         return;
     }
 
-    tenantsList.innerHTML = state.tenants.map(tenant => {
+    tenantsList.innerHTML = tenantsToShow.map(tenant => {
         // Get tenant initials for avatar
         const initials = tenant.name
             .split(' ')
@@ -4178,60 +4267,80 @@ function renderTenants() {
                 </div>`
             : '<span class="tenant-detail-value">N/A</span>';
 
-        return `
-            <div class="tenant-card">
-                <div class="tenant-header">
-                    <div class="tenant-avatar-small">${initials}</div>
-                    <h3>${tenant.name}</h3>
+    // Lease countdown logic
+    let leaseCountdownHtml = '';
+    if (tenant.leaseEnd) {
+        const today = new Date();
+        const leaseEndDate = new Date(tenant.leaseEnd);
+        const diffMs = leaseEndDate - today;
+        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        if (diffDays <= 60 && diffDays > 0 && (tenant.leaseStatus === 'active' || tenant.leaseStatus === 'pending')) {
+            leaseCountdownHtml = `
+                <div class="tenant-detail-row" style="margin-top:8px;">
+                    <span style="color:#f39c12; font-weight:600;">
+                        <i class="fas fa-hourglass-half"></i>
+                        Lease expires in <span style="font-size:1.08em; color:#d35400;">${diffDays} day${diffDays !== 1 ? 's' : ''}</span>
+                    </span>
                 </div>
-                <div class="tenant-info">
-                    <div class="tenant-section">
-                        <div class="tenant-section-title"><i class="fas fa-home"></i> Unit</div>
-                        <div class="tenant-detail-row">
-                            ${assignedUnit ? 
-                                `Unit ${assignedUnit.number} (${assignedUnit.bedrooms} bed, ${assignedUnit.bathrooms} bath)` : 
-                                'No unit assigned'}
-                        </div>
-                    </div>
-                    <div class="tenant-section">
-                        <div class="tenant-section-title"><i class="fas fa-calendar-alt"></i> Lease</div>
-                        <div class="tenant-detail-row"><span>Lease:</span> <span>${leaseStart} - ${leaseEnd}</span></div>
-                        <div class="tenant-detail-row"><span>Deposit:</span> <span>$${(tenant.deposit ?? 0).toFixed(2)}</span></div>
-                        <div class="tenant-detail-row"><span>Base Rent:</span> <span>$${(Number(tenant.baseRent) || 0).toFixed(2)}</span></div>
-                        <div class="tenant-detail-row"><span>Total Fees:</span> <span style="font-weight:600; color:#2980b9;">$${additionalFees.toFixed(2)}</span></div>
-                        <div class="tenant-detail-row">
-                            <span>Total Rent:</span>
-                            <span style="font-weight:700; color:#217dbb; font-size:1.08em; letter-spacing:0.5px; background:#eaf6ff; padding:3px 12px; border-radius:12px;">
-                                $${totalRent.toFixed(2)}
-                            </span>
-                        </div>
-                        <div class="tenant-detail-row">
-                            <span>Status:</span>
-                            <span class="lease-badge ${tenant.leaseStatus || 'active'}">
-                                <i class="fas fa-circle"></i>
-                                ${(tenant.leaseStatus || 'active').charAt(0).toUpperCase() + (tenant.leaseStatus || 'active').slice(1)}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="tenant-section">
-                        <div class="tenant-section-title"><i class="fas fa-user-shield"></i> Emergency</div>
-                        ${emergency}
+            `;
+        }
+    }
+
+    return `
+        <div class="tenant-card">
+            <div class="tenant-header">
+                <div class="tenant-avatar-small">${initials}</div>
+                <h3>${tenant.name}</h3>
+            </div>
+            <div class="tenant-info">
+                <div class="tenant-section">
+                    <div class="tenant-section-title"><i class="fas fa-home"></i> Unit</div>
+                    <div class="tenant-detail-row">
+                        ${assignedUnit ? 
+                            `Unit ${assignedUnit.number} (${assignedUnit.bedrooms} bed, ${assignedUnit.bathrooms} bath)` : 
+                            'No unit assigned'}
                     </div>
                 </div>
-                <div class="tenant-actions">
-                    <button onclick="viewTenantDetails('${tenant._id}')" class="btn-secondary">
-                        <i class="fas fa-eye"></i> Details
-                    </button>
-                    <button onclick="editTenant('${tenant._id}')" class="btn-secondary">
-                        <i class="fas fa-edit"></i> Edit
-                    </button>
-                    <button onclick="deleteTenant('${tenant._id}')" class="btn-icon delete-btn" title="Delete Tenant">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                <div class="tenant-section">
+                    <div class="tenant-section-title"><i class="fas fa-calendar-alt"></i> Lease</div>
+                    <div class="tenant-detail-row"><span>Lease:</span> <span>${leaseStart} - ${leaseEnd}</span></div>
+                    ${leaseCountdownHtml}
+                    <div class="tenant-detail-row"><span>Deposit:</span> <span>$${(tenant.deposit ?? 0).toFixed(2)}</span></div>
+                    <div class="tenant-detail-row"><span>Base Rent:</span> <span>$${(Number(tenant.baseRent) || 0).toFixed(2)}</span></div>
+                    <div class="tenant-detail-row"><span>Total Fees:</span> <span style="font-weight:600; color:#2980b9;">$${additionalFees.toFixed(2)}</span></div>
+                    <div class="tenant-detail-row">
+                        <span>Total Rent:</span>
+                        <span style="font-weight:700; color:#217dbb; font-size:1.08em; letter-spacing:0.5px; background:#eaf6ff; padding:3px 12px; border-radius:12px;">
+                            $${totalRent.toFixed(2)}
+                        </span>
+                    </div>
+                    <div class="tenant-detail-row">
+                        <span>Status:</span>
+                        <span class="lease-badge ${tenant.leaseStatus || 'active'}">
+                            <i class="fas fa-circle"></i>
+                            ${(tenant.leaseStatus || 'active').charAt(0).toUpperCase() + (tenant.leaseStatus || 'active').slice(1)}
+                        </span>
+                    </div>
+                </div>
+                <div class="tenant-section">
+                    <div class="tenant-section-title"><i class="fas fa-user-shield"></i> Emergency</div>
+                    ${emergency}
                 </div>
             </div>
-        `;
-    }).join('');
+            <div class="tenant-actions">
+                <button onclick="viewTenantDetails('${tenant._id}')" class="btn-secondary">
+                    <i class="fas fa-eye"></i> Details
+                </button>
+                <button onclick="editTenant('${tenant._id}')" class="btn-secondary">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button onclick="deleteTenant('${tenant._id}')" class="btn-icon delete-btn" title="Delete Tenant">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+}).join('');
 }
 
 
@@ -5834,6 +5943,11 @@ async function loadAllUnitsAndTenants() {
 function updatePropertyStats() {
     if (!state.currentProperty) return;
 
+    // Only count tenants that are not terminated or expired
+    const activeTenants = (state.tenants || []).filter(
+        t => t.leaseStatus !== 'terminated' && t.leaseStatus !== 'expired'
+    );
+
     const stats = {
         totalUnits: state.units.length,
         vacantUnits: state.units.filter(u => u.status === 'vacant').length,
@@ -5844,10 +5958,7 @@ function updatePropertyStats() {
     document.getElementById('vacantUnits').textContent = stats.vacantUnits;
     document.getElementById('occupancyRate').textContent = stats.occupancyRate;
 
-    // Calculate and display estimated monthly income for this property (including all additional fees and monthly pet rent only)
-    const activeTenants = (state.tenants || []).filter(
-        t => t.leaseStatus !== 'terminated' && t.leaseStatus !== 'expired'
-    );
+    // Estimated monthly income for this property (active tenants only)
     const propertyMonthlyIncome = activeTenants.reduce((sum, t) =>
         sum +
         (Number(t.baseRent) || 0) +
@@ -5871,7 +5982,6 @@ function renderMainSummary() {
         const elOccupancyRate = document.getElementById('summaryOccupancyRate');
         const elMonthlyIncome = document.getElementById('summaryMonthlyIncome');
         if (!elTotalProperties || !elTotalUnits || !elTotalTenants || !elOccupancyRate || !elMonthlyIncome) {
-            // Elements not found, skip rendering summary
             return;
         }
 
@@ -5893,7 +6003,7 @@ function renderMainSummary() {
             ? state.allUnits.filter(u => activeTenantUnitIds.has(u._id)).length
             : 0;
 
-        // Calculate total monthly income including all additional fees and monthly pet rent only
+        // Calculate total monthly income (active tenants only)
         const totalMonthlyIncome = activeTenants.reduce((sum, t) =>
             sum +
             (Number(t.baseRent) || 0) +
@@ -5911,7 +6021,6 @@ function renderMainSummary() {
         elOccupancyRate.textContent = `${occupancyRate}%`;
         elMonthlyIncome.textContent = `$${totalMonthlyIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     } catch (error) {
-        // Catch any errors that might occur during summary rendering
         console.warn('Error rendering main summary:', error);
     }
 }
