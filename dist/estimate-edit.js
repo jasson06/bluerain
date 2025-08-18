@@ -775,7 +775,13 @@ function addLineItemCard(item = {}, categoryHeader = null) {
     ? item.assignedTo.name.split(" ").map((n) => n[0]).join("").toUpperCase()
     : "NA";
 
-  // ✅ Define possible statuses
+  // Status dropdown options
+  const statusOptions = [
+    { value: "in-progress", label: "In Progress" },
+    { value: "completed", label: "Completed" },
+    { value: "approved", label: "Approved" },
+    { value: "rework", label: "Rework" }
+  ];
   const status = item.status || "new";
   const statusClass = getStatusClass(status);
 
@@ -873,12 +879,14 @@ function addLineItemCard(item = {}, categoryHeader = null) {
         </div>
       </div>
     </div>
-<div class="card-footer">
-  <div class="status-assigned-container" style="display:flex; align-items:center; gap:24px;">
-    <span>
-      Status:
-      <span class="item-status ${statusClass}">${status.toUpperCase()}</span>
-    </span>
+    <div class="card-footer">
+      <div class="status-assigned-container" style="display:flex; align-items:center; gap:24px;">
+<span>
+  Status:
+  <select class="item-status-dropdown ${statusClass}" style="margin-left:8px; padding:4px 10px; border-radius:6px; border:1px solid #ccc; font-weight:600;">
+    ${statusOptions.map(opt => `<option value="${opt.value}" ${status === opt.value ? "selected" : ""}>${opt.label}</option>`).join("")}
+  </select>
+</span>
     <span>
       Assigned to:
       <span class="vendor-name tooltip-click" data-fullname="${assignedToName}">
@@ -891,6 +899,56 @@ function addLineItemCard(item = {}, categoryHeader = null) {
   </span>
 </div>
   `;
+
+   // Status dropdown handler
+const statusDropdown = card.querySelector(".item-status-dropdown");
+statusDropdown.className = "item-status-dropdown " + getStatusClass(status);
+
+statusDropdown.addEventListener("change", async function () {
+  const newStatus = statusDropdown.value;
+  const lineItemId = card.getAttribute("data-item-id");
+  const vendorId = card.getAttribute("data-assigned-to");
+  const estimateId = new URLSearchParams(window.location.search).get("estimateId");
+
+  // 1. Update estimate line item status
+  try {
+    const response = await fetch(`/api/estimates/line-items/${lineItemId}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus })
+    });
+    if (!response.ok) {
+      showToast("Failed to update estimate status");
+      return;
+    }
+  } catch (err) {
+    showToast("Error updating estimate status");
+    return;
+  }
+  // 2. Update vendor assigned item status (if assigned)
+  if (vendorId && /^[a-f\d]{24}$/i.test(vendorId)) {
+    try {
+      const vendorRes = await fetch(`/api/vendors/${vendorId}/update-item-status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemId: lineItemId,
+          status: newStatus,
+          estimateId: estimateId
+        })
+      });
+      if (!vendorRes.ok) {
+        showToast("Vendor status update failed");
+      }
+    } catch (err) {
+      showToast("Error updating vendor status");
+    }
+  }
+  // Update dropdown color
+  const newClass = getStatusClass(newStatus);
+  statusDropdown.className = "item-status-dropdown " + newClass;
+  showToast("Status updated!");
+});
 
     // Inside addLineItemCard, after defining laborCostInput and materialCostInput:
 const laborCostFromBackend = item.laborCost !== undefined;
