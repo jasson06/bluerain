@@ -3308,6 +3308,11 @@ async function selectProperty(propertyId) {
             // Re-render the property list to update the active class
         renderPropertyList();
 
+                        const sidebar = document.querySelector('.sidebar');
+        if (window.innerWidth <= 900 && sidebar.classList.contains('visible')) {
+            sidebar.classList.remove('visible');
+        }
+
     } catch (error) {
         console.error('Error selecting property:', error);
         showNotification('Error loading property details', 'error');
@@ -6105,5 +6110,6 @@ window.deletePayment = deletePayment;
     </script>
 </body>
 </html>
+
 
 
