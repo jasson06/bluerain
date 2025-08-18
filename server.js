@@ -439,7 +439,8 @@ const estimateSchema = new mongoose.Schema({
             enum: ['in-progress', 'completed', 'approved', 'rework'], 
             default: 'in-progress' 
           },
-
+          
+          maintenanceRequestId: { type: mongoose.Schema.Types.ObjectId, ref: 'MaintenanceRequest', default: null },
           qualityControl: {
             status: {
               type: String,
@@ -1121,6 +1122,7 @@ app.post('/api/estimates', async (req, res) => {
             total: item.total || item.quantity * item.unitPrice,
             status: item.status || 'in-progress',
             assignedTo: item.assignedTo || null
+            maintenanceRequestId: item.maintenanceRequestId 
           };
         });
 
@@ -1315,13 +1317,15 @@ app.put("/api/estimates/:id", async (req, res) => {
           item.startDate = item.startDate ?? existingItem.startDate;
           item.endDate = item.endDate ?? existingItem.endDate;
           item.status = item.status || normalizeStatus(existingItem.status);
-          item.costCode = item.costCode || existingItem.costCode || "Uncategorized"; // ✅ Preserve cost code
+          item.costCode = item.costCode || existingItem.costCode || "Uncategorized";
+          item.maintenanceRequestId = item.maintenanceRequestId || existingItem.maintenanceRequestId || null; // <-- Preserve maintenanceRequestId
         } else {
           // For new items
           if (!item.status || item.status.trim() === "") {
             item.status = "in-progress";
           }
-          item.costCode = item.costCode || "Uncategorized"; // ✅ Default for new items
+          item.costCode = item.costCode || "Uncategorized";
+          item.maintenanceRequestId = item.maintenanceRequestId || null; // <-- Set for new items if provided
         }
       });
     });
@@ -5822,6 +5826,55 @@ app.put('/api/projects/:projectId/utilities', async (req, res) => {
     res.json({ success: true, utilityAccounts: project.utilityAccounts });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.patch('/api/estimates/line-items/:lineItemId/status', async (req, res) => {
+  try {
+    const { lineItemId } = req.params;
+    const { status } = req.body;
+    const allowedStatuses = ['in-progress', 'completed', 'approved', 'rework'];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ message: 'Invalid status value.' });
+    }
+
+    // Update line item status in Estimate
+    const estimate = await Estimate.findOneAndUpdate(
+      { 'lineItems.items._id': lineItemId },
+      { $set: { 'lineItems.$[].items.$[item].status': status } },
+      { arrayFilters: [{ 'item._id': lineItemId }], new: true }
+    );
+
+    if (!estimate) {
+      return res.status(404).json({ message: 'Line item not found.' });
+    }
+
+    // Find the updated line item and get maintenanceRequestId
+    let maintenanceRequestId = null;
+    for (const cat of estimate.lineItems) {
+      for (const item of cat.items) {
+        if (item._id.toString() === lineItemId && item.maintenanceRequestId) {
+          maintenanceRequestId = item.maintenanceRequestId;
+        }
+      }
+    }
+
+    // Sync maintenance request status
+    if (maintenanceRequestId) {
+      let maintenanceStatus = 'pending';
+      if (status === 'in-progress' || status === 'rework') maintenanceStatus = 'in-progress';
+      if (status === 'completed' || status === 'approved') maintenanceStatus = 'completed';
+
+      await MaintenanceRequest.findByIdAndUpdate(
+        maintenanceRequestId,
+        { $set: { status: maintenanceStatus, ...(maintenanceStatus === 'completed' ? { completedAt: new Date() } : {}) } },
+        { new: true }
+      );
+    }
+
+    res.json({ success: true, status, estimate });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
   }
 });
 
