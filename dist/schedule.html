@@ -944,21 +944,59 @@ function populateEstimateDropdown(estimates) {
 
 
       
-      async function updateLineItem(lineItemId, updates) {
-        try {
-          const response = await fetch(`/api/estimates/line-items/${lineItemId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(updates),
-          });
-          if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-          showNotification("Task updated successfully");
-          return await response.json();
-        } catch (error) {
-          console.error("Error updating task:", error);
-          showNotification("Error updating task", "error");
+    function updateLineItem(lineItemId, updates) {
+  // Example: Find the task in selectedLineItems and update its fields
+  const task = (selectedLineItems || []).flatMap(cat => cat.items || []).find(item => item._id === lineItemId);
+  if (task) {
+    Object.assign(task, updates);
+    renderTable(selectedLineItems); // Re-render table to reflect changes
+  }
+}
+
+async function updateLineItemStatus(lineItemId, newStatus, vendorId, estimateId) {
+  try {
+    // 1. Update the estimate line item status (syncs maintenance request)
+    const response = await fetch(`/api/estimates/line-items/${lineItemId}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus })
+    });
+    if (!response.ok) {
+      const error = await response.text();
+      showNotification(`Failed to update status: ${error}`, "error");
+      return false;
+    }
+
+    // 2. Update the vendor's assigned item status
+    if (vendorId) {
+      try {
+        const vendorRes = await fetch(`/api/vendors/${vendorId}/update-item-status`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            itemId: lineItemId,
+            status: newStatus,
+            estimateId: estimateId
+          })
+        });
+        if (!vendorRes.ok) {
+          const error = await vendorRes.text();
+          showNotification(`Vendor status update failed: ${error}`, "warning");
         }
+      } catch (err) {
+        showNotification("Vendor status update error", "warning");
+        console.warn("Vendor status update error:", err);
       }
+    }
+
+    showNotification("Status updated successfully!", "success");
+    return true;
+  } catch (err) {
+    showNotification("Error updating status", "error");
+    console.error("Error updating line item status:", err);
+    return false;
+  }
+}
       
       /* --------------------- Data & State --------------------- */
       let selectedLineItems = [];
@@ -994,7 +1032,7 @@ function populateEstimateDropdown(estimates) {
 
       
       /* --------------------- Render Functions --------------------- */
-      function renderTable() {
+   function renderTable() {
   flatTasks = getAllTasks(selectedLineItems);
 
   const searchQuery = document.getElementById("listSearch").value.toLowerCase();
@@ -1120,10 +1158,18 @@ function populateEstimateDropdown(estimates) {
       <option value="completed" ${task.status==="completed"?"selected":""}>Completed</option>
     `;
     updateStatusDropdownStyle(statusSelect);
-    statusSelect.addEventListener("change", debounce(function() {
-      updateStatusDropdownStyle(statusSelect);
-      updateLineItem(task._id, { status: statusSelect.value });
-    }, 500));
+statusSelect.addEventListener("change", debounce(async function() {
+  updateStatusDropdownStyle(statusSelect);
+
+  // Ensure vendorId is a string
+  const vendorId = typeof task.assignedTo === "object" && task.assignedTo._id ? task.assignedTo._id : String(task.assignedTo);
+  const estimateId = task.estimateId || null;
+
+  const success = await updateLineItemStatus(task._id, statusSelect.value, vendorId, estimateId);
+  if (success) {
+    updateLineItem(task._id, { status: statusSelect.value });
+  }
+}, 500));
     statusCell.appendChild(statusSelect);
     row.appendChild(statusCell);
 
@@ -1790,3 +1836,4 @@ if (projectId) {
   </script>
 </body>
 </html>
+
