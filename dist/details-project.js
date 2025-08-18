@@ -2645,3 +2645,445 @@ async function renderQualityControlItems(projectId) {
 function navigateToQCControl(projectId) {
   window.location.href = `/qccontrol.html?projectId=${projectId}`;
 }
+
+
+// Add/replace these functions near your notification logic
+
+async function fetchMaintenanceNotifications(projectId) {
+    try {
+        const res = await fetch(`/api/properties/${projectId}/maintenance`);
+        if (!res.ok) return [];
+        const requests = await res.json();
+        // Only show pending or new requests
+        return requests.filter(r => r.status === 'pending' || r.status === 'new');
+    } catch (err) {
+        console.error('Error fetching maintenance notifications:', err);
+        return [];
+    }
+}
+
+// Add this function globally
+window.createOrderFromMaintenance = async function(unitNumber, description, projectId, maintenanceRequestId) {
+    showLoader();
+    try {
+        const estimatePayload = {
+            projectId,
+            title: `Unit ${unitNumber}`,
+            lineItems: [
+                {
+                    type: "category",
+                    category: "Maintenance Requests",
+                    status: "in-progress",
+                    items: [
+                        {
+                            type: "item",
+                            name: unitNumber,
+                            description: description || "",
+                            quantity: 1,
+                            unitPrice: 0,
+                            total: 0,
+                            costCode: "12-200 Property Maintenance",
+                            status: "in-progress",
+                            maintenanceRequestId // <-- Pass the request ID here
+                        }
+                    ]
+                }
+            ],
+            tax: 0
+        };
+
+        const response = await fetch("/api/estimates", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(estimatePayload)
+        });
+
+        if (!response.ok) throw new Error("Failed to create order/estimate.");
+
+        const result = await response.json();
+        showToast("Order created successfully!");
+
+        if (result.estimate && result.estimate._id) {
+            window.location.href = `/estimate-edit.html?projectId=${projectId}&estimateId=${result.estimate._id}`;
+        }
+    } catch (error) {
+        console.error("Error creating order:", error);
+        showToast("Error creating order. Please try again.");
+    } finally {
+        hideLoader();
+    }
+};
+
+
+function renderMaintenanceNotifDropdown(requests) {
+    const notifCount = document.getElementById('maintenanceNotifCount');
+    const notifDropdown = document.getElementById('maintenanceNotifDropdown');
+    const notifList = document.getElementById('maintenanceNotifList');
+    if (!notifCount || !notifDropdown || !notifList) return;
+
+    notifCount.textContent = requests.length;
+    notifCount.style.display = requests.length ? '' : 'none';
+
+    if (!requests.length) {
+        notifList.innerHTML = `<div style="padding:24px; color:#888; text-align:center;">
+            <i class="fas fa-check-circle" style="color:#27ae60; font-size:1.7em;"></i>
+            <div style="margin-top:8px;">No pending maintenance requests.</div>
+        </div>`;
+        return;
+    }
+
+    const projectId = window.currentProjectId || getProjectIdFromPage();
+
+    notifList.innerHTML = requests.map((r, idx) => `
+        <div class="notif-list-item modern-notif-item">
+            <div class="notif-list-row">
+                <div class="notif-title">
+                    <i class="fas fa-tools"></i> ${r.title}
+                </div>
+                <span class="notif-priority">
+                    Priority: ${r.priority}
+                </span>
+                <span class="notif-status">
+                    Status: ${r.status}
+                </span>
+            </div>
+            <div class="notif-desc">
+                ${r.description}
+            </div>
+            <div class="notif-meta">
+                <span class="notif-unit"><i class="fas fa-door-open"></i> Unit: ${r.unitId?.number || 'N/A'}</span>
+                <span><i class="far fa-calendar-alt"></i> Requested: ${new Date(r.createdAt).toLocaleDateString()}</span>
+            </div>
+            <div style="margin-top:10px; text-align:right; position:relative;">
+                <button class="btn-primary create-order-btn" 
+                    style="padding:7px 18px; font-size:0.97em; border-radius:7px;"
+                    onclick="window.toggleOrderDropdown(${idx})">
+                    <i class="fas fa-file-invoice-dollar"></i> Create Order
+                </button>
+                <div class="order-dropdown" id="orderDropdown-${idx}" style="display:none; position:absolute; right:0; top:50px;">
+                    <button class="order-dropdown-btn" onclick="createOrderFromMaintenance('${r.unitId?.number || ''}', '${r.description.replace(/'/g, "\\'")}', '${projectId}', '${r._id}')">Create New Estimate</button>
+                    <button class="order-dropdown-btn" onclick="showEstimateSelectModal('${r.unitId?.number || ''}', '${r.description.replace(/'/g, "\\'")}', '${projectId}', '${r._id}')">Add Line Item to Existing Estimate</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Toggle dropdown for each request
+window.toggleOrderDropdown = function(idx) {
+    // Hide all other dropdowns except the one clicked
+    document.querySelectorAll('.order-dropdown').forEach((d, i) => {
+        if (i !== idx) d.style.display = 'none';
+    });
+    const dropdown = document.getElementById(`orderDropdown-${idx}`);
+    if (dropdown) {
+        dropdown.style.display = dropdown.style.display === 'none' || !dropdown.style.display ? 'block' : 'none';
+    }
+    // Prevent event bubbling to document click
+    if (window.event) window.event.stopPropagation();
+};
+
+// Hide all order dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+    // Only close if not clicking inside any order-dropdown or on a create-order-btn
+    if (!e.target.closest('.order-dropdown') && !e.target.closest('.create-order-btn')) {
+        document.querySelectorAll('.order-dropdown').forEach(d => d.style.display = 'none');
+    }
+});
+
+// Prevent clicks inside the dropdown from closing it
+document.querySelectorAll('.order-dropdown').forEach(dropdown => {
+    dropdown.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+});
+
+// Show modal to select estimate
+window.showEstimateSelectModal = async function(unitNumber, description, projectId, maintenanceRequestId) {
+    showLoader();
+    try {
+        const response = await fetch(`/api/estimates?projectId=${projectId}`);
+        if (!response.ok) throw new Error("Failed to fetch estimates");
+        const { estimates } = await response.json();
+
+        // Create modal if not exists
+        let modal = document.getElementById('selectEstimateModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'selectEstimateModal';
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width:420px;">
+                    <h3>Select Estimate</h3>
+                    <div id="estimateSelectList"></div>
+                    <button onclick="closeSelectEstimateModal()" style="margin-top:18px;" class="btn-secondary">Cancel</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        const list = modal.querySelector('#estimateSelectList');
+        list.innerHTML = estimates.length ? estimates.map(e => `
+            <div style="margin-bottom:10px;">
+                <button class="btn-primary" style="width:100%; text-align:left;" onclick="addLineItemToEstimate('${e._id}', '${unitNumber}', '${description.replace(/'/g, "\\'")}', '${projectId}', '${maintenanceRequestId}')">
+                    ${e.title || 'Untitled'} <span style="float:right; color:#888;">${new Date(e.createdAt).toLocaleDateString()}</span>
+                </button>
+            </div>
+        `).join('') : `<div style="color:#888; padding:12px;">No estimates found.</div>`;
+        modal.style.display = 'flex';
+    } catch (error) {
+        showToast("Error loading estimates.");
+    } finally {
+        hideLoader();
+    }
+};
+
+window.closeSelectEstimateModal = function() {
+    const modal = document.getElementById('selectEstimateModal');
+    if (modal) modal.style.display = 'none';
+};
+
+// Add line item to selected estimate
+window.addLineItemToEstimate = async function(estimateId, unitNumber, description, projectId, maintenanceRequestId) {
+    showLoader();
+    try {
+        const newItem = {
+            type: "item",
+            name: unitNumber,
+            description: description || "",
+            quantity: 1,
+            unitPrice: 0,
+            total: 0,
+            costCode: "12-200 Property Maintenance",
+            status: "in-progress",
+            maintenanceRequestId // <-- Pass it here
+        };
+
+        // Fetch the estimate to get its categories and title
+        const response = await fetch(`/api/estimates/${estimateId}`);
+        if (!response.ok) throw new Error("Failed to fetch estimate");
+        const { estimate } = await response.json();
+
+        // Preserve the existing title
+        const preservedTitle = estimate.title;
+
+        // Add to first category or create new if none
+        let updatedLineItems = estimate.lineItems && estimate.lineItems.length
+            ? [...estimate.lineItems]
+            : [{
+                type: "category",
+                category: "Maintenance Requests",
+                status: "in-progress",
+                items: []
+            }];
+
+        // Add to first category (or you can prompt for category selection)
+        updatedLineItems[0].items.push(newItem);
+
+        // Update estimate, preserving the title
+        const updateRes = await fetch(`/api/estimates/${estimateId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: preservedTitle, lineItems: updatedLineItems })
+        });
+
+        if (!updateRes.ok) throw new Error("Failed to update estimate");
+
+        showToast("Line item added to estimate!");
+        closeSelectEstimateModal();
+        // Optionally, redirect to edit page
+        window.location.href = `/estimate-edit.html?projectId=${projectId}&estimateId=${estimateId}`;
+    } catch (error) {
+        showToast("Error adding line item.");
+    } finally {
+        hideLoader();
+    }
+};
+
+// Add styles for dropdown and modal
+if (!document.getElementById('order-dropdown-styles')) {
+    const style = document.createElement('style');
+    style.id = 'order-dropdown-styles';
+    style.innerHTML = `
+    .order-dropdown {
+        min-width: 220px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 2px 12px rgba(59,130,246,0.07);
+        padding: 6px 0;
+        z-index: 100;
+    }
+    .order-dropdown-btn {
+        background: none;
+        border: none;
+        width: 90%;
+        text-align: left;
+        padding: 8px 10px;
+        font-size: 1em;
+        color: #2980b9;
+        cursor: pointer;
+        transition: background 0.18s, color 0.18s;
+        border-radius: 6px;
+    }
+    .order-dropdown-btn:hover {
+        background: #2980b9;
+        color: #ffffffff;
+    }
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0; top: 0; width: 100vw; height: 100vh;
+        background: rgba(44,62,80,0.18);
+        align-items: center; justify-content: center;
+    }
+    .modal-content {
+        background: #fff;
+        border-radius: 12px;
+        padding: 32px 28px;
+        box-shadow: 0 4px 24px rgba(59,130,246,0.13);
+        min-width: 320px;
+        max-width: 420px;
+        margin: auto;
+    }
+    .btn-primary {
+        background: #0f4c75;
+        color: #fff;
+        border: none;
+        border-radius: 7px;
+        padding: 8px 18px;
+        font-size: 1em;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.18s;
+    }
+    .btn-primary:hover {
+        background: #217dbb;
+    }
+    .btn-secondary {
+        background: #f3f4f6;
+        color: #0f4c75;
+        border: none;
+        border-radius: 7px;
+        padding: 8px 18px;
+        font-size: 1em;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.18s;
+    }
+    .btn-secondary:hover {
+        background: #eaf6ff;
+        color: #217dbb;
+    }
+    `;
+    document.head.appendChild(style);
+}
+
+
+
+// Add this to your CSS or <style> block
+if (!document.getElementById('modern-notif-styles')) {
+    const style = document.createElement('style');
+    style.id = 'modern-notif-styles';
+    style.innerHTML = `
+    .modern-notif-item {
+        background: #fff;
+        border-radius: 12px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 8px rgba(241,196,15,0.07);
+        padding: 16px 18px;
+        transition: box-shadow 0.18s, background 0.18s;
+        border: 1px solid #217dbb;
+        cursor: pointer;
+    }
+    .modern-notif-item:hover {
+        background: #f3f6fbff;
+        box-shadow: 0 4px 16px rgba(52,152,219,0.10);
+        border-color: #569ff7;
+    }
+    .notif-list-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 4px;
+    }
+    .notif-title {
+        font-weight: 700;
+        color: #000000ff;
+        font-size: 1.08em;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .notif-priority {
+        background: #ffe066;
+        color: #e67e22;
+        font-weight: 600;
+        border-radius: 6px;
+        padding: 2px 10px;
+        font-size: 0.97em;
+    }
+    .notif-status {
+        background: #eaf6ff;
+        color: #2980b9;
+        font-weight: 600;
+        border-radius: 6px;
+        padding: 2px 10px;
+        font-size: 0.97em;
+    }
+    .notif-desc {
+        margin: 8px 0 4px 0;
+        color: #444;
+        font-size: 0.98em;
+    }
+    .notif-meta {
+        font-size: 0.93em;
+        color: #888;
+        display: flex;
+        gap: 18px;
+        margin-top: 4px;
+    }
+    .notif-unit {
+        color: #217dbb;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    `;
+    document.head.appendChild(style);
+}
+
+async function updateMaintenanceNotificationBar() {
+    const projectId = window.currentProjectId || getProjectIdFromPage();
+    if (!projectId) return;
+    const requests = await fetchMaintenanceNotifications(projectId);
+    renderMaintenanceNotifDropdown(requests);
+}
+
+// Toggle dropdown on icon click
+document.addEventListener('DOMContentLoaded', () => {
+    updateMaintenanceNotificationBar();
+
+    const notifBtn = document.getElementById('maintenanceNotifBtn');
+    const notifDropdown = document.getElementById('maintenanceNotifDropdown');
+    if (notifBtn && notifDropdown) {
+        notifBtn.onclick = (e) => {
+            e.stopPropagation();
+            notifDropdown.style.display = notifDropdown.style.display === 'none' || !notifDropdown.style.display ? 'block' : 'none';
+        };
+        // Hide dropdown when clicking outside
+        document.body.addEventListener('click', () => {
+            notifDropdown.style.display = 'none';
+        });
+        notifDropdown.addEventListener('click', (e) => e.stopPropagation());
+    }
+});
+
+// Helper to get projectId from page (customize as needed)
+function getProjectIdFromPage() {
+    const match = window.location.pathname.match(/\/details\/projects\/([a-zA-Z0-9]+)/);
+    return match ? match[1] : null;
+}
+
+// Run on page load
+document.addEventListener('DOMContentLoaded', updateMaintenanceNotificationBar);
