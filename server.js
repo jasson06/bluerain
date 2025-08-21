@@ -1019,6 +1019,17 @@ const roomPackageSchema = new mongoose.Schema({
   ]
 }, { timestamps: true });
 
+const maintenanceScheduleSchema = new mongoose.Schema({
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
+  title: { type: String, required: true },
+  description: String,
+  frequency: { type: String, enum: ['daily', 'weekly', 'monthly', 'yearly', 'custom'], required: true },
+  intervalDays: { type: Number, default: null }, // for custom
+  startDate: { type: Date, required: true },
+  nextScheduledDate: { type: Date, required: true },
+  assignedVendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', default: null },
+  createdAt: { type: Date, default: Date.now }
+});
 
 const Task = mongoose.model('Task', taskSchema);
 const Comment = mongoose.model("Comment", commentSchema);
@@ -1043,6 +1054,7 @@ const MaintenanceRequest = mongoose.model('MaintenanceRequest', maintenanceReque
 const Document = mongoose.model('Document', documentSchema);
 const Payment = mongoose.model('Payment', paymentSchema);
 const RoomPackage = mongoose.model('RoomPackage', roomPackageSchema);
+const MaintenanceSchedule = mongoose.model('MaintenanceSchedule', maintenanceScheduleSchema);
 
 module.exports = {
   Task,
@@ -5875,6 +5887,293 @@ app.patch('/api/estimates/line-items/:lineItemId/status', async (req, res) => {
     res.json({ success: true, status, estimate });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
+  }
+});
+
+// --- auto schedule logic ---
+async function updateNextScheduledDates() {
+  try {
+    const now = new Date();
+    const overdueSchedules = await MaintenanceSchedule.find({ nextScheduledDate: { $lt: now } });
+
+    for (const schedule of overdueSchedules) {
+      let nextDate = new Date(schedule.nextScheduledDate);
+
+      // Advance nextDate until it's in the future
+      while (nextDate < now) {
+        switch (schedule.frequency) {
+          case 'daily':
+            nextDate.setDate(nextDate.getDate() + 1);
+            break;
+          case 'weekly':
+            nextDate.setDate(nextDate.getDate() + 7);
+            break;
+          case 'monthly':
+            nextDate.setMonth(nextDate.getMonth() + 1);
+            break;
+          case 'yearly':
+            nextDate.setFullYear(nextDate.getFullYear() + 1);
+            break;
+          case 'custom':
+            if (schedule.intervalDays && schedule.intervalDays > 0) {
+              nextDate.setDate(nextDate.getDate() + schedule.intervalDays);
+            } else {
+              // If intervalDays is not set, break the loop
+              nextDate = now;
+            }
+            break;
+          default:
+            nextDate = now;
+            break;
+        }
+      }
+
+      // Only update if the new date is in the future
+      if (nextDate > now) {
+        schedule.nextScheduledDate = nextDate;
+        await schedule.save();
+        console.log(`Updated nextScheduledDate for schedule "${schedule.title}" to ${nextDate.toISOString()}`);
+      }
+    }
+  } catch (err) {
+    console.error('Error updating nextScheduledDates:', err);
+  }
+}
+
+// --- Run this function every hour  ---
+setInterval(updateNextScheduledDates, 60 * 60 * 1000);
+
+
+
+// Replace the HTML in sendMaintenanceReminders with this improved style:
+function getMaintenanceEmailHtml({ recipientName, schedule, dayLabel, isManager }) {
+  return `
+    <div style="font-family: Arial, sans-serif; background: #f6fafd; padding: 24px;">
+      <div style="max-width: 520px; margin: auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(44,62,80,0.07); padding: 24px;">
+        <h2 style="color: #217dbb; margin-top: 0;">${dayLabel} Maintenance Reminder</h2>
+        <p style="font-size: 1.1em;">Hello ${recipientName},</p>
+        <p>
+          ${isManager
+            ? 'This is a friendly reminder that we have a scheduled maintenance for'
+            : 'This is a friendly reminder that you have a scheduled maintenance for'}
+          <strong style="color: #2c3e50;">${schedule.title}</strong>
+          at <strong style="color: #217dbb;">${schedule.projectId?.name || 'Property'}</strong>
+          <span style="color: #217dbb;">${dayLabel === 'Today' ? 'today' : 'tomorrow'} (${new Date(schedule.nextScheduledDate).toLocaleDateString()})</span>.
+        </p>
+        <div style="margin: 18px 0; padding: 12px; background: #eaf6ff; border-radius: 8px;">
+          <strong>Description:</strong> ${schedule.description || '<span style="color:#888;">No description provided.</span>'}
+        </div>
+        <table style="width:100%;margin-bottom:18px;">
+          <tr>
+            <td style="padding:6px 0;"><strong>Frequency:</strong></td>
+            <td style="padding:6px 0;">${schedule.frequency.charAt(0).toUpperCase() + schedule.frequency.slice(1)}${schedule.frequency === 'custom' && schedule.intervalDays ? ` (Every ${schedule.intervalDays} days)` : ''}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;"><strong>Start Date:</strong></td>
+            <td style="padding:6px 0;">${new Date(schedule.startDate).toLocaleDateString()}</td>
+          </tr>
+        </table>
+        <div style="margin-top: 24px; text-align: right;">
+          <span style="font-size: 0.95em; color: #888;">Thank you,<br>BESF Team</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// In sendMaintenanceReminders, update the email sending logic:
+async function sendMaintenanceReminders() {
+  try {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Find schedules for tomorrow and today
+    const schedulesTomorrow = await MaintenanceSchedule.find({
+      nextScheduledDate: {
+        $gte: tomorrow,
+        $lt: new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000)
+      }
+    }).populate('assignedVendor projectId');
+
+    const schedulesToday = await MaintenanceSchedule.find({
+      nextScheduledDate: {
+        $gte: today,
+        $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+      }
+    }).populate('assignedVendor projectId');
+
+    // Send reminders for tomorrow
+    for (const schedule of schedulesTomorrow) {
+       // Vendor reminder
+      if (schedule.assignedVendor && schedule.assignedVendor.email) {
+        await transporter.sendMail({
+          from: `"BESF Team" <${process.env.EMAIL_USER}>`,
+          to: schedule.assignedVendor.email,
+          subject: `Reminder: Upcoming Maintenance Scheduled for Tomorrow`,
+          html: getMaintenanceEmailHtml({
+            recipientName: schedule.assignedVendor.name || 'Vendor',
+            schedule,
+            dayLabel: 'Tomorrow',
+            isManager: false
+          })
+        });
+      }
+      // Send to default project manager email
+await transporter.sendMail({
+  from: `"BESF Team" <${process.env.EMAIL_USER}>`,
+  to: ["besfllc@gmail.com", "jleonel3915@gmail.com", "josh@bluerainholdingsllc.onmicrosoft.com"], // <-- Add both emails here
+  subject: `Reminder: Maintenance Scheduled for Tomorrow`,
+  html: getMaintenanceEmailHtml({
+    recipientName: 'Team',
+    schedule,
+    dayLabel: 'Tomorrow',
+    isManager: true
+  })
+});
+    }
+
+    // Send reminders for today
+    for (const schedule of schedulesToday) {
+      // Vendor reminder
+      if (schedule.assignedVendor && schedule.assignedVendor.email) {
+        await transporter.sendMail({
+          from: `"BESF Team" <${process.env.EMAIL_USER}>`,
+          to: schedule.assignedVendor.email,
+          subject: `Reminder: Maintenance Scheduled for Today`,
+          html: getMaintenanceEmailHtml({
+            recipientName: schedule.assignedVendor.name || 'Vendor',
+            schedule,
+            dayLabel: 'Today',
+            isManager: false
+          })
+        });
+      }
+      // Send to default project manager email
+await transporter.sendMail({
+  from: `"BESF Team" <${process.env.EMAIL_USER}>`,
+  to: ["besfllc@gmail.com", "jleonel3915@gmail.com", "josh@bluerainholdingsllc.onmicrosoft.com"], // <-- Add both emails here
+  subject: `Reminder: Maintenance Scheduled for Tomorrow`,
+  html: getMaintenanceEmailHtml({
+    recipientName: 'Team',
+    schedule,
+    dayLabel: 'Tomorrow',
+    isManager: true
+  })
+});
+    }
+  } catch (err) {
+    console.error('Error sending maintenance reminders:', err);
+  }
+}
+
+// --- Run this function every morning at 8am ---
+const now = new Date();
+const millisTill8 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0, 0) - now;
+setTimeout(function() {
+  sendMaintenanceReminders();
+  setInterval(sendMaintenanceReminders, 24 * 60 * 60 * 1000); // every 24 hours
+}, millisTill8 > 0 ? millisTill8 : 0);
+
+
+
+// API to create a schedule
+app.post('/api/properties/:propertyId/maintenance-schedules', async (req, res) => {
+  try {
+    const { title, description, frequency, intervalDays, startDate, assignedVendor } = req.body;
+    if (!title || !frequency || !startDate) {
+      return res.status(400).json({ message: 'Missing required fields.' });
+    }
+    // Calculate nextScheduledDate
+    let nextDate = new Date(startDate);
+    switch (frequency) {
+      case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
+      case 'weekly': nextDate.setDate(nextDate.getDate() + 7); break;
+      case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
+      case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
+      case 'custom':
+        if (!intervalDays || intervalDays < 1) return res.status(400).json({ message: 'Custom intervalDays required.' });
+        nextDate.setDate(nextDate.getDate() + intervalDays);
+        break;
+    }
+    const schedule = new MaintenanceSchedule({
+      projectId: req.params.propertyId,
+      title,
+      description,
+      frequency,
+      intervalDays: frequency === 'custom' ? intervalDays : null,
+      startDate,
+      nextScheduledDate: nextDate,
+      assignedVendor: assignedVendor || null
+    });
+    await schedule.save();
+    res.status(201).json(schedule);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to create schedule.' });
+  }
+});
+
+// API to get schedules for a property
+app.get('/api/properties/:propertyId/maintenance-schedules', async (req, res) => {
+  try {
+    const schedules = await MaintenanceSchedule.find({ projectId: req.params.propertyId })
+      .populate('assignedVendor', 'name email'); 
+    res.json(schedules);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch maintenance schedules' });
+  }
+});
+
+// --- Maintenance Schedule: Update (PUT) ---
+app.put('/api/properties/:propertyId/maintenance-schedules/:scheduleId', async (req, res) => {
+  try {
+    const { title, description, frequency, intervalDays, startDate, assignedVendor } = req.body;
+    // Calculate nextScheduledDate
+    let nextDate = new Date(startDate);
+    switch (frequency) {
+      case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
+      case 'weekly': nextDate.setDate(nextDate.getDate() + 7); break;
+      case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
+      case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
+      case 'custom':
+        if (!intervalDays || intervalDays < 1) return res.status(400).json({ message: 'Custom intervalDays required.' });
+        nextDate.setDate(nextDate.getDate() + intervalDays);
+        break;
+    }
+    const updated = await MaintenanceSchedule.findOneAndUpdate(
+      { _id: req.params.scheduleId, projectId: req.params.propertyId },
+      {
+        title,
+        description,
+        frequency,
+        intervalDays: frequency === 'custom' ? intervalDays : null,
+        startDate,
+        nextScheduledDate: nextDate,
+        assignedVendor: assignedVendor || null
+      },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ message: 'Schedule not found.' });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update schedule.' });
+  }
+});
+
+// --- Maintenance Schedule: Delete (DELETE) ---
+app.delete('/api/properties/:propertyId/maintenance-schedules/:scheduleId', async (req, res) => {
+  try {
+    const deleted = await MaintenanceSchedule.findOneAndDelete({
+      _id: req.params.scheduleId,
+      projectId: req.params.propertyId
+    });
+    if (!deleted) return res.status(404).json({ message: 'Schedule not found.' });
+    res.json({ message: 'Schedule deleted.' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to delete schedule.' });
   }
 });
 
