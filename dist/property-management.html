@@ -5682,9 +5682,20 @@ function renderMaintenanceSchedulesList(schedules) {
             const vendorName = schedule.assignedVendor?.name
               ? `<span style="color:#217dbb;font-weight:600;">${schedule.assignedVendor.name}</span>`
               : '<span style="color:#888;">None</span>';
-            const unitLabel = schedule.unitId?.number
-              ? `Unit ${schedule.unitId.number}`
-              : (schedule.unitId ? schedule.unitId : '<span style="color:#888;">None</span>');
+            // --- FIX: Show Unit Number or "None" ---
+            let unitLabel = '<span style="color:#888;">None</span>';
+            if (schedule.unitId) {
+              if (typeof schedule.unitId === 'object' && schedule.unitId.number) {
+                unitLabel = `Unit ${schedule.unitId.number}`;
+              } else if (typeof schedule.unitId === 'string') {
+                const unitObj = state.units?.find(u => u._id === schedule.unitId);
+                if (unitObj && unitObj.number) {
+                  unitLabel = `Unit ${unitObj.number}`;
+                } else {
+                  unitLabel = schedule.unitId;
+                }
+              }
+            }
             const statusLabel = schedule.status
               ? `<span class="status-badge ${schedule.status}">${schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}</span>`
               : '<span class="status-badge pending">Pending</span>';
@@ -5724,6 +5735,8 @@ function renderMaintenanceSchedulesList(schedules) {
   `;
 }
 
+
+
 function renderMaintenanceSchedules(schedules) {
   const scheduleList = document.getElementById('scheduleList');
   if (!scheduleList) return;
@@ -5757,9 +5770,23 @@ function renderMaintenanceSchedules(schedules) {
     const vendorName = schedule.assignedVendor?.name
       ? `<span style="color:#217dbb;font-weight:600;font-size:0.97em;"><i class="fas fa-user-tie"></i> ${schedule.assignedVendor.name}</span>`
       : '<span style="color:#888;font-size:0.97em;"><i class="fas fa-user-slash"></i> None</span>';
-    const unitLabel = schedule.unitId?.number
-      ? `<i class="fas fa-door-open"></i> Unit ${schedule.unitId.number}`
-      : (schedule.unitId ? `<i class="fas fa-door-open"></i> ${schedule.unitId}` : '<span style="color:#888;font-size:0.97em;"><i class="fas fa-door-closed"></i> None</span>');
+
+    // --- FIX: Show Unit Number or "No unit assigned" ---
+    let unitLabel = '<span style="color:#888;font-size:0.97em;"><i class="fas fa-door-closed"></i> No unit assigned</span>';
+    if (schedule.unitId) {
+      if (typeof schedule.unitId === 'object' && schedule.unitId.number) {
+        unitLabel = `<i class="fas fa-door-open"></i> Unit ${schedule.unitId.number}`;
+      } else if (typeof schedule.unitId === 'string') {
+        // Try to find the unit in state.units
+        const unitObj = state.units?.find(u => u._id === schedule.unitId);
+        if (unitObj && unitObj.number) {
+          unitLabel = `<i class="fas fa-door-open"></i> Unit ${unitObj.number}`;
+        } else {
+          unitLabel = `<i class="fas fa-door-open"></i> ${schedule.unitId}`;
+        }
+      }
+    }
+
     const statusIcon = schedule.status === 'completed'
       ? '<i class="fas fa-check-circle"></i>'
       : schedule.status === 'in-progress'
@@ -5819,7 +5846,7 @@ function renderMaintenanceSchedules(schedules) {
             </div>
             <div>
               <div style="margin-bottom:8px;"><strong><i class="fas fa-user-tie"></i> Vendor:</strong> ${vendorName}</div>
-              <div style="margin-bottom:8px;"><strong><i class="fas fa-door-open"></i> Unit:</strong> ${unitLabel}</div>
+              <div style="margin-bottom:8px;"> ${unitLabel}</div>
               <div style="margin-bottom:8px;"><strong><i class="fas fa-calendar-check"></i> Completed At:</strong> ${completedAtLabel}</div>
               <div><strong><i class="fas fa-dollar-sign"></i> Cost:</strong> ${costLabel}</div>
             </div>
@@ -5829,6 +5856,7 @@ function renderMaintenanceSchedules(schedules) {
     `;
   }).join('');
 }
+
 
 
 
@@ -7028,4 +7056,5 @@ window.deletePayment = deletePayment;
     </script>
 </body>
 </html>
+
 
