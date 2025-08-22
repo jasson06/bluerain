@@ -3031,6 +3031,27 @@ select {
           <!-- Populate with vendors -->
         </select>
       </div>
+      <!-- NEW FIELDS BELOW -->
+      <div class="form-group">
+        <label>Unit (optional)</label>
+        <select id="scheduleUnit">
+          <option value="">None</option>
+          <!-- Populate with units -->
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="scheduleStatus">
+          <option value="pending">Pending</option>
+          <option value="in-progress">In Progress</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Cost ($)</label>
+        <input type="number" id="scheduleCost" min="0" step="0.01">
+      </div>
+      <!-- END NEW FIELDS -->
       <div class="modal-buttons">
         <button type="button" class="btn-secondary" onclick="closeModal('addScheduleModal')">Cancel</button>
         <button type="submit" class="btn-primary">Create Schedule</button>
@@ -5373,96 +5394,91 @@ function renderMaintenanceRequestsList(requests) {
 
 // Update the renderMaintenanceRequests function
 function renderMaintenanceRequests() {
-    const maintenanceList = document.getElementById('maintenanceList');
-    if (!state.maintenanceRequests?.length) {
-        maintenanceList.innerHTML = `
+  const maintenanceList = document.getElementById('maintenanceList');
+  if (!state.maintenanceRequests?.length) {
+    maintenanceList.innerHTML = `
       <div class="empty-state" style="text-align:center;padding:32px;">
         <i class="fas fa-tools" style="font-size:2.2em;color:#3498db;margin-bottom:12px;"></i>
-        <p style="font-size:1.1em;color:#888;">No maintenance requests found.</p>
+        <p style="font-size:1em;color:#888;">No maintenance requests found.</p>
       </div>
     `;
     return;
-    }
+  }
 
-    maintenanceList.innerHTML = state.maintenanceRequests.map(request => {
-        // Find the associated unit
-        const unit = typeof request.unitId === 'object' ? request.unitId : 
-            state.units.find(u => u._id === request.unitId);
+  maintenanceList.innerHTML = state.maintenanceRequests.map(request => {
+    // Find the associated unit
+    const unit = typeof request.unitId === 'object' ? request.unitId : 
+      state.units.find(u => u._id === request.unitId);
 
-        // Format creation date
-        const createdDate = new Date(request.createdAt).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
+    // Format creation date
+    const createdDate = new Date(request.createdAt).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
 
-        return `
-            <div class="maintenance-card">
-                <div class="maintenance-header">
-                    <div class="header-content">
-                        <h3>${request.title}</h3>
-                        <span class="priority-badge ${request.priority}">
-                            <i class="fas fa-exclamation-circle"></i>
-                            ${request.priority.charAt(0).toUpperCase() + request.priority.slice(1)} Priority
-                        </span>
-                    </div>
-                    <div class="maintenance-actions">
-                        <button onclick="updateMaintenanceStatus('${request._id}')" class="btn-secondary">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="deleteMaintenance('${request._id}')" class="btn-icon delete-btn" title="Delete Request">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="maintenance-content">
-                    <div class="unit-info">
-                        <i class="fas fa-home"></i>
-                        ${unit ? 
-                            `Unit ${unit.number} (${unit.bedrooms}bed/${unit.bathrooms}bath)` : 
-                            'No unit assigned'}
-                    </div>
-                    <div class="description">
-                        <p>${request.description}</p>
-                    </div>
-                </div>
+    // Priority badge
+    const priorityBadge = `<span class="badge badge-info" style="background:#fff3cd;color:#856404;padding:2px 10px;border-radius:10px;font-size:0.92em;">
+      <i class="fas fa-exclamation-circle"></i> ${request.priority.charAt(0).toUpperCase() + request.priority.slice(1)} Priority
+    </span>`;
 
-                <div class="maintenance-footer">
-                    <div class="request-meta">
-                        <span class="status-badge ${request.status}">
-                            <i class="fas fa-circle"></i>
-                            ${request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                        </span>
-                        <span class="created-date">
-                            <i class="fas fa-calendar-alt"></i>
-                            Created: ${createdDate}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
+    // Status badge with icon
+    let statusIcon = '<i class="fas fa-clock"></i>';
+    if (request.status === 'completed') statusIcon = '<i class="fas fa-check-circle"></i>';
+    else if (request.status === 'in-progress') statusIcon = '<i class="fas fa-spinner"></i>';
+    const statusBadge = `<span class="status-badge ${request.status}" style="padding:4px 12px;border-radius:15px;font-size:0.82em;font-weight:600;">
+      ${statusIcon} ${request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+    </span>`;
 
-// Add this function to populate maintenance unit select
-function populateMaintenanceUnitSelect() {
-    const unitSelect = document.getElementById('maintenanceUnit');
-    if (!unitSelect || !state.units) return;
-    
-    // Get all units (we want to allow maintenance requests for any unit)
-    console.log('Available units for maintenance:', state.units); // Debug log
-    
-    // Clear existing options and add new ones
-    unitSelect.innerHTML = `
-        <option value="">Select a unit</option>
-        ${state.units.map(unit => `
-            <option value="${unit._id}">
-                Unit ${unit.number} - ${unit.status}
-                (${unit.bedrooms} bed, ${unit.bathrooms} bath)
-            </option>
-        `).join('')}
+    // --- Make description stand out ---
+    const descriptionHtml = `
+      <div style="
+        margin-bottom:12px;
+        background: linear-gradient(90deg, #eaf6ff 0%, #f7f7ff 100%);
+        border-left: 4px solid #3498db;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 0.97em;
+        color: #217dbb;
+        font-weight: 500;
+        box-shadow: 0 1px 4px rgba(44,62,80,0.05);
+      ">
+        <i class="fas fa-align-left" style="margin-right:7px;color:#217dbb;"></i>
+        ${request.description || '<span style="color:#888;">No description provided.</span>'}
+      </div>
     `;
+
+    return `
+      <div class="maintenance-card" style="border:1.5px solid #e1e8ed;box-shadow:0 2px 8px rgba(44,62,80,0.07);margin-bottom:18px;font-size:0.97em;">
+        <div class="maintenance-header" style="background:#f6fafd;padding:12px 18px;border-bottom:1px solid #e1e8ed;display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <strong style="font-size:1.08em;color:#2c3e50;"><i class="fas fa-tools" style="color:#217dbb;margin-right:8px;"></i>${request.title}</strong>
+            <span style="margin-left:12px;">${priorityBadge}</span>
+          </div>
+          <div class="maintenance-actions">
+            <button onclick="updateMaintenanceStatus('${request._id}')" class="btn-secondary" style="margin-right:6px;font-size:0.97em;">
+              <i class="fas fa-edit"></i> Edit
+            </button>
+            <button onclick="deleteMaintenance('${request._id}')" class="btn-icon delete-btn" title="Delete Request" style="font-size:0.97em;">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+        <div class="maintenance-content" style="padding:14px 18px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+              ${descriptionHtml}
+              <div style="margin-bottom:8px;"><strong><i class="fas fa-calendar-alt"></i> Created:</strong> <span style="color:#217dbb;">${createdDate}</span></div>
+              <div style="margin-bottom:8px;"><strong><i class="fas fa-info-circle"></i> Status:</strong> ${statusBadge}</div>
+            </div>
+            <div>
+              <div style="margin-bottom:8px;"> ${unit ? `<i class="fas fa-door-open"></i> Unit ${unit.number}` : '<span style="color:#888;font-size:0.97em;"><i class="fas fa-door-closed"></i> None</span>'}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 
@@ -5647,6 +5663,10 @@ function renderMaintenanceSchedulesList(schedules) {
             <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Start Date</th>
             <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Next Scheduled</th>
             <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Vendor</th>
+            <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Unit</th>
+            <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Status</th>
+            <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Cost</th>
+            <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Completed At</th>
             <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Actions</th>
           </tr>
         </thead>
@@ -5662,6 +5682,19 @@ function renderMaintenanceSchedulesList(schedules) {
             const vendorName = schedule.assignedVendor?.name
               ? `<span style="color:#217dbb;font-weight:600;">${schedule.assignedVendor.name}</span>`
               : '<span style="color:#888;">None</span>';
+            const unitLabel = schedule.unitId?.number
+              ? `Unit ${schedule.unitId.number}`
+              : (schedule.unitId ? schedule.unitId : '<span style="color:#888;">None</span>');
+            const statusLabel = schedule.status
+              ? `<span class="status-badge ${schedule.status}">${schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}</span>`
+              : '<span class="status-badge pending">Pending</span>';
+            const costLabel = typeof schedule.cost === 'number'
+              ? `$${schedule.cost.toFixed(2)}`
+              : '$0.00';
+            const completedAtLabel = schedule.completedAt
+              ? new Date(schedule.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+              : '';
+
             return `
               <tr style="border-bottom:1px solid #e1e8ed;">
                 <td style="padding:10px 8px;font-weight:600;color:#2c3e50;">${schedule.title}</td>
@@ -5670,6 +5703,10 @@ function renderMaintenanceSchedulesList(schedules) {
                 <td style="padding:10px 8px;">${new Date(schedule.startDate).toLocaleDateString('en-US')}</td>
                 <td style="padding:10px 8px;color:#217dbb;font-weight:600;">${nextDate}</td>
                 <td style="padding:10px 8px;">${vendorName}</td>
+                <td style="padding:10px 8px;">${unitLabel}</td>
+                <td style="padding:10px 8px;">${statusLabel}</td>
+                <td style="padding:10px 8px;">${costLabel}</td>
+                <td style="padding:10px 8px;">${completedAtLabel}</td>
                 <td style="padding:10px 8px;">
                   <button onclick="editMaintenanceSchedule('${schedule._id}')" class="btn-secondary" title="Edit" style="margin-right:6px;">
                     <i class="fas fa-edit"></i>
@@ -5695,7 +5732,7 @@ function renderMaintenanceSchedules(schedules) {
     scheduleList.innerHTML = `
       <div class="empty-state" style="text-align:center;padding:32px;">
         <i class="fas fa-calendar-alt" style="font-size:2.2em;color:#3498db;margin-bottom:12px;"></i>
-        <p style="font-size:1.1em;color:#888;">No routine maintenance schedules found.</p>
+        <p style="font-size:1em;color:#888;">No routine maintenance schedules found.</p>
       </div>
     `;
     return;
@@ -5706,37 +5743,86 @@ function renderMaintenanceSchedules(schedules) {
       ? new Date(schedule.nextScheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
       : 'N/A';
 
+    const startDateLabel = schedule.startDate
+      ? new Date(schedule.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : 'N/A';
+
     let freqLabel = schedule.frequency.charAt(0).toUpperCase() + schedule.frequency.slice(1);
     if (schedule.frequency === 'custom' && schedule.intervalDays) {
-      freqLabel = `Every ${schedule.intervalDays} days`;
+      freqLabel = `<span class="badge badge-info" style="background:#eaf6ff;color:#217dbb;padding:2px 10px;border-radius:10px;font-size:0.92em;"><i class="fas fa-sync-alt"></i> Every ${schedule.intervalDays} days</span>`;
+    } else {
+      freqLabel = `<span class="badge badge-default" style="background:#f6fafd;color:#217dbb;padding:2px 10px;border-radius:10px;font-size:0.92em;"><i class="fas fa-clock"></i> ${freqLabel}</span>`;
     }
 
-    const vendorName = schedule.assignedVendor?.name || 'None';
+    const vendorName = schedule.assignedVendor?.name
+      ? `<span style="color:#217dbb;font-weight:600;font-size:0.97em;"><i class="fas fa-user-tie"></i> ${schedule.assignedVendor.name}</span>`
+      : '<span style="color:#888;font-size:0.97em;"><i class="fas fa-user-slash"></i> None</span>';
+    const unitLabel = schedule.unitId?.number
+      ? `<i class="fas fa-door-open"></i> Unit ${schedule.unitId.number}`
+      : (schedule.unitId ? `<i class="fas fa-door-open"></i> ${schedule.unitId}` : '<span style="color:#888;font-size:0.97em;"><i class="fas fa-door-closed"></i> None</span>');
+    const statusIcon = schedule.status === 'completed'
+      ? '<i class="fas fa-check-circle"></i>'
+      : schedule.status === 'in-progress'
+        ? '<i class="fas fa-spinner"></i>'
+        : '<i class="fas fa-clock"></i>';
+    const statusLabel = schedule.status
+      ? `<span class="status-badge ${schedule.status}" style="padding:4px 12px;border-radius:15px;font-size:0.82em;font-weight:600;">${statusIcon} ${schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}</span>`
+      : '<span class="status-badge pending" style="padding:4px 12px;border-radius:15px;font-size:0.82em;font-weight:600;"><i class="fas fa-clock"></i> Pending</span>';
+    const costLabel = typeof schedule.cost === 'number'
+      ? `<span style="color:#217dbb;font-weight:600;font-size:0.97em;"><i class="fas fa-dollar-sign"></i> $${schedule.cost.toFixed(2)}</span>`
+      : '<span style="color:#888;font-size:0.97em;"><i class="fas fa-dollar-sign"></i> $0.00</span>';
+    const completedAtLabel = schedule.completedAt
+      ? `<span style="color:#27ae60;font-weight:600;font-size:0.97em;"><i class="fas fa-calendar-check"></i> ${new Date(schedule.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>`
+      : '<span style="color:#888;font-size:0.97em;"><i class="fas fa-calendar-times"></i> Not completed</span>';
+
+    // --- Make description stand out ---
+    const descriptionHtml = `
+      <div style="
+        margin-bottom:12px;
+        background: linear-gradient(90deg, #eaf6ff 0%, #f7f7ff 100%);
+        border-left: 4px solid #3498db;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 0.97em;
+        color: #217dbb;
+        font-weight: 500;
+        box-shadow: 0 1px 4px rgba(44,62,80,0.05);
+      ">
+        <i class="fas fa-align-left" style="margin-right:7px;color:#217dbb;"></i>
+        ${schedule.description || '<span style="color:#888;">No description provided.</span>'}
+      </div>
+    `;
 
     return `
-      <div class="maintenance-card">
-        <div class="maintenance-header">
+      <div class="maintenance-card" style="border:1.5px solid #e1e8ed;box-shadow:0 2px 8px rgba(44,62,80,0.07);margin-bottom:18px;font-size:0.97em;">
+        <div class="maintenance-header" style="background:#f6fafd;padding:12px 18px;border-bottom:1px solid #e1e8ed;display:flex;justify-content:space-between;align-items:center;">
           <div>
-            <h3>${schedule.title}</h3>
-            <span style="font-size:0.97em; color:#888;">${schedule.description || ''}</span>
+            <strong style="font-size:1.08em;color:#2c3e50;"><i class="fas fa-sync-alt" style="color:#217dbb;margin-right:8px;"></i>${schedule.title}</strong>
+            <span style="margin-left:12px;">${freqLabel}</span>
           </div>
           <div class="maintenance-actions">
-            <button onclick="editMaintenanceSchedule('${schedule._id}')" class="btn-secondary" title="Edit"><i class="fas fa-edit"></i></button>
-            <button onclick="deleteMaintenanceSchedule('${schedule._id}')" class="btn-icon delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
+            <button onclick="editMaintenanceSchedule('${schedule._id}')" class="btn-secondary" style="margin-right:6px;font-size:0.97em;">
+              <i class="fas fa-edit"></i> Edit
+            </button>
+            <button onclick="deleteMaintenanceSchedule('${schedule._id}')" class="btn-icon delete-btn" title="Delete" style="font-size:0.97em;">
+              <i class="fas fa-trash"></i>
+            </button>
           </div>
         </div>
-        <div class="maintenance-content">
-          <div style="margin-bottom:8px;">
-            <strong>Frequency:</strong> ${freqLabel}
-          </div>
-          <div style="margin-bottom:8px;">
-            <strong>Start Date:</strong> ${new Date(schedule.startDate).toLocaleDateString('en-US')}
-          </div>
-          <div style="margin-bottom:8px;">
-            <strong>Next Scheduled:</strong> <span style="color:#217dbb; font-weight:600;">${nextDate}</span>
-          </div>
-          <div>
-            <strong>Assigned Vendor:</strong> ${vendorName}
+        <div class="maintenance-content" style="padding:14px 18px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+              ${descriptionHtml}
+              <div style="margin-bottom:8px;"><strong><i class="fas fa-calendar-day"></i> Start Date:</strong> <span style="color:#217dbb;">${startDateLabel}</span></div>
+              <div style="margin-bottom:8px;"><strong><i class="fas fa-calendar-alt"></i> Next Date:</strong> <span style="color:#217dbb;">${nextDate}</span></div>
+              <div style="margin-bottom:8px;"><strong><i class="fas fa-info-circle"></i> Status:</strong> ${statusLabel}</div>
+            </div>
+            <div>
+              <div style="margin-bottom:8px;"><strong><i class="fas fa-user-tie"></i> Vendor:</strong> ${vendorName}</div>
+              <div style="margin-bottom:8px;"><strong><i class="fas fa-door-open"></i> Unit:</strong> ${unitLabel}</div>
+              <div style="margin-bottom:8px;"><strong><i class="fas fa-calendar-check"></i> Completed At:</strong> ${completedAtLabel}</div>
+              <div><strong><i class="fas fa-dollar-sign"></i> Cost:</strong> ${costLabel}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -5753,7 +5839,8 @@ document.getElementById('addScheduleBtn').addEventListener('click', async () => 
   form.dataset.scheduleId = '';
   form.querySelector('button[type="submit"]').textContent = 'Create Schedule';
   document.getElementById('customIntervalGroup').style.display = 'none';
-  await populateScheduleVendorSelect(); // <-- Add this line
+  await populateScheduleVendorSelect();
+  await populateScheduleUnitSelect(); // <-- Add this line
   openModal('addScheduleModal');
 });
 
@@ -5761,52 +5848,66 @@ document.getElementById('scheduleFrequency').addEventListener('change', function
   document.getElementById('customIntervalGroup').style.display = this.value === 'custom' ? 'block' : 'none';
 });
 
-document.getElementById('addScheduleForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const title = document.getElementById('scheduleTitle').value;
-  const description = document.getElementById('scheduleDescription').value;
-  const frequency = document.getElementById('scheduleFrequency').value;
-  const intervalDays = frequency === 'custom' ? Number(document.getElementById('scheduleIntervalDays').value) : null;
-  const startDate = document.getElementById('scheduleStartDate').value;
-  const assignedVendor = document.getElementById('scheduleVendor').value;
-const vendorValue = assignedVendor && assignedVendor !== "" ? assignedVendor : null;
-  const form = e.target;
-  const isEdit = form.dataset.editMode === 'true';
-  const scheduleId = form.dataset.scheduleId;
-  
 
-  showLoader();
-  try {
-    let res;
-if (isEdit && scheduleId) {
-  res = await fetch(`/api/properties/${state.currentProperty._id}/maintenance-schedules/${scheduleId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, description, frequency, intervalDays, startDate, assignedVendor: vendorValue })
-  });
-} else {
-  res = await fetch(`/api/properties/${state.currentProperty._id}/maintenance-schedules`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, description, frequency, intervalDays, startDate, assignedVendor: vendorValue })
-  });
-}
-    if (!res.ok) throw new Error(isEdit ? 'Failed to update schedule' : 'Failed to create schedule');
-    closeModal('addScheduleModal');
-    showNotification(isEdit ? 'Schedule updated!' : 'Schedule created!', 'success');
-    await loadMaintenanceSchedules();
-    // Reset form mode after submit
-    form.dataset.editMode = 'false';
-    form.dataset.scheduleId = '';
-    form.querySelector('button[type="submit"]').textContent = 'Create Schedule';
-    form.reset();
-    document.getElementById('customIntervalGroup').style.display = 'none';
-  } catch (err) {
-    showNotification(isEdit ? 'Error updating schedule' : 'Error creating schedule', 'error');
-  } finally {
-    hideLoader();
-  }
+
+document.getElementById('addScheduleBtn').addEventListener('click', async () => {
+  const form = document.getElementById('addScheduleForm');
+  form.reset();
+  form.dataset.editMode = 'false';
+  form.dataset.scheduleId = '';
+  form.querySelector('button[type="submit"]').textContent = 'Create Schedule';
+  document.getElementById('customIntervalGroup').style.display = 'none';
+  await populateScheduleVendorSelect();
+  await populateScheduleUnitSelect();
+
+  // Reset form submit handler to default create logic
+  form.onsubmit = async function(e) {
+    e.preventDefault();
+    const title = document.getElementById('scheduleTitle').value;
+    const description = document.getElementById('scheduleDescription').value;
+    const frequency = document.getElementById('scheduleFrequency').value;
+    const intervalDays = frequency === 'custom' ? Number(document.getElementById('scheduleIntervalDays').value) : null;
+    const startDate = document.getElementById('scheduleStartDate').value;
+    const assignedVendor = document.getElementById('scheduleVendor').value;
+    const unitId = document.getElementById('scheduleUnit').value || null;
+    const status = document.getElementById('scheduleStatus').value;
+    const cost = Number(document.getElementById('scheduleCost').value) || 0;
+    const vendorValue = assignedVendor && assignedVendor !== "" ? assignedVendor : null;
+
+    showLoader();
+    try {
+      const payload = { title, description, frequency, intervalDays, startDate, assignedVendor: vendorValue, unitId, status, cost };
+      const res = await fetch(`/api/properties/${state.currentProperty._id}/maintenance-schedules`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Failed to create schedule');
+      closeModal('addScheduleModal');
+      showNotification('Schedule created!', 'success');
+      await loadMaintenanceSchedules();
+      form.dataset.editMode = 'false';
+      form.dataset.scheduleId = '';
+      form.querySelector('button[type="submit"]').textContent = 'Create Schedule';
+      form.reset();
+      document.getElementById('customIntervalGroup').style.display = 'none';
+    } catch (err) {
+      showNotification('Error creating schedule', 'error');
+    } finally {
+      hideLoader();
+    }
+  };
+
+  openModal('addScheduleModal');
 });
+
+// Populate units in the schedule modal
+async function populateScheduleUnitSelect() {
+  const select = document.getElementById('scheduleUnit');
+  if (!select || !state.units) return;
+  select.innerHTML = `<option value="">None</option>` +
+    state.units.map(unit => `<option value="${unit._id}">Unit ${unit.number}</option>`).join('');
+}
 
 
 async function populateScheduleVendorSelect() {
@@ -5840,15 +5941,19 @@ async function editMaintenanceSchedule(scheduleId) {
     }
 
     await populateScheduleVendorSelect();
+    await populateScheduleUnitSelect();
 
     // Populate modal fields
-    document.getElementById('scheduleTitle').value = schedule.title;
+    document.getElementById('scheduleTitle').value = schedule.title || '';
     document.getElementById('scheduleDescription').value = schedule.description || '';
-    document.getElementById('scheduleFrequency').value = schedule.frequency;
+    document.getElementById('scheduleFrequency').value = schedule.frequency || 'monthly';
     document.getElementById('customIntervalGroup').style.display = schedule.frequency === 'custom' ? 'block' : 'none';
     document.getElementById('scheduleIntervalDays').value = schedule.intervalDays || '';
     document.getElementById('scheduleStartDate').value = schedule.startDate ? new Date(schedule.startDate).toISOString().split('T')[0] : '';
     document.getElementById('scheduleVendor').value = schedule.assignedVendor?._id || '';
+    document.getElementById('scheduleUnit').value = schedule.unitId?._id || schedule.unitId || '';
+    document.getElementById('scheduleStatus').value = schedule.status || 'pending';
+    document.getElementById('scheduleCost').value = typeof schedule.cost === 'number' ? schedule.cost : '';
 
     // Set edit mode
     const form = document.getElementById('addScheduleForm');
@@ -5868,7 +5973,7 @@ async function editMaintenanceSchedule(scheduleId) {
   }
 }
 
-// Handle Update Maintenance Schedule
+// Handle Update Maintenance Schedule (send all fields)
 async function handleUpdateMaintenanceSchedule(scheduleId) {
   const title = document.getElementById('scheduleTitle').value;
   const description = document.getElementById('scheduleDescription').value;
@@ -5876,12 +5981,26 @@ async function handleUpdateMaintenanceSchedule(scheduleId) {
   const intervalDays = frequency === 'custom' ? Number(document.getElementById('scheduleIntervalDays').value) : null;
   const startDate = document.getElementById('scheduleStartDate').value;
   const assignedVendor = document.getElementById('scheduleVendor').value || null;
+  const unitId = document.getElementById('scheduleUnit').value || null;
+  const status = document.getElementById('scheduleStatus').value;
+  const cost = Number(document.getElementById('scheduleCost').value) || 0;
+
   showLoader();
   try {
     const res = await fetch(`/api/properties/${state.currentProperty._id}/maintenance-schedules/${scheduleId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, description, frequency, intervalDays, startDate, assignedVendor })
+      body: JSON.stringify({
+        title,
+        description,
+        frequency,
+        intervalDays,
+        startDate,
+        assignedVendor,
+        unitId,
+        status,
+        cost
+      })
     });
     if (!res.ok) throw new Error('Failed to update schedule');
     closeModal('addScheduleModal');
@@ -5893,6 +6012,7 @@ async function handleUpdateMaintenanceSchedule(scheduleId) {
     hideLoader();
   }
 }
+
 
 // Delete Maintenance Schedule
 async function deleteMaintenanceSchedule(scheduleId) {
@@ -6024,9 +6144,9 @@ function showRecurringDetailsModal(selectedDate, schedules) {
     );
   });
 
-  // Build modal HTML
-   let html = `
-    <div class="modal-content" style="max-width:500px;">
+  // Build modal HTML with all schedule fields
+  let html = `
+    <div class="modal-content" style="max-width:600px;">
       <h2>Recurring Maintenance for ${selectedDate.toLocaleDateString()}</h2>
       ${events.length === 0 ? '<p>No recurring maintenance scheduled for this date.</p>' : ''}
       <ul style="padding-left:0;">
@@ -6035,7 +6155,11 @@ function showRecurringDetailsModal(selectedDate, schedules) {
             <strong>${sch.title}</strong><br>
             <span style="color:#888;">${sch.description || ''}</span><br>
             <span>Frequency: ${sch.frequency}${sch.frequency === 'custom' && sch.intervalDays ? `, every ${sch.intervalDays} days` : ''}</span><br>
-            <span>Vendor: ${sch.assignedVendor?.name || 'None'}</span>
+            <span>Vendor: ${sch.assignedVendor?.name || 'None'}</span><br>
+            <span>Unit: ${sch.unitId?.number ? `Unit ${sch.unitId.number}` : (sch.unitId ? sch.unitId : 'None')}</span><br>
+            <span>Status: <span class="status-badge ${sch.status}">${sch.status ? sch.status.charAt(0).toUpperCase() + sch.status.slice(1) : 'Pending'}</span></span><br>
+            <span>Cost: ${typeof sch.cost === 'number' ? `$${sch.cost.toFixed(2)}` : '$0.00'}</span><br>
+            ${sch.completedAt ? `<span style="color:#27ae60;">Completed: ${new Date(sch.completedAt).toLocaleDateString()}</span><br>` : ''}
             <div style="margin-top:8px;">
               <button onclick="editMaintenanceSchedule('${sch._id}')" class="btn-secondary" style="margin-right:6px;">
                 <i class="fas fa-edit"></i> Edit
