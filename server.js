@@ -1028,6 +1028,10 @@ const maintenanceScheduleSchema = new mongoose.Schema({
   startDate: { type: Date, required: true },
   nextScheduledDate: { type: Date, required: true },
   assignedVendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', default: null },
+  unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit', default: null }, // <-- Optional unit
+  status: { type: String, enum: ['pending', 'in-progress', 'completed'], default: 'pending' }, // <-- Status
+  completedAt: { type: Date, default: null }, // <-- Date completed
+  cost: { type: Number, default: 0 }, // <-- Cost field
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -6083,11 +6087,10 @@ setTimeout(function() {
 // API to create a schedule
 app.post('/api/properties/:propertyId/maintenance-schedules', async (req, res) => {
   try {
-    const { title, description, frequency, intervalDays, startDate, assignedVendor } = req.body;
+    const { title, description, frequency, intervalDays, startDate, assignedVendor, unitId, cost } = req.body;
     if (!title || !frequency || !startDate) {
       return res.status(400).json({ message: 'Missing required fields.' });
     }
-    // Calculate nextScheduledDate
     let nextDate = new Date(startDate);
     switch (frequency) {
       case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
@@ -6107,7 +6110,9 @@ app.post('/api/properties/:propertyId/maintenance-schedules', async (req, res) =
       intervalDays: frequency === 'custom' ? intervalDays : null,
       startDate,
       nextScheduledDate: nextDate,
-      assignedVendor: assignedVendor || null
+      assignedVendor: assignedVendor || null,
+      unitId: unitId || null,
+      cost: cost || 0
     });
     await schedule.save();
     res.status(201).json(schedule);
@@ -6130,8 +6135,7 @@ app.get('/api/properties/:propertyId/maintenance-schedules', async (req, res) =>
 // --- Maintenance Schedule: Update (PUT) ---
 app.put('/api/properties/:propertyId/maintenance-schedules/:scheduleId', async (req, res) => {
   try {
-    const { title, description, frequency, intervalDays, startDate, assignedVendor } = req.body;
-    // Calculate nextScheduledDate
+    const { title, description, frequency, intervalDays, startDate, assignedVendor, unitId, status, cost } = req.body;
     let nextDate = new Date(startDate);
     switch (frequency) {
       case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
@@ -6143,17 +6147,26 @@ app.put('/api/properties/:propertyId/maintenance-schedules/:scheduleId', async (
         nextDate.setDate(nextDate.getDate() + intervalDays);
         break;
     }
+    const updateObj = {
+      title,
+      description,
+      frequency,
+      intervalDays: frequency === 'custom' ? intervalDays : null,
+      startDate,
+      nextScheduledDate: nextDate,
+      assignedVendor: assignedVendor || null,
+      unitId: unitId || null,
+      cost: cost || 0
+    };
+    if (status) {
+      updateObj.status = status;
+      if (status === 'completed') {
+        updateObj.completedAt = new Date();
+      }
+    }
     const updated = await MaintenanceSchedule.findOneAndUpdate(
       { _id: req.params.scheduleId, projectId: req.params.propertyId },
-      {
-        title,
-        description,
-        frequency,
-        intervalDays: frequency === 'custom' ? intervalDays : null,
-        startDate,
-        nextScheduledDate: nextDate,
-        assignedVendor: assignedVendor || null
-      },
+      updateObj,
       { new: true }
     );
     if (!updated) return res.status(404).json({ message: 'Schedule not found.' });
@@ -6162,6 +6175,7 @@ app.put('/api/properties/:propertyId/maintenance-schedules/:scheduleId', async (
     res.status(500).json({ message: 'Failed to update schedule.' });
   }
 });
+
 
 // --- Maintenance Schedule: Delete (DELETE) ---
 app.delete('/api/properties/:propertyId/maintenance-schedules/:scheduleId', async (req, res) => {
