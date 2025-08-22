@@ -5927,6 +5927,14 @@ async function populateScheduleVendorSelect() {
 }
 
 
+        function populateMaintenanceUnitSelect() {
+  const select = document.getElementById('maintenanceUnit');
+  if (!select || !state.units) return;
+  select.innerHTML = `<option value="">Select a unit</option>` +
+    state.units.map(unit => `<option value="${unit._id}">Unit ${unit.number}</option>`).join('');
+}
+
+
 
 // Edit Maintenance Schedule
 async function editMaintenanceSchedule(scheduleId) {
@@ -7020,3 +7028,4 @@ window.deletePayment = deletePayment;
     </script>
 </body>
 </html>
+
