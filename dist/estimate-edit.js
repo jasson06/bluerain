@@ -2426,9 +2426,78 @@ function goToEstimate(offset) {
   window.location.href = `?projectId=${projectId}&estimateId=${newEstimateId}`;
 }
 
+let allEstimatesList = []; // Store all estimates for suggestions
+
+async function setupEstimateTitleSuggestions() {
+  const projectId = new URLSearchParams(window.location.search).get("projectId");
+  const estimateId = new URLSearchParams(window.location.search).get("estimateId");
+  const input = document.getElementById("estimate-title");
+  const suggestionBox = document.getElementById("estimate-title-suggestions");
+  if (!input || !suggestionBox || !projectId) return;
+
+  // Fetch all estimates for this project
+  try {
+    const res = await fetch(`/api/estimates?projectId=${projectId}`);
+    const data = await res.json();
+    window.allEstimatesList = data.estimates || [];
+  } catch (err) {
+    window.allEstimatesList = [];
+  }
+
+  // Helper to render suggestions
+  function renderSuggestions(matches) {
+    suggestionBox.innerHTML = "";
+    if (matches.length === 0) {
+      suggestionBox.style.display = "none";
+      return;
+    }
+    matches.forEach(est => {
+      const option = document.createElement("div");
+      option.textContent = est.title || `Estimate ${est._id}`;
+      option.style.padding = "10px 16px";
+      option.style.cursor = "pointer";
+      option.style.borderBottom = "1px solid #eee";
+      option.onmouseenter = () => (option.style.background = "#f0f4ff");
+      option.onmouseleave = () => (option.style.background = "#fff");
+      option.onclick = () => {
+        window.location.href = `?projectId=${projectId}&estimateId=${est._id}`;
+      };
+      suggestionBox.appendChild(option);
+    });
+    suggestionBox.style.display = "block";
+  }
+
+  // Show all suggestions when input is focused
+  input.addEventListener("focus", function () {
+    renderSuggestions(window.allEstimatesList);
+  });
+
+  // Show filtered suggestions when typing
+  input.addEventListener("input", function () {
+    const val = input.value.trim().toLowerCase();
+    if (!val) {
+      renderSuggestions(window.allEstimatesList);
+    } else {
+      const matches = window.allEstimatesList.filter(est =>
+        (est.title || "").toLowerCase().includes(val)
+      );
+      renderSuggestions(matches);
+    }
+  });
+
+  // Hide suggestions when clicking outside
+  document.addEventListener("click", function (e) {
+    if (!input.contains(e.target) && !suggestionBox.contains(e.target)) {
+      suggestionBox.style.display = "none";
+    }
+  });
+}
+
+
 // Attach event listeners after DOMContentLoaded
 document.addEventListener("DOMContentLoaded", () => {
   setupEstimateNavigation();
+  setupEstimateTitleSuggestions();
   document.getElementById("prev-estimate").addEventListener("click", () => goToEstimate(-1));
   document.getElementById("next-estimate").addEventListener("click", () => goToEstimate(1));
 });
