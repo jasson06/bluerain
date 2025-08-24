@@ -2162,10 +2162,9 @@ function applyCardViewFilters(categoryValue, statusValue, vendorValue) {
     const cardCategory = categoryHeader ?
       categoryHeader.querySelector('.category-title span')?.textContent?.trim() || '' : '';
 
-    // Get item status from the status element's text content
-    const statusElement = card.querySelector('.item-status');
-    const cardStatus = statusElement ?
-      statusElement.textContent.trim().toLowerCase() : 'new';
+// Get item status from the dropdown value
+const statusDropdown = card.querySelector('.item-status-dropdown');
+const cardStatus = statusDropdown ? statusDropdown.value.toLowerCase() : 'new';
 
     // Get assigned vendor
     const assignedTo = card.getAttribute('data-assigned-to') || '';
