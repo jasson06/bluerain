@@ -3386,8 +3386,21 @@ async function loadProperties() {
             project.type?.toLowerCase() === 'multifamily'
         );
 
-        // Combine both lists
-        state.properties = [...activeProperties, ...completedProperties];
+        // --- Fetch "On Market" properties ---
+        const onMarketRes = await fetch('/api/on-market-projects');
+        if (onMarketRes.ok) {
+            const onMarketData = await onMarketRes.json();
+            state.onMarketProperties = (onMarketData.projects || []).filter(project =>
+                project.type?.toLowerCase() === 'multifamily' 
+            );
+            // You can render these in a separate list or badge if needed
+            console.log('On Market Properties:', state.onMarketProperties);
+        } else {
+            state.onMarketProperties = [];
+        }
+
+        // Combine all lists: active, completed, and on market
+        state.properties = [...activeProperties, ...completedProperties, ...state.onMarketProperties];
 
         renderPropertyList();
 
@@ -3401,9 +3414,8 @@ async function loadProperties() {
     } catch (error) {
         console.error('Error loading properties:', error);
         showNotification('Error loading properties', 'error');
-            } finally {
+    } finally {
         hideLoader();
-    
     }
 }
  
@@ -7056,5 +7068,6 @@ window.deletePayment = deletePayment;
     </script>
 </body>
 </html>
+
 
 
