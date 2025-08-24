@@ -1590,6 +1590,21 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   }
 }
 
+#estimate-title-suggestions.suggestion-box {
+  font-size: 1rem;
+  box-shadow: 0 2px 8px rgba(59,130,246,0.09);
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  max-height: 220px;
+  overflow-y: auto;
+}
+#estimate-title-suggestions .active,
+#estimate-title-suggestions div:hover {
+  background: #e0e7ef;
+  color: #2563eb;
+}
+    
 /* Add to your CSS file or <style> block */
   
 .item-status-dropdown.status-in-progress {
@@ -1659,12 +1674,15 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
       </svg>
       <strong>Estimate Title:</strong>
     </label>
+    <div style="flex:1; position:relative;">
+      <input type="text" id="estimate-title" placeholder="e.g., Kitchen Remodel Estimate" autocomplete="off" />
+      <div id="estimate-title-suggestions" class="suggestion-box" style="display:none; position:absolute; left:0; top:100%; width:100%; background:#fff; border:1px solid #ccc; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.08); z-index:1000; max-height:220px; overflow-y:auto;"></div>
+    </div>
     <div id="estimate-nav-buttons">
       <button id="prev-estimate" class="btn-secondary nav-btn">&#8592; Previous</button>
       <button id="next-estimate" class="btn-secondary nav-btn">&#8594; Next</button>
     </div>
   </div>
-  <input type="text" id="estimate-title" placeholder="e.g., Kitchen Remodel Estimate" />
 </div>
     
 <section id="button-action">
