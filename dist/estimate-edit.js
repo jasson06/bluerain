@@ -1265,9 +1265,7 @@ function addSmartBlurAutoSave(input) {
     materialCostInput,
     areaInput,
     lengthInput,
-    calcModeSelect,
-    startDateInput,
-    endDateInput
+    calcModeSelect
   ].forEach(input => addSmartBlurAutoSave(input));
 
 // For estimate title (outside addLineItemCard, after DOMContentLoaded)
