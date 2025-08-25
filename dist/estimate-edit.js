@@ -797,6 +797,10 @@ function addLineItemCard(item = {}, categoryHeader = null) {
   const quantity = item.quantity || 1;
   const unitPrice = item.unitPrice || 0;
 
+    // Start/End Date values
+  const startDateValue = item.startDate ? new Date(item.startDate).toISOString().substring(0, 10) : "";
+  const endDateValue = item.endDate ? new Date(item.endDate).toISOString().substring(0, 10) : "";
+
   card.innerHTML = `
     <div class="card-header">
       <input type="checkbox" class="line-item-select" ${item.assignedTo ? "disabled" : ""}>
@@ -879,26 +883,47 @@ function addLineItemCard(item = {}, categoryHeader = null) {
         </div>
       </div>
     </div>
-    <div class="card-footer">
-      <div class="status-assigned-container" style="display:flex; align-items:center; gap:24px;">
-<span>
-  Status:
-  <select class="item-status-dropdown ${statusClass}" style="margin-left:8px; padding:4px 10px; border-radius:6px; border:1px solid #ccc; font-weight:600;">
-    ${statusOptions.map(opt => `<option value="${opt.value}" ${status === opt.value ? "selected" : ""}>${opt.label}</option>`).join("")}
-  </select>
-</span>
-    <span>
-      Assigned to:
-      <span class="vendor-name tooltip-click" data-fullname="${assignedToName}">
-        ${assignedToInitials}
+  <div class="card-footer" style="
+    
+    border-top: 1px solid #e5e7eb;
+    padding: 18px 24px;
+    border-radius: 0 0 12px 12px;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+    align-items: center;
+    justify-content: space-between;
+  ">
+    <div class="footer-dates" style="display:flex; gap:18px; align-items:center;">
+      <div style="display:flex; flex-direction:column;">
+        <label for="start-date-${card.getAttribute("data-item-id")}" style="font-weight:500; color:#2563eb; margin-bottom:2px;">Start Date</label>
+        <input type="date" class="item-start-date" id="start-date-${card.getAttribute("data-item-id")}" value="${startDateValue}" style="padding:7px 12px; border-radius:6px; border:1px solid #d1d5db; background:#fff;">
+      </div>
+      <div style="display:flex; flex-direction:column;">
+        <label for="end-date-${card.getAttribute("data-item-id")}" style="font-weight:500; color:#2563eb; margin-bottom:2px;">End Date</label>
+        <input type="date" class="item-end-date" id="end-date-${card.getAttribute("data-item-id")}" value="${endDateValue}" style="padding:7px 12px; border-radius:6px; border:1px solid #d1d5db; background:#fff;">
+      </div>
+    </div>
+    <div class="status-assigned-container" style="display:flex; align-items:center; gap:24px;">
+      <span>
+        Status:
+        <select class="item-status-dropdown ${statusClass}" style="margin-left:8px; padding:4px 10px; border-radius:6px; border:1px solid #ccc; font-weight:600;">
+          ${statusOptions.map(opt => `<option value="${opt.value}" ${status === opt.value ? "selected" : ""}>${opt.label}</option>`).join("")}
+        </select>
       </span>
+      <span>
+        Assigned to:
+        <span class="vendor-name tooltip-click" data-fullname="${assignedToName}">
+          ${assignedToInitials}
+        </span>
+      </span>
+    </div>
+    <span class="item-total" style="font-size:1.15em; font-weight:600; color:#2563eb; margin-left:auto;">
+      $0.00
     </span>
   </div>
-  <span class="item-total">
-    $0.00
-  </span>
-</div>
-  `;
+`;
 
    // Status dropdown handler
 const statusDropdown = card.querySelector(".item-status-dropdown");
@@ -949,6 +974,32 @@ statusDropdown.addEventListener("change", async function () {
   statusDropdown.className = "item-status-dropdown " + newClass;
   showToast("Status updated!");
 });
+
+    // Start/End Date update handlers
+  const startDateInput = card.querySelector(".item-start-date");
+  const endDateInput = card.querySelector(".item-end-date");
+  const lineItemId = card.getAttribute("data-item-id");
+
+  if (startDateInput) {
+    startDateInput.addEventListener("change", async () => {
+      await fetch(`/api/estimates/line-items/${lineItemId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ startDate: startDateInput.value })
+      });
+      showToast("Start date updated!");
+    });
+  }
+  if (endDateInput) {
+    endDateInput.addEventListener("change", async () => {
+      await fetch(`/api/estimates/line-items/${lineItemId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endDate: endDateInput.value })
+      });
+      showToast("End date updated!");
+    });
+  }
 
     // Inside addLineItemCard, after defining laborCostInput and materialCostInput:
 const laborCostFromBackend = item.laborCost !== undefined;
@@ -1201,17 +1252,19 @@ function addSmartBlurAutoSave(input) {
 
 // In addLineItemCard, replace the previous blur listeners with:
 [
-  card.querySelector(".item-name"),
-  card.querySelector(".item-description"),
-  card.querySelector(".item-cost-code"),
-  quantityInput,
-  priceInput,
-  laborCostInput,
-  materialCostInput,
-  areaInput,
-  lengthInput,
-  calcModeSelect
-].forEach(input => addSmartBlurAutoSave(input));
+    card.querySelector(".item-name"),
+    card.querySelector(".item-description"),
+    card.querySelector(".item-cost-code"),
+    quantityInput,
+    priceInput,
+    laborCostInput,
+    materialCostInput,
+    areaInput,
+    lengthInput,
+    calcModeSelect,
+    startDateInput,
+    endDateInput
+  ].forEach(input => addSmartBlurAutoSave(input));
 
 // For estimate title (outside addLineItemCard, after DOMContentLoaded)
 addSmartBlurAutoSave(document.getElementById("estimate-title"));
