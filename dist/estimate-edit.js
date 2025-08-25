@@ -719,7 +719,11 @@ lineItemsContainer.querySelectorAll('.item-description').forEach(autoResizeTexta
       addLineItemCard({}, header);
     });
 
-    header.querySelector(".remove-category").addEventListener("click", () => {
+        header.querySelector(".remove-category").addEventListener("click", () => {
+  const categoryName = header.querySelector(".category-title span")?.textContent?.trim() || "this category";
+  if (!confirm(`Are you sure you want to remove "${categoryName}" and all its line items? This cannot be undone.`)) {
+    return;
+  }
       let nextSibling = header.nextSibling;
       while (nextSibling && nextSibling.classList.contains("line-item-card")) {
         const temp = nextSibling.nextSibling;
