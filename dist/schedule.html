@@ -944,12 +944,29 @@ function populateEstimateDropdown(estimates) {
 
 
       
-    function updateLineItem(lineItemId, updates) {
-  // Example: Find the task in selectedLineItems and update its fields
-  const task = (selectedLineItems || []).flatMap(cat => cat.items || []).find(item => item._id === lineItemId);
-  if (task) {
-    Object.assign(task, updates);
-    renderTable(selectedLineItems); // Re-render table to reflect changes
+async function updateLineItem(lineItemId, updates) {
+  // Update backend
+  try {
+    const response = await fetch(`/api/estimates/line-items/${lineItemId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+    showNotification("Task updated successfully");
+    // Optionally update local data with backend response
+    const updatedTask = await response.json();
+
+    // Update local data
+    const task = (selectedLineItems || []).flatMap(cat => cat.items || []).find(item => item._id === lineItemId);
+    if (task) {
+      Object.assign(task, updates);
+      renderTable(); // No argument needed, uses global selectedLineItems
+    }
+    return updatedTask;
+  } catch (error) {
+    console.error("Error updating task:", error);
+    showNotification("Error updating task", "error");
   }
 }
 
@@ -1836,4 +1853,5 @@ if (projectId) {
   </script>
 </body>
 </html>
+
 
