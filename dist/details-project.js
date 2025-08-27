@@ -1520,8 +1520,59 @@ async function loadEstimates(projectId) {
 
     const { estimates } = await response.json();
 
+    // --- Stats for Graph ---
+    let totalLineItems = 0;
+    let completedItems = 0;
+    let inProgressItems = 0;
+
+    if (estimates && estimates.length) {
+      estimates.forEach(est => {
+        est.lineItems?.forEach(cat => {
+          cat.items?.forEach(item => {
+            totalLineItems++;
+            if (item.status === "completed") completedItems++;
+            else inProgressItems++;
+          });
+        });
+      });
+    }
+
+    // --- Calculate % completed ---
+    const percentCompleted = totalLineItems ? Math.round((completedItems / totalLineItems) * 100) : 0;
+
+    // --- Modern Graph HTML ---
+    let graphHtml = `
+      <div class="alt-estimate-graph">
+        <div class="alt-graph-circle">
+          <svg width="90" height="90">
+            <circle cx="45" cy="45" r="40" stroke="#e5e7eb" stroke-width="8" fill="none"/>
+            <circle cx="45" cy="45" r="40" stroke="#3b82f6" stroke-width="8" fill="none"
+              stroke-dasharray="${2 * Math.PI * 40}"
+              stroke-dashoffset="${2 * Math.PI * 40 * (1 - percentCompleted / 100)}"
+              style="transition: stroke-dashoffset 0.6s;"/>
+            <text x="50%" y="54%" text-anchor="middle" fill="#0f172a" font-size="1.5em" font-weight="bold" dy=".3em">${percentCompleted}%</text>
+          </svg>
+        </div>
+        <div class="alt-graph-details">
+          <div class="alt-graph-row">
+            <span class="alt-graph-label">Total Items</span>
+            <span class="alt-graph-value">${totalLineItems}</span>
+          </div>
+          <div class="alt-graph-row">
+            <span class="alt-graph-label">Completed</span>
+            <span class="alt-graph-value" style="color:#10b981;">${completedItems}</span>
+          </div>
+          <div class="alt-graph-row">
+            <span class="alt-graph-label">In Progress</span>
+            <span class="alt-graph-value" style="color:#f59e42;">${inProgressItems}</span>
+          </div>
+        </div>
+      </div>
+    `;
+
     if (!estimates || estimates.length === 0) {
       estimatesList.innerHTML = `
+        ${graphHtml}
         <div class="empty-estimates modern-card">
           <i class="fas fa-file-invoice-dollar" style="font-size: 2.5rem; color: #3b82f6;"></i>
           <p style="margin-top: 10px; color: #64748b;">No estimates found for this project.</p>
@@ -1533,37 +1584,37 @@ async function loadEstimates(projectId) {
       estimatesCount.textContent = `(${estimates.length})`;
 
       let totalBudget = 0;
-estimatesList.innerHTML = estimates.map((estimate) => {
-  totalBudget += estimate.total || 0;
-  const createdDate = estimate.createdAt
-    ? new Date(estimate.createdAt).toLocaleDateString()
-    : "N/A";
-  return `
-    <div class="estimate-item modern-card">
-      <div class="estimate-header">
-        <div>
-          ${estimate.title ? `<h3 class="estimate-title">${estimate.title}</h3>` : ""}
-          <span class="estimate-date"><i class="far fa-calendar-alt"></i> ${createdDate}</span>
-        </div>
-        <div class="estimate-actions">
-          <button class="view-estimate-button smart-btn" onclick="viewEstimate('${estimate._id}')">
-            <i class="fas fa-eye"></i> View
-          </button>
-          <button class="edit-estimate-button smart-btn" onclick="editEstimate('${projectId}', '${estimate._id}')">
-            <i class="fas fa-edit"></i> Edit
-          </button>
-          <button class="delete-estimate-button smart-btn danger" onclick="deleteEstimate('${estimate._id}')">
-            <i class="fas fa-trash"></i> Delete
-          </button>
-        </div>
-      </div>
-      <div class="estimate-details">
-        <p><strong>Invoice #:</strong> <span class="mono">${estimate.invoiceNumber}</span></p>
-        <p><strong>Total:</strong> <span class="mono" style="color:#10b981;">$${estimate.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></p>
-      </div>
-    </div>
-  `;
-}).join("");
+      estimatesList.innerHTML = graphHtml + estimates.map((estimate) => {
+        totalBudget += estimate.total || 0;
+        const createdDate = estimate.createdAt
+          ? new Date(estimate.createdAt).toLocaleDateString()
+          : "N/A";
+        return `
+          <div class="estimate-item modern-card">
+            <div class="estimate-header">
+              <div>
+                ${estimate.title ? `<h3 class="estimate-title">${estimate.title}</h3>` : ""}
+                <span class="estimate-date"><i class="far fa-calendar-alt"></i> ${createdDate}</span>
+              </div>
+              <div class="estimate-actions">
+                <button class="view-estimate-button smart-btn" onclick="viewEstimate('${estimate._id}')">
+                  <i class="fas fa-eye"></i> View
+                </button>
+                <button class="edit-estimate-button smart-btn" onclick="editEstimate('${projectId}', '${estimate._id}')">
+                  <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="delete-estimate-button smart-btn danger" onclick="deleteEstimate('${estimate._id}')">
+                  <i class="fas fa-trash"></i> Delete
+                </button>
+              </div>
+            </div>
+            <div class="estimate-details">
+              <p><strong>Invoice #:</strong> <span class="mono">${estimate.invoiceNumber}</span></p>
+              <p><strong>Total:</strong> <span class="mono" style="color:#10b981;">$${estimate.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></p>
+            </div>
+          </div>
+        `;
+      }).join("");
 
       totalBudgetEl.textContent = `$${totalBudget.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     }
@@ -1578,7 +1629,7 @@ estimatesList.innerHTML = estimates.map((estimate) => {
   }
 }
 
-// Add modern styles for the estimates section
+// Add modern styles for the estimates section and graph
 if (!document.getElementById("modern-estimate-styles")) {
   const style = document.createElement("style");
   style.id = "modern-estimate-styles";
@@ -1637,7 +1688,6 @@ if (!document.getElementById("modern-estimate-styles")) {
     .smart-btn:hover {
       background: #e0e7ff;
       color: #0063f7ff;
-      
     }
     .smart-btn.danger {
       color: #ef4444;
@@ -1666,36 +1716,71 @@ if (!document.getElementById("modern-estimate-styles")) {
       color: #64748b;
       font-size: 1.1rem;
     }
-      /* --- Responsive styles for mobile devices --- */
+
+    /* --- Modern Graph Styles --- */
+     .alt-estimate-graph {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      background: #f8fafc;
+      border-radius: 16px;
+      box-shadow: 0 2px 12px rgba(59,130,246,0.07);
+      padding: 22px 18px;
+      margin-bottom: 18px;
+      border: 1px solid #e5e7eb;
+      flex-wrap: wrap;
+    }
+    .alt-graph-circle {
+      width: 90px;
+      height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #eaf6ff;
+      border-radius: 50%;
+      box-shadow: 0 1px 8px #e5e7eb;
+      margin-right: 18px;
+      position: relative;
+    }
+    .alt-graph-circle svg {
+      display: block;
+      margin: auto;
+    }
+    .alt-graph-details {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 120px;
+    }
+    .alt-graph-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.08em;
+      padding: 2px 0;
+    }
+    .alt-graph-label {
+      color: #64748b;
+      font-weight: 500;
+    }
+    .alt-graph-value {
+      font-weight: 700;
+      color: #0f172a;
+      margin-left: 18px;
+    }
     @media (max-width: 600px) {
-      .modern-card {
-        padding: 12px 8px;
-        margin-bottom: 14px;
-        border-radius: 8px;
-      }
-      .estimate-header {
+      .alt-estimate-graph {
         flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
+        gap: 12px;
+        padding: 12px 6px;
+        border-radius: 10px;
       }
-      .estimate-title {
-        font-size: 1.05rem;
+      .alt-graph-circle {
+        margin-right: 0;
+        margin-bottom: 10px;
       }
-      .estimate-date {
-        font-size: 0.85rem;
-      }
-      .estimate-details {
-        flex-direction: column;
-        gap: 10px;
-        font-size: 0.98rem;
-      }
-      .smart-btn {
-        font-size: 0.95rem;
-        padding: 6px 10px;
-        gap: 4px;
-      }
-      .estimate-actions {
-        gap: 4px;
+      .alt-graph-details {
+        min-width: 0;
       }
     }
   `;
