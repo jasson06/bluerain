@@ -1979,6 +1979,24 @@ if (!document.getElementById("modern-estimate-styles")) {
       font-size: 1.1rem;
     }
 
+    @media (max-width: 600px) {
+  .estimate-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 0 0 0;
+  }
+  .estimate-actions {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .estimate-title {
+    font-size: 1.08rem;
+  }
+}
+
     /* --- Modern Graph Styles --- */
      .alt-estimate-graph {
       display: flex;
