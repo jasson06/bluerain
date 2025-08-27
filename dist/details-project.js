@@ -1584,7 +1584,7 @@ async function loadEstimates(projectId) {
       estimatesCount.textContent = `(${estimates.length})`;
 
       let totalBudget = 0;
-      estimatesList.innerHTML = graphHtml + estimates.map((estimate) => {
+      estimatesList.innerHTML = graphHtml + estimates.map((estimate, idx) => {
         totalBudget += estimate.total || 0;
         // Calculate progress for this estimate
         let estTotal = 0, estCompleted = 0;
@@ -1599,45 +1599,108 @@ async function loadEstimates(projectId) {
         const createdDate = estimate.createdAt
           ? new Date(estimate.createdAt).toLocaleDateString()
           : "N/A";
-        return `
-          <div class="estimate-item modern-card">
-            <div class="estimate-header">
-              <div>
-                ${estimate.title ? `<h3 class="estimate-title">${estimate.title}</h3>` : ""}
-                <span class="estimate-date"><i class="far fa-calendar-alt"></i> ${createdDate}</span>
-              </div>
-              <div class="estimate-actions">
-                <button class="view-estimate-button smart-btn" onclick="viewEstimate('${estimate._id}')">
-                  <i class="fas fa-eye"></i> View
-                </button>
-                <button class="edit-estimate-button smart-btn" onclick="editEstimate('${projectId}', '${estimate._id}')">
-                  <i class="fas fa-edit"></i> Edit
-                </button>
-                <button class="delete-estimate-button smart-btn danger" onclick="deleteEstimate('${estimate._id}')">
-                  <i class="fas fa-trash"></i> Delete
-                </button>
-              </div>
-            </div>
-                        <div class="estimate-progress-bar">
-              <div class="progress-label">
-                <span>${estCompleted} / ${estTotal} Completed</span>
-                <span>${estPercent}%</span>
-              </div>
-              <div class="progress-bar-bg">
-                <div class="progress-bar-fill" style="width:${estPercent}%;"></div>
-              </div>
-            </div>
-            <div class="estimate-details">
-              <p><strong>Invoice #:</strong> <span class="mono">${estimate.invoiceNumber}</span></p>
-              <p><strong>Total:</strong> <span class="mono" style="color:#10b981;">$${estimate.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></p>
-            </div>
 
-          </div>
+        // --- Line Items Preview (hidden by default, toggled on click) ---
+let lineItemsHtml = "";
+if (estimate.lineItems && estimate.lineItems.length) {
+  lineItemsHtml = `
+    <div class="estimate-line-items-preview" id="line-items-preview-${estimate._id}" style="display:none;">
+      ${estimate.lineItems.map(cat => `
+        <div class="estimate-category">
+          <div class="estimate-category-title">${cat.category || "Category"}</div>
+          <ul class="estimate-items-list">
+            ${cat.items.map(item => `
+              <li class="estimate-item-row" 
+                  title="Click for description"
+                  data-description="${item.description || ''}">
+                <span class="estimate-item-name">${item.name}</span>
+                <span class="estimate-item-status ${item.status === "completed" ? "completed" : "in-progress"}">${item.status || "in-progress"}</span>
+                <span class="estimate-item-qty">Qty: ${item.quantity || 1}</span>
+                <span class="estimate-item-total">$${(item.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </li>
+            `).join("")}
+          </ul>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+        return `
+  <div class="estimate-item modern-card" data-estimate-id="${estimate._id}">
+    <div class="estimate-header estimate-toggle" style="cursor:pointer;" data-idx="${idx}">
+      <div>
+        ${estimate.title ? `<h3 class="estimate-title">${estimate.title}</h3>` : ""}
+        <span class="estimate-date"><i class="far fa-calendar-alt"></i> ${createdDate}</span>
+      </div>
+      <div class="estimate-actions">
+        <button class="view-estimate-button smart-btn" onclick="viewEstimate('${estimate._id}');event.stopPropagation();">
+          <i class="fas fa-eye"></i> View
+        </button>
+        <button class="edit-estimate-button smart-btn" onclick="editEstimate('${projectId}', '${estimate._id}');event.stopPropagation();">
+          <i class="fas fa-edit"></i> Edit
+        </button>
+        <button class="delete-estimate-button smart-btn danger" onclick="deleteEstimate('${estimate._id}');event.stopPropagation();">
+          <i class="fas fa-trash"></i> Delete
+        </button>
+      </div>
+    </div>
+    <div class="estimate-progress-bar">
+      <div class="progress-label">
+        <span>${estCompleted} / ${estTotal} Completed</span>
+        <span>${estPercent}%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" style="width:${estPercent}%;"></div>
+      </div>
+    </div>
+    <div class="estimate-details">
+      <p><strong>Invoice #:</strong> <span class="mono">${estimate.invoiceNumber}</span></p>
+      <p><strong>Total:</strong> <span class="mono" style="color:#10b981;">$${estimate.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></p>
+    </div>
+    ${lineItemsHtml}
+  </div>
         `;
       }).join("");
 
       totalBudgetEl.textContent = `$${totalBudget.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     }
+
+    // --- Add click event listeners for expanding/collapsing line items ---
+   setTimeout(() => {
+  // Expand/collapse estimate cards
+  document.querySelectorAll('.estimate-toggle').forEach(header => {
+    header.addEventListener('click', function (e) {
+      const card = header.closest('.estimate-item');
+      const estimateId = card.getAttribute('data-estimate-id');
+      const preview = document.getElementById(`line-items-preview-${estimateId}`);
+      if (preview) {
+        const isOpen = preview.style.display === "block";
+        document.querySelectorAll('.estimate-line-items-preview').forEach(el => el.style.display = "none");
+        preview.style.display = isOpen ? "none" : "block";
+      }
+    });
+  });
+
+  // Hover and click for line item descriptions
+  document.querySelectorAll('.estimate-item-row').forEach(row => {
+    row.addEventListener('mouseenter', function () {
+      row.style.background = "#eaf6ff";
+      row.style.cursor = "pointer";
+    });
+    row.addEventListener('mouseleave', function () {
+      row.style.background = "";
+      row.style.cursor = "";
+    });
+    row.addEventListener('click', function (e) {
+      e.stopPropagation();
+      const desc = row.getAttribute('data-description');
+      if (desc) {
+        showLineItemDescription(desc, row);
+      }
+    });
+  });
+}, 0);
 
     loadTasks(projectId);
   } catch (error) {
@@ -1647,6 +1710,148 @@ async function loadEstimates(projectId) {
   } finally {
     hideLoader();
   }
+}
+
+// Add this helper function:
+function showLineItemDescription(desc, row) {
+  // Remove any existing popup
+  document.querySelectorAll('.line-item-desc-popup').forEach(el => el.remove());
+  // Create popup
+  const popup = document.createElement('div');
+  popup.className = 'line-item-desc-popup';
+  popup.textContent = desc;
+  popup.style.position = 'absolute';
+  popup.style.background = '#fff';
+  popup.style.border = '1px solid #3b82f6';
+  popup.style.borderRadius = '8px';
+  popup.style.boxShadow = '0 2px 8px #e5e7eb';
+  popup.style.padding = '12px 18px';
+  popup.style.color = '#334155';
+  popup.style.fontSize = '1em';
+  popup.style.zIndex = '9999';
+  popup.style.maxWidth = '320px';
+  popup.style.left = (row.getBoundingClientRect().left + window.scrollX + 20) + 'px';
+  popup.style.top = (row.getBoundingClientRect().top + window.scrollY + 28) + 'px';
+
+  document.body.appendChild(popup);
+
+  // Remove popup on click outside or mouseleave
+  setTimeout(() => {
+    document.addEventListener('mousedown', function handler(e) {
+      if (!popup.contains(e.target)) {
+        popup.remove();
+        document.removeEventListener('mousedown', handler);
+      }
+    });
+  }, 0);
+}
+
+// Add CSS for hover and popup
+if (!document.getElementById("estimate-line-item-hover-styles")) {
+  const style = document.createElement("style");
+  style.id = "estimate-line-item-hover-styles";
+  style.innerHTML = `
+    .estimate-item-row:hover {
+      background: #eaf6ff !important;
+      cursor: pointer;
+      transition: background 0.18s;
+    }
+    .line-item-desc-popup {
+      animation: fadeIn 0.2s;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-8px);}
+      to { opacity: 1; transform: translateY(0);}
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// Add styles for the estimate progress bar and preview
+if (!document.getElementById("estimate-progress-bar-styles")) {
+  const style = document.createElement("style");
+  style.id = "estimate-progress-bar-styles";
+  style.innerHTML = `
+    .estimate-progress-bar {
+      margin: 12px 0 0 0;
+      padding: 0 2px 2px 2px;
+    }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.98em;
+      color: #64748b;
+      margin-bottom: 2px;
+    }
+    .progress-bar-bg {
+      width: 100%;
+      background: #e5e7eb;
+      border-radius: 8px;
+      height: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      background: linear-gradient(90deg, #3b82f6 60%, #0ea5e9 100%);
+      height: 100%;
+      border-radius: 8px;
+      transition: width 0.4s;
+      position: absolute;
+      left: 0; top: 0;
+    }
+    .estimate-line-items-preview {
+      background: #ffffffff;
+      border-radius: 8px;
+      margin: 14px 0 0 0;
+      padding: 14px 18px;
+      box-shadow: 0 1px 6px #e5e7eb;
+      animation: fadeIn 0.3s;
+    }
+    .estimate-category-title {
+      font-weight: 600;
+      color: #0f4c75;
+      margin-bottom: 6px;
+      font-size: 1.08em;
+    }
+    .estimate-items-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 10px 0;
+    }
+    .estimate-item-row {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      font-size: 0.98em;
+      padding: 4px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .estimate-item-row:last-child {
+      border-bottom: none;
+    }
+    .estimate-item-name {
+      flex: 1;
+      font-weight: 500;
+      color: #334155;
+    }
+    .estimate-item-status.completed {
+      color: #10b981;
+      font-weight: 600;
+    }
+    .estimate-item-status.in-progress {
+      color: #f59e42;
+      font-weight: 600;
+    }
+    .estimate-item-qty, .estimate-item-total {
+      color: #64748b;
+      font-size: 0.97em;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-8px);}
+      to { opacity: 1; transform: translateY(0);}
+    }
+  `;
+  document.head.appendChild(style);
 }
 
 // Add styles for the estimate progress bar
