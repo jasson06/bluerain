@@ -1586,6 +1586,16 @@ async function loadEstimates(projectId) {
       let totalBudget = 0;
       estimatesList.innerHTML = graphHtml + estimates.map((estimate) => {
         totalBudget += estimate.total || 0;
+        // Calculate progress for this estimate
+        let estTotal = 0, estCompleted = 0;
+        estimate.lineItems?.forEach(cat => {
+          cat.items?.forEach(item => {
+            estTotal++;
+            if (item.status === "completed") estCompleted++;
+          });
+        });
+        const estPercent = estTotal ? Math.round((estCompleted / estTotal) * 100) : 0;
+
         const createdDate = estimate.createdAt
           ? new Date(estimate.createdAt).toLocaleDateString()
           : "N/A";
@@ -1608,10 +1618,20 @@ async function loadEstimates(projectId) {
                 </button>
               </div>
             </div>
+                        <div class="estimate-progress-bar">
+              <div class="progress-label">
+                <span>${estCompleted} / ${estTotal} Completed</span>
+                <span>${estPercent}%</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width:${estPercent}%;"></div>
+              </div>
+            </div>
             <div class="estimate-details">
               <p><strong>Invoice #:</strong> <span class="mono">${estimate.invoiceNumber}</span></p>
               <p><strong>Total:</strong> <span class="mono" style="color:#10b981;">$${estimate.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></p>
             </div>
+
           </div>
         `;
       }).join("");
@@ -1628,6 +1648,43 @@ async function loadEstimates(projectId) {
     hideLoader();
   }
 }
+
+// Add styles for the estimate progress bar
+if (!document.getElementById("estimate-progress-bar-styles")) {
+  const style = document.createElement("style");
+  style.id = "estimate-progress-bar-styles";
+  style.innerHTML = `
+    .estimate-progress-bar {
+      margin: 12px 0 0 0;
+      padding: 0 2px 2px 2px;
+    }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.80em;
+      color: #64748b;
+      margin-bottom: 2px;
+    }
+    .progress-bar-bg {
+      width: 100%;
+      background: #e5e7eb;
+      border-radius: 8px;
+      height: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      background: linear-gradient(90deg, #3b82f6 60%, #0ea5e9 100%);
+      height: 100%;
+      border-radius: 8px;
+      transition: width 0.4s;
+      position: absolute;
+      left: 0; top: 0;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 
 // Add modern styles for the estimates section and graph
 if (!document.getElementById("modern-estimate-styles")) {
