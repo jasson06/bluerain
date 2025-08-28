@@ -2707,3 +2707,19 @@ li.completed span {
 }
 }
 
+
+  .inline-title-input {
+      border: 1px solid #3b82f6;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 1.08em;
+      color: #0f172a;
+      margin-right: 8px;
+      background: #f8fafc;
+      outline: none;
+      transition: border 0.18s;
+    }
+    .inline-title-input:focus {
+      border-color: #0f4c75;
+      background: #eaf6ff;
+    }
