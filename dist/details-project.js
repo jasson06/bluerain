@@ -1626,11 +1626,16 @@ if (estimate.lineItems && estimate.lineItems.length) {
   `;
 }
 
-        return `
+return `
   <div class="estimate-item modern-card" data-estimate-id="${estimate._id}">
     <div class="estimate-header estimate-toggle" style="cursor:pointer;" data-idx="${idx}">
       <div>
-        ${estimate.title ? `<h3 class="estimate-title">${estimate.title}</h3>` : ""}
+        <h3 class="estimate-title" style="display:block;">
+          <span class="estimate-title-text" data-estimate-id="${estimate._id}">${estimate.title || ""}</span>
+          <button class="edit-title-btn" title="Edit Title" style="margin-left:0px; background:none; border:none; color:#3b82f6; cursor:pointer; font-size:0.75em;">
+            <i class="fas fa-edit"></i>
+          </button>
+        </h3>
         <span class="estimate-date"><i class="far fa-calendar-alt"></i> ${createdDate}</span>
       </div>
       <div class="estimate-actions">
@@ -1656,11 +1661,11 @@ if (estimate.lineItems && estimate.lineItems.length) {
     </div>
     <div class="estimate-details">
       <p><strong>Invoice #:</strong> <span class="mono">${estimate.invoiceNumber}</span></p>
-      <p><strong>Total:</strong> <span class="mono" style="color:#10b981;">$${estimate.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></p>
+      <p><strong>Total:</strong> <span class="mono" style="color:#007bff;">$${estimate.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></p>
     </div>
     ${lineItemsHtml}
   </div>
-        `;
+`;
       }).join("");
 
       totalBudgetEl.textContent = `$${totalBudget.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
@@ -1668,6 +1673,10 @@ if (estimate.lineItems && estimate.lineItems.length) {
 
     // --- Add click event listeners for expanding/collapsing line items ---
    setTimeout(() => {
+
+
+    
+    
   // Expand/collapse estimate cards
   document.querySelectorAll('.estimate-toggle').forEach(header => {
     header.addEventListener('click', function (e) {
@@ -1697,6 +1706,60 @@ if (estimate.lineItems && estimate.lineItems.length) {
       const desc = row.getAttribute('data-description');
       if (desc) {
         showLineItemDescription(desc, row);
+      }
+    });
+  });
+
+
+  // Inline edit for estimate title
+  document.querySelectorAll('.edit-title-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const titleSpan = btn.closest('.estimate-title').querySelector('.estimate-title-text');
+      const estimateId = titleSpan.getAttribute('data-estimate-id');
+      const currentTitle = titleSpan.textContent;
+      // Replace span with input
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = currentTitle;
+      input.className = 'inline-title-input';
+      input.style.fontSize = '1.08em';
+      input.style.width = '80%';
+      titleSpan.replaceWith(input);
+      input.focus();
+
+      // Save on blur or Enter
+      input.addEventListener('blur', saveTitle);
+      input.addEventListener('keydown', function(ev) {
+        if (ev.key === 'Enter') {
+          saveTitle();
+        }
+      });
+
+      function saveTitle() {
+        const newTitle = input.value.trim();
+        if (newTitle && newTitle !== currentTitle) {
+          fetch(`/api/estimates/${estimateId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: newTitle })
+          })
+          .then(res => {
+            if (!res.ok) throw new Error('Failed to update title');
+            return res.json();
+          })
+          .then(() => {
+            showToast('Title updated!');
+            input.replaceWith(titleSpan);
+            titleSpan.textContent = newTitle;
+          })
+          .catch(() => {
+            showToast('Error updating title');
+            input.replaceWith(titleSpan);
+          });
+        } else {
+          input.replaceWith(titleSpan);
+        }
       }
     });
   });
@@ -1979,7 +2042,7 @@ if (!document.getElementById("modern-estimate-styles")) {
       font-size: 1.1rem;
     }
 
-    @media (max-width: 600px) {
+@media (max-width: 600px) {
   .estimate-header {
     flex-direction: column;
     align-items: flex-start;
