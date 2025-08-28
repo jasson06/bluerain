@@ -1295,6 +1295,11 @@ app.put("/api/estimates/:id", async (req, res) => {
       updatesPayload.title = "";
     }
 
+    // Defensive: If lineItems is present, ensure it's an array
+    if ("lineItems" in updatesPayload && !Array.isArray(updatesPayload.lineItems)) {
+      return res.status(400).json({ message: "Missing or invalid lineItems array in request body." });
+    }
+
     // Normalize status helper
     function normalizeStatus(status) {
       if (typeof status !== "string") return status;
@@ -1309,61 +1314,70 @@ app.put("/api/estimates/:id", async (req, res) => {
       return res.status(404).json({ message: "Estimate not found" });
     }
 
-    // Create a map of existing items by their _id
-    const existingItemsMap = new Map();
-    existingEstimate.lineItems.forEach((lineItem) => {
-      lineItem.items.forEach((item) => {
-        existingItemsMap.set(item._id.toString(), item);
+    // Only process lineItems if present and is an array
+    if (Array.isArray(updatesPayload.lineItems)) {
+      // Create a map of existing items by their _id
+      const existingItemsMap = new Map();
+      existingEstimate.lineItems.forEach((lineItem) => {
+        lineItem.items.forEach((item) => {
+          existingItemsMap.set(item._id.toString(), item);
+        });
       });
-    });
 
-    // Merge new items with existing data
-    updatesPayload.lineItems.forEach((lineItem) => {
-      lineItem.items.forEach((item) => {
-        if (item.status && item.status.trim() !== "") {
-          item.status = normalizeStatus(item.status);
-        }
-
-        if (item._id && existingItemsMap.has(item._id.toString())) {
-          const existingItem = existingItemsMap.get(item._id.toString());
-
-          // Preserve fields
-          item.photos = existingItem.photos ?? { before: [], after: [] };
-          item.assignedTo = existingItem.assignedTo ?? null;
-          item.startDate = item.startDate ?? existingItem.startDate;
-          item.endDate = item.endDate ?? existingItem.endDate;
-          item.status = item.status || normalizeStatus(existingItem.status);
-          item.costCode = item.costCode || existingItem.costCode || "Uncategorized";
-          item.maintenanceRequestId = item.maintenanceRequestId || existingItem.maintenanceRequestId || null; // <-- Preserve maintenanceRequestId
-        } else {
-          // For new items
-          if (!item.status || item.status.trim() === "") {
-            item.status = "in-progress";
+      // Merge new items with existing data
+      updatesPayload.lineItems.forEach((lineItem) => {
+        lineItem.items.forEach((item) => {
+          if (item.status && item.status.trim() !== "") {
+            item.status = normalizeStatus(item.status);
           }
-          item.costCode = item.costCode || "Uncategorized";
-          item.maintenanceRequestId = item.maintenanceRequestId || null; // <-- Set for new items if provided
-        }
-      });
-    });
 
-    // ✅ Recalculate the estimate total
-    let newTotal = 0;
-    updatesPayload.lineItems.forEach((lineItem) => {
-      lineItem.items.forEach((item) => {
-        newTotal += (item.quantity || 1) * (item.unitPrice || 0);
+          if (item._id && existingItemsMap.has(item._id.toString())) {
+            const existingItem = existingItemsMap.get(item._id.toString());
+
+            // Preserve fields
+            item.photos = existingItem.photos ?? { before: [], after: [] };
+            item.assignedTo = existingItem.assignedTo ?? null;
+            item.startDate = item.startDate ?? existingItem.startDate;
+            item.endDate = item.endDate ?? existingItem.endDate;
+            item.status = item.status || normalizeStatus(existingItem.status);
+            item.costCode = item.costCode || existingItem.costCode || "Uncategorized";
+            item.maintenanceRequestId = item.maintenanceRequestId || existingItem.maintenanceRequestId || null;
+          } else {
+            // For new items
+            if (!item.status || item.status.trim() === "") {
+              item.status = "in-progress";
+            }
+            item.costCode = item.costCode || "Uncategorized";
+            item.maintenanceRequestId = item.maintenanceRequestId || null;
+          }
+        });
       });
-    });
+
+      // Recalculate the estimate total
+      let newTotal = 0;
+      updatesPayload.lineItems.forEach((lineItem) => {
+        lineItem.items.forEach((item) => {
+          newTotal += (item.quantity || 1) * (item.unitPrice || 0);
+        });
+      });
+      updatesPayload.total = newTotal;
+    }
+
+    // If no lineItems, preserve the existing total
+    if (!Array.isArray(updatesPayload.lineItems)) {
+      updatesPayload.total = existingEstimate.total || 0;
+    }
 
     // Update the document
     const updatedEstimate = await Estimate.findByIdAndUpdate(
       estimateId,
       {
-        $set: { ...updatesPayload, total: newTotal }
+        $set: updatesPayload
       },
       { new: true, runValidators: true }
     );
 
-    // ✅ Log the update
+    // Log the update
     await logDailyUpdate(
       updatedEstimate.projectId,
       `Estimate ${updatedEstimate.invoiceNumber} was updated${updatedEstimate.title ? `: "${updatedEstimate.title}"` : ""}.`
