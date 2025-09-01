@@ -2224,3 +2224,31 @@ input, textarea {
     margin-right: 0;
   }
 }
+
+      .project-progress-bar {
+        margin: 8px 0 0 0;
+        padding: 0 2px 2px 2px;
+      }
+      .project-progress-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.97em;
+        color: #64748b;
+        margin-bottom: 2px;
+      }
+      .project-progress-bar-bg {
+        width: 100%;
+        background: #e5e7eb;
+        border-radius: 8px;
+        height: 12px;
+        position: relative;
+        overflow: hidden;
+      }
+      .project-progress-bar-fill {
+        background: linear-gradient(90deg, #3b82f6 60%, #0ea5e9 100%);
+        height: 100%;
+        border-radius: 8px;
+        transition: width 0.4s;
+        position: absolute;
+        left: 0; top: 0;
+      }
