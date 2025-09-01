@@ -1530,7 +1530,7 @@ async function loadEstimates(projectId) {
         est.lineItems?.forEach(cat => {
           cat.items?.forEach(item => {
             totalLineItems++;
-            if (item.status === "completed") completedItems++;
+           if (item.status === "completed" || item.status === "approved") completedItems++;
             else inProgressItems++;
           });
         });
@@ -1591,7 +1591,7 @@ async function loadEstimates(projectId) {
         estimate.lineItems?.forEach(cat => {
           cat.items?.forEach(item => {
             estTotal++;
-            if (item.status === "completed") estCompleted++;
+            if (item.status === "completed" || item.status === "approved") estCompleted++;
           });
         });
         const estPercent = estTotal ? Math.round((estCompleted / estTotal) * 100) : 0;
@@ -1614,7 +1614,7 @@ if (estimate.lineItems && estimate.lineItems.length) {
                   title="Click for description"
                   data-description="${item.description || ''}">
                 <span class="estimate-item-name">${item.name}</span>
-                <span class="estimate-item-status ${item.status === "completed" ? "completed" : "in-progress"}">${item.status || "in-progress"}</span>
+                <span class="estimate-item-status ${item.status === "completed" ? "completed" : item.status === "approved" ? "approved" : "in-progress"}">${item.status || "in-progress"}</span>
                 <span class="estimate-item-qty">Qty: ${item.quantity || 1}</span>
                 <span class="estimate-item-total">$${(item.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </li>
@@ -1897,6 +1897,12 @@ if (!document.getElementById("estimate-progress-bar-styles")) {
       font-weight: 500;
       color: #334155;
     }
+
+    .estimate-item-status.approved {
+      color: #3b82f6;
+      font-weight: 600;
+    }
+
     .estimate-item-status.completed {
       color: #10b981;
       font-weight: 600;
