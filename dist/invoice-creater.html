@@ -1230,6 +1230,14 @@ function openInvoicePreview(savedInvoice) {
     ? new Date(savedInvoice.date).toLocaleDateString()
     : 'N/A';
 
+  // Get estimate title from savedInvoice or from the dropdown if not present
+  let estimateTitle = savedInvoice?.estimateTitle;
+  if (!estimateTitle) {
+    const estimateSelect = document.getElementById('estimateSelect');
+    const selectedEstimateOption = estimateSelect?.options[estimateSelect.selectedIndex];
+    estimateTitle = selectedEstimateOption ? selectedEstimateOption.textContent : '';
+  }
+
   // 👇 Use item.total (which is laborCost for imported items)
   const total = lineItems.reduce((sum, i) => sum + (parseFloat(i.total) || 0), 0);
   const tax = 0;
@@ -1238,13 +1246,30 @@ function openInvoicePreview(savedInvoice) {
   const preview = document.getElementById('invoicePreviewContent');
 
   preview.innerHTML = `
-    <div style="font-family: 'Segoe UI', sans-serif; padding: 30px;">
-      <h2 style="color: #007bff; margin: 0;"><strong>Subcontractor Name:</strong> ${vendorName}</h2>
-      <p><strong>Project Name:</strong> ${projectName}</p>
-      <p><strong>Service Address:</strong> ${finalServiceAddress}</p>
-      <p><strong>Invoice #:</strong> ${invoiceNumber}</p>
-      <p><strong>Date:</strong> ${invoiceDate}</p>
-      <hr style="margin: 20px 0; border-color: #ccc;" />
+    <div style="font-family: 'Segoe UI', sans-serif; padding: 24px 0 0 0;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
+        <div>
+          <h2 style="color: #007bff; margin: 0;"><strong>Subcontractor Name:</strong> ${vendorName}</h2>
+          <div style="margin-bottom: 8px;">
+            <strong>Project:</strong> <span>${projectName}</span>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <strong>Service Address:</strong> <span>${finalServiceAddress}</span>
+          </div>
+           <div style="margin-bottom: 8px;">
+            <strong>Estimate:</strong> <span>${estimateTitle || 'N/A'}</span>
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <div style="margin-bottom: 8px;">
+            <strong>Invoice #:</strong> <span>${invoiceNumber}</span>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <strong>Date:</strong> <span>${invoiceDate}</span>
+          </div>
+        </div>
+      </div>
+      <hr style="margin: 18px 0 18px 0; border-color: #e5e7eb;" />
 
       <h3>Line Items</h3>
       <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
@@ -1254,7 +1279,6 @@ function openInvoicePreview(savedInvoice) {
             <th style="border: 1px solid #ccc; padding: 10px;">ITEM</th>
             <th style="border: 1px solid #ccc; padding: 10px;">DESCRIPTION</th>
             <th style="border: 1px solid #ccc; padding: 10px;">QUANTITY</th>
-            
             <th style="border: 1px solid #ccc; padding: 10px;">TOTAL</th>
           </tr>
         </thead>
@@ -1268,14 +1292,13 @@ function openInvoicePreview(savedInvoice) {
                 <td style="border: 1px solid #ccc; padding: 8px;">${item.name}</td>
                 <td style="border: 1px solid #ccc; padding: 8px;">${item.description}</td>
                 <td style="border: 1px solid #ccc; padding: 8px;">${item.quantity}</td>
-                
                 <td style="border: 1px solid #ccc; padding: 8px;">$${(
-  typeof item.total !== "undefined"
-    ? parseFloat(item.total)
-    : (typeof item.laborCost !== "undefined"
-        ? parseFloat(item.laborCost)
-        : (parseFloat(item.unitPrice) * parseFloat(item.quantity) || 0))
-).toFixed(2)}</td>
+                  typeof item.total !== "undefined"
+                    ? parseFloat(item.total)
+                    : (typeof item.laborCost !== "undefined"
+                        ? parseFloat(item.laborCost)
+                        : (parseFloat(item.unitPrice) * parseFloat(item.quantity) || 0))
+                ).toFixed(2)}</td>
               </tr>
             `;
           }).join('')}
@@ -1293,7 +1316,6 @@ function openInvoicePreview(savedInvoice) {
 
   document.getElementById('invoiceModal').style.display = 'flex';
 }
-
 
 
 
@@ -1970,3 +1992,4 @@ function closeHelpVideo() {
   </script>
 </body>
 </html>
+
