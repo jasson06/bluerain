@@ -1521,24 +1521,65 @@ async function loadEstimates(projectId) {
     const { estimates } = await response.json();
 
     // --- Stats for Graph ---
-    let totalLineItems = 0;
-    let completedItems = 0;
-    let inProgressItems = 0;
+let totalLineItems = 0;
+let completedItems = 0;
+let inProgressItems = 0;
+let latestEndDate = null;
 
-    if (estimates && estimates.length) {
-      estimates.forEach(est => {
-        est.lineItems?.forEach(cat => {
-          cat.items?.forEach(item => {
-            totalLineItems++;
-           if (item.status === "completed" || item.status === "approved") completedItems++;
-            else inProgressItems++;
-          });
-        });
+// Track latest endDate for both completed and in-progress items
+if (estimates && estimates.length) {
+  estimates.forEach(est => {
+    est.lineItems?.forEach(cat => {
+      cat.items?.forEach(item => {
+        totalLineItems++;
+        if (item.status === "completed" || item.status === "approved") {
+          completedItems++;
+          if (item.endDate) {
+            const itemEndDate = new Date(item.endDate);
+            if (!latestEndDate || itemEndDate > latestEndDate) {
+              latestEndDate = itemEndDate;
+            }
+          }
+        } else {
+          inProgressItems++;
+          if (item.endDate) {
+            const itemEndDate = new Date(item.endDate);
+            if (!latestEndDate || itemEndDate > latestEndDate) {
+              latestEndDate = itemEndDate;
+            }
+          }
+        }
       });
-    }
+    });
+  });
+}
 
     // --- Calculate % completed ---
     const percentCompleted = totalLineItems ? Math.round((completedItems / totalLineItems) * 100) : 0;
+
+    // --- Estimate Completion Date Calculation ---
+    let estimatedCompletionDate = "N/A";
+    if (latestEndDate) {
+      estimatedCompletionDate = latestEndDate.toLocaleDateString();
+    } else if (estimates && estimates.length) {
+      // If no completed items, use latest planned endDate among all items
+      let plannedEndDate = null;
+      estimates.forEach(est => {
+        est.lineItems?.forEach(cat => {
+          cat.items?.forEach(item => {
+            if (item.endDate) {
+              const itemEndDate = new Date(item.endDate);
+              if (!plannedEndDate || itemEndDate > plannedEndDate) {
+                plannedEndDate = itemEndDate;
+              }
+            }
+          });
+        });
+      });
+      if (plannedEndDate) {
+        estimatedCompletionDate = plannedEndDate.toLocaleDateString();
+      }
+    }
 
     // --- Modern Graph HTML ---
     let graphHtml = `
@@ -1565,6 +1606,10 @@ async function loadEstimates(projectId) {
           <div class="alt-graph-row">
             <span class="alt-graph-label">In Progress</span>
             <span class="alt-graph-value" style="color:#f59e42;">${inProgressItems}</span>
+          </div>
+          <div class="alt-graph-row">
+            <span class="alt-graph-label">Estimated Completion</span>
+            <span class="alt-graph-value" style="color:#2563eb;">${estimatedCompletionDate}</span>
           </div>
         </div>
       </div>
@@ -1673,7 +1718,6 @@ return `
 
     // --- Add click event listeners for expanding/collapsing line items ---
    setTimeout(() => {
-
 
     
     
