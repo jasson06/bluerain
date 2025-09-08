@@ -1028,10 +1028,16 @@ const maintenanceScheduleSchema = new mongoose.Schema({
   startDate: { type: Date, required: true },
   nextScheduledDate: { type: Date, required: true },
   assignedVendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', default: null },
-  unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit', default: null }, // <-- Optional unit
-  status: { type: String, enum: ['pending', 'in-progress', 'completed'], default: 'pending' }, // <-- Status
-  completedAt: { type: Date, default: null }, // <-- Date completed
-  cost: { type: Number, default: 0 }, // <-- Cost field
+  unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit', default: null },
+  status: { type: String, enum: ['pending', 'in-progress', 'completed'], default: 'pending' },
+  completedAt: { type: Date, default: null },
+  cost: { type: Number, default: 0 },
+  // --- Add history array ---
+  history: [{
+    completedAt: Date,
+    completedBy: String, 
+    notes: String
+  }],
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -5908,50 +5914,194 @@ app.patch('/api/estimates/line-items/:lineItemId/status', async (req, res) => {
   }
 });
 
+app.patch('/api/properties/:propertyId/maintenance-schedules/:scheduleId/complete', async (req, res) => {
+  try {
+    const { propertyId, scheduleId } = req.params;
+    const { completedBy, notes } = req.body || {};
+
+    // Find the schedule
+    const schedule = await MaintenanceSchedule.findOne({ _id: scheduleId, projectId: propertyId });
+    if (!schedule) return res.status(404).json({ message: 'Schedule not found.' });
+
+    // Record completion in history
+    schedule.history = schedule.history || [];
+    schedule.history.push({
+      completedAt: new Date(),
+      completedBy: completedBy || 'System',
+      notes: notes || ''
+    });
+
+    // --- Determine base date for next schedule ---
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    let baseDate = schedule.nextScheduledDate < today ? today : schedule.nextScheduledDate;
+
+    // Advance nextScheduledDate based on frequency, using baseDate
+    let nextDate = new Date(baseDate);
+    switch (schedule.frequency) {
+      case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
+      case 'weekly': nextDate.setDate(nextDate.getDate() + 7); break;
+      case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
+      case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
+      case 'custom':
+        if (schedule.intervalDays && schedule.intervalDays > 0) {
+          nextDate.setDate(nextDate.getDate() + schedule.intervalDays);
+        }
+        break;
+    } 
+
+    // Reset status and completedAt for the next cycle
+    schedule.status = 'pending';
+    schedule.completedAt = null;
+    schedule.nextScheduledDate = nextDate;
+
+    await schedule.save();
+
+    res.json({ success: true, schedule });
+  } catch (err) {
+    console.error('Error completing maintenance schedule:', err);
+    res.status(500).json({ message: 'Failed to complete and reset schedule.' });
+  }
+});
+
+
+
+// Helper for overdue email
+function getOverdueMaintenanceEmailHtml({ recipientName, schedule, isManager }) {
+  // Helper to format address
+  function formatAddress(address) {
+    if (!address) return '';
+    const line1 = address.addressLine1 || address.line1 || '';
+    const line2 = address.addressLine2 || address.line2 || '';
+    const city = address.city || '';
+    const state = address.state || '';
+    const zip = address.zip || '';
+    let addr = line1;
+    if (line2) addr += ', ' + line2;
+    if (city) addr += ', ' + city;
+    if (state) addr += ', ' + state;
+    if (zip) addr += ' ' + zip;
+    return addr.trim();
+  }
+
+  const propertyAddress = schedule.projectId?.address
+    ? formatAddress(schedule.projectId.address)
+    : '';
+
+  return `
+    <div style="font-family: Arial, sans-serif; background: #fffbe6; padding: 24px;">
+      <div style="max-width: 520px; margin: auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(44,62,80,0.07); padding: 24px;">
+        <h2 style="color: #d35400; margin-top: 0;">Overdue Maintenance Alert</h2>
+        <p style="font-size: 1.1em;">Hello ${recipientName},</p>
+        <p>
+          ${isManager
+            ? 'This is an alert that the following scheduled maintenance is overdue:'
+            : 'This is an alert that your assigned scheduled maintenance is overdue:'}
+          <br>
+          <strong style="color: #2c3e50;">${schedule.title}</strong>
+          at <strong style="color: #217dbb;">${propertyAddress || 'Property'}</strong>
+          <span style="color: #d35400;">(Original Due Date: ${new Date(schedule.nextScheduledDate).toLocaleDateString()})</span>.
+        </p>
+        <div style="margin: 18px 0; padding: 12px; background: #fff3cd; border-radius: 8px;">
+          <strong>Description:</strong> ${schedule.description || '<span style="color:#888;">No description provided.</span>'}
+        </div>
+        <div style="margin-top: 24px; text-align: right;">
+          <span style="font-size: 0.95em; color: #888;">Thank you,<br>BESF Team</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+
+async function sendTodayMaintenanceReminder(schedule) {
+  // Populate vendor and project if not already
+  if (!schedule.assignedVendor || !schedule.projectId) {
+    schedule = await MaintenanceSchedule.findById(schedule._id)
+      .populate('assignedVendor projectId');
+  }
+  // Vendor reminder
+  if (schedule.assignedVendor && schedule.assignedVendor.email) {
+    await transporter.sendMail({
+      from: `"BESF Team" <${process.env.EMAIL_USER}>`,
+      to: schedule.assignedVendor.email,
+      subject: `Reminder: Maintenance Scheduled for Today`,
+      html: getMaintenanceEmailHtml({
+        recipientName: schedule.assignedVendor.name || 'Vendor',
+        schedule,
+        dayLabel: 'Today',
+        isManager: false
+      })
+    });
+  }
+  // Manager reminder
+  await transporter.sendMail({
+    from: `"BESF Team" <${process.env.EMAIL_USER}>`,
+    to: ["besfllc@gmail.com", "jleonel3915@gmail.com", "josh@bluerainholdingsllc.onmicrosoft.com"], // Add more emails as needed
+    subject: `Reminder: Maintenance Scheduled for Today`,
+    html: getMaintenanceEmailHtml({
+      recipientName: 'Team',
+      schedule,
+      dayLabel: 'Today',
+      isManager: true
+    })
+  });
+}
+
 // --- auto schedule logic ---
 async function updateNextScheduledDates() {
   try {
     const now = new Date();
-    const overdueSchedules = await MaintenanceSchedule.find({ nextScheduledDate: { $lt: now } });
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    for (const schedule of overdueSchedules) {
-      let nextDate = new Date(schedule.nextScheduledDate);
+    // 1. Set status to "in-progress" if nextScheduledDate is today and not already in-progress
+    const schedulesToday = await MaintenanceSchedule.find({
+      nextScheduledDate: {
+        $gte: today,
+        $lt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
+      },
+      status: { $ne: 'in-progress' }
+    }).populate('assignedVendor projectId');
 
-      // Advance nextDate until it's in the future
-      while (nextDate < now) {
-        switch (schedule.frequency) {
-          case 'daily':
-            nextDate.setDate(nextDate.getDate() + 1);
-            break;
-          case 'weekly':
-            nextDate.setDate(nextDate.getDate() + 7);
-            break;
-          case 'monthly':
-            nextDate.setMonth(nextDate.getMonth() + 1);
-            break;
-          case 'yearly':
-            nextDate.setFullYear(nextDate.getFullYear() + 1);
-            break;
-          case 'custom':
-            if (schedule.intervalDays && schedule.intervalDays > 0) {
-              nextDate.setDate(nextDate.getDate() + schedule.intervalDays);
-            } else {
-              // If intervalDays is not set, break the loop
-              nextDate = now;
-            }
-            break;
-          default:
-            nextDate = now;
-            break;
-        }
+    for (const schedule of schedulesToday) {
+      schedule.status = 'in-progress';
+      await schedule.save();
+      await sendTodayMaintenanceReminder(schedule);
+      console.log(`Auto-updated schedule "${schedule.title}" to in-progress for today.`);
+    }
+
+    // 2. Notify for overdue schedules (nextScheduledDate < today, not completed)
+    const overdueSchedules = await MaintenanceSchedule.find({
+      nextScheduledDate: { $lt: today },
+      status: { $ne: 'completed' }
+    }).populate('assignedVendor projectId');
+
+    for (const schedule of overdueSchedules) { 
+      // Send to vendor if assigned
+      if (schedule.assignedVendor && schedule.assignedVendor.email) {
+        await transporter.sendMail({
+          from: `"BESF Team" <${process.env.EMAIL_USER}>`,
+          to: schedule.assignedVendor.email,
+          subject: `Overdue Maintenance Alert: ${schedule.title}`,
+          html: getOverdueMaintenanceEmailHtml({
+            recipientName: schedule.assignedVendor.name || 'Vendor',
+            schedule,
+            isManager: false
+          })
+        });
       }
-
-      // Only update if the new date is in the future
-      if (nextDate > now) {
-        schedule.nextScheduledDate = nextDate;
-        await schedule.save();
-        console.log(`Updated nextScheduledDate for schedule "${schedule.title}" to ${nextDate.toISOString()}`);
-      }
+      // Send to default manager emails
+      await transporter.sendMail({
+        from: `"BESF Team" <${process.env.EMAIL_USER}>`,
+        to: ["besfllc@gmail.com", "jleonel3915@gmail.com", "josh@bluerainholdingsllc.onmicrosoft.com"], // Add more emails as needed
+        subject: `Overdue Maintenance Alert: ${schedule.title}`,
+        html: getOverdueMaintenanceEmailHtml({
+          recipientName: 'Team',
+          schedule,
+          isManager: true
+        })
+      });
+      console.log(`Overdue maintenance alert sent for "${schedule.title}"`);
     }
   } catch (err) {
     console.error('Error updating nextScheduledDates:', err);
@@ -5965,6 +6115,26 @@ setInterval(updateNextScheduledDates, 60 * 60 * 1000);
 
 // Replace the HTML in sendMaintenanceReminders with this improved style:
 function getMaintenanceEmailHtml({ recipientName, schedule, dayLabel, isManager }) {
+  // Helper to format address
+  function formatAddress(address) {
+    if (!address) return '';
+    const line1 = address.addressLine1 || address.line1 || '';
+    const line2 = address.addressLine2 || address.line2 || '';
+    const city = address.city || '';
+    const state = address.state || '';
+    const zip = address.zip || '';
+    let addr = line1;
+    if (line2) addr += ', ' + line2;
+    if (city) addr += ', ' + city;
+    if (state) addr += ', ' + state;
+    if (zip) addr += ' ' + zip;
+    return addr.trim();
+  }
+
+  const propertyAddress = schedule.projectId?.address
+    ? formatAddress(schedule.projectId.address)
+    : '';
+ 
   return `
     <div style="font-family: Arial, sans-serif; background: #f6fafd; padding: 24px;">
       <div style="max-width: 520px; margin: auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(44,62,80,0.07); padding: 24px;">
@@ -5975,7 +6145,7 @@ function getMaintenanceEmailHtml({ recipientName, schedule, dayLabel, isManager 
             ? 'This is a friendly reminder that we have a scheduled maintenance for'
             : 'This is a friendly reminder that you have a scheduled maintenance for'}
           <strong style="color: #2c3e50;">${schedule.title}</strong>
-          at <strong style="color: #217dbb;">${schedule.projectId?.name || 'Property'}</strong>
+          at <strong style="color: #217dbb;">${propertyAddress || 'Property'}</strong>
           <span style="color: #217dbb;">${dayLabel === 'Today' ? 'today' : 'tomorrow'} (${new Date(schedule.nextScheduledDate).toLocaleDateString()})</span>.
         </p>
         <div style="margin: 18px 0; padding: 12px; background: #eaf6ff; border-radius: 8px;">
@@ -5985,10 +6155,6 @@ function getMaintenanceEmailHtml({ recipientName, schedule, dayLabel, isManager 
           <tr>
             <td style="padding:6px 0;"><strong>Frequency:</strong></td>
             <td style="padding:6px 0;">${schedule.frequency.charAt(0).toUpperCase() + schedule.frequency.slice(1)}${schedule.frequency === 'custom' && schedule.intervalDays ? ` (Every ${schedule.intervalDays} days)` : ''}</td>
-          </tr>
-          <tr>
-            <td style="padding:6px 0;"><strong>Start Date:</strong></td>
-            <td style="padding:6px 0;">${new Date(schedule.startDate).toLocaleDateString()}</td>
           </tr>
         </table>
         <div style="margin-top: 24px; text-align: right;">
@@ -6023,7 +6189,7 @@ async function sendMaintenanceReminders() {
         $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
       }
     }).populate('assignedVendor projectId');
-
+ 
     // Send reminders for tomorrow
     for (const schedule of schedulesTomorrow) {
        // Vendor reminder
@@ -6036,36 +6202,6 @@ async function sendMaintenanceReminders() {
             recipientName: schedule.assignedVendor.name || 'Vendor',
             schedule,
             dayLabel: 'Tomorrow',
-            isManager: false
-          })
-        });
-      }
-      // Send to default project manager email
-await transporter.sendMail({
-  from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-  to: ["besfllc@gmail.com", "jleonel3915@gmail.com", "josh@bluerainholdingsllc.onmicrosoft.com"], // <-- Add both emails here
-  subject: `Reminder: Maintenance Scheduled for Tomorrow`,
-  html: getMaintenanceEmailHtml({
-    recipientName: 'Team',
-    schedule,
-    dayLabel: 'Tomorrow',
-    isManager: true
-  })
-});
-    }
-
-    // Send reminders for today
-    for (const schedule of schedulesToday) {
-      // Vendor reminder
-      if (schedule.assignedVendor && schedule.assignedVendor.email) {
-        await transporter.sendMail({
-          from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-          to: schedule.assignedVendor.email,
-          subject: `Reminder: Maintenance Scheduled for Today`,
-          html: getMaintenanceEmailHtml({
-            recipientName: schedule.assignedVendor.name || 'Vendor',
-            schedule,
-            dayLabel: 'Today',
             isManager: false
           })
         });
@@ -6182,15 +6318,14 @@ app.put('/api/properties/:propertyId/maintenance-schedules/:scheduleId', async (
       { _id: req.params.scheduleId, projectId: req.params.propertyId },
       updateObj,
       { new: true }
-    );
+    ); 
     if (!updated) return res.status(404).json({ message: 'Schedule not found.' });
     res.json(updated);
   } catch (err) {
     res.status(500).json({ message: 'Failed to update schedule.' });
   }
 });
-
-
+ 
 // --- Maintenance Schedule: Delete (DELETE) ---
 app.delete('/api/properties/:propertyId/maintenance-schedules/:scheduleId', async (req, res) => {
   try {
@@ -6202,6 +6337,52 @@ app.delete('/api/properties/:propertyId/maintenance-schedules/:scheduleId', asyn
     res.json({ message: 'Schedule deleted.' });
   } catch (err) {
     res.status(500).json({ message: 'Failed to delete schedule.' });
+  }
+});
+
+
+app.patch('/api/properties/:propertyId/maintenance-schedules/:scheduleId/complete', async (req, res) => {
+  try {
+    const { propertyId, scheduleId } = req.params;
+    const { completedBy, notes } = req.body || {};
+
+    // Find the schedule
+    const schedule = await MaintenanceSchedule.findOne({ _id: scheduleId, projectId: propertyId });
+    if (!schedule) return res.status(404).json({ message: 'Schedule not found.' });
+
+    // Record completion in history
+    schedule.history = schedule.history || [];
+    schedule.history.push({
+      completedAt: new Date(),
+      completedBy: completedBy || 'System',
+      notes: notes || ''
+    });
+
+    // Advance nextScheduledDate based on frequency
+    let nextDate = new Date(schedule.nextScheduledDate);
+    switch (schedule.frequency) {
+      case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
+      case 'weekly': nextDate.setDate(nextDate.getDate() + 7); break;
+      case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
+      case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
+      case 'custom':
+        if (schedule.intervalDays && schedule.intervalDays > 0) {
+          nextDate.setDate(nextDate.getDate() + schedule.intervalDays);
+        }
+        break;
+    }
+
+    // Reset status and completedAt for the next cycle
+    schedule.status = 'pending';
+    schedule.completedAt = null;
+    schedule.nextScheduledDate = nextDate;
+
+    await schedule.save();
+
+    res.json({ success: true, schedule });
+  } catch (err) {
+    console.error('Error completing maintenance schedule:', err);
+    res.status(500).json({ message: 'Failed to complete and reset schedule.' });
   }
 });
 
