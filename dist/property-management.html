@@ -595,7 +595,7 @@ html {
     border: none;
     padding: 11px 24px;
     border-radius: 8px;
-    font-size: 1.07rem;
+    font-size: 0.80rem;
     font-weight: 600;
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(52, 152, 219, 0.08);
@@ -5650,105 +5650,102 @@ document.getElementById('toggleScheduleViewBtn').addEventListener('click', () =>
   }
 });
 
-function renderMaintenanceSchedulesList(schedules) {
-  const scheduleList = document.getElementById('scheduleList');
-  if (!scheduleList) return;
+const completeModalHtml = `
+  <div class="modal" id="completeScheduleModal" style="display:none;">
+    <div class="modal-content" style="max-width:400px;">
+      <h2 style="font-size:1.3em;margin-bottom:18px;">Mark Schedule as Completed</h2>
+      <form id="completeScheduleForm">
+        <div class="form-group">
+          <label for="completedByInput">Completed By</label>
+          <input type="text" id="completedByInput" required>
+        </div>
+        <div class="form-group">
+          <label for="completedNotesInput">Notes (optional)</label>
+          <textarea id="completedNotesInput" rows="2"></textarea>
+        </div>
+        <div class="modal-buttons" style="margin-top:18px;">
+          <button type="button" class="btn-secondary" id="cancelCompleteScheduleBtn">Cancel</button>
+          <button type="submit" class="btn-primary">Mark as Completed</button>
+        </div>
+      </form>
+    </div>
+  </div>
+`;
+if (!document.getElementById('completeScheduleModal')) {
+  document.body.insertAdjacentHTML('beforeend', completeModalHtml);
+}
 
-  if (!schedules.length) {
-    scheduleList.innerHTML = `
-      <div class="empty-state" style="text-align:center;padding:32px;">
-        <i class="fas fa-calendar-alt" style="font-size:2.2em;color:#3498db;margin-bottom:12px;"></i>
-        <p style="font-size:1.1em;color:#888;">No routine maintenance schedules found.</p>
-      </div>
-    `;
-    return;
+// 1. Mark as Completed Handler
+async function markScheduleCompleted(scheduleId) {
+  // Find the schedule to get vendor info
+  const schedules = window.lastLoadedSchedules || [];
+  const schedule = schedules.find(s => s._id === scheduleId);
+  let vendorName = '';
+  if (schedule && schedule.assignedVendor) {
+    vendorName = schedule.assignedVendor.name || schedule.assignedVendor.email || '';
   }
 
-  scheduleList.innerHTML = `
-    <div style="overflow-x:auto;">
-      <table class="maintenance-table" style="width:100%;border-collapse:collapse;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(44,62,80,0.07);margin-bottom:18px;">
-        <thead>
-          <tr style="background:#f6fafd;">
-            <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Title</th>
-            <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Description</th>
-            <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Frequency</th>
-            <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Start Date</th>
-            <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Next Scheduled</th>
-            <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Vendor</th>
-            <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Unit</th>
-            <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Status</th>
-            <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Cost</th>
-            <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Completed At</th>
-            <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${schedules.map(schedule => {
-            const nextDate = schedule.nextScheduledDate
-              ? new Date(schedule.nextScheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-              : 'N/A';
-            let freqLabel = schedule.frequency.charAt(0).toUpperCase() + schedule.frequency.slice(1);
-            if (schedule.frequency === 'custom' && schedule.intervalDays) {
-              freqLabel = `<span style="background:#eaf6ff;color:#217dbb;padding:2px 10px;border-radius:10px;">Every ${schedule.intervalDays} days</span>`;
-            }
-            const vendorName = schedule.assignedVendor?.name
-              ? `<span style="color:#217dbb;font-weight:600;">${schedule.assignedVendor.name}</span>`
-              : '<span style="color:#888;">None</span>';
-            // --- FIX: Show Unit Number or "None" ---
-            let unitLabel = '<span style="color:#888;">None</span>';
-            if (schedule.unitId) {
-              if (typeof schedule.unitId === 'object' && schedule.unitId.number) {
-                unitLabel = `Unit ${schedule.unitId.number}`;
-              } else if (typeof schedule.unitId === 'string') {
-                const unitObj = state.units?.find(u => u._id === schedule.unitId);
-                if (unitObj && unitObj.number) {
-                  unitLabel = `Unit ${unitObj.number}`;
-                } else {
-                  unitLabel = schedule.unitId;
-                }
-              }
-            }
-            const statusLabel = schedule.status
-              ? `<span class="status-badge ${schedule.status}">${schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}</span>`
-              : '<span class="status-badge pending">Pending</span>';
-            const costLabel = typeof schedule.cost === 'number'
-              ? `$${schedule.cost.toFixed(2)}`
-              : '$0.00';
-            const completedAtLabel = schedule.completedAt
-              ? new Date(schedule.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-              : '';
+  // Show modal
+  const modal = document.getElementById('completeScheduleModal');
+  const form = document.getElementById('completeScheduleForm');
+  const completedByInput = document.getElementById('completedByInput');
+  const notesInput = document.getElementById('completedNotesInput');
+  completedByInput.value = vendorName || '';
+  notesInput.value = '';
+  modal.style.display = 'block';
 
-            return `
-              <tr style="border-bottom:1px solid #e1e8ed;">
-                <td style="padding:10px 8px;font-weight:600;color:#2c3e50;">${schedule.title}</td>
-                <td style="padding:10px 8px;color:#555;">${schedule.description || ''}</td>
-                <td style="padding:10px 8px;">${freqLabel}</td>
-                <td style="padding:10px 8px;">${new Date(schedule.startDate).toLocaleDateString('en-US')}</td>
-                <td style="padding:10px 8px;color:#217dbb;font-weight:600;">${nextDate}</td>
-                <td style="padding:10px 8px;">${vendorName}</td>
-                <td style="padding:10px 8px;">${unitLabel}</td>
-                <td style="padding:10px 8px;">${statusLabel}</td>
-                <td style="padding:10px 8px;">${costLabel}</td>
-                <td style="padding:10px 8px;">${completedAtLabel}</td>
-                <td style="padding:10px 8px;">
-                  <button onclick="editMaintenanceSchedule('${schedule._id}')" class="btn-secondary" title="Edit" style="margin-right:6px;">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <button onclick="deleteMaintenanceSchedule('${schedule._id}')" class="btn-icon delete-btn" title="Delete" style="margin-left:2px;">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </td>
-              </tr>
-            `;
-          }).join('')}
-        </tbody>
-      </table>
+  // Cancel handler
+  document.getElementById('cancelCompleteScheduleBtn').onclick = () => {
+    modal.style.display = 'none';
+  };
+
+  // Submit handler
+  form.onsubmit = async function(e) {
+    e.preventDefault();
+    showLoader();
+    try {
+      const completedBy = completedByInput.value.trim() || 'System';
+      const notes = notesInput.value.trim();
+      const res = await fetch(`/api/properties/${state.currentProperty._id}/maintenance-schedules/${scheduleId}/complete`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completedBy, notes })
+      });
+      if (!res.ok) throw new Error('Failed to complete schedule');
+      showNotification('Schedule marked as completed and reset!', 'success');
+      modal.style.display = 'none';
+      await loadMaintenanceSchedules();
+    } catch (err) {
+      showNotification('Error completing schedule', 'error');
+    } finally {
+      hideLoader();
+    }
+  };
+}
+
+// Make globally accessible
+window.markScheduleCompleted = markScheduleCompleted;
+
+// 2. Render History Helper
+function renderScheduleHistory(history) {
+  if (!history || !history.length) return '<div style="color:#888;font-size:0.96em;">No completion history yet.</div>';
+  return `
+    <div style="margin-top:8px;">
+      <strong style="color:#217dbb;">Completion History:</strong>
+      <ul style="margin:6px 0 0 0;padding-left:18px;">
+        ${history.slice().reverse().map(h => `
+          <li style="margin-bottom:4px;">
+            <span style="color:#27ae60;"><i class="fas fa-check-circle"></i> ${new Date(h.completedAt).toLocaleDateString()}</span>
+            ${h.completedBy ? ` by <strong>${h.completedBy}</strong>` : ''}
+            ${h.notes ? `<br><span style="color:#888;">Notes: ${h.notes}</span>` : ''}
+          </li>
+        `).join('')}
+      </ul>
     </div>
   `;
 }
 
-
-
+// CARD VIEW
 function renderMaintenanceSchedules(schedules) {
   const scheduleList = document.getElementById('scheduleList');
   if (!scheduleList) return;
@@ -5783,13 +5780,11 @@ function renderMaintenanceSchedules(schedules) {
       ? `<span style="color:#217dbb;font-weight:600;font-size:0.97em;"><i class="fas fa-user-tie"></i> ${schedule.assignedVendor.name}</span>`
       : '<span style="color:#888;font-size:0.97em;"><i class="fas fa-user-slash"></i> None</span>';
 
-    // --- FIX: Show Unit Number or "No unit assigned" ---
     let unitLabel = '<span style="color:#888;font-size:0.97em;"><i class="fas fa-door-closed"></i> No unit assigned</span>';
     if (schedule.unitId) {
       if (typeof schedule.unitId === 'object' && schedule.unitId.number) {
         unitLabel = `<i class="fas fa-door-open"></i> Unit ${schedule.unitId.number}`;
       } else if (typeof schedule.unitId === 'string') {
-        // Try to find the unit in state.units
         const unitObj = state.units?.find(u => u._id === schedule.unitId);
         if (unitObj && unitObj.number) {
           unitLabel = `<i class="fas fa-door-open"></i> Unit ${unitObj.number}`;
@@ -5810,11 +5805,14 @@ function renderMaintenanceSchedules(schedules) {
     const costLabel = typeof schedule.cost === 'number'
       ? `<span style="color:#217dbb;font-weight:600;font-size:0.97em;"><i class="fas fa-dollar-sign"></i> $${schedule.cost.toFixed(2)}</span>`
       : '<span style="color:#888;font-size:0.97em;"><i class="fas fa-dollar-sign"></i> $0.00</span>';
-    const completedAtLabel = schedule.completedAt
-      ? `<span style="color:#27ae60;font-weight:600;font-size:0.97em;"><i class="fas fa-calendar-check"></i> ${new Date(schedule.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>`
-      : '<span style="color:#888;font-size:0.97em;"><i class="fas fa-calendar-times"></i> Not completed</span>';
 
-    // --- Make description stand out ---
+    const canComplete = schedule.status !== 'pending';
+    const completeBtn = canComplete
+      ? `<button onclick="markScheduleCompleted('${schedule._id}')" class="btn-primary" style="margin-top:8px;"><i class="fas fa-check"></i> Mark as Completed</button>`
+      : '';
+
+    const historyHtml = renderScheduleHistory(schedule.history);
+
     const descriptionHtml = `
       <div style="
         margin-bottom:12px;
@@ -5855,18 +5853,146 @@ function renderMaintenanceSchedules(schedules) {
               <div style="margin-bottom:8px;"><strong><i class="fas fa-calendar-day"></i> Start Date:</strong> <span style="color:#217dbb;">${startDateLabel}</span></div>
               <div style="margin-bottom:8px;"><strong><i class="fas fa-calendar-alt"></i> Next Date:</strong> <span style="color:#217dbb;">${nextDate}</span></div>
               <div style="margin-bottom:8px;"><strong><i class="fas fa-info-circle"></i> Status:</strong> ${statusLabel}</div>
+              ${completeBtn}
             </div>
             <div>
               <div style="margin-bottom:8px;"><strong><i class="fas fa-user-tie"></i> Vendor:</strong> ${vendorName}</div>
               <div style="margin-bottom:8px;"> ${unitLabel}</div>
-              <div style="margin-bottom:8px;"><strong><i class="fas fa-calendar-check"></i> Completed At:</strong> ${completedAtLabel}</div>
               <div><strong><i class="fas fa-dollar-sign"></i> Cost:</strong> ${costLabel}</div>
             </div>
+          </div>
+          <div style="margin-top:10px;">
+            <button class="btn-secondary" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block';this.textContent = this.textContent.includes('Show') ? 'Hide History' : 'Show History';">
+              <i class="fas fa-history"></i> Show History
+            </button>
+            <div style="display:none;">${historyHtml}</div>
           </div>
         </div>
       </div>
     `;
   }).join('');
+}
+
+// LIST VIEW
+function renderMaintenanceSchedulesList(schedules) {
+  const scheduleList = document.getElementById('scheduleList');
+  if (!scheduleList) return;
+
+  if (!schedules.length) {
+    scheduleList.innerHTML = `
+      <div class="empty-state" style="text-align:center;padding:32px;">
+        <i class="fas fa-calendar-alt" style="font-size:2.2em;color:#3498db;margin-bottom:12px;"></i>
+        <p style="font-size:1.1em;color:#888;">No routine maintenance schedules found.</p>
+      </div>
+    `;
+    return;
+  }
+
+  scheduleList.innerHTML = `
+    <div style="overflow-x:auto;">
+      <table class="maintenance-table" style="width:100%;border-collapse:collapse;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(44,62,80,0.07);margin-bottom:18px;">
+        <thead>
+          <tr style="background:#f6fafd;">
+            <th>Title</th>
+            <th>Description</th>
+            <th>Frequency</th>
+            <th>Start Date</th>
+            <th>Next Scheduled</th>
+            <th>Vendor</th>
+            <th>Unit</th>
+            <th>Status</th>
+            <th>Cost</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${schedules.map((schedule, idx) => {
+            const nextDate = schedule.nextScheduledDate
+              ? new Date(schedule.nextScheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+              : 'N/A';
+            let freqLabel = schedule.frequency.charAt(0).toUpperCase() + schedule.frequency.slice(1);
+            if (schedule.frequency === 'custom' && schedule.intervalDays) {
+              freqLabel = `<span style="background:#eaf6ff;color:#217dbb;padding:2px 10px;border-radius:10px;">Every ${schedule.intervalDays} days</span>`;
+            }
+            const vendorName = schedule.assignedVendor?.name
+              ? `<span style="color:#217dbb;font-weight:600;">${schedule.assignedVendor.name}</span>`
+              : '<span style="color:#888;">None</span>';
+            let unitLabel = '<span style="color:#888;">None</span>';
+            if (schedule.unitId) {
+              if (typeof schedule.unitId === 'object' && schedule.unitId.number) {
+                unitLabel = `Unit ${schedule.unitId.number}`;
+              } else if (typeof schedule.unitId === 'string') {
+                const unitObj = state.units?.find(u => u._id === schedule.unitId);
+                if (unitObj && unitObj.number) {
+                  unitLabel = `Unit ${unitObj.number}`;
+                } else {
+                  unitLabel = schedule.unitId;
+                }
+              }
+            }
+            const statusLabel = schedule.status
+              ? `<span class="status-badge ${schedule.status}">${schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}</span>`
+              : '<span class="status-badge pending">Pending</span>';
+            const costLabel = typeof schedule.cost === 'number'
+              ? `$${schedule.cost.toFixed(2)}`
+              : '$0.00';
+
+            const canComplete = schedule.status !== 'pending';
+            const completeBtn = canComplete
+              ? `<button onclick="markScheduleCompleted('${schedule._id}')" class="btn-primary" style="margin-bottom:4px;"><i class="fas fa-check"></i></button>`
+              : '';
+
+            // Each row gets a unique id for toggling
+            const rowId = `schedule-row-${idx}`;
+            const historyRowId = `schedule-history-row-${idx}`;
+            const historyHtml = renderScheduleHistory(schedule.history);
+
+            return `
+              <tr id="${rowId}" class="schedule-row" style="border-bottom:1px solid #e1e8ed;cursor:pointer;">
+                <td style="padding:10px 8px;font-weight:600;color:#2c3e50;">${schedule.title}</td>
+                <td style="padding:10px 8px;color:#555;">${schedule.description || ''}</td>
+                <td style="padding:10px 8px;">${freqLabel}</td>
+                <td style="padding:10px 8px;">${new Date(schedule.startDate).toLocaleDateString('en-US')}</td>
+                <td style="padding:10px 8px;color:#217dbb;font-weight:600;">${nextDate}</td>
+                <td style="padding:10px 8px;">${vendorName}</td>
+                <td style="padding:10px 8px;">${unitLabel}</td>
+                <td style="padding:10px 8px;">${statusLabel}</td>
+                <td style="padding:10px 8px;">${costLabel}</td>
+                <td style="padding:10px 8px;">
+                  <button onclick="event.stopPropagation();editMaintenanceSchedule('${schedule._id}')" class="btn-secondary" title="Edit" style="margin-right:6px;">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button onclick="event.stopPropagation();deleteMaintenanceSchedule('${schedule._id}')" class="btn-icon delete-btn" title="Delete" style="margin-left:2px;">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                  ${completeBtn}
+                </td>
+              </tr>
+              <tr id="${historyRowId}" class="schedule-history-row" style="display:none;background:#f8fafd;">
+                <td colspan="10" style="padding:12px 24px 12px 32px;border-bottom:1px solid #e1e8ed;">
+                  ${historyHtml}
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  // Attach event listeners after rendering
+  setTimeout(() => {
+    document.querySelectorAll('.schedule-row').forEach((row, idx) => {
+      row.addEventListener('click', function () {
+        const historyRow = document.getElementById('schedule-history-row-' + idx);
+        if (historyRow.style.display === 'none' || !historyRow.style.display) {
+          historyRow.style.display = 'table-row';
+        } else {
+          historyRow.style.display = 'none';
+        }
+      });
+    });
+  }, 0);
 }
 
 
@@ -7068,6 +7194,7 @@ window.deletePayment = deletePayment;
     </script>
 </body>
 </html>
+
 
 
 
