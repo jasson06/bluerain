@@ -211,62 +211,64 @@
     document.getElementById("spinner-overlay").style.display = "none";
   }
 
-  document.addEventListener("DOMContentLoaded", async () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get("token");
-    const email = urlParams.get("email");
+document.addEventListener("DOMContentLoaded", async () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get("token");
+  const email = urlParams.get("email");
+  const role = urlParams.get("role");
 
-    if (token && email) {
-      // Show Set New Password form and pre-fill fields
-      toggleForm("setpw");
-      document.getElementById("setpw-email").value = email;
-      document.getElementById("setpw-token").value = token;
-    } else if (token) {
-      toggleForm("activate"); // Show Activate Account Form
-      document.getElementById("activate-form").addEventListener("submit", async (e) => {
-        e.preventDefault();
+  if (token && role) {
+    // Invitation activation link (for invited users)
+    toggleForm("activate");
+    document.getElementById("activate-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-        const name = document.getElementById("activate-name").value.trim();
-        const password = document.getElementById("activate-password").value.trim();
+      const name = document.getElementById("activate-name").value.trim();
+      const password = document.getElementById("activate-password").value.trim();
 
-        if (!name || !password) {
-          showToast("All fields are required.", "error");
-          return;
-        }
+      if (!name || !password) {
+        showToast("All fields are required.", "error");
+        return;
+      }
 
-        try {
-          showSpinner();
-          const response = await fetch("/api/invite/accept", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token, name, password }),
-          });
-          const result = await response.json();
-          if (!response.ok) throw new Error(result.message);
-          showToast("Account activated successfully!", "success");
-          setTimeout(() => {
-            if (result.role === "project-manager") {
-              window.location.href = "/project-manager-auth.html";
-            } else {
-              window.location.href = "/sign-inpage.html";
-            }
-          }, 1200);
-        } catch (error) {
-          console.error("Activation Error:", error);
-          showToast("Failed to activate account. Please try again.", "error");
-        } finally {
-          hideSpinner();
-        }
-      });
-    } else {
-      toggleForm("signin");
-    }
+      try {
+        showSpinner();
+        const response = await fetch("/api/invite/accept", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, name, password }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message);
+        showToast("Account activated successfully!", "success");
+        setTimeout(() => {
+          if (result.role === "project-manager") {
+            window.location.href = "/project-manager-auth.html";
+          } else {
+            window.location.href = "/sign-inpage.html";
+          }
+        }, 1200);
+      } catch (error) {
+        console.error("Activation Error:", error);
+        showToast("Failed to activate account. Please try again.", "error");
+      } finally {
+        hideSpinner();
+      }
+    });
+  } else if (token && email) {
+    // Password reset link
+    toggleForm("setpw");
+    document.getElementById("setpw-email").value = email;
+    document.getElementById("setpw-token").value = token;
+  } else {
+    toggleForm("signin");
+  }
 
-    // Fallback: If no form is active, show sign-in form
-    if (!document.querySelector('form.active')) {
-      document.getElementById('signin-form').classList.add('active');
-    }
-  });
+  // Fallback: If no form is active, show sign-in form
+  if (!document.querySelector('form.active')) {
+    document.getElementById('signin-form').classList.add('active');
+  }
+});
 
 
   function toggleForm(formType) {
