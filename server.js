@@ -2236,7 +2236,7 @@ app.post('/api/password-reset/request', async (req, res) => {
 
     // Send the reset token and link via email
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: `"BESF Team" <${process.env.EMAIL_USER}>`,
       to: vendor.email,
       subject: 'Password Reset Request',
       text: `Your password reset token is: ${resetToken}\n\nOr click the link below to reset your password:\n${resetLink}`,
@@ -2367,6 +2367,40 @@ app.put('/api/vendors/:vendorId/update-item-status', async (req, res) => {
     item.status = status;
     await vendor.save();
     console.log("✅ Vendor Item Status & Dates Updated Successfully:", item);
+
+        // --- If status is completed, also update the maintenance schedule ---
+if (status === "completed") {
+  // Try to find the matching maintenance schedule by project, title, and startDate
+  let schedule = await MaintenanceSchedule.findOne({
+    projectId: item.projectId,
+    title: item.name,
+    startDate: { $lte: item.startDate || new Date() }, // Find the schedule whose startDate is <= item's startDate
+    status: { $ne: "completed" }
+  }).sort({ startDate: -1 }); // Get the most recent one
+
+  // Fallback: try by project and title only if not found
+  if (!schedule) {
+    schedule = await MaintenanceSchedule.findOne({
+      projectId: item.projectId,
+      title: item.name,
+      status: { $ne: "completed" }
+    });
+  }
+
+  if (schedule) {
+    schedule.status = "completed";
+    schedule.completedAt = new Date();
+    // Optionally, add to history
+    schedule.history = schedule.history || [];
+    schedule.history.push({
+      completedAt: new Date(),
+      completedBy: vendor.name || "Vendor",
+      notes: "Marked as completed by vendor"
+    });
+    await schedule.save();
+    console.log(`✅ Maintenance schedule "${schedule.title}" marked as completed due to vendor item completion.`);
+  }
+}
 
     // ✅ Update the corresponding item status and dates in the Estimate
     const estimateUpdate = {};
@@ -3269,7 +3303,7 @@ app.post('/api/manager/reset-password', async (req, res) => {
     const resetLink = `${baseUrl}/project-manager-auth.html?role=manager&email=${encodeURIComponent(email)}&token=${encodeURIComponent(resetToken)}`;
 
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: `"BESF Team" <${process.env.EMAIL_USER}>`,
       to: manager.email,
       subject: 'Password Reset Request',
       text: `Your password reset token is: ${resetToken}\n\nOr click the link below to reset your password:\n${resetLink}`,
@@ -6037,7 +6071,7 @@ async function sendTodayMaintenanceReminder(schedule) {
   // Manager reminder
   await transporter.sendMail({
     from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-    to: ["besfllc@gmail.com", "jleonel3915@gmail.com", "josh@bluerainholdingsllc.onmicrosoft.com"], // Add more emails as needed
+    to: ["jleonel3915@gmail.com"], // Add more emails as needed
     subject: `Reminder: Maintenance Scheduled for Today`,
     html: getMaintenanceEmailHtml({
       recipientName: 'Team',
@@ -6068,6 +6102,107 @@ async function updateNextScheduledDates() {
       await schedule.save();
       await sendTodayMaintenanceReminder(schedule);
       console.log(`Auto-updated schedule "${schedule.title}" to in-progress for today.`);
+
+      // --- 1. Ensure vendor is assigned to the project first ---
+      let vendor = null;
+      let projectIdStr = (schedule.projectId._id || schedule.projectId).toString();
+      if (schedule.assignedVendor) {
+        vendor = await Vendor.findById(schedule.assignedVendor);
+        if (vendor) {
+          const alreadyAssignedProject = vendor.assignedProjects.some(
+            p => p.projectId && p.projectId.toString() === projectIdStr
+          );
+          if (!alreadyAssignedProject) {
+            vendor.assignedProjects.push({ projectId: projectIdStr, status: "new" });
+            await vendor.save();
+            console.log(`Assigned project ${projectIdStr} to vendor "${vendor.name}"`);
+            // Reload vendor to ensure up-to-date state for next steps
+            vendor = await Vendor.findById(schedule.assignedVendor);
+          }
+        }
+      }
+
+      // --- 2. Create estimate if not exists ---
+      let estimate = await Estimate.findOne({
+        projectId: schedule.projectId._id || schedule.projectId,
+        title: { $regex: new RegExp(`^Maintenance: ${schedule.title}$`, 'i') }
+      });
+
+      if (!estimate) {
+        estimate = new Estimate({
+          projectId: schedule.projectId._id || schedule.projectId,
+          invoiceNumber: `MS-${Date.now()}`,
+          title: `Maintenance: ${schedule.title}`,
+          lineItems: [],
+          total: 0,
+          tax: 0
+        });
+        await estimate.save(); // Save to get _id and enable subdoc arrays
+        estimate = await Estimate.findById(estimate._id); // Reload as Mongoose doc
+      }
+
+      // --- 3. Always create a new line item for this recurrence ---
+      const newItem = {
+        type: 'item',
+        name: schedule.title,
+        description: schedule.description || '',
+        costCode: 'Maintenance',
+        quantity: 1,
+        unitPrice: schedule.cost || 0,
+        total: schedule.cost || 0,
+        status: 'in-progress',
+        assignedTo: schedule.assignedVendor?._id || schedule.assignedVendor || null,
+        photos: { before: [], after: [] },
+        startDate: now,
+        endDate: null
+      };
+
+      // Find or create the "Maintenance" category as a real subdoc
+      let maintenanceCategory = estimate.lineItems.find(cat => cat.category === 'Maintenance');
+      if (!maintenanceCategory) {
+        estimate.lineItems.push({
+          type: 'category',
+          category: 'Maintenance',
+          status: 'in-progress',
+          items: []
+        });
+        maintenanceCategory = estimate.lineItems.find(cat => cat.category === 'Maintenance');
+      }
+      maintenanceCategory.items.push(newItem);
+      estimate.markModified('lineItems');
+      estimate.total += schedule.cost || 0;
+      await estimate.save();
+
+      // Fetch the saved item with _id
+      const savedEstimate = await Estimate.findById(estimate._id);
+      const savedCategory = savedEstimate.lineItems.find(cat => cat.category === 'Maintenance');
+      const savedItem = savedCategory.items[savedCategory.items.length - 1]; // The last one is the new one
+
+      // --- Assign to Vendor's assignedItems if vendor is present and savedItem._id exists ---
+      if (vendor && savedItem && savedItem._id) {
+        const alreadyAssigned = vendor.assignedItems.some(i =>
+          i.itemId?.toString() === savedItem._id.toString()
+        );
+        if (!alreadyAssigned) {
+          vendor.assignedItems.push({
+            itemId: savedItem._id.toString(),
+            projectId: estimate.projectId,
+            estimateId: estimate._id,
+            name: savedItem.name,
+            description: savedItem.description,
+            quantity: savedItem.quantity,
+            unitPrice: savedItem.unitPrice,
+            total: savedItem.total,
+            status: 'new',
+            costCode: savedItem.costCode || 'Maintenance',
+            photos: { before: [], after: [] },
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+          await vendor.save();
+          console.log(`Assigned maintenance line item "${savedItem.name}" to vendor "${vendor.name}"`);
+        }
+      }
     }
 
     // 2. Notify for overdue schedules (nextScheduledDate < today, not completed)
@@ -6093,7 +6228,7 @@ async function updateNextScheduledDates() {
       // Send to default manager emails
       await transporter.sendMail({
         from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-        to: ["besfllc@gmail.com", "jleonel3915@gmail.com", "josh@bluerainholdingsllc.onmicrosoft.com"], // Add more emails as needed
+        to: ["jleonel3915@gmail.com"],
         subject: `Overdue Maintenance Alert: ${schedule.title}`,
         html: getOverdueMaintenanceEmailHtml({
           recipientName: 'Team',
@@ -6107,7 +6242,6 @@ async function updateNextScheduledDates() {
     console.error('Error updating nextScheduledDates:', err);
   }
 }
-
 // --- Run this function every hour  ---
 setInterval(updateNextScheduledDates, 60 * 60 * 1000);
 
@@ -6164,6 +6298,8 @@ function getMaintenanceEmailHtml({ recipientName, schedule, dayLabel, isManager 
     </div>
   `;
 }
+
+
 
 // In sendMaintenanceReminders, update the email sending logic:
 async function sendMaintenanceReminders() {
@@ -6231,7 +6367,6 @@ setTimeout(function() {
   sendMaintenanceReminders();
   setInterval(sendMaintenanceReminders, 24 * 60 * 60 * 1000); // every 24 hours
 }, millisTill8 > 0 ? millisTill8 : 0);
-
 
 
 // API to create a schedule
