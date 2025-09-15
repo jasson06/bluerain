@@ -2316,6 +2316,8 @@ app.get("/api/vendors/:vendorId/debug-items", async (req, res) => {
   }
 });
 
+
+
 app.put('/api/vendors/:vendorId/update-item-status', async (req, res) => {
   const { vendorId } = req.params;
   const { itemId, status } = req.body;
@@ -2368,39 +2370,68 @@ app.put('/api/vendors/:vendorId/update-item-status', async (req, res) => {
     await vendor.save();
     console.log("✅ Vendor Item Status & Dates Updated Successfully:", item);
 
-        // --- If status is completed, also update the maintenance schedule ---
-if (status === "completed") {
-  // Try to find the matching maintenance schedule by project, title, and startDate
-  let schedule = await MaintenanceSchedule.findOne({
-    projectId: item.projectId,
-    title: item.name,
-    startDate: { $lte: item.startDate || new Date() }, // Find the schedule whose startDate is <= item's startDate
-    status: { $ne: "completed" }
-  }).sort({ startDate: -1 }); // Get the most recent one
+    // --- If status is completed, also update the maintenance schedule with the same flow ---
+    if (status === "completed") {
+      // Try to find the matching maintenance schedule by project, title, and startDate
+      let schedule = await MaintenanceSchedule.findOne({
+        projectId: item.projectId,
+        title: item.name,
+        startDate: { $lte: item.startDate || new Date() },
+        status: { $ne: "completed" }
+      }).sort({ startDate: -1 });
 
-  // Fallback: try by project and title only if not found
-  if (!schedule) {
-    schedule = await MaintenanceSchedule.findOne({
-      projectId: item.projectId,
-      title: item.name,
-      status: { $ne: "completed" }
-    });
-  }
+      // Fallback: try by project and title only if not found
+      if (!schedule) {
+        schedule = await MaintenanceSchedule.findOne({
+          projectId: item.projectId,
+          title: item.name,
+          status: { $ne: "completed" }
+        });
+      }
 
-  if (schedule) {
-    schedule.status = "completed";
-    schedule.completedAt = new Date();
-    // Optionally, add to history
-    schedule.history = schedule.history || [];
-    schedule.history.push({
-      completedAt: new Date(),
-      completedBy: vendor.name || "Vendor",
-      notes: "Marked as completed by vendor"
-    });
-    await schedule.save();
-    console.log(`✅ Maintenance schedule "${schedule.title}" marked as completed due to vendor item completion.`);
-  }
-}
+if (schedule) {
+    // Only push if not already logged for today by this vendor 
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const alreadyLogged = schedule.history?.some(
+      h => h.completedBy === (vendor.name || "Vendor") && h.completedAt?.toISOString().slice(0, 10) === todayStr
+    );
+    if (!alreadyLogged) {
+      schedule.history = schedule.history || [];
+      schedule.history.push({
+        completedAt: new Date(),
+        completedBy: vendor.name || "Vendor",
+        notes: "Marked as completed by vendor"
+      });
+    }
+
+        // --- Determine base date for next schedule (use today if overdue) ---
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        let baseDate = schedule.nextScheduledDate < today ? today : schedule.nextScheduledDate;
+
+        // Advance nextScheduledDate based on frequency, using baseDate
+        let nextDate = new Date(baseDate);
+        switch (schedule.frequency) {
+          case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
+          case 'weekly': nextDate.setDate(nextDate.getDate() + 7); break;
+          case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
+          case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
+          case 'custom':
+            if (schedule.intervalDays && schedule.intervalDays > 0) {
+              nextDate.setDate(nextDate.getDate() + schedule.intervalDays);
+            }
+            break;
+        }
+
+        // Reset status and completedAt for the next cycle
+        schedule.status = 'pending';
+        schedule.completedAt = null;
+        schedule.nextScheduledDate = nextDate;
+
+        await schedule.save();
+        console.log(`✅ Maintenance schedule "${schedule.title}" marked as completed and rescheduled.`);
+      }
+    }
 
     // ✅ Update the corresponding item status and dates in the Estimate
     const estimateUpdate = {};
@@ -2440,9 +2471,6 @@ if (status === "completed") {
     res.status(500).json({ message: "Failed to update item status." });
   }
 });
-
-
-
 
 
 
@@ -5921,10 +5949,16 @@ app.patch('/api/estimates/line-items/:lineItemId/status', async (req, res) => {
 
     // Find the updated line item and get maintenanceRequestId
     let maintenanceRequestId = null;
+    let itemName = null;
+    let itemStartDate = null;
+    let projectId = null;
     for (const cat of estimate.lineItems) {
       for (const item of cat.items) {
-        if (item._id.toString() === lineItemId && item.maintenanceRequestId) {
+        if (item._id.toString() === lineItemId) {
           maintenanceRequestId = item.maintenanceRequestId;
+          itemName = item.name;
+          itemStartDate = item.startDate;
+          projectId = estimate.projectId;
         }
       }
     }
@@ -5940,6 +5974,69 @@ app.patch('/api/estimates/line-items/:lineItemId/status', async (req, res) => {
         { $set: { status: maintenanceStatus, ...(maintenanceStatus === 'completed' ? { completedAt: new Date() } : {}) } },
         { new: true }
       );
+    }
+
+    // --- If status is completed, also update the maintenance schedule with the same flow ---
+if (status === "completed" && itemName && projectId) {
+  // Try to find the matching maintenance schedule by project, title, and startDate
+  let schedule = await MaintenanceSchedule.findOne({
+    projectId: projectId,
+    title: itemName,
+    startDate: { $lte: itemStartDate || new Date() },
+    status: { $ne: "completed" }
+  }).sort({ startDate: -1 });
+
+  // Fallback: try by project and title only if not found
+  if (!schedule) {
+    schedule = await MaintenanceSchedule.findOne({
+      projectId: projectId,
+      title: itemName,
+      status: { $ne: "completed" }
+    });
+  }
+
+  if (schedule) {
+    // Only push if not already logged for today
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const alreadyLogged = schedule.history?.some(
+      h => h.completedBy === "Estimate/Manager" && h.completedAt?.toISOString().slice(0, 10) === todayStr
+    );
+    if (!alreadyLogged) {
+      schedule.history = schedule.history || [];
+      schedule.history.push({
+        completedAt: new Date(),
+        completedBy: "Estimate/Manager",
+        notes: "Marked as completed from estimate"
+      });
+    }
+
+        // --- Determine base date for next schedule (use today if overdue) ---
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        let baseDate = schedule.nextScheduledDate < today ? today : schedule.nextScheduledDate;
+
+        // Advance nextScheduledDate based on frequency, using baseDate
+        let nextDate = new Date(baseDate);
+        switch (schedule.frequency) {
+          case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
+          case 'weekly': nextDate.setDate(nextDate.getDate() + 7); break;
+          case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
+          case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
+          case 'custom':
+            if (schedule.intervalDays && schedule.intervalDays > 0) {
+              nextDate.setDate(nextDate.getDate() + schedule.intervalDays);
+            }
+            break;
+        }
+
+        // Reset status and completedAt for the next cycle
+        schedule.status = 'pending';
+        schedule.completedAt = null;
+        schedule.nextScheduledDate = nextDate;
+
+        await schedule.save();
+        console.log(`✅ Maintenance schedule "${schedule.title}" marked as completed and rescheduled from estimate.`);
+      }
     }
 
     res.json({ success: true, status, estimate });
