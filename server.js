@@ -6341,8 +6341,22 @@ async function updateNextScheduledDates() {
     console.error('Error updating nextScheduledDates:', err);
   }
 }
-// --- Run this function every hour  ---
-setInterval(updateNextScheduledDates, 60 * 60 * 1000);
+// Run updateNextScheduledDates every day at 7am
+function scheduleDailyUpdateNextScheduledDates() {
+  const now = new Date();
+  const next7am = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 7, 0, 0, 0);
+  if (now > next7am) {
+    // If it's past 7am today, schedule for tomorrow
+    next7am.setDate(next7am.getDate() + 1);
+  }
+  const millisTill7am = next7am - now;
+  setTimeout(() => {
+    updateNextScheduledDates();
+    setInterval(updateNextScheduledDates, 24 * 60 * 60 * 1000); // every 24 hours
+  }, millisTill7am);
+}
+
+scheduleDailyUpdateNextScheduledDates();
 
 
 
