@@ -6344,19 +6344,20 @@ async function updateNextScheduledDates() {
 // Run updateNextScheduledDates every day at 7am
 function scheduleDailyUpdateNextScheduledDates() {
   const now = new Date();
-  const next7am = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 7, 0, 0, 0);
-  if (now > next7am) {
-    // If it's past 7am today, schedule for tomorrow
-    next7am.setDate(next7am.getDate() + 1);
+  const next11am = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 11, 0, 0, 0);
+  if (now > next11am) {
+    // If it's past 11am today, schedule for tomorrow
+    next11am.setDate(next11am.getDate() + 1);
   }
-  const millisTill7am = next7am - now;
+  const millisTill11am = next11am - now;
   setTimeout(() => {
     updateNextScheduledDates();
     setInterval(updateNextScheduledDates, 24 * 60 * 60 * 1000); // every 24 hours
-  }, millisTill7am);
+  }, millisTill11am);
 }
 
 scheduleDailyUpdateNextScheduledDates();
+
 
 
 
@@ -6475,11 +6476,11 @@ await transporter.sendMail({
 
 // --- Run this function every morning at 8am ---
 const now = new Date();
-const millisTill8 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0, 0) - now;
+const millisTill11 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 11, 0, 0, 0) - now;
 setTimeout(function() {
   sendMaintenanceReminders();
   setInterval(sendMaintenanceReminders, 24 * 60 * 60 * 1000); // every 24 hours
-}, millisTill8 > 0 ? millisTill8 : 0);
+}, millisTill11 > 0 ? millisTill11 : 0);
 
 
 // API to create a schedule
