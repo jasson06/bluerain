@@ -285,6 +285,7 @@ button, input, textarea {
         gap: 4px;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+       margin-left: -18px;
     }
 
     .tab {
