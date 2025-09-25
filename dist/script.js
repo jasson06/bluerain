@@ -2045,3 +2045,155 @@ pdf.save(`project-report-${safeProjectName}.pdf`);
 };
 };
 
+
+// --- Maintenance Notification Logic for Dashboard ---
+// Fetch maintenance requests (for dashboard, you may want to show ALL pending requests)
+async function fetchAllMaintenanceNotifications() {
+    try {
+        const res = await fetch(`/api/properties/maintenance`);
+        if (!res.ok) return [];
+        const requests = await res.json();
+        console.log('Maintenance requests from API:', requests); // <--- Add this line
+        // Only show pending or new requests
+        return requests.filter(r => r.status === 'pending' || r.status === 'new');
+    } catch (err) {
+        console.error('Error fetching maintenance notifications:', err);
+        return [];
+    }
+}
+
+// Update notification bar to use ALL requests
+async function updateMaintenanceNotificationBar() {
+    const requests = await fetchAllMaintenanceNotifications();
+    renderMaintenanceNotifDropdown(requests);
+}
+
+async function renderMaintenanceNotifDropdown(requests) {
+  const notifCount = document.getElementById('maintenanceNotifCount');
+  const notifDropdown = document.getElementById('maintenanceNotifDropdown');
+  const notifList = document.getElementById('maintenanceNotifList');
+  if (!notifCount || !notifDropdown || !notifList) return;
+
+  notifCount.textContent = requests.length;
+  notifCount.style.display = requests.length ? '' : 'none';
+
+  if (!requests.length) {
+    notifList.innerHTML = `<div style="padding:24px; color:#888; text-align:center;">
+      <i class="fas fa-check-circle" style="color:#27ae60; font-size:1.7em;"></i>
+      <div style="margin-top:8px;">No pending maintenance requests.</div>
+    </div>`;
+    return;
+  }
+
+  // Fetch all projects (active, completed, on-market)
+  let allProjects = [];
+  try {
+    const [activeRes, completedRes, onMarketRes] = await Promise.all([
+      fetch('/api/projects'),
+      fetch('/api/completed-projects'),
+      fetch('/api/on-market-projects')
+    ]);
+    const activeData = await activeRes.json();
+    const completedData = await completedRes.json();
+    const onMarketData = await onMarketRes.json();
+    allProjects = [
+      ...(activeData.projects || []),
+      ...(completedData.projects || []),
+      ...(onMarketData.projects || [])
+    ];
+  } catch (err) {
+    console.warn('Could not fetch all projects for maintenance notifications.', err);
+  }
+  const propertyMap = {};
+  allProjects.forEach(p => propertyMap[p._id] = p.name);
+
+  notifList.innerHTML = requests.map(r => `
+    <div class="notif-list-item modern-notif-item" 
+         style="cursor:pointer;" 
+         onclick="handleMaintenanceRequestClick('${r._id}', '${r.projectId}', '${r.unitId?.number || ''}')">
+      <div class="notif-list-row">
+        <div class="notif-title">
+          <i class="fas fa-tools"></i> ${r.title}
+        </div>
+        <span class="notif-priority">
+          Priority: ${r.priority}
+        </span>
+        <span class="notif-status">
+          Status: ${r.status}
+        </span>
+      </div>
+      <div class="notif-desc">
+        ${r.description}
+      </div>
+      <div class="notif-meta">
+        <span class="notif-unit"><i class="fas fa-door-open"></i> Unit: ${r.unitId?.number || 'N/A'}</span>
+        <span><i class="far fa-calendar-alt"></i> Requested: ${new Date(r.createdAt).toLocaleDateString()}</span>
+        <span class="notif-property"><i class="fas fa-building"></i> Property: ${propertyMap[r.projectId] || 'Unknown'}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function updateMaintenanceNotificationBar() {
+  const requests = await fetchAllMaintenanceNotifications();
+  renderMaintenanceNotifDropdown(requests);
+}
+
+// Toggle dropdown on icon click
+document.addEventListener('DOMContentLoaded', () => {
+    updateMaintenanceNotificationBar();
+
+    const notifBtn = document.getElementById('maintenanceNotifBtn');
+    const notifDropdown = document.getElementById('maintenanceNotifDropdown');
+    if (notifBtn && notifDropdown) {
+        notifBtn.onclick = (e) => {
+            e.stopPropagation();
+            notifDropdown.style.display = notifDropdown.style.display === 'none' || !notifDropdown.style.display ? 'block' : 'none';
+        };
+        // Hide dropdown when clicking outside
+        document.body.addEventListener('click', () => {
+            notifDropdown.style.display = 'none';
+        });
+        notifDropdown.addEventListener('click', (e) => e.stopPropagation());
+    }
+});
+
+
+
+async function handleMaintenanceRequestClick(requestId, projectId, unitNumber) {
+  // 1. Check if an estimate exists for this maintenance request
+  try {
+    const res = await fetch(`/api/estimates?projectId=${projectId}`);
+    if (!res.ok) throw new Error("Failed to fetch estimates");
+    const data = await res.json();
+    const estimates = data.estimates || [];
+
+    // Look for a line item with maintenanceRequestId === requestId
+    let foundEstimate = null;
+    let foundEstimateId = null;
+    for (const est of estimates) {
+      for (const cat of est.lineItems || []) {
+        for (const item of cat.items || []) {
+          if (item.maintenanceRequestId && item.maintenanceRequestId.toString() === requestId) {
+            foundEstimate = est;
+            foundEstimateId = est._id;
+            break;
+          }
+        }
+        if (foundEstimate) break;
+      }
+      if (foundEstimate) break;
+    }
+
+    if (foundEstimate && foundEstimateId) {
+      // Redirect to the estimate edit page
+      window.location.href = `/estimate-edit.html?projectId=${projectId}&estimateId=${foundEstimateId}`;
+    } else {
+      // Redirect to the project details page and highlight/open the maintenance section
+      window.location.href = `/details/projects/${projectId}?maintenanceRequestId=${requestId}`;
+    }
+  } catch (err) {
+    alert("Error loading maintenance request details.");
+    console.error(err);
+  }
+}
