@@ -5111,6 +5111,20 @@ app.get('/api/projects/:projectId/files/:fileId/download', async (req, res) => {
   }
 });
 
+
+// ✅ Get ALL maintenance requests for ALL properties
+app.get('/api/properties/maintenance', async (req, res) => {
+  try {
+    const requests = await MaintenanceRequest.find()
+      .populate('unitId')
+      .sort({ createdAt: -1 });
+    res.json(requests);
+  } catch (error) {
+    console.error('Error fetching all maintenance requests:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Property Management API Routes
 
 
