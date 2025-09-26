@@ -1305,7 +1305,7 @@ input, textarea {
   }
 
     .avatar {
-    margin-left: 0px;
+    margin-left: -10px;
   }
 
 }
