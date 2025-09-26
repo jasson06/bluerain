@@ -2689,7 +2689,7 @@ li.completed span {
 @media (max-width: 600px) {
   .notif-dropdown {
     min-width: 90vw;
-    right: 8vw;
+    right: 10vw;
     left: auto;
   }
 }
