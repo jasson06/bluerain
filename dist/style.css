@@ -1077,7 +1077,14 @@ input, textarea {
 
 .main-content {
   margin-top: 55px;
-  margin-left: 20px;
+ 
+      width: 100vw;
+    max-width: 92vw;
+    margin-left: 25px !important;
+    
+    box-sizing: border-box;
+    padding-left: 0;
+    padding-right: 0;
 }
 
   .columns-container {
@@ -1298,7 +1305,7 @@ input, textarea {
   }
 
     .avatar {
-    margin-left: -30px;
+    margin-left: 0px;
   }
 
 }
