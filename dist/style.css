@@ -1174,7 +1174,7 @@ input, textarea {
 .hamburger {
   position: fixed;
   top: 4px;
-  left: 380px;
+  left: 360px;
   background: var(--primary-color);
   color: white;
   border: none;
@@ -2389,7 +2389,7 @@ input, textarea {
     padding-right: 8px;
   }
   .notif-icon-btn {
-    right: 0px;
+    right: 10px;
     font-size: 1.2em;
     top: 20px;
   }
