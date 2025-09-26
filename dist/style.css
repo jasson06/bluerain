@@ -2299,7 +2299,7 @@ input, textarea {
 }
 .notif-dropdown {
   position: absolute;
-  top: 65px;
+  top: 80px;
   right: 0;
   min-width: 450px;
   max-width: 98vw;
@@ -2378,8 +2378,8 @@ input, textarea {
 }
 @media (max-width: 600px) {
   .notif-dropdown {
-    min-width: 92vw;
-    right: -8vw;
+    min-width: 90vw;
+    right: 0vw;
     left: auto;
   }
 }
