@@ -2688,8 +2688,8 @@ li.completed span {
 }
 @media (max-width: 600px) {
   .notif-dropdown {
-    min-width: 98vw;
-    right: 12vw;
+    min-width: 90vw;
+    right: 8vw;
     left: auto;
   }
 }
@@ -2707,7 +2707,7 @@ li.completed span {
     right: 0px;
   }
   button {
-    margin: 0.95rem;
+    margin: 0.60rem;
 }
 }
 
