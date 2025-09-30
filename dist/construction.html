@@ -1,0 +1,1118 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Remodeling company: Building strength and style into every remodel. Free estimates, quality craftsmanship, and 100% satisfaction.">
+  <title>Home | Remodeling Company</title>
+ 
+  <style>
+    /* Modern Google Font */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    html, body {
+      font-family: 'Inter', Arial, sans-serif;
+      background: #ffffff;
+      color: #222;
+      scroll-behavior: smooth;
+    }
+    /* Hero Section */
+    .hero {
+      max-width: 1400px;
+  /* background will be set dynamically by JS for gallery effect */
+      min-height: 65vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 8px 32px 0 rgba(31,38,135,0.15);
+      overflow: hidden;
+      animation: fadeIn 1.2s cubic-bezier(.4,0,.2,1);
+       border-radius: 32px;
+      margin-top: 1.5em;
+      margin-bottom: 2em;
+      border: 2.5px solid #043672;
+      backdrop-filter: blur(18px) saturate(1.4);
+      -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(40px); }
+      to { opacity: 1; transform: none; }
+    }
+    .hero-content { position: relative; z-index: 2; }
+    .hero h1 { font-size: 2.8rem; margin-bottom: 0.5em; font-weight: 700; letter-spacing: -1px; text-shadow: 0 2px 16px rgba(0,0,0,0.18); }
+    .hero p { font-size: 1.25rem; margin-bottom: 1.5em; font-weight: 400; }
+    .hero .cta-btns button {
+      margin: 0 0.5em;
+      padding: 0.85em 2em;
+      font-size: 1.1rem;
+      border: none;
+      border-radius: 32px;
+      background: linear-gradient(90deg, #1a73e8 0%, #155ab6 100%);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 2px 12px rgba(26,115,232,0.12);
+      transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+    }
+    .hero .cta-btns button:hover {
+      background: linear-gradient(90deg, #155ab6 0%, #1a73e8 100%);
+      transform: translateY(-2px) scale(1.04);
+      box-shadow: 0 4px 24px rgba(26,115,232,0.18);
+    }
+
+    /* Sticky Nav */
+    nav {
+      position: sticky;
+      top: 0;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      box-shadow: 0 2px 16px rgba(30,41,59,0.07);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.7em 2em;
+      border-bottom: 1px solid #e3e8ee;
+      transition: background 0.3s;
+    }
+    nav ul { list-style: none; display: flex; gap: 1.5em; margin: 0; padding: 0; }
+    nav a { text-decoration: none; color: #000000; font-weight: 600; letter-spacing: 0.01em; transition: color 0.2s; position: relative; }
+    nav a::after {
+      content: '';
+      display: block;
+      width: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #1a73e8 0%, #155ab6 100%);
+      transition: width 0.2s;
+      position: absolute;
+      left: 0; bottom: -2px;
+    }
+    nav a:hover { color: #155ab6; }
+    nav a:hover::after { width: 100%; }
+
+    /* Section Styles */
+    section { padding: 3em 1em; max-width: 1100px; margin: 0 auto; }
+    .section-title { font-size: 2.2rem; margin-bottom: 1em; text-align: center; font-weight: 700; letter-spacing: -0.5px; }
+    .about-content, .services-list, .projects-grid, .why-list, .testimonials, .process-steps, .contact-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2em;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    .about-img {
+      max-width: 320px;
+      border-radius: 18px;
+      box-shadow: 0 4px 32px rgba(26,115,232,0.10);
+      filter: grayscale(10%) contrast(1.08);
+      transition: filter 0.3s, box-shadow 0.3s;
+    }
+    .about-img:hover {
+      filter: none;
+      box-shadow: 0 8px 48px rgba(52,168,83,0.13);
+    }
+    .about-text { flex: 1; min-width: 250px; font-size: 1.1rem; }
+    .service-card {
+      background: rgba(255,255,255,0.85);
+      border-radius: 18px;
+      padding: 2em 1.5em;
+      flex: 1 1 220px;
+      min-width: 220px;
+      max-width: 260px;
+      text-align: center;
+      box-shadow: 0 2px 16px rgba(30,41,59,0.07);
+      transition: box-shadow 0.2s, transform 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .service-card:hover {
+      box-shadow: 0 8px 32px rgba(51, 99, 158, 0.39);
+      transform: translateY(-4px) scale(1.03);
+    }
+    .service-card img {
+  width: 260px;
+  height: 220px;
+  margin-bottom: 1.2em;
+  border-radius: 32px;
+  background: #fff;
+  object-fit: cover;
+  box-shadow: 0 8px 40px 0 rgba(26,115,232,0.18);
+  padding: 0;
+  filter: none;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  border: 3px solid #e3e8ee;
+  transition: box-shadow 0.2s, border 0.2s, transform 0.3s cubic-bezier(.4,0,.2,1);
+    }
+    .service-card img:hover {
+  box-shadow: 0 16px 64px 0 rgba(26,115,232,0.28);
+  border: 3px solid #1a73e8;
+  transform: scale(1.12);
+    }
+    
+    .projects-grid {
+      gap: 1.5em;
+      justify-content: center;
+      align-items: flex-start;
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .projects-grid img {
+      width: 100%;
+      border-radius: 18px;
+      max-width: 320px;
+      box-shadow: 0 2px 16px rgba(30,41,59,0.07);
+      transition: box-shadow 0.2s, transform 0.2s;
+      cursor: pointer;
+    }
+    .projects-grid img:hover {
+      box-shadow: 0 8px 32px rgba(26,115,232,0.13);
+      transform: scale(1.04);
+    }
+    .why-list { flex-direction: column; align-items: center; }
+    .why-list {
+      display: flex;
+      flex-wrap: wrap;
+      flex-direction: row;
+      justify-content: center;
+      align-items: stretch;
+      gap: 1.5em;
+      margin: 2em 0 1em 0;
+      padding: 0;
+    }
+    .why-list li {
+      flex: 1 1 180px;
+      min-width: 180px;
+      max-width: 260px;
+      margin: 0;
+      font-size: 1.15rem;
+      background: rgba(255,255,255,0.75);
+      border-radius: 18px;
+      font-weight: 600;
+      color: #043672;
+      box-shadow: 0 4px 24px rgba(26,115,232,0.10);
+      transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+      padding: 1.5em 1.2em 1.2em 1.2em;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border: 2px solid #e3e8ee;
+      position: relative;
+      backdrop-filter: blur(8px) saturate(1.2);
+    }
+    .why-list li:hover {
+      background: rgba(96,165,250,0.13);
+      box-shadow: 0 8px 32px rgba(26,115,232,0.13);
+      transform: translateY(-4px) scale(1.04);
+      border: 2px solid #60a5fa;
+    }
+    .why-list .why-icon {
+      font-size: 2.1em;
+      margin-bottom: 0.5em;
+      color: #1a73e8;
+      background: rgba(26,115,232,0.08);
+      border-radius: 50%;
+      width: 2.2em;
+      height: 2.2em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(26,115,232,0.10);
+    }
+    .testimonial {
+      background: rgba(255,255,255,0.95);
+      border-radius: 18px;
+      box-shadow: 0 2px 16px rgba(30,41,59,0.07);
+      padding: 1.7em 1.2em;
+      max-width: 340px;
+      margin: 0.5em;
+      text-align: left;
+      transition: box-shadow 0.2s, transform 0.2s;
+      border: 1px solid #e3e8ee;
+    }
+    .testimonial:hover {
+      box-shadow: 0 8px 32px rgba(26,115,232,0.13);
+      transform: translateY(-2px) scale(1.03);
+    }
+    .testimonial .client-photo { width: 48px; border-radius: 50%; margin-right: 1em; box-shadow: 0 2px 8px #1a73e820; }
+    .testimonial .client-initials {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+  background: #bdbdbd; /* fallback, will be overridden by JS */
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.2em;
+      margin-right: 1em;
+      box-shadow: 0 2px 8px #1a73e820;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .testimonial-header { display: flex; align-items: center; margin-bottom: 0.5em; }
+    .process-step {
+      flex: 1 1 160px;
+      min-width: 160px;
+      background: rgba(255,255,255,0.85);
+      border-radius: 18px;
+      padding: 1.2em 0.7em;
+      text-align: center;
+      margin: 0.5em;
+      box-shadow: 0 2px 16px rgba(30,41,59,0.07);
+      font-weight: 500;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .process-step:hover {
+  box-shadow: 0 8px 32px rgba(26,115,232,0.18);
+      transform: scale(1.04);
+    }
+    .cta-section {
+      background: linear-gradient(90deg, #1a73e8 0%, #155ab6 100%);
+      color: #fff;
+      text-align: center;
+      padding: 3em 1em 2.5em 1em;
+      border-radius: 18px;
+      margin: 2em auto 2em auto;
+      box-shadow: 0 4px 32px rgba(26,115,232,0.10);
+      max-width: 900px;
+      animation: fadeIn 1.2s cubic-bezier(.4,0,.2,1);
+    }
+    .cta-section button {
+      background: #fff;
+      color: #1a73e8;
+      border: none;
+      border-radius: 32px;
+      padding: 0.85em 2em;
+      font-size: 1.1rem;
+      margin-top: 1em;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 2px 12px rgba(26,115,232,0.12);
+      transition: background 0.2s, color 0.2s, transform 0.2s, box-shadow 0.2s;
+    }
+    .cta-section button:hover {
+      background: #155ab6;
+      color: #fff;
+      transform: translateY(-2px) scale(1.04);
+      box-shadow: 0 4px 24px rgba(26,115,232,0.18);
+    }
+    .contact-form {
+      flex-direction: column;
+      max-width: 400px;
+      margin: 0 auto;
+      background: rgba(255,255,255,0.95);
+      border-radius: 18px;
+      padding: 2em 1.5em;
+      box-shadow: 0 2px 16px rgba(30,41,59,0.07);
+      border: 1px solid #e3e8ee;
+      animation: fadeIn 1.2s cubic-bezier(.4,0,.2,1);
+    }
+    .contact-form input, .contact-form textarea {
+      width: 93%;
+      margin-bottom: 1em;
+      padding: 0.85em;
+      border: 1px solid #c3cfe2;
+      border-radius: 8px;
+      font-size: 1rem;
+      background: rgba(245,247,250,0.95);
+      transition: border 0.2s, box-shadow 0.2s;
+    }
+    .contact-form input:focus, .contact-form textarea:focus {
+      border: 1.5px solid #1a73e8;
+      box-shadow: 0 2px 8px #1a73e820;
+      outline: none;
+    }
+    .contact-form button {
+      width: 100%;
+      background: linear-gradient(90deg, #1a73e8 0%, #155ab6 100%);
+      color: #fff;
+      border: none;
+      border-radius: 32px;
+      padding: 0.95em 2em;
+      font-size: 1.13rem;
+      font-weight: 700;
+      box-shadow: 0 2px 16px rgba(26,115,232,0.13);
+      margin-top: 0.5em;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background 0.2s, color 0.2s, transform 0.2s, box-shadow 0.2s;
+    }
+    .contact-form button:hover, .contact-form button:focus {
+      background: linear-gradient(90deg, #155ab6 0%, #1a73e8 100%);
+      color: #fff;
+      transform: translateY(-2px) scale(1.04);
+      box-shadow: 0 4px 24px rgba(26,115,232,0.18);
+      outline: none;
+    }
+    .footer {
+      background: #222;
+      color: #fff;
+      text-align: center;
+      padding: 1.5em 1em 1em 1em;
+      font-size: 0.98rem;
+      border-top-left-radius: 18px;
+      border-top-right-radius: 18px;
+      box-shadow: 0 -2px 16px rgba(30,41,59,0.07);
+    }
+    .footer a { color: #fff; margin: 0 0.5em; text-decoration: underline; transition: color 0.2s; }
+    .footer a:hover { color: #155ab6; }
+    @media (max-width: 900px) {
+      .about-content, .services-list, .projects-grid, .process-steps {
+        flex-direction: column;
+        align-items: center;
+      }
+      nav { flex-direction: column; gap: 0.5em; }
+      .cta-section { max-width: 98vw; }
+    }
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 1.5rem; }
+      .section-title { font-size: 1.2rem; }
+      .service-card, .testimonial, .process-step { max-width: 100%; }
+      nav { padding: 0.5em 0.5em; }
+    }
+
+        /* Expandable Service Card Styles */
+    .service-card {
+      transition: box-shadow 0.2s, transform 0.2s, max-width 0.3s;
+      position: relative;
+    }
+    .service-card.expanded {
+      z-index: 2;
+      min-width: 600px;
+      box-shadow: 0 12px 48px rgba(26,115,232,0.18), 0 2px 16px rgba(30,41,59,0.07);
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      border: 2.5px solid #1a73e8;
+      transform: scale(1.04) translateY(-6px);
+    }
+    .service-expandable {
+  display: block;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  margin-top: 1.2em;
+  background: rgba(255,255,255,0.85);
+  border-radius: 18px;
+  box-shadow: 0 2px 24px rgba(26,115,232,0.10);
+  padding: 0 1em;
+  border: 1.5px solid #e3e8ee;
+  transition: max-height 0.5s cubic-bezier(.4,0,.2,1), opacity 0.4s, padding 0.4s;
+    }
+
+    .service-card.expanded .service-expandable {
+      opacity: 1;
+      max-height: 700px;
+      padding: 1.2em 1em 1.2em 1em;
+      transition: max-height 0.5s cubic-bezier(.4,0,.2,1), opacity 0.4s, padding 0.4s;
+    }
+    
+    .expand-gallery {
+      display: flex;
+      gap: 1em;
+      justify-content: center;
+      margin-bottom: 1em;
+      flex-wrap: wrap;
+    }
+    .expand-gallery img {
+  width: 220px;
+  height: 160px;
+      object-fit: cover;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(26,115,232,0.10);
+      border: 2px solid #e3e8ee;
+      background: #fff;
+      transition: box-shadow 0.2s, border 0.2s;
+    }
+    .expand-gallery img:hover {
+  box-shadow: 0 8px 32px rgba(26,115,232,0.18);
+  border: 2px solid #1a73e8;
+  transform: scale(1.13);
+    }
+    .expand-details {
+      font-size: 1.08em;
+      color: #222;
+      margin-bottom: 1em;
+      text-align: left;
+    }
+    .expand-cta {
+      background: linear-gradient(90deg, #1a73e8 0%, #155ab6 100%);
+      color: #fff;
+      border: none;
+      border-radius: 32px;
+      padding: 0.7em 1.7em;
+      font-size: 1.05rem;
+      font-weight: 600;
+      box-shadow: 0 2px 12px rgba(26,115,232,0.12);
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+      margin: 0 auto;
+      display: block;
+    }
+    .expand-cta:hover {
+      background: #155ab6;
+      transform: scale(1.04);
+    }
+    @media (max-width: 900px) {
+      .service-card.expanded { max-width: 98vw; }
+  .expand-gallery img { width: 70vw; max-width: 320px; height: 120px; }
+    }
+    @media (max-width: 600px) {
+  .expand-gallery img { width: 98vw; max-width: 100vw; height: 100px; }
+      .service-card.expanded { max-width: 100vw; }
+    }
+
+
+    /* Featured Projects / photo slider Styles */ 
+    .projects-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2.5em 2em;
+      justify-content: center;
+      margin-bottom: 1em;
+    }
+    .project-block {
+      flex: 1 1 340px;
+      max-width: 420px;
+      min-width: 260px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(255,255,255,0.92);
+      border-radius: 18px;
+      box-shadow: 0 4px 32px rgba(26,115,232,0.10);
+      padding: 1.5em 1em 1.2em 1em;
+      margin-bottom: 0.5em;
+      animation: fadeIn 0.5s cubic-bezier(.4,0,.2,1);
+    }
+    .before-after-slider {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      height: 280px;
+      margin-bottom: 1em;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 4px 32px rgba(26,115,232,0.10);
+      background: #e3e8ee;
+      cursor: ew-resize;
+      transition: box-shadow 0.2s;
+}
+.before-after-slider:hover {
+  box-shadow: 0 8px 40px rgba(26,115,232,0.18);
+}
+.before-after-slider .slider-range {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.before-after-slider:hover .slider-range {
+  opacity: 1;
+  pointer-events: auto;
+}
+    
+    .before-after-slider img {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 18px;
+      pointer-events: none;
+      user-select: none;
+    }
+    .before-after-slider .after-img {
+      clip-path: inset(0 0 0 50%);
+      z-index: 2;
+      transition: clip-path 0.2s;
+    }
+    .before-after-slider .before-img {
+      z-index: 1;
+    }
+    .slider-range {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      width: 100%;
+      z-index: 3;
+      margin: 0;
+      accent-color: #1a73e8;
+      background: transparent;
+    }
+    .project-info {
+      background: rgba(255,255,255,0.92);
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(26,115,232,0.07);
+      padding: 1em 1.2em;
+      margin-bottom: 0.5em;
+      text-align: center;
+    }
+    .portfolio-cta {
+      color: #1a73e8;
+      font-weight: 600;
+      font-size: 1.1em;
+      text-decoration: underline;
+      border-radius: 24px;
+      padding: 0.7em 2em;
+      background: #f5f7fa;
+      box-shadow: 0 2px 12px rgba(26,115,232,0.07);
+      transition: background 0.2s;
+      display: inline-block;
+    }
+    .portfolio-cta:hover { background: #e3e8ee; }
+    @media (max-width: 600px) {
+      .carousel-track, .before-after-slider { max-width: 98vw; height: 180px; }
+    }
+  
+  /* About Modal Styles */
+    .about-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(30,41,59,0.38);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s;
+    }
+    .about-modal-content {
+      background: rgba(255,255,255,0.97);
+      border-radius: 24px;
+      max-width: 480px;
+      width: 95vw;
+      padding: 2.2em 2em 1.5em 2em;
+      box-shadow: 0 8px 48px rgba(26,115,232,0.18);
+      position: relative;
+      animation: fadeIn 0.5s cubic-bezier(.4,0,.2,1);
+      color: #043672;
+    }
+    .about-modal-content h2 {
+      margin-top: 0;
+      color: #1a73e8;
+      font-size: 2em;
+      font-weight: 700;
+      margin-bottom: 0.7em;
+    }
+    .about-modal-content ul {
+      color: #222;
+      font-size: 1.08em;
+      padding-left: 1.2em;
+    }
+    .about-modal-close {
+      position: absolute;
+      top: 1.1em;
+      right: 1.2em;
+      background: none;
+      border: none;
+      font-size: 2em;
+      color: #1a73e8;
+      cursor: pointer;
+      font-weight: 700;
+      transition: color 0.2s;
+    }
+    .about-modal-close:hover {
+      color: #155ab6;
+    }
+  </style>
+</head>
+<body>
+  <nav aria-label="Main Navigation">
+    <div><strong>BluerainCO</strong></div>
+    <ul>
+      <li><a href="#hero">Home</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#services">Services</a></li>
+      <li><a href="#projects">Projects</a></li>
+      <li><a href="#why">Why Us</a></li>
+      <li><a href="#testimonials">Testimonials</a></li>
+      <li><a href="#process">Process</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero" id="hero" aria-label="Hero Section">
+    <div class="hero-content">
+      <h1>Building strength and style into every remodel.</h1>
+      <p>Expert remodeling for kitchens, baths, and whole homes. Licensed, insured, and trusted for quality craftsmanship and on-time delivery.</p>
+      <div class="cta-btns">
+        <button onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">Get Your Free Estimate</button>
+        <button onclick="document.getElementById('projects').scrollIntoView({behavior:'smooth'})">See Our Work</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- About Us -->
+  <section id="about" aria-label="About Us">
+    <h2 class="section-title">Who We Are</h2>
+    <div class="about-content">
+      <img src="/images/image48.jpg" alt="Team at work on a remodeling project" class="about-img" loading="lazy">
+      <div class="about-text">
+        <p>With over 20 years of experience, RemodelCo specializes in transforming homes with quality, care, and creativity. Our team is passionate about delivering results that exceed expectations, from kitchen and bath remodels to full home renovations. We’re family-owned, fully licensed, and committed to your satisfaction.</p>
+        <a href="#" id="aboutModalTrigger" style="color:#1a73e8;">Learn More About Us</a>
+        <div id="aboutModal" class="about-modal" tabindex="-1" aria-modal="true" role="dialog" style="display:none;">
+          <div class="about-modal-content">
+            <button class="about-modal-close" aria-label="Close About Modal">&times;</button>
+            <h2>About Bluerain</h2>
+            <p>Bluerain is a family-owned remodeling company with over 20 years of experience, specializing in kitchen, bath, and full home renovations. Our mission is to deliver quality craftsmanship, innovative design, and complete client satisfaction on every project. We are fully licensed, insured, and committed to building lasting relationships with our clients and community.</p>
+            <ul style="margin:1.5em 0 0 1.2em;">
+              <li>🏆 Award-winning service and design</li>
+              <li>🔨 Skilled, background-checked team</li>
+              <li>🤝 Transparent process & communication</li>
+              <li>🌱 Eco-friendly materials and practices</li>
+              <li>📍 Proudly serving San Antonio and surrounding areas</li>
+            </ul>
+          </div>
+        </div>
+  
+      </div>
+    </div>
+  </section>
+
+  <!-- Services Overview -->
+  <section id="services" aria-label="Our Remodeling Services">
+    <h2 class="section-title">Our Remodeling Services</h2>
+    <div class="services-list">
+        <div class="service-card" data-service="kitchen">
+          <img src="/images/image2.jpg" alt="Kitchen Remodeling">
+          <h3>Kitchen Remodeling</h3>
+          <p>Modernize your kitchen with custom cabinetry, countertops, and lighting.</p>
+          <a href="#" style="color:#1a73e8;" class="learn-more">Learn More</a>
+          <div class="service-expandable">
+            <div class="expand-gallery">
+              <img src="/images/image22.jpg" alt="Kitchen Before" loading="lazy">
+              <img src="/images/image29.jpg" alt="Kitchen After" loading="lazy">
+              <img src="/images/image40.jpg" alt="Kitchen After" loading="lazy">
+              <img src="/images/image41.jpg" alt="Kitchen After" loading="lazy">
+            </div>
+            <div class="expand-details">
+             Modernize your kitchen with custom cabinetry, countertops, and lighting. See before and after transformations. Our team delivers functional, beautiful kitchens tailored to your lifestyle and budget.
+            </div>
+            <button class="expand-cta" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">Schedule Free Estimate</button>
+          </div>
+        </div>
+        <div class="service-card" data-service="bathroom">
+          <img src="/images/image5.jpg" alt="Bathroom Remodeling">
+          <h3>Bathroom Remodeling</h3>
+          <p>Upgrade your bath with luxury fixtures, tile, and spa-inspired designs.</p>
+          <a href="#" style="color:#1a73e8;" class="learn-more">Learn More</a>
+          <div class="service-expandable">
+            <div class="expand-gallery">
+              <img src="/images/image12.jpg" alt="Bathroom Before" loading="lazy">
+              <img src="/images/image17.jpg" alt="Bathroom After" loading="lazy">
+              <img src="/images/image18.jpg" alt="Bathroom After" loading="lazy">
+              <img src="/images/image6.jpg" alt="Bathroom After" loading="lazy">
+            </div>
+            <div class="expand-details">
+              Upgrade your bath with luxury fixtures, tile, and spa-inspired designs. Explore our recent bathroom makeovers and discover how we create relaxing, beautiful spaces.
+            </div>
+            <button class="expand-cta" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">Schedule Free Estimate</button>
+          </div>
+        </div>
+        <div class="service-card" data-service="home">
+          <img src="images/image1.jpg" alt="Full Home Renovations">
+          <h3>Full Home Renovations</h3>
+          <p>Transform your entire home for comfort, style, and value.</p>
+          <a href="#" style="color:#1a73e8;" class="learn-more">Learn More</a>
+          <div class="service-expandable">
+            <div class="expand-gallery">
+              <img src="/images/image14.jpg" alt="Home Before" loading="lazy">
+              <img src="/images/image19.jpg" alt="Home After" loading="lazy">
+              <img src="/images/image45.jpg" alt="Home After" loading="lazy">
+              <img src="/images/image47.jpg" alt="Home After" loading="lazy">
+              <img src="/images/image44.jpg" alt="Home After" loading="lazy">
+              <img src="/images/image43.jpg" alt="Home After" loading="lazy">
+            </div>
+            <div class="expand-details">
+              Transform your entire home for comfort, style, and value. View dramatic whole-home remodels and see how we turn visions into reality.
+            </div>
+            <button class="expand-cta" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">Schedule Free Estimate</button>
+          </div>
+        </div>
+        <div class="service-card" data-service="addition">
+          <img src="images/image25.jpg" alt="Additions & Framing">
+          <h3>Additions & Framing</h3>
+          <p>Expand your space with seamless additions and structural work.</p>
+          <a href="#" style="color:#1a73e8;" class="learn-more">Learn More</a>
+          <div class="service-expandable">
+            <div class="expand-gallery">
+              <img src="/images/image28.jpeg" alt="Addition Before" loading="lazy">
+              <img src="/images/image27.jpeg" alt="Addition After" loading="lazy">
+              <img src="/images/image26.jpeg" alt="Addition After" loading="lazy">
+            </div>
+            <div class="expand-details">
+              Expand your space with seamless additions and structural work. See how we add value and space to your home with expert framing and construction.
+            </div>
+            <button class="expand-cta" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">Schedule Free Estimate</button>
+          </div>
+        </div>
+        <div class="service-card" data-service="exterior">
+          <img src="images/image31.jpg" alt="Exterior Improvements">
+          <h3>Exterior Improvements</h3>
+          <p>Boost curb appeal with new siding, roofing, and windows.</p>
+          <a href="#" style="color:#1a73e8;" class="learn-more">Learn More</a>
+          <div class="service-expandable">
+            <div class="expand-gallery">
+              <img src="/images/image49.jpg" alt="Exterior Before" loading="lazy">
+              <img src="/images/image21.jpg" alt="Exterior After" loading="lazy">
+              <img src="/images/image10.jpg" alt="Exterior After" loading="lazy">
+              <img src="/images/image24.jpg" alt="Exterior After" loading="lazy">
+              <img src="/images/image36.jpg" alt="Exterior After" loading="lazy">
+              <img src="/images/image35.jpg" alt="Exterior After" loading="lazy">
+            </div>
+            <div class="expand-details">
+              Boost curb appeal with new siding, roofing, and windows. Check out our exterior upgrades and see the difference quality makes.
+            </div>
+            <button class="expand-cta" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">Schedule Free Estimate</button>
+          </div>
+        </div>
+    </div>
+  </section>
+  
+  
+
+
+  <!-- Featured Projects / Portfolio -->
+  <section id="projects" aria-label="Featured Projects">
+    <h2 class="section-title">Our Work Speaks for Itself</h2>
+    <div class="projects-list">
+      <div class="project-block">
+        <div class="before-after-slider">
+          <img src="images/image16.jpg" alt="Kitchen Remodel Before" class="before-img">
+          <img src="images/image2.jpg" alt="Kitchen Remodel After" class="after-img">
+          <input type="range" min="0" max="100" value="50" class="slider-range" aria-label="Before/After Slider">
+        </div>
+        <div class="project-info">
+          <h3>Kitchen Remodel – San Antonio, TX</h3>
+          <p>Complete kitchen transformation: removed walls, added custom cabinetry, quartz countertops, and modern lighting. Challenge: tight timeline, solved with efficient project management. Result: bright, open, and functional space.</p>
+        </div>
+      </div>
+      <div class="project-block">
+        <div class="before-after-slider">
+          <img src="images/image13.jpg" alt="Bathroom Remodel Before" class="before-img">
+          <img src="images/image12.jpg" alt="Bathroom Remodel After" class="after-img">
+          <input type="range" min="0" max="100" value="50" class="slider-range" aria-label="Before/After Slider">
+        </div>
+        <div class="project-info">
+          <h3>Bathroom Remodel – San Antonio, TX</h3>
+          <p>Converted outdated bath to spa-like retreat: new tile, walk-in shower, and soaking tub. Challenge: water damage, resolved with expert repairs. Result: luxurious, relaxing bathroom oasis.</p>
+        </div>
+      </div>
+      <div class="project-block">
+        <div class="before-after-slider">
+          <img src="images/image10.jpg" alt="Exterior Remodel Before" class="before-img">
+          <img src="images/image11.jpg" alt="Exterior Remodel After" class="after-img">
+          <input type="range" min="0" max="100" value="50" class="slider-range" aria-label="Before/After Slider">
+        </div>
+        <div class="project-info">
+          <h3>Exterior Renovation – San Antonio, TX</h3>
+          <p>Upgraded siding, windows, and roof for curb appeal and energy efficiency. Challenge: historic home restrictions, met with creative solutions. Result: beautiful, weatherproof exterior.</p>
+        </div>
+      </div>
+      <div class="project-block">
+        <div class="before-after-slider">
+          <img src="images/image15.jpg" alt="Living Room Remodel Before" class="before-img">
+          <img src="images/image14.jpg" alt="Living Room Remodel After" class="after-img">
+          <input type="range" min="0" max="100" value="50" class="slider-range" aria-label="Before/After Slider">
+        </div>
+        <div class="project-info">
+          <h3>Living Room Remodel – San Antonio, TX</h3>
+          <p>Transformed a dated living room into a modern, open-concept space with new flooring, lighting, and custom built-ins. Challenge: integrating structural changes with design vision. Result: a bright, welcoming family hub.</p>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+
+
+  <!-- Why Choose Us -->
+  <section id="why" aria-label="Why Choose Us">
+    <h2 class="section-title">Why Homeowners Trust Us</h2>
+    <div style="max-width:900px;margin:0 auto;">
+      <ul class="why-list">
+        <li><span class="why-icon">🔒</span>Licensed & Insured</li>
+        <li><span class="why-icon">📏</span>Built to Code</li>
+        <li><span class="why-icon">🛠️</span>Quality Craftsmanship</li>
+        <li><span class="why-icon">⏱️</span>On-Time & On-Budget</li>
+        <li><span class="why-icon">💯</span>100% Client Satisfaction Guarantee</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section id="testimonials" aria-label="Testimonials">
+    <h2 class="section-title">What Our Clients Say</h2>
+    <div class="testimonials">
+      <div class="testimonial">
+        <div class="testimonial-header">
+          <img src="images/client1.jpg" alt="Client 1" class="client-photo">
+          <div><strong>Jane S.</strong><br><span>Kitchen Remodel</span></div>
+        </div>
+        <p>“BluerainCO made our dream kitchen a reality. Professional, on time, and the quality is outstanding!”</p>
+        <div style="color:#fbc02d;">★★★★★</div>
+      </div>
+      <div class="testimonial">
+        <div class="testimonial-header">
+          <img src="images/client2.jpg" alt="Client 2" class="client-photo">
+          <div><strong>Mike R.</strong><br><span>Full Home Renovation</span></div>
+        </div>
+        <p>“The team was amazing from start to finish. We love our new home!”</p>
+        <div style="color:#fbc02d;">★★★★★</div>
+      </div>
+      <div class="testimonial">
+        <div class="testimonial-header">
+          <img src="images/client3.jpg" alt="Client 3" class="client-photo">
+          <div><strong>Lisa T.</strong><br><span>Bathroom Remodel</span></div>
+        </div>
+        <p>“Great communication and beautiful results. Highly recommend!”</p>
+        <div style="color:#fbc02d;">★★★★★</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Process -->
+  <section id="process" aria-label="Our Remodeling Process">
+    <h2 class="section-title">Our Remodeling Process</h2>
+    <div class="process-steps">
+      <div class="process-step">
+        <div style="font-size:2em;">1️⃣</div>
+        <h4>Free Consultation & Estimate</h4>
+      </div>
+      <div class="process-step">
+        <div style="font-size:2em;">2️⃣</div>
+        <h4>Design & Planning</h4>
+      </div>
+      <div class="process-step">
+        <div style="font-size:2em;">3️⃣</div>
+        <h4>Permits & Approvals</h4>
+      </div>
+      <div class="process-step">
+        <div style="font-size:2em;">4️⃣</div>
+        <h4>Construction & Remodeling</h4>
+      </div>
+      <div class="process-step">
+        <div style="font-size:2em;">5️⃣</div>
+        <h4>Final Walkthrough & Approval</h4>
+      </div>
+    </div>
+  </section>
+
+  <!-- Call-to-Action Section -->
+  <section class="cta-section" aria-label="Lead Capture">
+    <h2>Ready to Start Your Remodel?</h2>
+    <p>Contact us today for a free, no-obligation estimate and let’s build your dream home together.</p>
+    <button onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">Request a Free Estimate</button>
+  </section>
+
+  <!-- Contact Section / Footer -->
+  <section id="contact" aria-label="Contact">
+    <h2 class="section-title">Contact Us</h2>
+    <form class="contact-form" id="contactForm" autocomplete="on">
+      <input type="text" name="name" placeholder="Your Name" required aria-label="Name">
+      <input type="email" name="email" placeholder="Your Email" required aria-label="Email">
+      <input type="tel" name="phone" placeholder="Your Phone" required aria-label="Phone">
+      <textarea name="details" rows="4" placeholder="Project Details" required aria-label="Project Details"></textarea>
+      <button type="submit">Send Message</button>
+      <div id="formMsg" style="margin-top:1em;"></div>
+    </form>
+    <div style="margin-top:2em; text-align:center;">
+      <div><strong>Phone:</strong> <a href="tel:7252603319">(725) 260-3319</a></div>
+      <div><strong>Email:</strong> <a href="mailto:bluerainrealestate@gmail.com">bluerainrealestate@gmail.com</a></div>
+      <div><strong>Office:</strong><br>
+        14546 BROOK HOLLOW BLVD<br>
+        SUITE # 251<br>
+        SAN ANTONIO, TX 78232-3810<br>
+        United States
+      </div>
+      <div style="margin-top:1em;">
+  <iframe src="https://www.google.com/maps?q=14546+BROOK+HOLLOW+BLVD+SUITE+%23+251+SAN+ANTONIO,+TX+78232-3810+United+States&output=embed" width="100%" height="180" style="border:0; border-radius:8px;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Service Area Map"></iframe>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div>
+      <a href="#hero">Home</a> |
+      <a href="#about">About</a> |
+      <a href="#services">Services</a> |
+      <a href="#projects">Projects</a> |
+      <a href="#contact">Contact</a>
+    </div>
+    <div style="margin-top:0.5em;">
+      <a href="https://www.facebook.com/share/17MLzuidQb/?mibextid=wwXIfr">Facebook</a> |
+      <a href="#">Instagram</a> |
+      <a href="#">LinkedIn</a>
+    </div>
+    <div style="margin-top:0.5em;">&copy; 2025 RemodelCo. All rights reserved. | Lic# RBC-2400049</div>
+  </footer>
+
+  <script>
+    // About Modal open/close logic
+    document.getElementById('aboutModalTrigger')?.addEventListener('click', function(e) {
+      e.preventDefault();
+      const modal = document.getElementById('aboutModal');
+      if (modal) modal.style.display = 'flex';
+      setTimeout(() => { modal?.focus(); }, 100);
+    });
+    document.querySelector('.about-modal-close')?.addEventListener('click', function() {
+      document.getElementById('aboutModal').style.display = 'none';
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('aboutModal');
+        if (modal && modal.style.display === 'flex') modal.style.display = 'none';
+      }
+    });
+    document.getElementById('aboutModal')?.addEventListener('click', function(e) {
+      if (e.target === this) this.style.display = 'none';
+    });
+    // Testimonials: Show initials if no image present, and assign unique background color
+    (function() {
+      const palette = [
+        'linear-gradient(135deg, #60a5fa 60%, #0ea5e9 100%)',
+        'linear-gradient(135deg, #fbbf24 60%, #f59e42 100%)',
+        'linear-gradient(135deg, #34d399 60%, #059669 100%)',
+        'linear-gradient(135deg, #f472b6 60%, #be185d 100%)',
+        'linear-gradient(135deg, #a78bfa 60%, #7c3aed 100%)',
+        'linear-gradient(135deg, #f87171 60%, #b91c1c 100%)',
+        'linear-gradient(135deg, #fcd34d 60%, #f59e42 100%)',
+        'linear-gradient(135deg, #38bdf8 60%, #0ea5e9 100%)'
+      ];
+      document.querySelectorAll('.testimonial-header').forEach((header, i) => {
+        const img = header.querySelector('img.client-photo');
+        const color = palette[i % palette.length];
+        function createInitialsDiv() {
+          const name = header.querySelector('strong')?.textContent || '';
+          let initials = name.split(' ').map(w => w[0]).join('').slice(0,2);
+          const div = document.createElement('div');
+          div.className = 'client-initials';
+          div.textContent = initials || '?';
+          div.style.background = color;
+          return div;
+        }
+        if (img) {
+          img.onerror = function() {
+            img.replaceWith(createInitialsDiv());
+          };
+          if (!img.src || img.src.endsWith('/') || img.src.endsWith('client-photo')) {
+            img.onerror();
+          }
+        } else {
+          header.prepend(createInitialsDiv());
+        }
+      });
+    })();
+    // Expandable Service Cards Logic
+    document.querySelectorAll('.service-card .learn-more').forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const card = this.closest('.service-card');
+        const isExpanded = card.classList.contains('expanded');
+        // Collapse any expanded card
+        document.querySelectorAll('.service-card.expanded').forEach(exp => {
+          if (exp !== card) {
+            exp.classList.remove('expanded');
+          }
+        });
+        // Toggle this card
+        if (!isExpanded) {
+          card.classList.add('expanded');
+        } else {
+          card.classList.remove('expanded');
+        }
+      });
+    });
+
+    // Close expanded service card when clicking outside
+    document.addEventListener('click', function(e) {
+      const expanded = document.querySelector('.service-card.expanded');
+      if (expanded && !expanded.contains(e.target) && !e.target.classList.contains('learn-more')) {
+        expanded.classList.remove('expanded');
+      }
+    });
+
+    // Hero Section Background Gallery
+    (function() {
+      const hero = document.querySelector('.hero');
+      const gallery = [
+        'images/image2.jpg',
+        'images/image12.jpg',
+        'images/image14.jpg',
+        'images/image19.jpg',
+        'images/image23.jpg',
+        'images/image24.jpg',
+        'images/image20.jpg'
+      ];
+      let idx = 0;
+      function setHeroBg() {
+        hero.style.background = `url('${gallery[idx]}') center/cover no-repeat`;
+      }
+      setHeroBg();
+      setInterval(() => {
+        idx = (idx + 1) % gallery.length;
+        setHeroBg();
+      }, 5000);
+    })();
+
+    // Before/after slider logic for all project blocks
+    document.querySelectorAll('.before-after-slider').forEach(slider => {
+      const range = slider.querySelector('.slider-range');
+      const afterImg = slider.querySelector('.after-img');
+      // Normal slider input
+      range.addEventListener('input', function() {
+        afterImg.style.clipPath = `inset(0 0 0 ${100 - this.value}%)`;
+      });
+      // Initialize
+      afterImg.style.clipPath = `inset(0 0 0 ${100 - range.value}%)`;
+
+      // Hover/drag interaction
+      let isHovering = false;
+      slider.addEventListener('mouseenter', () => { isHovering = true; });
+      slider.addEventListener('mouseleave', () => { isHovering = false; });
+      slider.addEventListener('mousemove', function(e) {
+        if (!isHovering) return;
+        const rect = slider.getBoundingClientRect();
+        let percent = ((e.clientX - rect.left) / rect.width) * 100;
+        percent = Math.max(0, Math.min(100, percent));
+        range.value = Math.round(percent);
+        afterImg.style.clipPath = `inset(0 0 0 ${100 - percent}%)`;
+      });
+    });
+
+    // Contact Form Submission (AJAX)
+    document.getElementById('contactForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const formMsg = document.getElementById('formMsg');
+      formMsg.textContent = 'Sending...';
+      const data = {
+        name: form.name.value,
+        email: form.email.value,
+        phone: form.phone.value,
+        details: form.details.value
+      };
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (res.ok) {
+          formMsg.textContent = 'Thank you! We will contact you soon.';
+          form.reset();
+        } else {
+          formMsg.textContent = 'Sorry, there was a problem. Please try again.';
+        }
+      } catch (err) {
+        formMsg.textContent = 'Network error. Please try again.';
+      }
+    });
+  </script>
+</body>
+</html>
