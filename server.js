@@ -6649,6 +6649,62 @@ app.patch('/api/properties/:propertyId/maintenance-schedules/:scheduleId/complet
   }
 });
 
+
+// Contact Form Submission Endpoint
+app.post('/api/contact', async (req, res) => {
+  const { name, email, phone, details } = req.body;
+  // Validate input with stricter checks
+  if (
+    !name || typeof name !== 'string' || name.length < 2 ||
+    !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+    !phone || phone.length < 7 ||
+    !details || typeof details !== 'string' || details.length < 10
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: 'Please fill out all fields with valid information.'
+    });
+  }
+ 
+  // Compose a visually appealing HTML email
+  const htmlMsg = `
+    <div style="font-family:Inter,Arial,sans-serif;background:#f6fafd;padding:24px;">
+      <div style="max-width:520px;margin:auto;background:#fff;border-radius:18px;box-shadow:0 2px 8px #1a73e820;padding:24px;">
+        <h2 style="color:#1a73e8;margin-top:0;">New Contact Form Submission</h2>
+        <table style="width:100%;margin-bottom:18px;">
+          <tr><td style="font-weight:600;">Name:</td><td>${name}</td></tr>
+          <tr><td style="font-weight:600;">Email:</td><td>${email}</td></tr>
+          <tr><td style="font-weight:600;">Phone:</td><td>${phone}</td></tr>
+        </table>
+        <div style="margin:18px 0;padding:12px;background:#eaf6ff;border-radius:8px;">
+          <strong>Project Details:</strong><br>
+          <span style="font-size:1.08em;color:#222;">${details.replace(/\n/g, '<br>')}</span>
+        </div>
+        <div style="margin-top:24px;text-align:right;">
+          <span style="font-size:0.95em;color:#888;">Received via BluerainCO Website</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: `"Website Contact" <${process.env.EMAIL_USER}>`,
+      to: process.env.EMAIL_USER,
+      subject: 'New Contact Form Submission',
+      text: `Name: ${name}\nEmail: ${email}\nPhone: ${phone}\nDetails: ${details}`,
+      html: htmlMsg
+    });
+    res.status(200).json({ success: true, message: 'Message sent successfully!' });
+  } catch (err) {
+    console.error('Contact form email error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send message. Please try again later.'
+    });
+  }
+});
+
 // Debugging route to check server deployment status
 app.get('/api/debug', (req, res) => {
   res.json({
