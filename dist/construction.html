@@ -37,6 +37,7 @@
       border: 2.5px solid #043672;
       backdrop-filter: blur(18px) saturate(1.4);
       -webkit-backdrop-filter: blur(18px) saturate(1.4);
+     
     }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(40px); }
@@ -46,12 +47,12 @@
     .hero h1 { font-size: 2.8rem; margin-bottom: 0.5em; font-weight: 700; letter-spacing: -1px; text-shadow: 0 2px 16px rgba(0,0,0,0.18); }
     .hero p { font-size: 1.25rem; margin-bottom: 1.5em; font-weight: 400; }
     .hero .cta-btns button {
-      margin: 0 0.5em;
+      margin: 5px 0.5em;
       padding: 0.85em 2em;
       font-size: 1.1rem;
       border: none;
       border-radius: 32px;
-      background: linear-gradient(90deg, #1a73e8 0%, #155ab6 100%);
+      background: linear-gradient(88deg, #1e1f2082 0%, #2b476da6 100%);
       color: #fff;
       cursor: pointer;
       font-weight: 600;
@@ -59,7 +60,7 @@
       transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
     }
     .hero .cta-btns button:hover {
-      background: linear-gradient(90deg, #155ab6 0%, #1a73e8 100%);
+      background: linear-gradient(90deg, #00295e9d 0%, #0359ca89 100%);
       transform: translateY(-2px) scale(1.04);
       box-shadow: 0 4px 24px rgba(26,115,232,0.18);
     }
@@ -78,6 +79,7 @@
       padding: 0.7em 2em;
       border-bottom: 1px solid #e3e8ee;
       transition: background 0.3s;
+      width: 95%;
     }
     nav ul { list-style: none; display: flex; gap: 1.5em; margin: 0; padding: 0; }
     nav a { text-decoration: none; color: #000000; font-weight: 600; letter-spacing: 0.01em; transition: color 0.2s; position: relative; }
@@ -368,14 +370,23 @@
         flex-direction: column;
         align-items: center;
       }
-      nav { flex-direction: column; gap: 0.5em; }
+      
       .cta-section { max-width: 98vw; }
     }
     @media (max-width: 600px) {
       .hero h1 { font-size: 1.5rem; }
       .section-title { font-size: 1.2rem; }
       .service-card, .testimonial, .process-step { max-width: 100%; }
-      nav { padding: 0.5em 0.5em; }
+      
+          section { padding: 3em 1em; max-width: 1100px; margin: 0 auto; }
+    .section-title { font-size: 2.2rem; margin-bottom: 1em; text-align: center; font-weight: 700; letter-spacing: -0.5px; }
+    .about-content, .services-list, .projects-grid, .why-list,  .process-steps, .contact-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 2em;
+      justify-content: center;
+      align-items: flex-start;
+    }
     }
 
         /* Expandable Service Card Styles */
@@ -389,7 +400,7 @@
       box-shadow: 0 12px 48px rgba(26,115,232,0.18), 0 2px 16px rgba(30,41,59,0.07);
       background: rgba(255,255,255,0.85);
       backdrop-filter: blur(12px);
-      border: 2.5px solid #1a73e8;
+      border: 2.5px solid #1b5b88;
       transform: scale(1.04) translateY(-6px);
     }
     .service-expandable {
@@ -408,7 +419,7 @@
 
     .service-card.expanded .service-expandable {
       opacity: 1;
-      max-height: 700px;
+      max-height: 1000px;
       padding: 1.2em 1em 1.2em 1em;
       transition: max-height 0.5s cubic-bezier(.4,0,.2,1), opacity 0.4s, padding 0.4s;
     }
@@ -618,22 +629,151 @@
     .about-modal-close:hover {
       color: #155ab6;
     }
+
+
+    /* Add or improve these media queries in your <style> block for full mobile responsiveness */
+
+@media (max-width: 900px) {
+  
+  .about-content, .services-list, .projects-grid, .process-steps {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.2em;
+  }
+  .cta-section { max-width: 98vw; }
+  .section-title { font-size: 1.5rem; }
+}
+
+@media (max-width: 600px) {
+  html, body { font-size: 16px; }
+  .hero {
+    min-height: 45vh;
+    border-radius: 18px;
+    margin-top: 1.7em;
+    margin-bottom: 1em;
+    padding: 1em 0.5em;
+    width: 100%;
+    margin-left: 7px;
+  }
+  .hero h1 { font-size: 1.25rem; }
+  .hero p { font-size: 1rem; }
+  .cta-btns button { font-size: 1rem; padding: 0.7em 1.2em; }
+  
+  nav ul { flex-direction: column; gap: 0.7em; }
+  .about-img { max-width: 98vw; width: 100%; }
+  .service-card, .testimonial, .process-step, .project-block {
+    max-width: 100vw;
+    min-width: 0;
+    padding: 1em 0.5em;
+      max-height: 90vh;
+  overflow-y: auto;
+  }
+  .service-card img, .expand-gallery img {
+    width: 84vw;
+    max-width: 100vw;
+    height: 100px;
+    border-radius: 12px;
+  }
+  .service-card.expanded { max-width: 100vw; min-width: 0; }
+  .service-expandable { padding: 0.7em 0.5em; }
+  .projects-list, .projects-grid { gap: 1em; }
+  .before-after-slider { max-width: 98vw; height: 140px; border-radius: 12px; }
+  .project-info { padding: 0.7em 0.5em; }
+  .why-list { flex-direction: column; gap: 1em; }
+  .why-list li { min-width: 0; max-width: 100vw; padding: 1em 0.5em; }
+  .testimonial .client-photo, .testimonial .client-initials { width: 38px; height: 38px; }
+  .about-modal-content { max-width: 98vw; padding: 1.2em 0.7em; }
+  .footer { font-size: 0.92rem; padding: 1em 0.5em; }
+  iframe { height: 120px !important; }
+}
+
+/* Make buttons and inputs easier to tap */
+.contact-form input, .contact-form textarea, .contact-form button {
+  font-size: 1.08rem;
+  padding: 1em;
+  border-radius: 12px;
+}
+
+/* Ensure modal is scrollable on small screens */
+.about-modal-content {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+
+/* Hamburger Menu Styles */
+.nav-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 2.2em;
+  color: #000e20;
+  cursor: pointer;
+  margin-left: 0.5em;
+  z-index: 101;
+  transition: color 0.2s;
+}
+.nav-hamburger:focus,
+.nav-hamburger:hover {
+  color: #155ab6;
+}
+.nav-menu {
+  display: flex;
+}
+@media (max-width: 900px) {
+  .nav-hamburger {
+    display: block;
+  }
+  .nav-menu {
+    display: none;
+    position: absolute;
+    top: 41px;
+    left: 0;
+    right: 0;
+    background: rgba(255,255,255,0.97);
+    box-shadow: 0 8px 32px rgba(26,115,232,0.10);
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+    z-index: 100;
+    animation: fadeIn 0.3s cubic-bezier(.4,0,.2,1);
+  }
+  .nav-menu.open {
+    display: block;
+  }
+  nav ul {
+    flex-direction: column;
+    gap: 1em;
+    padding: 1.2em 0;
+    margin: 0;
+    align-items: center;
+  }
+}
   </style>
 </head>
 <body>
   <nav aria-label="Main Navigation">
-    <div><strong>BluerainCO</strong></div>
-    <ul>
-      <li><a href="#hero">Home</a></li>
-      <li><a href="#about">About</a></li>
-      <li><a href="#services">Services</a></li>
-      <li><a href="#projects">Projects</a></li>
-      <li><a href="#why">Why Us</a></li>
-      <li><a href="#testimonials">Testimonials</a></li>
-      <li><a href="#process">Process</a></li>
-      <li><a href="#contact">Contact</a></li>
-    </ul>
+  <div style="flex:1;"><strong>BluerainCO</strong><button class="nav-hamburger" aria-label="Open menu" tabindex="0" style="position:absolute;right:0em;top:-0.2em;">&#9776;</button></div>
+  <div class="nav-menu">
+      <ul>
+        <li><a href="#hero">Home</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#services">Services</a></li>
+        <li><a href="#projects">Projects</a></li>
+        <li><a href="#why">Why Us</a></li>
+        <li><a href="#testimonials">Testimonials</a></li>
+        <li><a href="#process">Process</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li style="display:flex;gap:0.4em;justify-content:center;margin-top:-0.5em;">
+          <a href="https://www.facebook.com/share/17MLzuidQb/?mibextid=wwXIfr" target="_blank" aria-label="Facebook" style="font-size:1.7em;color:#155ab6;display:inline-flex;align-items:center;"><svg width="1em" height="1em" viewBox="0 0 32 32" fill="currentColor" style="vertical-align:middle;"><path d="M27 0H5C2.2 0 0 2.2 0 5v22c0 2.8 2.2 5 5 5h11V20h-3v-4h3v-3c0-3.1 1.9-5 5-5 1.4 0 2.6.1 2.9.1v3.4h-2c-1.6 0-2 .8-2 2v2.5h4l-.5 4h-3.5v12h7c2.8 0 5-2.2 5-5V5c0-2.8-2.2-5-5-5z"/></svg></a>
+          <a href="#" target="_blank" aria-label="Instagram" style="font-size:1.5em;color:#155ab6;"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 1.366.062 2.633.334 3.608 1.308.974.974 1.246 2.241 1.308 3.608.058 1.266.07 1.646.07 4.85s-.012 3.584-.07 4.85c-.062 1.366-.334 2.633-1.308 3.608-.974.974-2.241 1.246-3.608 1.308-1.266.058-1.646.07-4.85.07s-3.584-.012-4.85-.07c-1.366-.062-2.633-.334-3.608-1.308-.974-.974-1.246-2.241-1.308-3.608C2.175 15.647 2.163 15.267 2.163 12s.012-3.584.07-4.85c.062-1.366.334-2.633 1.308-3.608.974-.974 2.241-1.246 3.608-1.308C8.416 2.175 8.796 2.163 12 2.163zm0-2.163C8.741 0 8.332.013 7.052.072 5.771.131 4.659.363 3.678 1.344c-.981.981-1.213 2.093-1.272 3.374C2.013 8.332 2 8.741 2 12c0 3.259.013 3.668.072 4.948.059 1.281.291 2.393 1.272 3.374.981.981 2.093 1.213 3.374 1.272C8.332 23.987 8.741 24 12 24s3.668-.013 4.948-.072c1.281-.059 2.393-.291 3.374-1.272.981-.981 1.213-2.093 1.272-3.374.059-1.28.072-1.689.072-4.948s-.013-3.668-.072-4.948c-.059-1.281-.291-2.393-1.272-3.374-.981-.981-2.093-1.213-3.374-1.272C15.668.013 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zm0 10.162a3.999 3.999 0 1 1 0-7.998 3.999 3.999 0 0 1 0 7.998zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg></a>
+          <a href="#" target="_blank" aria-label="LinkedIn" style="font-size:1.5em;color:#155ab6;"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.761 0 5-2.239 5-5v-14c0-2.761-2.239-5-5-5zm-11 19h-3v-10h3v10zm-1.5-11.268c-.966 0-1.75-.784-1.75-1.75s.784-1.75 1.75-1.75 1.75.784 1.75 1.75-.784 1.75-1.75 1.75zm13.5 11.268h-3v-5.604c0-1.337-.026-3.063-1.868-3.063-1.868 0-2.154 1.459-2.154 2.967v5.7h-3v-10h2.881v1.367h.041c.401-.761 1.379-1.563 2.841-1.563 3.039 0 3.601 2.002 3.601 4.604v5.592z"/></svg></a>
+        </li>
+      </ul>
+    </div>
   </nav>
+
+
+
 
   <!-- Hero Section -->
   <section class="hero" id="hero" aria-label="Hero Section">
@@ -735,7 +875,7 @@
           </div>
         </div>
         <div class="service-card" data-service="addition">
-          <img src="images/image25.JPG" alt="Additions & Framing">
+          <img src="images/image25.jpg" alt="Additions & Framing">
           <h3>Additions & Framing</h3>
           <p>Expand your space with seamless additions and structural work.</p>
           <a href="#" style="color:#1a73e8;" class="learn-more">Learn More</a>
@@ -1085,35 +1225,81 @@
       });
     });
 
+
+    // Hamburger Menu Toggle
+document.querySelector('.nav-hamburger').addEventListener('click', function(e) {
+  document.querySelector('.nav-menu').classList.toggle('open');
+  e.stopPropagation();
+});
+// Optional: close menu when clicking a link (for better UX)
+document.querySelectorAll('.nav-menu a').forEach(link => {
+  link.addEventListener('click', () => {
+    document.querySelector('.nav-menu').classList.remove('open');
+  });
+});
+
+// Close hamburger menu when clicking outside
+document.addEventListener('click', function(e) {
+  const navMenu = document.querySelector('.nav-menu');
+  const hamburger = document.querySelector('.nav-hamburger');
+  if (navMenu.classList.contains('open')) {
+    if (!navMenu.contains(e.target) && !hamburger.contains(e.target)) {
+      navMenu.classList.remove('open');
+    }
+  }
+});
+
     // Contact Form Submission (AJAX)
-    document.getElementById('contactForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const form = e.target;
-      const formMsg = document.getElementById('formMsg');
-      formMsg.textContent = 'Sending...';
-      const data = {
-        name: form.name.value,
-        email: form.email.value,
-        phone: form.phone.value,
-        details: form.details.value
-      };
-      try {
-        const res = await fetch('/api/contact', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        if (res.ok) {
-          formMsg.textContent = 'Thank you! We will contact you soon.';
-          form.reset();
-        } else {
-          formMsg.textContent = 'Sorry, there was a problem. Please try again.';
-        }
-      } catch (err) {
-        formMsg.textContent = 'Network error. Please try again.';
+     document.getElementById('contactForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formMsg = document.getElementById('formMsg');
+    formMsg.textContent = '';
+    let errors = [];
+
+    // Frontend validation
+    if (!form.name.value.trim() || form.name.value.trim().length < 2) {
+      errors.push('Please enter your name (at least 2 characters).');
+    }
+    if (!form.email.value.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.value.trim())) {
+      errors.push('Please enter a valid email address.');
+    }
+    if (!form.phone.value.trim() || form.phone.value.trim().length < 7) {
+      errors.push('Please enter a valid phone number.');
+    }
+    if (!form.details.value.trim() || form.details.value.trim().length < 10) {
+      errors.push('Please describe your project (at least 10 characters).');
+    }
+
+    if (errors.length) {
+      formMsg.innerHTML = errors.map(e => `<div style="color:#d32f2f;">${e}</div>`).join('');
+      return;
+    }
+
+    formMsg.textContent = 'Sending...';
+    const data = {
+      name: form.name.value,
+      email: form.email.value,
+      phone: form.phone.value,
+      details: form.details.value
+    };
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        formMsg.textContent = 'Thank you! We will contact you soon.';
+        form.reset();
+      } else {
+        formMsg.innerHTML = `<div style="color:#d32f2f;">${result.message || 'Sorry, there was a problem. Please try again.'}</div>`;
       }
-    });
+    } catch (err) {
+      formMsg.innerHTML = `<div style="color:#d32f2f;">Network error. Please try again.</div>`;
+    }
+  });
   </script>
 </body>
 </html>
-
