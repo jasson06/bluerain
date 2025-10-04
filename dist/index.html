@@ -215,15 +215,90 @@
 
    <!-- Daily Updates Panel -->
 <div id="daily-updates-panel">
-  <h3>Daily Updates</h3>
 
-  <!-- ✅ Date Picker Input -->
-  <input type="date" id="date-picker">
-
-  <div id="daily-updates-feed">
-      <p>Loading updates...</p>
+  <!-- Tabs for Updates and Tasks -->
+  <div class="updates-tasks-tabs">
+    <button class="tab-btn active" data-tab="updates">Updates</button>
+    <button class="tab-btn" data-tab="tasks">Tasks</button>
   </div>
-</div>   
+
+  <!-- Updates Tab Content -->
+  <div id="updates-tab-content">
+    <h3>Daily Updates</h3>
+    <input type="date" id="date-picker">
+    <div id="daily-updates-feed">
+      <p>Loading updates...</p>
+    </div>
+  </div>
+
+  <!-- Tasks Tab Content -->
+  <div id="tasks-tab-content" style="display:none;">
+    <h3 style="display:inline-flex;align-items:center;gap:10px;">
+  All Tasks
+<button id="add-task-btn" title="Add New Task" style="
+  background: linear-gradient(90deg,#2563eb 0%,#3b82f6 100%);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px !important;
+  margin-left: 130px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px #2563eb22;
+  transition: background 0.18s, box-shadow 0.18s, transform 0.15s;
+  outline: none;
+"
+>
+  <i class="fas fa-plus"></i>
+</button>
+</h3>
+
+<!-- Modal for adding a new task -->
+<div id="addTaskModal" class="modal" style="display:none;">
+  <div class="modal-content" style="max-width:420px;">
+    <span class="close" id="closeAddTaskModal" style="position:absolute;top:6px;right:18px;font-size:1.5rem;cursor:pointer;">&times;</span>
+    <h3>Add New Task</h3>
+    <form id="addTaskForm">
+      <label>Title:</label>
+      <input type="text" id="newTaskTitle" required />
+      <label>Description:</label>
+      <textarea id="newTaskDesc"></textarea>
+      <label>Due Date:</label>
+      <input type="date" id="newTaskDueDate" />
+      <label>Project:</label>
+      <select id="newTaskProject" required></select>
+        <label>Assign To:</label>
+  <select id="newTaskAssignedTo" required>
+    <option value="">-- Select --</option>
+  </select>
+      <button type="submit" style="margin-top:12px;">Add Task</button>
+    </form>
+  </div>
+</div>
+    <!-- Place this above your #all-tasks-feed container -->
+<div id="task-filters" style="width:100%;margin-bottom:0;">
+  <select id="combined-task-filter">
+    <option value="">All Tasks</option>
+    <optgroup label="Status">
+      <option value="status:open">Status: Open</option>
+      <option value="status:completed">Status: Completed</option>
+    </optgroup>
+    <optgroup label="Assigned"></optgroup>
+    <optgroup label="Project"></optgroup>
+  </select>
+  <!-- Active filter badges will be injected below -->
+</div>
+<div id="active-task-filters"></div>
+
+    <div id="all-tasks-feed">
+      <p>Loading tasks...</p>
+    </div>
+  </div>
+</div>    
 
       <!-- Subcontractors Modal -->
 <div id="subcontractorsModal" class="modal">
