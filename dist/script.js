@@ -2223,43 +2223,801 @@ async function handleMaintenanceRequestClick(requestId, projectId, unitNumber) {
 }
 
 
-    function showLoader() {
-      document.getElementById('loader').style.display = 'flex';
-    }
-    
-    function hideLoader() {
-      document.getElementById('loader').style.display = 'none';
-    }
+// --- Load all tasks for all projects and render in Tasks tab ---
+async function loadAllTasks() {
+  const tasksFeed = document.getElementById('all-tasks-feed');
+  if (!tasksFeed) return;
+  tasksFeed.innerHTML = '<p>Loading tasks...</p>';
 
+  // Combined filter dropdown and active filters badge area
+  const combinedFilter = document.getElementById('combined-task-filter');
+  let activeFiltersDiv = document.getElementById('active-task-filters');
+  if (!activeFiltersDiv) {
+    activeFiltersDiv = document.createElement('div');
+    activeFiltersDiv.id = 'active-task-filters';
+    activeFiltersDiv.style = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;';
+    combinedFilter.parentNode.insertBefore(activeFiltersDiv, combinedFilter.nextSibling);
+  }
 
-        function showToast(message) {
-      let toast = document.getElementById('toast');
-      
-      // If toast element doesn't exist, create it dynamically
-      if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'toast';
-        toast.style.cssText = `
-          position: fixed;
-          top: 30px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: linear-gradient(to right, #0ea5e9, #3b82f6);
-          color: white;
-          padding: 14px 24px;
-          border-radius: 8px;
-          display: none;
-          z-index: 9999;
-          font-weight: 500;
-          font-size: 15px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-          transition: opacity 0.3s ease, transform 0.3s ease;
-          pointer-events: none;
-        `;
-        document.body.appendChild(toast);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString() : '';
+
+  let activeFilters = [];
+
+  function populateCombinedFilter(tasks) {
+    combinedFilter.innerHTML = `
+      <option value="">All Tasks</option>
+      <optgroup label="Status">
+        <option value="status:open">Status: Open</option>
+        <option value="status:completed">Status: Completed</option>
+      </optgroup>
+      <optgroup label="Assigned"></optgroup>
+      <optgroup label="Project"></optgroup>
+    `;
+    const assignedSet = new Set();
+    tasks.forEach(t => {
+      if (t.assignedTo && t.assignedTo.name) assignedSet.add(t.assignedTo.name);
+    });
+    const assignedOptions = Array.from(assignedSet)
+      .map(name => `<option value="assigned:${esc(name)}">Assigned: ${esc(name)}</option>`)
+      .join('');
+    combinedFilter.querySelector('optgroup[label="Assigned"]').innerHTML = assignedOptions;
+
+    const projectSet = new Set();
+    tasks.forEach(t => {
+      if (t.projectName) projectSet.add(t.projectName);
+    });
+    const projectOptions = Array.from(projectSet)
+      .map(name => `<option value="project:${esc(name)}">Project: ${esc(name)}</option>`)
+      .join('');
+    combinedFilter.querySelector('optgroup[label="Project"]').innerHTML = projectOptions;
+  }
+
+  function applyCombinedFilters() {
+    document.querySelectorAll('.task-card').forEach(card => {
+      let show = true;
+      if (!activeFilters.length) {
+        show = true;
+      } else {
+        show = activeFilters.every(f => {
+          if (f.type === 'status') {
+            const cardStatus = card.classList.contains('completed') ? 'completed' : 'open';
+            return cardStatus === f.value;
+          }
+          if (f.type === 'assigned') {
+            const cardAssigned = card.getAttribute('data-assigned-name') || '';
+            return cardAssigned === f.value;
+          }
+          if (f.type === 'project') {
+            const cardProject = card.getAttribute('data-project-name') || '';
+            return cardProject === f.value;
+          }
+          return true;
+        });
       }
-      
-      toast.textContent = message;
-      toast.style.display = 'block';
-      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+      card.style.display = show ? '' : 'none';
+    });
+    renderActiveFilters();
+  }
+
+  function renderActiveFilters() {
+    activeFiltersDiv.innerHTML = '';
+    activeFilters.forEach((f, idx) => {
+      const badge = document.createElement('span');
+      badge.className = 'filter-badge';
+      badge.innerHTML = `${esc(f.type.charAt(0).toUpperCase() + f.type.slice(1))}: ${esc(f.value)}
+        <button class="filter-remove" title="Remove filter" style="margin-left:4px;border:none;background:none;color:#b91c1c;font-size:1em;cursor:pointer;">&times;</button>`;
+      badge.querySelector('.filter-remove').onclick = () => {
+        activeFilters.splice(idx, 1);
+        applyCombinedFilters();
+      };
+      activeFiltersDiv.appendChild(badge);
+    });
+    activeFiltersDiv.style.display = activeFilters.length ? 'flex' : 'none';
+  }
+
+  combinedFilter.onchange = function () {
+    const val = combinedFilter.value;
+    if (!val || activeFilters.some(f => `${f.type}:${f.value}` === val)) return;
+    if (val.startsWith('status:')) {
+      activeFilters.push({ type: 'status', value: val.split(':')[1] });
+    } else if (val.startsWith('assigned:')) {
+      activeFilters.push({ type: 'assigned', value: val.split(':')[1] });
+    } else if (val.startsWith('project:')) {
+      activeFilters.push({ type: 'project', value: val.split(':')[1] });
     }
+    combinedFilter.value = '';
+    applyCombinedFilters();
+  };
+
+  // Render comments HTML (now shows author)
+  const renderCommentsHtml = (comments, taskId) => {
+    let html = '';
+    if (!Array.isArray(comments) || !comments.length) {
+      html += `<div style="padding:8px 10px;color:#64748b;">No comments.</div>`;
+    } else {
+      html += `
+        <div class="task-comments" style="display:flex;flex-direction:column;gap:10px;padding:8px 6px;">
+          ${comments
+            .map((c) => {
+              const authorName = esc(
+                c?.managerName ||
+                c?.author?.name ||
+                [c?.author?.firstName, c?.author?.lastName].filter(Boolean).join(' ') ||
+                c?.authorName ||
+                c?.user?.name ||
+                c?.userName ||
+                c?.createdBy?.name ||
+                [c?.createdBy?.firstName, c?.createdBy?.lastName].filter(Boolean).join(' ') ||
+                c?.by?.name ||
+                c?.manager?.name ||
+                c?.vendor?.name ||
+                c?.email ||
+                ''
+              ) || 'Unknown';
+              const role = esc(c?.author?.role || c?.role || c?.createdByModel || c?.authorType || (c?.managerName ? 'Manager' : ''));
+              const initials = esc(
+                (authorName || '')
+                  .trim()
+                  .split(/\s+/)
+                  .map(w => w[0])
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .join('')
+                  .toUpperCase()
+              );
+              const text = esc(c?.text || c?.message || c?.body || c?.comment || '');
+              const tsRaw = c?.timestamp || c?.createdAt || c?.date || '';
+              const when = tsRaw ? new Date(tsRaw).toLocaleString() : '';
+
+              return `
+                <div class="comment-item" style="border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;background:#f9fafb;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                      <div style="width:28px;height:28px;border-radius:50%;background:#e2e8f0;color:#334155;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:600;">
+                        ${initials || 'C'}
+                      </div>
+                      <div style="display:flex;flex-direction:column;line-height:1.1;">
+                        <strong style="color:#0f172a;">${authorName}</strong>
+                        ${role ? `<span style="font-size:.8rem;color:#64748b;">${role}</span>` : ''}
+                      </div>
+                    </div>
+                    <span style="font-size:.82rem;color:#64748b;">${when}</span>
+                  </div>
+                  <div style="color:#334155;white-space:pre-wrap;">${text || '(empty)'}</div>
+                </div>
+              `;
+            })
+            .join('')}
+        </div>
+      `;
+    }
+    html += `
+      <form class="task-comment-form" style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+        <input type="text" class="task-comment-input" placeholder="Add a comment..." style="flex:1;padding:8px;border-radius:8px;border:1px solid #cbd5e1;" />
+        <button type="submit" class="task-comment-submit" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:600;cursor:pointer;">Send</button>
+      </form>
+    `;
+    return html;
+  };
+
+  try {
+    const res = await fetch(`/api/tasks?t=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Failed to fetch tasks');
+    const payload = await res.json();
+    const tasks = Array.isArray(payload?.tasks) ? payload.tasks : [];
+
+    populateCombinedFilter(tasks);
+
+    tasksFeed.innerHTML = '';
+    tasks.forEach((task) => {
+      const title = esc(task.title || 'Untitled Task');
+      const description = esc(task.description || '');
+      const projectName = esc(task.projectName || task.projectId || 'Unknown Project');
+      const due = fmtDate(task.dueDate);
+      const assignedName = esc(task.assignedTo?.name || '');
+
+      const now = new Date();
+      const dueDateObj = task.dueDate ? new Date(task.dueDate) : null;
+      const isOpenStatus = !task.completed;
+      const isOverdue = isOpenStatus && dueDateObj && dueDateObj < now;
+
+      const statusClass = task.completed ? 'completed' : 'open';
+      const overdueClass = isOverdue ? 'overdue' : '';
+
+      const div = document.createElement('div');
+      div.className = 'task-item';
+      div.innerHTML = `
+        <div class="task-card ${statusClass} ${overdueClass}" data-task-id="${esc(task._id)}"
+             data-assigned-name="${assignedName}" data-project-name="${projectName}" aria-expanded="false">
+          <div class="task-summary">
+            <div class="task-summary-main">
+              <div class="task-header">
+                <strong class="task-title">
+                  <button type="button" class="task-toggle" aria-label="Toggle details" aria-expanded="false">
+                    <svg class="task-toggle-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fill-rule="evenodd" d="M7.2 5.2a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1 0 1.06l-4.5 4.5a.75.75 0 1 1-1.06-1.06L10.94 10 7.2 6.26a.75.75 0 0 1 0-1.06z" clip-rule="evenodd"></path>
+                    </svg>
+                  </button>
+                  ${title} 
+                </strong>
+                <span class="comments-pill" data-task-id="${esc(task._id)}" style="display:none;">💬 <span class="comments-num">0</span></span>
+                <button class="task-menu-btn" title="Task Options">
+                  <i class="fas fa-ellipsis-v"></i>
+                </button>
+                <div class="task-menu-dropdown" style="display:none;">
+                  <button class="task-edit-btn"><i class="fas fa-edit"></i> Edit</button>
+                  <button class="task-delete-btn"><i class="fas fa-trash"></i> Delete</button>
+                </div>
+              </div>
+              <div class="task-meta">
+                <span>
+                  Project:
+                  ${ 
+                    task.projectId
+                      ? `<a class="project-link"
+                             href="/details/projects/${encodeURIComponent(String(task.projectId))}?taskId=${encodeURIComponent(String(task._id))}#task-details"
+                             title="Open project and show this task">
+                           ${projectName}
+                         </a>`
+                      : esc(projectName)
+                  }
+                </span>
+                ${due ? `<span> | Due: ${due}</span>` : ''}
+                ${assignedName ? `<span> | Assigned: ${assignedName}</span>` : ''}
+              </div>
+            </div>
+          </div>
+          ${isOverdue ? `<div class="task-overdue-warning"><i class="fas fa-exclamation-triangle"></i> Overdue Task! Please provide an update.</div>` : ''}
+          ${description ? `<div class="task-desc">${description}</div>` : ''}
+          <select class="task-status-dropdown" style="margin-left:10px;">
+            <option value="open" ${!task.completed ? 'selected' : ''}>Open</option>
+            <option value="completed" ${task.completed ? 'selected' : ''}>Completed</option>
+          </select>
+          <div class="task-details"><!-- comments load here --></div>
+        </div>
+      `;
+
+      // Status change logic
+      const statusDropdown = div.querySelector('.task-status-dropdown');
+      if (statusDropdown) {
+        statusDropdown.onchange = async function() {
+          const newStatus = statusDropdown.value;
+          try {
+            const res = await fetch(`/api/task/${task._id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                completed: newStatus === 'completed'
+              })
+            });
+            if (res.ok) {
+              showToast('Task status updated!');
+              loadAllTasks();
+            } else {
+              showToast('Error updating status.');
+            }
+          } catch {
+            showToast('Error updating status.');
+          }
+        };
+      }
+
+      // Edit and delete dropdown logic
+      const menuBtn = div.querySelector('.task-menu-btn');
+      const menuDropdown = div.querySelector('.task-menu-dropdown');
+      const editBtn = div.querySelector('.task-edit-btn');
+      const deleteBtn = div.querySelector('.task-delete-btn');
+
+      menuBtn.onclick = (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.task-menu-dropdown').forEach(d => d.style.display = 'none');
+        menuDropdown.style.display = menuDropdown.style.display === 'block' ? 'none' : 'block';
+      };
+      document.addEventListener('click', () => {
+        menuDropdown.style.display = 'none';
+      });
+
+      editBtn.onclick = (e) => {
+        e.stopPropagation();
+        menuDropdown.style.display = 'none';
+        window.openEditTaskModal(task);
+      };
+
+      deleteBtn.onclick = async (e) => {
+        e.stopPropagation();
+        menuDropdown.style.display = 'none';
+        if (confirm('Are you sure you want to delete this task?')) {
+          try {
+            const res = await fetch(`/api/task/${task._id}`, { method: 'DELETE' });
+            if (res.ok) {
+              showToast('Task deleted.');
+              loadAllTasks();
+            } else {
+              showToast('Error deleting task.');
+            }
+          } catch {
+            showToast('Error deleting task.');
+          }
+        }
+      };
+
+      tasksFeed.appendChild(div);
+
+      const card = div.querySelector('.task-card');
+      const toggle = div.querySelector('.task-toggle');
+      const summary = div.querySelector('.task-summary');
+      const details = div.querySelector('.task-details');
+
+      const projLink = div.querySelector('.project-link');
+      if (projLink) {
+        projLink.addEventListener('click', (e) => {
+          e.stopPropagation();
+        });
+      }
+
+      const setExpanded = (open) => {
+        card.setAttribute('aria-expanded', open ? 'true' : 'false');
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        details.style.display = open ? 'block' : 'none';
+      };
+
+      const toggleOpen = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const isOpen = card.getAttribute('aria-expanded') === 'true';
+        if (isOpen) {
+          setExpanded(false);
+        } else {
+          setExpanded(true);
+          if (!details.dataset.loaded) {
+            details.innerHTML = `<div style="padding:8px 10px;color:#64748b;">Loading comments...</div>`;
+            try {
+              const r = await fetch(`/api/comments?taskId=${encodeURIComponent(task._id)}&t=${Date.now()}`, { cache: 'no-store' });
+              let comments = [];
+              if (r.ok) {
+                const data = await r.json();
+                comments = Array.isArray(data?.comments) ? data.comments : [];
+              }
+              if (!comments.length && Array.isArray(task.comments)) comments = task.comments;
+              details.innerHTML = renderCommentsHtml(comments, task._id);
+              details.dataset.loaded = '1';
+              const pill = card.querySelector('.comments-pill');
+              if (pill) {
+                const numEl = pill.querySelector('.comments-num');
+                const count = comments.length;
+                if (numEl) numEl.textContent = String(count);
+                pill.style.display = count ? 'inline-flex' : 'none';
+              }
+
+              // Add comment form logic
+              const commentForm = details.querySelector('.task-comment-form');
+              if (commentForm) {
+                commentForm.onsubmit = async function(e) {
+                  e.preventDefault();
+                  const input = commentForm.querySelector('.task-comment-input');
+                  const commentText = input.value.trim();
+                  if (!commentText) return;
+                  input.disabled = true;
+                  commentForm.querySelector('.task-comment-submit').disabled = true;
+                  try {
+                    const managerName = localStorage.getItem('managerName') || 'Manager';
+                    const timestamp = new Date().toISOString();
+                    const res = await fetch('/api/comments', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        taskId: task._id,
+                        comment: commentText,
+                        managerName,
+                        timestamp
+                      })
+                    });
+                    if (res.ok) {
+                      showToast('Comment added!');
+                      const r = await fetch(`/api/comments?taskId=${encodeURIComponent(task._id)}&t=${Date.now()}`, { cache: 'no-store' });
+                      let comments = [];
+                      if (r.ok) {
+                        const data = await r.json();
+                        comments = Array.isArray(data?.comments) ? data.comments : [];
+                      }
+                      details.innerHTML = renderCommentsHtml(comments, task._id);
+                      details.dataset.loaded = '1';
+                      const newForm = details.querySelector('.task-comment-form');
+                      if (newForm) {
+                        newForm.onsubmit = commentForm.onsubmit;
+                      }
+                    } else {
+                      showToast('Error adding comment.');
+                    }
+                  } catch {
+                    showToast('Error adding comment.');
+                  } finally {
+                    input.disabled = false;
+                    commentForm.querySelector('.task-comment-submit').disabled = false;
+                    input.value = '';
+                  }
+                };
+              }
+            } catch (err) {
+              console.error('Error loading task comments:', err);
+              details.innerHTML = `<div style="padding:8px 10px;color:#b91c1c;">Error loading comments.</div>`;
+            }
+          }
+        }
+      };
+
+      toggle.addEventListener('click', toggleOpen);
+      summary.addEventListener('click', toggleOpen);
+
+      (async () => {
+        try {
+          const r = await fetch(`/api/comments?taskId=${encodeURIComponent(task._id)}&t=${Date.now()}`, { cache: 'no-store' });
+          if (!r.ok) return;
+          const data = await r.json();
+          const count = Array.isArray(data?.comments) ? data.comments.length : 0;
+          const pill = card.querySelector('.comments-pill');
+          if (pill) {
+            const numEl = pill.querySelector('.comments-num');
+            if (numEl) numEl.textContent = String(count);
+            pill.style.display = count ? 'inline-flex' : 'none';
+          }
+        } catch {}
+      })();
+    });
+
+    applyCombinedFilters();
+
+  } catch (err) {
+    console.error('Error loading tasks:', err);
+    tasksFeed.innerHTML = '<p>Error loading tasks.</p>';
+  }
+}
+
+// Add/Edit Task Modal logic
+document.addEventListener('DOMContentLoaded', () => {
+  const addBtn = document.getElementById('add-task-btn');
+  const addModal = document.getElementById('addTaskModal');
+  const closeModal = document.getElementById('closeAddTaskModal');
+  const addForm = document.getElementById('addTaskForm');
+  const projectSelect = document.getElementById('newTaskProject');
+  const assignSelect = document.getElementById('newTaskAssignedTo');
+  const submitBtn = addForm ? addForm.querySelector('button[type="submit"]') : null;
+
+  // Helper to populate project dropdown and select correct project
+  async function populateProjectDropdown(selectedProjectId = '') {
+    const [activeRes, completedRes, onMarketRes] = await Promise.all([
+      fetch('/api/projects'),
+      fetch('/api/completed-projects'),
+      fetch('/api/on-market-projects')
+    ]);
+    const activeData = await activeRes.json();
+    const completedData = await completedRes.json();
+    const onMarketData = await onMarketRes.json();
+
+    let options = '';
+    if (activeData.projects && activeData.projects.length) {
+      options += `<optgroup label="Active Projects">`;
+      options += activeData.projects.map(
+        p => `<option value="${p._id}"${selectedProjectId == p._id ? ' selected' : ''}>${p.name}</option>`
+      ).join('');
+      options += `</optgroup>`;
+    }
+    if (completedData.projects && completedData.projects.length) {
+      options += `<optgroup label="Completed Projects">`;
+      options += completedData.projects.map(
+        p => `<option value="${p._id}"${selectedProjectId == p._id ? ' selected' : ''}>${p.name} (Completed)</option>`
+      ).join('');
+      options += `</optgroup>`;
+    }
+    if (onMarketData.projects && onMarketData.projects.length) {
+      options += `<optgroup label="On Market Projects">`;
+      options += onMarketData.projects.map(
+        p => `<option value="${p._id}"${selectedProjectId == p._id ? ' selected' : ''}>${p.name} (On Market)</option>`
+      ).join('');
+      options += `</optgroup>`;
+    }
+    projectSelect.innerHTML = options;
+  }
+
+  // Helper to populate assign dropdown with Managers and Vendors in separate sections
+  async function populateAssignDropdown(selectedAssignedId = '') {
+    const [vendorsRes, managersRes] = await Promise.all([
+      fetch('/api/vendors'),
+      fetch('/api/managers')
+    ]);
+    const vendors = await vendorsRes.json();
+    const managers = await managersRes.json();
+
+    let options = `<option value="">-- Select --</option>`;
+    if (managers.length) {
+      options += `<optgroup label="Managers">`;
+      options += managers.map(m => `<option value="${m._id}"${selectedAssignedId == m._id ? ' selected' : ''}>${m.name} (Manager)</option>`).join('');
+      options += `</optgroup>`;
+    }
+    if (vendors.length) {
+      options += `<optgroup label="Vendors">`;
+      options += vendors.map(v => `<option value="${v._id}"${selectedAssignedId == v._id ? ' selected' : ''}>${v.name} (Vendor)</option>`).join('');
+      options += `</optgroup>`;
+    }
+    assignSelect.innerHTML = options;
+  }
+
+  // Open modal for add
+  if (addBtn) addBtn.onclick = async () => {
+    addModal.style.display = 'flex';
+    addForm.reset();
+    addForm.dataset.editingTaskId = '';
+    if (submitBtn) submitBtn.textContent = 'Add Task';
+    await populateProjectDropdown();
+    await populateAssignDropdown();
+  };
+
+  // Close modal
+  if (closeModal) closeModal.onclick = () => {
+    addModal.style.display = 'none';
+    addForm.reset();
+    addForm.dataset.editingTaskId = '';
+    if (submitBtn) submitBtn.textContent = 'Add Task';
+  };
+  window.onclick = (e) => {
+    if (e.target === addModal) {
+      addModal.style.display = 'none';
+      addForm.reset();
+      addForm.dataset.editingTaskId = '';
+      if (submitBtn) submitBtn.textContent = 'Add Task';
+    }
+  };
+
+  // Edit Task logic (called from task card dropdown)
+  window.openEditTaskModal = async function(task) {
+    addModal.style.display = 'flex';
+    addForm.dataset.editingTaskId = task._id;
+    document.getElementById('newTaskTitle').value = task.title || '';
+    document.getElementById('newTaskDesc').value = task.description || '';
+    document.getElementById('newTaskDueDate').value = task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '';
+    if (submitBtn) submitBtn.textContent = 'Update Task';
+    let projectId = '';
+    if (task.projectId && typeof task.projectId === 'object') {
+      projectId = task.projectId._id || task.projectId;
+    } else if (task.projectId) {
+      projectId = task.projectId;
+    }
+    await populateProjectDropdown(projectId);
+    let assignedId = '';
+    if (task.assignedTo && typeof task.assignedTo === 'object') {
+      assignedId = task.assignedTo._id || task.assignedTo;
+    } else if (task.assignedTo) {
+      assignedId = task.assignedTo;
+    }
+    await populateAssignDropdown(assignedId);
+  };
+
+   // Handle form submit (add or edit)
+  if (addForm) addForm.onsubmit = async function(e) {
+    e.preventDefault();
+    const editingId = addForm.dataset.editingTaskId;
+    const payload = {
+      title: document.getElementById('newTaskTitle').value,
+      description: document.getElementById('newTaskDesc').value,
+      dueDate: document.getElementById('newTaskDueDate').value,
+      projectId: document.getElementById('newTaskProject').value,
+      assignedTo: document.getElementById('newTaskAssignedTo').value
+    };
+    try {
+      let res;
+      let isAssignment = false;
+      if (editingId) {
+        // Check if assignment changed
+        const prevTaskRes = await fetch(`/api/task/${editingId}`);
+        const prevTaskData = await prevTaskRes.json();
+        isAssignment = prevTaskData.task && prevTaskData.task.assignedTo !== payload.assignedTo;
+        res = await fetch(`/api/task/${editingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        res = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        isAssignment = true; // New task, always assignment
+      }
+      if (res.ok) {
+        const data = await res.json();
+        showToast(editingId ? 'Task updated!' : 'Task added!');
+        addForm.reset();
+        addModal.style.display = 'none';
+        addForm.dataset.editingTaskId = '';
+        if (submitBtn) submitBtn.textContent = 'Add Task';
+        loadAllTasks();
+        // Trigger email notification if assigned
+        if (isAssignment && data.task && data.task._id) {
+          sendTaskAssignmentEmail(data.task._id);
+        }
+      } else {
+        showToast('Error saving task.');
+      }
+    } catch {
+      showToast('Error saving task.');
+    }
+  };
+});
+
+
+// Load tasks when Tasks tab is shown
+document.addEventListener('DOMContentLoaded', () => {
+  const tasksTab = document.getElementById('tasks-tab-content');
+  const tabBtns = document.querySelectorAll('.tab-btn');
+        tabBtns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            // Remove active class from all tab buttons
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            // Show/hide tab content based on data-tab
+            const tab = btn.getAttribute('data-tab');
+            if (tab === 'tasks') {
+              // Clear updates content
+              const updatesFeed = document.getElementById('daily-updates-feed');
+              if (updatesFeed) updatesFeed.innerHTML = '';
+              // Show tasks tab, hide updates tab
+              document.getElementById('tasks-tab-content').style.display = 'block';
+              document.getElementById('updates-tab-content').style.display = 'none';
+              // Clear and load tasks
+              const tasksFeed = document.getElementById('all-tasks-feed');
+              if (tasksFeed) tasksFeed.innerHTML = '';
+              loadAllTasks();
+            } else if (tab === 'updates') {
+              // Clear tasks content
+              const tasksFeed = document.getElementById('all-tasks-feed');
+              if (tasksFeed) tasksFeed.innerHTML = '';
+              // Show updates tab, hide tasks tab
+              document.getElementById('updates-tab-content').style.display = 'block';
+              document.getElementById('tasks-tab-content').style.display = 'none';
+              // Clear and load updates
+              const updatesFeed = document.getElementById('daily-updates-feed');
+              if (updatesFeed) updatesFeed.innerHTML = '';
+              // Always load updates for today when switching tab
+              const todayStr = new Date().toISOString().split('T')[0];
+              loadTeamDailyUpdates(todayStr);
+            }
+          });
+        });
+});
+
+
+
+// ✅ Function to Send Email Notification
+async function sendTaskAssignmentEmail(taskId) {
+  showLoader();
+  try {
+    if (!taskId) {
+      console.error("❌ Task ID is missing. Cannot fetch task details.");
+      return;
+    }
+
+    // Fetch task details
+    const taskResponse = await fetch(`/api/task/${taskId}`);
+    if (!taskResponse.ok) throw new Error("Failed to fetch task details.");
+    const { task } = await taskResponse.json();
+
+    if (!task || !task.assignedTo || !task.assignedTo.email || !task.projectId || !task.assignedToModel) {
+      console.error("❌ Missing email parameters:", {
+        assigneeEmail: task?.assignedTo?.email,
+        taskTitle: task?.title,
+        projectId: task?.projectId,
+        assignedToModel: task?.assignedToModel
+      });
+      return;
+    }
+
+    // Fetch project details
+    const projectResponse = await fetch(`/api/details/projects/${task.projectId}`);
+    if (!projectResponse.ok) throw new Error("Failed to fetch project details.");
+    const { project } = await projectResponse.json();
+
+    if (!project || !project.address) {
+      console.error("❌ Missing project details:", project);
+      return;
+    }
+
+    const projectAddress = `${project.address.addressLine1 || ''}, ${project.address.city}, ${project.address.state} ${project.address.zip || ''}`.trim();
+    const isVendor = task.assignedToModel.toLowerCase() === "vendor";
+    const signInLink = isVendor
+      ? `https://node-mongodb-api-1h93.onrender.com/sign-inpage.html`
+      : `https://node-mongodb-api-1h93.onrender.com/project-manager-auth.html`;
+
+    // Modern HTML email structure (inline styles, table layout)
+    const emailHtml = `
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;">
+        <tr>
+          <td align="center">
+            <table width="540" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;box-shadow:0 4px 24px #2563eb22;margin:32px 0;">
+              <tr>
+                <td style="padding:32px;">
+                  <h2 style="color:#2563eb;font-size:2em;margin-bottom:18px;">New Task Assigned</h2>
+                  <p style="font-size:1.08em;color:#334155;margin:0 0 18px 0;">
+                    <b>Hello ${task.assignedTo.name || ''},</b>
+                  </p>
+                  <p style="margin:0 0 18px 0;font-size:1.05em;">
+                    You have been assigned a new task in the project:<br>
+                    <b style="color:#2563eb;">${project.name}</b>
+                  </p>
+                  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
+                    <tr>
+                      <td style="color:#64748b;padding:8px 0;width:120px;">Task:</td>
+                      <td style="padding:8px 0;"><b>${task.title}</b></td>
+                    </tr>
+                    <tr>
+                      <td style="color:#64748b;padding:8px 0;">Project Address:</td>
+                      <td style="padding:8px 0;">${projectAddress}</td>
+                    </tr>
+                    <tr>
+                      <td style="color:#64748b;padding:8px 0;">Due Date:</td>
+                      <td style="padding:8px 0;">${task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'N/A'}</td>
+                    </tr>
+                    <tr>
+                      <td style="color:#64748b;padding:8px 0;">Description:</td>
+                      <td style="padding:8px 0;">${task.description || 'No description provided.'}</td>
+                    </tr>
+                  </table>
+                  <p style="margin:24px 0;">
+                    <a href="${signInLink}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:600;font-size:1.08em;">
+                      Sign In to View Task
+                    </a>
+                  </p>
+                  <hr style="border-top:1px solid #e5e7eb;margin:32px 0 18px 0;">
+                  <p style="color:#64748b;font-size:0.98em;margin:0;">
+                    If you have any questions, please contact your manager.<br>
+                    <span style="color:#2563eb;">Thank you!</span>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    `;
+
+    const emailSubject = `New Task Assigned: ${task.title}`;
+    const emailText = `
+Hello ${task.assignedTo.name || ''},
+
+You have been assigned a new task in the project: ${project.name}
+
+Task: ${task.title}
+Project Address: ${projectAddress}
+Due Date: ${task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'N/A'}
+Description: ${task.description || 'No description provided.'}
+
+Sign in to view your task: ${signInLink}
+
+If you have any questions, please contact your manager.
+
+Thank you!
+    `.trim();
+
+    // Send email via backend
+    const emailResponse = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: task.assignedTo.email,
+        subject: emailSubject,
+        text: emailText,
+        html: emailHtml
+      })
+    });
+
+    if (!emailResponse.ok) throw new Error("Failed to send email notification.");
+    showToast("✅ Email notification sent successfully.");
+
+  } catch (error) {
+    showToast("❌ Error sending email notification.");
+    console.error(error);
+  } finally {
+    hideLoader();
+  }
+}
