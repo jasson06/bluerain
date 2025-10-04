@@ -384,7 +384,28 @@
 </div>
 
   
-
+<!-- Modal for adding a new task -->
+<div id="addTaskModal" class="modal" style="display:none;">
+  <div class="modal-content" style="max-width:420px;">
+    <span class="close" id="closeAddTaskModal" style="position:absolute;top:6px;right:18px;font-size:1.5rem;cursor:pointer;">&times;</span>
+    <h3>Add New Task</h3>
+    <form id="addTaskForm">
+      <label>Title:</label>
+      <input type="text" id="newTaskTitle" required />
+      <label>Description:</label>
+      <textarea id="newTaskDesc"></textarea>
+      <label>Due Date:</label>
+      <input type="date" id="newTaskDueDate" />
+      <label>Project:</label>
+      <select id="newTaskProject" required></select>
+        <label>Assign To:</label>
+  <select id="newTaskAssignedTo" >
+    <option value="">-- Select --</option>
+  </select>
+      <button type="submit" style="margin-top:12px;">Add Task</button>
+    </form>
+  </div>
+</div>
 
 <!-- Invite Modal -->
 <div id="invite-modal" class="modal" style="display: none;">
