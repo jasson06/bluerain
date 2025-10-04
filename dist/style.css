@@ -2919,3 +2919,17 @@ input, textarea {
 .task-card.overdue .task-title {
   color: #b91c1c;
 }
+
+
+@media (max-width: 1024px) {
+  .modal {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-content {
+    margin: 10% auto;
+    width: 95vw;
+    max-width: 600px;
+  }
+}
