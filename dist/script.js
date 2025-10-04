@@ -1,4 +1,13 @@
-    function showToast(message) {
+    function showLoader() {
+      document.getElementById('loader').style.display = 'flex';
+    }
+    
+    function hideLoader() {
+      document.getElementById('loader').style.display = 'none';
+    }
+
+
+        function showToast(message) {
       let toast = document.getElementById('toast');
       
       // If toast element doesn't exist, create it dynamically
@@ -28,14 +37,6 @@
       toast.textContent = message;
       toast.style.display = 'block';
       setTimeout(() => { toast.style.display = 'none'; }, 3000);
-    }
-    
-    function showLoader() {
-      document.getElementById('loader').style.display = 'flex';
-    }
-    
-    function hideLoader() {
-      document.getElementById('loader').style.display = 'none';
     }
 
 
@@ -1133,7 +1134,7 @@ document.addEventListener("DOMContentLoaded", initMap);
 async function loadTeamDailyUpdates(selectedDate = null) {
     const updatesFeed = document.getElementById("daily-updates-feed");
     updatesFeed.innerHTML = "<p>Loading updates...</p>";
-
+    showLoader(); // 👈 START
     try {
         const managerId = localStorage.getItem("managerId"); // ✅ Retrieve Manager ID
         if (!managerId) {
@@ -1176,18 +1177,26 @@ async function loadTeamDailyUpdates(selectedDate = null) {
             // ✅ Fix the author display issue
             const authorName = update.author && update.author.trim() !== "" ? update.author : "System Update"; 
 
-            updateItem.innerHTML = `
-            <div class="update-card">
 
-                <p class="update-text">📌 ${update.text}</p>
-                <p class="update-project">
-                    🔗 <strong>Project:</strong> 
-                    <a href="/details/projects/${update.projectId}" class="project-link">${projectName}</a>
-                </p>
-                <p class="update-timestamp">🕒 ${formattedDate}</p>
-            </div>
-        `;
+        updateItem.innerHTML = `
+    <div class="update-card">
+        <p class="update-project">
+            🔗 <strong>Project:</strong>
+            <a href="/details/projects/${update.projectId}" class="project-link">${projectName}</a>
+        </p>
+
+
         
+        <p class="update-text">📌 ${update.text || "No details provided."}</p>
+        
+        <div class="update-header">
+            
+            <span class="update-timestamp">🕒 ${formattedDate}</span>
+        </div>
+    </div>
+
+  
+`;
 
             updatesFeed.appendChild(updateItem);
         });
@@ -1195,24 +1204,39 @@ async function loadTeamDailyUpdates(selectedDate = null) {
     } catch (error) {
         console.error("❌ Error loading team updates:", error);
         updatesFeed.innerHTML = "<p>Error loading updates.</p>";
+      } finally {
+        hideLoader(); // 👈 END 
     }
 }
 
+// Expose globally for event handlers
+window.loadTeamDailyUpdates = loadTeamDailyUpdates;
 
+
+  // --- Tab switching logic for Updates/Tasks tabs ---
+ 
 
 // ✅ Event Listener for Date Picker
 document.getElementById("date-picker").addEventListener("change", function() {
     const selectedDate = this.value; // Get selected date from input (YYYY-MM-DD)
-    console.log(`📅 Fetching updates for date: ${selectedDate}`);
+    
     loadTeamDailyUpdates(selectedDate); // Fetch updates for selected date
 });
 
-// ✅ Load Updates on Page Load (Default: Today)
-document.addEventListener("DOMContentLoaded", () => {
-    const today = new Date().toISOString().split("T")[0]; // Get YYYY-MM-DD
-    loadTeamDailyUpdates(today);
-});
-
+// ✅ Initialize date picker and load today's updates on page load (inside main DOMContentLoaded)
+{
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  const todayStr = `${yyyy}-${mm}-${dd}`;
+  const datePicker = document.getElementById('date-picker');
+  if (datePicker) {
+    datePicker.value = todayStr;
+  }
+  // Always load updates for today once on page load
+  loadTeamDailyUpdates(todayStr);
+}
 
 // ✅ Refresh Updates Periodically Every 90 Seconds (Only for Today's Date)
 setInterval(() => {
@@ -2197,3 +2221,45 @@ async function handleMaintenanceRequestClick(requestId, projectId, unitNumber) {
     console.error(err);
   }
 }
+
+
+    function showLoader() {
+      document.getElementById('loader').style.display = 'flex';
+    }
+    
+    function hideLoader() {
+      document.getElementById('loader').style.display = 'none';
+    }
+
+
+        function showToast(message) {
+      let toast = document.getElementById('toast');
+      
+      // If toast element doesn't exist, create it dynamically
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        toast.style.cssText = `
+          position: fixed;
+          top: 30px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: linear-gradient(to right, #0ea5e9, #3b82f6);
+          color: white;
+          padding: 14px 24px;
+          border-radius: 8px;
+          display: none;
+          z-index: 9999;
+          font-weight: 500;
+          font-size: 15px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          transition: opacity 0.3s ease, transform 0.3s ease;
+          pointer-events: none;
+        `;
+        document.body.appendChild(toast);
+      }
+      
+      toast.textContent = message;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
