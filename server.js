@@ -1795,35 +1795,65 @@ app.delete("/api/projects/:projectId", async (req, res) => {
 
 
 
-// Fetch tasks for a specific project
+// --- GET /api/tasks: Return all tasks with project name ---
 app.get('/api/tasks', async (req, res) => {
-  const { projectId } = req.query;
-
-  if (!projectId) {
-    return res.status(400).json({ success: false, error: 'Project ID is required' });
-  }
-
   try {
-    // Fetch tasks first, then determine the correct population
-    const tasks = await Task.find({ projectId });
+    const { projectId } = req.query;
 
-    // Populate assignedTo based on assignedToModel
-    for (let task of tasks) {
-      if (task.assignedTo) {
-        if (task.assignedToModel === 'Vendor') {
-          task.assignedTo = await Vendor.findById(task.assignedTo).select('name');
-        } else if (task.assignedToModel === 'Manager') {
-          task.assignedTo = await Manager.findById(task.assignedTo).select('name');
-        }
-      }
+    // Branch: project-specific tasks with assignedTo population
+    if (projectId) {
+      let tasks = await Task.find({ projectId }).lean();
+
+      // Populate assignedTo name based on assignedToModel
+      tasks = await Promise.all(
+        tasks.map(async (t) => {
+          if (!t.assignedTo) return t;
+
+          try {
+            if (t.assignedToModel === 'Vendor') {
+              const v = await Vendor.findById(t.assignedTo).select('name').lean();
+              return { ...t, assignedTo: v ? { _id: v._id, name: v.name } : null };
+            } else if (t.assignedToModel === 'Manager') {
+              const m = await Manager.findById(t.assignedTo).select('name').lean();
+              return { ...t, assignedTo: m ? { _id: m._id, name: m.name } : null };
+            }
+          } catch {
+            // ignore population errors per item
+          }
+          return t;
+        })
+      );
+
+      
+      return res.json({ success: true, tasks });
     }
 
-    console.log("✅ Retrieved Tasks with Correct Population:", tasks);
+    // Branch: all tasks with projectName mapping
+    const tasks = await Task.find({})
+      .select('title description dueDate completed assignedTo assignedToModel comments projectId')
+      .populate({ path: 'projectId', select: 'name' })
+      .populate({ path: 'assignedTo', select: 'name' }) // uses refPath: 'assignedToModel'
+      .lean();
 
-    res.json({ success: true, tasks });
-  } catch (error) {
-    console.error('Error fetching tasks:', error.message);
-    res.status(500).json({ success: false, error: 'Failed to fetch tasks' });
+    const tasksWithProject = tasks.map((task) => ({
+      _id: task._id,
+      title: task.title,
+      description: task.description,
+      dueDate: task.dueDate,
+      completed: task.completed,
+      comments: task.comments || [],
+      assignedTo: task.assignedTo
+        ? { _id: task.assignedTo._id, name: task.assignedTo.name }
+        : null,
+      assignedToModel: task.assignedToModel || null,
+      projectId: task.projectId?._id || task.projectId,
+      projectName: task.projectId?.name || String(task.projectId),
+    }));
+
+    return res.json({ tasks: tasksWithProject });
+  } catch (err) {
+    console.error('Error fetching tasks:', err.message || err);
+    return res.status(500).json({ error: 'Failed to fetch tasks' });
   }
 });
 
@@ -1852,7 +1882,7 @@ app.get('/api/task/:id', async (req, res) => {
       }
     }
 
-    console.log("✅ Task Details Retrieved with Email:", task);
+    
 
     res.status(200).json({
       success: true,
@@ -1957,7 +1987,7 @@ app.post('/api/tasks', async (req, res) => {
         // ✅ Log the new task creation in daily logs
     await logDailyUpdate(projectId, `New task "${title}" was created.`);
 
-    console.log("✅ New Task Created:", newTask);
+    
     res.status(201).json({ success: true, task: newTask });
 
   } catch (error) {
@@ -1984,7 +2014,7 @@ app.delete('/api/task/:id', async (req, res) => {
     await logDailyUpdate(task.projectId, `Task "${task.title}" was deleted.`, "System");
 
 
-    console.log(`✅ Task ${id} deleted successfully.`);
+    
     res.json({ success: true, message: 'Task deleted successfully.' });
 
   } catch (error) {
@@ -2044,7 +2074,7 @@ app.post('/api/comments', async (req, res) => {
     // ✅ Log the comment in daily updates
     await logDailyUpdate(task.projectId, `New comment on task "${task.title}": "${comment}"`, managerName);
 
-    console.log(`✅ Comment added to task "${task.title}".`);
+    
     res.status(201).json({ message: "Comment added successfully.", comment: newComment });
 
   } catch (error) {
@@ -2079,14 +2109,14 @@ app.put('/api/task/:id', async (req, res) => {
       
       if (vendor) {
         assignedToModel = 'Vendor';
-        console.log("✅ Assigned to Vendor:", vendor.name);
+        
       } else {
         console.log("Checking Manager...");
         const manager = await Manager.findById(assignedTo);
         
         if (manager) {
           assignedToModel = 'Manager';
-          console.log("✅ Assigned to Manager:", manager.name);
+          
         }
       }
 
@@ -2100,7 +2130,7 @@ app.put('/api/task/:id', async (req, res) => {
       updateFields.assignedToModel = assignedToModel;
     }
 
-    console.log("Final AssignedToModel Before Update:", assignedToModel);
+    
 
     // Update task and enforce correct role
     const task = await Task.findByIdAndUpdate(
@@ -2113,7 +2143,7 @@ app.put('/api/task/:id', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Task not found' });
     }
 
-    console.log("Updated Task:", task);
+    
 
         // ✅ Log the Update in Daily Updates
         await logDailyUpdate(task.projectId, `Task "${task.title}" was updated.`);
@@ -3611,31 +3641,98 @@ app.post("/api/invite/accept", async (req, res) => {
 });
 
 
+function getTaskAssignmentEmailHtml({ assigneeName, projectName, projectAddress, taskTitle, dueDate, description, signInLink }) {
+  return `
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;">
+      <tr>
+        <td align="center">
+          <table width="540" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;box-shadow:0 4px 24px #2563eb22;margin:32px 0;">
+            <tr>
+              <td style="padding:32px;">
+                <h2 style="color:#2563eb;font-size:2em;margin-bottom:18px;">New Task Assigned</h2>
+                <p style="font-size:1.08em;color:#334155;margin:0 0 18px 0;">
+                  <b>Hello ${assigneeName},</b>
+                </p>
+                <p style="margin:0 0 18px 0;font-size:1.05em;">
+                  You have been assigned a new task in the project:<br>
+                  <b style="color:#2563eb;">${projectName}</b>
+                </p>
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
+                  <tr>
+                    <td style="color:#64748b;padding:8px 0;width:120px;">Task:</td>
+                    <td style="padding:8px 0;"><b>${taskTitle}</b></td>
+                  </tr>
+                  <tr>
+                    <td style="color:#64748b;padding:8px 0;">Project Address:</td>
+                    <td style="padding:8px 0;">${projectAddress}</td>
+                  </tr>
+                  <tr>
+                    <td style="color:#64748b;padding:8px 0;">Due Date:</td>
+                    <td style="padding:8px 0;">${dueDate}</td>
+                  </tr>
+                  <tr>
+                    <td style="color:#64748b;padding:8px 0;">Description:</td>
+                    <td style="padding:8px 0;">${description}</td>
+                  </tr>
+                </table>
+                <p style="margin:24px 0;">
+                  <a href="${signInLink}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:600;font-size:1.08em;">
+                    Sign In to View Task
+                  </a>
+                </p>
+                <hr style="border-top:1px solid #e5e7eb;margin:32px 0 18px 0;">
+                <p style="color:#64748b;font-size:0.98em;margin:0;">
+                  If you have any questions, please contact your manager.<br>
+                  <span style="color:#2563eb;">Thank you!</span>
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  `;
+}
+
+
+
+
 // ✅ API to Send Task Assignment Email
 app.post('/api/send-email', async (req, res) => {
-  const { to, subject, text } = req.body;
+  const { to, subject, text, html, taskData } = req.body;
 
-  if (!to || !subject || !text) {
-      console.error("❌ Missing email parameters:", { to, subject, text });
-      return res.status(400).json({ success: false, message: "Missing email parameters" });
+  // If taskData is provided, generate improved HTML email
+  let emailHtml = html;
+  if (taskData) {
+    emailHtml = getTaskAssignmentEmailHtml({
+      assigneeName: taskData.assigneeName,
+      projectName: taskData.projectName,
+      projectAddress: taskData.projectAddress,
+      taskTitle: taskData.taskTitle,
+      dueDate: taskData.dueDate,
+      description: taskData.description,
+      signInLink: taskData.signInLink
+    });
+  }
+
+  if (!to || !subject || (!text && !emailHtml)) {
+    return res.status(400).json({ success: false, message: "Missing email parameters" });
   }
 
   try {
-      await transporter.sendMail({
-          from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-          to,
-          subject,
-          text,
-      });
+    await transporter.sendMail({
+      from: `"BESF Team" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      text,
+      html: emailHtml || undefined,
+    });
 
-      console.log(`✅ Email Sent to ${to}: ${subject}`);
-      res.json({ success: true, message: "Email sent successfully" });
+    res.json({ success: true, message: "Email sent successfully" });
   } catch (error) {
-      console.error("❌ Error sending email:", error);
-      res.status(500).json({ success: false, message: "Failed to send email" });
+    res.status(500).json({ success: false, message: "Failed to send email" });
   }
 });
-
 
 // ✅ Get Assigned Vendors for a Project
 app.get("/api/projects/:projectId/vendors", async (req, res) => {
