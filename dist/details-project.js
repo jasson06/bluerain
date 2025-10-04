@@ -1437,8 +1437,107 @@ function addTaskClickListeners() {
 
 // Function to create a new task
 function createNewTask() {
-  const projectId = getProjectId();
-  window.location.href = `/create-task.html?projectId=${projectId}`;
+  // Show the modal instead of redirecting
+  const addModal = document.getElementById('addTaskModal');
+  const addForm = document.getElementById('addTaskForm');
+  const closeModal = document.getElementById('closeAddTaskModal');
+  const projectSelect = document.getElementById('newTaskProject');
+  const assignSelect = document.getElementById('newTaskAssignedTo');
+  const submitBtn = addForm ? addForm.querySelector('button[type="submit"]') : null;
+
+  // Helper to populate project dropdown (only current project)
+  async function populateProjectDropdown(selectedProjectId = '') {
+    const projectId = getProjectId();
+    const res = await fetch(`/api/details/projects/${projectId}`);
+    const { project } = await res.json();
+    projectSelect.innerHTML = `<option value="${project._id}" selected>${project.name}</option>`;
+  }
+
+  // Helper to populate assign dropdown with Managers and Vendors
+  async function populateAssignDropdown() {
+    const [vendorsRes, managersRes] = await Promise.all([
+      fetch('/api/vendors'),
+      fetch('/api/managers')
+    ]);
+    const vendors = await vendorsRes.json();
+    const managers = await managersRes.json();
+
+    let options = `<option value="">-- Select --</option>`;
+    if (managers.length) {
+      options += `<optgroup label="Managers">`;
+      options += managers.map(m => `<option value="${m._id}">${m.name} (Manager)</option>`).join('');
+      options += `</optgroup>`;
+    }
+    if (vendors.length) {
+      options += `<optgroup label="Vendors">`;
+      options += vendors.map(v => `<option value="${v._id}">${v.name} (Vendor)</option>`).join('');
+      options += `</optgroup>`;
+    }
+    assignSelect.innerHTML = options;
+  }
+
+  // Show modal and reset form
+  addModal.style.display = 'flex';
+  addForm.reset();
+  if (submitBtn) submitBtn.textContent = 'Add Task';
+  populateProjectDropdown();
+  populateAssignDropdown();
+
+  // Close modal logic
+  closeModal.onclick = () => {
+    addModal.style.display = 'none';
+    addForm.reset();
+    if (submitBtn) submitBtn.textContent = 'Add Task';
+  };
+  window.onclick = (e) => {
+    if (e.target === addModal) {
+      addModal.style.display = 'none';
+      addForm.reset();
+      if (submitBtn) submitBtn.textContent = 'Add Task';
+    }
+  };
+
+  // Handle form submit
+ addForm.onsubmit = async function(e) {
+  e.preventDefault();
+  const payload = {
+    title: document.getElementById('newTaskTitle').value,
+    description: document.getElementById('newTaskDesc').value,
+    dueDate: document.getElementById('newTaskDueDate').value,
+    projectId: document.getElementById('newTaskProject').value,
+    assignedTo: document.getElementById('newTaskAssignedTo').value // This can be empty
+  };
+
+  // Only validate required fields
+  if (!payload.title || !payload.projectId) {
+    showToast('Please fill in all required fields.');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      showToast('Task added!');
+      addForm.reset();
+      addModal.style.display = 'none';
+      if (submitBtn) submitBtn.textContent = 'Add Task';
+      loadTasks(getProjectId());
+      // Only send email if assignedTo is present
+      if (payload.assignedTo) {
+        await sendTaskAssignmentEmail(data.task._id);
+      }
+    } else {
+      showToast('Error saving task.');
+    }
+  } catch {
+    showToast('Error saving task.');
+  }
+};
 }
 
 
