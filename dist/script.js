@@ -304,12 +304,14 @@ function navigateToDetails(section, id) {
   // Function to load projects dynamically
 async function loadProjects() {
   const projectsList = document.getElementById('projects-list');
-  projectsList.innerHTML = '<p>Loading...</p>';
+     projectsList.innerHTML = `<div id="projects-list-loader" style="display:flex;justify-content:center;align-items:center;height:120px;">
+    <div style="border:5px solid #e5e7eb;border-top:5px solid #3b82f6;border-radius:50%;width:38px;height:38px;animation:spin 0.8s linear infinite;"></div>
+  </div>`;
 
   // 📅 Get today's date in YYYY-MM-DD
   const today = new Date().toISOString().split("T")[0];
 
-  showLoader();
+
 
   try {
     // Fetch projects, today's updates, and all estimates
@@ -413,7 +415,9 @@ async function loadProjects() {
     console.error('Error loading projects:', error);
     projectsList.innerHTML = '<p>Error loading projects. Please try again later.</p>';
   } finally {
-    hideLoader();
+       // Remove loader from projects list panel only
+    const loaderDiv = document.getElementById("projects-list-loader");
+    if (loaderDiv) loaderDiv.remove();
   }
 }
   
