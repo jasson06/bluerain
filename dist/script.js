@@ -1133,8 +1133,8 @@ document.addEventListener("DOMContentLoaded", initMap);
 // ✅ Function to Load Daily Updates from Multiple Projects (with Manager ID)
 async function loadTeamDailyUpdates(selectedDate = null) {
     const updatesFeed = document.getElementById("daily-updates-feed");
-    updatesFeed.innerHTML = "<p>Loading updates...</p>";
-    showLoader(); // 👈 START
+  // Show loader only inside the daily updates panel
+  updatesFeed.innerHTML = `<div id="daily-updates-loader" style="display:flex;justify-content:center;align-items:center;height:120px;"><div style="border:5px solid #e5e7eb;border-top:5px solid #3b82f6;border-radius:50%;width:38px;height:38px;animation:spin 0.8s linear infinite;"></div></div>`;
     try {
         const managerId = localStorage.getItem("managerId"); // ✅ Retrieve Manager ID
         if (!managerId) {
@@ -1205,7 +1205,9 @@ async function loadTeamDailyUpdates(selectedDate = null) {
         console.error("❌ Error loading team updates:", error);
         updatesFeed.innerHTML = "<p>Error loading updates.</p>";
       } finally {
-        hideLoader(); // 👈 END 
+               // Remove loader from daily updates panel only
+        const loaderDiv = document.getElementById("daily-updates-loader");
+        if (loaderDiv) loaderDiv.remove();
     }
 }
 
@@ -2227,7 +2229,7 @@ async function handleMaintenanceRequestClick(requestId, projectId, unitNumber) {
 async function loadAllTasks() {
   const tasksFeed = document.getElementById('all-tasks-feed');
   if (!tasksFeed) return;
-  tasksFeed.innerHTML = '<p>Loading tasks...</p>';
+   tasksFeed.innerHTML = `<div id="all-tasks-loader" style="display:flex;justify-content:center;align-items:center;height:120px;"><div style="border:5px solid #e5e7eb;border-top:5px solid #3b82f6;border-radius:50%;width:38px;height:38px;animation:spin 0.8s linear infinite;"></div></div>`;
 
   // Combined filter dropdown and active filters badge area
   const combinedFilter = document.getElementById('combined-task-filter');
