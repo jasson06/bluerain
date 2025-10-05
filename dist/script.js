@@ -942,7 +942,7 @@ async function getLatLngFromAddress(address) {
 
 // ✅ Load All Project Locations
 async function loadProjectLocations() {
-  showLoader();
+ 
   
 
   try {
@@ -1005,8 +1005,6 @@ async function loadProjectLocations() {
   } catch (err) {
     console.error("Error loading project locations:", err);
     showToast("❌ Error loading locations.");
-  } finally {
-    hideLoader();
   }
 }
 
