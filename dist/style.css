@@ -2642,13 +2642,14 @@ input, textarea {
 
 /* Comment counter pill in summary */
 .comments-pill {
-  color: #475569;
-  background: #eef2ff;
-  border: 1px solid #c7d2fe;
+  color: #ffffff;
+  background: #ff1d1d;
+  border: 1px solid #ffffff;
   border-radius: 999px;
   padding: 0 8px;
   font-weight: 600;
   margin-left: 85px;
+  animation: notifPulse 1.2s infinite alternate;
   
 }
 
