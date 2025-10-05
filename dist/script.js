@@ -2411,10 +2411,15 @@ async function loadAllTasks() {
     const payload = await res.json();
     const tasks = Array.isArray(payload?.tasks) ? payload.tasks : [];
 
-    populateCombinedFilter(tasks);
+             // Sort tasks: open tasks first, then completed
+    const openTasks = tasks.filter(t => !t.completed);
+    const completedTasks = tasks.filter(t => t.completed);
+    const sortedTasks = [...openTasks, ...completedTasks]; 
+
+   populateCombinedFilter(sortedTasks);
 
     tasksFeed.innerHTML = '';
-    tasks.forEach((task) => {
+    sortedTasks.forEach((task) => {
       const title = esc(task.title || 'Untitled Task');
       const description = esc(task.description || '');
       const projectName = esc(task.projectName || task.projectId || 'Unknown Project');
@@ -2853,42 +2858,58 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Load tasks when Tasks tab is shown
 document.addEventListener('DOMContentLoaded', () => {
-  const tasksTab = document.getElementById('tasks-tab-content');
+  // Show Tasks tab by default on page load
+  const tasksTabContent = document.getElementById('tasks-tab-content');
+  const updatesTabContent = document.getElementById('updates-tab-content');
+  if (tasksTabContent) tasksTabContent.style.display = 'block';
+  if (updatesTabContent) updatesTabContent.style.display = 'none';
+
+  // Set Tasks tab button as active (if you have tab buttons)
   const tabBtns = document.querySelectorAll('.tab-btn');
-        tabBtns.forEach(btn => {
-          btn.addEventListener('click', () => {
-            // Remove active class from all tab buttons
-            tabBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            // Show/hide tab content based on data-tab
-            const tab = btn.getAttribute('data-tab');
-            if (tab === 'tasks') {
-              // Clear updates content
-              const updatesFeed = document.getElementById('daily-updates-feed');
-              if (updatesFeed) updatesFeed.innerHTML = '';
-              // Show tasks tab, hide updates tab
-              document.getElementById('tasks-tab-content').style.display = 'block';
-              document.getElementById('updates-tab-content').style.display = 'none';
-              // Clear and load tasks
-              const tasksFeed = document.getElementById('all-tasks-feed');
-              if (tasksFeed) tasksFeed.innerHTML = '';
-              loadAllTasks();
-            } else if (tab === 'updates') {
-              // Clear tasks content
-              const tasksFeed = document.getElementById('all-tasks-feed');
-              if (tasksFeed) tasksFeed.innerHTML = '';
-              // Show updates tab, hide tasks tab
-              document.getElementById('updates-tab-content').style.display = 'block';
-              document.getElementById('tasks-tab-content').style.display = 'none';
-              // Clear and load updates
-              const updatesFeed = document.getElementById('daily-updates-feed');
-              if (updatesFeed) updatesFeed.innerHTML = '';
-              // Always load updates for today when switching tab
-              const todayStr = new Date().toISOString().split('T')[0];
-              loadTeamDailyUpdates(todayStr);
-            }
-          });
-        });
+  tabBtns.forEach(btn => {
+    if (btn.getAttribute('data-tab') === 'tasks') {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  // Load tasks immediately
+  loadAllTasks();
+
+  // Tab switching logic
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.getAttribute('data-tab');
+      if (tab === 'tasks') {
+        // Clear updates content
+        const updatesFeed = document.getElementById('daily-updates-feed');
+        if (updatesFeed) updatesFeed.innerHTML = '';
+        // Show tasks tab, hide updates tab
+        if (tasksTabContent) tasksTabContent.style.display = 'block';
+        if (updatesTabContent) updatesTabContent.style.display = 'none';
+        // Clear and load tasks
+        const tasksFeed = document.getElementById('all-tasks-feed');
+        if (tasksFeed) tasksFeed.innerHTML = '';
+        loadAllTasks();
+      } else if (tab === 'updates') {
+        // Clear tasks content
+        const tasksFeed = document.getElementById('all-tasks-feed');
+        if (tasksFeed) tasksFeed.innerHTML = '';
+        // Show updates tab, hide tasks tab
+        if (updatesTabContent) updatesTabContent.style.display = 'block';
+        if (tasksTabContent) tasksTabContent.style.display = 'none';
+        // Clear and load updates
+        const updatesFeed = document.getElementById('daily-updates-feed');
+        if (updatesFeed) updatesFeed.innerHTML = '';
+        // Always load updates for today when switching tab
+        const todayStr = new Date().toISOString().split('T')[0];
+        loadTeamDailyUpdates(todayStr);
+      }
+    });
+  });
 });
 
 
