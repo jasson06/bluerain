@@ -257,28 +257,7 @@
 </button>
 </h3>
 
-<!-- Modal for adding a new task -->
-<div id="addTaskModal" class="modal" style="display:none;">
-  <div class="modal-content" style="max-width:420px;">
-    <span class="close" id="closeAddTaskModal" style="position:absolute;top:6px;right:18px;font-size:1.5rem;cursor:pointer;">&times;</span>
-    <h3>Add New Task</h3>
-    <form id="addTaskForm">
-      <label>Title:</label>
-      <input type="text" id="newTaskTitle" required />
-      <label>Description:</label>
-      <textarea id="newTaskDesc"></textarea>
-      <label>Due Date:</label>
-      <input type="date" id="newTaskDueDate" />
-      <label>Project:</label>
-      <select id="newTaskProject" required></select>
-        <label>Assign To:</label>
-  <select id="newTaskAssignedTo" required>
-    <option value="">-- Select --</option>
-  </select>
-      <button type="submit" style="margin-top:12px;">Add Task</button>
-    </form>
-  </div>
-</div>
+
     <!-- Place this above your #all-tasks-feed container -->
 <div id="task-filters" style="width:100%;margin-bottom:0;">
   <select id="combined-task-filter">
@@ -417,7 +396,30 @@
 <!-- ✅ Your custom script -->
 <script src="script.js"></script>
 
+<!-- Modal for adding a new task -->
+<div id="addTaskModal" class="modal" style="display:none;">
+  <div class="modal-content" style="max-width:420px;">
+    <span class="close" id="closeAddTaskModal" style="position:absolute;top:6px;right:18px;font-size:1.5rem;cursor:pointer;">&times;</span>
+    <h3>Add New Task</h3>
+    <form id="addTaskForm">
+      <label>Title:</label>
+      <input type="text" id="newTaskTitle" required />
+      <label>Description:</label>
+      <textarea id="newTaskDesc"></textarea>
+      <label>Due Date:</label>
+      <input type="date" id="newTaskDueDate" />
+      <label>Project:</label>
+      <select id="newTaskProject" required></select>
+        <label>Assign To:</label>
+  <select id="newTaskAssignedTo" required>
+    <option value="">-- Select --</option>
+  </select>
+      <button type="submit" style="margin-top:12px;">Add Task</button>
+    </form>
+  </div>
+</div>
 
+     
 </body>
 
 </html>
