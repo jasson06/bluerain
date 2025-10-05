@@ -2785,7 +2785,7 @@ input, textarea {
 }
 #addTaskModal {
   position: fixed; left: 0; top: 0; width: 100vw; height: 100vh;
-  background: rgba(30,41,59,0.18); z-index: 99999;
+  background: rgba(30,41,59,0.18); z-index: 2147483647;
   display: flex; align-items: center; justify-content: center;
 }
 #addTaskModal .modal-content {
