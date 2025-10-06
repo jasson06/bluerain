@@ -966,7 +966,7 @@ async function getPreviouslySubmittedLineItemIds(vendorId) {
 }
 
 
-// Display line items in the checkbox list
+// Display line items with checkboxes
 async function displayLineItems(items) {
   const container = document.getElementById('lineItemCheckboxList');
   container.innerHTML = '';
@@ -975,33 +975,29 @@ async function displayLineItems(items) {
   const vendorId = localStorage.getItem("vendorId");
   const usedIds = vendorId ? await getPreviouslySubmittedLineItemIds(vendorId) : new Set();
 
-  // Only show items that are "approved" or "completed" and NOT already submitted
-  items
-    .filter(item => {
-      const status = String(item.status || '').toLowerCase();
-      return (status === 'approved' || status === 'completed') && !(item._id && usedIds.has(item._id));
-    })
-    .forEach((item, idx) => {
-      const id = `lineitem-checkbox-${idx}`;
-      const total = typeof item.total !== "undefined"
-        ? parseFloat(item.total)
-        : (typeof item.laborCost !== "undefined"
-            ? parseFloat(item.laborCost)
-            : (parseFloat(item.unitPrice) * parseFloat(item.quantity) || 0));
-      const label = `
-        <span><strong>${item.name || 'Unnamed'}</strong></span>
-        <span style="color:#64748b; margin-left:8px;">${item.description || 'No description'}</span>
-      `;
-      const wrapper = document.createElement('div');
-      wrapper.style.marginBottom = '6px';
-      wrapper.style.display = 'flex';
-      wrapper.style.alignItems = 'center';
-      wrapper.innerHTML = `
-        <input type="checkbox" id="${id}" data-details='${JSON.stringify(item)}' style="margin-right: 8px;">
-        <label for="${id}" style="cursor:pointer; flex:1; display:flex; align-items:center; gap:10px;">${label}</label>
-      `;
-      container.appendChild(wrapper);
-    });
+  items.forEach((item, idx) => {
+    const status = String(item.status || '').toLowerCase();
+    const alreadySubmitted = item._id && usedIds.has(item._id);
+    const isSelectable = (status === 'approved' || status === 'completed') && !alreadySubmitted;
+
+    const id = `lineitem-checkbox-${idx}`;
+    const label = `
+      <span><strong>${item.name || 'Unnamed'}</strong></span>
+      <span style="color:#64748b; margin-left:8px;">${item.description || 'No description'}</span>
+      ${alreadySubmitted ? '<span style="color:#ef4444; margin-left:8px;">(Already Submitted)</span>' : ''}
+    `;
+    const wrapper = document.createElement('div');
+    wrapper.style.marginBottom = '6px';
+    wrapper.style.display = 'flex';
+    wrapper.style.alignItems = 'center';
+    wrapper.style.opacity = isSelectable ? '1' : '0.5';
+
+    wrapper.innerHTML = `
+      <input type="checkbox" id="${id}" data-details='${JSON.stringify(item)}' style="margin-right: 8px;" ${isSelectable ? '' : 'disabled'}>
+      <label for="${id}" style="cursor:${isSelectable ? 'pointer' : 'not-allowed'}; flex:1; display:flex; align-items:center; gap:10px;">${label}</label>
+    `;
+    container.appendChild(wrapper);
+  });
 }
 
 
@@ -1995,5 +1991,6 @@ function closeHelpVideo() {
   </script>
 </body>
 </html>
+
 
 
