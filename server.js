@@ -2089,7 +2089,7 @@ app.post('/api/comments', async (req, res) => {
 // Update Task Endpoint with Strict Role Detection
 app.put('/api/task/:id', async (req, res) => {
   const { id } = req.params;
-  const { title, description, dueDate, completed, assignedTo } = req.body;
+  const { title, description, dueDate, completed, assignedTo, projectId } = req.body;
 
   try {
     const updateFields = {};
@@ -2098,8 +2098,9 @@ app.put('/api/task/:id', async (req, res) => {
     if (title) updateFields.title = title;
     if (description) updateFields.description = description;
     if (dueDate) updateFields.dueDate = dueDate;
+    if (projectId) updateFields.projectId = projectId;
     if (typeof completed !== 'undefined') updateFields.completed = completed;
-
+    
     let assignedToModel = null;
 
     // Check if assignedTo exists
