@@ -984,7 +984,7 @@ async function displayLineItems(items) {
     const label = `
       <span><strong>${item.name || 'Unnamed'}</strong></span>
       <span style="color:#64748b; margin-left:8px;">${item.description || 'No description'}</span>
-      ${alreadySubmitted ? '<span style="color:#ef4444; margin-left:8px;">(Already Submitted)</span>' : ''}
+      ${alreadySubmitted ? '<span style="color:#ef4444; margin-left:8px;">(Submitted)</span>' : ''}
     `;
     const wrapper = document.createElement('div');
     wrapper.style.marginBottom = '6px';
@@ -1991,6 +1991,7 @@ function closeHelpVideo() {
   </script>
 </body>
 </html>
+
 
 
 
