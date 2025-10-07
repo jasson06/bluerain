@@ -1830,7 +1830,7 @@ app.get('/api/tasks', async (req, res) => {
 
     // Branch: all tasks with projectName mapping
     const tasks = await Task.find({})
-      .select('title description dueDate completed assignedTo assignedToModel comments projectId')
+      .select('title description dueDate completed assignedTo assignedToModel comments projectId createdAt updatedAt')
       .populate({ path: 'projectId', select: 'name' })
       .populate({ path: 'assignedTo', select: 'name' }) // uses refPath: 'assignedToModel'
       .lean();
@@ -1848,6 +1848,8 @@ app.get('/api/tasks', async (req, res) => {
       assignedToModel: task.assignedToModel || null,
       projectId: task.projectId?._id || task.projectId,
       projectName: task.projectId?.name || String(task.projectId),
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt
     }));
 
     return res.json({ tasks: tasksWithProject });
@@ -1858,7 +1860,6 @@ app.get('/api/tasks', async (req, res) => {
 });
 
 
-
 // Get Task Details Endpoint
 app.get('/api/task/:id', async (req, res) => {
   const { id } = req.params;
@@ -1867,7 +1868,7 @@ app.get('/api/task/:id', async (req, res) => {
   }
 
   try {
-    let task = await Task.findById(id).select('title description dueDate completed assignedTo photos comments assignedToModel projectId');
+    let task = await Task.findById(id).select('title description dueDate completed assignedTo photos comments assignedToModel projectId createdAt updatedAt');
 
     if (!task) {
       return res.status(404).json({ success: false, message: 'Task not found' });
@@ -1896,7 +1897,9 @@ app.get('/api/task/:id', async (req, res) => {
         assignedToModel: task.assignedToModel,               
         photos: task.photos,
         comments: task.comments || [], // Include comments in the response
-        projectId: task.projectId
+        projectId: task.projectId,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt
       },
     });
   } catch (error) {
