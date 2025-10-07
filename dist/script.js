@@ -2411,10 +2411,17 @@ async function loadAllTasks() {
     const payload = await res.json();
     const tasks = Array.isArray(payload?.tasks) ? payload.tasks : [];
 
-             // Sort tasks: open tasks first, then completed
-    const openTasks = tasks.filter(t => !t.completed);
-    const completedTasks = tasks.filter(t => t.completed);
-    const sortedTasks = [...openTasks, ...completedTasks]; 
+     // Sort: open tasks first (by most recent), then completed (by most recent)
+   const getDate = t => new Date(t.updatedAt || t.createdAt || 0).getTime();
+   const sortedTasks = tasks
+   .slice()
+   .sort((a, b) => {
+    // Open tasks first
+    if (!a.completed && b.completed) return -1;
+    if (a.completed && !b.completed) return 1;
+    // Within each group, most recent first
+    return getDate(b) - getDate(a);
+  });
 
    populateCombinedFilter(sortedTasks);
 
