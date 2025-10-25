@@ -4766,6 +4766,9 @@ app.post("/api/quotes/:id/convert-to-job", async (req, res) => {
           costCode: item.costCode || "Uncategorized",
           quantity: item.qty || 1,
           unitPrice: item.rate || 0,
+          // ✅ Treat quote labor/material fields as RATES and convert to TOTALS for estimate (rate * qty)
+          laborCost: (typeof item.laborCost !== 'undefined' ? Number(item.laborCost) : 0) * (item.qty || 1),
+          materialCost: (typeof item.materialCost !== 'undefined' ? Number(item.materialCost) : 0) * (item.qty || 1),
           total: (item.qty || 1) * (item.rate || 0),
           status: "in-progress",
           assignedTo: null,
