@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Labor Cost List</title>
   <style>
@@ -98,6 +98,8 @@ select:focus {
       justify-content: center;
       align-items: center;
       z-index: 9999;
+      overflow: auto;
+      width: 100%; height: 100%;
     }
     .modal-content {
       background: white;
@@ -163,23 +165,47 @@ select:focus {
         padding: 20px;
       }
     }
+
+
+     input, select { width:100%; padding:10px; margin:8px 0; border:1px solid #d1d5db; border-radius:6px; box-sizing:border-box; }
   </style>
 </head>
 <body>
-  <div class="sidebar">
-    <h2>Add New Item</h2>
-    <input id="newLaborCode" placeholder="Cost Code" />
-    <input id="newLaborName" placeholder="Task Name" />
-    <input id="newLaborDesc" placeholder="Description" />
-    <input id="newLaborRate" type="number" placeholder="Rate ($)" />
-    <button onclick="addLaborItem()" class="btn">Add Item</button>
+<div class="sidebar">
+  <h2>Add New Item</h2>
+  <input id="newLaborCode" placeholder="Cost Code" />
+  <input id="newLaborName" placeholder="Task Name" />
+  <input id="newLaborDesc" placeholder="Description" />
+  <input id="newLaborLaborRate" type="number" placeholder="Labor Rate ($/hr or unit)" step="0.01" />
+  <input id="newLaborLaborHours" type="number" placeholder="Labor Hours/Units" step="0.01" />
+  <input id="newLaborMaterialRate" type="number" placeholder="Material Rate ($/unit)" step="0.01" />
+  <input id="newLaborMaterialQty" type="number" placeholder="Material Qty" step="0.01" />
+  <input id="newBaseRate" type="number" placeholder="Base Rate (manual)" step="0.01" />
+  <div style="display:flex; gap:8px; align-items:center;">
+    <input id="newLaborMarkup" type="number" placeholder="Markup" step="0.01" min="0" />
+    <button id="newMarkupToggle" type="button" title="Toggle %/$" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;" data-mode="percent">%</button>
   </div>
+  <select id="newLaborCalcMode">
+    <option value="each">Each</option>
+    <option value="sqft">SqFt</option>
+    <option value="lnft">LnFt</option>
+    <option value="hour">Hour</option>
+  </select>
+  <input id="newLaborUnit"  placeholder="Unit (e.g. ft, hr, ea)" style="display: none;" />
+  <div style="margin: 10px 0; color: #2563eb;">
+    <div>Labor Cost: <span id="newLaborLaborCost">0.00</span></div>
+    <div>Material Cost: <span id="newLaborMaterialCost">0.00</span></div>
+  <div>Markup: <span id="newLaborMarkupDisplay">0.00%</span></div>
+  <div><b>Total Cost: <span id="newLaborTotalCost">0.00</span></b></div>
+  </div>
+  <button onclick="addLaborItem()" class="btn">Add Item</button>
+</div>
 
   <div class="main-content">
     <div class="sticky-search">
       <h1>Pricing List</h1>
 <button onclick="exportLaborCosts()" class="btn" style="margin-top: 10px; max-width: 200px;">Export to CSV</button>
-<input type="file" id="csvImportInput" accept=".csv" style="display:none;" onchange="handleCSVImport(event)">
+<input type="file" id="csvImportInput" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, .xlsx" style="display:none;" onchange="handleCSVImport(event)">
 <button onclick="document.getElementById('csvImportInput').click()" class="btn" style="margin-top: 10px; max-width: 200px;">Import from CSV</button>
 
       <input type="text" id="laborSearchInput" placeholder="Search labor task..." oninput="renderLaborSuggestions()">
@@ -188,19 +214,41 @@ select:focus {
     <ul id="laborSuggestionList" style="list-style: none; padding: 0;"></ul>
   </div>
 
-  <div id="editLaborModal" class="modal">
-    <div class="modal-content">
-      <h2>Edit Labor Item</h2>
-      <input id="editLaborCode" placeholder="Cost Code" />
-      <input id="editLaborName" placeholder="Task Name" />
-      <input id="editLaborDesc" placeholder="Description" />
-      <input id="editLaborRate" type="number" placeholder="Rate ($)" />
-      <div style="margin-top: 10px;">
-        <button onclick="saveEditedLaborItem()" class="btn">Save</button>
-        <button onclick="closeEditLaborModal()" class="btn" style="background: #e11d48;">Cancel</button>
-      </div>
+ <!--  edit modal  -->
+<div id="editLaborModal" class="modal">
+  <div class="modal-content">
+    <h2>Edit Labor Item</h2>
+    <input id="editLaborCode" placeholder="Cost Code" />
+    <input id="editLaborName" placeholder="Task Name" />
+    <input id="editLaborDesc" placeholder="Description" />
+    <input id="editLaborLaborRate" type="number" placeholder="Labor Rate ($/hr or unit)" step="0.01" />
+    <input id="editLaborLaborHours" type="number" placeholder="Labor Hours/Units" step="0.01" />
+    <input id="editLaborMaterialRate" type="number" placeholder="Material Rate ($/unit)" step="0.01" />
+    <input id="editLaborMaterialQty" type="number" placeholder="Material Qty" step="0.01" />
+    <input id="editBaseRate" type="number" placeholder="Base Rate (manual)" step="0.01" />
+    <div style="display:flex; gap:8px; align-items:center;">
+      <input id="editLaborMarkup" type="number" placeholder="Markup" step="0.01" min="0" />
+      <button id="editMarkupToggle" type="button" title="Toggle %/$" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;" data-mode="percent">%</button>
+    </div>
+    <select id="editLaborCalcMode">
+      <option value="each">Each</option>
+      <option value="sqft">SqFt</option>
+      <option value="lnft">LnFt</option>
+      <option value="hour">Hour</option>
+    </select>
+    <input id="editLaborUnit" placeholder="Unit (e.g. ft, hr, ea)"  style="display: none;" />
+    <div style="margin: 10px 0; color: #2563eb;">
+      <div>Labor Cost: <span id="editLaborLaborCost">0.00</span></div>
+      <div>Material Cost: <span id="editLaborMaterialCost">0.00</span></div>
+  <div>Markup: <span id="editLaborMarkupDisplay">0.00%</span></div>
+      <div><b>Total Cost: <span id="editLaborTotalCost">0.00</span></b></div>
+    </div>
+    <div style="margin-top: 10px; display: flex; gap: 10px;">
+      <button onclick="saveEditedLaborItem()" class="btn">Save</button>
+      <button onclick="closeEditLaborModal()" class="btn" style="background: #7b7c7d;">Cancel</button>
     </div>
   </div>
+</div>
 
   <div class="toast" id="toast"></div>
 
@@ -209,6 +257,23 @@ select:focus {
     const spinner = document.getElementById('spinner');
     let laborCostList = [];
     let currentEditingLaborIndex = null;
+
+    // Compute total for display with support for manual baseRate and markupMode
+    function computeDisplayTotal(item) {
+      const lr = Number(item.laborRate) || 0;
+      const mr = Number(item.materialRate) || 0;
+      const lh = lr ? ((Number(item.laborHours) || 1)) : (Number(item.laborHours) || 0);
+      const mq = mr ? ((Number(item.materialQty) || 1)) : (Number(item.materialQty) || 0);
+      let base = 0;
+      if (lr || mr) {
+        base = (lr * lh) + (mr * mq);
+      } else {
+        base = Number(item.baseRate) || 0;
+      }
+      const mode = (item.markupMode || 'percent');
+      const mk = Number(item.markup) || 0;
+      return mode === 'amount' ? (base + mk) : (base * (1 + mk / 100));
+    }
 
     function showToast(message, duration = 3000) {
       toast.textContent = message;
@@ -239,73 +304,82 @@ select:focus {
       }
     }
 
-    function renderLaborSuggestions() {
-      const query = document.getElementById('laborSearchInput').value.toLowerCase();
-      const list = document.getElementById('laborSuggestionList');
-      list.innerHTML = '';
 
-      const groups = {};
-      laborCostList.forEach((item, index) => {
-        let room = 'General';
-        const parts = item.name.split('-');
-        if (parts.length > 1) room = parts[1].trim().toLowerCase();
-        if (!groups[room]) groups[room] = [];
-        groups[room].push({ item, index });
-      });
+    
 
-      const sortedRooms = Object.keys(groups).sort();
+function renderLaborSuggestions() {
+  const query = document.getElementById('laborSearchInput').value.toLowerCase();
+  const list = document.getElementById('laborSuggestionList');
+  list.innerHTML = '';
 
-      for (const roomName of sortedRooms) {
-        const groupItems = groups[roomName];
-        const filtered = groupItems.filter(({ item }) =>
-          item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)
-        );
-        if (query && filtered.length === 0) continue;
+  const groups = {};
+  laborCostList.forEach((item, index) => {
+    let room = 'General';
+    const parts = item.name.split('-');
+    if (parts.length > 1) room = parts[1].trim().toLowerCase();
+    if (!groups[room]) groups[room] = [];
+    groups[room].push({ item, index });
+  });
 
-        const groupContainer = document.createElement('li');
-        const header = document.createElement('div');
-        header.innerHTML = `${roomName} <span style="font-size: 18px;">➕</span>`;
-        header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:8px 12px;background:#f0f4f8;border-radius:8px;font-weight:bold;color:#007bff;text-transform:capitalize;';
-        const itemList = document.createElement('ul');
-        itemList.style = 'list-style:none;padding-left:15px;display:' + (query ? 'block' : 'none');
+  const sortedRooms = Object.keys(groups).sort();
 
-        header.onclick = () => {
-          const visible = itemList.style.display === 'block';
-          itemList.style.display = visible ? 'none' : 'block';
-          header.querySelector('span').textContent = visible ? '➕' : '➖';
-        };
+  for (const roomName of sortedRooms) {
+    const groupItems = groups[roomName];
+    const filtered = groupItems.filter(({ item }) =>
+      item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)
+    );
+    if (query && filtered.length === 0) continue;
 
-        groupContainer.appendChild(header);
+    const groupContainer = document.createElement('li');
+    const header = document.createElement('div');
+    header.innerHTML = `${roomName} <span style="font-size: 18px;">➕</span>`;
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:8px 12px;background:#f0f4f8;border-radius:8px;font-weight:bold;color:#007bff;text-transform:capitalize;';
+    const itemList = document.createElement('ul');
+    itemList.style = 'list-style:none;padding-left:15px;display:' + (query ? 'block' : 'none');
 
-        (query ? filtered : groupItems).forEach(({ item, index }) => {
-          const li = document.createElement('li');
-          li.style.marginTop = '8px';
-          li.innerHTML = `
-            <div style="border:1px solid #ccc;padding:10px;border-radius:8px;background:#f9f9f9;">
-              <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div style="flex:1;padding-right:10px;">
-                  <small style="color:#64748b;"><strong>cost code:</strong> ${item.costCode || '-'}</small><br>
-                  <strong>${item.name}</strong><br>
-                  <small>${item.description}</small><br>
-                  <span style="color:#007bff;font-weight:bold;">$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div class="action-dropdown" style="position:relative;">
-                  <button class="dots" onclick="toggleActionDropdown(event, ${index})">⋯</button>
-                  <div class="action-dropdown-content" id="action-menu-${index}">
-                    <button onclick="editLaborItem(${index})">Edit</button>
-                    <button onclick="deleteLaborItem(${index})">Delete</button>
-                  </div>
-                </div>
+    header.onclick = () => {
+      const visible = itemList.style.display === 'block';
+      itemList.style.display = visible ? 'none' : 'block';
+      header.querySelector('span').textContent = visible ? '➕' : '➖';
+    };
+
+    groupContainer.appendChild(header);
+
+    (query ? filtered : groupItems).forEach(({ item, index }) => {
+      const li = document.createElement('li');
+      li.style.marginTop = '8px';
+      li.innerHTML = `
+        <div style="border:1px solid #ccc;padding:10px;border-radius:8px;background:#f9f9f9;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="flex:1;padding-right:10px;">
+              <small style="color:#64748b;"><strong>cost code:</strong> ${item.costCode || '-'}</small><br>
+              <strong>${item.name}</strong><br>
+              <small>${item.description}</small><br>
+              <div style="margin: 6px 0 2px 0;">
+                <span style="color:#f96302;"><b>Labor:</b> $${(((item.laborRate || 0) ? ((item.laborRate || 0) * ((item.laborHours || 0) || 1)) : (item.baseRate || 0))).toFixed(2)} (${item.laborRate || 0} × ${(item.laborRate || 0) ? ((item.laborHours || 0) || 1) : 1})</span><br>
+                <span style="color:#16a34a;"><b>Material:</b> $${(((item.materialRate || 0) * ((item.materialRate || 0) ? ((item.materialQty || 0) || 1) : 0))).toFixed(2)} (${item.materialRate || 0} × ${(item.materialRate || 0) ? ((item.materialQty || 0) || 1) : 0})</span><br>
+                <span style="color:#007bff;"><b>Markup:</b> ${item.markupMode === 'amount' ? `$${(item.markup || 0).toFixed(2)}` : `${(item.markup || 0).toFixed(2)}%`}</span><br>
+                <span style="color:#007bff;"><b>Total:</b> $${computeDisplayTotal(item).toFixed(2)}</span>
+                <span style="color:#64748b;font-size:12px;"> [${item.calcMode || 'each'}${item.unit ? ', ' + item.unit : ''}]</span>
               </div>
             </div>
-          `;
-          itemList.appendChild(li);
-        });
+            <div class="action-dropdown" style="position:relative;">
+              <button class="dots" onclick="toggleActionDropdown(event, ${index})">⋯</button>
+              <div class="action-dropdown-content" id="action-menu-${index}">
+                <button onclick="editLaborItem(${index})">Edit</button>
+                <button onclick="deleteLaborItem(${index})">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      itemList.appendChild(li);
+    });
 
-        groupContainer.appendChild(itemList);
-        list.appendChild(groupContainer);
-      }
-    }
+    groupContainer.appendChild(itemList);
+    list.appendChild(groupContainer);
+  }
+}
 
     function toggleActionDropdown(event, index) {
       event.stopPropagation();
@@ -314,93 +388,258 @@ select:focus {
       document.addEventListener('click', () => (menu.style.display = 'none'), { once: true });
     }
 
-    async function addLaborItem() {
-      const name = document.getElementById('newLaborName').value;
-      const description = document.getElementById('newLaborDesc').value;
-      const rate = parseFloat(document.getElementById('newLaborRate').value);
-      const costCode = document.getElementById('newLaborCode').value;
 
-      if (!name || !description || isNaN(rate)) return alert('Please fill all fields correctly.');
 
-      showLoader();
-      try {
-        const res = await fetch('/api/labor-costs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, description, rate, costCode })
-        });
-        const newItem = await res.json();
-        laborCostList.unshift(newItem);
-        renderLaborSuggestions();
-        showToast('✅ Labor item added');
-      } catch (err) {
-        console.error('Error adding labor item:', err);
-        showToast('❌ Failed to add labor item');
-      } finally {
-        hideLoader();
-        ['newLaborName', 'newLaborDesc', 'newLaborRate', 'newLaborCode'].forEach(id => {
-          document.getElementById(id).value = '';
-        });
-      }
-    }
 
-    function editLaborItem(index) {
-      const item = laborCostList[index];
-      currentEditingLaborIndex = index;
-      document.getElementById('editLaborCode').value = item.costCode || '';
-      document.getElementById('editLaborName').value = item.name;
-      document.getElementById('editLaborDesc').value = item.description;
-      document.getElementById('editLaborRate').value = item.rate;
-      document.getElementById('editLaborModal').style.display = 'flex';
-    }
+function updateNewLaborCostFields() {
+  const lr = parseFloat(document.getElementById('newLaborLaborRate').value) || 0;
+  let lh = parseFloat(document.getElementById('newLaborLaborHours').value);
+  const mr = parseFloat(document.getElementById('newLaborMaterialRate').value) || 0;
+  let mq = parseFloat(document.getElementById('newLaborMaterialQty').value);
+  const baseRate = parseFloat(document.getElementById('newBaseRate').value) || 0;
+  const markup = parseFloat(document.getElementById('newLaborMarkup').value) || 0;
+  const markupToggle = document.getElementById('newMarkupToggle');
+  const mode = (markupToggle?.dataset?.mode) || 'percent';
+
+  if (lr && (!lh || isNaN(lh))) lh = 1;
+  if (mr && (!mq || isNaN(mq))) mq = 1;
+
+  const hasBreakdown = (lr || mr);
+  const laborCost = hasBreakdown ? (lr * lh) : (baseRate || 0);
+  const materialCost = hasBreakdown ? (mr * mq) : 0;
+  const subtotal = laborCost + materialCost;
+  const totalCost = mode === 'amount' ? (subtotal + markup) : (subtotal * (1 + markup / 100));
+
+  document.getElementById('newLaborLaborCost').textContent = laborCost.toFixed(2);
+  document.getElementById('newLaborMaterialCost').textContent = materialCost.toFixed(2);
+  document.getElementById('newLaborMarkupDisplay').textContent = (mode === 'amount') ? `$${markup.toFixed(2)}` : `${markup.toFixed(2)}%`;
+  document.getElementById('newLaborTotalCost').textContent = totalCost.toFixed(2);
+}
+['newLaborLaborRate','newLaborLaborHours','newLaborMaterialRate','newLaborMaterialQty','newLaborMarkup','newBaseRate'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateNewLaborCostFields);
+});
+// Add markup mode toggle for add form
+document.getElementById('newMarkupToggle').addEventListener('click', function() {
+  const cur = this.dataset.mode === 'amount' ? 'amount' : 'percent';
+  const next = cur === 'amount' ? 'percent' : 'amount';
+  this.dataset.mode = next;
+  this.textContent = next === 'amount' ? '$' : '%';
+  updateNewLaborCostFields();
+});
+// Mutual exclusivity for add form
+document.getElementById('newBaseRate').addEventListener('input', function(){
+  if (this.value !== '') {
+    ['newLaborLaborRate','newLaborLaborHours','newLaborMaterialRate','newLaborMaterialQty'].forEach(id => document.getElementById(id).value = '');
+  }
+  updateNewLaborCostFields();
+});
+['newLaborLaborRate','newLaborLaborHours','newLaborMaterialRate','newLaborMaterialQty'].forEach(id => {
+  document.getElementById(id).addEventListener('input', function(){
+    if (this.value !== '') document.getElementById('newBaseRate').value = '';
+    updateNewLaborCostFields();
+  });
+});
+
+async function addLaborItem() {
+  const name = document.getElementById('newLaborName').value;
+  const description = document.getElementById('newLaborDesc').value;
+  const costCode = document.getElementById('newLaborCode').value;
+  const laborRate = parseFloat(document.getElementById('newLaborLaborRate').value) || 0;
+  let laborHours = parseFloat(document.getElementById('newLaborLaborHours').value) || 0;
+  const materialRate = parseFloat(document.getElementById('newLaborMaterialRate').value) || 0;
+  let materialQty = parseFloat(document.getElementById('newLaborMaterialQty').value) || 0;
+  const calcMode = document.getElementById('newLaborCalcMode').value;
+  const unit = document.getElementById('newLaborUnit').value;
+  const markup = parseFloat(document.getElementById('newLaborMarkup').value) || 0;
+  const baseRate = parseFloat(document.getElementById('newBaseRate').value) || 0;
+  const markupMode = document.getElementById('newMarkupToggle')?.dataset?.mode || 'percent';
+
+  const hasBreakdown = (laborRate || materialRate);
+  if (laborRate && !laborHours) laborHours = 1;
+  if (materialRate && !materialQty) materialQty = 1;
+
+  if (!name || !description || (!hasBreakdown && !baseRate)) return alert('Please fill all fields correctly (provide base rate or labor/material).');
+
+  showLoader();
+  try {
+    const res = await fetch('/api/labor-costs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name, description, costCode,
+        laborRate, laborHours,
+        materialRate, materialQty,
+        baseRate, markup, markupMode,
+        calcMode, unit
+      })
+    });
+    const newItem = await res.json();
+    laborCostList.unshift(newItem);
+    renderLaborSuggestions();
+    showToast('✅ Labor item added');
+  } catch (err) {
+    console.error('Error adding labor item:', err);
+    showToast('❌ Failed to add labor item');
+  } finally {
+    hideLoader();
+    ['newLaborName', 'newLaborDesc', 'newLaborCode', 'newLaborLaborRate', 'newLaborLaborHours', 'newLaborMaterialRate', 'newLaborMaterialQty', 'newLaborUnit', 'newLaborMarkup', 'newBaseRate'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('newMarkupToggle').dataset.mode = 'percent';
+    document.getElementById('newMarkupToggle').textContent = '%';
+    updateNewLaborCostFields();
+  }
+}
+
+  // --- Edit Modal: Add new fields and dynamic calculation ---
+function editLaborItem(index) {
+  const item = laborCostList[index];
+  currentEditingLaborIndex = index;
+  document.getElementById('editLaborCode').value = item.costCode || '';
+  document.getElementById('editLaborName').value = item.name;
+  document.getElementById('editLaborDesc').value = item.description;
+  document.getElementById('editLaborLaborRate').value = item.laborRate || 0;
+  document.getElementById('editLaborLaborHours').value = item.laborHours || 0;
+  document.getElementById('editLaborMaterialRate').value = item.materialRate || 0;
+  document.getElementById('editLaborMaterialQty').value = item.materialQty || 0;
+  document.getElementById('editLaborMarkup').value = item.markup || 0;
+  document.getElementById('editBaseRate').value = item.baseRate || 0;
+  document.getElementById('editLaborCalcMode').value = item.calcMode || 'each';
+  document.getElementById('editLaborUnit').value = item.unit || '';
+  const editToggle = document.getElementById('editMarkupToggle');
+  const mode = item.markupMode || 'percent';
+  editToggle.dataset.mode = mode;
+  editToggle.textContent = mode === 'amount' ? '$' : '%';
+  updateEditLaborCostFields();
+  document.getElementById('editLaborModal').style.display = 'flex';
+}
+
+function updateEditLaborCostFields() {
+  const laborRate = parseFloat(document.getElementById('editLaborLaborRate').value) || 0;
+  let laborHours = parseFloat(document.getElementById('editLaborLaborHours').value);
+  const materialRate = parseFloat(document.getElementById('editLaborMaterialRate').value) || 0;
+  let materialQty = parseFloat(document.getElementById('editLaborMaterialQty').value);
+  const baseRate = parseFloat(document.getElementById('editBaseRate').value) || 0;
+  const markup = parseFloat(document.getElementById('editLaborMarkup').value) || 0;
+  const mode = document.getElementById('editMarkupToggle')?.dataset?.mode || 'percent';
+
+  if (laborRate && (!laborHours || isNaN(laborHours))) laborHours = 1;
+  if (materialRate && (!materialQty || isNaN(materialQty))) materialQty = 1;
+  const hasBreakdown = (laborRate || materialRate);
+  const laborCost = hasBreakdown ? (laborRate * laborHours) : (baseRate || 0);
+  const materialCost = hasBreakdown ? (materialRate * materialQty) : 0;
+  const subtotal = laborCost + materialCost;
+  const totalCost = mode === 'amount' ? (subtotal + markup) : (subtotal * (1 + markup / 100));
+
+  document.getElementById('editLaborLaborCost').textContent = laborCost.toFixed(2);
+  document.getElementById('editLaborMaterialCost').textContent = materialCost.toFixed(2);
+  document.getElementById('editLaborMarkupDisplay').textContent = (mode === 'amount') ? `$${markup.toFixed(2)}` : `${markup.toFixed(2)}%`;
+  document.getElementById('editLaborTotalCost').textContent = totalCost.toFixed(2);
+}
+['editLaborLaborRate','editLaborLaborHours','editLaborMaterialRate','editLaborMaterialQty','editLaborMarkup'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', updateEditLaborCostFields);
+});
+// Toggle and mutual exclusivity for edit
+document.getElementById('editMarkupToggle').addEventListener('click', function(){
+  const cur = this.dataset.mode === 'amount' ? 'amount' : 'percent';
+  const next = cur === 'amount' ? 'percent' : 'amount';
+  this.dataset.mode = next;
+  this.textContent = next === 'amount' ? '$' : '%';
+  updateEditLaborCostFields();
+});
+document.getElementById('editBaseRate').addEventListener('input', function(){
+  if (this.value !== '') {
+    ['editLaborLaborRate','editLaborLaborHours','editLaborMaterialRate','editLaborMaterialQty'].forEach(id => document.getElementById(id).value = '');
+  }
+  updateEditLaborCostFields();
+});
+['editLaborLaborRate','editLaborLaborHours','editLaborMaterialRate','editLaborMaterialQty'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', function(){
+    if (this.value !== '') document.getElementById('editBaseRate').value = '';
+    updateEditLaborCostFields();
+  });
+});
 
     function closeEditLaborModal() {
       document.getElementById('editLaborModal').style.display = 'none';
     }
 
-    async function saveEditedLaborItem() {
-      if (currentEditingLaborIndex === null) return;
-      const id = laborCostList[currentEditingLaborIndex]._id;
-      const name = document.getElementById('editLaborName').value.trim();
-      const description = document.getElementById('editLaborDesc').value.trim();
-      const rate = parseFloat(document.getElementById('editLaborRate').value);
-      const costCode = document.getElementById('editLaborCode').value.trim();
+   async function saveEditedLaborItem() {
+  if (currentEditingLaborIndex === null) return;
+  const id = laborCostList[currentEditingLaborIndex]._id;
+  const name = document.getElementById('editLaborName').value.trim();
+  const description = document.getElementById('editLaborDesc').value.trim();
+  const costCode = document.getElementById('editLaborCode').value.trim();
+  const laborRate = parseFloat(document.getElementById('editLaborLaborRate').value) || 0;
+  let laborHours = parseFloat(document.getElementById('editLaborLaborHours').value) || 0;
+  const materialRate = parseFloat(document.getElementById('editLaborMaterialRate').value) || 0;
+  let materialQty = parseFloat(document.getElementById('editLaborMaterialQty').value) || 0;
+  const markup = parseFloat(document.getElementById('editLaborMarkup').value) || 0;
+  const baseRate = parseFloat(document.getElementById('editBaseRate').value) || 0;
+  const markupMode = document.getElementById('editMarkupToggle')?.dataset?.mode || 'percent';
+  const calcMode = document.getElementById('editLaborCalcMode').value;
+  const unit = document.getElementById('editLaborUnit').value;
 
-      if (!name || !description || isNaN(rate)) return alert('Please fill all fields correctly.');
+  const hasBreakdown = (laborRate || materialRate);
+  if (laborRate && !laborHours) laborHours = 1;
+  if (materialRate && !materialQty) materialQty = 1;
+  if (!name || !description || (!hasBreakdown && !baseRate)) return alert('Please fill all fields correctly (provide base rate or labor/material).');
 
-      showLoader();
-      try {
-        const res = await fetch(`/api/labor-costs/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, description, rate, costCode })
-        });
-        const updated = await res.json();
-        laborCostList[currentEditingLaborIndex] = updated;
-        renderLaborSuggestions();
-        showToast('✅ Labor item updated');
-      } catch (err) {
-        console.error('Error updating labor item:', err);
-        showToast('❌ Update failed');
-      } finally {
-        hideLoader();
-        closeEditLaborModal();
-        currentEditingLaborIndex = null;
-      }
-    }
+  showLoader();
+  try {
+    const res = await fetch(`/api/labor-costs/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name, description, costCode,
+        laborRate, laborHours,
+        materialRate, materialQty,
+        markup, markupMode, baseRate,
+        calcMode, unit
+      })
+    });
+    const updated = await res.json();
+    laborCostList[currentEditingLaborIndex] = updated;
+    renderLaborSuggestions();
+    showToast('✅ Labor item updated');
+  } catch (err) {
+    console.error('Error updating labor item:', err);
+    showToast('❌ Update failed');
+  } finally {
+    hideLoader();
+    closeEditLaborModal();
+    currentEditingLaborIndex = null;
+  }
+}
 
-    function exportLaborCosts() {
+function exportLaborCosts() {
   if (!laborCostList.length) {
     showToast('No labor items to export.');
     return;
   }
 
-  const headers = ['costCode', 'name', 'description', 'rate'];
+  const headers = [
+    'costCode', 'name', 'description',
+    'laborRate', 'laborHours', 'laborCost',
+    'materialRate', 'materialQty', 'materialCost',
+    'baseRate', 'markup', 'markupMode', 'totalCost', 'calcMode', 'unit'
+  ];
   const rows = laborCostList.map(item => [
     `"${item.costCode || ''}"`,
     `"${item.name || ''}"`,
     `"${item.description || ''}"`,
-    `"${item.rate != null ? `$${item.rate.toLocaleString()}` : ''}"`
+    `"${item.laborRate != null ? `$${item.laborRate.toLocaleString()}` : ''}"`,
+    `"${item.laborHours != null ? item.laborHours.toLocaleString() : ''}"`,
+    `"${item.laborRate != null && item.laborHours != null ? `$${(item.laborRate * item.laborHours).toLocaleString()}` : ''}"`,
+    `"${item.materialRate != null ? `$${item.materialRate.toLocaleString()}` : ''}"`,
+    `"${item.materialQty != null ? item.materialQty.toLocaleString() : ''}"`,
+    `"${item.materialRate != null && item.materialQty != null ? `$${(item.materialRate * item.materialQty).toLocaleString()}` : ''}"`,
+    `"${item.baseRate != null ? `$${(Number(item.baseRate) || 0).toLocaleString()}` : ''}"`,
+    `"${item.markup != null ? (Number(item.markup).toFixed(2)) : '0.00'}"`,
+    `"${item.markupMode || 'percent'}"`,
+    `"$${computeDisplayTotal(item).toLocaleString()}"`,
+    `"${item.calcMode || ''}"`,
+    `"${item.unit || ''}"`
   ]);
 
   const csvContent = [headers, ...rows]
@@ -419,16 +658,94 @@ select:focus {
   showToast('✅ Exported labor list');
 }
 
+function loadSheetJSScript(cb) {
+  if (window.XLSX) return cb();
+  const script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+  script.onload = cb;
+  document.head.appendChild(script);
+}
 
 function handleCSVImport(event) {
   const file = event.target.files[0];
   if (!file) return;
 
+  const isXLSX = file.name.endsWith('.xlsx');
+  if (isXLSX) {
+    loadSheetJSScript(() => {
+      const reader = new FileReader();
+      reader.onload = async function (e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+        let importedCount = 0;
+        let skippedCount = 0;
+        showLoader();
+        for (const row of json) {
+          const name = row.name?.toString().trim();
+          const costCode = row.costCode?.toString().trim() || '';
+          const description = row.description?.toString().trim() || '';
+          function cleanNum(val) {
+            if (!val) return 0;
+            return parseFloat(String(val).replace(/[$,]/g, '')) || 0;
+          }
+          const laborRate = cleanNum(row.laborRate);
+          const laborHours = cleanNum(row.laborHours);
+          const materialRate = cleanNum(row.materialRate);
+          const materialQty = cleanNum(row.materialQty);
+          const markup = row.markup != null ? parseFloat(String(row.markup).replace(/[%,$]/g, '')) || 0 : 0;
+          const markupMode = (row.markupMode === 'amount' || row.markupMode === 'percent') ? row.markupMode : 'percent';
+          const baseRate = cleanNum(row.baseRate);
+          const calcMode = row.calcMode || 'each';
+          const unit = row.unit || '';
+
+          if (!name) {
+            console.warn('Skipping invalid row:', row);
+            skippedCount++;
+            continue;
+          }
+
+          const newItem = {
+            name, costCode, description,
+            laborRate, laborHours,
+            materialRate, materialQty,
+            baseRate,
+            markup, markupMode,
+            calcMode, unit
+          };
+
+          try {
+            const res = await fetch('/api/labor-costs', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(newItem)
+            });
+            const saved = await res.json();
+            laborCostList.unshift(saved);
+            importedCount++;
+          } catch (err) {
+            console.error('❌ Failed to import row:', row, err);
+            skippedCount++;
+          }
+        }
+        renderLaborSuggestions();
+        hideLoader();
+        showToast(`✅ Imported ${importedCount} items. Skipped ${skippedCount}.`);
+      };
+      reader.readAsArrayBuffer(file);
+    });
+    return;
+  }
+
+  // CSV fallback
   const reader = new FileReader();
   reader.onload = async function (e) {
     const lines = e.target.result.split('\n').filter(line => line.trim());
     const [headerLine, ...dataLines] = lines;
-    const headers = headerLine.trim().split(',').map(h => h.trim().toLowerCase());
+    const headers = headerLine.trim().split(',').map(h => h.trim());
 
     let importedCount = 0;
     let skippedCount = 0;
@@ -438,19 +755,38 @@ function handleCSVImport(event) {
       const values = line.split(',').map(cell => cell.replace(/(^"|"$)/g, '').trim());
       const row = Object.fromEntries(headers.map((key, i) => [key, values[i]]));
 
+      // Parse and sanitize fields
       const name = row.name?.trim();
-      const costCode = row.costcode?.trim() || '';
+      const costCode = row.costCode?.trim() || '';
       const description = row.description?.trim() || '';
-      const rateStr = row.rate?.replace(/[$,]/g, '').trim() || '';
-      const rate = parseFloat(rateStr);
+      function cleanNum(val) {
+        if (!val) return 0;
+        return parseFloat(String(val).replace(/[$,]/g, '')) || 0;
+      }
+      const laborRate = cleanNum(row.laborRate);
+      const laborHours = cleanNum(row.laborHours);
+      const materialRate = cleanNum(row.materialRate);
+      const materialQty = cleanNum(row.materialQty);
+      const markup = row.markup != null ? parseFloat(String(row.markup).replace(/[%,$]/g, '')) || 0 : 0;
+      const markupMode = (row.markupMode === 'amount' || row.markupMode === 'percent') ? row.markupMode : 'percent';
+      const baseRate = cleanNum(row.baseRate);
+      const calcMode = row.calcMode || 'each';
+      const unit = row.unit || '';
 
-      if (!name || isNaN(rate)) {
+      if (!name) {
         console.warn('Skipping invalid row:', row);
         skippedCount++;
         continue;
       }
 
-      const newItem = { name, costCode, description, rate };
+      const newItem = {
+        name, costCode, description,
+        laborRate, laborHours,
+        materialRate, materialQty,
+        baseRate,
+        markup, markupMode,
+        calcMode, unit
+      };
 
       try {
         const res = await fetch('/api/labor-costs', {
@@ -471,31 +807,32 @@ function handleCSVImport(event) {
     hideLoader();
     showToast(`✅ Imported ${importedCount} items. Skipped ${skippedCount}.`);
   };
-
   reader.readAsText(file);
 }
 
 
 
-    async function deleteLaborItem(index) {
-      const item = laborCostList[index];
-      if (!confirm('Are you sure you want to delete this item?')) return;
-      showLoader();
-      try {
-        await fetch(`/api/labor-costs/${item._id}`, { method: 'DELETE' });
-        laborCostList.splice(index, 1);
-        renderLaborSuggestions();
-        showToast('🗑️ Labor item deleted');
-      } catch (err) {
-        console.error('Error deleting labor item:', err);
-        showToast('❌ Delete failed');
-      } finally {
-        hideLoader();
-      }
-    }
+async function deleteLaborItem(index) {
+  const item = laborCostList[index];
+  const msg = `Are you sure you want to delete "${item.name}" (Cost Code: ${item.costCode || '-'})?`;
+  if (!confirm(msg)) return;
+  showLoader();
+  try {
+    await fetch(`/api/labor-costs/${item._id}`, { method: 'DELETE' });
+    laborCostList.splice(index, 1);
+    renderLaborSuggestions();
+    showToast('🗑️ Labor item deleted');
+  } catch (err) {
+    console.error('Error deleting labor item:', err);
+    showToast('❌ Delete failed');
+  } finally {
+    hideLoader();
+  }
+}
 
     window.addEventListener('DOMContentLoaded', fetchLaborSuggestions);
   </script>
 </body>
 </html>
+
 
