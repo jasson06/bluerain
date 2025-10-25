@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   
  let laborCostList = [];
 
-  let isDeletingLineItem = false;
+ let isDeletingLineItem = false;
 
 async function fetchLaborCostList() {
   
@@ -597,7 +597,8 @@ async function deletePhoto(itemId, photoUrl, type) {
 
 // Expose function globally (if used in inline HTML events)
 window.deletePhoto = deletePhoto;
-
+window.expenses = await fetch('/api/expenses?projectId=' + projectId).then(r => r.json()).then(d => d.expenses || []);
+window.invoices = await fetch('/api/invoices?projectId=' + projectId).then(r => r.json()).then(d => d.invoices || []);
 
   // Load Project Details
   async function loadProjectDetails() {
@@ -635,28 +636,32 @@ async function loadEstimateDetails() {
       document.getElementById("tax-input").value = estimate.tax || 0;
       document.getElementById("estimate-title").value = estimate.title || "";
 
+      // ✅ Populate start and end date fields
+      const startDateInput = document.getElementById("estimate-start-date");
+      const endDateInput = document.getElementById("estimate-end-date");
+      if (startDateInput) startDateInput.value = estimate.startDate ? estimate.startDate.substring(0, 10) : "";
+      if (endDateInput) endDateInput.value = estimate.endDate ? estimate.endDate.substring(0, 10) : "";
+
       // ✅ Ensure photos are displayed correctly
       estimate.lineItems.forEach(category => {
           category.items.forEach(item => {
               updatePhotoSection(item._id, "before");
               updatePhotoSection(item._id, "after");
 
-
-        // ✅ Enable Swipe for All Photos on Load
-           setTimeout(() => {
-            enableSwipe(item._id, "before");
-            enableSwipe(item._id, "after");
-            }, 100);
+              // ✅ Enable Swipe for All Photos on Load
+              setTimeout(() => {
+                enableSwipe(item._id, "before");
+                enableSwipe(item._id, "after");
+              }, 100);
           });
       });
 
-
-    // ✅ Update the summary to reflect the latest totals
-           updateSummary();
+      // ✅ Update the summary to reflect the latest totals
+      updateSummary();
 
   } catch (error) {
       console.error("❌ Error loading estimate details:", error);
-    } finally {
+  } finally {
       hideLoader(); // 👈 END
   }
 }
@@ -685,7 +690,7 @@ function refreshLineItems(categories) {
   populateFilterOptions();
   applyFilters();
 
-    // Auto-resize all item-description textareas after rendering
+  // Auto-resize all item-description textareas after rendering
 lineItemsContainer.querySelectorAll('.item-description').forEach(autoResizeTextarea);
 
   // Focus the first line item's name input (first in DOM, always first in first category)
@@ -698,6 +703,7 @@ lineItemsContainer.querySelectorAll('.item-description').forEach(autoResizeTexta
     }, 100);
   }
 }
+
 
 
 
@@ -719,7 +725,7 @@ lineItemsContainer.querySelectorAll('.item-description').forEach(autoResizeTexta
       addLineItemCard({}, header);
     });
 
-        header.querySelector(".remove-category").addEventListener("click", () => {
+    header.querySelector(".remove-category").addEventListener("click", () => {
   const categoryName = header.querySelector(".category-title span")?.textContent?.trim() || "this category";
   if (!confirm(`Are you sure you want to remove "${categoryName}" and all its line items? This cannot be undone.`)) {
     return;
@@ -757,15 +763,18 @@ lineItemsContainer.querySelectorAll('.item-description').forEach(autoResizeTexta
 
 
 // Add this near the top, after showToast/hideLoader etc.
+
 function autoSaveEstimate() {
   saveEstimate();
   showToast("Auto-saved!");
 }
 
+
 function autoResizeTextarea(textarea) {
   textarea.style.height = 'auto';
   textarea.style.height = textarea.scrollHeight + 'px';
 }
+
 
 // Add Line Item Card Function
 function addLineItemCard(item = {}, categoryHeader = null) {
@@ -801,92 +810,101 @@ function addLineItemCard(item = {}, categoryHeader = null) {
   const quantity = item.quantity || 1;
   const unitPrice = item.unitPrice || 0;
 
-    // Start/End Date values
+  // Start/End Date values
   const startDateValue = item.startDate ? new Date(item.startDate).toISOString().substring(0, 10) : "";
   const endDateValue = item.endDate ? new Date(item.endDate).toISOString().substring(0, 10) : "";
 
-  card.innerHTML = `
-    <div class="card-header">
-      <input type="checkbox" class="line-item-select" ${item.assignedTo ? "disabled" : ""}>
-      <input type="text" class="item-name" value="${item.name || ""}" placeholder="Item Name">
-      <div class="suggestion-box" style="display:none; position:absolute; background:#fff; border:1px solid #ccc; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1); max-height:150px; overflow-y:auto; z-index:1000;"></div>
-      <button class="btn delete-line-item">Delete</button>
-      ${item.assignedTo ? `<button class="btn unassign-item">Unassign</button>` : ""}
+card.innerHTML = `
+  <div class="card-header">
+    <input type="checkbox" class="line-item-select" ${item.assignedTo ? "disabled" : ""}>
+    <input type="text" class="item-name" value="${item.name || ""}" placeholder="Item Name">
+    <div class="suggestion-box" style="display:none; position:absolute; background:#fff; border:1px solid #ccc; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1); max-height:150px; overflow-y:auto; z-index:1000;"></div>
+    <button class="btn delete-line-item">Delete</button>
+    ${item.assignedTo ? `<button class="btn unassign-item">Unassign</button>` : ""}
+  </div>
+  <div class="card-details">
+    <div class="detail">
+      <label>Cost Code</label>
+      <input type="text" class="item-cost-code" value="${item.costCode || ''}" placeholder="Cost Code">
     </div>
-    <div class="card-details">
-      <div class="detail">
-        <label>Cost Code</label>
-        <input type="text" class="item-cost-code" value="${item.costCode || ''}" placeholder="Cost Code">
-      </div>
-      <div class="detail">
-        <label>Description</label>
-        <textarea class="item-description" placeholder="Description"style="min-width:350px; overflow:hidden;">${item.description || ""}</textarea>
-      </div>
-      <div class="detail">
-        <label>Calculation Mode</label>
-        <select class="item-calc-mode">
-          <option value="each" ${calcMode === "each" ? "selected" : ""}>Each</option>
-          <option value="sqft" ${calcMode === "sqft" ? "selected" : ""}>Sq Ft</option>
-          <option value="lnft" ${calcMode === "lnft" ? "selected" : ""}>Ln Ft</option>
-        </select>
-      </div>
-      <div class="detail sqft-detail" style="display:${calcMode === "sqft" ? "block" : "none"}">
-        <label>Area (Sq Ft)</label>
-        <input type="number" class="item-area" value="${area}" min="0" step="0.01">
-      </div>
-      <div class="detail lnft-detail" style="display:${calcMode === "lnft" ? "block" : "none"}">
-        <label>Length (Ln Ft)</label>
-        <input type="number" class="item-length" value="${length}" min="0" step="0.01">
-      </div>
-      <div class="detail quantity-detail" style="display:${calcMode === "each" ? "block" : "none"}">
-        <label>Quantity</label>
-        <input type="number" class="item-quantity" value="${quantity}" min="1">
-      </div>
-      <div class="detail">
-        <label>Unit Price</label>
-        <input type="number" class="item-price" value="${unitPrice}" min="0" step="0.01">
-      </div>
-      <div class="detail">
-        <label>Labor Cost</label>
-        <input type="number" class="item-labor-cost" value="${item.laborCost !== undefined ? item.laborCost : ((quantity || 1) * (unitPrice || 0) * 0.37).toFixed(2)}" min="0" step="0.01">
-      </div>
-      <div class="detail">
-        <label>Material Cost</label>
-        <input type="number" class="item-material-cost" value="${item.materialCost !== undefined ? item.materialCost : ((quantity || 1) * (unitPrice || 0) * 0.4).toFixed(2)}" min="0" step="0.01">
-      </div>
+    <div class="detail">
+      <label>Description</label>
+      <textarea class="item-description" placeholder="Description" style="min-width:350px; overflow:hidden;">${item.description || ""}</textarea>
     </div>
-    <!-- Collapsible Photo Section -->
-    <div class="photo-toggle-section-modern">
-      <button class="toggle-photos-btn-modern">📸 Show Photos</button>
-              <span class="photo-count" style="margin-left:10px; font-weight:500; color:#2563eb;">
-    ${
-      (() => {
-        const beforeCount = Array.isArray(item.photos?.before) ? item.photos.before.length : 0;
-        const afterCount = Array.isArray(item.photos?.after) ? item.photos.after.length : 0;
-        const total = beforeCount + afterCount;
-        return `${total} photo${total === 1 ? '' : 's'} (${beforeCount} before, ${afterCount} after)`;
-      })()
-    }
-  </span>
-      <div class="photo-section-modern" style="display: none;">
-        <div class="photo-preview-modern">
-          <h5>Before Photos</h5>
-          <div id="before-photos-${card.getAttribute("data-item-id")}"></div>
-          <label class="upload-btn-modern">
-            <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'before')">
-            <span>＋ Add</span>
-          </label>
-        </div>
-        <div class="photo-preview-modern">
-          <h5>After Photos</h5>
-          <div id="after-photos-${card.getAttribute("data-item-id")}"></div>
-          <label class="upload-btn-modern">
-            <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'after')">
-            <span>＋ Add</span>
-          </label>
-        </div>
+    <div class="detail">
+      <label>Calculation Mode</label>
+      <select class="item-calc-mode">
+        <option value="each" ${calcMode === "each" ? "selected" : ""}>Each</option>
+        <option value="sqft" ${calcMode === "sqft" ? "selected" : ""}>Sq Ft</option>
+        <option value="lnft" ${calcMode === "lnft" ? "selected" : ""}>Ln Ft</option>
+      </select>
+    </div>
+    <div class="detail sqft-detail" style="display:${calcMode === "sqft" ? "block" : "none"}">
+      <label>Area (Sq Ft)</label>
+      <input type="number" class="item-area" value="${area}" min="0" step="0.01">
+    </div>
+    <div class="detail lnft-detail" style="display:${calcMode === "lnft" ? "block" : "none"}">
+      <label>Length (Ln Ft)</label>
+      <input type="number" class="item-length" value="${length}" min="0" step="0.01">
+    </div>
+    <div class="detail quantity-detail" style="display:${calcMode === "each" ? "block" : "none"}">
+      <label>Quantity</label>
+      <input type="number" class="item-quantity" value="${quantity}" min="1">
+    </div>
+    <div class="detail">
+      <label>Unit Price</label>
+      <input type="number" class="item-price" value="${unitPrice}" min="0" step="0.01">
+    </div>
+    <div class="detail">
+      <label>Labor Cost</label>
+      <input type="number" class="item-labor-cost" value="${item.laborCost !== undefined ? item.laborCost : 0}" min="0" step="0.01">
+      <div class="calc-hint" style="margin-top:6px; font-size:12px; color:#475569; display:flex; align-items:center; gap:8px;">
+        <span style="background:#eef2ff; color:#4f46e5; border:1px solid #e0e7ff; padding:2px 8px; border-radius:999px; font-weight:600;">Rate</span>
+        <span class="item-labor-rate" style="font-variant-numeric:tabular-nums; color:#111827;">$0.00</span>
       </div>
     </div>
+    <div class="detail">
+      <label>Material Cost</label>
+      <input type="number" class="item-material-cost" value="${item.materialCost !== undefined ? item.materialCost : 0}" min="0" step="0.01">
+      <div class="calc-hint" style="margin-top:6px; font-size:12px; color:#475569; display:flex; align-items:center; gap:8px;">
+        <span style="background:#ecfeff; color:#0e7490; border:1px solid #cffafe; padding:2px 8px; border-radius:999px; font-weight:600;">Rate</span>
+        <span class="item-material-rate" style="font-variant-numeric:tabular-nums; color:#111827;">$0.00</span>
+      </div>
+    </div>
+ 
+  </div>
+  <!-- Collapsible Photo Section -->
+  <div class="photo-toggle-section-modern">
+    <button class="toggle-photos-btn-modern">📸 Show Photos</button>
+      <span class="photo-count" style="margin-left:10px; font-weight:500; color:#2563eb;">
+  ${
+    (() => {
+      const beforeCount = Array.isArray(item.photos?.before) ? item.photos.before.length : 0;
+      const afterCount = Array.isArray(item.photos?.after) ? item.photos.after.length : 0;
+      const total = beforeCount + afterCount;
+      return `${total} photo${total === 1 ? '' : 's'} (${beforeCount} before, ${afterCount} after)`;
+    })()
+  }
+</span>
+    <div class="photo-section-modern" style="display: none;">
+      <div class="photo-preview-modern">
+        <h5>Before Photos</h5>
+        <div id="before-photos-${card.getAttribute("data-item-id")}"></div>
+        <label class="upload-btn-modern">
+          <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'before')">
+          <span>＋ Add</span>
+        </label>
+      </div>
+      <div class="photo-preview-modern">
+        <h5>After Photos</h5>
+        <div id="after-photos-${card.getAttribute("data-item-id")}"></div>
+        <label class="upload-btn-modern">
+          <input type="file" accept="image/*" multiple onchange="uploadPhoto(event, '${card.getAttribute("data-item-id")}', 'after')">
+          <span>＋ Add</span>
+        </label>
+      </div>
+    </div>
+  </div>
   <div class="card-footer" style="
     
     border-top: 1px solid #e5e7eb;
@@ -929,57 +947,57 @@ function addLineItemCard(item = {}, categoryHeader = null) {
   </div>
 `;
 
-   // Status dropdown handler
-const statusDropdown = card.querySelector(".item-status-dropdown");
-statusDropdown.className = "item-status-dropdown " + getStatusClass(status);
+  // Status dropdown handler
+  const statusDropdown = card.querySelector(".item-status-dropdown");
+  statusDropdown.className = "item-status-dropdown " + getStatusClass(status);
 
-statusDropdown.addEventListener("change", async function () {
-  const newStatus = statusDropdown.value;
-  const lineItemId = card.getAttribute("data-item-id");
-  const vendorId = card.getAttribute("data-assigned-to");
-  const estimateId = new URLSearchParams(window.location.search).get("estimateId");
+  statusDropdown.addEventListener("change", async function () {
+    const newStatus = statusDropdown.value;
+    const lineItemId = card.getAttribute("data-item-id");
+    const vendorId = card.getAttribute("data-assigned-to");
+    const estimateId = new URLSearchParams(window.location.search).get("estimateId");
 
-  // 1. Update estimate line item status
-  try {
-    const response = await fetch(`/api/estimates/line-items/${lineItemId}/status`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus })
-    });
-    if (!response.ok) {
-      showToast("Failed to update estimate status");
-      return;
-    }
-  } catch (err) {
-    showToast("Error updating estimate status");
-    return;
-  }
-  // 2. Update vendor assigned item status (if assigned)
-  if (vendorId && /^[a-f\d]{24}$/i.test(vendorId)) {
+    // 1. Update estimate line item status
     try {
-      const vendorRes = await fetch(`/api/vendors/${vendorId}/update-item-status`, {
-        method: "PUT",
+      const response = await fetch(`/api/estimates/line-items/${lineItemId}/status`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          itemId: lineItemId,
-          status: newStatus,
-          estimateId: estimateId
-        })
+        body: JSON.stringify({ status: newStatus })
       });
-      if (!vendorRes.ok) {
-        showToast("Vendor status update failed");
+      if (!response.ok) {
+        showToast("Failed to update estimate status");
+        return;
       }
     } catch (err) {
-      showToast("Error updating vendor status");
+      showToast("Error updating estimate status");
+      return;
     }
-  }
-  // Update dropdown color
-  const newClass = getStatusClass(newStatus);
-  statusDropdown.className = "item-status-dropdown " + newClass;
-  showToast("Status updated!");
-});
+    // 2. Update vendor assigned item status (if assigned)
+    if (vendorId && /^[a-f\d]{24}$/i.test(vendorId)) {
+      try {
+        const vendorRes = await fetch(`/api/vendors/${vendorId}/update-item-status`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            itemId: lineItemId,
+            status: newStatus,
+            estimateId: estimateId
+          })
+        });
+        if (!vendorRes.ok) {
+          showToast("Vendor status update failed");
+        }
+      } catch (err) {
+        showToast("Error updating vendor status");
+      }
+    }
+    // Update dropdown color
+    const newClass = getStatusClass(newStatus);
+    statusDropdown.className = "item-status-dropdown " + newClass;
+    showToast("Status updated!");
+  });
 
-    // Start/End Date update handlers
+  // Start/End Date update handlers
   const startDateInput = card.querySelector(".item-start-date");
   const endDateInput = card.querySelector(".item-end-date");
   const lineItemId = card.getAttribute("data-item-id");
@@ -1004,10 +1022,12 @@ statusDropdown.addEventListener("change", async function () {
       showToast("End date updated!");
     });
   }
+  
 
-    // Inside addLineItemCard, after defining laborCostInput and materialCostInput:
-const laborCostFromBackend = item.laborCost !== undefined;
-const materialCostFromBackend = item.materialCost !== undefined;
+  // Inside addLineItemCard, after defining laborCostInput and materialCostInput:
+  let laborCostFromBackend = item.laborCost !== undefined;
+  let materialCostFromBackend = item.materialCost !== undefined;
+
   
 // Suggestion Box Logic
 const itemNameInput = card.querySelector(".item-name");
@@ -1027,37 +1047,67 @@ itemNameInput.addEventListener("input", () => {
 
   matches.forEach(match => {
     const option = document.createElement("div");
+    // compute display values
+    const laborVal = typeof match.laborCost !== 'undefined' ? parseFloat(match.laborCost) : 0;
+    const materialVal = typeof match.materialCost !== 'undefined' ? parseFloat(match.materialCost) : 0;
+    const rateVal = typeof match.rate !== 'undefined' ? parseFloat(match.rate) : 0;
+    // totalCost field from labor-cost record; if missing, fall back to rate
+    const recTotal = typeof match.totalCost !== 'undefined' ? parseFloat(match.totalCost) : rateVal;
     option.innerHTML = `
     <div style="font-weight:600;">${match.name}</div>
-    <div style="font-size: 11px; color: #555; margin-top: 2px;">
-      ${match.description || "No description"}
-    </div>
-    <div style="font-size: 11px; color: #007bff; margin-top: 2px;">
-      $${(match.rate || 0).toFixed(2)}
+    <div style="font-size: 11px; color: #555; margin-top: 2px;">${match.description || "No description"}</div>
+    <div style="display:flex; gap:10px; align-items:center; margin-top:6px;">
+      
+      <div style="font-size:11px; color:#065f46;">Labor: $${laborVal.toFixed(2)}</div>
+      <div style="font-size:11px; color:#92400e;">Material: $${materialVal.toFixed(2)}</div>
+      <div style="font-size:11px; color:#007bff; font-weight:600;">Rate: $${recTotal.toFixed(2)}</div>
     </div>
   `;
-  option.style.padding = "8px";
-  option.style.cursor = "pointer";
-  option.style.borderBottom = "1px solid #eee";
+    option.style.padding = "8px";
+    option.style.cursor = "pointer";
+    option.style.borderBottom = "1px solid #eee";
     option.onmouseenter = () => (option.style.background = "#f0f0f0");
     option.onmouseleave = () => (option.style.background = "#fff");
-    
-option.onclick = () => {
-  itemNameInput.value = match.name;
-  card.querySelector(".item-description").value = match.description;
-  card.querySelector(".item-price").value = match.rate;
-  card.querySelector(".item-cost-code").value = match.costCode || "Uncategorized";
-  // Set quantity to 1 if empty, zero, or not a number
-  const qtyInput = card.querySelector(".item-quantity");
-  if (qtyInput && (!qtyInput.value || parseInt(qtyInput.value, 10) <= 0)) {
-    qtyInput.value = 1;
-  }
-  suggestionBox.style.display = "none";
-  updateCardValues(); // <-- Move this inside the click handler
-  autoSaveEstimate(); 
-};
-suggestionBox.appendChild(option);
+
+    option.onclick = () => {
+      itemNameInput.value = match.name;
+      card.querySelector(".item-description").value = match.description || "";
+      // Push the labor-cost record's totalCost as the item price; fall back to rate
+      card.querySelector(".item-price").value = (typeof match.totalCost !== 'undefined' ? parseFloat(match.totalCost) : rateVal).toFixed(2);
+      card.querySelector(".item-cost-code").value = match.costCode || "Uncategorized";
+
+      // Force quantity to 1 so displayed total equals the pushed price
+      const qtyInput = card.querySelector(".item-quantity");
+      if (qtyInput) qtyInput.value = 1;
+
+      // If the suggestion contains saved labor/material costs, push those values
+      const laborInput = card.querySelector('.item-labor-cost');
+      const materialInput = card.querySelector('.item-material-cost');
+      if (typeof match.laborCost !== 'undefined') {
+        laborInput.value = parseFloat(match.laborCost).toFixed(2);
+        laborCostFromBackend = true;
+        laborInput.removeAttribute('data-manual');
+      } else {
+        laborCostFromBackend = false;
+      }
+
+      if (typeof match.materialCost !== 'undefined') {
+        materialInput.value = parseFloat(match.materialCost).toFixed(2);
+        materialCostFromBackend = true;
+        materialInput.removeAttribute('data-manual');
+      } else {
+        materialCostFromBackend = false;
+      }
+
+      suggestionBox.style.display = "none";
+      updateCardValues();
+      autoSaveEstimate();
+    };
+
+    suggestionBox.appendChild(option);
   });
+
+
 
   const rect = itemNameInput.getBoundingClientRect();
   suggestionBox.style.top = `${itemNameInput.offsetTop + itemNameInput.offsetHeight}px`;
@@ -1066,6 +1116,7 @@ suggestionBox.appendChild(option);
   suggestionBox.style.display = "block";
   updateSummary();
   updateSelectedLaborCost();
+  
 
 });
 
@@ -1079,8 +1130,7 @@ document.addEventListener("click", function handleOutsideClick(e) {
   }
 });
 
-
- // Collapsible photo section logic
+  // Collapsible photo section logic
 const toggleBtn = card.querySelector('.toggle-photos-btn-modern');
 const photoSection = card.querySelector('.photo-section-modern');
   let photosLoaded = false;
@@ -1100,6 +1150,7 @@ const photoSection = card.querySelector('.photo-section-modern');
       toggleBtn.textContent = "Show Photos";
     }
   });
+
  
 
 // ✅ Enable vendor name 
@@ -1170,6 +1221,9 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
   }, 50); // Short delay ensures DOM is updated
 });
 
+
+
+  
   // Calculation logic for total
   const calcModeSelect = card.querySelector(".item-calc-mode");
   const areaInput = card.querySelector(".item-area");
@@ -1182,7 +1236,7 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
   const checkbox = card.querySelector(".line-item-select");
   checkbox.addEventListener("change", updateSelectedLaborCost);
 
- function updateCardValues() {
+function updateCardValues() {
   let total = 0;
   const unitPrice = parseFloat(priceInput.value) || 0;
   if (calcModeSelect.value === "sqft") {
@@ -1196,24 +1250,96 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
     total = qty * unitPrice;
   }
 
-  // Only auto-update if not manually edited and not from backend
-  if (
-    laborCostInput.getAttribute("data-manual") !== "true" &&
-    !laborCostFromBackend
-  ) {
-    laborCostInput.value = (total * 0.37).toFixed(2);
+  // Treat inputs as TOTALS = rate * effective quantity; show rate under inputs and keep totals synced on qty changes.
+  // Determine effective quantity
+  let effQty = 0;
+  if (calcModeSelect.value === "sqft") {
+    effQty = parseFloat(areaInput.value) || 0;
+  } else if (calcModeSelect.value === "lnft") {
+    effQty = parseFloat(lengthInput.value) || 0;
+  } else {
+    effQty = parseFloat(quantityInput.value) || 0;
   }
-  if (
-    materialCostInput.getAttribute("data-manual") !== "true" &&
-    !materialCostFromBackend
-  ) {
-    materialCostInput.value = (total * 0.4).toFixed(2);
+
+  // LABOR
+  const laborRateEl = card.querySelector('.item-labor-rate');
+  let laborTotalVal = parseFloat(laborCostInput.value) || 0;
+  let laborRate = parseFloat(laborCostInput.dataset.rate || "");
+  if (isNaN(laborRate)) laborRate = 0;
+  if (effQty > 0) {
+    if (document.activeElement === laborCostInput && laborCostInput.dataset.editMode === 'rate') {
+      // User is editing RATE directly; keep input value as rate and update stored rate only
+      const inputRate = parseFloat(laborCostInput.value) || 0;
+      laborCostInput.dataset.rate = String(inputRate);
+      laborRate = inputRate;
+      // Do NOT change input value here (it's showing rate). Total will be recomputed on blur.
+    } else if (document.activeElement === laborCostInput) {
+      // User editing TOTAL -> update rate from total/qty
+      laborRate = laborTotalVal / effQty;
+      laborCostInput.dataset.rate = String(laborRate);
+    } else {
+      // Qty changed or other field -> recompute total from stored rate
+      if (!laborCostInput.dataset.rate && laborTotalVal > 0) {
+        laborRate = laborTotalVal / effQty;
+        laborCostInput.dataset.rate = String(laborRate);
+      }
+      if (laborCostInput.dataset.rate) {
+        const newTotal = (parseFloat(laborCostInput.dataset.rate) || 0) * effQty;
+        if (Math.abs(newTotal - laborTotalVal) > 0.005) {
+          laborCostInput.value = newTotal.toFixed(2);
+          laborTotalVal = newTotal;
+        }
+      }
+    }
+  } else {
+    // effQty == 0; don't change total; set default rate if missing
+    if (!laborCostInput.dataset.rate && laborTotalVal > 0) {
+      laborCostInput.dataset.rate = String(laborTotalVal); // assume qty 1 initially
+      laborRate = laborTotalVal;
+    }
   }
+  if (laborRateEl) laborRateEl.textContent = `$${(parseFloat(laborCostInput.dataset.rate || '0') || 0).toFixed(2)}`;
+
+  // MATERIAL
+  const materialRateEl = card.querySelector('.item-material-rate');
+  let materialTotalVal = parseFloat(materialCostInput.value) || 0;
+  let materialRate = parseFloat(materialCostInput.dataset.rate || "");
+  if (isNaN(materialRate)) materialRate = 0;
+  if (effQty > 0) {
+    if (document.activeElement === materialCostInput && materialCostInput.dataset.editMode === 'rate') {
+      const inputRate = parseFloat(materialCostInput.value) || 0;
+      materialCostInput.dataset.rate = String(inputRate);
+      materialRate = inputRate;
+      // Do NOT change input value here (it's showing rate). Total will be recomputed on blur.
+    } else if (document.activeElement === materialCostInput) {
+      materialRate = materialTotalVal / effQty;
+      materialCostInput.dataset.rate = String(materialRate);
+    } else {
+      if (!materialCostInput.dataset.rate && materialTotalVal > 0) {
+        materialRate = materialTotalVal / effQty;
+        materialCostInput.dataset.rate = String(materialRate);
+      }
+      if (materialCostInput.dataset.rate) {
+        const newTotal = (parseFloat(materialCostInput.dataset.rate) || 0) * effQty;
+        if (Math.abs(newTotal - materialTotalVal) > 0.005) {
+          materialCostInput.value = newTotal.toFixed(2);
+          materialTotalVal = newTotal;
+        }
+      }
+    }
+  } else {
+    if (!materialCostInput.dataset.rate && materialTotalVal > 0) {
+      materialCostInput.dataset.rate = String(materialTotalVal);
+      materialRate = materialTotalVal;
+    }
+  }
+  if (materialRateEl) materialRateEl.textContent = `$${(parseFloat(materialCostInput.dataset.rate || '0') || 0).toFixed(2)}`;
 
   totalDisplay.textContent = `$${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
   updateSelectedLaborCost();
   updateSummary();
 }
+
   // Show/hide fields based on calculation mode
   calcModeSelect.addEventListener("change", () => {
     card.querySelector(".sqft-detail").style.display = calcModeSelect.value === "sqft" ? "block" : "none";
@@ -1226,13 +1352,76 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
     if (input) input.addEventListener("input", updateCardValues);
   });
 
-  // When user edits labor/material cost, set manual flag
+  // Recalculate when user edits totals (update rate display and keep totals consistent)
+  laborCostInput.addEventListener("input", updateCardValues);
+  materialCostInput.addEventListener("input", updateCardValues);
+
+  // Allow editing RATE via focusing the total input
+  function getEffQty() {
+    if (calcModeSelect.value === "sqft") {
+      return parseFloat(areaInput.value) || 0;
+    } else if (calcModeSelect.value === "lnft") {
+      return parseFloat(lengthInput.value) || 0;
+    }
+    return parseFloat(quantityInput.value) || 0;
+  }
+
+  laborCostInput.addEventListener('focus', () => {
+    laborCostInput.dataset.editMode = 'rate';
+    const effQty = getEffQty();
+    let rate = parseFloat(laborCostInput.dataset.rate || '');
+    if (isNaN(rate)) {
+      const totalVal = parseFloat(laborCostInput.value) || 0;
+      rate = effQty > 0 ? (totalVal / effQty) : totalVal;
+    }
+    laborCostInput.value = (rate || 0).toFixed(2);
+    // Optional UX: select content
+    setTimeout(() => laborCostInput.select && laborCostInput.select(), 0);
+  });
+
+  laborCostInput.addEventListener('blur', () => {
+    const effQty = getEffQty();
+    const rate = parseFloat(laborCostInput.value) || 0;
+    laborCostInput.dataset.rate = String(rate);
+    const newTotal = rate * (effQty || 0);
+    laborCostInput.dataset.editMode = '';
+    laborCostInput.value = newTotal.toFixed(2);
+    updateCardValues();
+  });
+
+  materialCostInput.addEventListener('focus', () => {
+    materialCostInput.dataset.editMode = 'rate';
+    const effQty = getEffQty();
+    let rate = parseFloat(materialCostInput.dataset.rate || '');
+    if (isNaN(rate)) {
+      const totalVal = parseFloat(materialCostInput.value) || 0;
+      rate = effQty > 0 ? (totalVal / effQty) : totalVal;
+    }
+    materialCostInput.value = (rate || 0).toFixed(2);
+    setTimeout(() => materialCostInput.select && materialCostInput.select(), 0);
+  });
+
+  materialCostInput.addEventListener('blur', () => {
+    const effQty = getEffQty();
+    const rate = parseFloat(materialCostInput.value) || 0;
+    materialCostInput.dataset.rate = String(rate);
+    const newTotal = rate * (effQty || 0);
+    materialCostInput.dataset.editMode = '';
+    materialCostInput.value = newTotal.toFixed(2);
+    updateCardValues();
+  });
+
+  // Optional: mark manual edits (not used for logic but kept for compatibility)
   laborCostInput.addEventListener("input", () => {
     laborCostInput.setAttribute("data-manual", "true");
   });
   materialCostInput.addEventListener("input", () => {
     materialCostInput.setAttribute("data-manual", "true");
   });
+
+  // Initialize totals/rates display
+  updateCardValues();
+
 
 
 // Utility to add "smart blur" auto-save to an input or editable element
@@ -1266,6 +1455,7 @@ function addSmartBlurAutoSave(input) {
     areaInput,
     lengthInput,
     calcModeSelect
+
   ].forEach(input => addSmartBlurAutoSave(input));
 
 // For estimate title (outside addLineItemCard, after DOMContentLoaded)
@@ -1276,7 +1466,10 @@ document.querySelectorAll(".category-title span[contenteditable]").forEach(span 
   addSmartBlurAutoSave(span);
 });
 
-      // Initial calculation
+
+
+
+  // Initial calculation
   updateCardValues();
 
   // Append the card to the container
@@ -1286,8 +1479,7 @@ document.querySelectorAll(".category-title span[contenteditable]").forEach(span 
   } else {
     lineItemsContainer.appendChild(card);
   }
-
-    // ✅ Scroll to and focus new line item
+      // ✅ Scroll to and focus new line item
 setTimeout(() => {
   card.scrollIntoView({ behavior: "smooth", block: "center" });
   const nameInput = card.querySelector(".item-name");
@@ -1298,7 +1490,8 @@ setTimeout(() => {
 }, 100);
 }
 
-  
+
+
   // Update Summary Function
 function updateSummary() {
   const lineItems = document.querySelectorAll(".line-item-card");
@@ -1377,20 +1570,20 @@ function updateSelectedLaborCost() {
 
   
 
-  async function assignItemsToVendor() {
-    const vendorId = document.getElementById("vendor-select").value;
-  
-    if (!vendorId) {
-      showToast("Please select a vendor.");
-      return;
-    }
-  
-    if (!projectId || !estimateId) {
-      showToast("Missing project or estimate ID!");
-      return;
-    }
+async function assignItemsToVendor() {
+  const vendorId = document.getElementById("vendor-select").value;
 
-     // ✅ Check if vendor is already invited to the project
+  if (!vendorId) {
+    showToast("Please select a vendor.");
+    return;
+  }
+
+  if (!projectId || !estimateId) {
+    showToast("Missing project or estimate ID!");
+    return;
+  }
+
+  // ✅ Check if vendor is already invited to the project
   let vendorIsInvited = false;
   try {
     // Fetch vendor details
@@ -1431,95 +1624,101 @@ function updateSelectedLaborCost() {
       return;
     }
   }
-  
-const selectedItems = Array.from(document.querySelectorAll(".line-item-select:checked")).map((checkbox) => {
-  const card = checkbox.closest(".line-item-card");
-  const itemId = card.getAttribute("data-item-id");
 
-  const name = card.querySelector(".item-name").value.trim();
-  const description = card.querySelector(".item-description").value.trim() || "No description provided";
-  const quantity = parseInt(card.querySelector(".item-quantity").value, 10) || 1;
-  const unitPrice = parseFloat(card.querySelector(".item-price").value) || 0;
-  const laborCost = parseFloat(card.querySelector(".item-labor-cost").value) || 0;
-  const total = laborCost; // <-- total sent to vendor is now labor cost
+  const selectedItems = Array.from(document.querySelectorAll(".line-item-select:checked")).map((checkbox) => {
+    const card = checkbox.closest(".line-item-card");
+    const itemId = card.getAttribute("data-item-id");
 
-  let costCode = card.querySelector(".item-cost-code")?.value.trim() || "Uncategorized";
-  if (!costCode || costCode === "Uncategorized") {
-    const categoryHeader = card.previousElementSibling?.classList.contains("category-header")
-      ? card.previousElementSibling
-      : card.closest(".category-header");
-    costCode = categoryHeader?.querySelector(".category-title span")?.textContent?.trim() || "Uncategorized";
+    const name = card.querySelector(".item-name").value.trim();
+    const description = card.querySelector(".item-description").value.trim() || "No description provided";
+    const quantity = parseInt(card.querySelector(".item-quantity").value, 10) || 1;
+    const unitPrice = parseFloat(card.querySelector(".item-price").value) || 0;
+    const laborCost = parseFloat(card.querySelector(".item-labor-cost").value) || 0;
+    const materialCost = parseFloat(card.querySelector(".item-material-cost").value) || 0;
+    const calcMode = card.querySelector(".item-calc-mode")?.value || "each"; // <-- Add this line
+    const area = parseFloat(card.querySelector(".item-area")?.value) || 0;    // <-- Add this line
+    const length = parseFloat(card.querySelector(".item-length")?.value) || 0; // <-- Add this line
+    const total = laborCost; // total sent to vendor is now labor cost
+
+    let costCode = card.querySelector(".item-cost-code")?.value.trim() || "Uncategorized";
+    if (!costCode || costCode === "Uncategorized") {
+      const categoryHeader = card.previousElementSibling?.classList.contains("category-header")
+        ? card.previousElementSibling
+        : card.closest(".category-header");
+      costCode = categoryHeader?.querySelector(".category-title span")?.textContent?.trim() || "Uncategorized";
+    }
+
+    const itemObj = {
+      itemId,
+      name,
+      description,
+      quantity,
+      unitPrice,
+      laborCost,
+      materialCost,
+      calcMode, // <-- Include calculation mode
+      area,     // <-- Include area
+      length,   // <-- Include length
+      total,        // Now total is the labor cost
+      assignedTo: vendorId,
+      costCode
+    };
+
+    return itemObj;
+  });
+
+  if (selectedItems.length === 0) {
+    showToast("No items selected for assignment.");
+    return;
   }
 
-  const itemObj = {
-    itemId,
-    name,
-    description,
-    quantity,
-    unitPrice,
-    total,        // Now total is the labor cost
-    laborCost,    // Actual labor cost field
-    assignedTo: vendorId,
-    costCode
-  };
+  showLoader(); // 👈 START
+  try {
+    // ✅ Send API Request with cost code included
+    const response = await fetch("/api/assign-items", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vendorId, projectId, estimateId, items: selectedItems }),
+    });
 
-  
+    if (!response.ok) throw new Error("Failed to assign items.");
 
-  return itemObj;
-});
-  
-    if (selectedItems.length === 0) {
-      showToast("No items selected for assignment.");
-      return;
-    }
-  
-    showLoader(); // 👈 START
-    try {
-      // ✅ Send API Request with cost code included
-      const response = await fetch("/api/assign-items", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vendorId, projectId, estimateId, items: selectedItems }),
-      });
-  
-      if (!response.ok) throw new Error("Failed to assign items.");
-  
-      // ✅ Update UI for assigned items
-selectedItems.forEach((item) => {
-  const card = document.querySelector(`.line-item-card[data-item-id="${item.itemId}"]`);
-  if (card) {
-    card.setAttribute("data-assigned-to", vendorId);
-    card.querySelector(".vendor-name").textContent = getVendorInitials(vendorId);
+    // ✅ Update UI for assigned items
+    selectedItems.forEach((item) => {
+      const card = document.querySelector(`.line-item-card[data-item-id="${item.itemId}"]`);
+      if (card) {
+        card.setAttribute("data-assigned-to", vendorId);
+        card.querySelector(".vendor-name").textContent = getVendorInitials(vendorId);
 
-    // Disable and uncheck the checkbox
-    const checkbox = card.querySelector(".line-item-select");
-    if (checkbox) {
-      checkbox.checked = false;
-      checkbox.disabled = true;
-    }
+        // Disable and uncheck the checkbox
+        const checkbox = card.querySelector(".line-item-select");
+        if (checkbox) {
+          checkbox.checked = false;
+          checkbox.disabled = true;
+        }
 
-    // If Unassign button doesn't exist, add it
-    if (!card.querySelector(".unassign-item")) {
-      const unassignBtn = document.createElement("button");
-      unassignBtn.className = "btn unassign-item";
-      unassignBtn.textContent = "Unassign";
-      unassignBtn.addEventListener("click", () => unassignItem(card));
-      card.querySelector(".card-header").appendChild(unassignBtn);
-    }
+        // If Unassign button doesn't exist, add it
+        if (!card.querySelector(".unassign-item")) {
+          const unassignBtn = document.createElement("button");
+          unassignBtn.className = "btn unassign-item";
+          unassignBtn.textContent = "Unassign";
+          unassignBtn.addEventListener("click", () => unassignItem(card));
+          card.querySelector(".card-header").appendChild(unassignBtn);
+        }
+      }
+    });
+    // 👇 Add this line after the forEach block
+    updateSelectedLaborCost();
+
+    showToast("✅ Items assigned successfully!");
+    updatePage(); // Refresh totals and page
+  } catch (error) {
+    console.error("❌ Error assigning items:", error);
+    showToast("Error assigning items. Please try again.");
+  } finally {
+    hideLoader();
   }
-});
-// 👇 Add this line after the forEach block
-updateSelectedLaborCost();
-  
-      showToast("✅ Items assigned successfully!");
-      updatePage(); // Refresh totals and page
-    } catch (error) {
-      console.error("❌ Error assigning items:", error);
-      showToast("Error assigning items. Please try again.");
-    } finally {
-      hideLoader();
-    }
-  }
+}
   
   
 
@@ -1608,13 +1807,13 @@ function refreshLineItemCard(updatedItem) {
   card.querySelector(".item-description").value = updatedItem.description || "";
   card.querySelector(".item-quantity").value = updatedItem.quantity || 1;
   card.querySelector(".item-price").value = updatedItem.unitPrice || 0;
-  card.querySelector(".item-labor-cost").value = updatedItem.laborCost !== undefined ? updatedItem.laborCost : ((updatedItem.quantity || 1) * (updatedItem.unitPrice || 0) * 0.37).toFixed(2);
-  card.querySelector(".item-material-cost").value = updatedItem.materialCost !== undefined ? updatedItem.materialCost : ((updatedItem.quantity || 1) * (updatedItem.unitPrice || 0) * 0.4).toFixed(2);
+  card.querySelector(".item-labor-cost").value = updatedItem.laborCost !== undefined ? updatedItem.laborCost : 0;
+  card.querySelector(".item-material-cost").value = updatedItem.materialCost !== undefined ? updatedItem.materialCost : 0;
   card.querySelector(".item-cost-code").value = updatedItem.costCode || "";
   card.querySelector(".item-total").textContent = `$${((updatedItem.quantity || 1) * (updatedItem.unitPrice || 0)).toFixed(2)}`;
   // Optionally update status, assignedTo, etc.
+  
 }
-
 
 
 
@@ -1646,7 +1845,7 @@ async function saveEstimate() {
         unitPrice: parseFloat(element.querySelector(".item-price").value) || 0,
         laborCost: parseFloat(element.querySelector(".item-labor-cost").value) || 0,
         materialCost: parseFloat(element.querySelector(".item-material-cost").value) || 0,
-         calcMode: element.querySelector(".item-calc-mode")?.value || "each", // <-- Add this line
+        calcMode: element.querySelector(".item-calc-mode")?.value || "each", // <-- Add this line
          area: parseFloat(element.querySelector(".item-area")?.value) || 0,     // <-- Add this line
          length: parseFloat(element.querySelector(".item-length")?.value) || 0, // <-- Add this line
         total: (
@@ -1704,7 +1903,8 @@ async function saveEstimate() {
             total: item.quantity * item.unitPrice,
             photos: item.photos ?? existingItem?.photos,
             assignedTo: item.assignedTo || existingItem?.assignedTo,
-            costCode: item.costCode || existingItem?.costCode || "Uncategorized"
+            costCode: item.costCode || existingItem?.costCode || "Uncategorized",
+            maintenanceRequestId: item.maintenanceRequestId || existingItem?.maintenanceRequestId || null
           };
         }),
       };
@@ -1802,6 +2002,7 @@ body: JSON.stringify({
     showToast("Error saving the estimate. Please try again.");
   }
 }
+
 
 
 
@@ -2051,6 +2252,8 @@ document.getElementById("assign-vendor-btn").onclick = async function() {
   document.getElementById("tax-input").addEventListener("input", updateSummary);
   document.getElementById("save-estimate").addEventListener("click", saveEstimate);
  });
+
+
 
 
  // Add this right after the document.addEventListener("DOMContentLoaded", async () => {
@@ -2444,7 +2647,6 @@ function updateTableFooterTotals(filteredOnly = false) {
   }
 }
 
-
 let allEstimateIds = [];
 let currentEstimateIndex = -1;
 
@@ -2469,6 +2671,8 @@ async function setupEstimateNavigation() {
     console.warn("Estimate navigation fetch failed", err);
   }
 }
+
+
 
 // Navigation button handlers
 function goToEstimate(offset) {
@@ -2499,7 +2703,7 @@ async function setupEstimateTitleSuggestions() {
     window.allEstimatesList = [];
   }
 
-  // Helper to render suggestions
+  // Helper to render suggestions with startDate and endDate
   function renderSuggestions(matches) {
     suggestionBox.innerHTML = "";
     if (matches.length === 0) {
@@ -2508,12 +2712,29 @@ async function setupEstimateTitleSuggestions() {
     }
     matches.forEach(est => {
       const option = document.createElement("div");
-      option.textContent = est.title || `Estimate ${est._id}`;
+      option.style.display = "flex";
+      option.style.alignItems = "center";
+      option.style.justifyContent = "space-between";
       option.style.padding = "10px 16px";
       option.style.cursor = "pointer";
       option.style.borderBottom = "1px solid #eee";
       option.onmouseenter = () => (option.style.background = "#f0f4ff");
       option.onmouseleave = () => (option.style.background = "#fff");
+
+      // Title
+      const titleSpan = document.createElement("span");
+      titleSpan.textContent = est.title || `Estimate ${est._id}`;
+      option.appendChild(titleSpan);
+
+      // Dates
+      const datesSpan = document.createElement("span");
+      datesSpan.style.fontSize = "0.9em";
+      datesSpan.style.color = "#888";
+      let startDate = est.startDate ? new Date(est.startDate).toLocaleDateString() : "-";
+      let endDate = est.endDate ? new Date(est.endDate).toLocaleDateString() : "-";
+      datesSpan.textContent = `Start: ${startDate} | End: ${endDate}`;
+      option.appendChild(datesSpan);
+
       option.onclick = () => {
         window.location.href = `?projectId=${projectId}&estimateId=${est._id}`;
       };
@@ -2521,6 +2742,7 @@ async function setupEstimateTitleSuggestions() {
     });
     suggestionBox.style.display = "block";
   }
+
 
   // Show all suggestions when input is focused
   input.addEventListener("focus", function () {
@@ -2553,7 +2775,7 @@ async function setupEstimateTitleSuggestions() {
 document.addEventListener("DOMContentLoaded", () => {
   setupEstimateNavigation();
   setupEstimateTitleSuggestions();
+  
   document.getElementById("prev-estimate").addEventListener("click", () => goToEstimate(-1));
   document.getElementById("next-estimate").addEventListener("click", () => goToEstimate(1));
 });
-
