@@ -13,7 +13,7 @@
     body {
       font-family: 'Segoe UI', sans-serif;
       margin: 0;
-      padding: 20px;
+      padding: 10px;
       background: #f9f9f9;
       color: #333;
     }
@@ -22,7 +22,7 @@
       max-width: 1100px;
       margin: auto;
       background: white;
-      padding: 30px;
+      padding: 10px;
       border-radius: 12px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
@@ -36,6 +36,56 @@
       margin-bottom: 30px;
     }
 
+    /* Grid layout for Quote From / Quote To / Meta sections */
+    .quote-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    @media (min-width: 900px) {
+      .quote-meta-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      /* Avoid extra space between cards when in grid */
+      .quote-meta-grid .section {
+        margin-bottom: 0;
+      }
+    }
+    .quote-meta-grid .section {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 12px;
+      box-shadow: 0 1px 2px rgba(2, 6, 23, 0.04);
+    }
+    .quote-meta-grid .section h3 {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+      color: #0f172a;
+    }
+
+    /* Internal grid for Quote meta fields */
+    .section-dates {
+      
+      grid-template-columns: 1fr;
+      gap: 10px 16px;
+    }
+    .section-dates .field {
+      display: flex;
+      flex-direction: column;
+    }
+    .section-dates .field label {
+      margin-top: 0; /* override global label top margin inside grouped fields */
+      margin-bottom: 6px;
+    }
+    @media (min-width: 900px) {
+      .section-dates {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: end;
+      }
+    }
+
     label {
       display: block;
       margin-top: 10px;
@@ -47,19 +97,17 @@
   font-size: 14px;
   padding: 6px 8px;
   border: 1px solid #ccc;
-  border-radius: 8px;
+  border-radius: 5px;
   box-sizing: border-box;
     }
 
-    input:focus,
+    input:focus,.floating-label-group textarea:focus,
 select:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(96, 37, 235, 0.21);
+  box-shadow: 0 0 0 1px rgba(65, 88, 221, 0.705);
   outline: none;
 }
 
-
-    
     #line-items-cards textarea,
 .line-item-row textarea {
   resize: vertical;           /* ✅ Enables manual drag */
@@ -69,7 +117,7 @@ select:focus {
   font-size: 14px;
   padding: 8px 10px;
   border: 1px solid #cccccc;
-  border-radius: 8px;
+  border-radius: 5px;
   box-sizing: border-box;
   width: 100%;
 }
@@ -83,15 +131,53 @@ select:focus {
   }
 }
 
+/* Mobile: make floating-label-group textareas fully responsive */
+@media (max-width: 1275px) {
+  .floating-label-group {
+    min-width: 100%;
+    max-width: 100%;
+    width: 100%;
+  }
+  .floating-label-group textarea {
+    width: 200% !important; /* override any inline widths (e.g., 260%) */
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 1124px) {
+  .floating-label-group {
+    min-width: 100%;
+    max-width: 100%;
+    width: 100%;
+  }
+  .floating-label-group textarea {
+    width: 150% !important; /* override any inline widths (e.g., 260%) */
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 1024px) {
+  .floating-label-group {
+    min-width: 100%;
+    max-width: 100%;
+    width: 100%;
+  }
+  .floating-label-group textarea {
+    width: 100% !important; /* override any inline widths (e.g., 260%) */
+    box-sizing: border-box;
+  }
+}
+
+
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 20px;
+      margin-top: 10px;
     }
 
     th, td {
       border: 1px solid #ddd;
-      padding: 10px;
+      padding: 2px 3px;
       text-align: left;
     }
 
@@ -101,13 +187,39 @@ select:focus {
 
     .btn {
       padding: 10px 20px;
-      margin-top: 20px;
+      margin-top: 10px;
       margin-right: 10px;
       border: none;
       border-radius: 8px;
-      background: #007bff;
-      color: white;
+      background: #007bff; /* blue-600 */
+      color: #ffffff;
+      font-weight: 600;
       cursor: pointer;
+      transition: background-color .2s ease, box-shadow .2s ease, transform .1s ease;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 2px 6px rgba(37,99,235,0.15);
+    }
+    .btn:hover {
+      background: #1d4ed8; /* blue-700 */
+      box-shadow: 0 1px 3px rgba(0,0,0,0.10), 0 8px 18px rgba(29,78,216,0.20);
+      transform: translateY(-1px);
+    }
+    .btn:active {
+      background: #1e40af; /* blue-800 */
+      transform: translateY(0);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 2px 8px rgba(30,64,175,0.18);
+    }
+    .btn:focus-visible {
+      outline: 2px solid #93c5fd; /* blue-300 */
+      outline-offset: 2px;
+    }
+    .btn:disabled,
+    .btn[disabled] {
+      background: #9ca3af; /* gray-400 */
+      color: #ffffff;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+      opacity: 0.85;
     }
 
     .dropdown {
@@ -164,6 +276,30 @@ select:focus {
     .summary-box p {
       margin: 5px 0;
     }
+
+    /* Enhanced totals panel */
+    .totals-panel {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      row-gap: 8px;
+      column-gap: 16px;
+      padding: 14px 16px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(2, 6, 23, 0.04);
+    }
+    .totals-panel .t-row { display: contents; }
+    .totals-panel .label { color: #64748b; font-size: 14px; align-self: center; }
+    .totals-panel .value { color: #0f172a; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .totals-panel .divider {
+      grid-column: 1 / -1;
+      height: 1px;
+      background: #e5e7eb;
+      margin: 4px 0 6px 0;
+    }
+    .totals-panel .grand .label { font-weight: 700; color: #0f172a; font-size: 15px; }
+    .totals-panel .grand .value { font-weight: 800; color: #0ea5e9; font-size: 18px; }
 
     .modal {
   position: fixed;
@@ -235,23 +371,16 @@ select:focus {
       border-left: 5px solid #007bff;
     }
 
-    .line-item-row {
-  
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 10px;
-  justify-content: space-between;
-  
-}
+
 
 .line-item-row {
   position: sticky;
-  top: 0;
+  top: 8px;
   z-index: 1000;
   background: #f7f8fa;
   border: 1px solid #707a86;
   border-radius: 8px;
-  padding: 12px 10px;
+  padding: 4px 5px;
   margin-bottom: 18px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.03);
 }
@@ -305,6 +434,14 @@ select:focus {
       h1 {
         font-size: 1.4rem;
       }
+      .floating-label-group textarea  {
+        
+        width: 112% !important;
+      }
+
+      #suggestionBox{
+  top: 108px !important;
+}
     }
 
     @media screen and (max-width: 600px) {
@@ -329,7 +466,13 @@ select:focus {
       table, th, td {
         font-size: 0.9rem;
       }
+
+
     }
+
+    
+
+
 
 
     @media (max-width: 600px) {
@@ -530,10 +673,13 @@ select:focus {
   .dropdown-menu button:hover {
     background-color: #f0f0f0;
   }
+  /* Action menu positioned at card's top-right */
   .action-dropdown {
-    position: relative;
+    position: absolute;
+    top: 8px;
+    right: 8px;
     display: inline-block;
-    float: right;
+    z-index: 20;
   }
   .action-dropdown .dots {
     background: transparent;
@@ -543,13 +689,16 @@ select:focus {
   }
   .action-dropdown-content {
     display: none;
-    position: flex;
+    position: absolute;
+    top: 28px;
     right: 0;
     background-color: #fff;
     border: 1px solid #ccc;
     border-radius: 5px;
     box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
-    z-index: 10;
+    z-index: 1000;
+    overflow: visible;
+    min-width: 120px;
   }
   .action-dropdown-content button {
     width: 100%;
@@ -689,6 +838,8 @@ input, textarea {
     margin-right: 370px; /* 360px + 10px gap */
     transition: margin 0.3s ease;
   }
+
+
 }
 
 /* ✏️ Edit Labor Modal (modal-centered layout) */
@@ -750,6 +901,114 @@ textarea {
 
 .package-dropdown-content.show {
     display: block;
+}
+
+/* Inline + icon button for showing the new labor form */
+  .add-labor-inline-btn {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 8px;
+    background: #007bff; /* Tailwind-esque blue-600 */
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 2px 8px rgba(37,99,235,0.20);
+    transition: background-color .2s ease, box-shadow .2s ease, transform .1s ease;
+  }
+  .add-labor-inline-btn:hover {
+    background: #1d4ed8; /* blue-700 */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 6px 16px rgba(29,78,216,0.25);
+    transform: translateY(-1px);
+  }
+  .add-labor-inline-btn:active {
+    background: #1e40af; /* blue-800 */
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.10), 0 2px 8px rgba(30,64,175,0.20);
+  }
+  .add-labor-inline-btn:focus-visible {
+    outline: 2px solid #93c5fd; /* blue-300 */
+    outline-offset: 2px;
+  }
+
+/* Row to place button and + icon side by side */
+.package-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.package-header-row .package-select-btn {
+  flex: 1;
+  width: auto;
+}
+
+/* Suggestions footer styles */
+.totals-footer {
+  margin-top: 10px;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 5px;
+}
+#laborSuggestionsFooter .t-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  padding: 4px 0;
+}
+#laborSuggestionsFooter .t-row .label { color: #6b7280; }
+#laborSuggestionsFooter .t-row .value { font-weight: 600; color: #111827; }
+#laborSuggestionsFooter .t-row.grand { border-top: 1px dashed #e5e7eb; margin-top: 4px; padding-top: 8px; }
+#laborSuggestionsFooter .t-row.grand .value { font-size: 16px; color: #111827; }
+
+/* Modern total row for labor suggestions */
+.suggestion-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 7px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(2, 6, 23, 0.04);
+  cursor: pointer;
+  transition: background-color .15s ease, box-shadow .15s ease, transform .05s ease;
+}
+.suggestion-total-row:hover {
+  background: #f8fafc;
+  box-shadow: 0 2px 6px rgba(2, 6, 23, 0.06);
+}
+.suggestion-total-row:active {
+  transform: translateY(0.5px);
+}
+.suggestion-total-row .total-amount {
+  color: #007bff;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.suggestion-total-row .chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 17px;
+  line-height: 1;
+  transition: transform .15s ease, background-color .15s ease, color .15s ease;
+}
+.suggestion-total-row.open .chevron {
+  transform: rotate(90deg);
+  background: #e2e8f0;
+  color: #334155;
 }
 
 .package-option {
@@ -843,7 +1102,8 @@ textarea {
   color: #007bff;
 }
 
-    /* Only allow drag handle to block touch, not the whole row */
+
+/* Only allow drag handle to block touch, not the whole row */
 .drag-handle, .drag-handle-group {
   touch-action: none !important;
   -webkit-user-select: none !important;
@@ -884,7 +1144,70 @@ tbody tr, tbody td {
   background: #dbeafe !important;
   box-shadow: 0 0 0 2px #3b82f6;
 }
-    
+
+/* Floating Label Styles */
+.floating-label-group {
+  position: relative;
+  margin-bottom: 8px;
+  display: inline-block;
+  vertical-align: top;
+}
+.floating-label-group input,
+.floating-label-group textarea {
+  width: 100%;
+  padding: 7px 2px 6px 2px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background: #ffffff;
+  font-size: 0.85rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.floating-label-group label {
+  position: absolute;
+  top: -2px;
+  left: 12px;
+  color: #64748b;
+  background: #ffffff;
+  font-size: 12px;
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+.floating-label-group input:focus + label,
+.floating-label-group input.filled + label,
+.floating-label-group textarea:focus + label,
+.floating-label-group textarea.filled + label {
+  top: -16px;
+  left: 6px;
+  font-size: 10px;
+  color: #2563eb;
+  background: #fff;
+  padding: 0 4px;
+  transition: all 0.25s cubic-bezier(.4,0,.2,1);
+  border-radius: 25%;
+}
+.floating-label-group textarea {
+  min-height: 36px;
+  resize: vertical;
+}
+.floating-label-group {
+  min-width: 60px;
+  max-width: 160px;
+}
+.floating-label-group:last-child {
+  min-width: 180px;
+  max-width: 300px;
+}
+
+
+/* Add this CSS near your other table styles */
+#lineItemsTableContainer tr:not(.category-group-row):not(.editing-row):hover {
+  background: #e0f2fe !important;
+  transition: background 0.18s;
+  cursor: pointer;
+}
+
+
+
   </style>
 </head>
 <body>
@@ -905,8 +1228,8 @@ tbody tr, tbody td {
       </div>
     </div>
     
-
-    <div class="section">
+    <div class="quote-meta-grid">
+    <div class="section section-from">
       <h3>Quote From</h3>
       <input id="fromName" placeholder="Company Name" />
       <input id="fromAddress" placeholder="Address" />
@@ -915,8 +1238,7 @@ tbody tr, tbody td {
       <input id="fromLicense" placeholder="License #" />
     </div>
     
-
-    <div class="section">
+    <div class="section section-to">
       <h3>Quote To</h3>
       <input id="toName" placeholder="Customer Name" oninput="showClientSuggestions()" />
 <div id="clientSuggestionBox" style="position: absolute; background: white; border: 1px solid #ccc; border-radius: 6px; z-index: 1000; display: none; max-height: 150px; overflow-y: auto;"></div>
@@ -932,32 +1254,65 @@ autocomplete="off"
       <input id="toPhone" placeholder="Phone Number" />
     </div>
 
-    <div class="section">
-      <label>Quote Number:</label>
-      <input id="quoteNumber" placeholder="e.g. Q-20250401" readonly />
+    <div class="section section-dates">
+      <div class="field">
+        <label for="quoteNumber">Quote Number:</label>
+        <input id="quoteNumber" placeholder="e.g. Q-20250401" readonly />
+      </div>
 
-      <label>Date:</label>
-      <input type="date" id="quoteDate" />
+      <div class="field">
+        <label for="quoteDate">Date:</label>
+        <input type="date" id="quoteDate" />
+      </div>
 
-      <label>Valid Till:</label>
-      <input type="date" id="validTill" />
+      <div class="field">
+        <label for="validTill">Valid Till:</label>
+        <input type="date" id="validTill" />
+      </div>
+    </div>
+
     </div>
 
     <div class="section">
       <h3>Line Items</h3>
       <div class="line-item-row">
-        <input id="itemCode" placeholder="Cost Code" />
-        <input id="itemName" placeholder="Item Name" />
+        <!-- Combined compact section: first row = fields, second row = description + add -->
+        <div style="display:flex; gap:0px; width:100%; flex-wrap:wrap; align-items:flex-start;">
+          <div style="flex:1 1 680px; display:flex; gap:0px; align-items:center;">
+            <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+              <div class="floating-label-group"><input id="itemCode" style="width:105px" /><label for="itemCode">Cost Code</label></div>
+              <div class="floating-label-group" style="min-width:220px; flex:1;"><input id="itemName" /><label for="itemName">Item Name</label></div>
+              <div class="floating-label-group"><input id="itemQty" type="number" style="width:60px" /><label for="itemQty">Qty</label></div>
+              <div class="floating-label-group"><input id="itemRate" type="number" style="width:70px" /><label for="itemRate">Rate</label></div>
+              <div class="floating-label-group" style="display:flex;align-items:center;gap:6px;">
+                <div style="position:relative;display:inline-block;">
+                  <input id="markup" type="number" step="any" min="0" max="60" style="width:75px" />
+                  <label for="markup">Markup</label>
+                </div>
+                <button type="button" id="markupToggle" onclick="toggleAddMarkupMode()" title="Toggle %/$" style="padding:4px 6px;border:1px solid #cbcdd0;border-radius:6px;background:#fff;cursor:pointer;">%</button>
+              </div>
+              <div class="floating-label-group"><input id="laborRate" type="number" step="any" style="width:80px" /><label for="laborRate">Labor</label></div>
+              <div class="floating-label-group" style="display:none;"><input id="laborHours" type="number" step="any" style="width:90px" value="1" /><label for="laborHours">Labor Qty</label></div>
+              <div class="floating-label-group"><input id="materialRate" type="number" step="any" style="width:80px" /><label for="materialRate">Material</label></div>
+              <div class="floating-label-group" style="display:none;"><input id="materialQty" type="number" step="any" style="width:110px" value="1" /><label for="materialQty">Material Qty</label></div>
+            </div>
+          </div>
+
+        <div style="display:flex; gap:0px; width:100%; margin-top:2px; align-items:flex-start;">
+          <div style="flex:1;">
+            <div class="floating-label-group"><textarea id="itemDesc" style="width:420%; min-height:50px; resize:vertical;" rows="1"></textarea><label for="itemDesc">Description</label></div>
+          </div>
+          <div style="width:120px; display:flex; align-items:flex-end;">
+            <button class="btn" style="width:53%; margin-left: 48px;" onclick="addLineItem()">Add</button>
+          </div>
+        </div>
         <div id="suggestionBox" style="position: absolute; background: #fff; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 1000; display: none; max-height: 350px; overflow-y: auto;"></div>
-        <input id="itemQty" type="number" placeholder="Quantity" />
-        <input id="itemRate" type="number" placeholder="Rate" />
-        <button class="btn" onclick="addLineItem()">Add</button>
-        <textarea id="itemDesc" placeholder="Description" rows="2"></textarea>
       </div>
+    </div>
 
       <div class="table-responsive-sm">
-      
-       <div id="lineItemsTableContainer"></div>
+        
+        <div id="lineItemsTableContainer"></div>
       </div>
       
       
@@ -976,10 +1331,14 @@ autocomplete="off"
     </div>
 
     <div class="summary-box">
-      <p><strong>Subtotal:</strong> $<span id="subtotal">0.00</span></p>
-      <p><strong>Discount:</strong> $<span id="discount">0.00</span></p>
-      <p><strong>Tax:</strong> $<span id="tax">0.00</span></p>
-      <p><strong>Total:</strong> $<span id="grandTotal">0.00</span></p>
+      <div id="totalsPanel" class="totals-panel">
+        <div class="t-row"><span class="label">Subtotal</span><span class="value">$<span id="subtotal">0.00</span></span></div>
+        <div class="t-row"><span class="label">Markup</span><span class="value">$<span id="markupTotal">0.00</span></span></div>
+        <div class="t-row"><span class="label">Discount</span><span class="value">$<span id="discount">0.00</span></span></div>
+        <div class="t-row"><span class="label">Tax</span><span class="value">$<span id="tax">0.00</span></span></div>
+        <div class="divider"></div>
+        <div class="t-row grand"><span class="label">Total</span><span class="value">$<span id="grandTotal">0.00</span></span></div>
+      </div>
     </div>
 
     <div class="payment-terms">
@@ -1082,12 +1441,15 @@ autocomplete="off"
 <!-- Replace the existing room-packages-section in the laborCostModal div -->
 <div class="room-packages-section">
     <div class="package-dropdown">
-        <button class="package-select-btn" onclick="togglePackageDropdown()">
-            🏗️ Add Room Package
-            <span class="dropdown-arrow">▼</span>
-        </button>
+        <div class="package-header-row">
+          <button class="package-select-btn" onclick="togglePackageDropdown()">
+              🏗️ Add Room Package
+              <span class="dropdown-arrow">▼</span>
+          </button>
+          <span class="add-labor-inline-btn" title="Add new labor cost" onclick="toggleNewLaborForm()">＋</span>
+        </div>
 <div id="packageDropdownContent" class="package-dropdown-content">
-      <button onclick="addRoomPackage('exterior')" class="package-option">
+       <button onclick="addRoomPackage('exterior')" class="package-option">
         🏡 Exterior Overall Remodel Package
         <span class="edit-icon" onclick="event.stopPropagation(); openEditRoomPackageModal('exterior')">✏️</span>
     </button> 
@@ -1106,7 +1468,7 @@ autocomplete="off"
     <button onclick="addRoomPackage('bathroom')" class="package-option">
         🚽 Bathroom Remodel Package
         <span class="edit-icon" onclick="event.stopPropagation(); openEditRoomPackageModal('bathroom')">✏️</span>
-    </button>
+    </button> 
     <button onclick="addRoomPackage('mainbedroom')" class="package-option">
   🛏️ Main Bedroom Package
   <span class="edit-icon" onclick="event.stopPropagation(); openEditRoomPackageModal('mainbedroom')">✏️</span>
@@ -1123,43 +1485,89 @@ autocomplete="off"
   🛏️ Bedroom 3 Package
   <span class="edit-icon" onclick="event.stopPropagation(); openEditRoomPackageModal('bedroom3')">✏️</span>
 </button>
-
- 
             <!-- Add more package options here -->
         </div>
     </div>
 </div>
 
     <input type="text" id="laborSearchInput" placeholder="Search labor task..." oninput="renderLaborSuggestions()" style="width: 100%; padding: 8px; margin: 10px 0;">
-    <ul id="laborSuggestionList" style="list-style: none; padding: 0; max-height: 400px; overflow-y: auto;"></ul>
-    <div style="margin-top: 10px;">
-      <input id="newLaborCode" placeholder="Cost Code" style="width: 100%; padding: 8px; margin-top: 10px;" />
-      <input id="newLaborName" placeholder="Task Name" style="width: 100%; padding: 8px; margin-top: 10px;" />
-      <input id="newLaborDesc" placeholder="Description" style="width: 100%; padding: 8px; margin-top: 10px;" />
-      <input id="newLaborRate" type="number" placeholder="Rate ($)" style="width: 100%; padding: 8px; margin-top: 10px;" />
-      <button onclick="addLaborItem()" style="margin-top: 10px;" class="btn">Add Labor Item</button>
-    </div>
+  <ul id="laborSuggestionList" style="list-style: none; padding: 0; max-height: 420px; overflow-y: auto;"></ul>
+  <div id="laborSuggestionsFooter" class="totals-footer">
+    <div class="t-row"><span class="label">Markup</span><span class="value">$<span id="suggestionsMarkupTotal">0.00</span></span></div>
+    <div class="t-row grand"><span class="label">Total</span><span class="value">$<span id="suggestionsGrandTotal">0.00</span></span></div>
   </div>
-</div>
+  <div id="newLaborFormContainer" style="margin-top: 10px; display: none;">
+          <input id="newLaborCode" placeholder="Cost Code" style="width: 100%; padding: 8px; margin-top: 10px;" />
+          <input id="newLaborName" placeholder="Task Name" style="width: 100%; padding: 8px; margin-top: 10px;" />
+          <input id="newLaborDesc" placeholder="Description" style="width: 100%; padding: 8px; margin-top: 10px;" />
+          <input id="newLaborLaborRate" type="number" placeholder="Labor Rate ($/hr or unit)" step="0.01" style="width: 100%; padding: 8px; margin-top: 10px;" />
+          <!-- hide new labor qty; default to 1 -->
+          <input id="newLaborLaborHours" type="number" placeholder="Labor Hours/Units" step="0.01" value="1" style="width: 100%; padding: 8px; margin-top: 10px; display:none;" />
+          <input id="newLaborMaterialRate" type="number" placeholder="Material Rate ($/unit)" step="0.01" style="width: 100%; padding: 8px; margin-top: 10px;" />
+          <!-- hide new material qty; default to 1 -->
+          <input id="newLaborMaterialQty" type="number" placeholder="Material Qty" step="0.01" value="1" style="width: 100%; padding: 8px; margin-top: 10px; display:none;" />
+          <input id="newBaseRate" type="number" placeholder="Base Rate (manual)" step="0.01" style="width: 100%; padding: 8px; margin-top: 10px;" />
+          <div style="display:flex; gap:8px; align-items:center; margin-top:10px;">
+            <input id="newLaborMarkup" type="number" placeholder="Markup" step="0.01" min="0" style="width: 100%; padding: 8px;" />
+            <button id="newMarkupToggle" type="button" title="Toggle %/$" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;" data-mode="percent">%</button>
+          </div>
+          <select id="newLaborCalcMode" style="width: 100%; padding: 8px; margin-top: 10px;">
+            <option value="each">Each</option>
+            <option value="sqft">SqFt</option>
+            <option value="lnft">LnFt</option>
+            <option value="hour">Hour</option>
+          </select>
+          <input id="newLaborUnit" placeholder="Unit (e.g. ft, hr, ea)" style="width: 100%; padding: 8px; margin-top: 10px;" />
+          <div style="margin: 10px 0; color: #2563eb;">
+            <div>Labor Cost: <span id="newLaborLaborCost">0.00</span></div>
+            <div>Material Cost: <span id="newLaborMaterialCost">0.00</span></div>
+            <div><b>Total Cost: <span id="newLaborTotalCost">0.00</span></b></div>
+          </div>
+          <button onclick="addLaborItem()" style="margin-top: 10px;" class="btn">Add Labor Item</button>
+  </div>
+      </div>
+    </div>
 
 
 <!-- Edit Labor Item Modal -->
-<div id="editLaborModal" class="modal" style="display: none;">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>Edit Labor Item</h3>
-      <span class="close-modal" onclick="closeEditLaborModal()" style="font-size: 24px; cursor: pointer;">&times;</span>
-    </div>
-    <div style="margin-top: 10px;">
-      <input id="editLaborCode" placeholder="Cost Code" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
-      <input id="editLaborName" placeholder="Task Name" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
-      <textarea id="editLaborDesc" placeholder="Description"
-  style="width: 100%; padding: 8px; margin-bottom: 10px; resize: vertical; min-height: 80px; overflow-y: hidden;"
-  oninput="autoResizeTextarea(this)"></textarea>
-
-      <input id="editLaborRate" type="number" placeholder="Rate ($)" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
-      <button onclick="saveEditedLaborItem()" class="btn" style="margin-top: 10px;">Save Changes</button>
-    </div>
+ <div id="editLaborModal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Edit Labor Item</h3>
+          <span class="close-modal" onclick="closeEditLaborModal()" style="font-size: 24px; cursor: pointer;">&times;</span>
+        </div>
+        <div style="margin-top: 10px;">
+          <input id="editLaborCode" placeholder="Cost Code" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
+          <input id="editLaborName" placeholder="Task Name" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
+          <textarea id="editLaborDesc" placeholder="Description"
+            style="width: 100%; padding: 8px; margin-bottom: 10px; resize: vertical; min-height: 80px; overflow-y: hidden;"
+            oninput="autoResizeTextarea(this)"></textarea>
+          <input id="editLaborLaborRate" type="number" placeholder="Labor Rate ($/hr or unit)" step="0.01" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
+          <!-- hide labor hours in modal; default to 1 -->
+          <input id="editLaborLaborHours" type="number" placeholder="Labor Hours/Units" step="0.01" value="1" style="width: 100%; padding: 8px; margin-bottom: 10px; display:none;" />
+          <input id="editLaborMaterialRate" type="number" placeholder="Material Rate ($/unit)" step="0.01" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
+          <!-- hide material qty in modal; default to 1 -->
+          <input id="editLaborMaterialQty" type="number" placeholder="Material Qty" step="0.01" value="1" style="width: 100%; padding: 8px; margin-bottom: 10px; display:none;" />
+          <input id="editBaseRate" type="number" placeholder="Base Rate (manual)" step="0.01" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
+          <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+            <input id="editLaborMarkup" type="number" placeholder="Markup" step="0.01" min="0" style="width: 100%; padding: 8px;" />
+            <button id="editMarkupToggle" type="button" title="Toggle %/$" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;" data-mode="percent">%</button>
+          </div>
+          <select id="editLaborCalcMode" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+            <option value="each">Each</option>
+            <option value="sqft">SqFt</option>
+            <option value="lnft">LnFt</option>
+            <option value="hour">Hour</option>
+          </select>
+          <input id="editLaborUnit" placeholder="Unit (e.g. ft, hr, ea)" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
+          <div style="margin: 10px 0; color: #2563eb;">
+            <div>Labor Cost: <span id="editLaborLaborCost">0.00</span></div>
+            <div>Material Cost: <span id="editLaborMaterialCost">0.00</span></div>
+            <div>Markup: <span id="editLaborMarkupDisplay">0.00%</span></div>
+            <div><b>Total Cost: <span id="editLaborTotalCost">0.00</span></b></div>
+          </div>
+          <button onclick="saveEditedLaborItem()" class="btn" style="margin-top: 10px;">Save Changes</button>
+        </div>
   </div>
 </div>
 
@@ -1223,8 +1631,9 @@ autocomplete="off"
   "></div>
 </div>
 
-<!-- Add this to your <style> block or <head> -->
+
 <style>
+/* Loader Spinner Animation */
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -1259,13 +1668,90 @@ autocomplete="off"
       loadRoomPackages();
 
 
+
+
+
         // Enable suggestions on item name input
   document.getElementById('itemName').addEventListener('input', showLaborSuggestions);
+
+  // --- Recalculate total when labor/material fields or explicit rate change ---
+function recalcLineItemTotal() {
+  const laborRate = parseFloat(document.getElementById('laborRate').value) || 0;
+  let laborHours = parseFloat(document.getElementById('laborHours').value);
+  if (!laborHours || isNaN(laborHours)) laborHours = 1;
+  const materialRate = parseFloat(document.getElementById('materialRate').value) || 0;
+  let materialQty = parseFloat(document.getElementById('materialQty').value);
+  if (!materialQty || isNaN(materialQty)) materialQty = 1;
+  const markup = parseFloat(document.getElementById('markup').value) || 0;
+  const itemRateEl = document.getElementById('itemRate');
+  const itemQtyEl = document.getElementById('itemQty');
+  const markupToggle = document.getElementById('markupToggle');
+  let markupMode = 'percent';
+  if (markupToggle && markupToggle.dataset && markupToggle.dataset.mode) {
+    markupMode = markupToggle.dataset.mode;
+  } else if (markupToggle) {
+    markupMode = markupToggle.textContent.trim() === '$' ? 'amount' : 'percent';
+    markupToggle.dataset.mode = markupMode;
+  }
+
+  // Use breakdown if labor/material present, else manual rate
+  const breakdownHasNonZero = (laborRate !== 0 || materialRate !== 0);
+
+  let totalWithMarkup = 0;
+  if (breakdownHasNonZero) {
+    const baseTotal = (laborRate * laborHours) + (materialRate * materialQty);
+    totalWithMarkup = (markupMode === 'amount')
+      ? baseTotal + markup
+      : baseTotal * (1 + markup / 100);
+    // Update itemRate input to show computed price from breakdown and mark it as auto-filled
+    if (itemRateEl) {
+      itemRateEl.value = baseTotal;
+      try { itemRateEl.dataset.autofill = '1'; } catch (_) {}
+    }
+  } else if (itemRateEl && itemRateEl.value !== '') {
+    const base = parseFloat(itemRateEl.value) || 0;
+    totalWithMarkup = (markupMode === 'amount')
+      ? base + markup
+      : base * (1 + markup / 100);
+  } else {
+    totalWithMarkup = 0;
+  }
+
+  // Optionally update the live total preview
+  const qty = parseInt(itemQtyEl?.value) || 0;
+  let totalPreview = document.getElementById('lineTotalPreview');
+  if (!totalPreview) {
+    totalPreview = document.createElement('div');
+    totalPreview.id = 'lineTotalPreview';
+    totalPreview.style.marginTop = '6px';
+    totalPreview.style.fontSize = '14px';
+    const container = document.querySelector('.line-item-row') || document.body;
+    container.appendChild(totalPreview);
+  }
+  totalPreview.textContent = `Total: $${(totalWithMarkup * qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+}
+
+  // Listen to breakdown inputs + explicit rate and qty so preview updates live
+  // Expose the recalc helper to global scope so other handlers (suggestions) can call it
+  try { window.recalcLineItemTotal = recalcLineItemTotal; } catch(_) {}
+  ['laborRate','laborHours','materialRate','materialQty','markup','itemQty'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', recalcLineItemTotal);
+  });
+  // For itemRate, treat typing as a user action that clears auto-fill marker
+  const itemRateEl = document.getElementById('itemRate');
+  if (itemRateEl) {
+    itemRateEl.addEventListener('input', function onItemRateInput(e) {
+      try { delete this.dataset.autofill; } catch (_) { this.removeAttribute && this.removeAttribute('data-autofill'); }
+      // then update preview
+      try { recalcLineItemTotal(); } catch (_) {}
+    });
+  }
     };
 
     document.getElementById('itemName').addEventListener('input', showLaborSuggestions);
 
-    function showLaborSuggestions() {
+  function showLaborSuggestions() {
   const input = document.getElementById('itemName');
   const value = input.value.toLowerCase();
   const box = document.getElementById('suggestionBox');
@@ -1280,18 +1766,34 @@ autocomplete="off"
   if (matches.length === 0) return (box.style.display = 'none');
 
   matches.forEach(item => {
+    const lr = Number(item.laborRate) || 0;
+    const mr = Number(item.materialRate) || 0;
+    const lh = lr ? ((Number(item.laborHours) || 1)) : (Number(item.laborHours) || 0);
+    const mq = mr ? ((Number(item.materialQty) || 1)) : (Number(item.materialQty) || 0);
+    const hasBreakdown = (lr || mr);
+    const laborCost = hasBreakdown ? (lr * lh) : (Number(item.baseRate) || 0);
+    const materialCost = hasBreakdown ? (mr * mq) : 0;
+    const mk = Number(item.markup) || 0;
+    const mode = item.markupMode || 'percent';
+    const totalCost = item.totalCost ?? (mode === 'amount' ? (laborCost + materialCost + mk) : ((laborCost + materialCost) * (1 + mk / 100)));
     const option = document.createElement('div');
     option.innerHTML = `
-          <div style="font-weight:600;">${item.name}</div>
-          
-        <div style="font-size: 11px; color: #555; margin-top: 2px;">
-      ${item.description || "No description"}
-        </div>
-
-         <div style="font-size: 11px; color: #007bff; margin-top: 2px;">
-      $${(item.rate || 0).toFixed(2)}
-    </div>
-      
+      <div style="font-weight:600;">${item.name}</div>
+      <div style="font-size: 11px; color: #555; margin-top: 2px;">
+        ${item.description || "No description"}
+      </div>
+      <div style="font-size: 11px; color: #f96302; margin-top: 2px;">
+        Labor: $${laborCost.toFixed(2)} ${hasBreakdown ? `(${lr} × ${lh})` : `(manual)`}
+      </div>
+      <div style="font-size: 11px; color: #16a34a; margin-top: 2px;">
+        Material: $${materialCost.toFixed(2)} ${hasBreakdown ? `(${mr} × ${mq})` : `(—)`}
+      </div>
+      <div style="font-size: 11px; color: #7c3aed; margin-top: 2px;">
+        Markup: ${mode === 'amount' ? `$${mk.toFixed(2)}` : `${mk.toFixed(2)}%`}
+      </div>
+      <div style="font-size: 11px; color: #007bff; margin-top: 2px;">
+        <b>Total:</b> $${totalCost.toFixed(2)} <span style="color:#64748b;font-size:11px;">[${item.calcMode || 'each'}${item.unit ? ', ' + item.unit : ''}]</span>
+      </div>
     `;
     option.style.padding = '8px';
     option.style.cursor = 'pointer';
@@ -1303,10 +1805,50 @@ autocomplete="off"
     option.onclick = () => {
       document.getElementById('itemName').value = item.name;
       document.getElementById('itemDesc').value = item.description;
-      document.getElementById('itemRate').value = item.rate;
+      // Apply markup value and mode
+      const markupEl = document.getElementById('markup');
+      if (markupEl) markupEl.value = (Number(item.markup) || 0);
+      const markupToggle = document.getElementById('markupToggle');
+      if (markupToggle) {
+        const mm = item.markupMode || 'percent';
+        markupToggle.dataset.mode = mm;
+        markupToggle.textContent = (mm === 'amount') ? '$' : '%';
+      }
       if (document.getElementById('itemCode')) {
         document.getElementById('itemCode').value = item.costCode || '';
       }
+      // Fill according to breakdown vs manual base
+      const rateInput = document.getElementById('itemRate');
+      if (lr || mr) {
+        // breakdown path - set breakdown fields and show base in rate (autofill)
+        document.getElementById('laborRate').value = (item.laborRate ?? '')
+        document.getElementById('laborHours').value = (item.laborHours != null && item.laborHours !== 0) ? item.laborHours : '1';
+        document.getElementById('materialRate').value = (item.materialRate ?? '')
+        document.getElementById('materialQty').value = (item.materialQty != null && item.materialQty !== 0) ? item.materialQty : '1';
+        const base = (lr * lh) + (mr * mq);
+        if (rateInput) { rateInput.value = base; try { rateInput.dataset.autofill = '1'; } catch(_){} }
+      } else {
+        // manual path - clear breakdown, set baseRate into rate
+        document.getElementById('laborRate').value = '';
+        document.getElementById('laborHours').value = '1';
+        document.getElementById('materialRate').value = '';
+        document.getElementById('materialQty').value = '1';
+        if (rateInput) { rateInput.value = (Number(item.baseRate) || 0); try { delete rateInput.dataset.autofill; } catch(_){} }
+      }
+      // Save suggestion context for addLineItem
+      window.lastLaborSuggestion = {
+        laborRate: item.laborRate,
+        laborHours: item.laborHours,
+        materialRate: item.materialRate,
+        materialQty: item.materialQty,
+        baseRate: Number(item.baseRate) || 0,
+        markup: Number(item.markup) || 0,
+        markupMode: item.markupMode || 'percent'
+      };
+      // Update live preview based on current fields (use global export if available)
+      try { if (typeof window.recalcLineItemTotal === 'function') window.recalcLineItemTotal(); else if (typeof recalcLineItemTotal === 'function') recalcLineItemTotal(); } catch (_) {}
+      // Refresh floating labels after auto-fill
+      if (typeof updateFloatingLabels === 'function') updateFloatingLabels();
       box.style.display = 'none';
     };
 
@@ -1514,65 +2056,208 @@ function validateAddress(address) {
   }
 }
 
-
+function updateFloatingLabels() {
+  document.querySelectorAll('.floating-label-group input, .floating-label-group textarea').forEach(function(el) {
+    if (el.value) {
+      el.classList.add('filled');
+    } else {
+      el.classList.remove('filled');
+    }
+  });
+}
+updateFloatingLabels();
+document.querySelectorAll('.floating-label-group input, .floating-label-group textarea').forEach(function(el) {
+  el.addEventListener('input', updateFloatingLabels);
+  el.addEventListener('focus', updateFloatingLabels);
+  el.addEventListener('blur', updateFloatingLabels);
+});
 
 
 
 let lineItems = [];
 
-function addLineItem() {
-  const name = document.getElementById('itemName');
-  const description = document.getElementById('itemDesc');
-  const rate = parseFloat(document.getElementById('itemRate').value);
-  const qty = parseInt(document.getElementById('itemQty').value);
-  const costCode = document.getElementById('itemCode').value;
 
-  if (!name.value || isNaN(rate) || isNaN(qty)) {
-    [name, document.getElementById('itemRate'), document.getElementById('itemQty')].forEach(el => {
-      el.style.borderColor = !el.value ? 'red' : '#ccc';
-    });
-    showToast('Please fill all fields');
+
+function toggleAddMarkupMode() {
+  const btn = document.getElementById('markupToggle');
+  if (!btn) return;
+  // Toggle dataset.mode and button label
+  const current = btn.dataset.mode === 'amount' ? 'amount' : 'percent';
+  const next = current === 'amount' ? 'percent' : 'amount';
+  btn.dataset.mode = next;
+  btn.textContent = next === 'amount' ? '$' : '%';
+
+  updateAddLineTotalPreview();
+}
+
+function updateAddLineTotalPreview() {
+  const markupInput = document.getElementById('markup');
+  const markupToggle = document.getElementById('markupToggle');
+  let markupMode = 'percent';
+  if (markupToggle && markupToggle.dataset && markupToggle.dataset.mode) {
+    markupMode = markupToggle.dataset.mode;
+  } else if (markupToggle) {
+    // fallback: infer from button text
+    markupMode = markupToggle.textContent.trim() === '$' ? 'amount' : 'percent';
+    markupToggle.dataset.mode = markupMode;
+  }
+
+  const qty = parseFloat(document.getElementById('itemQty')?.value) || 1;
+  const laborRate = parseFloat(document.getElementById('laborRate')?.value) || 0;
+  const laborHours = parseFloat(document.getElementById('laborHours')?.value) || (laborRate ? 1 : 0);
+  const materialRate = parseFloat(document.getElementById('materialRate')?.value) || 0;
+  const materialQty = parseFloat(document.getElementById('materialQty')?.value) || (materialRate ? 1 : 0);
+  const itemRateInput = document.getElementById('itemRate');
+  const markup = parseFloat(markupInput?.value) || 0;
+
+  let base = 0;
+  // Use breakdown if labor/material present, else manual rate
+  if (laborRate || materialRate) {
+    base = (laborRate * laborHours) + (materialRate * materialQty);
+  } else if (itemRateInput && itemRateInput.value) {
+    base = parseFloat(itemRateInput.value) || 0;
+  }
+
+  let rate = base;
+  if (markupMode === 'percent') {
+    rate = base * (1 + markup / 100);
+  } else {
+    rate = base + markup;
+  }
+
+  // Update the preview
+  let totalPreview = document.getElementById('lineTotalPreview');
+  if (!totalPreview) {
+    totalPreview = document.createElement('div');
+    totalPreview.id = 'lineTotalPreview';
+    totalPreview.style.marginTop = '6px';
+    totalPreview.style.fontSize = '14px';
+    document.querySelector('.line-item-row').appendChild(totalPreview);
+  }
+  totalPreview.textContent = `Total: $${(rate * qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+}
+
+function addLineItem() {
+  const nameEl = document.getElementById('itemName');
+  const descEl = document.getElementById('itemDesc');
+  const qtyVal = parseFloat(document.getElementById('itemQty').value);
+  const itemRateRaw = document.getElementById('itemRate').value;
+  const costCode = document.getElementById('itemCode')?.value || '';
+  const markup = parseFloat(document.getElementById('markup').value) || 0;
+  const markupToggle = document.getElementById('markupToggle');
+  const markupMode = markupToggle?.dataset?.mode || (markupToggle?.textContent.trim() === '$' ? 'amount' : 'percent');
+
+  // Decide if user provided breakdown inputs (labor/material) explicitly.
+  const breakdownProvided = (String(document.getElementById('laborRate')?.value || '').trim() !== '') || (String(document.getElementById('materialRate')?.value || '').trim() !== '');
+
+  // If the user provided an explicit rate (and it wasn't auto-filled by recalc), treat it as explicit.
+  const itemRateElForAdd = document.getElementById('itemRate');
+  const wasAutoFilled = itemRateElForAdd && (itemRateElForAdd.dataset && itemRateElForAdd.dataset.autofill === '1');
+  const explicitRateProvided = !wasAutoFilled && (itemRateRaw !== '' && !isNaN(parseFloat(itemRateRaw)));
+
+  let laborRate, laborHours, materialRate, materialQty;
+  if (breakdownProvided) {
+    laborRate = Number(parseFloat(document.getElementById('laborRate').value) || 0);
+    laborHours = Number(parseFloat(document.getElementById('laborHours').value));
+    if (!laborHours || isNaN(laborHours)) laborHours = 1;
+    materialRate = Number(parseFloat(document.getElementById('materialRate').value) || 0);
+    materialQty = Number(parseFloat(document.getElementById('materialQty').value));
+    if (!materialQty || isNaN(materialQty)) materialQty = 1;
+    try { window.lastLaborSuggestion = null; } catch (_) {}
+  } else if (explicitRateProvided) {
+    laborRate = undefined;
+    laborHours = undefined;
+    materialRate = undefined;
+    materialQty = undefined;
+  } else {
+    if (window.lastLaborSuggestion) {
+      laborRate = Number(window.lastLaborSuggestion.laborRate) || 0;
+      laborHours = Number(window.lastLaborSuggestion.laborHours) || 0;
+      materialRate = Number(window.lastLaborSuggestion.materialRate) || 0;
+      materialQty = Number(window.lastLaborSuggestion.materialQty) || 0;
+      if (!document.getElementById('markup').value && window.lastLaborSuggestion.markup != null) {
+        document.getElementById('markup').value = window.lastLaborSuggestion.markup;
+      }
+      try { window.lastLaborSuggestion = null; } catch (_) {}
+    } else {
+      laborRate = 0;
+      laborHours = 1;
+      materialRate = 0;
+      materialQty = 1;
+    }
+  }
+
+  // Validate required fields (name and qty)
+  if (!nameEl.value || isNaN(qtyVal) || qtyVal <= 0) {
+    [nameEl, document.getElementById('itemQty')].forEach(el => { if (el) el.style.borderColor = !el.value ? 'red' : '#ccc'; });
+    showToast('Please enter item name and a valid quantity.');
     return;
   }
 
+  // Determine rate: prefer explicit itemRate input, else compute from breakdown + markup
+  let rate = 0;
+  if (explicitRateProvided) {
+    rate = parseFloat(itemRateRaw);
+    if (markup && !isNaN(markup) && Number(markup) !== 0) {
+      rate = (markupMode === 'amount') ? (rate + Number(markup)) : (rate * (1 + Number(markup) / 100));
+    }
+  } else {
+    // If no explicit rate and no user-provided breakdown,
+    // try to use lastLaborSuggestion's baseRate if present; otherwise compute from suggestion breakdown defaults.
+    let base = 0;
+    if (typeof laborRate === 'number' && typeof laborHours === 'number' && typeof materialRate === 'number' && typeof materialQty === 'number') {
+      base = (Number(laborRate) || 0) * (Number(laborHours) || 0) + (Number(materialRate) || 0) * (Number(materialQty) || 0);
+    }
+    if (base === 0 && window.lastLaborSuggestion && (Number(window.lastLaborSuggestion.baseRate) || 0)) {
+      base = Number(window.lastLaborSuggestion.baseRate) || 0;
+    }
+    rate = (markupMode === 'amount') ? (base + (Number(markup) || 0)) : (base * (1 + (Number(markup) || 0) / 100));
+  }
+
   lineItems.push({
-    
-    name: name.value,
-    description: description.value,
-    rate,
-    qty,
-    costCode // ✅ Added
+    costCode,
+    name: nameEl.value,
+    description: descEl.value || '',
+    rate: Number(rate) || 0,
+    qty: Number(qtyVal),
+    markup: Number(markup) || 0,
+  markupMode: markupMode,
+  baseRate: (window.lastLaborSuggestion && Number(window.lastLaborSuggestion.baseRate)) || 0,
+    laborRate: Number(laborRate) || 0,
+    laborHours: Number(laborHours) || 0,
+    materialRate: Number(materialRate) || 0,
+    materialQty: Number(materialQty) || 0
   });
 
   renderTable();
   showToast('Line item added');
 
-  name.value = '';
-  description.value = '';
+  // clear inputs
+  nameEl.value = '';
+  descEl.value = '';
   document.getElementById('itemRate').value = '';
+  document.getElementById('markup').value = '';
   document.getElementById('itemQty').value = '';
-  document.getElementById('itemCode').value = ''; // ✅ Clear cost code
-  [name, document.getElementById('itemRate'), document.getElementById('itemQty')].forEach(el => el.style.borderColor = '#ccc');
+  if (document.getElementById('itemCode')) document.getElementById('itemCode').value = '';
+  document.getElementById('laborRate').value = '';
+  document.getElementById('laborHours').value = '1';
+  document.getElementById('materialRate').value = '';
+  document.getElementById('materialQty').value = '1';
+
+  if (typeof updateFloatingLabels === 'function') updateFloatingLabels();
+  updateAddLineTotalPreview();
 }
 
-
-// Live total preview
-['itemRate', 'itemQty'].forEach(id => {
-  document.getElementById(id).addEventListener('input', () => {
-    const rate = parseFloat(document.getElementById('itemRate').value) || 0;
-    const qty = parseInt(document.getElementById('itemQty').value) || 0;
-    const total = rate * qty;
-    let totalPreview = document.getElementById('lineTotalPreview');
-    if (!totalPreview) {
-      totalPreview = document.createElement('div');
-      totalPreview.id = 'lineTotalPreview';
-      totalPreview.style.marginTop = '6px';
-      totalPreview.style.fontSize = '14px';
-      document.querySelector('.line-item-row').appendChild(totalPreview);
-    }
-    totalPreview.textContent = `Total: $${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-  });
+// --- Attach preview update to all relevant inputs and toggle ---
+['itemRate', 'itemQty', 'markup', 'laborRate', 'laborHours', 'materialRate', 'materialQty'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', updateAddLineTotalPreview);
 });
+const markupToggleBtn = document.getElementById('markupToggle');
+if (markupToggleBtn) markupToggleBtn.addEventListener('click', updateAddLineTotalPreview);
+
+// Initial preview
+updateAddLineTotalPreview();
 
 // 📏 Auto Expand for Description Textarea
 const descField = document.getElementById('itemDesc');
@@ -1607,7 +2292,6 @@ function groupLineItemsByCategory(items) {
 
   return groups;
 }
-
 
 
 function setupMobileSortableActivation() {
@@ -1718,9 +2402,10 @@ function renderTable() {
         <th></th>
         <th>Cost Code</th>
         <th>Item</th>
-        <th>Description</th>
-        <th>Rate</th>
-        <th>Quantity</th>
+        <th style="width: 370px;">Description</th>
+        <th >Rate</th>
+        <th>Markup</th>
+        <th style="width: 50px;">Qty</th>
         <th>Total</th>
         <th>Actions</th>
       </tr>
@@ -1732,7 +2417,13 @@ function renderTable() {
   const categoryOrder = Object.keys(grouped);
 
   categoryOrder.forEach((category) => {
-    // --- Category/group header row (draggable) ---
+    // --- Track category total ---
+    let categoryTotal = 0;
+    grouped[category].forEach(item => {
+      categoryTotal += item.rate * item.qty;
+    });
+
+    // --- Category/group header row (draggable) with total ---
     const groupRow = document.createElement('tr');
     groupRow.className = 'category-group-row';
     groupRow.innerHTML = `
@@ -1753,7 +2444,11 @@ function renderTable() {
       ">
         ${capitalizeCategory(category)}
       </td>
+      <td style="background: #fafdff; font-weight: bold; color: #007bff;">
+        ${formatCurrency(categoryTotal)}
+      </td>
     `;
+
     // Create a <tbody> for this category
     const tbody = document.createElement('tbody');
     tbody.setAttribute('data-category', category);
@@ -1766,19 +2461,52 @@ function renderTable() {
       const row = document.createElement('tr');
       row.setAttribute('data-flat-index', lineItems.indexOf(item)); // For editing/deleting
 
-     const isEditing = item.isEditing;
+      const isEditing = item.isEditing;
+      // Determine the display rate for edit mode:
+      // - If L/M values exist, always show base (labor+material) without markup
+      // - If manual mode, show the manual base (stored or derived)
+      const lrDisp = Number(item.laborRate) || 0;
+      const lhDisp = (Number(item.laborHours) || 0) || 1; // default 1 for display
+      const mrDisp = Number(item.materialRate) || 0;
+      const mqDisp = (Number(item.materialQty) || 0) || 1; // default 1 for display
+      const hasLMDisp = (lrDisp > 0) || (mrDisp > 0);
+      const prevMarkupForDisplay = (typeof item.markup !== 'undefined') ? (Number(item.markup) || 0) : 0;
+      const modeDisp = (item.markupMode === 'amount') ? 'amount' : 'percent';
+      const manualBase = (typeof item.baseRateManual === 'number')
+        ? item.baseRateManual
+        : (
+            modeDisp === 'percent'
+              ? (prevMarkupForDisplay ? ((Number(item.rate) || 0) / (1 + prevMarkupForDisplay / 100)) : (Number(item.rate) || 0))
+              : ((Number(item.rate) || 0) - (Number(item.markup) || 0))
+          );
+      const displayRate = hasLMDisp
+        ? (lrDisp * lhDisp + mrDisp * mqDisp)
+        : manualBase;
 
       row.innerHTML = isEditing ? `
-        <td style="text-align:center;"><span class="drag-handle">☰</span></td>
+  <td style="text-align:center;"><span class="drag-handle" onclick="event.stopPropagation()">☰</span></td>
         <td><input type="text" value="${item.costCode || ''}" id="editCode-${lineItems.indexOf(item)}" readonly style="background: #f1f5f9; cursor: not-allowed;" /></td>
         <td><input type="text" value="${item.name}" id="editName-${lineItems.indexOf(item)}" /></td>
-        <td><textarea id="editDesc-${lineItems.indexOf(item)}" oninput="autoResizeTextarea(this)" style="width:100%;">${item.description}</textarea></td>
-        <td><input type="number" value="${item.rate}" id="editRate-${lineItems.indexOf(item)}" /></td>
-        <td><input type="number" value="${item.qty}" id="editQty-${lineItems.indexOf(item)}" /></td>
-        <td>${formatCurrency(item.rate * item.qty)}</td>
         <td>
-          <button class="btn" onclick="saveLineItem(${lineItems.indexOf(item)})">✅</button>
-          <button class="btn" onclick="cancelEditLineItem(${lineItems.indexOf(item)})">❌</button>
+        <textarea id="editDesc-${lineItems.indexOf(item)}" oninput="autoResizeTextarea(this)" style="width:100%;">${item.description}</textarea>
+        </td>
+  <td><input type="number" value="${displayRate}" id="editRate-${lineItems.indexOf(item)}" oninput="recalcEditLineItem(${lineItems.indexOf(item)})" onblur="applyMarkupIfManual(${lineItems.indexOf(item)})" /></td>
+  <td>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <input type="number" value="${item.markup ?? 0}" id="editMarkup-${lineItems.indexOf(item)}" step="any" min="0" style="width:100px" oninput="recalcEditLineItem(${lineItems.indexOf(item)})" />
+      <button type="button" id="editMarkupToggle-${lineItems.indexOf(item)}" onclick="toggleMarkupMode(${lineItems.indexOf(item)})" title="Toggle %/$" style="padding:4px 6px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;cursor:pointer;">${item.markupMode === 'amount' ? '$' : '%'}</button>
+    </div>
+  </td>
+  <td><input type="number" value="${item.qty}" id="editQty-${lineItems.indexOf(item)}" oninput="recalcEditLineItem(${lineItems.indexOf(item)})" /></td>
+  <td><span id="editTotal-${lineItems.indexOf(item)}">${formatCurrency(item.rate * item.qty)}</span></td>
+        <td>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <!-- Save/Cancel buttons removed: click-away will save -->
+            <button title="Advanced" aria-label="Advanced" onclick="toggleAdvancedEdit(${lineItems.indexOf(item)})"
+              style="width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #e5e7eb;background:#ffffff;color:#6b7280;margin:0;box-shadow:0 1px 1.5px rgba(0,0,0,0.04);cursor:pointer;">
+              ⚙
+            </button>
+          </div>
         </td>
       ` : `
         <td style="text-align:center;"><span class="drag-handle">☰</span></td>
@@ -1786,20 +2514,87 @@ function renderTable() {
         <td>${item.name}</td>
         <td>${item.description}</td>
         <td>${formatCurrency(item.rate)}</td>
+  <td>${item.markupMode === 'amount' ? formatCurrency(item.markup || 0) : ((item.markup ?? 0).toFixed(2) + '%')}</td>
         <td>${item.qty}</td>
         <td>${formatCurrency(total)}</td>
         <td>
-          <div class="action-dropdown">
-            <button class="dots" onclick="toggleLineItemMenu(event, ${lineItems.indexOf(item)})">⋯</button>
-            <div class="action-dropdown-content" id="lineitem-menu-${lineItems.indexOf(item)}">
-              <button onclick="editLineItem(${lineItems.indexOf(item)})">✏️ Edit</button>
-              <button onclick="deleteLineItem(${lineItems.indexOf(item)})" style="color: red;">🗑️ Delete</button>
-            </div>
-          </div>
+          <button title="Delete" aria-label="Delete" onclick="event.stopPropagation(); deleteLineItem(${lineItems.indexOf(item)})"
+            style="width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #e5e7eb;background:#ffffff;color:#ef4444;margin:0;box-shadow:0 1px 1.5px rgba(0,0,0,0.04);cursor:pointer;">
+            🗑️
+          </button>
         </td>
       `;
 
+      // Clicking a non-edit row enters edit mode; avoid for drag handle and delete
+      if (!isEditing) {
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', () => editLineItem(lineItems.indexOf(item)));
+      }
       tbody.appendChild(row);
+      // Wire robust listeners to recalc when editing fields change (in case inline handlers were removed)
+      if (isEditing) {
+        const idx = lineItems.indexOf(item);
+        const ids = [
+          `editLaborRate-${idx}`,
+          `editLaborHours-${idx}`,
+          `editMaterialRate-${idx}`,
+          `editMaterialQty-${idx}`,
+          `editMarkup-${idx}`,
+          `editRate-${idx}`,
+          `editQty-${idx}`
+        ];
+        ids.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.addEventListener('input', () => recalcEditLineItem(idx));
+        });
+        // Initial sync
+        try { recalcEditLineItem(idx); } catch (_) {}
+      }
+      // Add a full-width advanced edit row below the main edit row
+      if (isEditing) {
+        const editIdx = lineItems.indexOf(item);
+        const advRow = document.createElement('tr');
+        advRow.setAttribute('data-adv-for', editIdx);
+        advRow.style.display = 'none';
+        advRow.id = `advRow-${editIdx}`;
+        const advTd = document.createElement('td');
+        advTd.colSpan = 9;
+        advTd.innerHTML = `
+          <div id="advancedEdit-${editIdx}" style="margin-top:-9px;background:#f9fafb;border:1px solid #e5e7eb;padding:10px;border-radius:8px; max-width: 1100px;">
+            <div style="border-bottom:1px solid #e5e7eb;margin-bottom:8px;padding-bottom:4px;font-weight:600;color:#334155;font-size:13px;display:flex;align-items:center;justify-content:space-between;">
+              <span>Advanced Edit</span>
+              <span style=\"font-size:12px;color:#6b7280;\">Adjust labor/material to recalc rate with markup</span>
+            </div>
+            <div style="margin-bottom:8px;">
+             
+              <div style="display:flex;flex-direction:row;gap:8px;align-items:flex-start;">
+                <div style="display:flex;flex-direction:column;gap:4px;width:100%;max-width:220px;">
+                  <label style="font-size:12px;color:#64748b;">Labor Rate</label>
+                  <input type="number" id="editLaborRate-${editIdx}" value="${item.laborRate ?? ''}" placeholder="0.00" oninput="recalcEditLineItem(${editIdx})" style="width:100%;padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;" />
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;width:100%;max-width:220px; display:none;">
+                  <label style="font-size:12px;color:#64748b;">Labor Hours</label>
+                  <!-- hidden by default; qtys default to 1 -->
+                  <input type="number" id="editLaborHours-${editIdx}" value="${(typeof item.laborHours !== 'undefined' && item.laborHours !== null) ? item.laborHours : 1}" placeholder="0" oninput="recalcEditLineItem(${editIdx})" style="width:100%;padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px; display:none;" />
+                </div>
+                 <div style="display:flex;flex-direction:column;gap:4px;width:100%;max-width:220px;">
+                  <label style="font-size:12px;color:#64748b;">Material Rate</label>
+                  <input type="number" id="editMaterialRate-${editIdx}" value="${item.materialRate ?? ''}" placeholder="0.00" oninput="recalcEditLineItem(${editIdx})" style="width:100%;padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;" />
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;width:100%;max-width:220px; display:none;">
+                  <label style="font-size:12px;color:#64748b;">Material Qty</label>
+                  <!-- hidden by default; qtys default to 1 -->
+                  <input type="number" id="editMaterialQty-${editIdx}" value="${(typeof item.materialQty !== 'undefined' && item.materialQty !== null) ? item.materialQty : 1}" placeholder="0" oninput="recalcEditLineItem(${editIdx})" style="width:100%;padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px; display:none;" />
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:6px;font-size:12px;color:#64748b;">
+              <span id="editBreakdown-${editIdx}"></span>
+            </div>
+          </div>`;
+        advRow.appendChild(advTd);
+        tbody.appendChild(advRow);
+      }
     });
 
     table.appendChild(tbody);
@@ -1883,7 +2678,7 @@ function renderTable() {
       }
     });
     window.sortables.push(s);
-  } 
+  }
 
   // Totals
   const discount = parseFloat(document.getElementById('inputDiscount').value || 0);
@@ -1891,14 +2686,44 @@ function renderTable() {
   const tax = (subtotal - discount) * (taxRate / 100);
   const total = subtotal - discount + tax;
 
+  // Calculate total markup (sum of all line item markups as applied)
+  let totalMarkup = 0;
+  lineItems.forEach(item => {
+    const qty = Number(item.qty) || 0;
+    let base = 0;
+    if ((Number(item.laborRate) || 0) > 0 || (Number(item.materialRate) || 0) > 0) {
+      // L/M mode
+      base = (Number(item.laborRate) || 0) * ((Number(item.laborHours) || 0) || 1) + (Number(item.materialRate) || 0) * ((Number(item.materialQty) || 0) || 1);
+    } else {
+      // Manual mode
+      if (item.markupMode === 'percent') {
+        base = (item.markup && item.rate) ? (Number(item.rate) / (1 + Number(item.markup) / 100)) : (Number(item.rate) || 0);
+      } else {
+        base = (item.markup && item.rate) ? (Number(item.rate) - Number(item.markup)) : (Number(item.rate) || 0);
+      }
+    }
+    let markupAmt = 0;
+    if (item.markupMode === 'amount') {
+      markupAmt = (Number(item.markup) || 0) * qty;
+    } else {
+      markupAmt = (base * (Number(item.markup) || 0) / 100) * qty;
+    }
+    totalMarkup += markupAmt;
+  });
+
+  // Update markup total value (formatted without currency sign inside span)
+  const markupTotalEl = document.getElementById('markupTotal');
+  if (markupTotalEl) {
+    markupTotalEl.textContent = totalMarkup.toLocaleString(undefined, { minimumFractionDigits: 2 });
+  }
+
   document.getElementById('subtotal').textContent = formatCurrency(subtotal).replace('$', '');
   document.getElementById('discount').textContent = formatCurrency(discount).replace('$', '');
   document.getElementById('tax').textContent = formatCurrency(tax).replace('$', '');
   document.getElementById('grandTotal').textContent = formatCurrency(total).replace('$', '');
+  // Keep suggestions footer in sync with summary-box totals
+  try { updateLaborSuggestionsFooter(); } catch (_) {}
 }
-
-
-
 
 function capitalizeCategory(category) {
   return category.replace(/\w\S*/g, (txt) =>
@@ -1907,9 +2732,24 @@ function capitalizeCategory(category) {
 }
 
   function editLineItem(index) {
-  lineItems[index].isEditing = true;
-  renderTable();
-}
+    lineItems[index].isEditing = true;
+    renderTable();
+    // Setup click-away-to-save
+    setTimeout(() => {
+      const row = document.querySelector(`tr[data-flat-index='${index}']`);
+      const advRow = document.getElementById(`advRow-${index}`);
+      if (!row) return;
+      function handleClickAway(e) {
+        // If click is inside the main edit row or the advanced edit row, do not save/close
+        if (row.contains(e.target) || (advRow && advRow.contains(e.target))) {
+          return;
+        }
+        saveLineItem(index);
+        document.removeEventListener('mousedown', handleClickAway, true);
+      }
+      document.addEventListener('mousedown', handleClickAway, true);
+    }, 0);
+  }
 
 function cancelEditLineItem(index) {
   delete lineItems[index].isEditing;
@@ -1919,8 +2759,11 @@ function cancelEditLineItem(index) {
 function saveLineItem(index) {
   const name = document.getElementById(`editName-${index}`).value;
   const description = document.getElementById(`editDesc-${index}`).value;
-  const rate = parseFloat(document.getElementById(`editRate-${index}`).value);
+  let rate = parseFloat(document.getElementById(`editRate-${index}`).value);
   const qty = parseInt(document.getElementById(`editQty-${index}`).value);
+  const markupInput = document.getElementById(`editMarkup-${index}`);
+  const markup = markupInput ? parseFloat(markupInput.value) || 0 : (lineItems[index].markup ?? 0);
+  const markupMode = (lineItems[index]?.markupMode === 'amount') ? 'amount' : 'percent';
 
   if (!name || isNaN(rate) || isNaN(qty)) {
     showToast("Please fill in all fields correctly.");
@@ -1931,8 +2774,349 @@ function saveLineItem(index) {
   const costCodeInput = document.getElementById(`editCode-${index}`);
   const costCode = costCodeInput ? costCodeInput.value.trim() : (lineItems[index].costCode || "Uncategorized");
 
-  lineItems[index] = { costCode, name, description, rate, qty };
+  // Read advanced breakdown inputs if present; else preserve existing
+  const lrEl = document.getElementById(`editLaborRate-${index}`);
+  const lhEl = document.getElementById(`editLaborHours-${index}`);
+  const mrEl = document.getElementById(`editMaterialRate-${index}`);
+  const mqEl = document.getElementById(`editMaterialQty-${index}`);
+  const laborRate = lrEl ? (parseFloat(lrEl.value) || 0) : (lineItems[index].laborRate ?? undefined);
+  const laborHours = lhEl ? (parseFloat(lhEl.value) || 0) : (lineItems[index].laborHours ?? undefined);
+  const materialRate = mrEl ? (parseFloat(mrEl.value) || 0) : (lineItems[index].materialRate ?? undefined);
+  const materialQty = mqEl ? (parseFloat(mqEl.value) || 0) : (lineItems[index].materialQty ?? undefined);
+
+  // Compute rate based on the active mode
+  const hasLM = ((Number(laborRate) || 0) > 0) || ((Number(materialRate) || 0) > 0);
+  if (hasLM) {
+    // L/M mode: derive base from L/M and apply markup for stored rate
+    const lr = Number(laborRate) || 0;
+    const lh = (Number(laborHours) || 0) || 1;
+    const mr = Number(materialRate) || 0;
+    const mq = (Number(materialQty) || 0) || 1;
+    const baseLM = lr * lh + mr * mq;
+    rate = (markupMode === 'amount') ? (baseLM + (markup || 0)) : (baseLM * (1 + (markup || 0) / 100));
+  } else {
+    // Manual mode: compute from a stable base
+    const existing = lineItems[index] || {};
+    const base = (typeof existing.baseRateManual === 'number') ? existing.baseRateManual : rate;
+    rate = (markupMode === 'amount') ? (base + (markup || 0)) : (base * (1 + (markup || 0) / 100));
+  }
+  lineItems[index] = { costCode, name, description, rate, qty, markup, markupMode, laborRate, laborHours, materialRate, materialQty };
   renderTable();
+}
+
+function toggleAdvancedEdit(index) {
+  // Toggle the below-row advanced edit panel if present; otherwise toggle the in-cell panel
+  const advRow = document.getElementById(`advRow-${index}`);
+  const attachListeners = () => {
+    // Attach input listeners to all advanced edit fields for this index
+    [
+      `editLaborRate-${index}`,
+      `editLaborHours-${index}`,
+      `editMaterialRate-${index}`,
+      `editMaterialQty-${index}`,
+      `editMarkup-${index}`,
+      `editRate-${index}`,
+      `editQty-${index}`
+    ].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el._advListenerAttached) {
+        el.addEventListener('input', () => recalcEditLineItem(index));
+        el._advListenerAttached = true;
+      }
+    });
+  };
+  if (advRow) {
+    const opening = advRow.style.display === 'none';
+    advRow.style.display = opening ? 'table-row' : 'none';
+    if (opening) {
+      setTimeout(() => {
+        attachListeners();
+        try { recalcEditLineItem(index); } catch (_) {}
+      }, 0);
+    }
+    return;
+  }
+  const advCell = document.getElementById(`advancedEdit-${index}`);
+  if (advCell) {
+    const opening = advCell.style.display === 'none';
+    advCell.style.display = opening ? 'block' : 'none';
+    if (opening) {
+      setTimeout(() => {
+        attachListeners();
+        try { recalcEditLineItem(index); } catch (_) {}
+      }, 0);
+    }
+  }
+}
+
+function toggleAdvancedGroup(index, section) {
+  const body = document.getElementById(`advBody-${section}-${index}`);
+  const icon = document.getElementById(`advIcon-${section}-${index}`);
+  if (!body || !icon) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  icon.textContent = isOpen ? '▸' : '▾';
+}
+
+// Toggle markup mode between percent and amount for a specific line item
+function toggleMarkupMode(index) {
+  if (!lineItems[index]) return;
+  const current = (lineItems[index].markupMode === 'amount') ? 'amount' : 'percent';
+  const next = current === 'amount' ? 'percent' : 'amount';
+  lineItems[index].markupMode = next;
+  // Update toggle button label if present
+  const btn = document.getElementById(`editMarkupToggle-${index}`);
+  if (btn) btn.textContent = next === 'amount' ? '$' : '%';
+  // Recalculate with new interpretation
+  try { recalcEditLineItem(index); } catch (_) {}
+}
+
+// Recalculate the edit row when markup, rate, or qty changes
+function recalcEditLineItem(index) {
+  const rateEl = document.getElementById(`editRate-${index}`);
+  const qtyEl = document.getElementById(`editQty-${index}`);
+  const markupEl = document.getElementById(`editMarkup-${index}`);
+  if (!rateEl || !qtyEl) return;
+
+
+  let rate = parseFloat(rateEl.value) || 0;
+  const qty = parseInt(qtyEl.value) || 0;
+  const markup = markupEl ? (parseFloat(markupEl.value) || 0) : (typeof lineItems[index]?.markup !== 'undefined' ? Number(lineItems[index].markup) || 0 : 0);
+  const markupMode = (lineItems[index]?.markupMode === 'amount') ? 'amount' : 'percent';
+
+  const item = lineItems[index];
+  const laborRateEl = document.getElementById(`editLaborRate-${index}`);
+  const laborHoursEl = document.getElementById(`editLaborHours-${index}`);
+  const materialRateEl = document.getElementById(`editMaterialRate-${index}`);
+  const materialQtyEl = document.getElementById(`editMaterialQty-${index}`);
+
+  // Get values
+  let lr = laborRateEl ? (parseFloat(laborRateEl.value) || 0) : (typeof item?.laborRate !== 'undefined' ? item.laborRate : 0);
+  let lh = laborHoursEl ? (parseFloat(laborHoursEl.value) || 0) : (typeof item?.laborHours !== 'undefined' ? item.laborHours : 0);
+  let mr = materialRateEl ? (parseFloat(materialRateEl.value) || 0) : (typeof item?.materialRate !== 'undefined' ? item.materialRate : 0);
+  let mq = materialQtyEl ? (parseFloat(materialQtyEl.value) || 0) : (typeof item?.materialQty !== 'undefined' ? item.materialQty : 0);
+
+
+  // Determine if we're in manual mode: no labor/material rates provided
+  // Ignore hours/qty defaults (they may be 1 by default but rates define intent)
+  const manualMode = ((lr || 0) === 0 && (mr || 0) === 0);
+
+  // We'll track the rate we store for calculations/totals separately from what's shown in the input
+  let storedRate = null;
+
+  // If labor/material fields are being edited, recalc from L/M with markup
+  if (
+    (laborRateEl && document.activeElement === laborRateEl) ||
+    (laborHoursEl && document.activeElement === laborHoursEl) ||
+    (materialRateEl && document.activeElement === materialRateEl) ||
+    (materialQtyEl && document.activeElement === materialQtyEl)
+  ) {
+    // Ensure sensible defaults when entering L/M fields: set hours/qty to 1 if zero/empty
+    if ((laborRateEl && document.activeElement === laborRateEl) || (laborHoursEl && document.activeElement === laborHoursEl)) {
+      if (!lh || isNaN(lh)) {
+        lh = 1;
+        if (laborHoursEl) laborHoursEl.value = '1';
+      }
+    }
+    if ((materialRateEl && document.activeElement === materialRateEl) || (materialQtyEl && document.activeElement === materialQtyEl)) {
+      if (!mq || isNaN(mq)) {
+        mq = 1;
+        if (materialQtyEl) materialQtyEl.value = '1';
+      }
+    }
+    const laborCost = (lr) * (lh);
+    const materialCost = (mr) * (mq);
+  const baseLM = (laborCost + materialCost);
+  const effectiveLM = markupMode === 'amount' ? (baseLM + (markup || 0)) : (baseLM * (1 + (markup || 0) / 100));
+    storedRate = effectiveLM;
+    // Show base in the input while editing L/M
+    rateEl.value = baseLM > 0 ? baseLM.toFixed(2) : '';
+    if (lineItems[index]) {
+      lineItems[index].rate = effectiveLM;
+      delete lineItems[index].baseRateManual; // L/M is the source now
+    }
+  } else if (markupEl && document.activeElement === markupEl) {
+    // Markup changed: apply differently depending on mode
+    if (manualMode) {
+      // Keep the input as the base rate; only update stored/calculated rate
+      const base = (typeof item?.baseRateManual === 'number')
+        ? item.baseRateManual
+        : (parseFloat(rateEl.value) || 0);
+  const finalRate = markupMode === 'amount' ? (base + (markup || 0)) : (base * (1 + (markup || 0) / 100));
+      storedRate = finalRate;
+      // Do NOT change the input value; it should show base in manual mode
+      if (lineItems[index]) {
+        lineItems[index].rate = finalRate;
+        lineItems[index].markup = markup;
+        lineItems[index].baseRateManual = base;
+      }
+    } else {
+      // L/M mode: recompute base+markup; show base, store effective for totals
+      const laborCost = (lr) * (lh);
+      const materialCost = (mr) * (mq);
+  const baseLM = (laborCost + materialCost);
+  const effectiveLM = markupMode === 'amount' ? (baseLM + (markup || 0)) : (baseLM * (1 + (markup || 0) / 100));
+      storedRate = effectiveLM;
+      rateEl.value = baseLM > 0 ? baseLM.toFixed(2) : '';
+      if (lineItems[index]) {
+        lineItems[index].rate = effectiveLM;
+      }
+    }
+  } else if (document.activeElement === rateEl) {
+    // Typing manually in rate: treat as manual mode and do NOT apply markup to the input
+    if (lineItems[index]) {
+      lineItems[index].baseRateManual = rate;
+      // Clear L/M values when switching to manual entry
+      if (!manualMode) {
+        if (laborRateEl) laborRateEl.value = '';
+        if (laborHoursEl) laborHoursEl.value = '';
+        if (materialRateEl) materialRateEl.value = '';
+        if (materialQtyEl) materialQtyEl.value = '';
+        lineItems[index].laborRate = 0;
+        lineItems[index].laborHours = 0;
+        lineItems[index].materialRate = 0;
+        lineItems[index].materialQty = 0;
+      }
+    }
+    // While typing, keep input as base but store effective (base × (1+markup)) so totals stay accurate
+  storedRate = markupMode === 'amount' ? (rate + (markup || 0)) : (rate * (1 + (markup || 0) / 100));
+  } else if (manualMode) {
+    // Not focused on inputs, but in manual mode: ensure stored rate reflects base+markup
+    const base = (typeof item?.baseRateManual === 'number') ? item.baseRateManual : (parseFloat(rateEl.value) || 0);
+  storedRate = markupMode === 'amount' ? (base + (markup || 0)) : (base * (1 + (markup || 0) / 100));
+    if (lineItems[index]) {
+      lineItems[index].rate = storedRate;
+      lineItems[index].baseRateManual = base;
+    }
+  }
+
+  // Show breakdown if advanced fields used
+  const breakdownEl = document.getElementById(`editBreakdown-${index}`);
+  if (breakdownEl) {
+    const laborCost = (lr) * (lh);
+    const materialCost = (mr) * (mq);
+    if (lr || lh || mr || mq) {
+      breakdownEl.textContent = `Labor: $${laborCost.toFixed(2)} (${lr} × ${lh}) • Material: $${materialCost.toFixed(2)} (${mr} × ${mq})`;
+    } else {
+      breakdownEl.textContent = '';
+    }
+  }
+
+  // Always update backing data (without overwriting storedRate decision)
+  if (lineItems[index]) {
+    lineItems[index].markup = markup;
+    if (storedRate !== null) lineItems[index].rate = storedRate;
+    lineItems[index].laborRate = lr;
+    lineItems[index].laborHours = lh;
+    lineItems[index].materialRate = mr;
+    lineItems[index].materialQty = mq;
+  }
+
+  const effectiveRate = (storedRate !== null) ? storedRate : rate;
+  const total = effectiveRate * qty;
+  const totalSpan = document.getElementById(`editTotal-${index}`);
+  if (totalSpan) totalSpan.textContent = formatCurrency(total);
+
+  updateTotalsPreviewWithEdit(index);
+}
+
+// Apply markup to the manual rate only after user finishes typing (on blur) when no labor/material are provided
+function applyMarkupIfManual(index) {
+  const rateEl = document.getElementById(`editRate-${index}`);
+  const markupEl = document.getElementById(`editMarkup-${index}`);
+  if (!rateEl) return;
+
+  const laborRateEl = document.getElementById(`editLaborRate-${index}`);
+  const laborHoursEl = document.getElementById(`editLaborHours-${index}`);
+  const materialRateEl = document.getElementById(`editMaterialRate-${index}`);
+  const materialQtyEl = document.getElementById(`editMaterialQty-${index}`);
+
+  const lr = laborRateEl ? (parseFloat(laborRateEl.value) || 0) : 0;
+  const lh = laborHoursEl ? (parseFloat(laborHoursEl.value) || 0) : 0;
+  const mr = materialRateEl ? (parseFloat(materialRateEl.value) || 0) : 0;
+  const mq = materialQtyEl ? (parseFloat(materialQtyEl.value) || 0) : 0;
+
+  // If using manual rate (no labor/material rates entered)
+  if (((lr || 0) === 0 && ((mr || 0) === 0))) {
+    const item = lineItems[index] || {};
+    const base = (typeof item.baseRateManual === 'number') ? item.baseRateManual : (parseFloat(rateEl.value) || 0);
+    const markup = markupEl ? (parseFloat(markupEl.value) || 0) : 0;
+    const mode = (item.markupMode === 'amount') ? 'amount' : 'percent';
+    const finalRate = mode === 'amount' ? (base + (markup || 0)) : (base * (1 + (markup || 0) / 100));
+    // Keep input showing base to avoid compounding perception; only store final
+    if (lineItems[index]) {
+      lineItems[index].rate = finalRate;
+      lineItems[index].markup = markup;
+      lineItems[index].baseRateManual = base;
+      // Zero out breakdown since manual
+      lineItems[index].laborRate = 0;
+      lineItems[index].laborHours = 0;
+      lineItems[index].materialRate = 0;
+      lineItems[index].materialQty = 0;
+    }
+    // Refresh the row total preview
+    updateTotalsPreviewWithEdit(index);
+  }
+}
+
+// Recompute totals using edited row values if present
+function updateTotalsPreviewWithEdit(editIndex) {
+  const discount = parseFloat(document.getElementById('inputDiscount')?.value || 0);
+  const taxRate = parseFloat(document.getElementById('inputTax')?.value || 0);
+  let subtotal = 0;
+  for (let i = 0; i < lineItems.length; i++) {
+    if (i === editIndex && document.getElementById(`editQty-${i}`)) {
+      // Use stored effective rate (includes markup) with live qty input for edited row
+      const r = Number(lineItems[i]?.rate) || 0;
+      const q = parseInt(document.getElementById(`editQty-${i}`).value) || 0;
+      subtotal += r * q;
+    } else {
+      const it = lineItems[i];
+      subtotal += (Number(it.rate) || 0) * (Number(it.qty) || 0);
+    }
+  }
+  const tax = (subtotal - discount) * (taxRate / 100);
+  const total = subtotal - discount + tax;
+  const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = formatCurrency(val).replace('$',''); };
+  setText('subtotal', subtotal);
+  setText('discount', discount);
+  setText('tax', tax);
+  setText('grandTotal', total);
+
+  // Also update each category header total live while editing
+  try {
+    const tbodys = document.querySelectorAll('tbody[data-category]');
+    tbodys.forEach(tbody => {
+      const catKey = tbody.getAttribute('data-category'); // normalized category key (lowercase)
+      // Recompute total for this category, honoring the current edit row values
+      let catTotal = 0;
+      for (let i = 0; i < lineItems.length; i++) {
+        const item = lineItems[i];
+        // Determine normalized category key like groupLineItemsByCategory
+        let category = 'General';
+        if (item?.name && item.name.includes('-')) {
+          const c = item.name.split('-').slice(1).join('-').trim();
+          category = c || 'General';
+        }
+        const norm = String(category).toLowerCase().trim();
+        if (norm === catKey) {
+          if (i === editIndex && document.getElementById(`editQty-${i}`)) {
+            const r = Number(lineItems[i]?.rate) || 0;
+            const q = parseInt(document.getElementById(`editQty-${i}`).value) || 0;
+            catTotal += r * q;
+          } else {
+            const r = Number(item?.rate) || 0;
+            const q = Number(item?.qty) || 0;
+            catTotal += r * q;
+          }
+        }
+      }
+      const headerCell = tbody.querySelector('.category-group-row td:last-child');
+      if (headerCell) headerCell.textContent = formatCurrency(catTotal);
+    });
+  } catch (_) {
+    // Non-fatal if structure not present
+  }
 }
 
 
@@ -2160,13 +3344,19 @@ async function loadQuoteForEditing(quoteId) {
     document.getElementById('inputDiscount').value = quote.totals?.discount || 0;
     document.getElementById('inputTax').value = quote.totals?.tax || 0;
     
-    // Fill in line items
+    // Fill in line items (preserve markup if present)
     lineItems = quote.lineItems.map(item => ({
       costCode: item.costCode || '',
       name: item.name,
       description: item.description || '',
       rate: parseFloat(item.rate) || 0,
-      qty: parseInt(item.qty) || 0
+      qty: parseInt(item.qty) || 0,
+      markup: item.markup != null ? parseFloat(item.markup) : 0,
+      markupMode: item.markupMode === 'amount' ? 'amount' : 'percent',
+      laborRate: item.laborRate,
+      laborHours: item.laborHours,
+      materialRate: item.materialRate,
+      materialQty: item.materialQty
     }));
     
     // Render the table with the line items
@@ -2215,7 +3405,22 @@ function saveQuote() {
     date: document.getElementById('quoteDate').value,
     validTill: document.getElementById('validTill').value,
     notes: document.getElementById('quoteNotes').value,
-    lineItems,
+    // Store laborCost and materialCost if available
+    lineItems: lineItems.map(item => {
+      let laborCost = null, materialCost = null;
+      if (typeof item.laborRate !== 'undefined' && typeof item.laborHours !== 'undefined') {
+        laborCost = (item.laborRate || 0) * (item.laborHours || 0);
+      }
+      if (typeof item.materialRate !== 'undefined' && typeof item.materialQty !== 'undefined') {
+        materialCost = (item.materialRate || 0) * (item.materialQty || 0);
+      }
+      return {
+        ...item,
+        markup: item.markup != null ? item.markup : 0,
+        laborCost,
+        materialCost
+      };
+    }),
     totals: {
       subtotal: parseFloat(document.getElementById('subtotal').textContent.replace(/,/g, '')),
       discount: parseFloat(document.getElementById('discount').textContent.replace(/,/g, '')),
@@ -2739,135 +3944,159 @@ function closeLaborCostModal() {
     }
   }
 
-  function renderLaborSuggestions() {
-  const query = document.getElementById('laborSearchInput').value.toLowerCase();
-  const list = document.getElementById('laborSuggestionList');
-  list.innerHTML = '';
+  // --- RENDER LABOR SUGGESTIONS (NEW SCHEMA) ---
+    function renderLaborSuggestions() {
+      const query = document.getElementById('laborSearchInput').value.toLowerCase();
+      const list = document.getElementById('laborSuggestionList');
+      list.innerHTML = '';
 
-  // 🛠 Create Expand/Collapse Buttons
-  const controls = document.createElement('div');
-  controls.style.display = 'flex';
-  controls.style.justifyContent = 'flex-end';
-  controls.style.gap = '10px';
-  controls.style.marginBottom = '10px';
+      // ...expand/collapse controls (unchanged)...
 
-  const expandAllBtn = document.createElement('button');
-  expandAllBtn.textContent = 'Expand All';
-  expandAllBtn.className = 'btn';
-  expandAllBtn.style.padding = '6px 12px';
-  expandAllBtn.onclick = () => {
-    list.querySelectorAll('ul').forEach(ul => ul.style.display = 'block');
-    list.querySelectorAll('li > div > span').forEach(span => span.textContent = '➖');
-  };
+      const controls = document.createElement('div');
+      controls.style.display = 'flex';
+      controls.style.justifyContent = 'flex-end';
+      controls.style.gap = '10px';
+      controls.style.marginBottom = '10px';
 
-  const collapseAllBtn = document.createElement('button');
-  collapseAllBtn.textContent = 'Collapse All';
-  collapseAllBtn.className = 'btn';
-  collapseAllBtn.style.padding = '6px 12px';
-  collapseAllBtn.onclick = () => {
-    list.querySelectorAll('ul').forEach(ul => ul.style.display = 'none');
-    list.querySelectorAll('li > div > span').forEach(span => span.textContent = '➕');
-  };
+      const expandAllBtn = document.createElement('button');
+      expandAllBtn.textContent = 'Expand All';
+      expandAllBtn.className = 'btn';
+      expandAllBtn.style.padding = '6px 12px';
+      expandAllBtn.onclick = () => {
+        list.querySelectorAll('ul').forEach(ul => ul.style.display = 'block');
+        list.querySelectorAll('li > div > span').forEach(span => span.textContent = '➖');
+      };
 
-  controls.appendChild(expandAllBtn);
-  controls.appendChild(collapseAllBtn);
-  list.appendChild(controls);
+      const collapseAllBtn = document.createElement('button');
+      collapseAllBtn.textContent = 'Collapse All';
+      collapseAllBtn.className = 'btn';
+      collapseAllBtn.style.padding = '6px 12px';
+      collapseAllBtn.onclick = () => {
+        list.querySelectorAll('ul').forEach(ul => ul.style.display = 'none');
+        list.querySelectorAll('li > div > span').forEach(span => span.textContent = '➕');
+      };
 
-  // 🧠 Group items by room
-  const groups = {};
+      controls.appendChild(expandAllBtn);
+      controls.appendChild(collapseAllBtn);
+      list.appendChild(controls);
 
-  laborCostList.forEach((item, index) => {
-    let room = 'General'; // Default group
-    const parts = item.name.split('-');
-    if (parts.length > 1) {
-      room = parts[1].trim().toLowerCase();
-    }
-    if (!groups[room]) groups[room] = [];
-    groups[room].push({ item, index });
-  });
+      // Group by room
+      const groups = {};
+      laborCostList.forEach((item, index) => {
+        let room = 'General';
+        const parts = item.name.split('-');
+        if (parts.length > 1) room = parts[1].trim().toLowerCase();
+        if (!groups[room]) groups[room] = [];
+        groups[room].push({ item, index });
+      });
 
-  // ✨ Sort rooms alphabetically
-  const sortedRooms = Object.keys(groups).sort((a, b) => a.localeCompare(b));
-
-  for (const roomName of sortedRooms) {
-    const groupItems = groups[roomName];
-
-    // 🔍 Filter inside group
-    const filtered = groupItems.filter(({ item }) =>
-      item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)
-    );
-
-    if (query && filtered.length === 0) continue; // Skip empty groups when searching
-
-    // ➡️ Create collapsible room section
-    const groupContainer = document.createElement('li');
-    groupContainer.style.marginTop = '15px';
-
-    const header = document.createElement('div');
-    header.style.display = 'flex';
-    header.style.justifyContent = 'space-between';
-    header.style.alignItems = 'center';
-    header.style.cursor = 'pointer';
-    header.style.padding = '8px 12px';
-    header.style.background = '#f0f4f8';
-    header.style.borderRadius = '8px';
-    header.style.fontWeight = 'bold';
-    header.style.color = '#007bff';
-    header.style.textTransform = 'capitalize';
-    header.innerHTML = ` ${roomName} <span style="font-size: 18px;">➕</span>`;
-
-    const itemList = document.createElement('ul');
-    itemList.style.listStyle = 'none';
-    itemList.style.paddingLeft = '15px';
-    itemList.style.display = query ? 'block' : 'none'; // 🔥 Open group if searching!
-
-    // Toggle display
-    header.onclick = () => {
-      if (itemList.style.display === 'none') {
-        itemList.style.display = 'block';
-        header.querySelector('span').textContent = '➖';
-      } else {
-        itemList.style.display = 'none';
-        header.querySelector('span').textContent = '➕';
-      }
-    };
-
-    groupContainer.appendChild(header);
-
-    (query ? filtered : groupItems).forEach(({ item, index }) => {
-      const li = document.createElement('li');
-      li.style.marginTop = '8px';
-      li.innerHTML = `
-        <div style="border: 1px solid #ccc; padding: 10px; border-radius: 8px; background: #f9f9f9;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div onclick="useSuggestedLabor(${index})" style="flex: 1; padding-right: 10px;">
-              <small style="color: #64748b;"><strong>cost code:</strong> ${item.costCode || '-'}</small><br>
-              <strong>${item.name}</strong><br>
-              <small>${item.description}</small><br>
-              <span style="color: #007bff; font-weight: bold;">$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-            </div>
-            <div class="action-dropdown" style="position: relative;">
-              <button class="dots" onclick="toggleActionDropdown(event, ${index})">⋯</button>
-              <div class="action-dropdown-content" id="action-menu-${index}">
-                <button onclick="useSuggestedLabor(${index})">Use</button>
-                <button onclick="editLaborItem(${index})">Edit</button>
-                <button onclick="deleteLaborItem(${index})">Delete</button>
+      const sortedRooms = Object.keys(groups).sort((a, b) => a.localeCompare(b));
+      for (const roomName of sortedRooms) {
+        const groupItems = groups[roomName];
+        const filtered = groupItems.filter(({ item }) =>
+          item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)
+        );
+        if (query && filtered.length === 0) continue;
+        const groupContainer = document.createElement('li');
+        groupContainer.style.marginTop = '15px';
+        const header = document.createElement('div');
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'center';
+        header.style.cursor = 'pointer';
+        header.style.padding = '8px 12px';
+        header.style.background = '#f0f4f8';
+        header.style.borderRadius = '8px';
+        header.style.fontWeight = 'bold';
+        header.style.color = '#007bff';
+        header.style.textTransform = 'capitalize';
+        header.innerHTML = ` ${roomName} <span style="font-size: 18px;">➕</span>`;
+        const itemList = document.createElement('ul');
+        itemList.style.listStyle = 'none';
+        itemList.style.paddingLeft = '15px';
+        itemList.style.display = query ? 'block' : 'none';
+        header.onclick = () => {
+          if (itemList.style.display === 'none') {
+            itemList.style.display = 'block';
+            header.querySelector('span').textContent = '➖';
+          } else {
+            itemList.style.display = 'none';
+            header.querySelector('span').textContent = '➕';
+          }
+        };
+        groupContainer.appendChild(header);
+        (query ? filtered : groupItems).forEach(({ item, index }) => {
+          const li = document.createElement('li');
+          li.style.marginTop = '8px';
+          li.innerHTML = `
+            <div style="border: 1px solid #ccc; padding: 10px; border-radius: 8px; background: #f9f9f9; position: relative;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div onclick="useSuggestedLabor(${index})" style="flex: 1; padding-right: 10px; cursor:pointer;">
+                  <small style="color: #64748b;"><strong>cost code:</strong> ${item.costCode || '-'}</small><br>
+                  <strong>${item.name}</strong><br>
+                  <small>${item.description}</small><br>
+                  <div style="margin: 6px 0 2px 0;">
+                    ${(() => {
+                      const lr = Number(item.laborRate) || 0;
+                      const mr = Number(item.materialRate) || 0;
+                      const lh = lr ? ((Number(item.laborHours) || 1)) : (Number(item.laborHours) || 0);
+                      const mq = mr ? ((Number(item.materialQty) || 1)) : (Number(item.materialQty) || 0);
+                      const hasBreakdown = (lr || mr);
+                      const laborCost = hasBreakdown ? (lr * lh) : (Number(item.baseRate) || 0);
+                      const materialCost = hasBreakdown ? (mr * mq) : 0;
+                      const mk = Number(item.markup) || 0;
+                      const mm = item.markupMode || 'percent';
+                      const total = item.totalCost ?? (mm === 'amount' ? (laborCost + materialCost + mk) : ((laborCost + materialCost) * (1 + mk/100)));
+                      const markupText = mm === 'amount' ? `$${mk.toFixed(2)}` : `${mk.toFixed(2)}%`;
+                      return `
+                        <div class=\"suggestion-total-row\" id=\"total-head-${index}\" onclick=\"toggleSuggestionDetails(event, ${index})\">
+                          <span class=\"total-amount\"><b></b> $${total.toFixed(2)}</span>
+                          <span id=\"chev-${index}\" class=\"chevron\">▸</span>
+                        </div>
+                        <div id=\"cost-details-${index}\" style=\"display:none;margin-top:4px;\">
+                          <span style=\"color:#7c3aed;\"><b>Labor:</b> $${laborCost.toFixed(2)} ${hasBreakdown ? `(${lr} × ${lh})` : `(manual)`}</span><br>
+                          <span style=\"color:#16a34a;\"><b>Material:</b> $${materialCost.toFixed(2)} ${hasBreakdown ? `(${mr} × ${mq})` : `(—)`}</span><br>
+                          <span style=\"color:#2563eb;\"><b>Markup:</b> ${markupText}</span><br>
+                          <span style=\"color:#64748b;font-size:12px;\"> [${item.calcMode || 'each'}${item.unit ? ', ' + item.unit : ''}]</span>
+                        </div>
+                      `;
+                    })()}
+                  </div>
+                </div>
+                <div class="action-dropdown">
+                  <button class="dots" onclick="toggleActionDropdown(event, ${index})">⋮</button>
+                  <div class="action-dropdown-content" id="action-menu-${index}">
+                    <button onclick="useSuggestedLabor(${index})">Use</button>
+                    <button onclick="editLaborItem(${index})">Edit</button>
+                    <button onclick="deleteLaborItem(${index})">Delete</button>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      `;
-      itemList.appendChild(li);
-    });
+          `;
+          itemList.appendChild(li);
+        });
+        groupContainer.appendChild(itemList);
+        list.appendChild(groupContainer);
+      }
+      // Reset footer totals when rendering the list
+      if (typeof updateLaborSuggestionsFooter === 'function') updateLaborSuggestionsFooter(null);
+    }
 
-    groupContainer.appendChild(itemList);
-    list.appendChild(groupContainer);
+
+
+
+  function toggleSuggestionDetails(event, index) {
+    if (event && event.stopPropagation) event.stopPropagation();
+    const details = document.getElementById(`cost-details-${index}`);
+    const chev = document.getElementById(`chev-${index}`);
+    const head = document.getElementById(`total-head-${index}`);
+    if (!details || !chev) return;
+    const open = details.style.display !== 'none';
+    details.style.display = open ? 'none' : 'block';
+    chev.textContent = open ? '▸' : '▾';
+    if (head && head.classList) head.classList.toggle('open', !open);
   }
-}
-
-
-
-
 
   function toggleActionDropdown(event, index) {
     event.stopPropagation();
@@ -2876,91 +4105,244 @@ function closeLaborCostModal() {
     document.addEventListener('click', () => (menu.style.display = 'none'), { once: true });
   }
 
-  async function addLaborItem() {
-  const name = document.getElementById('newLaborName').value;
-  const description = document.getElementById('newLaborDesc').value;
-  const rate = parseFloat(document.getElementById('newLaborRate').value);
-  const costCode = document.getElementById('newLaborCode').value;
-
-  if (!name || !description || isNaN(rate)) return alert('Please fill all fields correctly.');
-  showLoader();
-  try {
-    const res = await fetch('/api/labor-costs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description, rate, costCode })
+    // --- DYNAMIC CALCULATION FOR ADD LABOR ITEM ---
+    function updateNewLaborCostFields() {
+  const laborRate = parseFloat(document.getElementById('newLaborLaborRate').value) || 0;
+  let laborHours = parseFloat(document.getElementById('newLaborLaborHours').value);
+  if (!laborHours || isNaN(laborHours)) laborHours = 1;
+  const materialRate = parseFloat(document.getElementById('newLaborMaterialRate').value) || 0;
+  let materialQty = parseFloat(document.getElementById('newLaborMaterialQty').value);
+  if (!materialQty || isNaN(materialQty)) materialQty = 1;
+  const baseRate = parseFloat(document.getElementById('newBaseRate').value) || 0;
+  const markup = parseFloat(document.getElementById('newLaborMarkup').value) || 0;
+  const mode = document.getElementById('newMarkupToggle')?.dataset?.mode || 'percent';
+      const hasBreakdown = (laborRate || materialRate);
+      const laborCost = hasBreakdown ? (laborRate * laborHours) : baseRate;
+      const materialCost = hasBreakdown ? (materialRate * materialQty) : 0;
+      const subtotal = laborCost + materialCost;
+      const totalCost = mode === 'amount' ? (subtotal + markup) : (subtotal * (1 + markup / 100));
+      document.getElementById('newLaborLaborCost').textContent = laborCost.toFixed(2);
+      document.getElementById('newLaborMaterialCost').textContent = materialCost.toFixed(2);
+      document.getElementById('newLaborTotalCost').textContent = totalCost.toFixed(2);
+    }
+    ['newLaborLaborRate','newLaborLaborHours','newLaborMaterialRate','newLaborMaterialQty','newLaborMarkup','newBaseRate'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updateNewLaborCostFields);
     });
-    const newItem = await res.json();
-    laborCostList.unshift(newItem);
-    renderLaborSuggestions();
-  } catch (err) {
-    console.error('Error adding labor item:', err);
-  } finally {
-    hideLoader();
-  }
+    // Toggle and mutual exclusivity for New Labor
+    document.getElementById('newMarkupToggle')?.addEventListener('click', function(){
+      const cur = this.dataset.mode === 'amount' ? 'amount' : 'percent';
+      const next = cur === 'amount' ? 'percent' : 'amount';
+      this.dataset.mode = next;
+      this.textContent = next === 'amount' ? '$' : '%';
+      updateNewLaborCostFields();
+    });
+    document.getElementById('newBaseRate')?.addEventListener('input', function(){
+      if (this.value !== '') {
+        ['newLaborLaborRate','newLaborLaborHours','newLaborMaterialRate','newLaborMaterialQty'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+      }
+      updateNewLaborCostFields();
+    });
+    ['newLaborLaborRate','newLaborLaborHours','newLaborMaterialRate','newLaborMaterialQty'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', function(){
+        if (this.value !== '') {
+          const base = document.getElementById('newBaseRate');
+          if (base) base.value = '';
+        }
+      });
+    });
 
-  // Reset fields
-  ['newLaborName', 'newLaborDesc', 'newLaborRate', 'newLaborCode'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-}
+    // --- DYNAMIC CALCULATION FOR EDIT LABOR ITEM ---
+    function updateEditLaborCostFields() {
+  const laborRate = parseFloat(document.getElementById('editLaborLaborRate').value) || 0;
+  let laborHours = parseFloat(document.getElementById('editLaborLaborHours').value);
+  if (laborRate && (!laborHours || isNaN(laborHours))) laborHours = 1;
+  const materialRate = parseFloat(document.getElementById('editLaborMaterialRate').value) || 0;
+  let materialQty = parseFloat(document.getElementById('editLaborMaterialQty').value);
+  if (materialRate && (!materialQty || isNaN(materialQty))) materialQty = 1;
+  const baseRate = parseFloat(document.getElementById('editBaseRate').value) || 0;
+  const markup = parseFloat(document.getElementById('editLaborMarkup').value) || 0;
+  const mode = document.getElementById('editMarkupToggle')?.dataset?.mode || 'percent';
+      const hasBreakdown = (laborRate || materialRate);
+      const laborCost = hasBreakdown ? (laborRate * (laborHours || 0)) : baseRate;
+      const materialCost = hasBreakdown ? (materialRate * (materialQty || 0)) : 0;
+      const subtotal = laborCost + materialCost;
+      const totalCost = mode === 'amount' ? (subtotal + markup) : (subtotal * (1 + markup / 100));
+      document.getElementById('editLaborLaborCost').textContent = laborCost.toFixed(2);
+      document.getElementById('editLaborMaterialCost').textContent = materialCost.toFixed(2);
+      const mkSpan = document.getElementById('editLaborMarkupDisplay');
+      if (mkSpan) mkSpan.textContent = (mode === 'amount') ? `$${markup.toFixed(2)}` : `${markup.toFixed(2)}%`;
+      document.getElementById('editLaborTotalCost').textContent = totalCost.toFixed(2);
+    }
+    ['editLaborLaborRate','editLaborLaborHours','editLaborMaterialRate','editLaborMaterialQty','editLaborMarkup','editBaseRate'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', updateEditLaborCostFields);
+    });
+    // Toggle and mutual exclusivity
+    document.getElementById('editMarkupToggle')?.addEventListener('click', function(){
+      const cur = this.dataset.mode === 'amount' ? 'amount' : 'percent';
+      const next = cur === 'amount' ? 'percent' : 'amount';
+      this.dataset.mode = next;
+      this.textContent = next === 'amount' ? '$' : '%';
+      updateEditLaborCostFields();
+    });
+    document.getElementById('editBaseRate')?.addEventListener('input', function(){
+      if (this.value !== '') {
+        ['editLaborLaborRate','editLaborLaborHours','editLaborMaterialRate','editLaborMaterialQty'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+      }
+      updateEditLaborCostFields();
+    });
+    ['editLaborLaborRate','editLaborLaborHours','editLaborMaterialRate','editLaborMaterialQty'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', function(){
+        if (this.value !== '') {
+          const base = document.getElementById('editBaseRate');
+          if (base) base.value = '';
+        }
+      });
+    });
+
+    // --- ADD LABOR ITEM (NEW SCHEMA) ---
+    async function addLaborItem() {
+      const name = document.getElementById('newLaborName').value;
+      const description = document.getElementById('newLaborDesc').value;
+      const costCode = document.getElementById('newLaborCode').value;
+  const laborRate = parseFloat(document.getElementById('newLaborLaborRate').value) || 0;
+  let laborHours = parseFloat(document.getElementById('newLaborLaborHours').value);
+  if (!laborHours || isNaN(laborHours)) laborHours = 1;
+  const materialRate = parseFloat(document.getElementById('newLaborMaterialRate').value) || 0;
+  let materialQty = parseFloat(document.getElementById('newLaborMaterialQty').value);
+  if (!materialQty || isNaN(materialQty)) materialQty = 1;
+  const calcMode = document.getElementById('newLaborCalcMode').value;
+  const unit = document.getElementById('newLaborUnit').value;
+  const markup = parseFloat(document.getElementById('newLaborMarkup').value) || 0;
+  const baseRate = parseFloat(document.getElementById('newBaseRate').value) || 0;
+  const markupMode = document.getElementById('newMarkupToggle')?.dataset?.mode || 'percent';
+
+      const hasBreakdown = (laborRate || materialRate);
+      if (!name || !description || (!hasBreakdown && !baseRate)) return alert('Please fill all fields correctly (provide base rate or labor/material).');
+      showLoader();
+      try {
+        const res = await fetch('/api/labor-costs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name, description, costCode,
+            laborRate, laborHours,
+            materialRate, materialQty,
+            calcMode, unit,
+            markup,
+            baseRate, markupMode
+          })
+        });
+        const newItem = await res.json();
+        laborCostList.unshift(newItem);
+        renderLaborSuggestions();
+        // Auto-close the New Labor form on success
+        const formEl = document.getElementById('newLaborFormContainer');
+        if (formEl) formEl.style.display = 'none';
+      } catch (err) {
+        console.error('Error adding labor item:', err);
+      } finally {
+        hideLoader();
+        ['newLaborName', 'newLaborDesc', 'newLaborCode', 'newLaborLaborRate', 'newLaborLaborHours', 'newLaborMaterialRate', 'newLaborMaterialQty', 'newLaborUnit','newLaborMarkup','newBaseRate'].forEach(id => {
+          // keep hidden qtys set to 1
+          if (id === 'newLaborLaborHours' || id === 'newLaborMaterialQty') document.getElementById(id).value = '1';
+          else document.getElementById(id).value = '';
+        });
+        const t = document.getElementById('newMarkupToggle'); if (t) { t.dataset.mode = 'percent'; t.textContent = '%'; }
+        updateNewLaborCostFields();
+      }
+    }
 
 
 let currentEditingLaborIndex = null; // 🔵 Store which labor item is being edited
 
-function editLaborItem(index) {
-  const item = laborCostList[index];
-  currentEditingLaborIndex = index; // Save it globally!
-
-  // Prefill the modal fields
-  document.getElementById('editLaborCode').value = item.costCode || '';
-  document.getElementById('editLaborName').value = item.name;
-  document.getElementById('editLaborDesc').value = item.description;
-  document.getElementById('editLaborRate').value = item.rate;
-
-  // Open the modal
-  document.getElementById('editLaborModal').style.display = 'flex';
-}
+    // --- EDIT LABOR ITEM (NEW SCHEMA) ---
+    function editLaborItem(index) {
+      const item = laborCostList[index];
+      currentEditingLaborIndex = index;
+      document.getElementById('editLaborCode').value = item.costCode || '';
+      document.getElementById('editLaborName').value = item.name;
+      document.getElementById('editLaborDesc').value = item.description;
+  document.getElementById('editLaborLaborRate').value = item.laborRate || 0;
+  // set hidden qtys to stored values or default to 1
+  document.getElementById('editLaborLaborHours').value = (item.laborHours != null && item.laborHours !== 0) ? item.laborHours : 1;
+  document.getElementById('editLaborMaterialRate').value = item.materialRate || 0;
+  document.getElementById('editLaborMaterialQty').value = (item.materialQty != null && item.materialQty !== 0) ? item.materialQty : 1;
+    // populate markup input
+    document.getElementById('editLaborMarkup').value = item.markup ?? 0;
+    const baseInput = document.getElementById('editBaseRate');
+    if (baseInput) baseInput.value = item.baseRate || 0;
+    const toggle = document.getElementById('editMarkupToggle');
+    if (toggle) {
+      const mode = item.markupMode || 'percent';
+      toggle.dataset.mode = mode;
+      toggle.textContent = mode === 'amount' ? '$' : '%';
+    }
+      document.getElementById('editLaborCalcMode').value = item.calcMode || 'each';
+      document.getElementById('editLaborUnit').value = item.unit || '';
+      updateEditLaborCostFields();
+      document.getElementById('editLaborModal').style.display = 'flex';
+    }
 
 function closeEditLaborModal() {
   document.getElementById('editLaborModal').style.display = 'none';
 }
 
-async function saveEditedLaborItem() {
-  if (currentEditingLaborIndex === null) return;
+  async function saveEditedLaborItem() {
+      if (currentEditingLaborIndex === null) return;
+      const id = laborCostList[currentEditingLaborIndex]._id;
+      const name = document.getElementById('editLaborName').value.trim();
+      const description = document.getElementById('editLaborDesc').value.trim();
+      const costCode = document.getElementById('editLaborCode').value.trim();
+      const laborRate = parseFloat(document.getElementById('editLaborLaborRate').value) || 0;
+  let laborHours = parseFloat(document.getElementById('editLaborLaborHours').value);
+  if (!laborHours || isNaN(laborHours)) laborHours = 1;
+      const materialRate = parseFloat(document.getElementById('editLaborMaterialRate').value) || 0;
+  let materialQty = parseFloat(document.getElementById('editLaborMaterialQty').value);
+  if (!materialQty || isNaN(materialQty)) materialQty = 1;
+  const calcMode = document.getElementById('editLaborCalcMode').value;
+  const unit = document.getElementById('editLaborUnit').value;
+  const markup = parseFloat(document.getElementById('editLaborMarkup').value) || 0;
+  const baseRate = parseFloat(document.getElementById('editBaseRate').value) || 0;
+  const markupMode = document.getElementById('editMarkupToggle')?.dataset?.mode || 'percent';
 
-  const id = laborCostList[currentEditingLaborIndex]._id;
-  const name = document.getElementById('editLaborName').value.trim();
-  const description = document.getElementById('editLaborDesc').value.trim();
-  const rate = parseFloat(document.getElementById('editLaborRate').value);
-  const costCode = document.getElementById('editLaborCode').value.trim();
+      if (!name || !description || isNaN(laborRate)) {
+        alert('Please fill all fields correctly.');
+        return;
+      }
 
-  if (!name || !description || isNaN(rate)) {
-    alert('Please fill all fields correctly.');
-    return;
-  }
-
-  showLoader();
-  try {
-    const res = await fetch(`/api/labor-costs/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description, rate, costCode })
-    });
-
-    const updated = await res.json();
-    laborCostList[currentEditingLaborIndex] = updated;
-    renderLaborSuggestions();
-    showToast('✅ Labor item updated.');
-  } catch (err) {
-    console.error('Error updating labor item:', err);
-    showToast('❌ Failed to update labor item.');
-  } finally {
-    hideLoader();
-    closeEditLaborModal();
-    currentEditingLaborIndex = null;
-  }
-}
+      showLoader();
+      try {
+        const res = await fetch(`/api/labor-costs/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name, description, costCode,
+            laborRate, laborHours,
+            materialRate, materialQty,
+            calcMode, unit,
+            markup,
+            baseRate, markupMode
+          })
+        });
+        const updated = await res.json();
+        laborCostList[currentEditingLaborIndex] = updated;
+        renderLaborSuggestions();
+        showToast('✅ Labor item updated.');
+      } catch (err) {
+        console.error('Error updating labor item:', err);
+        showToast('❌ Failed to update labor item.');
+      } finally {
+        hideLoader();
+        closeEditLaborModal();
+        currentEditingLaborIndex = null;
+      }
+    }
 
 
 
@@ -2982,24 +4364,71 @@ async function saveEditedLaborItem() {
 
 
 
-  function useSuggestedLabor(index) {
-  const item = laborCostList[index];
 
-  // Match the REAL HTML IDs
-  const nameField = document.getElementById('itemName');
-  const descField = document.getElementById('itemDesc');
-  const rateField = document.getElementById('itemRate');
-  const qtyField = document.getElementById('itemQty');
-  const costCodeField = document.getElementById('itemCode'); // ✅ FIXED to itemCode
-
-  if (nameField) nameField.value = item.name || '';
-  if (descField) descField.value = item.description || '';
-  if (rateField) rateField.value = item.rate || 0;
-  if (qtyField) qtyField.value = 1;
-  if (costCodeField) costCodeField.value = item.costCode || '';
-
-  
-}
+    // --- USE SUGGESTED LABOR (NEW SCHEMA) ---
+    function useSuggestedLabor(index) {
+      const item = laborCostList[index];
+      const nameField = document.getElementById('itemName');
+      const descField = document.getElementById('itemDesc');
+      const rateField = document.getElementById('itemRate');
+      const qtyField = document.getElementById('itemQty');
+      const costCodeField = document.getElementById('itemCode');
+      const laborRateField = document.getElementById('laborRate');
+      const laborHoursField = document.getElementById('laborHours');
+      const materialRateField = document.getElementById('materialRate');
+      const materialQtyField = document.getElementById('materialQty');
+      const markupField = document.getElementById('markup');
+  // Compute base and total with support for manual base and markup modes
+  const lr = Number(item.laborRate) || 0;
+  const mr = Number(item.materialRate) || 0;
+  const lh = lr ? ((Number(item.laborHours) || 1)) : (Number(item.laborHours) || 0);
+  const mq = mr ? ((Number(item.materialQty) || 1)) : (Number(item.materialQty) || 0);
+  const hasBreakdown = (lr || mr);
+  const laborCost = hasBreakdown ? (lr * lh) : (Number(item.baseRate) || 0);
+  const materialCost = hasBreakdown ? (mr * mq) : 0;
+  const mk = Number(item.markup) || 0;
+  const mm = item.markupMode || 'percent';
+  const base = laborCost + materialCost;
+  const totalCost = item.totalCost ?? (mm === 'amount' ? (base + mk) : (base * (1 + mk/100)));
+      if (nameField) nameField.value = item.name || '';
+      if (descField) descField.value = item.description || '';
+      if (markupField) markupField.value = mk;
+      const markupToggle = document.getElementById('markupToggle');
+      if (markupToggle) { markupToggle.dataset.mode = mm; markupToggle.textContent = (mm === 'amount') ? '$' : '%'; }
+      if (rateField) {
+        if (hasBreakdown) { rateField.value = base; try { rateField.dataset.autofill = '1'; } catch(_){} }
+        else { rateField.value = (Number(item.baseRate) || 0); try { delete rateField.dataset.autofill; } catch(_){} }
+      }
+      if (qtyField) qtyField.value = 1;
+      if (costCodeField) costCodeField.value = item.costCode || '';
+  if (hasBreakdown) {
+    if (laborRateField) laborRateField.value = item.laborRate ?? '';
+    if (laborHoursField) laborHoursField.value = (item.laborHours != null && item.laborHours !== 0) ? item.laborHours : '1';
+    if (materialRateField) materialRateField.value = item.materialRate ?? '';
+    if (materialQtyField) materialQtyField.value = (item.materialQty != null && item.materialQty !== 0) ? item.materialQty : '1';
+  } else {
+    if (laborRateField) laborRateField.value = '';
+    if (laborHoursField) laborHoursField.value = '1';
+    if (materialRateField) materialRateField.value = '';
+    if (materialQtyField) materialQtyField.value = '1';
+  }
+      // Store fields for addLineItem, including baseRate and markupMode
+      window.lastLaborSuggestion = {
+        laborRate: item.laborRate,
+        laborHours: item.laborHours,
+        materialRate: item.materialRate,
+        materialQty: item.materialQty,
+        baseRate: Number(item.baseRate) || 0,
+        markup: mk,
+        markupMode: mm
+      };
+      // Update the computed total preview (use global export if needed)
+      try { if (typeof window.recalcLineItemTotal === 'function') window.recalcLineItemTotal(); else if (typeof recalcLineItemTotal === 'function') recalcLineItemTotal(); } catch (_) {}
+      if (typeof updateFloatingLabels === 'function') updateFloatingLabels();
+      // Update suggestions footer totals for this item
+      try { updateLaborSuggestionsFooter(item); } catch (_) {}
+      
+    }
 
 
 
@@ -3025,7 +4454,7 @@ function openEditRoomPackageModal(packageKey) {
   setTimeout(() => {
     document.querySelectorAll('#editRoomPackageContent textarea').forEach(autoResizeTextarea);
   }, 0);
-  
+
   // Load labor costs if not already loaded
   if (!laborCostList.length) fetchLaborSuggestions();
   renderLaborSuggestionsForPackage();
@@ -3131,27 +4560,47 @@ function renderLaborSuggestionsForPackage() {
   matches.forEach(item => {
     const li = document.createElement('li');
     li.style.marginBottom = '6px';
+    // compute display rate from breakdown if needed
+    const _laborCost = item.laborCost ?? ((item.laborRate || 0) * (item.laborHours || 0));
+    const _materialCost = item.materialCost ?? ((item.materialRate || 0) * (item.materialQty || 0));
+    const _markupPct = Number(item.markup || 0);
+    const _displayRate = item.totalCost ?? ((_laborCost + _materialCost) * (1 + _markupPct / 100));
     li.innerHTML = `
       <div style="border:1px solid #eee; border-radius:6px; padding:6px; display:flex; justify-content:space-between; align-items:center;">
         <div>
           <strong>${item.name}</strong><br>
           <small>${item.description || ''}</small><br>
-          <span style="color:#007bff;">$${item.rate}</span>
+          <span style="color:#007bff;">$${_displayRate}</span>
         </div>
-        <button class="btn" style="padding:4px 10px; font-size:13px;" onclick="addLaborToEditingPackage('${item.costCode || ''}', '${item.name.replace(/'/g,"\\'")}', '${(item.description||'').replace(/'/g,"\\'")}', ${item.rate})">Add</button>
+        <button class="btn" style="padding:4px 10px; font-size:13px;" onclick="addLaborToEditingPackage('${item.costCode || ''}', '${item.name.replace(/'/g,"\\'")}', '${(item.description||'').replace(/'/g,"\\'")}', ${item.laborRate || 0}, ${item.laborHours || 0}, ${item.materialRate || 0}, ${item.materialQty || 0}, ${_markupPct})">Add</button>
       </div>
     `;
     list.appendChild(li);
   });
 }
 
-function addLaborToEditingPackage(costCode, name, description, rate) {
+function addLaborToEditingPackage(costCode, name, description, laborRate, laborHours, materialRate, materialQty, markup) {
+  // compute total rate from breakdown and markup
+  laborRate = Number(laborRate) || 0;
+  laborHours = Number(laborHours) || 0;
+  materialRate = Number(materialRate) || 0;
+  materialQty = Number(materialQty) || 0;
+  markup = Number(markup) || 0;
+  const laborCost = laborRate * laborHours;
+  const materialCost = materialRate * materialQty;
+  const totalRate = (laborCost + materialCost) * (1 + markup / 100);
+
   editingPackageItems.push({
     costCode,
     name,
     description,
-    rate: Number(rate),
-    qty: 1
+    rate: Number(totalRate) || 0,
+    qty: 1,
+    laborRate,
+    laborHours,
+    materialRate,
+    materialQty,
+    markup
   });
   renderEditRoomPackageModal();
 }
@@ -3168,6 +4617,8 @@ function addLaborToEditingPackage(costCode, name, description, rate) {
   });
 
   window.openLaborCostModal = openLaborCostModal;
+
+
 
 
   // Add this after your existing script tag content
@@ -3201,7 +4652,7 @@ function addRoomPackage(packageType) {
   showToast(`✅ Added ${package.name} package`);
 }
 
-// Add this to your HTML in the dropdown menu section
+
 
 
 // Add these functions to your JavaScript
@@ -3222,6 +4673,45 @@ document.addEventListener('click', (e) => {
         document.querySelector('.dropdown-arrow').style.transform = 'rotate(0)';
     }
 });
+
+
+// Toggle visibility of the New Labor form below the suggestions list
+function toggleNewLaborForm() {
+  const el = document.getElementById('newLaborFormContainer');
+  if (!el) return;
+  const showing = el.style.display !== 'none';
+  el.style.display = showing ? 'none' : 'block';
+  if (!showing) {
+    // Ensure preview is up to date when opening
+    try { updateNewLaborCostFields(); } catch (_) {}
+    // Optional: scroll into view
+    try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+  }
+}
+
+// Click-away to close the New Labor form
+document.addEventListener('click', (e) => {
+  const formEl = document.getElementById('newLaborFormContainer');
+  if (!formEl || formEl.style.display === 'none') return;
+  const clickInsideForm = formEl.contains(e.target);
+  const onPlusIcon = e.target.closest('.add-labor-inline-btn');
+  if (!clickInsideForm && !onPlusIcon) {
+    formEl.style.display = 'none';
+  }
+});
+
+// Update the footer totals below the suggestions list
+function updateLaborSuggestionsFooter() {
+  const mkEl = document.getElementById('suggestionsMarkupTotal');
+  const gtEl = document.getElementById('suggestionsGrandTotal');
+  if (!mkEl || !gtEl) return;
+  // Mirror the main summary-box values
+  const mainMk = document.getElementById('markupTotal')?.textContent || '0.00';
+  const mainGt = document.getElementById('grandTotal')?.textContent || '0.00';
+  mkEl.textContent = mainMk;
+  gtEl.textContent = mainGt;
+}
+
 
 
   </script>
