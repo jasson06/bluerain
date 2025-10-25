@@ -818,7 +818,7 @@ card.innerHTML = `
   <div class="card-header">
     <input type="checkbox" class="line-item-select" ${item.assignedTo ? "disabled" : ""}>
     <input type="text" class="item-name" value="${item.name || ""}" placeholder="Item Name">
-    <div class="suggestion-box" style="display:none; position:absolute; background:#fff; border:1px solid #ccc; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1); max-height:150px; overflow-y:auto; z-index:1000;"></div>
+    <div class="suggestion-box" style="display:none; position:absolute; background:#fff; border:1px solid #ccc; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1); max-height:350px; overflow-y:auto; z-index:1000;"></div>
     <button class="btn delete-line-item">Delete</button>
     ${item.assignedTo ? `<button class="btn unassign-item">Unassign</button>` : ""}
   </div>
