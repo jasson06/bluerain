@@ -758,7 +758,15 @@ const quoteSchema = new mongoose.Schema({
     name: String,
     description: String,
     rate: Number,
-    qty: Number
+    qty: Number,
+    // Markup percentage applied to (labor + material) when computing rate on the client
+    markup: { type: Number, default: 0 },
+    laborRate: Number,
+    laborHours: Number,
+    laborCost: Number,
+    materialRate: Number,
+    materialQty: Number,
+    materialCost: Number
   }],
   totals: {
     subtotal: Number,
@@ -796,12 +804,90 @@ const quoteSchema = new mongoose.Schema({
   ]
 }, { timestamps: true });
 
+
+
 const laborCostSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String },
-  rate: { type: Number, required: true },
-  costCode: { type: String } // ✅ NEW FIELD
+  costCode: { type: String, default: "Uncategorized" },
+
+  // 💰 Labor details
+  laborRate: { type: Number, default: 0 }, // Rate per hour or per unit
+  laborHours: { type: Number, default: 0 },    // Hours worked or units
+  laborCost: {
+    type: Number,
+    default: function () {
+      return this.laborRate * this.laborHours;
+    }
+  },
+
+  // 🧱 Material details
+  materialRate: { type: Number, default: 0 },
+  materialQty: { type: Number, default: 0 },
+  materialCost: {
+    type: Number,
+    default: function () {
+      return this.materialRate * this.materialQty;
+    }
+  },
+
+  // Manual base rate (used when no labor/material breakdown is provided)
+  baseRate: { type: Number, default: 0 },
+
+  // Markup value and mode
+  // markup represents either a percent (e.g., 10 => 10%) or a flat amount (e.g., 25 => $25)
+  markup: { type: Number, default: 0 },
+  markupMode: { type: String, enum: ['percent', 'amount'], default: 'percent' },
+
+  // 🧾 Combined total (with markup)
+  totalCost: {
+    type: Number,
+    default: function () {
+      // This default is superseded by the pre-save hook below. Kept for completeness.
+      const lh = this.laborHours || 0;
+      const mq = this.materialQty || 0;
+      const subtotal = (this.laborRate * lh) + (this.materialRate * mq) || this.baseRate || 0;
+      if (this.markupMode === 'amount') {
+        return subtotal + (this.markup || 0);
+      }
+      return subtotal * (1 + (this.markup || 0) / 100);
+    }
+  },
+
+  // 🧩 Metadata
+  calcMode: { type: String, enum: ['each', 'sqft', 'lnft', 'hour'], default: 'each' },
+  unit: { type: String, default: '' },
 }, { timestamps: true });
+
+// ✅ Keep totalCost always up to date before saving (with markup)
+laborCostSchema.pre('save', function (next) {
+  // Determine if we have a breakdown (labor/material) or a manual base rate
+  const hasLabor = typeof this.laborRate === 'number' && this.laborRate !== 0;
+  const hasMaterial = typeof this.materialRate === 'number' && this.materialRate !== 0;
+
+  // Default laborHours/materialQty to 1 if a corresponding rate is provided but qty is falsy
+  const lh = hasLabor ? (this.laborHours || 1) : (this.laborHours || 0);
+  const mq = hasMaterial ? (this.materialQty || 1) : (this.materialQty || 0);
+
+  if (hasLabor || hasMaterial) {
+    this.laborCost = (this.laborRate || 0) * lh;
+    this.materialCost = (this.materialRate || 0) * mq;
+  } else {
+    // Manual base rate path: attribute base to laborCost for reporting simplicity
+    const base = this.baseRate || 0;
+    this.laborCost = base;
+    this.materialCost = 0;
+  }
+
+  const baseSubtotal = this.laborCost + this.materialCost;
+  if (this.markupMode === 'amount') {
+    this.totalCost = baseSubtotal + (this.markup || 0);
+  } else {
+    this.totalCost = baseSubtotal * (1 + (this.markup || 0) / 100);
+  }
+  next();
+});
+
 
 
 const fileSchema = new mongoose.Schema({
@@ -4451,7 +4537,22 @@ app.get("/api/notifications", async (req, res) => {
 // Create a new quote
 app.post('/api/quotes', async (req, res) => {
   try {
-    const newQuote = new Quote(req.body); // req.body.paymentSchedules will be saved if present
+    // Ensure laborCost and materialCost are set for each line item (preserve markup)
+    if (Array.isArray(req.body.lineItems)) {
+      req.body.lineItems = req.body.lineItems.map(item => {
+        let laborCost = item.laborCost;
+        let materialCost = item.materialCost;
+        const markup = typeof item.markup !== 'undefined' ? Number(item.markup) : 0;
+        if (typeof laborCost === 'undefined' && typeof item.laborRate !== 'undefined' && typeof item.laborHours !== 'undefined') {
+          laborCost = (item.laborRate || 0) * (item.laborHours || 0);
+        }
+        if (typeof materialCost === 'undefined' && typeof item.materialRate !== 'undefined' && typeof item.materialQty !== 'undefined') {
+          materialCost = (item.materialRate || 0) * (item.materialQty || 0);
+        }
+        return { ...item, markup, laborCost, materialCost };
+      });
+    }
+    const newQuote = new Quote(req.body);
     const savedQuote = await newQuote.save();
     res.status(201).json(savedQuote);
   } catch (err) {
@@ -4508,6 +4609,7 @@ app.delete('/api/quotes/:id', async (req, res) => {
 });
 
 
+
 // Update a quote
 app.put('/api/quotes/:id', async (req, res) => {
   try {
@@ -4520,15 +4622,29 @@ app.put('/api/quotes/:id', async (req, res) => {
       return res.status(400).json({ message: 'Missing required fields: client name or line items' });
     }
 
+    // Ensure laborCost and materialCost are set for each line item (preserve markup)
+    let processedLineItems = Array.isArray(lineItems) ? lineItems.map(item => {
+      let laborCost = item.laborCost;
+      let materialCost = item.materialCost;
+      const markup = typeof item.markup !== 'undefined' ? Number(item.markup) : 0;
+      if ((laborCost === null || typeof laborCost === 'undefined') && typeof item.laborRate !== 'undefined' && typeof item.laborHours !== 'undefined') {
+        laborCost = (item.laborRate || 0) * (item.laborHours || 0);
+      }
+      if ((materialCost === null || typeof materialCost === 'undefined') && typeof item.materialRate !== 'undefined' && typeof item.materialQty !== 'undefined') {
+        materialCost = (item.materialRate || 0) * (item.materialQty || 0);
+      }
+      return { ...item, markup, laborCost, materialCost };
+    }) : [];
+
     // ✅ Calculate totals using provided tax as percentage
-    const subtotal = lineItems.reduce((acc, item) => acc + (item.rate * item.qty), 0);
+    const subtotal = processedLineItems.reduce((acc, item) => acc + (item.rate * item.qty), 0);
     const discount = parseFloat(totals?.discount) || 0;
     const taxRate = parseFloat(totals?.tax) || 0;
     const taxAmount = (subtotal - discount) * (taxRate / 100);
     const total = subtotal - discount + taxAmount;
 
-       const updateFields = {
-      to, from, quoteNumber, date, validTill, notes, lineItems,
+    const updateFields = {
+      to, from, quoteNumber, date, validTill, notes, lineItems: processedLineItems,
       totals: { subtotal, discount, tax: taxRate, total }
     };
     if (status) updateFields.status = status;
@@ -4732,13 +4848,40 @@ app.get('/api/labor-costs', async (req, res) => {
 });
 
 // Create a new labor item
+// Small helper to normalize calcMode inputs coming from CSV/imports/UI
+function normalizeCalcMode(val) {
+  if (!val || typeof val !== 'string') return undefined;
+  const s = val.toString().trim().toLowerCase();
+  // Common synonyms
+  if (['each', 'ea', 'unit', 'count', 'per item'].includes(s)) return 'each';
+  if (['sqft', 'sf', 'sq ft', 'square foot', 'square feet'].includes(s)) return 'sqft';
+  if (['lnft', 'lf', 'ln ft', 'linear ft', 'linear foot', 'linear feet'].includes(s)) return 'lnft';
+  if (['hour', 'hr', 'hrs', 'hours'].includes(s)) return 'hour';
+  // Domain-specific fallbacks (treat certain descriptors as per-each by default)
+  if (['exhaust vent', 'vent', 'grille', 'register'].includes(s)) return 'each';
+  return undefined; // let schema default apply or validation catch truly invalid values
+}
+
 app.post('/api/labor-costs', async (req, res) => {
   try {
-    const newItem = new LaborCost(req.body);
+    const body = { ...req.body };
+    // Normalize calcMode if provided or salvage from description-like values
+    const normalized = normalizeCalcMode(body.calcMode || body.unit || body.name || body.description);
+    if (normalized) {
+      body.calcMode = normalized;
+    } else if (typeof body.calcMode !== 'undefined') {
+      // Remove invalid value so schema default can apply
+      delete body.calcMode;
+    }
+
+    const newItem = new LaborCost(body);
     const saved = await newItem.save();
     res.status(201).json(saved);
   } catch (err) {
     console.error('Error saving labor cost:', err);
+    if (err && err.name === 'ValidationError') {
+      return res.status(400).json({ error: 'Validation failed', details: err.errors || {} });
+    }
     res.status(500).json({ error: 'Failed to save labor cost' });
   }
 });
@@ -4746,11 +4889,70 @@ app.post('/api/labor-costs', async (req, res) => {
 // Update a labor item
 app.put('/api/labor-costs/:id', async (req, res) => {
   try {
-    const updated = await LaborCost.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!updated) return res.status(404).json({ error: 'Labor item not found' });
+    // Fetch existing doc so we can fall back to stored values when the request omits fields
+    const existing = await LaborCost.findById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Labor item not found' });
+
+    const incoming = { ...(req.body || {}) };
+    // Normalize calcMode if present
+    if (typeof incoming.calcMode !== 'undefined') {
+      const normalized = normalizeCalcMode(incoming.calcMode);
+      if (normalized) incoming.calcMode = normalized;
+      else delete incoming.calcMode; // allow default
+    }
+    const laborRate = typeof incoming.laborRate !== 'undefined' ? Number(incoming.laborRate) : (existing.laborRate || 0);
+    const laborHoursRaw = typeof incoming.laborHours !== 'undefined' ? Number(incoming.laborHours) : (existing.laborHours || 0);
+    const materialRate = typeof incoming.materialRate !== 'undefined' ? Number(incoming.materialRate) : (existing.materialRate || 0);
+    const materialQtyRaw = typeof incoming.materialQty !== 'undefined' ? Number(incoming.materialQty) : (existing.materialQty || 0);
+    const markup = typeof incoming.markup !== 'undefined' ? Number(incoming.markup) : (existing.markup || 0);
+    const markupMode = typeof incoming.markupMode !== 'undefined' ? incoming.markupMode : (existing.markupMode || 'percent');
+    const baseRate = typeof incoming.baseRate !== 'undefined' ? Number(incoming.baseRate) : (existing.baseRate || 0);
+
+    const hasLabor = !!(laborRate && laborRate !== 0);
+    const hasMaterial = !!(materialRate && materialRate !== 0);
+    const laborHours = hasLabor ? (laborHoursRaw || 1) : laborHoursRaw || 0;
+    const materialQty = hasMaterial ? (materialQtyRaw || 1) : materialQtyRaw || 0;
+
+    let laborCost = 0;
+    let materialCost = 0;
+    let baseSubtotal = 0;
+    if (hasLabor || hasMaterial) {
+      laborCost = (laborRate || 0) * laborHours;
+      materialCost = (materialRate || 0) * materialQty;
+      baseSubtotal = laborCost + materialCost;
+    } else {
+      // Manual base rate path
+      baseSubtotal = baseRate || 0;
+      laborCost = baseSubtotal;
+      materialCost = 0;
+    }
+
+    const totalCost = (markupMode === 'amount')
+      ? baseSubtotal + (markup || 0)
+      : baseSubtotal * (1 + (markup || 0) / 100);
+
+    // Build update object merging incoming fields but ensuring derived fields are correct
+    const updateObj = Object.assign({}, incoming, {
+      laborRate,
+      laborHours,
+      materialRate,
+      materialQty,
+      markup,
+      markupMode,
+      baseRate,
+      laborCost,
+      materialCost,
+      totalCost
+    });
+
+    // Use findByIdAndUpdate with the merged update object and return the new doc
+    const updated = await LaborCost.findByIdAndUpdate(req.params.id, updateObj, { new: true });
     res.json(updated);
   } catch (err) {
     console.error('Error updating labor cost:', err);
+    if (err && err.name === 'ValidationError') {
+      return res.status(400).json({ error: 'Validation failed', details: err.errors || {} });
+    }
     res.status(500).json({ error: 'Failed to update labor cost' });
   }
 });
@@ -4766,7 +4968,6 @@ app.delete('/api/labor-costs/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete labor cost' });
   }
 });
-
 
 
 app.get('/api/vendors/login-direct/:id', async (req, res) => {
