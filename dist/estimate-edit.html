@@ -20,7 +20,7 @@
     }
 
     .container {
-      max-width: 1300px;
+      max-width: 1410px;
       margin: 20px auto;
       padding: 20px;
       background: #ffffff;
@@ -434,7 +434,7 @@
   align-items: center;
 }
 
-.line-item-card .card-header .item-name {
+.line-item-card .card-header .item-name  {
   font-weight: bold;
   font-size: 1rem;
   flex-grow: 1;
@@ -442,17 +442,20 @@
 }
 
 .line-item-card .card-header button {
-  background: #007bff;
-  color: white;
-  border: none;
+  background: #ffffff;
+  color: #007bff;
+  border: 1px solid #007bff;
   border-radius: 6px;
   padding: 6px 12px;
   cursor: pointer;
   transition: background-color 0.2s ease;
+  margin-left: 10px;
+
 }
 
 .line-item-card .card-header button:hover {
-  background: #0056b3;
+  background: #007bff;
+  color: #ffffff;
 }
 
 /* Card Details */
@@ -1606,7 +1609,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   background: #e0e7ef;
   color: #2563eb;
 }
-    
+
 /* Add to your CSS file or <style> block */
   
 .item-status-dropdown.status-in-progress {
@@ -1634,6 +1637,16 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   color: #888;
   border-color: #d9d9d9;
 }
+
+      
+        /* Modern toggle button states */
+        #toggle-view-btn:hover { transform: translateY(-1px); box-shadow:0 2px 8px rgba(0,0,0,0.08); border-color:#cbd5e1; }
+        #toggle-view-btn:active { transform: translateY(0); box-shadow:0 1px 3px rgba(0,0,0,0.06); }
+        #toggle-view-btn:focus-visible { outline: none; box-shadow:0 0 0 3px rgba(59,130,246,0.25); border-color:#93c5fd; }
+        /* List mode accent */
+        #toggle-view-btn.is-list { background: linear-gradient(180deg, #eef2ff, #e0e7ff); border-color:#c7d2fe; }
+        #toggle-view-btn.is-list .tvi-label { color:#374151; }
+      
 </style> 
 </head>
 <body>
@@ -1691,6 +1704,12 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   <button  class="export-estimate-excel-button"id="export-estimate-excel">Export</button>
   <button class="add-line-item-button" id="add-line-item">+ Add Line Item</button>
   <button class="add-category-header-button" id="add-category-header">+ Add Room</button>
+         
+        <button id="toggle-view-btn" title="Toggle list/card view" aria-pressed="false" style="margin-left:auto; display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid #e2e8f0; border-radius:999px; background:linear-gradient(180deg,#ffffff, #f8fafc); cursor:pointer; color:#0f172a; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.04); transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;">
+            <span id="toggle-view-icon" class="tvi-icon" aria-hidden="true" style="font-size:14px;">📋</span>
+            <span id="toggle-view-label" class="tvi-label" style="font-size:12px; color:#475569;">List View</span>
+          </button>
+        
 </section>
 
     <section id="estimate-section">
@@ -1798,6 +1817,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
 </style>
 
   
