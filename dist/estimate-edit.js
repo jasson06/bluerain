@@ -32,6 +32,8 @@ async function fetchLaborCostList() {
   try {
     const res = await fetch("/api/labor-costs");
     laborCostList = await res.json();
+    // Expose globally for list-view modules defined outside this closure
+    try { window.laborCostList = laborCostList; } catch (_) { /* no-op */ }
   } catch (error) {
     console.error("Failed to fetch labor cost suggestions", error);
   } finally {
@@ -186,7 +188,6 @@ function enableSwipe(itemId, type) {
   wrapper.addEventListener("touchmove", handleTouchMove);
   wrapper.addEventListener("touchend", handleTouchEnd);
 
-  console.log(`✅ Swipe enabled for ${type}-${itemId}`);
 }
 
 
@@ -194,7 +195,6 @@ function enableSwipe(itemId, type) {
 
 // ✅ Open Full-Screen Viewer with Swipe Support
 function openPhotoViewer(photoUrl, photosList) {
-  console.log("🟢 Open Viewer Called - Photo:", photoUrl, " | List:", photosList);
 
   const viewer = document.getElementById("photo-viewer");
   const fullPhoto = document.getElementById("full-photo");
@@ -270,7 +270,7 @@ function enableFullScreenSwipe() {
 
 
   
-  console.log("✅ Swipe enabled for full-screen viewer");
+  
 }
 
   
@@ -327,7 +327,6 @@ function uploadPhoto(event, itemId, type) {
               throw new Error(result.message || "Invalid server response.");
           }
 
-          console.log(`✅ Uploaded ${files.length} Photo(s):`, result.photoUrls);
           showToast(`✅ ${files.length} Photo(s) uploaded successfully!`);
 
           // ✅ Immediately refresh the photos
@@ -563,7 +562,7 @@ async function deletePhoto(itemId, photoUrl, type) {
         // Construct absolute URL (Ensure correct Render API path)
         const apiUrl = `${window.location.origin}/api/delete-photo/${vendorId}/${itemId}/${encodeURIComponent(photoUrl)}`;
 
-        console.log(`🗑️ Deleting photo from: ${apiUrl}`);
+        
 
         // Send DELETE request
         const response = await fetch(apiUrl, {
@@ -630,7 +629,7 @@ async function loadEstimateDetails() {
       if (!response.ok) throw new Error("Failed to fetch estimate details.");
       const { estimate } = await response.json();
 
-      console.log("✅ Loaded Estimate:", estimate); // Debugging
+      
 
       refreshLineItems(estimate.lineItems);
       document.getElementById("tax-input").value = estimate.tax || 0;
@@ -642,19 +641,27 @@ async function loadEstimateDetails() {
       if (startDateInput) startDateInput.value = estimate.startDate ? estimate.startDate.substring(0, 10) : "";
       if (endDateInput) endDateInput.value = estimate.endDate ? estimate.endDate.substring(0, 10) : "";
 
-      // ✅ Ensure photos are displayed correctly
-      estimate.lineItems.forEach(category => {
-          category.items.forEach(item => {
-              updatePhotoSection(item._id, "before");
-              updatePhotoSection(item._id, "after");
-
-              // ✅ Enable Swipe for All Photos on Load
-              setTimeout(() => {
-                enableSwipe(item._id, "before");
-                enableSwipe(item._id, "after");
-              }, 100);
-          });
-      });
+      // ✅ Defer initial photo setup to idle time for faster first paint
+      try {
+        const onIdle = window.requestIdleCallback || function(cb){ return setTimeout(() => cb({ timeRemaining: () => 0 }), 50); };
+        const ids = [];
+        estimate.lineItems.forEach(category => { category.items.forEach(item => ids.push(item._id)); });
+        let i = 0;
+        onIdle(function step(deadline){
+          let processed = 0;
+          while (i < ids.length && (deadline.timeRemaining ? deadline.timeRemaining() > 8 : processed < 3)) {
+            const id = ids[i++];
+            try {
+              updatePhotoSection(id, 'before');
+              updatePhotoSection(id, 'after');
+              enableSwipe(id, 'before');
+              enableSwipe(id, 'after');
+            } catch (_) {}
+            processed++;
+          }
+          if (i < ids.length) onIdle(step);
+        });
+      } catch (_) {}
 
       // ✅ Update the summary to reflect the latest totals
       updateSummary();
@@ -671,18 +678,13 @@ function refreshLineItems(categories) {
   const lineItemsContainer = document.getElementById("line-items-cards");
   lineItemsContainer.innerHTML = "";
 
+  const pendingPhotoItems = [];
   categories.forEach(category => {
     const categoryHeader = addCategoryHeader(category);
     category.items.forEach(item => {
       addLineItemCard(item, categoryHeader);
-
-      // Ensure photos are displayed and swipe is enabled
-      if (item.photos) {
-        updatePhotoSection(item._id, "before");
-        updatePhotoSection(item._id, "after");
-        enableSwipe(item._id, "before");
-        enableSwipe(item._id, "after");
-      }
+      // Defer photo setup to idle time to speed initial render
+      pendingPhotoItems.push(item._id);
     });
   });
 
@@ -690,17 +692,45 @@ function refreshLineItems(categories) {
   populateFilterOptions();
   applyFilters();
 
-  // Auto-resize all item-description textareas after rendering
-lineItemsContainer.querySelectorAll('.item-description').forEach(autoResizeTextarea);
+  // Utility: schedule work during idle periods
+  const onIdle = window.requestIdleCallback || function(cb){ return setTimeout(() => cb({ timeRemaining: () => 0 }), 50); };
+
+  // Batch setup of photos and swipe in idle time to avoid blocking first paint
+  try {
+    let idx = 0;
+    onIdle(function step(deadline){
+      // Process a few items per idle period
+      let count = 0;
+      while (idx < pendingPhotoItems.length && (deadline.timeRemaining ? deadline.timeRemaining() > 8 : count < 3)) {
+        const id = pendingPhotoItems[idx++];
+        try {
+          updatePhotoSection(id, "before");
+          updatePhotoSection(id, "after");
+          enableSwipe(id, "before");
+          enableSwipe(id, "after");
+        } catch (_) {}
+        count++;
+      }
+      if (idx < pendingPhotoItems.length) onIdle(step);
+    });
+  } catch (_) {}
+
+  // Auto-resize textareas after rendering, but do it lazily during idle
+  onIdle(() => {
+    lineItemsContainer.querySelectorAll('.item-description').forEach(autoResizeTextarea);
+  });
 
   // Focus the first line item's name input (first in DOM, always first in first category)
   const firstItemInput = lineItemsContainer.querySelector('.line-item-card .item-name');
   if (firstItemInput) {
-    setTimeout(() => {
-      firstItemInput.focus();
-      if (firstItemInput.select) firstItemInput.select();
-      firstItemInput.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 100);
+    // Delay focus until idle so it doesn't block paint
+    onIdle(() => {
+      try {
+        firstItemInput.focus();
+        if (firstItemInput.select) firstItemInput.select();
+        firstItemInput.scrollIntoView({ behavior: "smooth", block: "center" });
+      } catch (_) {}
+    });
   }
 }
 
@@ -768,16 +798,29 @@ function autoSaveEstimate() {
   saveEstimate();
   showToast("Auto-saved!");
 }
+// Expose to global for blur handlers defined outside this scope
+try { window.autoSaveEstimate = autoSaveEstimate; } catch (_) {}
+
+// Debounced autosave for card view edits (when user types but doesn't blur)
+let __cardAutoSaveTimer = null;
+function queueCardAutoSave(delay = 600) {
+  try { clearTimeout(__cardAutoSaveTimer); } catch (_) {}
+  __cardAutoSaveTimer = setTimeout(() => {
+    try { if (typeof autoSaveEstimate === 'function') autoSaveEstimate(); } catch (e) { console.warn('Auto-save (card view) failed', e); }
+  }, delay);
+}
 
 
 function autoResizeTextarea(textarea) {
   textarea.style.height = 'auto';
   textarea.style.height = textarea.scrollHeight + 'px';
 }
+// Expose globally so list/card view utilities outside the initial closure can call it
+try { window.autoResizeTextarea = autoResizeTextarea; } catch (_) {}
 
 
 // Add Line Item Card Function
-function addLineItemCard(item = {}, categoryHeader = null) {
+function addLineItemCard(item = {}, categoryHeader = null, insertAfter = null) {
   const card = document.createElement("div");
   card.classList.add("line-item-card");
   card.setAttribute("data-item-id", item._id || `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
@@ -849,7 +892,7 @@ card.innerHTML = `
     </div>
     <div class="detail quantity-detail" style="display:${calcMode === "each" ? "block" : "none"}">
       <label>Quantity</label>
-      <input type="number" class="item-quantity" value="${quantity}" min="1">
+      <input type="number" class="item-quantity" value="${quantity}" min="1" step="1">
     </div>
     <div class="detail">
       <label>Unit Price</label>
@@ -871,7 +914,7 @@ card.innerHTML = `
         <span class="item-material-rate" style="font-variant-numeric:tabular-nums; color:#111827;">$0.00</span>
       </div>
     </div>
- 
+
   </div>
   <!-- Collapsible Photo Section -->
   <div class="photo-toggle-section-modern">
@@ -908,7 +951,7 @@ card.innerHTML = `
   <div class="card-footer" style="
     
     border-top: 1px solid #e5e7eb;
-    padding: 18px 24px;
+    padding: 6px 24px;
     border-radius: 0 0 12px 12px;
     box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
     display: flex;
@@ -1083,20 +1126,41 @@ itemNameInput.addEventListener("input", () => {
       // If the suggestion contains saved labor/material costs, push those values
       const laborInput = card.querySelector('.item-labor-cost');
       const materialInput = card.querySelector('.item-material-cost');
-      if (typeof match.laborCost !== 'undefined') {
-        laborInput.value = parseFloat(match.laborCost).toFixed(2);
-        laborCostFromBackend = true;
-        laborInput.removeAttribute('data-manual');
-      } else {
-        laborCostFromBackend = false;
+      // Determine effective quantity for rate calculations
+      const modeVal = (card.querySelector('.item-calc-mode')?.value || 'each');
+      const effQty = modeVal === 'sqft' ? (parseFloat(card.querySelector('.item-area')?.value) || 0)
+                    : modeVal === 'lnft' ? (parseFloat(card.querySelector('.item-length')?.value) || 0)
+                    : (parseFloat(card.querySelector('.item-quantity')?.value) || 0);
+
+      if (laborInput) {
+        if (typeof match.laborCost !== 'undefined') {
+          const laborTotal = parseFloat(match.laborCost) || 0;
+          laborInput.value = laborTotal.toFixed(2);
+          // Store rate for consistent recompute on qty changes
+          const lr = effQty > 0 ? (laborTotal / effQty) : laborTotal;
+          laborInput.dataset.rate = String(lr || 0);
+          laborCostFromBackend = true;
+          laborInput.removeAttribute('data-manual');
+        } else {
+          laborCostFromBackend = false;
+          delete laborInput.dataset.rate;
+        }
+        laborInput.dispatchEvent(new Event('input', { bubbles: true }));
       }
 
-      if (typeof match.materialCost !== 'undefined') {
-        materialInput.value = parseFloat(match.materialCost).toFixed(2);
-        materialCostFromBackend = true;
-        materialInput.removeAttribute('data-manual');
-      } else {
-        materialCostFromBackend = false;
+      if (materialInput) {
+        if (typeof match.materialCost !== 'undefined') {
+          const materialTotal = parseFloat(match.materialCost) || 0;
+          materialInput.value = materialTotal.toFixed(2);
+          const mr = effQty > 0 ? (materialTotal / effQty) : materialTotal;
+          materialInput.dataset.rate = String(mr || 0);
+          materialCostFromBackend = true;
+          materialInput.removeAttribute('data-manual');
+        } else {
+          materialCostFromBackend = false;
+          delete materialInput.dataset.rate;
+        }
+        materialInput.dispatchEvent(new Event('input', { bubbles: true }));
       }
 
       suggestionBox.style.display = "none";
@@ -1208,6 +1272,7 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
     return;
   }
   isDeletingLineItem = true;
+  try { window.__isDeletingLineItem = true; } catch (_) {}
   // Blur any focused input inside the card to prevent late blur events
   const focused = card.querySelector(":focus");
   if (focused) focused.blur();
@@ -1218,6 +1283,7 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
   setTimeout(() => {
     autoSaveEstimate(); // Auto-save after DOM is updated
     isDeletingLineItem = false;
+    try { window.__isDeletingLineItem = false; } catch (_) {}
   }, 50); // Short delay ensures DOM is updated
 });
 
@@ -1236,6 +1302,36 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
   const checkbox = card.querySelector(".line-item-select");
   checkbox.addEventListener("change", updateSelectedLaborCost);
 
+  // Enforce integer-only quantity for 'each' mode
+  if (quantityInput) {
+    // Prevent typing of non-integer characters when in 'each' mode
+    quantityInput.addEventListener('keydown', (e) => {
+      if (calcModeSelect.value !== 'each') return;
+      if (e.key === '.' || e.key === 'e' || e.key === 'E' || e.key === '-' || e.key === '+') {
+        e.preventDefault();
+      }
+    });
+    quantityInput.addEventListener('input', () => {
+      if (calcModeSelect.value !== 'each') return;
+      const n = parseInt(quantityInput.value || '');
+      quantityInput.value = Number.isFinite(n) ? String(Math.max(1, n)) : '';
+    });
+    quantityInput.addEventListener('blur', () => {
+      if (calcModeSelect.value !== 'each') return;
+      let n = parseInt(quantityInput.value || '');
+      if (!Number.isFinite(n) || n < 1) n = 1;
+      quantityInput.value = String(n);
+    });
+  }
+
+  // UX: auto-clear price on focus if currently zero, so it's ready for a new value
+  if (priceInput) {
+    priceInput.addEventListener('focus', () => {
+      const v = parseFloat(priceInput.value);
+      if (isNaN(v) || v === 0) priceInput.value = '';
+    });
+  }
+
 function updateCardValues() {
   let total = 0;
   const unitPrice = parseFloat(priceInput.value) || 0;
@@ -1246,7 +1342,8 @@ function updateCardValues() {
     const length = parseFloat(lengthInput.value) || 0;
     total = length * unitPrice;
   } else {
-    const qty = parseFloat(quantityInput.value) || 0;
+    // qty is integer-only in 'each' mode
+    const qty = Math.max(1, Math.round(parseFloat(quantityInput.value) || 1));
     total = qty * unitPrice;
   }
 
@@ -1340,6 +1437,9 @@ function updateCardValues() {
   updateSummary();
 }
 
+// Expose so list-view (outside this closure) can call it
+try { window.addLineItemCard = addLineItemCard; } catch (_) {}
+
   // Show/hide fields based on calculation mode
   calcModeSelect.addEventListener("change", () => {
     card.querySelector(".sqft-detail").style.display = calcModeSelect.value === "sqft" ? "block" : "none";
@@ -1351,6 +1451,8 @@ function updateCardValues() {
   [areaInput, lengthInput, quantityInput, priceInput].forEach(input => {
     if (input) input.addEventListener("input", updateCardValues);
   });
+  // Also queue a debounced autosave on numeric inputs while typing
+  // Note: autosave only on blur; no autosave while typing
 
   // Recalculate when user edits totals (update rate display and keep totals consistent)
   laborCostInput.addEventListener("input", updateCardValues);
@@ -1363,10 +1465,13 @@ function updateCardValues() {
     } else if (calcModeSelect.value === "lnft") {
       return parseFloat(lengthInput.value) || 0;
     }
-    return parseFloat(quantityInput.value) || 0;
+    const q = Math.round(parseFloat(quantityInput.value) || 1);
+    return q < 1 ? 1 : q;
   }
 
   laborCostInput.addEventListener('focus', () => {
+    // Capture stable total before we switch to rate view for smart-blur compare
+    try { laborCostInput.dataset.smartOrig = String(parseFloat(laborCostInput.value) || 0); } catch (_) {}
     laborCostInput.dataset.editMode = 'rate';
     const effQty = getEffQty();
     let rate = parseFloat(laborCostInput.dataset.rate || '');
@@ -1375,8 +1480,13 @@ function updateCardValues() {
       rate = effQty > 0 ? (totalVal / effQty) : totalVal;
     }
     laborCostInput.value = (rate || 0).toFixed(2);
-    // Optional UX: select content
-    setTimeout(() => laborCostInput.select && laborCostInput.select(), 0);
+    // Auto-clear if zero to ease entering a new value; otherwise select content
+    const v = parseFloat(laborCostInput.value);
+    if (isNaN(v) || v === 0) {
+      laborCostInput.value = '';
+    } else {
+      setTimeout(() => laborCostInput.select && laborCostInput.select(), 0);
+    }
   });
 
   laborCostInput.addEventListener('blur', () => {
@@ -1390,6 +1500,8 @@ function updateCardValues() {
   });
 
   materialCostInput.addEventListener('focus', () => {
+    // Capture stable total before we switch to rate view for smart-blur compare
+    try { materialCostInput.dataset.smartOrig = String(parseFloat(materialCostInput.value) || 0); } catch (_) {}
     materialCostInput.dataset.editMode = 'rate';
     const effQty = getEffQty();
     let rate = parseFloat(materialCostInput.dataset.rate || '');
@@ -1398,7 +1510,13 @@ function updateCardValues() {
       rate = effQty > 0 ? (totalVal / effQty) : totalVal;
     }
     materialCostInput.value = (rate || 0).toFixed(2);
-    setTimeout(() => materialCostInput.select && materialCostInput.select(), 0);
+    // Auto-clear if zero to ease entering a new value; otherwise select content
+    const v = parseFloat(materialCostInput.value);
+    if (isNaN(v) || v === 0) {
+      materialCostInput.value = '';
+    } else {
+      setTimeout(() => materialCostInput.select && materialCostInput.select(), 0);
+    }
   });
 
   materialCostInput.addEventListener('blur', () => {
@@ -1424,24 +1542,7 @@ function updateCardValues() {
 
 
 
-// Utility to add "smart blur" auto-save to an input or editable element
-function addSmartBlurAutoSave(input) {
-  if (!input) return;
-  let originalValue;
-  const getValue = () =>
-    input.hasAttribute("contenteditable") ? input.textContent : input.value;
-
-  input.addEventListener("focus", () => {
-    originalValue = getValue();
-  });
-
-  input.addEventListener("blur", () => {
-    if (isDeletingLineItem) return; // Prevent auto-save if deleting
-    if (getValue() !== originalValue) {
-      autoSaveEstimate();
-    }
-  });
-}
+// (moved to global scope) smart blur autosave is defined below globally
 
 // In addLineItemCard, replace the previous blur listeners with:
 [
@@ -1458,13 +1559,16 @@ function addSmartBlurAutoSave(input) {
 
   ].forEach(input => addSmartBlurAutoSave(input));
 
-// For estimate title (outside addLineItemCard, after DOMContentLoaded)
-addSmartBlurAutoSave(document.getElementById("estimate-title"));
-
-// For all category titles (outside addLineItemCard, after DOMContentLoaded)
-document.querySelectorAll(".category-title span[contenteditable]").forEach(span => {
-  addSmartBlurAutoSave(span);
-});
+// Bind static fields once
+if (!window.__staticAutoSaveBound) {
+  try {
+    if (typeof addSmartBlurAutoSave === 'function') {
+      addSmartBlurAutoSave(document.getElementById("estimate-title"));
+      document.querySelectorAll(".category-title span[contenteditable]").forEach(span => addSmartBlurAutoSave(span));
+    }
+  } catch (_) {}
+  window.__staticAutoSaveBound = true;
+}
 
 
 
@@ -1474,7 +1578,9 @@ document.querySelectorAll(".category-title span[contenteditable]").forEach(span 
 
   // Append the card to the container
   const lineItemsContainer = document.getElementById("line-items-cards");
-  if (categoryHeader && categoryHeader.nextSibling) {
+  if (insertAfter && insertAfter.parentNode) {
+    insertAfter.parentNode.insertBefore(card, insertAfter.nextSibling);
+  } else if (categoryHeader && categoryHeader.nextSibling) {
     categoryHeader.parentNode.insertBefore(card, categoryHeader.nextSibling);
   } else {
     lineItemsContainer.appendChild(card);
@@ -1526,6 +1632,11 @@ function updateSummary() {
   document.getElementById("total-labor-cost").textContent = `$${totalLabor.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
   document.getElementById("total-material-cost").textContent = `$${totalMaterial.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
   document.getElementById("projected-profit").textContent = `$${projectedProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  // Keep list view in sync if visible (debounced to avoid destroying focused input)
+  if (isListViewActive && isListViewActive()) {
+    if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
+    scheduleListViewRebuild(600);
+  }
 }
   
 
@@ -1567,6 +1678,9 @@ function updateSelectedLaborCost() {
     floatingLaborCost.style.display = "none";
   }
 }
+
+// Expose for external callers (e.g., list view actions)
+try { window.updateSelectedLaborCost = updateSelectedLaborCost; } catch (_) {}
 
   
 
@@ -1672,7 +1786,14 @@ async function assignItemsToVendor() {
     return;
   }
 
-  showLoader(); // 👈 START
+  // Show small loaders on each selected card's Assigned area instead of global loader
+  const affectedCards = [];
+  try { selectedItems.forEach(it => { const c = document.querySelector(`.line-item-card[data-item-id="${it.itemId}"]`); if (c) affectedCards.push(c); }); } catch (_) {}
+  ensureAssignSpinnerStyles();
+  affectedCards.forEach(c => { try { setAssignLoading(c, true); } catch (_) {} });
+  if (isListViewActive && isListViewActive()) {
+    selectedItems.forEach(it => { try { setListAssignedLoading(it.itemId, true); } catch (_) {} });
+  }
   try {
     // ✅ Send API Request with cost code included
     const response = await fetch("/api/assign-items", {
@@ -1688,7 +1809,14 @@ async function assignItemsToVendor() {
       const card = document.querySelector(`.line-item-card[data-item-id="${item.itemId}"]`);
       if (card) {
         card.setAttribute("data-assigned-to", vendorId);
-        card.querySelector(".vendor-name").textContent = getVendorInitials(vendorId);
+        const vendor = (window.vendorMap && window.vendorMap[vendorId]) || null;
+        const vendorFullName = vendor ? vendor.name : 'Assigned';
+        const vendorInitials = getVendorInitials(vendorId);
+        const vendorEl = card.querySelector(".vendor-name");
+        if (vendorEl) {
+          vendorEl.textContent = vendorInitials;
+          vendorEl.setAttribute('data-fullname', vendorFullName);
+        }
 
         // Disable and uncheck the checkbox
         const checkbox = card.querySelector(".line-item-select");
@@ -1710,13 +1838,27 @@ async function assignItemsToVendor() {
     // 👇 Add this line after the forEach block
     updateSelectedLaborCost();
 
+    // Rebuild list view if visible so Assigned column and unassign icon update
+    try {
+      if (typeof scheduleListViewRebuild === 'function') {
+        scheduleListViewRebuild(120);
+      } else if (isListViewActive && isListViewActive()) {
+        buildListViewFromCards();
+        if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
+      }
+    } catch (_) {}
+
     showToast("✅ Items assigned successfully!");
     updatePage(); // Refresh totals and page
   } catch (error) {
     console.error("❌ Error assigning items:", error);
     showToast("Error assigning items. Please try again.");
   } finally {
-    hideLoader();
+    // Remove small loaders
+    affectedCards.forEach(c => { try { setAssignLoading(c, false); } catch (_) {} });
+    if (isListViewActive && isListViewActive()) {
+      selectedItems.forEach(it => { try { setListAssignedLoading(it.itemId, false); } catch (_) {} });
+    }
   }
 }
   
@@ -1770,12 +1912,15 @@ function unassignItem(card) {
     assignCheckbox.addEventListener("change", updateSelectedLaborCost);
   }
 
-  // Send API Request to unassign the item
-  clearVendorAssignment(itemId);
+  // Send API Request to unassign the item (show small loader in assigned area)
+  clearVendorAssignment(itemId, card);
 }
   
-  async function clearVendorAssignment(itemId) {
-    showLoader(); // 👈 START
+  async function clearVendorAssignment(itemId, card = null) {
+    // Small, inline loader instead of global loader
+    try { ensureAssignSpinnerStyles(); } catch (_) {}
+    if (card) { try { setAssignLoading(card, true); } catch (_) {} }
+    if (isListViewActive && isListViewActive()) { try { setListAssignedLoading(itemId, true); } catch (_) {} }
     try {
       const response = await fetch(`/api/clear-vendor-assignment/${itemId}`, {
         method: "PATCH",
@@ -1787,12 +1932,13 @@ function unassignItem(card) {
         throw new Error(error.message || "Failed to clear vendor assignment.");
       }
   
-      console.log(`Vendor assignment cleared for item: ${itemId}`);
+      
     } catch (error) {
       console.error("Error clearing vendor assignment:", error);
       showToast("Failed to unassign item. Please try again.");
     } finally {
-      hideLoader();
+      if (card) { try { setAssignLoading(card, false); } catch (_) {} }
+      if (isListViewActive && isListViewActive()) { try { setListAssignedLoading(itemId, false); } catch (_) {} }
     }
   }
   
@@ -1821,6 +1967,7 @@ function refreshLineItemCard(updatedItem) {
 async function saveEstimate() {
   const lineItems = [];
   let currentCategory = null;
+  let skippedDraftNewItems = false; // Track unnamed brand-new items we intentionally skip
 
   document.querySelectorAll("#line-items-cards > div").forEach((element) => {
     if (element.classList.contains("category-header")) {
@@ -1836,18 +1983,27 @@ async function saveEstimate() {
       const assignedToValue = element.getAttribute("data-assigned-to");
       const assignedTo = assignedToValue && /^[a-f\d]{24}$/i.test(assignedToValue) ? assignedToValue : undefined;
 
+      const tmpId = element.getAttribute("data-item-id") || undefined;
+      const nameVal = element.querySelector(".item-name").value.trim();
+
+      // Skip brand-new, unnamed items during save to avoid server validation errors
+      if ((tmpId && tmpId.startsWith("item-")) && nameVal.length === 0) {
+        skippedDraftNewItems = true;
+        return; // do not include this draft item in payload
+      }
+
       const item = {
-        _id: element.getAttribute("data-item-id") || undefined,
+        _id: tmpId,
         type: "item",
-        name: element.querySelector(".item-name").value.trim(),
+        name: nameVal,
         description: element.querySelector(".item-description").value.trim() || "",
         quantity: parseInt(element.querySelector(".item-quantity").value, 10) || 1,
         unitPrice: parseFloat(element.querySelector(".item-price").value) || 0,
         laborCost: parseFloat(element.querySelector(".item-labor-cost").value) || 0,
         materialCost: parseFloat(element.querySelector(".item-material-cost").value) || 0,
-        calcMode: element.querySelector(".item-calc-mode")?.value || "each", // <-- Add this line
-         area: parseFloat(element.querySelector(".item-area")?.value) || 0,     // <-- Add this line
-         length: parseFloat(element.querySelector(".item-length")?.value) || 0, // <-- Add this line
+        calcMode: element.querySelector(".item-calc-mode")?.value || "each",
+        area: parseFloat(element.querySelector(".item-area")?.value) || 0,
+        length: parseFloat(element.querySelector(".item-length")?.value) || 0,
         total: (
           (parseInt(element.querySelector(".item-quantity").value, 10) || 1) *
           (parseFloat(element.querySelector(".item-price").value) || 0)
@@ -1855,6 +2011,11 @@ async function saveEstimate() {
         assignedTo,
         costCode: element.querySelector(".item-cost-code")?.value.trim() || "Uncategorized"
       };
+
+      // Remove temporary IDs so server can assign proper ObjectIds for new items
+      if (!item._id || (typeof item._id === 'string' && item._id.startsWith('item-'))) {
+        delete item._id;
+      }
 
       const beforePhotos = Array.from(element.querySelectorAll(".photo-before")).map(img => img.src);
       const afterPhotos = Array.from(element.querySelectorAll(".photo-after")).map(img => img.src);
@@ -1881,16 +2042,20 @@ async function saveEstimate() {
 
   const tax = parseFloat(document.getElementById("tax-input").value) || 0;
 
+  // Remove any empty categories to avoid clearing server-side data accidentally
+  const cleanedLineItems = lineItems.filter(cat => cat && cat.type === 'category' && Array.isArray(cat.items) && cat.items.length > 0);
+
   try {
     let existingEstimate = null;
     if (estimateId) {
       const response = await fetch(`/api/estimates/${estimateId}`);
       if (!response.ok) throw new Error("Failed to fetch existing estimate.");
-      existingEstimate = await response.json();
+      const dto = await response.json();
+      existingEstimate = dto?.estimate || null; // API returns { success, estimate }
     }
 
-    const mergedLineItems = lineItems.map((category) => {
-      const existingCategory = existingEstimate?.lineItems?.find((cat) => cat._id === category._id);
+    const mergedLineItems = cleanedLineItems.map((category) => {
+      const existingCategory = existingEstimate?.lineItems?.find((cat) => (cat._id?.toString?.() || cat._id) === category._id);
 
       return {
         ...category,
@@ -1911,7 +2076,7 @@ async function saveEstimate() {
     });
 
     const title = document.getElementById("estimate-title").value.trim();
-    const updatedEstimate = { projectId, title, lineItems: mergedLineItems, tax };
+  const updatedEstimate = { projectId, title, lineItems: mergedLineItems, tax };
 
     const method = estimateId ? "PUT" : "POST";
     const url = estimateId ? `/api/estimates/${estimateId}` : "/api/estimates";
@@ -1923,13 +2088,18 @@ async function saveEstimate() {
     });
 
     if (!saveResponse.ok) {
-      const error = await saveResponse.json();
-      throw new Error(error.message || `Failed to ${method === "POST" ? "create" : "update"} estimate.`);
+      let serverMsg = '';
+      try { const error = await saveResponse.json(); serverMsg = error?.message || ''; } catch (_) {}
+      throw new Error(serverMsg || `Failed to ${method === "POST" ? "create" : "update"} estimate.`);
     }
 
-    console.log("🔍 Saving Estimate Data:", JSON.stringify(updatedEstimate, null, 2));
+    
 
-    const result = await saveResponse.json();
+  const result = await saveResponse.json();
+    // Inform about skipped drafts if any
+    if (skippedDraftNewItems) {
+      showToast("Note: Unnamed new line items were not saved. Add a name to include them.");
+    }
     showToast(`Estimate ${method === "POST" ? "created" : "updated"} successfully!`, result);
 
     if (!estimateId && result.estimate && result.estimate._id) {
@@ -1940,7 +2110,7 @@ async function saveEstimate() {
       return;
     }
 
-    // --- After a successful save, update vendor assignments using DOM values ---
+  // --- After a successful save, update vendor assignments using DOM values ---
     const patchPromises = [];
     document.querySelectorAll(".line-item-card").forEach(card => {
       const assignedTo = card.getAttribute("data-assigned-to");
@@ -1996,10 +2166,76 @@ body: JSON.stringify({
     });
     await Promise.all(patchPromises);
 
-    updatePage();
+    // Reconcile only newly added items to avoid refreshing the entire page
+    try {
+      const tempCards = Array.from(document.querySelectorAll('.line-item-card'))
+        .filter(c => (c.getAttribute('data-item-id') || '').startsWith('item-'))
+        // Exclude unnamed drafts we skipped
+        .filter(c => (c.querySelector('.item-name')?.value?.trim() || '').length > 0);
+
+      if (tempCards.length > 0) {
+        // Show small spinners on affected cards
+        tempCards.forEach(c => { try { setCardSaving(c, true); } catch (_) {} });
+
+        // Build signatures from current DOM state to match with server response
+        const cardSigs = new Map();
+        tempCards.forEach(c => {
+          const sig = buildCardItemSignature(c);
+          if (sig) cardSigs.set(c, sig);
+        });
+
+        // Use response estimate if available, else fetch fresh one
+        let serverEstimate = (result && result.estimate) ? result.estimate : null;
+        if (!serverEstimate || !Array.isArray(serverEstimate.lineItems)) {
+          try {
+            const fres = await fetch(`/api/estimates/${estimateId}`);
+            if (fres.ok) {
+              const dto = await fres.json();
+              serverEstimate = dto?.estimate || null;
+            }
+          } catch (_) {}
+        }
+
+        if (serverEstimate && Array.isArray(serverEstimate.lineItems)) {
+          const serverPool = [];
+          serverEstimate.lineItems.forEach(cat => {
+            const cn = cat?.category || '';
+            (cat?.items || []).forEach(it => {
+              serverPool.push({ _id: String(it._id), sig: buildServerItemSignature(cn, it) });
+            });
+          });
+          const used = new Set();
+          tempCards.forEach(card => {
+            const oldId = card.getAttribute('data-item-id');
+            const sig = cardSigs.get(card);
+            if (!sig) return;
+            let match = serverPool.find(en => !used.has(en._id) && signaturesEqual(sig, en.sig));
+            if (!match) {
+              match = serverPool.find(en => !used.has(en._id) && en.sig.name === sig.name && en.sig.costCode === sig.costCode);
+            }
+            if (match) {
+              used.add(match._id);
+              rewireCardItemId(card, oldId, match._id);
+              // Refresh photo sections so inline handlers reference new ids
+              try { updatePhotoSection(match._id, 'before'); } catch (_) {}
+              try { updatePhotoSection(match._id, 'after'); } catch (_) {}
+            }
+          });
+        }
+
+        // Remove spinners
+        tempCards.forEach(c => { try { setCardSaving(c, false); } catch (_) {} });
+      }
+
+      // Keep UI totals in sync and lightly refresh list view if visible
+      try { updateSummary(); } catch (_) {}
+      try { if (isListViewActive && isListViewActive()) scheduleListViewRebuild(300); } catch (_) {}
+    } catch (_) {
+      // Non-fatal: if reconcile fails silently, leave the page as-is
+    }
   } catch (error) {
     console.error("Error saving estimate:", error);
-    showToast("Error saving the estimate. Please try again.");
+    showToast(`Error saving the estimate${error?.message ? ": " + error.message : ". Please try again."}`);
   }
 }
 
@@ -2090,7 +2326,7 @@ function updatePage() {
       const fileName = `${estimate.title?.replace(/\s+/g, "_") || "estimate"}_${new Date().toISOString().split("T")[0]}.xlsx`;
       XLSX.writeFile(workbook, fileName);
       
-      console.log("✅ Estimate exported to Excel");
+      
     } catch (error) {
       console.error("❌ Error exporting to Excel:", error);
       showToast("Failed to export estimate to Excel.");
@@ -2116,11 +2352,25 @@ function updatePage() {
   showLoader(); // global loader ON
 
   try {
-    await loadProjectDetails();
-    await loadVendors();
-    await loadEstimateDetails();
-    await fetchLaborCostList();
+    // Speed up first paint by parallelizing independent loads
+    const projectPromise = loadProjectDetails();
+    const vendorsPromise = loadVendors();
+    const estimatePromise = loadEstimateDetails();
+    const laborPromise = fetchLaborCostList(); // suggestions can load in background
+
+    // Ensure estimate and core project details render ASAP
+    await Promise.all([projectPromise, estimatePromise]);
+
+    // Build filters and view toggle after core content is on screen
     createFilterUI();
+
+    // When vendors arrive, refresh vendor filter options without blocking UI
+    vendorsPromise.then(() => {
+      try { if (typeof populateFilterOptions === 'function') populateFilterOptions(); } catch (_) {}
+    });
+
+    // Allow remaining background tasks to finish without blocking
+    await Promise.allSettled([vendorsPromise, laborPromise]);
   } catch (error) {
     console.error("Initial load failed:", error);
     showToast("⚠️ Failed to load some data");
@@ -2266,9 +2516,10 @@ function createFilterUI() {
   filterContainer.innerHTML = `
     <div class="filter-panel">
       <div class="filter-header">
-        <h3>Filters</h3>
+        <h3 style="display:flex; align-items:center; gap:10px;">Filters</h3> 
         <button id="clear-filters" class="btn-secondary">Clear Filters</button>
       </div>
+
       <div class="filter-options">
         <div class="filter-group">
           <label for="filter-item-name">Item Name</label>
@@ -2307,9 +2558,1395 @@ function createFilterUI() {
   if (lineItemsContainer) {
     lineItemsContainer.parentNode.insertBefore(filterContainer, lineItemsContainer);
     initializeFilterListeners();
+    wireToggleViewButton();
+    // Restore last view mode (lazy-init list view only if needed)
+    const mode = (localStorage.getItem('estimateViewMode') || 'card');
+    if (mode === 'list') {
+      showListView(); // showListView itself ensures container exists
+    } else {
+      showCardView();
+    }
   } else {
     console.error("Line items container not found");
   }
+}
+
+// Create the list view container and table scaffold if missing
+function ensureListViewContainer() {
+  if (document.getElementById('line-items-table-container')) return;
+  const cards = document.getElementById('line-items-cards');
+  if (!cards || !cards.parentNode) return;
+  const container = document.createElement('div');
+  container.id = 'line-items-table-container';
+  container.style.display = 'none';
+  container.style.marginTop = '10px';
+  container.innerHTML = `
+    <style>
+      /* List view row hover */
+      #line-items-table-container .estimate-table tbody tr:hover {
+        background-color: #e4f0fcff; /* slate-50 */
+      }
+      /* Inputs look consistent */
+      #line-items-table-container .estimate-table input,
+      #line-items-table-container .estimate-table select {
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 6px 6px;
+        outline: none;
+      }
+      #line-items-table-container .estimate-table input:focus,
+      #line-items-table-container .estimate-table select:focus {
+        border-color: #93c5fd; /* blue-300 */
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.15); /* blue ring */
+      }
+      /* Delete button styles */
+      #line-items-table-container .lv-delete-btn {
+        background: #ffffffff; /* red-100 */
+        color: #b91c1c;      /* red-700 */
+        border: 1px solid #ffffffff; /* red-200 */
+        border-radius: 8px;
+        padding: 4px 4px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
+      }
+      #line-items-table-container .lv-delete-btn:hover {
+        background: #fecaca; /* red-200 */
+        color: #7f1d1d;      /* red-900 */
+        box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      }
+      #line-items-table-container .lv-delete-btn:active {
+        transform: translateY(1px);
+      }
+      /* Unassign icon button (only shows when assigned) */
+      #line-items-table-container .lv-unassign-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px; height: 22px;
+        margin-left: 1px;
+        border-radius: 999px;
+        border: 1px solid #e5e7eb; /* slate-200 */
+        background: #ffffff;
+        color: #6b7280; /* slate-500 */
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+      }
+      #line-items-table-container .lv-unassign-btn:hover {
+        background: #fee2e2; /* red-100 */
+        color: #b91c1c;      /* red-700 */
+        box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+      }
+      #line-items-table-container .lv-unassign-btn:active {
+        transform: translateY(1px);
+      }
+      /* Detail row for per-line collapse */
+      #line-items-table-container .lv-detail-row td {
+        background: #f9fafb; /* slate-50 */
+        padding: 14px 16px;
+        border-top: 1px solid #e5e7eb; /* slate-200 */
+        border-bottom: 1px solid #e5e7eb; /* slate-200 */
+      }
+      #line-items-table-container .lv-detail-content {
+        display: flex;
+        gap: 18px;
+        align-items: flex-start;
+        flex-wrap: nowrap;
+      }
+      #line-items-table-container .lv-detail-desc {
+        flex: 1 1 320px;
+        max-width: 460px;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px;
+      }
+      #line-items-table-container .lv-detail-desc h5,
+      #line-items-table-container .lv-detail-photos h5 {
+        margin: 0 0 8px 0;
+        font-size: 13px;
+        color: #374151; /* slate-700 */
+      }
+      #line-items-table-container .lv-detail-photos {
+        flex: 2 1 640px;
+        display: flex;
+        gap: 18px;
+      }
+      #line-items-table-container .lv-thumb-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      #line-items-table-container .lv-thumb-row img {
+        width: 128px;
+        height: 96px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+        background: #fff;
+        cursor: pointer;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      }
+      #line-items-table-container .lv-detail-desc textarea {
+        width: 100%;
+        min-height: 72px;
+        resize: vertical;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 8px 10px;
+        font-size: 13px;
+        color: #111827; /* slate-900 */
+        outline: none;
+      }
+      #line-items-table-container .lv-detail-desc textarea:focus {
+        border-color: #93c5fd; /* blue-300 */
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+      }
+      /* Toggle arrow next to category */
+      #line-items-table-container .lv-toggle-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px; height: 24px;
+        border: 1px solid #e5e7eb; /* slate-200 */
+        background: #ffffff;
+        color: #111827; /* slate-900 */
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 12px;
+        line-height: 1;
+        padding: 0;
+        transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+        margin-right: 0;
+      }
+      #line-items-table-container .lv-toggle-btn:hover {
+        background: #f3f4f6; /* slate-100 */
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      }
+      #line-items-table-container .lv-cat-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      #line-items-table-container .lv-icon-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        margin-right: 0px;
+      }
+      #line-items-table-container .lv-toggle-btn svg {
+        transition: transform 0.18s ease;
+        transform: rotate(0deg);
+        display: block;
+      }
+      #line-items-table-container .lv-toggle-btn[aria-expanded="true"] svg {
+        transform: rotate(90deg);
+      }
+      /* Add line item button */
+      #line-items-table-container .lv-add-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px; height: 26px;
+        border: 1px solid #e5e7eb; /* slate-200 */
+        background: #ffffff;
+        color: #727376; /* green-600 */
+        border-radius: 999px;
+        cursor: pointer;
+        font-weight: 700;
+        line-height: 1;
+        padding: 0;
+        transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease, color 0.15s ease;
+      }
+      #line-items-table-container .lv-add-btn:hover {
+        background: #f3f4f6; /* emerald-50 */
+        color: #154780ff; /* green-700 */
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      }
+      #line-items-table-container .lv-add-btn:active { transform: translateY(1px); }
+      /* Editable category label */
+      #line-items-table-container .lv-cat-label[contenteditable="true"] {
+        outline: none;
+        border-radius: 6px;
+        padding: 2px 4px;
+        transition: box-shadow 0.15s ease, background 0.15s ease;
+      }
+      #line-items-table-container .lv-cat-label[contenteditable="true"]:focus {
+        background: #ffffff;
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+      }
+      /* Status dropdown styling to match card view */
+      #line-items-table-container .item-status-dropdown {
+        font-weight: 600;
+        border-radius: 6px;
+        border: 1px solid #d1d5db; /* slate-300 */
+        padding: 6px 8px;
+        background: #ffffff;
+        color: #111827; /* slate-900 */
+      }
+      #line-items-table-container .item-status-dropdown.status-pending {
+        background: #f3f4f6; /* slate-100 */
+        border-color: #d1d5db; /* slate-300 */
+        color: #374151; /* slate-700 */
+      }
+      #line-items-table-container .item-status-dropdown.status-in-progress {
+        background: #fef3c7; /* amber-100 */
+        border-color: #f59e0b; /* amber-500 */
+        color: #92400e; /* amber-800 */
+      }
+      #line-items-table-container .item-status-dropdown.status-completed {
+        background: #dcfce7; /* green-100 */
+        border-color: #22c55e; /* green-500 */
+        color: #065f46; /* emerald-800 */
+      }
+      #line-items-table-container .item-status-dropdown.status-on-hold {
+        background: #ffedd5; /* orange-100 */
+        border-color: #f97316; /* orange-500 */
+        color: #7c2d12; /* orange-900 */
+      }
+      #line-items-table-container .item-status-dropdown.status-new {
+        background: #fee2e2; /* red-100 */
+        border-color: #ef4444; /* red-500 */
+        color: #991b1b; /* red-800 */
+      }
+    </style>
+    <div style="overflow:auto; border:1px solid #e5e7eb; border-radius:8px;">
+      <table class="estimate-table" style="width:100%; min-width:1040px; border-collapse:separate; border-spacing:0;">
+        <thead style="background:#f8fafc; position:sticky; top:0; z-index:1;">
+          <tr>
+            <th style="padding:3px 6px; border-bottom:1px solid #e5e7eb; width:36px; min-width:36px;"></th>
+            <th style="text-align:center; padding:3px 0px; border-bottom:1px solid #e5e7eb; min-width:170px;">Category</th>
+            <th style="text-align:left; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:200px;">Item</th>
+            <th style="text-align:left; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:70px;">Mode</th>
+            <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:72px;">Qty</th>
+            <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:88px;">Unit Price</th>
+            <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:100px;">Labor</th>
+            <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:92px;">Material</th>
+            <th style="text-align:center; padding:3px 0px; border-bottom:1px solid #e5e7eb; min-width:90px;">Amount</th>
+            <th style="text-align:left; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:160px; width:160px;">Status</th>
+            <th style="text-align:left; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:140px;">Assigned</th>
+            <th style="text-align:left; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:64px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="6" style="padding:10px; border-top:1px solid #e5e7eb; text-align:right; font-weight:600;">TOTALS:</td>
+            <td style="padding:10px; border-top:1px solid #e5e7eb; text-align:right;">$0.00</td>
+            <td style="padding:10px; border-top:1px solid #e5e7eb; text-align:right;">$0.00</td>
+            <td style="padding:10px; border-top:1px solid #e5e7eb; text-align:right;">$0.00</td>
+            <td colspan="3" style="border-top:1px solid #e5e7eb;"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  `;
+  cards.parentNode.insertBefore(container, cards.nextSibling);
+}
+
+// Utility: show/hide the summary panel
+function toggleSummaryVisibility(show) {
+  // Try to find a shared container holding the summary fields
+  const ids = ['subtotal','total','total-labor-cost','total-material-cost','projected-profit'];
+  const els = ids.map(id => document.getElementById(id)).filter(Boolean);
+  if (els.length === 0) return; // nothing to toggle
+
+  // Find an ancestor of the first element that contains all the others
+  let candidate = els[0];
+  for (let i = 0; i < 8 && candidate; i++) {
+    if (els.every(e => candidate.contains(e))) break;
+    candidate = candidate.parentElement;
+  }
+  let container = candidate && els.every(e => candidate.contains(e)) ? candidate : els[0].parentElement;
+  if (!container) return;
+  container.style.display = show ? '' : 'none';
+}
+
+// Inject spinner keyframes once
+function ensureAssignSpinnerStyles() {
+  if (document.getElementById('assign-spinner-style')) return;
+  const style = document.createElement('style');
+  style.id = 'assign-spinner-style';
+  style.textContent = `@keyframes assignSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`;
+  document.head.appendChild(style);
+}
+
+// Show/hide small loader in a card's Assigned area
+function setAssignLoading(card, isLoading) {
+  if (!card) return;
+  const vendorNameEl = card.querySelector('.vendor-name');
+  if (!vendorNameEl || !vendorNameEl.parentElement) return;
+  let loader = card.querySelector('.assign-loading');
+  if (isLoading) {
+    if (!loader) {
+      loader = document.createElement('span');
+      loader.className = 'assign-loading';
+      loader.title = 'Assigning…';
+      loader.style.cssText = 'display:inline-block;width:14px;height:14px;margin-left:8px;border:2px solid #cbd5e1;border-top-color:#3b82f6;border-radius:50%;animation:assignSpin .8s linear infinite;vertical-align:middle;';
+      vendorNameEl.parentElement.appendChild(loader);
+    }
+  } else {
+    if (loader) loader.remove();
+  }
+}
+
+// Show/hide small loader in list view Assigned column
+function setListAssignedLoading(itemId, isLoading) {
+  const row = document.querySelector(`#line-items-table-container tr[data-card-id="${itemId}"]`);
+  if (!row) return;
+  const cell = row.querySelector('td.lv-assigned');
+  if (!cell) return;
+  let loader = cell.querySelector('.assign-loading');
+  if (isLoading) {
+    if (!loader) {
+      loader = document.createElement('span');
+      loader.className = 'assign-loading';
+      loader.title = 'Assigning…';
+      loader.style.cssText = 'display:inline-block;width:14px;height:14px;margin-left:8px;border:2px solid #cbd5e1;border-top-color:#3b82f6;border-radius:50%;animation:assignSpin .8s linear infinite;vertical-align:middle;';
+      // If there is a wrapper, append spinner to it; else append to cell
+      const wrap = cell.firstElementChild && cell.firstElementChild.tagName === 'DIV' ? cell.firstElementChild : cell;
+      wrap.appendChild(loader);
+    }
+  } else {
+    if (loader) loader.remove();
+  }
+}
+
+// Small per-line-item saving spinner next to the item name (card view)
+function setCardSaving(card, isSaving) {
+  if (!card) return;
+  try { ensureAssignSpinnerStyles(); } catch (_) {}
+  const header = card.querySelector('.card-header');
+  if (!header) return;
+  let spinner = card.querySelector('.li-saving');
+  if (isSaving) {
+    if (!spinner) {
+      spinner = document.createElement('span');
+      spinner.className = 'li-saving';
+      spinner.title = 'Saving…';
+      spinner.style.cssText = 'display:inline-block;width:14px;height:14px;margin-left:8px;border:2px solid #cbd5e1;border-top-color:#3b82f6;border-radius:50%;animation:assignSpin .8s linear infinite;vertical-align:middle;';
+      const nameInput = header.querySelector('.item-name');
+      if (nameInput && nameInput.nextSibling) {
+        nameInput.parentNode.insertBefore(spinner, nameInput.nextSibling);
+      } else if (nameInput) {
+        nameInput.parentNode.appendChild(spinner);
+      } else {
+        header.appendChild(spinner);
+      }
+    }
+  } else {
+    if (spinner) spinner.remove();
+  }
+}
+
+// Update one card's temporary ID to the real server ID without rebuilding the page
+function rewireCardItemId(card, oldId, newId) {
+  if (!card || !oldId || !newId || oldId === newId) return;
+  card.setAttribute('data-item-id', newId);
+  // Update any element IDs containing the old id
+  card.querySelectorAll('[id]').forEach(el => {
+    const id = el.getAttribute('id');
+    if (id && id.indexOf(oldId) !== -1) {
+      el.setAttribute('id', id.split(oldId).join(newId));
+    }
+  });
+  // Update label 'for' attributes
+  card.querySelectorAll('label[for]').forEach(el => {
+    const f = el.getAttribute('for');
+    if (f && f.indexOf(oldId) !== -1) {
+      el.setAttribute('for', f.split(oldId).join(newId));
+    }
+  });
+  // Update inline handler attributes that reference the old id
+  ['onchange','onclick','oninput','onblur'].forEach(attr => {
+    card.querySelectorAll(`[${attr}]`).forEach(node => {
+      const v = node.getAttribute(attr);
+      if (v && v.indexOf(oldId) !== -1) {
+        node.setAttribute(attr, v.split(oldId).join(newId));
+      }
+    });
+  });
+  // Update list view linkage if present
+  try {
+    const row = document.querySelector(`#line-items-table-container tr[data-card-id="${oldId}"]`);
+    if (row) row.setAttribute('data-card-id', newId);
+    const detail = document.querySelector(`#line-items-table-container tr.lv-detail-row[data-for-id="${oldId}"]`);
+    if (detail) detail.setAttribute('data-for-id', newId);
+  } catch (_) {}
+}
+
+// Build a stable signature for a card item for server reconciliation
+function buildCardItemSignature(card) {
+  if (!card) return null;
+  let header = card.previousElementSibling;
+  while (header && !header.classList.contains('category-header')) {
+    header = header.previousElementSibling;
+  }
+  const categoryName = header ? (header.querySelector('.category-title span')?.textContent?.trim() || '') : '';
+  const name = card.querySelector('.item-name')?.value?.trim() || '';
+  const description = card.querySelector('.item-description')?.value?.trim() || '';
+  const unitPrice = Number.parseFloat(card.querySelector('.item-price')?.value || '0') || 0;
+  const quantity = Number.parseFloat(card.querySelector('.item-quantity')?.value || '1') || 1;
+  const calcMode = card.querySelector('.item-calc-mode')?.value || 'each';
+  const area = Number.parseFloat(card.querySelector('.item-area')?.value || '0') || 0;
+  const length = Number.parseFloat(card.querySelector('.item-length')?.value || '0') || 0;
+  const costCode = card.querySelector('.item-cost-code')?.value?.trim() || 'Uncategorized';
+  return { categoryName, name, description, unitPrice: +unitPrice.toFixed(2), quantity, calcMode, area: +area.toFixed(2), length: +length.toFixed(2), costCode };
+}
+
+// Build a signature for a server-side item using its parent category name
+function buildServerItemSignature(categoryName, item) {
+  return {
+    categoryName: categoryName || '',
+    name: (item?.name || '').trim(),
+    description: (item?.description || '').trim(),
+    unitPrice: +((Number(item?.unitPrice) || 0).toFixed(2)),
+    quantity: Number(item?.quantity) || 1,
+    calcMode: (item?.calcMode || 'each'),
+    area: +((Number(item?.area) || 0).toFixed(2)),
+    length: +((Number(item?.length) || 0).toFixed(2)),
+    costCode: (item?.costCode || 'Uncategorized')
+  };
+}
+
+function signaturesEqual(a, b) {
+  if (!a || !b) return false;
+  return a.categoryName === b.categoryName &&
+         a.name === b.name &&
+         a.description === b.description &&
+         a.unitPrice === b.unitPrice &&
+         a.quantity === b.quantity &&
+         a.calcMode === b.calcMode &&
+         a.area === b.area &&
+         a.length === b.length &&
+         a.costCode === b.costCode;
+}
+
+function wireToggleViewButton() {
+  const btn = document.getElementById('toggle-view-btn');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const isList = isListViewActive();
+    if (isList) {
+      showCardView();
+      localStorage.setItem('estimateViewMode', 'card');
+    } else {
+      showListView();
+      localStorage.setItem('estimateViewMode', 'list');
+    }
+    // Reflect pressed state and styling
+    const nowList = isListViewActive();
+    btn.setAttribute('aria-pressed', nowList ? 'true' : 'false');
+    if (nowList) btn.classList.add('is-list'); else btn.classList.remove('is-list');
+  });
+}
+
+function isListViewActive() {
+  const tableContainer = document.getElementById('line-items-table-container');
+  return tableContainer && tableContainer.style.display !== 'none';
+}
+
+function showCardView() {
+  const cards = document.getElementById('line-items-cards');
+  const tableContainer = document.getElementById('line-items-table-container');
+  if (cards) cards.style.display = '';
+  if (tableContainer) tableContainer.style.display = 'none';
+  const icon = document.getElementById('toggle-view-icon');
+  const label = document.getElementById('toggle-view-label');
+  if (icon) icon.textContent = '📋';
+  if (label) label.textContent = 'List View';
+  // Ensure summary box is visible in card view
+  try { toggleSummaryVisibility(true); } catch (_) {}
+  const btn = document.getElementById('toggle-view-btn');
+  if (btn) { btn.setAttribute('aria-pressed','false'); btn.classList.remove('is-list'); }
+  // When switching back to card view, auto-resize all visible item description textareas
+  try {
+    const onIdle = window.requestIdleCallback || function(cb){ return setTimeout(() => cb({ timeRemaining: () => 0 }), 50); };
+    onIdle(() => {
+      if (!cards) return;
+      const areas = cards.querySelectorAll('.item-description');
+      areas.forEach((ta) => { try { (window.autoResizeTextarea || autoResizeTextarea)(ta); } catch (_) {} });
+    });
+  } catch (_) {}
+}
+
+function showListView() {
+  ensureListViewContainer();
+  buildListViewFromCards();
+  const cards = document.getElementById('line-items-cards');
+  const tableContainer = document.getElementById('line-items-table-container');
+  if (cards) cards.style.display = 'none';
+  if (tableContainer) tableContainer.style.display = '';
+  const icon = document.getElementById('toggle-view-icon');
+  const label = document.getElementById('toggle-view-label');
+  if (icon) icon.textContent = '🗂️';
+  if (label) label.textContent = 'Card View';
+  // Hide summary box in list view
+  try { toggleSummaryVisibility(false); } catch (_) {}
+  const btn = document.getElementById('toggle-view-btn');
+  if (btn) { btn.setAttribute('aria-pressed','true'); btn.classList.add('is-list'); }
+  // Update footer totals
+  if (typeof updateTableFooterTotals === 'function') {
+    updateTableFooterTotals(false);
+  }
+}
+
+// Debounced autosave helper for list-view edits
+let __listViewSaveTimer = null;
+function queueListAutoSave(delay = 400) {
+  try { clearTimeout(__listViewSaveTimer); } catch (_) {}
+  __listViewSaveTimer = setTimeout(() => {
+    try { if (typeof autoSaveEstimate === 'function') autoSaveEstimate(); } catch (e) { console.warn('Auto-save (list view) failed', e); }
+  }, delay);
+}
+
+// Debounced list-view rebuild (avoid destroying the input the user is typing into)
+let __listViewRebuildTimer = null;
+function scheduleListViewRebuild(delay = 600) {
+  try { clearTimeout(__listViewRebuildTimer); } catch (_) {}
+  __listViewRebuildTimer = setTimeout(() => {
+    if (!(isListViewActive && isListViewActive())) return;
+    // If the user is actively typing inside the list view, delay rebuild further
+    const active = document.activeElement;
+    const tableContainer = document.getElementById('line-items-table-container');
+    if (active && tableContainer && tableContainer.contains(active) && (active.tagName === 'INPUT' || active.tagName === 'SELECT' || active.hasAttribute('contenteditable'))) {
+      scheduleListViewRebuild(delay); // re-arm until idle
+      return;
+    }
+    try {
+      buildListViewFromCards();
+      if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
+    } catch (e) {
+      console.warn('List view rebuild failed', e);
+    }
+  }, delay);
+}
+
+// Build the list-view table rows by reading current card DOM (respects filters)
+function buildListViewFromCards() {
+  const tbody = document.querySelector('#line-items-table-container .estimate-table tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  const formatter = (n) => `$${(Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}`;
+
+  const headers = document.querySelectorAll('.category-header');
+  // Use a document fragment to minimize reflows during table construction
+  const frag = document.createDocumentFragment();
+
+  headers.forEach(header => {
+    // Skip hidden categories
+    if (header.style.display === 'none') return;
+    const categoryName = header.querySelector('.category-title span')?.textContent?.trim() || '';
+    let nextEl = header.nextElementSibling;
+    while (nextEl && !nextEl.classList.contains('category-header')) {
+      if (nextEl.classList.contains('line-item-card') && nextEl.style.display !== 'none') {
+        const card = nextEl;
+        const name = card.querySelector('.item-name')?.value || '';
+        const mode = card.querySelector('.item-calc-mode')?.value || 'each';
+        const qty = parseFloat(card.querySelector('.item-quantity')?.value) || 0;
+        const area = parseFloat(card.querySelector('.item-area')?.value) || 0;
+        const length = parseFloat(card.querySelector('.item-length')?.value) || 0;
+        const unitPrice = parseFloat(card.querySelector('.item-price')?.value) || 0;
+        const laborTotal = parseFloat(card.querySelector('.item-labor-cost')?.value) || 0;
+        const materialTotal = parseFloat(card.querySelector('.item-material-cost')?.value) || 0;
+        let effQty = 0; let qtyLabel = '';
+        if (mode === 'sqft') { effQty = area; qtyLabel = `${effQty} sqft`; }
+        else if (mode === 'lnft') { effQty = length; qtyLabel = `${effQty} lnft`; }
+        else { effQty = qty; qtyLabel = `${effQty}`; }
+        const amount = (effQty * unitPrice) || 0;
+        const status = card.querySelector('.item-status-dropdown')?.value || '';
+        const assigned = card.getAttribute('data-assigned-to') ? (card.querySelector('.vendor-name')?.getAttribute('data-fullname') || 'Assigned') : 'Unassigned';
+
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-card-id', card.getAttribute('data-item-id'));
+
+        // Helpers to find the matching card elements
+        const getCardInput = (selector) => card.querySelector(selector);
+        const syncAndRebuild = () => {
+          // Light-touch: update footer now and schedule a rebuild when user pauses typing
+          if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
+          scheduleListViewRebuild(600);
+        };
+        const setAndDispatch = (el, value, eventName='input') => {
+          if (!el) return;
+          el.value = value;
+          const evt = new Event(eventName, { bubbles: true });
+          el.dispatchEvent(evt);
+        };
+
+        // Select checkbox
+  const tdSelect = document.createElement('td');
+  tdSelect.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; width:36px; min-width:36px;';
+        const selectCb = document.createElement('input');
+        selectCb.type = 'checkbox';
+        const cardCb = getCardInput('.line-item-select');
+        if (cardCb) {
+          selectCb.checked = cardCb.checked;
+          selectCb.disabled = cardCb.disabled;
+        }
+        selectCb.addEventListener('change', () => {
+          if (cardCb) {
+            cardCb.checked = selectCb.checked;
+            cardCb.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
+        tdSelect.appendChild(selectCb);
+        tr.appendChild(tdSelect);
+
+  // Category with toggle arrow
+  const tdCat = document.createElement('td');
+  tdCat.style.cssText = 'padding:4px 0px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:170px;';
+  const catWrap = document.createElement('div');
+  catWrap.className = 'lv-cat-wrap';
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = 'lv-toggle-btn';
+  toggleBtn.type = 'button';
+  toggleBtn.setAttribute('aria-expanded', 'false');
+  toggleBtn.title = 'Show details';
+  toggleBtn.innerHTML = '<svg aria-hidden="true" viewBox="0 0 20 20" width="14" height="14" fill="currentColor"><path d="M7.293 14.707a1 1 0 0 1 0-1.414L10.586 10 7.293 6.707a1 1 0 1 1 1.414-1.414l4 4a1 1 0 0 1 0 1.414l-4 4a1 1 0 0 1-1.414 0z"></path></svg>';
+  const catLabel = document.createElement('span');
+  catLabel.className = 'lv-cat-label';
+  catLabel.textContent = categoryName;
+  catLabel.setAttribute('contenteditable', 'true');
+  // Category inline edit behavior
+  catLabel.addEventListener('focus', () => {
+    catLabel.dataset.orig = catLabel.textContent || '';
+    // Select all text for quick overwrite
+    try {
+      const range = document.createRange();
+      range.selectNodeContents(catLabel);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch (_) {}
+  });
+  catLabel.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); catLabel.blur(); }
+    if (e.key === 'Escape') { e.preventDefault(); catLabel.textContent = catLabel.dataset.orig || categoryName; catLabel.blur(); }
+  });
+  catLabel.addEventListener('blur', () => {
+    const newName = (catLabel.textContent || '').trim();
+    const oldName = catLabel.dataset.orig || '';
+    if (!newName) { catLabel.textContent = oldName || categoryName; return; }
+    if (newName === oldName) return;
+    // Push change to the underlying category header title span
+    try {
+      const titleSpan = header && header.querySelector('.category-title span');
+      if (titleSpan) {
+        titleSpan.textContent = newName;
+        // Dispatch input so any dependent UI updates run
+        titleSpan.dispatchEvent(new Event('input', { bubbles: true }));
+        // Trigger autosave explicitly only when modified
+        try { if (typeof autoSaveEstimate === 'function') autoSaveEstimate(); } catch (_) {}
+      }
+      // Refresh filters and list view to reflect updated category name
+      try { if (typeof populateFilterOptions === 'function') populateFilterOptions(); } catch (_) {}
+      scheduleListViewRebuild(200);
+    } catch (e) { console.warn('Failed to update category name from list view', e); }
+  });
+  // "+" Add line item button for this category
+  const addBtn = document.createElement('button');
+  addBtn.className = 'lv-add-btn';
+  addBtn.type = 'button';
+  addBtn.title = 'Add line item to this category';
+  addBtn.textContent = '+';
+  addBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    try {
+      // Insert directly below this item's underlying card
+      if (window.addLineItemCard) {
+        window.addLineItemCard({}, null, card);
+      } else if (typeof addLineItemCard === 'function') {
+        addLineItemCard({}, null, card);
+      }
+      // Rebuild list shortly to show the new row; card view handles focus/scroll
+      scheduleListViewRebuild(300);
+    } catch (err) {
+      console.warn('Failed to add line item from list view', err);
+    }
+  });
+  // Group left-side icons together before the label
+  const iconGroup = document.createElement('div');
+  iconGroup.className = 'lv-icon-group';
+  iconGroup.appendChild(toggleBtn);
+  iconGroup.appendChild(addBtn);
+  catWrap.appendChild(iconGroup);
+  catWrap.appendChild(catLabel);
+  tdCat.appendChild(catWrap);
+  tr.appendChild(tdCat);
+
+        // Item name (editable)
+  const tdName = document.createElement('td');
+  tdName.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:200px;';
+        tdName.style.position = 'relative';
+  const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.value = name;
+  nameInput.style.width = '100%';
+  nameInput.style.fontSize = '15px';
+  nameInput.style.padding = '4px 6px';
+        // Suggestion box for list view item names
+        const nameSuggest = document.createElement('div');
+        nameSuggest.className = 'lv-suggestion-box';
+        nameSuggest.style.cssText = 'display:none; position:absolute; left:10px; right:10px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,0.08); max-height:300px; overflow-y:auto; z-index:2000; margin-top:6px;';
+        // Prevent input blur while clicking suggestions
+        nameSuggest.addEventListener('mousedown', (e) => { e.preventDefault(); });
+
+        function renderNameSuggestionsListView(matches) {
+          if (!Array.isArray(matches) || matches.length === 0) {
+            nameSuggest.style.display = 'none';
+            nameSuggest.innerHTML = '';
+            return;
+          }
+          nameSuggest.innerHTML = '';
+          matches.forEach(match => {
+            const row = document.createElement('div');
+            row.style.cssText = 'padding:8px 10px; border-bottom:1px solid #f3f4f6; cursor:pointer;';
+            const laborVal = typeof match.laborCost !== 'undefined' ? parseFloat(match.laborCost) : 0;
+            const materialVal = typeof match.materialCost !== 'undefined' ? parseFloat(match.materialCost) : 0;
+            const rateVal = typeof match.rate !== 'undefined' ? parseFloat(match.rate) : 0;
+            const recTotal = typeof match.totalCost !== 'undefined' ? parseFloat(match.totalCost) : rateVal;
+            row.innerHTML = `
+              <div style="font-weight:600;">${match.name || ''}</div>
+              <div style="font-size:12px; color:#6b7280;">${match.description || 'No description'}</div>
+              <div style="display:flex; gap:12px; margin-top:6px; font-size:12px;">
+                <span style="color:#065f46;">Labor: $${(laborVal||0).toFixed(2)}</span>
+                <span style="color:#92400e;">Material: $${(materialVal||0).toFixed(2)}</span>
+                <span style="color:#2563eb; font-weight:600;">Rate: $${(recTotal||0).toFixed(2)}</span>
+              </div>
+            `;
+            row.addEventListener('click', () => {
+              // Apply to list input
+              nameInput.value = match.name || '';
+              // Push to underlying card inputs (no blur yet -> no autosave yet)
+              setAndDispatch(getCardInput('.item-name'), nameInput.value, 'input');
+              const descEl = getCardInput('.item-description');
+              if (descEl) { descEl.value = match.description || ''; descEl.dispatchEvent(new Event('input', { bubbles:true })); }
+              const priceEl = getCardInput('.item-price');
+              if (priceEl) { priceEl.value = (typeof match.totalCost !== 'undefined' ? parseFloat(match.totalCost) : rateVal).toFixed(2); priceEl.dispatchEvent(new Event('input', { bubbles:true })); }
+              const codeEl = getCardInput('.item-cost-code');
+              if (codeEl) { codeEl.value = match.costCode || 'Uncategorized'; codeEl.dispatchEvent(new Event('input', { bubbles:true })); }
+              const qtyEl = getCardInput('.item-quantity');
+              if (qtyEl) { qtyEl.value = 1; qtyEl.dispatchEvent(new Event('input', { bubbles:true })); }
+              // Push labor and material totals (and set rates for consistency)
+              const laborEl = getCardInput('.item-labor-cost');
+              const materialEl = getCardInput('.item-material-cost');
+              const modeVal = (modeSelect && modeSelect.value) || 'each';
+              const effQtyNow = modeVal === 'sqft' ? (parseFloat(getCardInput('.item-area')?.value) || 0)
+                               : modeVal === 'lnft' ? (parseFloat(getCardInput('.item-length')?.value) || 0)
+                               : (parseFloat(getCardInput('.item-quantity')?.value) || 0);
+              if (laborEl) {
+                if (typeof match.laborCost !== 'undefined') {
+                  const laborTotal = parseFloat(match.laborCost) || 0;
+                  laborEl.value = laborTotal.toFixed(2);
+                  // Store rate if possible so quantity changes keep totals consistent
+                  const lr = effQtyNow > 0 ? (laborTotal / effQtyNow) : laborTotal;
+                  laborEl.dataset.rate = String(lr || 0);
+                  laborEl.removeAttribute('data-manual');
+                } else {
+                  laborEl.value = (parseFloat(laborEl.value) || 0).toFixed(2);
+                  delete laborEl.dataset.rate;
+                }
+                laborEl.dispatchEvent(new Event('input', { bubbles:true }));
+              }
+              if (materialEl) {
+                if (typeof match.materialCost !== 'undefined') {
+                  const materialTotal = parseFloat(match.materialCost) || 0;
+                  materialEl.value = materialTotal.toFixed(2);
+                  const mr = effQtyNow > 0 ? (materialTotal / effQtyNow) : materialTotal;
+                  materialEl.dataset.rate = String(mr || 0);
+                  materialEl.removeAttribute('data-manual');
+                } else {
+                  materialEl.value = (parseFloat(materialEl.value) || 0).toFixed(2);
+                  delete materialEl.dataset.rate;
+                }
+                materialEl.dispatchEvent(new Event('input', { bubbles:true }));
+              }
+              nameSuggest.style.display = 'none';
+              // Recompute and update list presentation
+              try { if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false); } catch(_) {}
+              syncAndRebuild();
+            });
+            nameSuggest.appendChild(row);
+          });
+          nameSuggest.style.display = 'block';
+        }
+
+        nameInput.addEventListener('focus', () => {
+          // Show all suggestions on focus for quick selection
+          const list = (Array.isArray(window.laborCostList) ? window.laborCostList : []);
+          renderNameSuggestionsListView(list.slice(0, 50));
+        });
+        nameInput.addEventListener('input', () => {
+          const val = (nameInput.value || '').toLowerCase();
+          if (!val) {
+            nameSuggest.style.display = 'none';
+            nameSuggest.innerHTML = '';
+            return;
+          }
+          const list = (Array.isArray(window.laborCostList) ? window.laborCostList : []);
+          const matches = list.filter(it => (it.name || '').toLowerCase().includes(val));
+          renderNameSuggestionsListView(matches.slice(0, 50));
+        });
+        nameInput.addEventListener('blur', () => {
+          // Hide suggestions after a short delay to allow click
+          setTimeout(() => { nameSuggest.style.display = 'none'; }, 120);
+        });
+        nameInput.addEventListener('focus', () => {
+          const cardEl = getCardInput('.item-name');
+          nameInput.dataset.orig = cardEl ? (cardEl.value || '') : '';
+        });
+        nameInput.addEventListener('blur', () => {
+          if ((nameInput.dataset.orig || '') !== (nameInput.value || '')) {
+            setAndDispatch(getCardInput('.item-name'), nameInput.value, 'blur');
+          }
+          syncAndRebuild();
+          // autosave comes from underlying card blur handler
+        });
+        tdName.appendChild(nameInput);
+        tdName.appendChild(nameSuggest);
+        tr.appendChild(tdName);
+
+        // Mode select
+  const tdMode = document.createElement('td');
+  tdMode.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:70px;';
+  const modeSelect = document.createElement('select');
+  modeSelect.style.fontSize = '13px';
+  modeSelect.style.padding = '4px 6px';
+        ['each','sqft','lnft'].forEach(opt => {
+          const o = document.createElement('option');
+          o.value = opt; o.textContent = opt.toUpperCase();
+          if (opt === mode) o.selected = true;
+          modeSelect.appendChild(o);
+        });
+        modeSelect.addEventListener('focus', () => {
+          const cardEl = getCardInput('.item-calc-mode');
+          modeSelect.dataset.orig = cardEl ? (cardEl.value || '') : '';
+        });
+        modeSelect.addEventListener('change', () => {
+          setAndDispatch(getCardInput('.item-calc-mode'), modeSelect.value, 'change');
+          // After mode change, the effective qty field changes meaning; rebuild row
+          syncAndRebuild();
+        });
+        // Save when exiting the mode select
+        modeSelect.addEventListener('blur', () => {
+          if ((modeSelect.dataset.orig || '') !== (modeSelect.value || '')) {
+            setAndDispatch(getCardInput('.item-calc-mode'), modeSelect.value, 'blur');
+          }
+        });
+        tdMode.appendChild(modeSelect);
+        tr.appendChild(tdMode);
+
+        // Qty/Area/Len input (based on mode)
+  const tdQty = document.createElement('td');
+  tdQty.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; text-align:right; min-width:72px;';
+  const qtyInput = document.createElement('input');
+        qtyInput.type = 'number';
+        if (mode === 'each') { qtyInput.min = '1'; qtyInput.step = '1'; }
+        else { qtyInput.min = '0'; qtyInput.step = '0.01'; }
+  qtyInput.style.width = '100%'; qtyInput.style.textAlign = 'right';
+  qtyInput.style.fontSize = '13px';
+  qtyInput.style.padding = '4px 6px';
+        qtyInput.value = effQty;
+        qtyInput.addEventListener('focus', () => {
+          const key = (modeSelect.value === 'sqft') ? '.item-area' : (modeSelect.value === 'lnft' ? '.item-length' : '.item-quantity');
+          const cardEl = getCardInput(key);
+          qtyInput.dataset.orig = cardEl ? (cardEl.value || '') : '';
+        });
+        // Block decimal/exponent keys for each mode
+        qtyInput.addEventListener('keydown', (e) => {
+          if (modeSelect.value === 'each') {
+            if (e.key === '.' || e.key === 'e' || e.key === 'E' || e.key === '-' || e.key === '+') {
+              e.preventDefault();
+            }
+          }
+        });
+        qtyInput.addEventListener('input', () => {
+          if (modeSelect.value === 'each') {
+            const n = parseInt(qtyInput.value || '');
+            qtyInput.value = Number.isFinite(n) ? String(Math.max(1, n)) : '';
+          }
+          if (modeSelect.value === 'sqft') setAndDispatch(getCardInput('.item-area'), qtyInput.value, 'input');
+          else if (modeSelect.value === 'lnft') setAndDispatch(getCardInput('.item-length'), qtyInput.value, 'input');
+          else setAndDispatch(getCardInput('.item-quantity'), qtyInput.value, 'input');
+          syncAndRebuild();
+        });
+        // Save when leaving the qty/area/length field
+        qtyInput.addEventListener('blur', () => {
+          const key = (modeSelect.value === 'sqft') ? '.item-area' : (modeSelect.value === 'lnft' ? '.item-length' : '.item-quantity');
+          if ((qtyInput.dataset.orig || '') !== (qtyInput.value || '')) {
+            setAndDispatch(getCardInput(key), qtyInput.value, 'blur');
+          }
+        });
+        tdQty.appendChild(qtyInput);
+        tr.appendChild(tdQty);
+
+        // Unit price input
+  const tdUnit = document.createElement('td');
+  tdUnit.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; text-align:right; min-width:88px;';
+  const unitInput = document.createElement('input');
+        unitInput.type = 'number'; unitInput.min = '0'; unitInput.step = '0.01';
+  unitInput.style.width = '100%'; unitInput.style.textAlign = 'right';
+  unitInput.style.fontSize = '15px';
+  unitInput.style.padding = '4px 6px';
+        unitInput.value = (unitPrice || 0).toFixed(2);
+        unitInput.addEventListener('focus', () => {
+          const cardEl = getCardInput('.item-price');
+          unitInput.dataset.orig = cardEl ? (cardEl.value || '') : '';
+          // UX: auto-clear when zero to ease entering new value
+          const v = parseFloat(unitInput.value);
+          if (isNaN(v) || v === 0) unitInput.value = '';
+        });
+        unitInput.addEventListener('input', () => {
+          setAndDispatch(getCardInput('.item-price'), unitInput.value, 'input');
+          syncAndRebuild();
+        });
+        unitInput.addEventListener('blur', () => {
+          if ((unitInput.dataset.orig || '') !== (unitInput.value || '')) {
+            setAndDispatch(getCardInput('.item-price'), unitInput.value, 'blur');
+          }
+        });
+        tdUnit.appendChild(unitInput);
+        tr.appendChild(tdUnit);
+
+        // Labor total input
+  const tdLabor = document.createElement('td');
+  tdLabor.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; text-align:right; min-width:100px;';
+  const laborInput = document.createElement('input');
+        laborInput.type = 'number'; laborInput.min = '0'; laborInput.step = '0.01';
+  laborInput.style.width = '100%'; laborInput.style.textAlign = 'right';
+  laborInput.style.fontSize = '15px';
+  laborInput.style.padding = '4px 6px';
+        laborInput.value = (laborTotal || 0).toFixed(2);
+        laborInput.addEventListener('focus', () => {
+          const cardEl = getCardInput('.item-labor-cost');
+          laborInput.dataset.orig = cardEl ? (cardEl.value || '') : '';
+          // Switch to RATE edit mode like card view
+          // Compute effective quantity from the underlying card inputs
+          const modeVal = (modeSelect && modeSelect.value) || 'each';
+          const effQty = modeVal === 'sqft' ? (parseFloat(getCardInput('.item-area')?.value) || 0)
+                        : modeVal === 'lnft' ? (parseFloat(getCardInput('.item-length')?.value) || 0)
+                        : (parseFloat(getCardInput('.item-quantity')?.value) || 0);
+          let rate = parseFloat(cardEl?.dataset.rate || '');
+          if (isNaN(rate)) {
+            const totalVal = parseFloat(cardEl?.value || '0') || 0;
+            rate = effQty > 0 ? (totalVal / effQty) : totalVal;
+          }
+          laborInput.dataset.editMode = 'rate';
+          laborInput.dataset.effQty = String(effQty || 0);
+          // Keep originals for smart no-op on unchanged
+          laborInput.dataset.lvOrigRate = String(rate || 0);
+          laborInput.dataset.lvOrigEffQty = String(effQty || 0);
+          laborInput.dataset.lvOrigTotal = String(parseFloat(cardEl?.value || '0') || 0);
+          laborInput.value = (rate || 0).toFixed(2);
+          // If zero, clear to ease typing
+          const v = parseFloat(laborInput.value);
+          if (isNaN(v) || v === 0) laborInput.value = '';
+        });
+        // While editing rate in list view, don't push to card until blur
+        laborInput.addEventListener('input', () => {
+          // No-op: keep footer unchanged until blur for accurate totals, but refresh footer label if desired
+        });
+        laborInput.addEventListener('blur', () => {
+          const cardEl = getCardInput('.item-labor-cost');
+          const modeVal = (modeSelect && modeSelect.value) || 'each';
+          const effQtyNow = modeVal === 'sqft' ? (parseFloat(getCardInput('.item-area')?.value) || 0)
+                           : modeVal === 'lnft' ? (parseFloat(getCardInput('.item-length')?.value) || 0)
+                           : (parseFloat(getCardInput('.item-quantity')?.value) || 0);
+          const fallbackEff = parseFloat(laborInput.dataset.effQty || '0') || 0;
+          const effQty = effQtyNow || fallbackEff;
+          const rate = parseFloat(laborInput.value) || 0;
+          const origRate = parseFloat(laborInput.dataset.lvOrigRate || '0') || 0;
+          const origEff = parseFloat(laborInput.dataset.lvOrigEffQty || '0') || 0;
+          const origTotal = parseFloat(laborInput.dataset.lvOrigTotal || '0') || 0;
+          const nearlyEqual = (a,b) => Math.abs((a||0)-(b||0)) < 0.005;
+          const rateChanged = !nearlyEqual(rate, origRate);
+          const effChanged = !nearlyEqual(effQty, origEff);
+          if (!rateChanged && !effChanged) {
+            // No real change: restore original total and skip dispatch/autosave
+            laborInput.value = (origTotal || 0).toFixed(2);
+            delete laborInput.dataset.editMode;
+            return;
+          }
+          const newTotal = rate * (effQty || 0);
+          if (cardEl) {
+            cardEl.dataset.rate = String(rate);
+            cardEl.dataset.editMode = '';
+            cardEl.value = (newTotal || 0).toFixed(2);
+            // Only dispatch input so card logic recalculates without reinterpreting as RATE on blur
+            setAndDispatch(cardEl, cardEl.value, 'input');
+          }
+          laborInput.value = (newTotal || 0).toFixed(2);
+          delete laborInput.dataset.editMode;
+          if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
+          // Trigger a debounced autosave since we skipped card blur
+          try { if (typeof queueListAutoSave === 'function') queueListAutoSave(400); } catch (_) {}
+          scheduleListViewRebuild(600);
+        });
+        tdLabor.appendChild(laborInput);
+        tr.appendChild(tdLabor);
+
+        // Material total input
+  const tdMaterial = document.createElement('td');
+  tdMaterial.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; text-align:right; min-width:92px;';
+  const materialInput = document.createElement('input');
+        materialInput.type = 'number'; materialInput.min = '0'; materialInput.step = '0.01';
+  materialInput.style.width = '100%'; materialInput.style.textAlign = 'right';
+  materialInput.style.fontSize = '15px';
+  materialInput.style.padding = '4px 6px';
+        materialInput.value = (materialTotal || 0).toFixed(2);
+        materialInput.addEventListener('focus', () => {
+          const cardEl = getCardInput('.item-material-cost');
+          materialInput.dataset.orig = cardEl ? (cardEl.value || '') : '';
+          // Switch to RATE edit mode like card view
+          const modeVal = (modeSelect && modeSelect.value) || 'each';
+          const effQty = modeVal === 'sqft' ? (parseFloat(getCardInput('.item-area')?.value) || 0)
+                        : modeVal === 'lnft' ? (parseFloat(getCardInput('.item-length')?.value) || 0)
+                        : (parseFloat(getCardInput('.item-quantity')?.value) || 0);
+          let rate = parseFloat(cardEl?.dataset.rate || '');
+          if (isNaN(rate)) {
+            const totalVal = parseFloat(cardEl?.value || '0') || 0;
+            rate = effQty > 0 ? (totalVal / effQty) : totalVal;
+          }
+          materialInput.dataset.editMode = 'rate';
+          materialInput.dataset.effQty = String(effQty || 0);
+          materialInput.dataset.lvOrigRate = String(rate || 0);
+          materialInput.dataset.lvOrigEffQty = String(effQty || 0);
+          materialInput.dataset.lvOrigTotal = String(parseFloat(cardEl?.value || '0') || 0);
+          materialInput.value = (rate || 0).toFixed(2);
+          const v = parseFloat(materialInput.value);
+          if (isNaN(v) || v === 0) materialInput.value = '';
+        });
+        // Do not sync to card until blur
+        materialInput.addEventListener('input', () => {
+          // No-op during typing
+        });
+        materialInput.addEventListener('blur', () => {
+          const cardEl = getCardInput('.item-material-cost');
+          const modeVal = (modeSelect && modeSelect.value) || 'each';
+          const effQtyNow = modeVal === 'sqft' ? (parseFloat(getCardInput('.item-area')?.value) || 0)
+                           : modeVal === 'lnft' ? (parseFloat(getCardInput('.item-length')?.value) || 0)
+                           : (parseFloat(getCardInput('.item-quantity')?.value) || 0);
+          const fallbackEff = parseFloat(materialInput.dataset.effQty || '0') || 0;
+          const effQty = effQtyNow || fallbackEff;
+          const rate = parseFloat(materialInput.value) || 0;
+          const origRate = parseFloat(materialInput.dataset.lvOrigRate || '0') || 0;
+          const origEff = parseFloat(materialInput.dataset.lvOrigEffQty || '0') || 0;
+          const origTotal = parseFloat(materialInput.dataset.lvOrigTotal || '0') || 0;
+          const nearlyEqual = (a,b) => Math.abs((a||0)-(b||0)) < 0.005;
+          const rateChanged = !nearlyEqual(rate, origRate);
+          const effChanged = !nearlyEqual(effQty, origEff);
+          if (!rateChanged && !effChanged) {
+            materialInput.value = (origTotal || 0).toFixed(2);
+            delete materialInput.dataset.editMode;
+            return;
+          }
+          const newTotal = rate * (effQty || 0);
+          if (cardEl) {
+            cardEl.dataset.rate = String(rate);
+            cardEl.dataset.editMode = '';
+            cardEl.value = (newTotal || 0).toFixed(2);
+            setAndDispatch(cardEl, cardEl.value, 'input');
+          }
+          materialInput.value = (newTotal || 0).toFixed(2);
+          delete materialInput.dataset.editMode;
+          if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
+          try { if (typeof queueListAutoSave === 'function') queueListAutoSave(400); } catch (_) {}
+          scheduleListViewRebuild(600);
+        });
+        tdMaterial.appendChild(materialInput);
+        tr.appendChild(tdMaterial);
+
+        // Amount (computed)
+  const tdAmount = document.createElement('td');
+  tdAmount.style.cssText = 'padding:4px 0px; font-size:15px; border-bottom:1px solid #f1f5f9; text-align:center; min-width:90px;';
+        tdAmount.textContent = formatter(amount);
+        tr.appendChild(tdAmount);
+
+        // Status select
+  const tdStatus = document.createElement('td');
+  tdStatus.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:160px; width:160px;';
+  const statusSelect = document.createElement('select');
+        statusSelect.style.width = '80%';
+        statusSelect.style.boxSizing = 'border-box';
+  statusSelect.style.padding = '4px 6px';
+  statusSelect.style.fontSize = '13px';
+        statusSelect.className = 'item-status-dropdown';
+        const statusToClass = (s) => {
+          switch ((s || '').toLowerCase()) {
+            case 'in-progress': return 'status-in-progress';
+            case 'completed': return 'status-completed';
+            case 'approved': return 'status-completed'; // match card style
+            case 'rework': return 'status-on-hold';
+            case 'pending': return 'status-pending';
+            case 'cancelled': return 'status-new';
+            default: return 'status-pending';
+          }
+        };
+        [
+          { value: 'in-progress', label: 'In Progress' },
+          { value: 'completed', label: 'Completed' },
+          { value: 'approved', label: 'Approved' },
+          { value: 'rework', label: 'Rework' }
+        ].forEach(opt => {
+          const o = document.createElement('option');
+          o.value = opt.value; o.textContent = opt.label;
+          if ((status || '').toLowerCase() === opt.value) o.selected = true;
+          statusSelect.appendChild(o);
+        });
+        // Apply initial class based on current status
+        statusSelect.classList.add(statusToClass(status));
+        statusSelect.addEventListener('change', () => {
+          statusSelect.className = 'item-status-dropdown ' + statusToClass(statusSelect.value);
+          setAndDispatch(getCardInput('.item-status-dropdown'), statusSelect.value, 'change');
+          syncAndRebuild();
+        });
+        tdStatus.appendChild(statusSelect);
+        tr.appendChild(tdStatus);
+
+        // Assigned (text + optional unassign icon when assigned)
+  const tdAssigned = document.createElement('td');
+  tdAssigned.className = 'lv-assigned';
+  tdAssigned.style.cssText = 'padding:3px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:140px;';
+        if (card.getAttribute('data-assigned-to')) {
+          const wrap = document.createElement('div');
+          wrap.style.display = 'flex';
+          wrap.style.alignItems = 'center';
+          wrap.style.gap = '6px';
+          const nameSpan = document.createElement('span');
+          nameSpan.textContent = assigned;
+          const unassignBtn = document.createElement('button');
+          unassignBtn.className = 'lv-unassign-btn';
+          unassignBtn.title = 'Unassign';
+          unassignBtn.setAttribute('aria-label', 'Unassign');
+          unassignBtn.textContent = '✕';
+          unassignBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Prefer existing card unassign button if present
+            const cardBtn = getCardInput('.unassign-item');
+            if (cardBtn) {
+              cardBtn.click();
+            } else if (typeof unassignItem === 'function') {
+              unassignItem(card);
+            }
+            // Rebuild after unassign completes
+            setTimeout(() => {
+              buildListViewFromCards();
+              if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
+              if (typeof window.updateSelectedLaborCost === 'function') window.updateSelectedLaborCost();
+            }, 150);
+          });
+          wrap.appendChild(nameSpan);
+          wrap.appendChild(unassignBtn);
+          tdAssigned.appendChild(wrap);
+        } else {
+          tdAssigned.textContent = 'Unassigned';
+        }
+        tr.appendChild(tdAssigned);
+
+        // Actions (Delete)
+  const tdActions = document.createElement('td');
+  tdActions.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:64px;';
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '🗑️';
+        delBtn.className = 'lv-delete-btn';
+        delBtn.addEventListener('click', () => {
+          const btn = getCardInput('.delete-line-item');
+          if (btn) btn.click();
+          // Rebuild after deletion
+          setTimeout(() => { buildListViewFromCards(); updateTableFooterTotals(false); }, 80);
+        });
+        tdActions.appendChild(delBtn);
+  tr.appendChild(tdActions);
+
+  frag.appendChild(tr);
+
+        // Row-level collapse toggle: show description and photos horizontally beneath
+        const itemId = card.getAttribute('data-item-id');
+        const thCount = document.querySelectorAll('#line-items-table-container thead th').length || 12;
+        function removeExistingDetailRow() {
+          const next = tr.nextElementSibling;
+          if (next && next.classList && next.classList.contains('lv-detail-row') && next.getAttribute('data-for-id') === itemId) {
+            next.remove();
+            return true;
+          }
+          return false;
+        }
+        function renderThumbs(imgUrls) {
+          if (!Array.isArray(imgUrls) || imgUrls.length === 0) {
+            return '<div class="placeholder" style="color:#6b7280; font-size:12px;">No photos</div>';
+          }
+          const list = imgUrls.map(src => `<img src="${src}" alt="photo">`).join('');
+          // Provide an onclick handler via event delegation later
+          return `<div class="lv-thumb-row">${list}</div>`;
+        }
+        function getCardPhotos(type) {
+          try {
+            const sel = `#${type}-photos-${itemId} img`;
+            const imgs = Array.from(card.querySelectorAll(sel));
+            return imgs.map(img => img.getAttribute('src')).filter(Boolean);
+          } catch (_) { return []; }
+        }
+        function createDetailRow() {
+          const dtr = document.createElement('tr');
+          dtr.className = 'lv-detail-row';
+          dtr.setAttribute('data-for-id', itemId);
+          const td = document.createElement('td');
+          td.colSpan = thCount;
+          // Gather content
+          const description = (getCardInput('.item-description')?.value || '').trim();
+          const beforeList = getCardPhotos('before');
+          const afterList = getCardPhotos('after');
+          // Start/End date current values from card
+          const startDateVal = getCardInput('.item-start-date')?.value || '';
+          const endDateVal = getCardInput('.item-end-date')?.value || '';
+          td.innerHTML = `
+            <div class="lv-detail-content">
+              <div class="lv-detail-desc">
+                <h5>Description</h5>
+                <textarea class="lv-detail-desc-textarea" placeholder="No description provided."></textarea>
+              </div>
+              <div class="lv-detail-dates" style="flex:0 0 150px; background:#ffffff; border:1px solid #e5e7eb; border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:10px;">
+                
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                  <label style="font-size:12px; color:#374151;">Start Date</label>
+                  <input type="date" class="lv-detail-start-date" value="${startDateVal}" style="padding:6px 8px; border:1px solid #d1d5db; border-radius:6px;">
+                  <label style="font-size:12px; color:#374151;">End Date</label>
+                  <input type="date" class="lv-detail-end-date" value="${endDateVal}" style="padding:6px 8px; border:1px solid #d1d5db; border-radius:6px;">
+                </div>
+              </div>
+              <div class="lv-detail-photos">
+                <div style="flex:1 1 0;">
+                  <h5>Before Photos</h5>
+                  <div class="lv-before" data-type="before">${renderThumbs(beforeList)}</div>
+                </div>
+                <div style="flex:1 1 0;">
+                  <h5>After Photos</h5>
+                  <div class="lv-after" data-type="after">${renderThumbs(afterList)}</div>
+                </div>
+              </div>
+            </div>
+          `;
+          // Wire editable description to underlying card
+          const descTa = td.querySelector('.lv-detail-desc-textarea');
+          if (descTa) {
+            descTa.value = description || '';
+            try { if (typeof autoResizeTextarea === 'function') autoResizeTextarea(descTa); } catch (_) {}
+            descTa.addEventListener('focus', () => {
+              const cardDesc = getCardInput('.item-description');
+              descTa.dataset.orig = cardDesc ? (cardDesc.value || '') : '';
+            });
+            descTa.addEventListener('input', () => {
+              const cardDesc = getCardInput('.item-description');
+              if (cardDesc) {
+                cardDesc.value = descTa.value;
+                cardDesc.dispatchEvent(new Event('input', { bubbles:true }));
+              }
+              try { if (typeof autoResizeTextarea === 'function') autoResizeTextarea(descTa); } catch (_) {}
+            });
+            descTa.addEventListener('blur', () => {
+              const cardDesc = getCardInput('.item-description');
+              if (!cardDesc) return;
+              const changed = (descTa.dataset.orig || '') !== (descTa.value || '');
+              if (changed) {
+                cardDesc.dispatchEvent(new Event('blur', { bubbles:true }));
+              }
+            });
+          }
+          // Wire start/end dates to underlying card inputs
+          const lvStart = td.querySelector('.lv-detail-start-date');
+          const lvEnd = td.querySelector('.lv-detail-end-date');
+          if (lvStart) {
+            lvStart.addEventListener('focus', () => {
+              const cardStart = getCardInput('.item-start-date');
+              lvStart.dataset.orig = cardStart ? (cardStart.value || '') : '';
+            });
+            lvStart.addEventListener('change', () => {
+              const cardStart = getCardInput('.item-start-date');
+              if (cardStart) {
+                cardStart.value = lvStart.value;
+                // Trigger the card's change handler which persists to server
+                cardStart.dispatchEvent(new Event('change', { bubbles:true }));
+              }
+            });
+            lvStart.addEventListener('blur', () => {
+              // If user reverted, no-op
+              if ((lvStart.dataset.orig || '') === (lvStart.value || '')) return;
+              const cardStart = getCardInput('.item-start-date');
+              if (cardStart) {
+                // Ensure final sync on blur
+                if (cardStart.value !== lvStart.value) {
+                  cardStart.value = lvStart.value;
+                  cardStart.dispatchEvent(new Event('change', { bubbles:true }));
+                }
+              }
+            });
+          }
+          if (lvEnd) {
+            lvEnd.addEventListener('focus', () => {
+              const cardEnd = getCardInput('.item-end-date');
+              lvEnd.dataset.orig = cardEnd ? (cardEnd.value || '') : '';
+            });
+            lvEnd.addEventListener('change', () => {
+              const cardEnd = getCardInput('.item-end-date');
+              if (cardEnd) {
+                cardEnd.value = lvEnd.value;
+                cardEnd.dispatchEvent(new Event('change', { bubbles:true }));
+              }
+            });
+            lvEnd.addEventListener('blur', () => {
+              if ((lvEnd.dataset.orig || '') === (lvEnd.value || '')) return;
+              const cardEnd = getCardInput('.item-end-date');
+              if (cardEnd) {
+                if (cardEnd.value !== lvEnd.value) {
+                  cardEnd.value = lvEnd.value;
+                  cardEnd.dispatchEvent(new Event('change', { bubbles:true }));
+                }
+              }
+            });
+          }
+          // Click any thumbnail to open the full-screen viewer
+          td.addEventListener('click', (ev) => {
+            const img = ev.target && ev.target.tagName === 'IMG' ? ev.target : null;
+            if (!img) return;
+            const col = img.closest('.lv-before, .lv-after');
+            if (!col) return;
+            const type = col.classList.contains('lv-before') ? 'before' : 'after';
+            const urls = Array.from(col.querySelectorAll('img')).map(i => i.getAttribute('src')).filter(Boolean);
+            if (urls.length === 0) return;
+            if (typeof openPhotoViewer === 'function') {
+              openPhotoViewer(img.getAttribute('src'), urls);
+            }
+          });
+          dtr.appendChild(td);
+          return dtr;
+        }
+        // Toggle detail using arrow button only
+        toggleBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+          if (expanded) {
+            // Collapse
+            removeExistingDetailRow();
+            toggleBtn.setAttribute('aria-expanded', 'false');
+            toggleBtn.title = 'Show details';
+            // icon rotates via CSS
+          } else {
+            // Expand
+            const detailRow = createDetailRow();
+            tr.parentNode.insertBefore(detailRow, tr.nextSibling);
+            toggleBtn.setAttribute('aria-expanded', 'true');
+            toggleBtn.title = 'Hide details';
+            // icon rotates via CSS
+          }
+        });
+      }
+      nextEl = nextEl.nextElementSibling;
+    }
+  });
+
+  // Commit rows to the DOM in a single operation
+  tbody.appendChild(frag);
 }
 
 // ✅ Initialize filter event listeners
@@ -2467,7 +4104,12 @@ const cardStatus = statusDropdown ? statusDropdown.value.toLowerCase() : 'new';
     header.style.display = hasVisibleCards ? '' : 'none';
   });
 
-  console.log(`Filter applied: ${visibleCount} items shown, ${hiddenCount} items hidden`);
+  
+  // If list view is active, rebuild the table to reflect current visible cards
+  if (isListViewActive && isListViewActive()) {
+    buildListViewFromCards();
+    if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
+  }
 }
 
 // ✅ Clear all filters
@@ -2491,7 +4133,7 @@ function clearFilters() {
   // Reset filter counts
   updateFilterCounts();
   
-  console.log('Filters cleared');
+  
 }
 
 // ✅ Update the filter count display - Card View Only
@@ -2605,7 +4247,7 @@ function clearFilters() {
   // Reset filter counts
   updateFilterCounts();
   
-  console.log('Filters cleared');
+  
 }
 
 
@@ -2613,36 +4255,87 @@ function clearFilters() {
 
 // Update table footer totals, optionally only counting visible rows
 function updateTableFooterTotals(filteredOnly = false) {
-  const rows = document.querySelectorAll('.estimate-table tbody tr');
+  // Prefer the list-view table if visible; otherwise fallback to the first .estimate-table
+  const tableContainer = document.getElementById('line-items-table-container');
+  const table = (tableContainer && tableContainer.style.display !== 'none')
+    ? tableContainer.querySelector('.estimate-table')
+    : document.querySelector('.estimate-table');
+  if (!table) return;
+
+  const rows = table.querySelectorAll('tbody tr');
   let totalLabor = 0;
   let totalMaterial = 0;
   let totalAmount = 0;
   let totalProfit = 0;
-  
+
+  // Determine column indexes by header labels when possible
+  let laborIdx = -1, materialIdx = -1, amountIdx = -1, profitIdx = -1;
+  const headerCells = Array.from(table.querySelectorAll('thead tr th'));
+  if (headerCells.length) {
+    headerCells.forEach((th, idx) => {
+      const t = (th.textContent || '').trim().toLowerCase();
+      if (t.includes('labor')) laborIdx = idx;
+      if (t.includes('material')) materialIdx = idx;
+      if (t.includes('amount') || t.includes('total')) amountIdx = idx;
+      if (t.includes('profit')) profitIdx = idx;
+    });
+  }
+
+  // Get numeric value from a table cell: prefer input/select value, fallback to textContent
+  const getCellNumeric = (cell) => {
+    if (!cell) return 0;
+    const input = cell.querySelector('input, select');
+    const raw = input ? (input.value ?? '') : (cell.textContent ?? '');
+    const v = parseFloat(String(raw).replace(/[$,\s]/g, ''));
+    return isNaN(v) ? 0 : v;
+  };
+
   rows.forEach(row => {
-    // Skip hidden rows if in filtered mode
     if (filteredOnly && row.style.display === 'none') return;
-    
-    totalLabor += parseFloat(row.children[8].textContent.replace('$', '')) || 0;
-    totalMaterial += parseFloat(row.children[9].textContent.replace('$', '')) || 0;
-    totalAmount += parseFloat(row.children[10].textContent.replace('$', '')) || 0;
-    totalProfit += parseFloat(row.children[11].textContent.replace('$', '')) || 0;
+    const cells = row.children;
+    const cLen = cells.length;
+
+    // Fallback heuristics if headers not found
+    let lIdx = laborIdx, mIdx = materialIdx, aIdx = amountIdx, pIdx = profitIdx;
+    if (lIdx === -1 || mIdx === -1 || aIdx === -1) {
+      if (cLen >= 12) {
+        // Legacy table layout
+        lIdx = 8; mIdx = 9; aIdx = 10; pIdx = 11;
+      } else if (cLen >= 8) {
+        // New list-view layout
+        lIdx = 5; mIdx = 6; aIdx = 7; pIdx = -1;
+      }
+    }
+
+    totalLabor += getCellNumeric(cells[lIdx]);
+    totalMaterial += getCellNumeric(cells[mIdx]);
+    totalAmount += getCellNumeric(cells[aIdx]);
+    if (pIdx !== -1) totalProfit += getCellNumeric(cells[pIdx]);
   });
-  
-  const footer = document.querySelector('.estimate-table tfoot tr');
-  if (footer) {
+
+  const footer = table.querySelector('tfoot tr');
+  if (!footer) return;
+
+  // Map footer positions based on structure
+  const fLen = footer.children.length;
+  if (fLen >= 12) {
+    // Legacy footer layout
     footer.children[8].textContent = '$' + totalLabor.toFixed(2);
     footer.children[9].textContent = '$' + totalMaterial.toFixed(2);
     footer.children[10].textContent = '$' + totalAmount.toFixed(2);
     footer.children[11].textContent = '$' + totalProfit.toFixed(2);
-    
-    // Add indicator that totals are filtered
+    if (filteredOnly) footer.setAttribute('data-filtered', 'true'); else footer.removeAttribute('data-filtered');
+  } else if (fLen >= 4 && footer.children[0] && footer.children[0].colSpan >= 4) {
+    // List-view footer layout: [0]=colspan label, [1]=Labor, [2]=Material, [3]=Amount
+    if (footer.children[1]) footer.children[1].textContent = '$' + totalLabor.toFixed(2);
+    if (footer.children[2]) footer.children[2].textContent = '$' + totalMaterial.toFixed(2);
+    if (footer.children[3]) footer.children[3].textContent = '$' + totalAmount.toFixed(2);
     if (filteredOnly) {
       footer.setAttribute('data-filtered', 'true');
-      footer.children[0].textContent = 'FILTERED TOTALS:';
+      if (footer.children[0]) footer.children[0].textContent = 'FILTERED TOTALS:';
     } else {
       footer.removeAttribute('data-filtered');
-      footer.children[0].textContent = 'TOTALS:';
+      if (footer.children[0]) footer.children[0].textContent = 'TOTALS:';
     }
   }
 }
@@ -2778,4 +4471,55 @@ document.addEventListener("DOMContentLoaded", () => {
   
   document.getElementById("prev-estimate").addEventListener("click", () => goToEstimate(-1));
   document.getElementById("next-estimate").addEventListener("click", () => goToEstimate(1));
+
+  // Autosave tax changes: update summary live and persist with debounce / on blur
+  const taxInput = document.getElementById('tax-input');
+  if (taxInput) {
+    taxInput.addEventListener('input', () => { try { updateSummary(); } catch (_) {} });
+    // Use smart blur so autosave only fires on actual changes
+    addSmartBlurAutoSave(taxInput);
+  }
 });
+
+// Global utility: only autosave on blur if value actually changed, and skip during deletion
+function addSmartBlurAutoSave(input) {
+  if (!input) return;
+  let originalValue;
+  const getValue = () => input.hasAttribute('contenteditable') ? input.textContent : input.value;
+  input.addEventListener('focus', () => {
+    // If a stable original was provided by a specialized focus handler (e.g., labor/material), use it
+    if (typeof input.dataset.smartOrig !== 'undefined') {
+      originalValue = input.dataset.smartOrig;
+    } else {
+      originalValue = getValue();
+    }
+  });
+  input.addEventListener('blur', () => {
+    if (window.__isDeletingLineItem) return;
+    // Numeric-aware comparison to avoid autosave due to formatting (e.g., 10 vs 10.00)
+    const rawNow = getValue();
+    const isNumericField = (
+      input.type === 'number' ||
+      input.classList.contains('item-price') ||
+      input.classList.contains('item-quantity') ||
+      input.classList.contains('item-area') ||
+      input.classList.contains('item-length') ||
+      input.classList.contains('item-labor-cost') ||
+      input.classList.contains('item-material-cost')
+    );
+    let changed = false;
+    if (isNumericField) {
+      const beforeNum = parseFloat(originalValue);
+      const nowNum = parseFloat(rawNow);
+      const diff = Math.abs((isNaN(beforeNum)?0:beforeNum) - (isNaN(nowNum)?0:nowNum));
+      changed = diff > 0.005; // pennies tolerance
+    } else {
+      changed = rawNow !== originalValue;
+    }
+    // Clear smartOrig flag
+    try { delete input.dataset.smartOrig; } catch (_) {}
+    if (changed) {
+      try { autoSaveEstimate(); } catch (e) { console.warn('Autosave (blur) failed', e); }
+    }
+  });
+}
