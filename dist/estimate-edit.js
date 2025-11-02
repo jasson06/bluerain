@@ -607,12 +607,28 @@ window.invoices = await fetch('/api/invoices?projectId=' + projectId).then(r => 
       if (!response.ok) throw new Error("Failed to fetch project details.");
       const { project } = await response.json();
 
-      document.getElementById("project-title").textContent = `Project Name: ${project.name}`;
-      document.getElementById("project-code").textContent = `Lockbox Code: ${project.code}`;
-      document.getElementById("project-status").textContent = `Status: ${project.status || "N/A"}`;
-      document.getElementById("project-type").textContent = `Type: ${project.type || "N/A"}`;
-      document.getElementById("project-description").textContent = `Description: ${project.description || "No description provided."}`;
-      document.getElementById("project-address").textContent = `${project.address?.addressLine1 || "N/A"}, ${project.address?.city || "N/A"}, ${project.address?.state || "N/A"}, ${project.address?.zip || "N/A"}`;
+      // Gracefully handle missing elements (UI is now compact)
+      const setText = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+      };
+
+      // Optional legacy fields (will no-op if not present)
+      setText("project-title", `Project Name: ${project.name}`);
+      setText("project-code", `Lockbox Code: ${project.code}`);
+      setText("project-status", `Status: ${project.status || "N/A"}`);
+      setText("project-type", `Type: ${project.type || "N/A"}`);
+      setText("project-description", `Description: ${project.description || "No description provided."}`);
+
+      // Address: only show available parts, avoid N/A spam
+      const addrParts = [
+        project.address?.addressLine1,
+        project.address?.city,
+        project.address?.state,
+        project.address?.zip
+      ].filter(Boolean);
+      const addressStr = addrParts.join(", ");
+      setText("project-address", addressStr);
     } catch (error) {
       console.error("Error loading project details:", error);
     } finally {
@@ -787,6 +803,22 @@ function refreshLineItems(categories) {
     sel.addRange(range);
   }
 }, 100);
+
+    // ✅ If list view is active, immediately rebuild so the new category appears
+    try {
+      if (typeof isListViewActive === 'function' && isListViewActive()) {
+        // Small delay to ensure DOM is updated before measuring widths
+        setTimeout(() => {
+          try { if (typeof buildListViewFromCards === 'function') buildListViewFromCards(); } catch(_) {}
+          try { if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false); } catch(_) {}
+          try { if (typeof syncSeparatedListHeader === 'function') syncSeparatedListHeader(); } catch(_) {}
+        }, 50);
+      }
+    } catch (_) {}
+
+    // ✅ Refresh filter dropdowns and counts to include the new category
+    try { if (typeof populateFilterOptions === 'function') populateFilterOptions(); } catch(_) {}
+    try { if (typeof updateFilterCounts === 'function') updateFilterCounts(); } catch(_) {}
 
     return header;
   }
@@ -2512,12 +2544,12 @@ document.getElementById("assign-vendor-btn").onclick = async function() {
 // ✅ Create Filter UI - Card View Only
 function createFilterUI() {
   const filterContainer = document.createElement('div');
+  // Render compact when inline within topbar; class applied just before insert
   filterContainer.className = 'filters-container';
   filterContainer.innerHTML = `
     <div class="filter-panel">
       <div class="filter-header">
         <h3 style="display:flex; align-items:center; gap:10px;">Filters</h3> 
-        <button id="clear-filters" class="btn-secondary">Clear Filters</button>
       </div>
 
       <div class="filter-options">
@@ -2549,26 +2581,80 @@ function createFilterUI() {
             <option value="unassigned">Unassigned</option>
           </select>
         </div>
+        <button id="clear-filters" class="btn-secondary">Clear Filters</button>
+         <button id="toggle-view-btn" title="Toggle list/card view" aria-pressed="false" style="display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid #e2e8f0; border-radius:8px; background:#ffffff; cursor:pointer; color:#0f172a; margin-top:11px; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.04); transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease; width:34px; height:34px; padding:0; justify-content:center;">
+            <span id="toggle-view-icon" class="tvi-icon" aria-hidden="true" data-mode="card">
+              <!-- List icon (shown when in card mode to switch to list) -->
+              <svg class="icon-list" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <circle cx="4" cy="6" r="1"></circle>
+                <circle cx="4" cy="12" r="1"></circle>
+                <circle cx="4" cy="18" r="1"></circle>
+              </svg>
+              <!-- Grid icon (shown when in list mode to switch to card/grid) -->
+              <svg class="icon-grid" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                <rect x="3" y="3" width="7" height="7" rx="1" ry="1"></rect>
+                <rect x="14" y="3" width="7" height="7" rx="1" ry="1"></rect>
+                <rect x="3" y="14" width="7" height="7" rx="1" ry="1"></rect>
+                <rect x="14" y="14" width="7" height="7" rx="1" ry="1"></rect>
+              </svg>
+            </span>
+            <span id="toggle-view-label" class="tvi-label sr-only">Toggle View</span>
+          </button>
       </div>
     </div>
   `;
 
-  // Insert at the beginning of the line-items-cards container
-  const lineItemsContainer = document.getElementById('line-items-cards');
-  if (lineItemsContainer) {
-    lineItemsContainer.parentNode.insertBefore(filterContainer, lineItemsContainer);
-    initializeFilterListeners();
-    wireToggleViewButton();
-    // Restore last view mode (lazy-init list view only if needed)
-    const mode = (localStorage.getItem('estimateViewMode') || 'card');
-    if (mode === 'list') {
-      showListView(); // showListView itself ensures container exists
-    } else {
-      showCardView();
-    }
+  // Prefer placing inside the topbar host if present; fallback to original location
+  const topbarHost = document.getElementById('topbar-filters-host');
+  if (topbarHost) {
+    filterContainer.classList.add('topbar-inline');
+    topbarHost.appendChild(filterContainer);
   } else {
-    console.error("Line items container not found");
+    const lineItemsContainer = document.getElementById('line-items-cards');
+    if (lineItemsContainer && lineItemsContainer.parentNode) {
+      lineItemsContainer.parentNode.insertBefore(filterContainer, lineItemsContainer);
+    } else {
+      console.error("Line items container not found");
+    }
   }
+
+  initializeFilterListeners();
+  wireToggleViewButton();
+  // Restore last view mode (lazy-init list view only if needed)
+  const mode = (localStorage.getItem('estimateViewMode') || 'card');
+  if (mode === 'list') {
+    showListView();
+  } else {
+    showCardView();
+  }
+
+  // After rendering filters, update sticky offset to actual topbar height
+  try { if (typeof updateTopbarHeight === 'function') updateTopbarHeight(); } catch (_) {}
+}
+
+// Dynamically set CSS variable for sticky offsets based on actual topbar height
+function updateTopbarHeight() {
+  // Fixed offset to match sticky top bar height
+  document.documentElement.style.setProperty('--topbar-height', `148px`);
+}
+
+// Keep the value current on resize (debounced)
+let __topbarHeightTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(__topbarHeightTimer);
+  __topbarHeightTimer = setTimeout(() => {
+    try { updateTopbarHeight(); } catch(_) {}
+  }, 150);
+});
+
+// Initialize on DOM ready if possible
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', updateTopbarHeight);
+} else {
+  updateTopbarHeight();
 }
 
 // Create the list view container and table scaffold if missing
@@ -2582,6 +2668,14 @@ function ensureListViewContainer() {
   container.style.marginTop = '10px';
   container.innerHTML = `
     <style>
+      /* Sticky header handled separately in HTML */
+      #line-items-table-container { position: relative; }
+      #line-items-table-container > .table-scroll { overflow-x: auto; overflow-y: visible; width: 100%; }
+      #line-items-table-container .estimate-table { border-collapse: separate; border-spacing: 0; }
+      #line-items-table-container .estimate-table thead { display: none; }
+
+      
+
       /* List view row hover */
       #line-items-table-container .estimate-table tbody tr:hover {
         background-color: #e4f0fcff; /* slate-50 */
@@ -2810,24 +2904,9 @@ function ensureListViewContainer() {
         color: #991b1b; /* red-800 */
       }
     </style>
-    <div style="overflow:auto; border:1px solid #e5e7eb; border-radius:8px;">
-      <table class="estimate-table" style="width:100%; min-width:1040px; border-collapse:separate; border-spacing:0;">
-        <thead style="background:#f8fafc; position:sticky; top:0; z-index:1;">
-          <tr>
-            <th style="padding:3px 6px; border-bottom:1px solid #e5e7eb; width:36px; min-width:36px;"></th>
-            <th style="text-align:center; padding:3px 0px; border-bottom:1px solid #e5e7eb; min-width:170px;">Category</th>
-            <th style="text-align:left; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:200px;">Item</th>
-            <th style="text-align:left; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:70px;">Mode</th>
-            <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:72px;">Qty</th>
-            <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:88px;">Unit Price</th>
-            <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:100px;">Labor</th>
-            <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:92px;">Material</th>
-            <th style="text-align:center; padding:3px 0px; border-bottom:1px solid #e5e7eb; min-width:90px;">Amount</th>
-            <th style="text-align:left; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:160px; width:160px;">Status</th>
-            <th style="text-align:left; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:140px;">Assigned</th>
-            <th style="text-align:left; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:64px;">Actions</th>
-          </tr>
-        </thead>
+    <div class="table-scroll" style="border:1px solid #e5e7eb; border-radius:8px;">
+      <table class="estimate-table" style="width:100%; min-width:1040px; border-collapse:separate; border-spacing:0; table-layout:auto;">
+        <!-- No header here; header lives in HTML -->
         <tbody></tbody>
         <tfoot>
           <tr>
@@ -2842,6 +2921,54 @@ function ensureListViewContainer() {
     </div>
   `;
   cards.parentNode.insertBefore(container, cards.nextSibling);
+}
+
+// Sync the separate HTML header with the body table (widths + horizontal scroll)
+function syncSeparatedListHeader() {
+  const header = document.getElementById('list-view-header');
+  const scroller = document.querySelector('#line-items-table-container .table-scroll');
+  const bodyTable = document.querySelector('#line-items-table-container .estimate-table');
+  if (!header || !scroller || !bodyTable) return;
+  const headerTable = header.querySelector('table');
+  if (!headerTable) return;
+
+  // Measure header column widths
+  const ths = headerTable.querySelectorAll('thead th');
+  if (!ths.length) return;
+  const widths = Array.from(ths).map(th => th.offsetWidth);
+
+  // Create/replace colgroups so columns lock to same widths
+  const colgroupHTML = widths.map(w => `<col style="width:${w}px">`).join('');
+  let hg = headerTable.querySelector('colgroup');
+  if (!hg) { hg = document.createElement('colgroup'); headerTable.insertBefore(hg, headerTable.firstChild); }
+  hg.innerHTML = colgroupHTML;
+  let bg = bodyTable.querySelector('colgroup');
+  if (!bg) { bg = document.createElement('colgroup'); bodyTable.insertBefore(bg, bodyTable.firstChild); }
+  bg.innerHTML = colgroupHTML;
+
+  // Sync horizontal scroll position
+  const inner = header.querySelector('.lvh-inner');
+  if (inner) inner.style.transform = `translateX(${-scroller.scrollLeft}px)`;
+}
+
+function initSeparatedListHeader() {
+  const header = document.getElementById('list-view-header');
+  const scroller = document.querySelector('#line-items-table-container .table-scroll');
+  if (!header || !scroller) return;
+
+  syncSeparatedListHeader();
+
+  if (!scroller.__lvhBound) {
+    scroller.addEventListener('scroll', () => {
+      const inner = header.querySelector('.lvh-inner');
+      if (inner) inner.style.transform = `translateX(${-scroller.scrollLeft}px)`;
+    });
+    scroller.__lvhBound = true;
+  }
+  if (!window.__lvhResizeBound) {
+    window.addEventListener('resize', () => { try { syncSeparatedListHeader(); } catch(_) {} });
+    window.__lvhResizeBound = true;
+  }
 }
 
 // Utility: show/hide the summary panel
@@ -3049,11 +3176,13 @@ function isListViewActive() {
 function showCardView() {
   const cards = document.getElementById('line-items-cards');
   const tableContainer = document.getElementById('line-items-table-container');
+  const header = document.getElementById('list-view-header');
   if (cards) cards.style.display = '';
   if (tableContainer) tableContainer.style.display = 'none';
+  if (header) header.style.display = 'none';
   const icon = document.getElementById('toggle-view-icon');
   const label = document.getElementById('toggle-view-label');
-  if (icon) icon.textContent = '📋';
+  if (icon) icon.setAttribute('data-mode', 'card');
   if (label) label.textContent = 'List View';
   // Ensure summary box is visible in card view
   try { toggleSummaryVisibility(true); } catch (_) {}
@@ -3075,11 +3204,13 @@ function showListView() {
   buildListViewFromCards();
   const cards = document.getElementById('line-items-cards');
   const tableContainer = document.getElementById('line-items-table-container');
+  const header = document.getElementById('list-view-header');
   if (cards) cards.style.display = 'none';
   if (tableContainer) tableContainer.style.display = '';
+  if (header) header.style.display = '';
   const icon = document.getElementById('toggle-view-icon');
   const label = document.getElementById('toggle-view-label');
-  if (icon) icon.textContent = '🗂️';
+  if (icon) icon.setAttribute('data-mode', 'list');
   if (label) label.textContent = 'Card View';
   // Hide summary box in list view
   try { toggleSummaryVisibility(false); } catch (_) {}
@@ -3089,6 +3220,8 @@ function showListView() {
   if (typeof updateTableFooterTotals === 'function') {
     updateTableFooterTotals(false);
   }
+  try { initSeparatedListHeader(); } catch(_) {}
+  try { updateTopbarHeight(); } catch(_) {}
 }
 
 // Debounced autosave helper for list-view edits
@@ -3122,6 +3255,9 @@ function scheduleListViewRebuild(delay = 600) {
   }, delay);
 }
 
+// Render the list-view table headers inside the topbar so they appear as a single sticky section
+// (Reverted) Combined header integration removed; using native sticky thead below topbar.
+
 // Build the list-view table rows by reading current card DOM (respects filters)
 function buildListViewFromCards() {
   const tbody = document.querySelector('#line-items-table-container .estimate-table tbody');
@@ -3138,6 +3274,7 @@ function buildListViewFromCards() {
     if (header.style.display === 'none') return;
     const categoryName = header.querySelector('.category-title span')?.textContent?.trim() || '';
     let nextEl = header.nextElementSibling;
+    let rowsForThisCategory = 0;
     while (nextEl && !nextEl.classList.contains('category-header')) {
       if (nextEl.classList.contains('line-item-card') && nextEl.style.display !== 'none') {
         const card = nextEl;
@@ -3176,9 +3313,12 @@ function buildListViewFromCards() {
 
         // Select checkbox
   const tdSelect = document.createElement('td');
-  tdSelect.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; width:36px; min-width:36px;';
+  tdSelect.style.cssText = 'padding:4px 2px; font-size:15px; border-bottom:1px solid #f1f5f9; width:26px; min-width:26px;';
         const selectCb = document.createElement('input');
         selectCb.type = 'checkbox';
+  // Remove default checkbox margins and center compactly
+  selectCb.style.display = 'block';
+  selectCb.style.margin = '0 auto';
         const cardCb = getCardInput('.line-item-select');
         if (cardCb) {
           selectCb.checked = cardCb.checked;
@@ -3195,7 +3335,7 @@ function buildListViewFromCards() {
 
   // Category with toggle arrow
   const tdCat = document.createElement('td');
-  tdCat.style.cssText = 'padding:4px 0px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:170px;';
+  tdCat.style.cssText = 'padding:4px 0px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:130px;';
   const catWrap = document.createElement('div');
   catWrap.className = 'lv-cat-wrap';
   const toggleBtn = document.createElement('button');
@@ -3760,6 +3900,7 @@ function buildListViewFromCards() {
   tr.appendChild(tdActions);
 
   frag.appendChild(tr);
+  rowsForThisCategory++;
 
         // Row-level collapse toggle: show description and photos horizontally beneath
         const itemId = card.getAttribute('data-item-id');
@@ -3943,10 +4084,86 @@ function buildListViewFromCards() {
       }
       nextEl = nextEl.nextElementSibling;
     }
+
+    // If no visible items for this category, render a placeholder row so the category appears
+    if (rowsForThisCategory === 0) {
+      const ptr = document.createElement('tr');
+      ptr.className = 'lv-empty-category';
+
+      // Build 12 columns to match header
+      const td0 = document.createElement('td'); // Select
+      const tdCat = document.createElement('td'); // Category
+      const tdItem = document.createElement('td'); // Item
+      const tdMode = document.createElement('td');
+      const tdQty = document.createElement('td');
+      const tdUnit = document.createElement('td');
+      const tdLabor = document.createElement('td');
+      const tdMaterial = document.createElement('td');
+      const tdAmount = document.createElement('td');
+      const tdStatus = document.createElement('td');
+      const tdAssigned = document.createElement('td');
+      const tdActions = document.createElement('td');
+
+      const base = 'padding:4px 6px; border-bottom:1px solid #f1f5f9; font-size:14px;';
+      td0.style.cssText = 'padding:3px 2px; border-bottom:1px solid #f1f5f9; width:26px; min-width:26px;';
+      tdCat.style.cssText = base + ' min-width:130px; font-weight:600; color:#0f172a;';
+      tdItem.style.cssText = base + ' min-width:200px; color:#6b7280; font-style:italic;';
+      tdMode.style.cssText = base + ' min-width:70px;';
+      tdQty.style.cssText = base + ' min-width:72px; text-align:right;';
+      tdUnit.style.cssText = base + ' min-width:88px; text-align:right;';
+      tdLabor.style.cssText = base + ' min-width:100px; text-align:right;';
+      tdMaterial.style.cssText = base + ' min-width:92px; text-align:right;';
+      tdAmount.style.cssText = base + ' min-width:90px; text-align:center;';
+      tdStatus.style.cssText = base + ' min-width:160px; width:160px; text-align:center; color:#9ca3af;';
+      tdAssigned.style.cssText = base + ' min-width:140px; color:#9ca3af;';
+      tdActions.style.cssText = base + ' min-width:64px; text-align:right;';
+
+      // Build category cell with inline "+" add button (like non-empty rows)
+      const catWrap = document.createElement('div');
+      catWrap.className = 'lv-cat-wrap';
+      const iconGroup = document.createElement('div');
+      iconGroup.className = 'lv-icon-group';
+      const addBtn = document.createElement('button');
+      addBtn.className = 'lv-add-btn';
+      addBtn.type = 'button';
+      addBtn.title = 'Add line item to this category';
+      addBtn.textContent = '+';
+      addBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        try {
+          if (window.addLineItemCard) {
+            window.addLineItemCard({}, header);
+          } else if (typeof addLineItemCard === 'function') {
+            addLineItemCard({}, header);
+          }
+          setTimeout(() => {
+            try { if (typeof buildListViewFromCards === 'function') buildListViewFromCards(); } catch(_) {}
+            try { if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false); } catch(_) {}
+            try { if (typeof syncSeparatedListHeader === 'function') syncSeparatedListHeader(); } catch(_) {}
+          }, 100);
+        } catch (err) {
+          console.warn('Failed to add line item from empty category placeholder', err);
+        }
+      });
+      iconGroup.appendChild(addBtn);
+      const catLabel = document.createElement('span');
+      catLabel.className = 'lv-cat-label';
+      catLabel.textContent = categoryName || 'Untitled Category';
+      catWrap.appendChild(iconGroup);
+      catWrap.appendChild(catLabel);
+      tdCat.appendChild(catWrap);
+
+      tdItem.textContent = 'No items yet';
+
+      [td0, tdCat, tdItem, tdMode, tdQty, tdUnit, tdLabor, tdMaterial, tdAmount, tdStatus, tdAssigned, tdActions]
+        .forEach(td => ptr.appendChild(td));
+      frag.appendChild(ptr);
+    }
   });
 
   // Commit rows to the DOM in a single operation
   tbody.appendChild(frag);
+    try { syncSeparatedListHeader(); } catch(_) {}
 }
 
 // ✅ Initialize filter event listeners
@@ -4133,7 +4350,6 @@ function clearFilters() {
   // Reset filter counts
   updateFilterCounts();
   
-  
 }
 
 // ✅ Update the filter count display - Card View Only
@@ -4185,20 +4401,27 @@ function updateFilterCounts() {
     select.classList.toggle('has-value', select.value !== '');
   });
   
-  // Update or create the filter badges container
-  let badgesContainer = document.querySelector('.filter-badges');
+  // Update or create the filter badges container inline next to the header title
+  const headerContainer = document.querySelector('.filter-header');
+  let badgesContainer = headerContainer ? headerContainer.querySelector('.filter-badges') : null;
   if (!badgesContainer) {
     badgesContainer = document.createElement('div');
     badgesContainer.className = 'filter-badges';
-    const filterPanel = document.querySelector('.filter-panel');
-    filterPanel.insertBefore(badgesContainer, document.querySelector('.filter-options'));
+    if (headerContainer) {
+      const titleEl = headerContainer.querySelector('h3');
+      if (titleEl) {
+        titleEl.insertAdjacentElement('afterend', badgesContainer);
+      } else {
+        headerContainer.appendChild(badgesContainer);
+      }
+    }
   }
   
   // Clear existing badges
   badgesContainer.innerHTML = '';
   
   // Hide badges container if no active filters
-  badgesContainer.style.display = activeFilters.length ? 'flex' : 'none';
+  badgesContainer.style.display = activeFilters.length ? 'inline-flex' : 'none';
   
   // Create badges for each active filter
   activeFilters.forEach(filter => {
@@ -4227,6 +4450,9 @@ function clearFilters() {
     document.getElementById('filter-status'),
     document.getElementById('filter-vendor')
   ];
+  // Also reset the item name text filter
+  const itemNameInput = document.getElementById('filter-item-name');
+  if (itemNameInput) itemNameInput.value = '';
   
   filterElements.forEach(el => {
     if (el) el.value = '';
@@ -4236,6 +4462,15 @@ function clearFilters() {
   document.querySelectorAll('.line-item-card, .category-header').forEach(el => {
     el.style.display = '';
   });
+  
+  // If list view is active, rebuild the table and refresh totals
+  try {
+    if (typeof isListViewActive === 'function' && isListViewActive()) {
+      if (typeof buildListViewFromCards === 'function') buildListViewFromCards();
+      if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
+      if (typeof syncSeparatedListHeader === 'function') syncSeparatedListHeader();
+    }
+  } catch (_) {}
   
   // Hide badges container
   const badgesContainer = document.querySelector('.filter-badges');
@@ -4298,12 +4533,28 @@ function updateTableFooterTotals(filteredOnly = false) {
     // Fallback heuristics if headers not found
     let lIdx = laborIdx, mIdx = materialIdx, aIdx = amountIdx, pIdx = profitIdx;
     if (lIdx === -1 || mIdx === -1 || aIdx === -1) {
-      if (cLen >= 12) {
-        // Legacy table layout
-        lIdx = 8; mIdx = 9; aIdx = 10; pIdx = 11;
+      const separatedHeaderVisible = (function(){
+        const h = document.getElementById('list-view-header');
+        return !!(h && (h.style.display !== 'none'));
+      })();
+
+      if (separatedHeaderVisible && cLen >= 12) {
+        // Current list-view (separate HTML header):
+        // [0]=Select, [1]=Category, [2]=Item, [3]=Mode, [4]=Qty, [5]=Unit Price, [6]=Labor, [7]=Material, [8]=Amount, [9]=Status, [10]=Assigned, [11]=Actions
+        lIdx = 6; mIdx = 7; aIdx = 8; pIdx = -1;
+      } else if (cLen >= 12) {
+        // 12-col legacy/body-internal header variant; fall back to common order if used
+        // Adjust if your legacy order differs
+        lIdx = 6; mIdx = 7; aIdx = 8; pIdx = -1;
       } else if (cLen >= 8) {
-        // New list-view layout
+        // Compact 8-col variant
         lIdx = 5; mIdx = 6; aIdx = 7; pIdx = -1;
+      } else {
+        // Last-resort guess: assume last three numeric cells are L/M/A
+        lIdx = Math.max(0, cLen - 3);
+        mIdx = Math.max(0, cLen - 2);
+        aIdx = Math.max(0, cLen - 1);
+        pIdx = -1;
       }
     }
 
@@ -4318,14 +4569,7 @@ function updateTableFooterTotals(filteredOnly = false) {
 
   // Map footer positions based on structure
   const fLen = footer.children.length;
-  if (fLen >= 12) {
-    // Legacy footer layout
-    footer.children[8].textContent = '$' + totalLabor.toFixed(2);
-    footer.children[9].textContent = '$' + totalMaterial.toFixed(2);
-    footer.children[10].textContent = '$' + totalAmount.toFixed(2);
-    footer.children[11].textContent = '$' + totalProfit.toFixed(2);
-    if (filteredOnly) footer.setAttribute('data-filtered', 'true'); else footer.removeAttribute('data-filtered');
-  } else if (fLen >= 4 && footer.children[0] && footer.children[0].colSpan >= 4) {
+  if (fLen >= 4 && footer.children[0] && footer.children[0].colSpan >= 4) {
     // List-view footer layout: [0]=colspan label, [1]=Labor, [2]=Material, [3]=Amount
     if (footer.children[1]) footer.children[1].textContent = '$' + totalLabor.toFixed(2);
     if (footer.children[2]) footer.children[2].textContent = '$' + totalMaterial.toFixed(2);
@@ -4337,6 +4581,13 @@ function updateTableFooterTotals(filteredOnly = false) {
       footer.removeAttribute('data-filtered');
       if (footer.children[0]) footer.children[0].textContent = 'TOTALS:';
     }
+  } else if (fLen >= 12) {
+    // Legacy footer layout with explicit columns
+    footer.children[8].textContent = '$' + totalLabor.toFixed(2);
+    footer.children[9].textContent = '$' + totalMaterial.toFixed(2);
+    footer.children[10].textContent = '$' + totalAmount.toFixed(2);
+    footer.children[11].textContent = '$' + (isNaN(totalProfit) ? 0 : totalProfit).toFixed(2);
+    if (filteredOnly) footer.setAttribute('data-filtered', 'true'); else footer.removeAttribute('data-filtered');
   }
 }
 
