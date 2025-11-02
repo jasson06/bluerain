@@ -1111,8 +1111,8 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   } 
 }
 
-@media (max-width: 415px) {
-  :root { --topbar-height: 120px; }
+@media (max-width: 480px) {
+  :root { --topbar-height: 0px !important; }
 }
 /* Tooltip Styling */
 .vendor-name::after {
@@ -1820,6 +1820,13 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   }
   #list-view-header .lvh-inner { position: relative; will-change: transform; }
+  
+  /* Mobile adjustments: allow horizontal scroll on header and disable sticky topbar */
+  @media (max-width: 480px) {
+    #button-action.topbar-compact { position: static; z-index: auto; }
+    /* Let the header inner be directly scrollable horizontally on mobile */
+    #list-view-header .lvh-inner { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  }
   /* Ensure title suggestions overlay the sticky table header */
   .suggestion-box { position: absolute; z-index: 1000; }
 
