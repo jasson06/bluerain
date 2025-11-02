@@ -2948,7 +2948,16 @@ function syncSeparatedListHeader() {
 
   // Sync horizontal scroll position
   const inner = header.querySelector('.lvh-inner');
-  if (inner) inner.style.transform = `translateX(${-scroller.scrollLeft}px)`;
+  if (inner) {
+    const isMobile = window.matchMedia && window.matchMedia('(max-width: 480px)').matches;
+    if (isMobile) {
+      // In mobile mode, let the header inner scroll natively and mirror scrollLeft
+      inner.style.transform = '';
+      try { inner.scrollLeft = scroller.scrollLeft; } catch(_) {}
+    } else {
+      inner.style.transform = `translateX(${-scroller.scrollLeft}px)`;
+    }
+  }
 }
 
 function initSeparatedListHeader() {
@@ -2957,13 +2966,37 @@ function initSeparatedListHeader() {
   if (!header || !scroller) return;
 
   syncSeparatedListHeader();
-
-  if (!scroller.__lvhBound) {
-    scroller.addEventListener('scroll', () => {
-      const inner = header.querySelector('.lvh-inner');
-      if (inner) inner.style.transform = `translateX(${-scroller.scrollLeft}px)`;
-    });
-    scroller.__lvhBound = true;
+  const inner = header.querySelector('.lvh-inner');
+  const isMobile = window.matchMedia && window.matchMedia('(max-width: 480px)').matches;
+  if (isMobile && inner) {
+    // Two-way scroll sync for mobile: scrolling header scrolls body and vice-versa
+    if (!scroller.__lvhMobileBound) {
+      let syncing = false;
+      const syncFromScroller = () => {
+        if (syncing) return; syncing = true;
+        try { inner.scrollLeft = scroller.scrollLeft; } catch(_) {}
+        syncing = false;
+      };
+      const syncFromHeader = () => {
+        if (syncing) return; syncing = true;
+        try { scroller.scrollLeft = inner.scrollLeft; } catch(_) {}
+        syncing = false;
+      };
+      scroller.addEventListener('scroll', syncFromScroller, { passive: true });
+      inner.addEventListener('scroll', syncFromHeader, { passive: true });
+      scroller.__lvhMobileBound = true;
+      scroller.__lvhMobileSyncFrom = syncFromScroller;
+      inner.__lvhMobileSyncFrom = syncFromHeader;
+    }
+  } else {
+    // Desktop/tablet: translate header to mirror scroller X
+    if (!scroller.__lvhBound) {
+      scroller.addEventListener('scroll', () => {
+        const inner2 = header.querySelector('.lvh-inner');
+        if (inner2) inner2.style.transform = `translateX(${-scroller.scrollLeft}px)`;
+      }, { passive: true });
+      scroller.__lvhBound = true;
+    }
   }
   if (!window.__lvhResizeBound) {
     window.addEventListener('resize', () => { try { syncSeparatedListHeader(); } catch(_) {} });
