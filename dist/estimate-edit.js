@@ -3297,6 +3297,12 @@ function buildListViewFromCards() {
   if (!tbody) return;
   tbody.innerHTML = '';
   const formatter = (n) => `$${(Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}`;
+  // Helpers for numeric formatting/parsing (inputs show commas; calculations use raw numbers)
+  const fmtNum = (n) => (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const parseNum = (s) => {
+    const v = parseFloat(String(s ?? '').replace(/[$,\s]/g, ''));
+    return isNaN(v) ? 0 : v;
+  };
 
   const headers = document.querySelectorAll('.category-header');
   // Use a document fragment to minimize reflows during table construction
@@ -3654,43 +3660,53 @@ function buildListViewFromCards() {
         tdQty.appendChild(qtyInput);
         tr.appendChild(tdQty);
 
-        // Unit price input
+        // Unit price input (with comma formatting on blur)
   const tdUnit = document.createElement('td');
   tdUnit.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; text-align:right; min-width:88px;';
   const unitInput = document.createElement('input');
-        unitInput.type = 'number'; unitInput.min = '0'; unitInput.step = '0.01';
+        unitInput.type = 'text';
   unitInput.style.width = '100%'; unitInput.style.textAlign = 'right';
   unitInput.style.fontSize = '15px';
   unitInput.style.padding = '4px 6px';
-        unitInput.value = (unitPrice || 0).toFixed(2);
+        unitInput.value = fmtNum(unitPrice || 0);
         unitInput.addEventListener('focus', () => {
           const cardEl = getCardInput('.item-price');
           unitInput.dataset.orig = cardEl ? (cardEl.value || '') : '';
           // UX: auto-clear when zero to ease entering new value
+          // Show raw number (no commas) while editing
+          unitInput.value = (parseNum(unitInput.value) || 0).toFixed(2);
           const v = parseFloat(unitInput.value);
           if (isNaN(v) || v === 0) unitInput.value = '';
         });
         unitInput.addEventListener('input', () => {
-          setAndDispatch(getCardInput('.item-price'), unitInput.value, 'input');
+          // Sanitize to digits and decimal; do not insert commas while typing
+          const raw = unitInput.value;
+          const cleaned = String(raw).replace(/[^0-9.\-]/g, '');
+          if (cleaned !== raw) unitInput.value = cleaned;
+          setAndDispatch(getCardInput('.item-price'), String(parseNum(cleaned)), 'input');
           syncAndRebuild();
         });
         unitInput.addEventListener('blur', () => {
-          if ((unitInput.dataset.orig || '') !== (unitInput.value || '')) {
-            setAndDispatch(getCardInput('.item-price'), unitInput.value, 'blur');
+          const numeric = parseNum(unitInput.value);
+          // Push clean numeric string to the underlying card on blur
+          if ((unitInput.dataset.orig || '') !== String(numeric)) {
+            setAndDispatch(getCardInput('.item-price'), String(numeric), 'blur');
           }
+          // Re-apply comma formatting for display
+          unitInput.value = fmtNum(numeric);
         });
         tdUnit.appendChild(unitInput);
         tr.appendChild(tdUnit);
 
-        // Labor total input
+        // Labor total input (comma formatting on initial render and blur; edit rate raw)
   const tdLabor = document.createElement('td');
   tdLabor.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; text-align:right; min-width:100px;';
   const laborInput = document.createElement('input');
-        laborInput.type = 'number'; laborInput.min = '0'; laborInput.step = '0.01';
+        laborInput.type = 'text';
   laborInput.style.width = '100%'; laborInput.style.textAlign = 'right';
   laborInput.style.fontSize = '15px';
   laborInput.style.padding = '4px 6px';
-        laborInput.value = (laborTotal || 0).toFixed(2);
+        laborInput.value = fmtNum(laborTotal || 0);
         laborInput.addEventListener('focus', () => {
           const cardEl = getCardInput('.item-labor-cost');
           laborInput.dataset.orig = cardEl ? (cardEl.value || '') : '';
@@ -3711,6 +3727,7 @@ function buildListViewFromCards() {
           laborInput.dataset.lvOrigRate = String(rate || 0);
           laborInput.dataset.lvOrigEffQty = String(effQty || 0);
           laborInput.dataset.lvOrigTotal = String(parseFloat(cardEl?.value || '0') || 0);
+          // Show raw rate (no commas) while editing
           laborInput.value = (rate || 0).toFixed(2);
           // If zero, clear to ease typing
           const v = parseFloat(laborInput.value);
@@ -3719,6 +3736,9 @@ function buildListViewFromCards() {
         // While editing rate in list view, don't push to card until blur
         laborInput.addEventListener('input', () => {
           // No-op: keep footer unchanged until blur for accurate totals, but refresh footer label if desired
+          const raw = laborInput.value;
+          const cleaned = String(raw).replace(/[^0-9.\-]/g, '');
+          if (cleaned !== raw) laborInput.value = cleaned;
         });
         laborInput.addEventListener('blur', () => {
           const cardEl = getCardInput('.item-labor-cost');
@@ -3728,7 +3748,7 @@ function buildListViewFromCards() {
                            : (parseFloat(getCardInput('.item-quantity')?.value) || 0);
           const fallbackEff = parseFloat(laborInput.dataset.effQty || '0') || 0;
           const effQty = effQtyNow || fallbackEff;
-          const rate = parseFloat(laborInput.value) || 0;
+          const rate = parseNum(laborInput.value) || 0;
           const origRate = parseFloat(laborInput.dataset.lvOrigRate || '0') || 0;
           const origEff = parseFloat(laborInput.dataset.lvOrigEffQty || '0') || 0;
           const origTotal = parseFloat(laborInput.dataset.lvOrigTotal || '0') || 0;
@@ -3736,8 +3756,8 @@ function buildListViewFromCards() {
           const rateChanged = !nearlyEqual(rate, origRate);
           const effChanged = !nearlyEqual(effQty, origEff);
           if (!rateChanged && !effChanged) {
-            // No real change: restore original total and skip dispatch/autosave
-            laborInput.value = (origTotal || 0).toFixed(2);
+            // No real change: restore original total (with commas) and skip dispatch/autosave
+            laborInput.value = fmtNum(origTotal || 0);
             delete laborInput.dataset.editMode;
             return;
           }
@@ -3749,7 +3769,8 @@ function buildListViewFromCards() {
             // Only dispatch input so card logic recalculates without reinterpreting as RATE on blur
             setAndDispatch(cardEl, cardEl.value, 'input');
           }
-          laborInput.value = (newTotal || 0).toFixed(2);
+          // Show commas for display post-edit
+          laborInput.value = fmtNum(newTotal || 0);
           delete laborInput.dataset.editMode;
           if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
           // Trigger a debounced autosave since we skipped card blur
@@ -3759,15 +3780,15 @@ function buildListViewFromCards() {
         tdLabor.appendChild(laborInput);
         tr.appendChild(tdLabor);
 
-        // Material total input
+        // Material total input (comma formatting on initial render and blur; edit rate raw)
   const tdMaterial = document.createElement('td');
   tdMaterial.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; text-align:right; min-width:92px;';
   const materialInput = document.createElement('input');
-        materialInput.type = 'number'; materialInput.min = '0'; materialInput.step = '0.01';
+        materialInput.type = 'text';
   materialInput.style.width = '100%'; materialInput.style.textAlign = 'right';
   materialInput.style.fontSize = '15px';
   materialInput.style.padding = '4px 6px';
-        materialInput.value = (materialTotal || 0).toFixed(2);
+        materialInput.value = fmtNum(materialTotal || 0);
         materialInput.addEventListener('focus', () => {
           const cardEl = getCardInput('.item-material-cost');
           materialInput.dataset.orig = cardEl ? (cardEl.value || '') : '';
@@ -3786,13 +3807,16 @@ function buildListViewFromCards() {
           materialInput.dataset.lvOrigRate = String(rate || 0);
           materialInput.dataset.lvOrigEffQty = String(effQty || 0);
           materialInput.dataset.lvOrigTotal = String(parseFloat(cardEl?.value || '0') || 0);
+          // Show raw rate (no commas) while editing
           materialInput.value = (rate || 0).toFixed(2);
           const v = parseFloat(materialInput.value);
           if (isNaN(v) || v === 0) materialInput.value = '';
         });
         // Do not sync to card until blur
         materialInput.addEventListener('input', () => {
-          // No-op during typing
+          const raw = materialInput.value;
+          const cleaned = String(raw).replace(/[^0-9.\-]/g, '');
+          if (cleaned !== raw) materialInput.value = cleaned;
         });
         materialInput.addEventListener('blur', () => {
           const cardEl = getCardInput('.item-material-cost');
@@ -3802,7 +3826,7 @@ function buildListViewFromCards() {
                            : (parseFloat(getCardInput('.item-quantity')?.value) || 0);
           const fallbackEff = parseFloat(materialInput.dataset.effQty || '0') || 0;
           const effQty = effQtyNow || fallbackEff;
-          const rate = parseFloat(materialInput.value) || 0;
+          const rate = parseNum(materialInput.value) || 0;
           const origRate = parseFloat(materialInput.dataset.lvOrigRate || '0') || 0;
           const origEff = parseFloat(materialInput.dataset.lvOrigEffQty || '0') || 0;
           const origTotal = parseFloat(materialInput.dataset.lvOrigTotal || '0') || 0;
@@ -3810,7 +3834,7 @@ function buildListViewFromCards() {
           const rateChanged = !nearlyEqual(rate, origRate);
           const effChanged = !nearlyEqual(effQty, origEff);
           if (!rateChanged && !effChanged) {
-            materialInput.value = (origTotal || 0).toFixed(2);
+            materialInput.value = fmtNum(origTotal || 0);
             delete materialInput.dataset.editMode;
             return;
           }
@@ -3821,7 +3845,7 @@ function buildListViewFromCards() {
             cardEl.value = (newTotal || 0).toFixed(2);
             setAndDispatch(cardEl, cardEl.value, 'input');
           }
-          materialInput.value = (newTotal || 0).toFixed(2);
+          materialInput.value = fmtNum(newTotal || 0);
           delete materialInput.dataset.editMode;
           if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
           try { if (typeof queueListAutoSave === 'function') queueListAutoSave(400); } catch (_) {}
@@ -4600,13 +4624,19 @@ function updateTableFooterTotals(filteredOnly = false) {
   const footer = table.querySelector('tfoot tr');
   if (!footer) return;
 
+  // Currency formatter with thousands separators
+  const fmt = (n) => {
+    const num = Number(n) || 0;
+    return '$' + num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
   // Map footer positions based on structure
   const fLen = footer.children.length;
   if (fLen >= 4 && footer.children[0] && footer.children[0].colSpan >= 4) {
     // List-view footer layout: [0]=colspan label, [1]=Labor, [2]=Material, [3]=Amount
-    if (footer.children[1]) footer.children[1].textContent = '$' + totalLabor.toFixed(2);
-    if (footer.children[2]) footer.children[2].textContent = '$' + totalMaterial.toFixed(2);
-    if (footer.children[3]) footer.children[3].textContent = '$' + totalAmount.toFixed(2);
+    if (footer.children[1]) footer.children[1].textContent = fmt(totalLabor);
+    if (footer.children[2]) footer.children[2].textContent = fmt(totalMaterial);
+    if (footer.children[3]) footer.children[3].textContent = fmt(totalAmount);
     if (filteredOnly) {
       footer.setAttribute('data-filtered', 'true');
       if (footer.children[0]) footer.children[0].textContent = 'FILTERED TOTALS:';
@@ -4616,10 +4646,10 @@ function updateTableFooterTotals(filteredOnly = false) {
     }
   } else if (fLen >= 12) {
     // Legacy footer layout with explicit columns
-    footer.children[8].textContent = '$' + totalLabor.toFixed(2);
-    footer.children[9].textContent = '$' + totalMaterial.toFixed(2);
-    footer.children[10].textContent = '$' + totalAmount.toFixed(2);
-    footer.children[11].textContent = '$' + (isNaN(totalProfit) ? 0 : totalProfit).toFixed(2);
+    footer.children[8].textContent = fmt(totalLabor);
+    footer.children[9].textContent = fmt(totalMaterial);
+    footer.children[10].textContent = fmt(totalAmount);
+    footer.children[11].textContent = fmt(isNaN(totalProfit) ? 0 : totalProfit);
     if (filteredOnly) footer.setAttribute('data-filtered', 'true'); else footer.removeAttribute('data-filtered');
   }
 }
