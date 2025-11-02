@@ -1783,9 +1783,6 @@ return `
         <span class="estimate-date"><i class="far fa-calendar-alt"></i> ${createdDate}</span>
       </div>
       <div class="estimate-actions">
-        <button class="view-estimate-button smart-btn" onclick="viewEstimate('${estimate._id}');event.stopPropagation();">
-          <i class="fas fa-eye"></i> View
-        </button>
         <button class="edit-estimate-button smart-btn" onclick="editEstimate('${projectId}', '${estimate._id}');event.stopPropagation();">
           <i class="fas fa-edit"></i> Edit
         </button>
