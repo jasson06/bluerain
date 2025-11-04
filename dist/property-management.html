@@ -7127,18 +7127,22 @@ async function exportReceipt(paymentId) {
     const cardX = 14;
     const cardW = 182;
     const rowH = 8;
-    const cardPadding = 6;
+    const cardPadding = 5;
     const amount = Number(payment.amount) || 0;
     const late = Number(payment.lateFee) || 0;
     const totalPaid = amount + late;
     const balance = Number(payment.balance) || 0;
 
+    // Compute compact card height for a single-row summary (includes title gap)
+    const rowsCount = 1;
+    const titleGap = 10;
+    const cardH = cardPadding * 2 + titleGap + (rowH * rowsCount);
     // Card background
     doc.setFillColor(234, 246, 255);
-    doc.roundedRect(cardX, y, cardW, rowH * 5 + cardPadding * 2, 3, 3, 'F');
+    doc.roundedRect(cardX, y, cardW, cardH, 3, 3, 'F');
     // Card border
     doc.setDrawColor(border.r, border.g, border.b);
-    doc.roundedRect(cardX, y, cardW, rowH * 5 + cardPadding * 2, 3, 3);
+    doc.roundedRect(cardX, y, cardW, cardH, 3, 3);
 
     // Card title
     doc.setFont('helvetica', 'bold');
@@ -7147,7 +7151,7 @@ async function exportReceipt(paymentId) {
     doc.text('Payment Summary', cardX + cardPadding, y + cardPadding + 2);
 
     // Rows
-    const startY = y + cardPadding + 10;
+    const startY = y + cardPadding + titleGap;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
     const drawRow = (label, value, rowIndex, isEmphasis = false) => {
@@ -7159,12 +7163,10 @@ async function exportReceipt(paymentId) {
         doc.text(value, cardX + cardW - cardPadding, yy, { align: 'right' });
         doc.setFont('helvetica', 'normal');
     };
-    drawRow('Payment Amount', formatCurrency(amount), 0);
-    drawRow('Late Fee', formatCurrency(late), 1);
-    drawRow('Total Paid', formatCurrency(totalPaid), 2, true);
-    drawRow('Balance', formatCurrency(balance), 3, !isPaid);
+    drawRow('Total Paid', formatCurrency(totalPaid), 0, true);
+    
 
-    y = y + rowH * 5 + cardPadding * 2 + 12;
+    y = y + cardH + 10;
 
     // Acknowledgement and footer
     doc.setDrawColor(230, 230, 230);
@@ -7184,6 +7186,7 @@ async function exportReceipt(paymentId) {
     const filename = `receipt_${tenant ? tenant.name.replace(/\s+/g, '_') : paymentId}.pdf`;
     doc.save(filename);
 }
+
 
 
 
@@ -7455,6 +7458,7 @@ window.deletePayment = deletePayment;
     </script>
 </body>
 </html>
+
 
 
 
