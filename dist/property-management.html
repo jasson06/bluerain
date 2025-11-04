@@ -3104,10 +3104,11 @@ select {
         </div>
         <div class="form-group">
             <label>Payment Type</label>
-            <select id="paymentType" required>
-                <option value="rent">Rent</option>
-                <option value="hub">HUB</option>
-            </select>
+            <input type="text" id="paymentType" placeholder="e.g., Rent, HUB" list="paymentTypeOptions" required>
+            <datalist id="paymentTypeOptions">
+                <option value="Rent"></option>
+                <option value="HUB"></option>
+            </datalist>
         </div>
         <div class="form-group">
     <label>Late Fee (%)</label>
@@ -6675,7 +6676,7 @@ function renderPayments() {
                         <tr class="payment-row" onclick="editPayment('${payment._id}')">
                             <td>${tenant ? tenant.name : 'N/A'}</td>
                             <td>${unit ? unit.number : 'N/A'}</td>
-                            <td>${payment.type === 'rent' ? 'Rent' : 'HUB'}</td>
+                            <td>${payment.type || ''}</td>
                             <td>$${payment.amount.toFixed(2)}</td>
                             <td>${payment.method.charAt(0).toUpperCase() + payment.method.slice(1)}</td>
                             <td>${new Date(payment.date).toLocaleDateString()}</td>
@@ -6845,81 +6846,280 @@ async function deletePayment(paymentId) {
 
 
 // Export receipt (simple CSV for now)
-function exportReceipt(paymentId) {
+async function exportReceipt(paymentId) {
     const payment = state.payments.find(p => p._id === paymentId);
-    if (!payment) return;
+    if (!payment) {
+        showNotification('Payment not found', 'error');
+        return;
+    }
+
     const tenant = state.tenants.find(t => t._id === payment.tenantId);
     const unit = state.units.find(u => u._id === payment.unitId);
+    // Prefer the property linked to the payment; fallback to currentProperty
+    const property = (state.properties || []).find(p => p._id === payment.projectId) || state.currentProperty;
+
+    const formatCurrency = (n) => `$${(Number(n) || 0).toFixed(2)}`;
+    const toTitle = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
+    const formatAddressLines = (prop) => {
+        if (!prop) return ['Address: N/A'];
+        const a = prop.address || {};
+        // Support both Property schema (line1/line2) and Project schema (addressLine1/addressLine2)
+        const line1 = a.line1 || a.addressLine1 || a.street || prop.line1 || '';
+        const line2 = a.line2 || a.addressLine2 || a.suite || prop.line2 || '';
+        const city = a.city || prop.city || '';
+        const state = a.state || prop.state || '';
+        const zip = a.zip || a.postalCode || prop.zip || '';
+        const lines = [];
+        if (line1) lines.push(line1);
+        if (line2) lines.push(line2);
+        let last = '';
+        if (city) last += city;
+        if (state) last += (last ? ', ' : '') + state;
+        if (zip) last += (last ? ' ' : '') + zip;
+        if (last) lines.push(last);
+        if (!lines.length) return ['Address: N/A'];
+        return lines;
+    };
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    // Header
-    doc.setFillColor(52, 152, 219); // #3498db
-    doc.rect(0, 0, 210, 30, 'F');
-    doc.setFontSize(22);
-    doc.setTextColor(255, 255, 255);
-    doc.text("Payment Receipt", 105, 18, { align: "center" });
+    // Helper: fetch an image URL and convert to Data URL
+    const fetchAsDataURL = async (url) => {
+        try {
+            const res = await fetch(url, { cache: 'no-store' });
+            if (!res.ok) return null;
+            const blob = await res.blob();
+            return await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            return null;
+        }
+    };
 
-    // Company/Property Info (customize as needed)
-    doc.setFontSize(11);
-    doc.setTextColor(255, 255, 255);
-    doc.text("Property Management System", 105, 26, { align: "center" });
-
-    // Main body
-    let y = 40;
-    doc.setFontSize(13);
-    doc.setTextColor(44, 62, 80); // #2c3e50
-
-    doc.setFont(undefined, 'bold');
-    doc.text("Receipt Details", 14, y);
-    doc.setFont(undefined, 'normal');
-    y += 8;
-
-    // Draw a light line
-    doc.setDrawColor(230, 230, 230);
-    doc.line(14, y, 196, y);
-    y += 6;
-
-    // Info rows
-    const infoRows = [
-        ["Tenant", tenant ? tenant.name : 'N/A'],
-        ["Unit", unit ? unit.number : 'N/A'],
-        ["Type", payment.type === 'rent' ? 'Rent' : 'HUB'],
-        ["Amount", `$${payment.amount.toFixed(2)}`],
-        ["Method", payment.method.charAt(0).toUpperCase() + payment.method.slice(1)],
-        ["Date", new Date(payment.date).toLocaleDateString()],
-        ["Late Fee", `$${payment.lateFee?.toFixed(2) || '0.00'}`],
-        ["Balance", `$${payment.balance?.toFixed(2) || '0.00'}`]
+    // Try common logo locations
+    let logoDataUrl = null;
+    const logoCandidates = [
+        '/images/logo.png',
+        '/images/logo.jpg',
+        '/public/images/logo.png',
+        '/public/logo.png',
+        '/logo.png'
     ];
+    for (const path of logoCandidates) {
+        logoDataUrl = await fetchAsDataURL(path);
+        if (logoDataUrl) break;
+    }
 
-    infoRows.forEach(([label, value]) => {
-        doc.setFont(undefined, 'bold');
-        doc.text(`${label}:`, 18, y);
-        doc.setFont(undefined, 'normal');
-        doc.text(`${value}`, 60, y);
-        y += 9;
+    // Theme colors
+    // Adjusted brand palette
+    const brand = { r: 31, g: 78, b: 121 }; // #1F4E79
+    const success = { r: 39, g: 174, b: 96 };
+    const warning = { r: 243, g: 156, b: 18 };
+    const textDark = { r: 38, g: 50, b: 56 };   // slightly darker
+    const textMuted = { r: 100, g: 116, b: 128 }; // cool gray
+    const border = { r: 225, g: 232, b: 237 };
+
+    // Small utility to lighten a color toward white
+    const lighten = (c, amt = 0.2) => ({
+        r: Math.min(255, Math.round(c.r + (255 - c.r) * amt)),
+        g: Math.min(255, Math.round(c.g + (255 - c.g) * amt)),
+        b: Math.min(255, Math.round(c.b + (255 - c.b) * amt))
     });
 
-    // Thank you section
-    y += 8;
-    doc.setDrawColor(52, 152, 219);
-    doc.setLineWidth(0.7);
-    doc.line(14, y, 196, y);
-    y += 12;
-    doc.setFontSize(12);
-    doc.setTextColor(52, 152, 219);
-    doc.setFont(undefined, 'bold');
-    doc.text("Thank you for your payment!", 105, y, { align: "center" });
+    // Header band with angled accent
+    const headerH = 42; // taller for a modern, breathable header
+    const headerW = 210; // A4 width in mm for jsPDF default
+    const brandLight = lighten(brand, 0.22);
+    doc.setFillColor(brand.r, brand.g, brand.b);
+    doc.rect(0, 0, headerW, headerH, 'F');
+    // Angled overlay on the right to add depth
+    doc.setFillColor(brandLight.r, brandLight.g, brandLight.b);
+    // Draw a triangle from mid-top to right-top to right-bottom
+    doc.triangle(130, 0, headerW, 0, headerW, headerH, 'F');
+    // Slim accent line below header
+    doc.setFillColor(brandLight.r, brandLight.g, brandLight.b);
+    doc.rect(0, headerH, headerW, 1.2, 'F');
 
-    // Footer
-    y += 14;
+    // Header content positions
+    let headerTitleX = 14;
+    const headerTitleY = 20;
+    const headerSubY = 28;
+
+    // Insert logo if available
+    if (logoDataUrl) {
+        try {
+            const logoW = 18; // mm
+            const logoH = 18; // mm
+            const logoX = 14;
+            const logoY = 6;
+            doc.addImage(logoDataUrl, 'PNG', logoX, logoY, logoW, logoH);
+            headerTitleX = logoX + logoW + 6; // shift title to the right of logo
+        } catch (e) {
+            // If addImage fails, continue without logo
+        }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.setTextColor(255, 255, 255);
+    doc.text('Payment Receipt', headerTitleX, headerTitleY);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.text('Blue Rain MF LLC', headerTitleX, headerSubY);
+
+    // Payment status badge in header (Paid/Outstanding)
+    const isPaid = (Number(payment.balance) || 0) <= 0;
+    const badgeX = 160, badgeY = 12, badgeW = 38, badgeH = 12;
+    if (isPaid) {
+        doc.setFillColor(success.r, success.g, success.b);
+    } else {
+        doc.setFillColor(warning.r, warning.g, warning.b);
+    }
+    doc.roundedRect(badgeX, badgeY, badgeW, badgeH, 3, 3, 'F');
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.setTextColor(150, 150, 150);
-    doc.setFont(undefined, 'normal');
-    doc.text("Generated by Property Management System", 105, y, { align: "center" });
+    doc.setTextColor(255, 255, 255);
+    doc.text(isPaid ? 'PAID' : 'OUTSTANDING', badgeX + badgeW / 2, badgeY + 8, { align: 'center' });
 
-    // Download the PDF
+    // Subtle watermark behind content
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(60);
+    const wmColor = lighten({ r: 230, g: 236, b: 240 }, 0.15); // very light
+    doc.setTextColor(wmColor.r, wmColor.g, wmColor.b);
+    doc.text('BR', 170, 150, { align: 'center' });
+
+    // Meta box on right — floating card overlapping header
+    const metaX = 120;
+    const boxTop = headerH - 8;
+    const boxW = 76;
+    const boxH = 34;
+    // Faux shadow
+    doc.setFillColor(235, 241, 246);
+    doc.roundedRect(metaX + 1.2, boxTop + 1.2, boxW, boxH, 3, 3, 'F');
+    // Card
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(220, 230, 240);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(metaX, boxTop, boxW, boxH, 3, 3, 'FD');
+    const receiptNo = (payment._id || '').slice(-8).toUpperCase();
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(textDark.r, textDark.g, textDark.b);
+    doc.text('Receipt Details', metaX + 4, boxTop + 8);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+    doc.text(`Receipt # : ${receiptNo}`, metaX + 4, boxTop + 15);
+    doc.text(`Date      : ${new Date(payment.date).toLocaleDateString()}`, metaX + 4, boxTop + 21);
+    doc.text(`Payment ID: ${(payment._id || '').substring(0, 12)}...`, metaX + 4, boxTop + 27);
+
+    // Property address (actual address, not project name)
+    doc.setTextColor(textDark.r, textDark.g, textDark.b);
+    let y = headerH + 18;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('Property Address', 14, y);
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    const addrLines = formatAddressLines(property);
+    doc.text(addrLines, 14, y);
+    y += (addrLines.length * 6) + 6;
+
+    // Separator
+    doc.setDrawColor(230, 230, 230);
+    doc.line(14, y, 196, y);
+    y += 10;
+
+    // Payer and Payment details columns
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('Payer', 14, y);
+    doc.text('Payment', 110, y);
+    y += 7;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    const leftCol = [
+        `Tenant: ${tenant ? tenant.name : 'N/A'}`,
+        `Unit: ${unit ? unit.number : 'N/A'}`,
+        tenant?.email ? `Email: ${tenant.email}` : null,
+        tenant?.phone ? `Phone: ${tenant.phone}` : null
+    ].filter(Boolean);
+    leftCol.forEach((line, idx) => doc.text(line, 14, y + (idx * 6)));
+
+    const rightY = y;
+    const rightCol = [
+        `Type: ${toTitle(payment.type || '')}`,
+        `Method: ${toTitle(payment.method)}`,
+        `Reference: ${receiptNo}`
+    ];
+    rightCol.forEach((line, idx) => doc.text(line, 110, rightY + (idx * 6)));
+    const blockHeight = Math.max(leftCol.length, rightCol.length) * 6;
+    y = y + blockHeight + 12;
+
+    // Totals card
+    const cardX = 14;
+    const cardW = 182;
+    const rowH = 8;
+    const cardPadding = 6;
+    const amount = Number(payment.amount) || 0;
+    const late = Number(payment.lateFee) || 0;
+    const totalPaid = amount + late;
+    const balance = Number(payment.balance) || 0;
+
+    // Card background
+    doc.setFillColor(234, 246, 255);
+    doc.roundedRect(cardX, y, cardW, rowH * 5 + cardPadding * 2, 3, 3, 'F');
+    // Card border
+    doc.setDrawColor(border.r, border.g, border.b);
+    doc.roundedRect(cardX, y, cardW, rowH * 5 + cardPadding * 2, 3, 3);
+
+    // Card title
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(textDark.r, textDark.g, textDark.b);
+    doc.text('Payment Summary', cardX + cardPadding, y + cardPadding + 2);
+
+    // Rows
+    const startY = y + cardPadding + 10;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    const drawRow = (label, value, rowIndex, isEmphasis = false) => {
+        const yy = startY + rowIndex * rowH;
+        doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
+        doc.text(label, cardX + cardPadding, yy);
+        doc.setFont('helvetica', isEmphasis ? 'bold' : 'normal');
+        doc.setTextColor(textDark.r, textDark.g, textDark.b);
+        doc.text(value, cardX + cardW - cardPadding, yy, { align: 'right' });
+        doc.setFont('helvetica', 'normal');
+    };
+    drawRow('Payment Amount', formatCurrency(amount), 0);
+    drawRow('Late Fee', formatCurrency(late), 1);
+    drawRow('Total Paid', formatCurrency(totalPaid), 2, true);
+    drawRow('Balance', formatCurrency(balance), 3, !isPaid);
+
+    y = y + rowH * 5 + cardPadding * 2 + 12;
+
+    // Acknowledgement and footer
+    doc.setDrawColor(230, 230, 230);
+    doc.line(14, y, 196, y);
+    y += 10;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(brand.r, brand.g, brand.b);
+    doc.setFontSize(12);
+    doc.text('Thank you for your payment!', 105, y, { align: 'center' });
+    y += 10;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(150, 150, 150);
+    doc.setFontSize(9.5);
+    doc.text('Generated by Bluerain MF LLC  • (210) 981-9251', 105, y, { align: 'center' });
+
+    // Filename uses tenant name if available
     const filename = `receipt_${tenant ? tenant.name.replace(/\s+/g, '_') : paymentId}.pdf`;
     doc.save(filename);
 }
@@ -7194,6 +7394,7 @@ window.deletePayment = deletePayment;
     </script>
 </body>
 </html>
+
 
 
 
