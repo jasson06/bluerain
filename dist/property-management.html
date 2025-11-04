@@ -3216,6 +3216,31 @@ allTenants: [],
 
 const API_URL = '/api';
 
+
+        // Small utility: schedule non-critical work after first paint/idle
+function runWhenIdle(fn) {
+    try {
+        if (window.requestIdleCallback) {
+            window.requestIdleCallback(() => setTimeout(fn, 0), { timeout: 1200 });
+        } else {
+            setTimeout(fn, 0);
+        }
+    } catch (_) {
+        setTimeout(fn, 0);
+    }
+}
+
+// Light data cache to avoid re-fetching the same property data repeatedly
+state._cache = state._cache || {};
+const CACHE_TTL_MS = 60 * 1000; // 60s
+function shouldUseCache(key, propertyId) {
+    const entry = state._cache[key];
+    return entry && entry.propertyId === propertyId && (Date.now() - entry.ts) < CACHE_TTL_MS;
+}
+function touchCache(key, propertyId) {
+    state._cache[key] = { propertyId, ts: Date.now() };
+}
+
 // Initialize application
 document.addEventListener('DOMContentLoaded', () => {
     initializeEventListeners();
@@ -3370,31 +3395,36 @@ async function loadTabContent(tabId) {
 async function loadProperties() {
     showLoader();
     try {
-        // Fetch active properties
-        const response = await fetch('/api/projects');
+        // Fetch property datasets in parallel
+        const [response, completedRes, onMarketRes] = await Promise.all([
+            fetch('/api/projects'),
+            fetch('/api/completed-projects'),
+            fetch('/api/on-market-projects').catch(() => ({ ok: false }))
+        ]);
+
         if (!response.ok) throw new Error('Failed to fetch projects');
-        const data = await response.json();
+        if (!completedRes.ok) throw new Error('Failed to fetch completed projects');
+
+        const [data, completedData] = await Promise.all([
+            response.json(),
+            completedRes.json()
+        ]);
+
         // Only multifamily properties
         const activeProperties = data.projects.filter(project =>
             project.type?.toLowerCase() === 'multifamily'
         );
 
-        // Fetch completed properties
-        const completedRes = await fetch('/api/completed-projects');
-        if (!completedRes.ok) throw new Error('Failed to fetch completed projects');
-        const completedData = await completedRes.json();
         const completedProperties = (completedData.projects || []).filter(project =>
             project.type?.toLowerCase() === 'multifamily'
         );
 
         // --- Fetch "On Market" properties ---
-        const onMarketRes = await fetch('/api/on-market-projects');
-        if (onMarketRes.ok) {
+        if (onMarketRes && onMarketRes.ok) {
             const onMarketData = await onMarketRes.json();
             state.onMarketProperties = (onMarketData.projects || []).filter(project =>
-                project.type?.toLowerCase() === 'multifamily' 
+                project.type?.toLowerCase() === 'multifamily'
             );
-            // You can render these in a separate list or badge if needed
             console.log('On Market Properties:', state.onMarketProperties);
         } else {
             state.onMarketProperties = [];
@@ -3405,10 +3435,12 @@ async function loadProperties() {
 
         renderPropertyList();
 
-        // Load all units and tenants for summary
-        await loadAllUnitsAndTenants();
+        // Defer summary prefetching to avoid blocking first paint
+        runWhenIdle(() => {
+            loadAllUnitsAndTenants().catch(() => {});
+        });
 
-        // Auto-select the first property if available
+        // Auto-select the first property if available (don't block on non-critical loads)
         if (state.properties.length > 0) {
             selectProperty(state.properties[0]._id);
         }
@@ -3511,15 +3543,17 @@ async function selectProperty(propertyId) {
 
         document.getElementById('propertyName').textContent = state.currentProperty.name;
         
-        // Load all property data in parallel
+        // Load critical data first for faster perceived load
         await Promise.all([
             loadUnits(propertyId),
-            loadTenants(propertyId),
-            loadMaintenanceRequests(propertyId),
-            loadDocuments(propertyId),
-            loadPayments(propertyId),
-            loadMaintenanceSchedules(propertyId)
+            loadTenants(propertyId)
         ]);
+
+        // Defer non-critical tab data to idle time
+        runWhenIdle(() => loadDocuments(propertyId).catch(() => {}));
+        runWhenIdle(() => loadPayments(propertyId).catch(() => {}));
+        runWhenIdle(() => loadMaintenanceRequests(propertyId).catch(() => {}));
+        runWhenIdle(() => loadMaintenanceSchedules(propertyId).catch(() => {}));
         
         updatePropertyStats();
         showNotification('Property loaded successfully', 'success');
@@ -3544,6 +3578,14 @@ async function selectProperty(propertyId) {
 async function loadUnits(propertyId) {
     
     try {
+        if (shouldUseCache('units', propertyId)) {
+            renderUnits();
+            updatePropertyStats();
+            populateUnitSelect();
+            populateMaintenanceUnitSelect();
+            updateTabCounts();
+            return;
+        }
         const response = await fetch(`${API_URL}/properties/${propertyId}/units`);
         if (!response.ok) throw new Error('Failed to fetch units');
         
@@ -3557,6 +3599,7 @@ async function loadUnits(propertyId) {
         populateUnitSelect();
          populateMaintenanceUnitSelect();
          updateTabCounts(); 
+        touchCache('units', propertyId);
 
     } catch (error) {
         console.error('Error loading units:', error);
@@ -4401,6 +4444,11 @@ document.getElementById('petCount').addEventListener('input', updatePetFields);
 async function loadTenants(propertyId) {
     
     try {
+        if (shouldUseCache('tenants', propertyId)) {
+            renderTenants();
+            updateTabCounts();
+            return;
+        }
         const response = await fetch(`${API_URL}/properties/${propertyId}/tenants`);
         if (!response.ok) throw new Error('Failed to fetch tenants');
         
@@ -4410,6 +4458,7 @@ async function loadTenants(propertyId) {
         console.log('Loaded tenants:', state.tenants); // Debug log
         renderTenants();
         updateTabCounts(); 
+        touchCache('tenants', propertyId);
     } catch (error) {
         console.error('Error loading tenants:', error);
         showNotification('Error loading tenants', 'error');
@@ -6460,6 +6509,11 @@ document.getElementById('toggleCalendarIcon').addEventListener('click', () => {
 async function loadDocuments(propertyId) {
     
     try {
+        if (shouldUseCache('documents', propertyId)) {
+            renderDocuments();
+            updateTabCounts();
+            return;
+        }
         const response = await fetch(`${API_URL}/properties/${propertyId}/documents`);
         if (!response.ok) throw new Error('Failed to fetch documents');
         
@@ -6468,6 +6522,7 @@ async function loadDocuments(propertyId) {
         console.log('Loaded documents:', state.documents);
         renderDocuments();
         updateTabCounts(); 
+        touchCache('documents', propertyId);
     } catch (error) {
         console.error('Error loading documents:', error);
         showNotification('Error loading documents', 'error');
@@ -6633,11 +6688,17 @@ showLoader();
 async function loadPayments(propertyId) {
 
     try {
+        if (shouldUseCache('payments', propertyId)) {
+            renderPayments();
+            updateTabCounts();
+            return;
+        }
         const response = await fetch(`${API_URL}/properties/${propertyId}/payments`);
         if (!response.ok) throw new Error('Failed to fetch payments');
         state.payments = await response.json();
         renderPayments();
         updateTabCounts(); 
+        touchCache('payments', propertyId);
     } catch (error) {
         console.error('Error loading payments:', error);
         showNotification('Error loading payments', 'error');
@@ -7394,6 +7455,7 @@ window.deletePayment = deletePayment;
     </script>
 </body>
 </html>
+
 
 
 
