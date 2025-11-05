@@ -6489,7 +6489,7 @@ async function sendTodayMaintenanceReminder(schedule) {
   // Manager reminder
   await transporter.sendMail({
     from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-    to: ["jleonel3915@gmail.com"], // Add more emails as needed
+     to: ["besfllc@gmail.com"], // Add more emails as needed
     subject: `Reminder: Maintenance Scheduled for Today`,
     html: getMaintenanceEmailHtml({
       recipientName: 'Team',
@@ -6646,7 +6646,7 @@ async function updateNextScheduledDates() {
       // Send to default manager emails
       await transporter.sendMail({
         from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-        to: ["jleonel3915@gmail.com"],
+         to: ["besfllc@gmail.com"],
         subject: `Overdue Maintenance Alert: ${schedule.title}`,
         html: getOverdueMaintenanceEmailHtml({
           recipientName: 'Team',
@@ -6778,7 +6778,7 @@ async function sendMaintenanceReminders() {
       // Send to default project manager email
 await transporter.sendMail({
   from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-  to: ["besfllc@gmail.com", "jleonel3915@gmail.com", "josh@bluerainholdingsllc.onmicrosoft.com"], // <-- Add both emails here
+  to: ["besfllc@gmail.com"], // <-- Add both emails here
   subject: `Reminder: Maintenance Scheduled for Tomorrow`,
   html: getMaintenanceEmailHtml({
     recipientName: 'Team',
