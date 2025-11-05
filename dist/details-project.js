@@ -1,9 +1,57 @@
-console.log("details-project.js is loaded");
+/* Production hardening: disable console.log in the UI bundle */
+if (typeof window !== 'undefined' && window.console && typeof window.console.log === 'function') {
+  try { window.console.log = function(){}; } catch (e) {}
+}
+
+// Ensure mobile-friendly viewport meta is present
+(function ensureViewportMeta(){
+  try {
+    if (!document.querySelector('meta[name="viewport"]')) {
+      const m = document.createElement('meta');
+      m.name = 'viewport';
+      m.content = 'width=device-width, initial-scale=1, maximum-scale=1';
+      document.head.appendChild(m);
+    }
+  } catch {}
+})();
 
 // Helper function to consistently extract projectId from URL
 function getProjectId() {
-  const pathSegments = window.location.pathname.split('/');
-  return pathSegments[pathSegments.length - 1];
+  try {
+    const url = new URL(window.location.href);
+    // 1) Prefer explicit query param
+    const fromQuery = url.searchParams.get('projectId');
+    if (fromQuery) return fromQuery;
+
+    // 2) Handle pretty route: /details/projects/:id
+    const segments = url.pathname.split('/').filter(Boolean);
+    const idx = segments.indexOf('projects');
+    if (idx !== -1 && segments[idx + 1]) return segments[idx + 1];
+
+    // 3) Fallback: last segment if it looks like an ObjectId
+    const last = segments[segments.length - 1] || '';
+    const objectIdRegex = /^[a-fA-F0-9]{24}$/;
+    if (objectIdRegex.test(last)) return last;
+  } catch (e) {
+    console.warn('getProjectId parse error:', e);
+  }
+  return null;
+}
+
+// Organize estimates by title (case-insensitive)
+function organizeEstimatesByTitle(list = [], dir = 'asc') {
+  try {
+    const mul = (String(dir).toLowerCase() === 'desc') ? -1 : 1;
+    return [...list].sort((a, b) => {
+      const ta = (a?.title || '').toString().trim().toLowerCase();
+      const tb = (b?.title || '').toString().trim().toLowerCase();
+      if (ta < tb) return -1 * mul;
+      if (ta > tb) return 1 * mul;
+      return 0;
+    });
+  } catch {
+    return Array.isArray(list) ? list : [];
+  }
 }
 
 
@@ -13,7 +61,133 @@ function refreshProjectPage() {
   const projectId = getProjectId();
   loadProjectDetails(projectId);
   loadTasks(projectId);
-  loadEstimates(projectId);
+  setupLazyEstimates(projectId);
+  // Prefetch non-critical data during idle time
+  onIdle(() => { try { ensureVendorsList(); } catch {} });
+  onIdle(() => { try { ensureLaborCostList(); } catch {} });
+}
+
+// Run a callback when the browser is idle (with safe fallback)
+function onIdle(cb) {
+  try {
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      window.requestIdleCallback(cb, { timeout: 1200 });
+    } else {
+      setTimeout(cb, 0);
+    }
+  } catch { setTimeout(cb, 0); }
+}
+
+// Defer initial estimates load until the section is visible
+function setupLazyEstimates(projectId) {
+  try {
+    const target = document.getElementById('estimates-list') || document.getElementById('estimates-section');
+    if (!target) {
+      // Fallback: load shortly after to avoid blocking first paint
+      setTimeout(() => loadEstimates(projectId), 200);
+      return;
+    }
+    showEstimatesSkeleton();
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries) => {
+        const vis = entries.some(e => e.isIntersecting);
+        if (vis) {
+          io.disconnect();
+          loadEstimates(projectId);
+        }
+      }, { root: null, threshold: 0.15 });
+      io.observe(target);
+    } else {
+      // Older browsers: defer a bit but still load
+      setTimeout(() => loadEstimates(projectId), 200);
+    }
+  } catch {
+    setTimeout(() => loadEstimates(projectId), 200);
+  }
+}
+
+// Lightweight skeleton for estimates section
+function showEstimatesSkeleton() {
+  try {
+    const existing = document.getElementById('skeleton-styles');
+    const css = `
+      :root { --sk-bg:#f1f5f9; --sk-shimmer:rgba(255,255,255,0.65); --sk-card:#ffffff; --sk-border:#e5e7eb; }
+      .sk-animate { position: relative; overflow: hidden; background: var(--sk-bg); }
+      .sk-animate::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, var(--sk-shimmer), transparent); animation: sk 1.1s infinite; }
+      @keyframes sk { to { transform: translateX(100%); } }
+      .sk-card { border: 1px solid var(--sk-border); border-radius: 14px; padding: 16px; box-shadow: 0 6px 20px rgba(2,6,23,0.06); background: var(--sk-card); }
+      .sk-header { display:flex; gap:14px; align-items:center; }
+      .sk-circle { width: 90px; height: 90px; border-radius: 50%; position: relative; background: radial-gradient(circle at 50% 50%, #e2e8f0 40%, #cbd5e1 41%, #e2e8f0 60%); }
+      .sk-circle::after { content:""; position:absolute; inset: 12px; border-radius:50%; background: var(--sk-card); }
+      .sk-stats { display:flex; flex-direction:column; gap:8px; flex:1; }
+      .sk-row { height: 12px; border-radius: 999px; }
+      .sk-row.w40 { width:40%; } .sk-row.w50 { width:50%; } .sk-row.w60 { width:60%; } .sk-row.w70 { width:70%; } .sk-row.w80 { width:80%; }
+      .sk-table { margin-top: 14px; border-top:1px solid var(--sk-border); padding-top: 12px; }
+      .sk-thead { display:grid; grid-template-columns: 1.4fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 0.6fr; gap:12px; align-items:center; margin-bottom: 8px; }
+      .sk-th { height: 18px; border-radius: 8px; }
+      .sk-rows { display:flex; flex-direction:column; gap:10px; }
+      .sk-tr { display:grid; grid-template-columns: 1.4fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 0.6fr; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid var(--sk-border); }
+      .sk-cell { height: 16px; border-radius: 8px; }
+      .sk-title { display:flex; align-items:center; gap:10px; }
+      .sk-caret { width:18px; height:18px; border-radius:50%; }
+      .sk-badge { width: 26px; height: 26px; border-radius: 50%; display: inline-block; }
+      .sk-progress { height: 10px; border-radius: 999px; }
+      @media (max-width: 640px) {
+        .sk-thead, .sk-tr { grid-template-columns: 1.6fr 1fr 0.9fr 0.9fr 0.9fr; }
+        .sk-hide-sm { display:none; }
+      }
+    `;
+    if (!existing) {
+      const st = document.createElement('style');
+      st.id = 'skeleton-styles';
+      st.innerHTML = css;
+      document.head.appendChild(st);
+    } else {
+      existing.innerHTML = css;
+    }
+
+    const el = document.getElementById('estimates-list');
+    if (!el) return;
+    const rows = Array.from({length: 5}).map(() => `
+      <div class="sk-tr" role="row" aria-hidden="true">
+        <div class="sk-title" role="cell">
+          <span class="sk-animate sk-caret" aria-hidden="true"></span>
+          <span class="sk-animate sk-cell" style="width: 70%"></span>
+        </div>
+        <span class="sk-animate sk-cell w50" role="cell"></span>
+        <span class="sk-animate sk-cell w40" role="cell"></span>
+        <span class="sk-animate sk-cell w60" role="cell"></span>
+        <span class="sk-animate sk-cell w40" role="cell"></span>
+        <span class="sk-animate sk-progress" role="cell"></span>
+        <span class="sk-animate sk-cell w40 sk-hide-sm" role="cell"></span>
+      </div>
+    `).join('');
+
+    el.innerHTML = `
+      <div class="sk-card" aria-busy="true" aria-live="polite">
+        <div class="sk-header">
+          <div class="sk-circle" aria-hidden="true"></div>
+          <div class="sk-stats">
+            <div class="sk-animate sk-row w80"></div>
+            <div class="sk-animate sk-row w60"></div>
+            <div class="sk-animate sk-row w50"></div>
+          </div>
+        </div>
+        <div class="sk-table">
+          <div class="sk-thead" role="row">
+            <span class="sk-animate sk-th w60" role="columnheader"></span>
+            <span class="sk-animate sk-th w40" role="columnheader"></span>
+            <span class="sk-animate sk-th w40" role="columnheader"></span>
+            <span class="sk-animate sk-th w40" role="columnheader"></span>
+            <span class="sk-animate sk-th w40" role="columnheader"></span>
+            <span class="sk-animate sk-th w60" role="columnheader"></span>
+            <span class="sk-animate sk-th w30 sk-hide-sm" role="columnheader"></span>
+          </div>
+          <div class="sk-rows" role="rowgroup">${rows}</div>
+        </div>
+      </div>
+    `;
+  } catch {}
 }
 
 function showToast(message) {
@@ -36,7 +210,9 @@ function hideLoader() {
 async function loadProjectDetails(id) {
   const projectDetailsContainer = document.getElementById('project-details');
   const projectTitle = document.getElementById('project-title');
-showLoader(); // 👈 START
+
+  showLoader(); // 👈 START
+
   try {
     const response = await fetch(`/api/details/projects/${id}`);
     if (!response.ok) throw new Error('Failed to fetch project details');
@@ -86,10 +262,11 @@ showLoader(); // 👈 START
     projectTitle.textContent = 'Error Loading Project Details';
     projectDetailsContainer.innerHTML =
       '<p>An error occurred while loading project details.</p>';
-        } finally {
+    } finally {
       hideLoader(); // 👈 END  
   }
 }
+
 
 
 document.addEventListener("DOMContentLoaded", function() {
@@ -108,6 +285,8 @@ document.addEventListener("DOMContentLoaded", function() {
       console.warn("Project ID not found in URL.");
   }
 });
+
+
 
 
 // Open Edit Project Modal
@@ -198,6 +377,7 @@ function submitEditProject() {
     .catch((error) => console.error('Error updating project:', error));
 }
 
+
 // Function to delete the project
 async function deleteProject() {
   const projectId = getProjectId(); // Ensure this function gets the project ID
@@ -209,7 +389,9 @@ async function deleteProject() {
   if (!confirm("Are you sure you want to delete this project? This action cannot be undone.")) {
     return;
   }
- showLoader(); // 👈 START
+
+  showLoader(); // 👈 START
+
   try {
     const response = await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
 
@@ -217,13 +399,13 @@ async function deleteProject() {
       throw new Error("Failed to delete project.");
     }
 
-    showToast("✅ Project deleted successfully.");
+   
     closeEditProjectModal();
     window.location.href = "/"; // Redirect to the main dashboard
   } catch (error) {
     console.error("❌ Error deleting project:", error);
-   showToast("An error occurred while deleting the project. Please try again.");
-      } finally {
+    showToast("An error occurred while deleting the project. Please try again.");
+  } finally {
     hideLoader(); // 👈 END
   }
 }
@@ -351,6 +533,8 @@ function closeInviteModal() {
 }
 
 
+
+
 async function sendInvite() {
   const emails = document
     .getElementById("invite-email")
@@ -368,7 +552,7 @@ async function sendInvite() {
     showToast("All fields are required.");
     return;
   }
-showLoader(); // 👈 START
+  showLoader(); // 👈 START
   try {
     const response = await fetch("/api/invite", {
       method: "POST",
@@ -385,12 +569,12 @@ showLoader(); // 👈 START
     const message = result.invitedUsers
       .map((user) => `${user.email}: ${user.status}`)
       .join("\n");
-    showToast(`Invitations sent successfully:\n${message}`);
+      showToast(`Invitations sent successfully:\n${message}`);
     closeInviteModal();
   } catch (error) {
     console.error("Error sending invites:", error);
     showToast(`Error sending invites: ${error.message}`);
-      } finally {
+  } finally {
     hideLoader(); // 👈 END
   }
 }
@@ -406,7 +590,9 @@ function closeInviteModal() {
 
 // ✅ Assign Task and Send Email Notification
 async function assignTask(taskId, assigneeId, assignedToModel) {
+
   showLoader(); // 👈 START
+
   try {
       if (!taskId) {
           console.error("❌ Task ID is undefined. Cannot assign task.");
@@ -426,14 +612,14 @@ async function assignTask(taskId, assigneeId, assignedToModel) {
           throw new Error(data.message || 'Failed to assign task.');
       }
 
-      showToast("✅ Task assigned successfully. Calling sendTaskAssignmentEmail...");
+      showToast("✅ Task assigned successfully.");
 
       // ✅ Ensure Task ID is correctly passed
       await sendTaskAssignmentEmail(taskId);
 
   } catch (error) {
-      showToast("❌ Error assigning task:", error);
-        } finally {
+    showToast("❌ Error assigning task:", error);
+    } finally {
       hideLoader(); // 👈 END
   }
 }
@@ -444,21 +630,18 @@ async function assignTask(taskId, assigneeId, assignedToModel) {
 
 // ✅ Function to Send Email Notification
 async function sendTaskAssignmentEmail(taskId) {
-  showLoader(); // 👈 START
+  showLoader();
   try {
     if (!taskId) {
       console.error("❌ Task ID is missing. Cannot fetch task details.");
       return;
     }
 
-    console.log("📩 Fetching task details for Task ID:", taskId);
-
+    // Fetch task details
     const taskResponse = await fetch(`/api/task/${taskId}`);
-    if (!taskResponse.ok) {
-      throw new Error("Failed to fetch task details.");
-    }
-
+    if (!taskResponse.ok) throw new Error("Failed to fetch task details.");
     const { task } = await taskResponse.json();
+
     if (!task || !task.assignedTo || !task.assignedTo.email || !task.projectId || !task.assignedToModel) {
       console.error("❌ Missing email parameters:", {
         assigneeEmail: task?.assignedTo?.email,
@@ -469,41 +652,101 @@ async function sendTaskAssignmentEmail(taskId) {
       return;
     }
 
-    console.log("🏗️ Fetching project details for Project ID:", task.projectId);
-
-    // Fetch project details to get the project name and address
+    // Fetch project details
     const projectResponse = await fetch(`/api/details/projects/${task.projectId}`);
-    if (!projectResponse.ok) {
-      throw new Error("Failed to fetch project details.");
-    }
-
+    if (!projectResponse.ok) throw new Error("Failed to fetch project details.");
     const { project } = await projectResponse.json();
+
     if (!project || !project.address) {
       console.error("❌ Missing project details:", project);
       return;
     }
 
     const projectAddress = `${project.address.addressLine1 || ''}, ${project.address.city}, ${project.address.state} ${project.address.zip || ''}`.trim();
-
-    // ✅ Corrected: Assign the right sign-in URL based on the assignee's role
-    const isVendor = task.assignedToModel.toLowerCase() === "vendor"; // Ensure case-insensitive check
+    const isVendor = task.assignedToModel.toLowerCase() === "vendor";
     const signInLink = isVendor
-      ? `https://node-mongodb-api-1h93.onrender.com/sign-inpage.html` // Vendor Login
-      : `https://node-mongodb-api-1h93.onrender.com/project-manager-auth.html`; // Manager Login
+      ? `https://node-mongodb-api-1h93.onrender.com/sign-inpage.html`
+      : `https://node-mongodb-api-1h93.onrender.com/project-manager-auth.html`;
 
-    console.log(`📨 Sending email to: ${task.assignedTo.email} | Role: ${task.assignedToModel} | Sign-in URL: ${signInLink}`);
+    // Modern HTML email structure (inline styles, table layout)
+    const emailHtml = `
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;">
+        <tr>
+          <td align="center">
+            <table width="540" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;box-shadow:0 4px 24px #2563eb22;margin:32px 0;">
+              <tr>
+                <td style="padding:32px;">
+                  <h2 style="color:#2563eb;font-size:2em;margin-bottom:18px;">New Task Assigned</h2>
+                  <p style="font-size:1.08em;color:#334155;margin:0 0 18px 0;">
+                    <b>Hello ${task.assignedTo.name || ''},</b>
+                  </p>
+                  <p style="margin:0 0 18px 0;font-size:1.05em;">
+                    You have been assigned a new task in the project:<br>
+                    <b style="color:#2563eb;">${project.name}</b>
+                  </p>
+                  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
+                    <tr>
+                      <td style="color:#64748b;padding:8px 0;width:120px;">Task:</td>
+                      <td style="padding:8px 0;"><b>${task.title}</b></td>
+                    </tr>
+                    <tr>
+                      <td style="color:#64748b;padding:8px 0;">Project Address:</td>
+                      <td style="padding:8px 0;">${projectAddress}</td>
+                    </tr>
+                    <tr>
+                      <td style="color:#64748b;padding:8px 0;">Due Date:</td>
+                      <td style="padding:8px 0;">${task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'N/A'}</td>
+                    </tr>
+                    <tr>
+                      <td style="color:#64748b;padding:8px 0;">Description:</td>
+                      <td style="padding:8px 0;">${task.description || 'No description provided.'}</td>
+                    </tr>
+                  </table>
+                  <p style="margin:24px 0;">
+                    <a href="${signInLink}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:600;font-size:1.08em;">
+                      Sign In to View Task
+                    </a>
+                  </p>
+                  <hr style="border-top:1px solid #e5e7eb;margin:32px 0 18px 0;">
+                  <p style="color:#64748b;font-size:0.98em;margin:0;">
+                    If you have any questions, please contact your manager.<br>
+                    <span style="color:#2563eb;">Thank you!</span>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    `;
 
+    const emailSubject = `New Task Assigned: ${task.title}`;
+    const emailText = `
+Hello ${task.assignedTo.name || ''},
+
+You have been assigned a new task in the project: ${project.name}
+
+Task: ${task.title}
+Project Address: ${projectAddress}
+Due Date: ${task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'N/A'}
+Description: ${task.description || 'No description provided.'}
+
+Sign in to view your task: ${signInLink}
+
+If you have any questions, please contact your manager.
+
+Thank you!
+    `.trim();
+
+    // Send email via backend
     const emailResponse = await fetch('/api/send-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         to: task.assignedTo.email,
-        subject: `New Task Assigned: ${task.title}`,
-        text: `You have been assigned a new task: "${task.title}" in the project: "${project.name}" (${projectAddress}).
-
-Please check your dashboard for more details.
-
-🔗 Sign in here: ${signInLink}`
+        subject: emailSubject,
+        text: emailText,
+        html: emailHtml
       })
     });
 
@@ -511,9 +754,10 @@ Please check your dashboard for more details.
     showToast("✅ Email notification sent successfully.");
 
   } catch (error) {
-    showToast("❌ Error sending email notification:", error);
-      } finally {
-    hideLoader(); // 👈 END
+    showToast("❌ Error sending email notification.");
+    console.error(error);
+  } finally {
+    hideLoader();
   }
 }
 
@@ -529,7 +773,9 @@ async function loadTasks(projectId) {
   const taskList = document.getElementById('task-list');
   const taskCountElement = document.getElementById('task-count');
   taskList.innerHTML = '<p>Loading tasks...</p>';
-showLoader(); // 👈 START
+
+  
+
   try {
     const response = await fetch(`/api/tasks?projectId=${projectId}`);
     if (!response.ok) throw new Error('Failed to fetch tasks');
@@ -635,8 +881,7 @@ showLoader(); // 👈 START
   } catch (error) {
     console.error(error);
     taskList.innerHTML = '<p>An error occurred while loading tasks.</p>';
-      } finally {
-    hideLoader(); // 👈 END
+
   }
 }
 
@@ -667,6 +912,7 @@ async function openAssignModal(taskId) {
 
   // Fetch vendors and managers from the API
   const assigneeSelect = document.getElementById('assignee-select');
+  
   try {
     const [vendorsResponse, managersResponse] = await Promise.all([
       fetch('/api/vendors'),
@@ -829,7 +1075,7 @@ function updateTaskDueDate(taskId, newDueDate) {
 async function openEditTaskModal(taskId) {
   if (!taskId) {
     console.error('Task ID is missing in openEditTaskModal.');
-   showToast('Task ID is missing. Please try again.');
+    showToast('Task ID is missing. Please try again.');
     return;
   }
 
@@ -866,7 +1112,7 @@ async function updateTask(taskId) {
   const dueDate = document.getElementById('edit-task-due-date').value;
   const completed = document.getElementById('edit-task-completed').checked;
   const assignedTo = document.getElementById('edit-task-assigned-to').value;
-showLoader(); // 👈 START
+  showLoader(); // 👈 START
   try {
     const response = await fetch(`/api/task/${taskId}`, {
       method: 'PUT',
@@ -885,10 +1131,11 @@ showLoader(); // 👈 START
   } catch (error) {
     console.error('Error updating task:', error);
     showToast('An error occurred while updating the task.');
-      } finally {
+  } finally {
     hideLoader(); // 👈 END
   }
 }
+
 
 
 // Function to close the edit task modal
@@ -911,7 +1158,7 @@ async function deleteTask(taskId) {
   if (!confirm("Are you sure you want to delete this task?")) {
     return; // Exit if the user cancels the confirmation
   }
-showLoader(); // 👈 START
+  showLoader(); // 👈 START
   try {
     // Perform the API call to delete the task
     const response = await fetch(`/api/task/${taskId}`, { method: "DELETE" });
@@ -940,7 +1187,7 @@ showLoader(); // 👈 START
   } catch (error) {
     console.error("❌ Error deleting task:", error);
     showToast(`An error occurred while deleting the task: ${error.message}`);
-      } finally {
+  } finally {
     hideLoader(); // 👈 END
   }
 }
@@ -948,7 +1195,7 @@ showLoader(); // 👈 START
 
 
 
-
+  
 
 // Toggle task completion status
 async function toggleTaskStatus() {
@@ -989,6 +1236,8 @@ async function toggleTaskStatus() {
   }
 }
 
+ 
+
 
 
 
@@ -1022,7 +1271,7 @@ async function deletePhoto(photoId, type) {
   const filename = photoId.includes('/uploads/') ? photoId.split('/uploads/')[1] : photoId;
 
   
-showLoader(); // 👈 START
+  showLoader(); // 👈 START
   try {
     const response = await fetch(`/api/delete-photo/${filename}`, { method: 'DELETE' });
 
@@ -1036,7 +1285,7 @@ showLoader(); // 👈 START
   } catch (error) {
     console.error('Error deleting photo:', error);
     showToast('An error occurred while deleting the photo.');
-      } finally {
+  } finally {
     hideLoader(); // 👈 END
   }
 }
@@ -1055,7 +1304,7 @@ async function displayTaskDetails(taskId) {
   const taskDetailsContainer = document.getElementById("task-details");
   taskDetailsContainer.dataset.taskId = taskId; // Store the task ID
   taskDetailsContainer.style.display = "block";
-showLoader(); // 👈 START
+ 
   try {
     // Fetch task details
     const response = await fetch(`/api/task/${taskId}`);
@@ -1120,13 +1369,11 @@ showLoader(); // 👈 START
         loadTasks(projectId);
       } catch (error) {
         console.error("Error updating task status:", error);
-     } finally {
-      hideLoader(); // 👈 END
+        showToast("An error occurred while updating the task status.");
       }
     };
-
-
-
+ 
+ 
     
 
     // Load comments for the task
@@ -1157,7 +1404,7 @@ async function addComment(taskId, commentText) {
   const managerId = localStorage.getItem('managerId'); // Retrieve the ID of the logged-in user
 
   if (!managerName || !managerId) {
-   showToast('Manager information is not available. Please log in again.');
+    showToast('Manager information is not available. Please log in again.');
     return;
   }
 
@@ -1184,7 +1431,7 @@ async function addComment(taskId, commentText) {
     }
   } catch (error) {
     console.error('Error adding comment:', error);
-    alert('An error occurred while adding the comment.');
+    showToast('An error occurred while adding the comment.');
   }
 }
 
@@ -1193,7 +1440,7 @@ async function addComment(taskId, commentText) {
 
 // Function to load comments with manager's name and timestamp
 async function loadComments(taskId) {
-  showLoader(); // 👈 START
+  
   try {
     const response = await fetch(`/api/comments?taskId=${taskId}`);
     if (response.ok) {
@@ -1220,8 +1467,7 @@ async function loadComments(taskId) {
   } catch (error) {
     console.error("Error loading comments:", error);
     document.getElementById("comments-list").innerHTML = "<p>Error loading comments.</p>";
-      } finally {
-    hideLoader(); // 👈 END
+
   }
 }
 
@@ -1250,7 +1496,7 @@ function populatePhotos(photos = [], type) {
   photos.forEach((photoUrl) => {
     const photoElement = document.createElement('div');
     photoElement.classList.add('photo-item');
-
+   
     photoElement.innerHTML = `
       <img src="${photoUrl}" alt="${type} photo" onclick="displayPhotoModal('${photoUrl}')">
       <button class="delete-photo-btn" onclick="deletePhoto('${photoUrl}', '${type}')">×</button>
@@ -1310,7 +1556,7 @@ async function handlePhotoUpload(event, type) {
     formData.append('photos', file);
     formData.append('type', type);
     formData.append('taskId', taskId);
- showLoader(); // 👈 START
+    showLoader(); // 👈 START
     try {
       const response = await fetch('/api/upload-photos', {
         method: 'POST',
@@ -1325,7 +1571,7 @@ async function handlePhotoUpload(event, type) {
       }
     } catch (error) {
       console.error('Error uploading photo:', error);
-          } finally {
+    } finally {
       hideLoader(); // 👈 END
     }
   }
@@ -1397,6 +1643,8 @@ async function populateVendorsDropdown() {
 }
 
 
+
+
 // Ensure the modal is hidden on page load
 document.addEventListener('DOMContentLoaded', () => {
   const projectId = getProjectId();
@@ -1421,6 +1669,278 @@ document.getElementById('task-details').querySelector('.close-task-details').onc
   () => {
     document.getElementById('task-details').style.display = 'none';
   };
+
+// Smooth-scroll and focus a section from sidebar links
+function scrollToSection(sectionId) {
+  try {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    // Smooth scroll to section
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Temporary focus/highlight
+    section.classList.add('focus-highlight');
+    setTimeout(() => section.classList.remove('focus-highlight'), 1600);
+
+    // Update active link state
+    document.querySelectorAll('.sidebar-nav-link').forEach(a => {
+      if ((a.dataset.section || '').toLowerCase() === sectionId.toLowerCase()) {
+        a.classList.add('active');
+      } else {
+        a.classList.remove('active');
+      }
+    });
+  } catch (e) {
+    console.error('scrollToSection error:', e);
+  }
+}
+
+// Wire sidebar nav links
+document.addEventListener('DOMContentLoaded', () => {
+  const navLinks = document.querySelectorAll('.sidebar-nav-link');
+  navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      // Allow external links to navigate normally
+      if (link.dataset.external === 'true') return;
+      e.preventDefault();
+      const target = link.dataset.section || (link.getAttribute('href') || '').replace('#','');
+      if (target) scrollToSection(target);
+    });
+  });
+  // Jobs nav link toggle (dropdown)
+  const jobsLink = document.getElementById('jobs-nav-link');
+  if (jobsLink) {
+    jobsLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleJobsFlyout();
+    });
+
+    // Close on outside click
+    document.addEventListener('mousedown', (ev) => {
+      const flyout = document.getElementById('jobs-flyout');
+      if (!flyout) return;
+      const clickedInside = flyout.contains(ev.target) || jobsLink.contains(ev.target);
+      if (!clickedInside) {
+        flyout.style.display = 'none';
+        jobsLink.classList.remove('active');
+      }
+    });
+
+    // Close on Esc
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape') {
+        const flyout = document.getElementById('jobs-flyout');
+        if (flyout) {
+          flyout.style.display = 'none';
+          jobsLink.classList.remove('active');
+        }
+      }
+    });
+  }
+});
+
+// Toggle Jobs flyout visibility and load content on first open
+let jobsLoadedOnce = false;
+function toggleJobsFlyout() {
+  const link = document.getElementById('jobs-nav-link');
+  if (!link) return;
+
+  let flyout = document.getElementById('jobs-flyout');
+  if (!flyout) {
+    flyout = document.createElement('div');
+    flyout.id = 'jobs-flyout';
+    flyout.className = 'jobs-flyout';
+    flyout.style.display = 'none';
+    flyout.innerHTML = `
+      <div class="jobs-flyout-search">
+        <input id="jobs-flyout-search" class="search-input" type="text" placeholder="Search jobs" />
+      </div>
+      <div id="jobs-flyout-content"><div class="jobs-loading">Loading...</div></div>
+      <div id="jobs-flyout-empty" style="display:none; color:#94a3b8; font-size:0.9em; padding:6px;">No matching jobs</div>
+    `;
+    document.body.appendChild(flyout);
+  }
+
+  const opening = flyout.style.display === 'none' || flyout.style.display === '';
+  flyout.style.display = opening ? 'block' : 'none';
+
+  // Active link styling
+  document.querySelectorAll('.sidebar-nav-link').forEach(a => a.classList.remove('active'));
+  if (opening) link.classList.add('active');
+
+  // Position the flyout next to the Jobs link (outside sidebar)
+  if (opening) {
+    positionJobsFlyout();
+    if (!jobsLoadedOnce) {
+      loadJobsFlyout();
+      jobsLoadedOnce = true;
+    }
+  }
+}
+
+function positionJobsFlyout() {
+  const link = document.getElementById('jobs-nav-link');
+  const flyout = document.getElementById('jobs-flyout');
+  if (!link || !flyout) return;
+  const rect = link.getBoundingClientRect();
+  const isMobile = window.innerWidth <= 640;
+  if (isMobile) {
+    // Full-width-ish drawer near the trigger for mobile
+    flyout.style.left = `12px`;
+    // Try placing just under the Jobs link; clamp to viewport
+    const desiredTop = rect.bottom + 8;
+    const maxTop = Math.max(12, window.innerHeight - flyout.offsetHeight - 12);
+    const safeTop = Math.max(12, Math.min(desiredTop, maxTop));
+    flyout.style.top = `${safeTop}px`;
+  } else {
+    // Place to the right with a slight vertical offset on desktop
+    const left = rect.right + 10; // outside sidebar, next to the button
+    const top = rect.top + 2;     // slight down offset
+    flyout.style.left = `${left}px`;
+    flyout.style.top = `${top}px`;
+  }
+
+  // Reposition on resize and scroll while open
+  const handler = () => {
+    if (flyout.style.display !== 'none') {
+      const r = link.getBoundingClientRect();
+      const isMobile = window.innerWidth <= 640;
+      if (isMobile) {
+        flyout.style.left = `12px`;
+        const desiredTop = r.bottom + 8;
+        const maxTop = Math.max(12, window.innerHeight - flyout.offsetHeight - 12);
+        const safeTop = Math.max(12, Math.min(desiredTop, maxTop));
+        flyout.style.top = `${safeTop}px`;
+      } else {
+        flyout.style.left = `${r.right + 10}px`;
+        flyout.style.top = `${r.top + 2}px`;
+      }
+    }
+  };
+  window.addEventListener('resize', handler, { passive: true });
+  window.addEventListener('scroll', handler, { passive: true });
+}
+
+// Load and render jobs grouped by status in flyout
+async function loadJobsFlyout() {
+  const content = document.getElementById('jobs-flyout-content');
+  if (!content) return;
+  content.innerHTML = '<div class="jobs-loading">Loading...</div>';
+
+  try {
+    const [upcomingRes, onMarketRes, completedRes, inProgressRes] = await Promise.all([
+      fetch('/api/upcoming-projects'),
+      fetch('/api/on-market-projects'),
+      fetch('/api/completed-projects'),
+      fetch('/api/projects') // In Progress
+    ]);
+
+    const upcoming = (await upcomingRes.json()).projects || [];
+    const onMarket = (await onMarketRes.json()).projects || [];
+    const completed = (await completedRes.json()).projects || [];
+    const inProgress = (await inProgressRes.json()).projects || [];
+
+    // Helper to render a status group
+    const renderGroup = (title, emoji, items, badgeColor = '#e5e7eb') => {
+      const count = items.length;
+      const listHtml = count
+        ? items.map(p => {
+            const name = p.name || 'Untitled';
+            const letter = name.trim().charAt(0).toUpperCase() || '?';
+            const color = p.color || '#3b82f6';
+            const client = p.clientName || p.ownerName || '';
+            return `
+              <li class="job-item" data-id="${p._id}">
+                <div class="job-avatar" style="background:${color};">${letter}</div>
+                <div class="job-meta">
+                  <div class="job-name">${name}</div>
+                  <div class="job-sub">${client}</div>
+                </div>
+              </li>
+            `;
+          }).join('')
+        : `<div class="jobs-loading">No projects</div>`;
+
+      return `
+        <div class="jobs-status-group">
+          <div class="jobs-status-header">
+            <span>${emoji} ${title}</span>
+            <span style="background:${badgeColor}; padding:2px 8px; border-radius:999px; font-size:0.85em; color:#334155;">${count}</span>
+          </div>
+          <ul class="jobs-list">${listHtml}</ul>
+        </div>
+      `;
+    };
+
+    content.innerHTML = [
+      renderGroup('Upcoming', '⏳', upcoming, '#fde68a'),
+      renderGroup('In Progress', '🚧', inProgress, '#bae6fd'),
+      renderGroup('On Market', '🏷️', onMarket, '#c7f9cc'),
+      renderGroup('Completed', '✅', completed, '#e9d5ff')
+    ].join('');
+
+    // Wire click handlers to navigate to selected project
+    content.querySelectorAll('.job-item').forEach(li => {
+      li.addEventListener('click', () => {
+        const id = li.getAttribute('data-id');
+        if (!id) return;
+        // Navigate to pretty route expected by the backend
+        window.location.href = `/details/projects/${id}`;
+      });
+    });
+
+    setupJobsSearch();
+  } catch (err) {
+    console.error('Failed to load jobs:', err);
+    content.innerHTML = '<div class="jobs-loading">Error loading jobs</div>';
+  }
+}
+
+function setupJobsSearch() {
+  const input = document.getElementById('jobs-flyout-search');
+  if (!input) return;
+
+  const runFilter = () => {
+    const q = (input.value || '').trim().toLowerCase();
+    filterJobsFlyout(q);
+  };
+
+  input.addEventListener('input', runFilter);
+}
+
+function filterJobsFlyout(query) {
+  const content = document.getElementById('jobs-flyout-content');
+  const emptyState = document.getElementById('jobs-flyout-empty');
+  if (!content) return;
+
+  const groups = content.querySelectorAll('.jobs-status-group');
+  let totalVisible = 0;
+
+  groups.forEach(group => {
+    const items = Array.from(group.querySelectorAll('.job-item'));
+    let visibleCount = 0;
+    items.forEach(item => {
+      const text = item.textContent.toLowerCase();
+      const match = !query || text.includes(query);
+      item.style.display = match ? '' : 'none';
+      if (match) visibleCount++;
+    });
+
+    // Update header badge count
+    const header = group.querySelector('.jobs-status-header');
+    if (header) {
+      const badges = header.querySelectorAll('span');
+      if (badges.length > 1) badges[1].textContent = visibleCount;
+    }
+
+    // Show/hide group based on visibility
+    group.style.display = visibleCount > 0 ? '' : 'none';
+    totalVisible += visibleCount;
+  });
+
+  if (emptyState) emptyState.style.display = totalVisible > 0 ? 'none' : 'block';
+}
 
 
 // Add click event listeners for tasks
@@ -1542,7 +2062,6 @@ function createNewTask() {
 
 
 
-
 // Dynamically load projects into the sidebar
 async function loadSidebarProjects() {
   const upcomingList = document.getElementById('upcoming-list');
@@ -1550,19 +2069,68 @@ async function loadSidebarProjects() {
   const onMarketList = document.getElementById('onmarket-list');
   const completedList = document.getElementById('completed-list');
 
-  // Clear all lists with loading
-  const loadingMarkup = '<li>Loading...</li>';
-  upcomingList.innerHTML = loadingMarkup;
-  inProgressList.innerHTML = loadingMarkup;
-  onMarketList.innerHTML = loadingMarkup;
-  completedList.innerHTML = loadingMarkup;
+  // Helper to render each expandable section
+  function renderExpandableSection(listElement, projects, label, status) {
+    if (!listElement) return;
+    listElement.innerHTML = '';
+
+    // Section header with toggle
+    const sectionHeader = document.createElement('div');
+    sectionHeader.className = 'sidebar-section-header';
+    sectionHeader.innerHTML = `
+      <span class="sidebar-section-title">${label} <span class="sidebar-section-count">(${projects.length})
+      <span  class="sidebar-section-toggle" aria-label="Toggle ${label}">
+        <i class="fas fa-chevron-down"></i>
+      </span></span></span>
+    `;
+    listElement.appendChild(sectionHeader);
+
+    // Section content (project list)
+    const sectionContent = document.createElement('ul');
+    sectionContent.className = 'sidebar-section-content';
+    sectionContent.style.display = 'none';
+
+    if (!projects.length) {
+      sectionContent.innerHTML = `<li class="sidebar-empty">None</li>`;
+    } else {
+      projects.forEach(project => {
+        const li = document.createElement('li');
+        li.className = `sidebar-project-item sidebar-${status}`;
+        li.innerHTML = `
+          <a href="/details/projects/${project._id}" class="sidebar-project-link">
+            <span class="sidebar-project-dot" style="background:${project.color || '#3b82f6'}"></span>
+            <span class="sidebar-project-name">${project.name}</span>
+          
+          </a>
+        `;
+        sectionContent.appendChild(li);
+      });
+    }
+    listElement.appendChild(sectionContent);
+
+    // Toggle logic
+  const toggleSection = () => {
+    const isOpen = sectionContent.style.display === 'block';
+    sectionContent.style.display = isOpen ? 'none' : 'block';
+    sectionHeader.querySelector('i').classList.toggle('rotated', !isOpen);
+  };
+
+sectionHeader.onclick = toggleSection;
+}
+
+  // Show loading state
+  const loadingMarkup = '<li class="sidebar-loading">Loading...</li>';
+  [upcomingList, inProgressList, onMarketList, completedList].forEach(list => {
+    if (list) list.innerHTML = loadingMarkup;
+  });
+  showLoader();
 
   try {
     const [upcomingRes, onMarketRes, completedRes, inProgressRes] = await Promise.all([
       fetch('/api/upcoming-projects'),
       fetch('/api/on-market-projects'),
       fetch('/api/completed-projects'),
-      fetch('/api/projects') // ✅ In-progress
+      fetch('/api/projects')
     ]);
 
     const upcoming = (await upcomingRes.json()).projects || [];
@@ -1570,31 +2138,24 @@ async function loadSidebarProjects() {
     const completed = (await completedRes.json()).projects || [];
     const inProgress = (await inProgressRes.json()).projects || [];
 
-    const renderList = (listElement, projects) => {
-      listElement.innerHTML = '';
-      if (!projects.length) {
-        listElement.innerHTML = '<li style="color: #aaa;">None</li>';
-        return;
-      }
-      projects.forEach(project => {
-        const li = document.createElement('li');
-        li.innerHTML = `<a href="/details/projects/${project._id}">${project.name}</a>`;
-        listElement.appendChild(li);
-      });
-    };
-
-    renderList(upcomingList, upcoming);
-    renderList(onMarketList, onMarket);
-    renderList(completedList, completed);
-    renderList(inProgressList, inProgress);
+    renderExpandableSection(upcomingList, upcoming, 'Upcoming', 'upcoming');
+    renderExpandableSection(onMarketList, onMarket, 'On Market', 'on-market');
+    renderExpandableSection(completedList, completed, 'Completed', 'completed');
+    renderExpandableSection(inProgressList, inProgress, 'In Progress', 'in-progress');
 
   } catch (error) {
     console.error('Error loading projects:', error);
-    upcomingList.innerHTML = onMarketList.innerHTML =
-    inProgressList.innerHTML = completedList.innerHTML =
-      '<li>Error loading</li>';
+    [upcomingList, inProgressList, onMarketList, completedList].forEach(list => {
+      if (list) list.innerHTML = '<li class="sidebar-error">Error loading</li>';
+    });
+  } finally {
+    hideLoader();
   }
 }
+
+
+
+
 
   // Placeholder functions for interactive elements
 
@@ -1605,8 +2166,8 @@ async function loadSidebarProjects() {
   }
   
  
-
 // Function to load estimates for the current project with edit and assignment options
+let _estFetchController = null;
 async function loadEstimates(projectId) {
   const estimatesList = document.getElementById("estimates-list");
   const estimatesCount = document.getElementById("estimates-count");
@@ -1614,10 +2175,15 @@ async function loadEstimates(projectId) {
   showLoader();
 
   try {
-    const response = await fetch(`/api/estimates?projectId=${projectId}`);
+    if (_estFetchController) { try { _estFetchController.abort(); } catch {} }
+    _estFetchController = new AbortController();
+    const response = await fetch(`/api/estimates?projectId=${projectId}`,{ signal: _estFetchController.signal });
     if (!response.ok) throw new Error("Failed to fetch estimates");
 
-    const { estimates } = await response.json();
+  const { estimates } = await response.json();
+
+  const sortDir = localStorage.getItem('estSortDir') || 'asc';
+  const sortedEstimates = organizeEstimatesByTitle(estimates || [], sortDir);
 
     // --- Stats for Graph ---
 let totalLineItems = 0;
@@ -1682,39 +2248,42 @@ if (estimates && estimates.length) {
 
     // --- Modern Graph HTML ---
     let graphHtml = `
-      <div class="alt-estimate-graph">
+      <div id="alt-estimate-graph" class="alt-estimate-graph" data-total="${totalLineItems}" data-completed="${completedItems}" data-inprogress="${inProgressItems}">
         <div class="alt-graph-circle">
           <svg width="90" height="90">
             <circle cx="45" cy="45" r="40" stroke="#e5e7eb" stroke-width="8" fill="none"/>
-            <circle cx="45" cy="45" r="40" stroke="#3b82f6" stroke-width="8" fill="none"
+            <circle id="alt-graph-circle-progress" cx="45" cy="45" r="40" stroke="#3b82f6" stroke-width="8" fill="none"
               stroke-dasharray="${2 * Math.PI * 40}"
               stroke-dashoffset="${2 * Math.PI * 40 * (1 - percentCompleted / 100)}"
               style="transition: stroke-dashoffset 0.6s;"/>
-            <text x="50%" y="54%" text-anchor="middle" fill="#0f172a" font-size="1.5em" font-weight="bold" dy=".3em">${percentCompleted}%</text>
+            <text id="alt-graph-percent-text" x="50%" y="54%" text-anchor="middle" fill="#0f172a" font-size="1.5em" font-weight="bold" dy=".3em">${percentCompleted}%</text>
           </svg>
         </div>
         <div class="alt-graph-details">
           <div class="alt-graph-row">
             <span class="alt-graph-label">Total Items</span>
-            <span class="alt-graph-value">${totalLineItems}</span>
+            <span id="alt-graph-total" class="alt-graph-value">${totalLineItems}</span>
           </div>
           <div class="alt-graph-row">
             <span class="alt-graph-label">Completed</span>
-            <span class="alt-graph-value" style="color:#10b981;">${completedItems}</span>
+            <span id="alt-graph-completed" class="alt-graph-value" style="color:#10b981;">${completedItems}</span>
           </div>
           <div class="alt-graph-row">
             <span class="alt-graph-label">In Progress</span>
-            <span class="alt-graph-value" style="color:#f59e42;">${inProgressItems}</span>
+            <span id="alt-graph-inprogress" class="alt-graph-value" style="color:#f59e42;">${inProgressItems}</span>
           </div>
           <div class="alt-graph-row">
             <span class="alt-graph-label">Estimated Completion</span>
-            <span class="alt-graph-value" style="color:#2563eb;">${estimatedCompletionDate}</span>
+            <span id="alt-graph-date" class="alt-graph-value" style="color:#2563eb;">${estimatedCompletionDate}</span>
           </div>
         </div>
       </div>
     `;
 
-    if (!estimates || estimates.length === 0) {
+    // persist last estimates for add-item modal
+    window._lastEstimates = sortedEstimates;
+
+    if (!sortedEstimates || sortedEstimates.length === 0) {
       estimatesList.innerHTML = `
         ${graphHtml}
         <div class="empty-estimates modern-card">
@@ -1725,89 +2294,127 @@ if (estimates && estimates.length) {
       estimatesCount.textContent = "(0)";
       totalBudgetEl.textContent = "$0.00";
     } else {
-      estimatesCount.textContent = `(${estimates.length})`;
+  estimatesCount.textContent = `(${sortedEstimates.length})`;
 
       let totalBudget = 0;
-      estimatesList.innerHTML = graphHtml + estimates.map((estimate, idx) => {
+      // Prepare vendor map for initials/name display in preview
+      let vendorMap = {};
+      try {
+        const vendors = await (typeof ensureVendorsList === 'function' ? ensureVendorsList() : []);
+        (vendors || []).forEach(v => { if (v && v._id) vendorMap[String(v._id)] = v; });
+      } catch {}
+      const getInitials = (full = '') => {
+        try {
+          const base = String(full || '').trim() || '';
+          if (!base) return 'VN';
+          const parts = base.split(/\s+/).filter(Boolean);
+          const init = parts.slice(0,2).map(s => s[0].toUpperCase()).join('');
+          return init || 'VN';
+        } catch { return 'VN'; }
+      };
+
+      // Build a compact table list instead of grid cards
+  const rowsHtml = sortedEstimates.map((estimate, idx) => {
         totalBudget += estimate.total || 0;
-        // Calculate progress for this estimate
+        // Per-estimate progress
         let estTotal = 0, estCompleted = 0;
         estimate.lineItems?.forEach(cat => {
           cat.items?.forEach(item => {
             estTotal++;
-            if (item.status === "completed" || item.status === "approved") estCompleted++;
+            if (item.status === 'completed' || item.status === 'approved') estCompleted++;
           });
         });
         const estPercent = estTotal ? Math.round((estCompleted / estTotal) * 100) : 0;
+        const createdDate = estimate.createdAt ? new Date(estimate.createdAt).toLocaleDateString() : 'N/A';
 
-        const createdDate = estimate.createdAt
-          ? new Date(estimate.createdAt).toLocaleDateString()
-          : "N/A";
+        // Line items preview used in an expandable row (with inline status edit)
+        let previewInner = '';
+        if (estimate.lineItems && estimate.lineItems.length) {
+          previewInner = `
+            <div class="estimate-line-items-preview">
+              ${estimate.lineItems.map((cat, ci) => `
+                <div class="estimate-category">
+                  <div class="estimate-category-title">${cat.category || 'Category'}</div>
+                  <ul class="estimate-items-list">
+                    ${(cat.items || []).map((item, ii) => {
+                      const v = item.assignedTo ? vendorMap[String(item.assignedTo)] : null;
+                      const vTitle = v ? (v.name || v.email || 'Assigned') : '';
+                      const vInit = v ? getInitials(v.name || v.email || '') : '';
+                      const vendorBadge = v ? `<span class=\"vendor-badge\" title=\"${escapeHtml(vTitle)}\" data-fullname=\"${escapeHtml(vTitle)}\" aria-label=\"${escapeHtml(vTitle)}\">${escapeHtml(vInit)}</span>` : '';
+                      const labor = Number(item.laborCost || 0);
+                      const material = Number(item.materialCost || 0);
+                      return `
+                      <li class=\"estimate-item-row\" title=\"Click for description\" data-description=\"${item.description || ''}\">
+                        <span class=\"estimate-item-name\">${item.name}</span>
+                        ${vendorBadge}
+                        <select class=\"estimate-item-status-select\" data-estimate-id=\"${estimate._id}\" data-cat-index=\"${ci}\" data-item-index=\"${ii}\" data-item-id=\"${item._id || ''}\"> 
+                          <option value="in-progress" ${((item.status || 'in-progress') === 'in-progress') ? 'selected' : ''}>In Progress</option>
+                          <option value="approved" ${((item.status || '') === 'approved') ? 'selected' : ''}>Approved</option>
+                          <option value="completed" ${((item.status || '') === 'completed') ? 'selected' : ''}>Completed</option>
+                        </select>
+                        <span class=\"estimate-item-qty\">Qty: ${item.quantity || 1}</span>
+                        <span class=\"estimate-item-labor\">Labor: $${labor.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        <span class=\"estimate-item-material\">Material: $${material.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        <span class=\"estimate-item-total\">$${(item.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      </li>`;
+                    }).join('')}
+                  </ul>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
 
-        // --- Line Items Preview (hidden by default, toggled on click) ---
-let lineItemsHtml = "";
-if (estimate.lineItems && estimate.lineItems.length) {
-  lineItemsHtml = `
-    <div class="estimate-line-items-preview" id="line-items-preview-${estimate._id}" style="display:none;">
-      ${estimate.lineItems.map(cat => `
-        <div class="estimate-category">
-          <div class="estimate-category-title">${cat.category || "Category"}</div>
-          <ul class="estimate-items-list">
-            ${cat.items.map(item => `
-              <li class="estimate-item-row" 
-                  title="Click for description"
-                  data-description="${item.description || ''}">
-                <span class="estimate-item-name">${item.name}</span>
-                <span class="estimate-item-status ${item.status === "completed" ? "completed" : item.status === "approved" ? "approved" : "in-progress"}">${item.status || "in-progress"}</span>
-                <span class="estimate-item-qty">Qty: ${item.quantity || 1}</span>
-                <span class="estimate-item-total">$${(item.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-              </li>
-            `).join("")}
-          </ul>
+        return `
+          <tr class="estimate-row-toggle" data-estimate-id="${estimate._id}" title="Click to expand">
+            <td class="est-title-cell">
+              <button class="row-caret" aria-label="Toggle details"><i class="fas fa-chevron-right"></i></button>
+              <div class="estimate-title">
+                <span class="estimate-title-text" data-estimate-id="${estimate._id}">${estimate.title || ''}</span>
+                <button class="edit-title-btn" title="Edit Title" style="margin-left:6px; background:none; border:none; color:#3b82f6; cursor:pointer; font-size:0.85em;">
+                  <i class="fas fa-edit"></i>
+                </button>
+              </div>
+            </td>
+            <td>${createdDate}</td>
+            <td class="mono"><a href="#" class="invoice-link" data-estimate-id="${estimate._id}" title="Open estimate">${estimate.invoiceNumber || ''}</a></td>
+            <td class="mono" style="color:#0f4c75; font-weight:600;">$${(estimate.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+            <td>${estCompleted} / ${estTotal}</td>
+            <td class="progress-cell">
+              <div class="progress-bar-bg mini"><div class="progress-bar-fill" style="width:${estPercent}%;"></div></div>
+              <span class="progress-percent">${estPercent}%</span>
+            </td>
+            <td class="est-actions">
+              <button class="smart-btn danger" onclick="deleteEstimate('${estimate._id}');event.stopPropagation();"><i class="fas fa-trash"></i></button>
+            </td>
+          </tr>
+          <tr class="estimate-preview-row" id="preview-row-${estimate._id}" style="display:none;">
+            <td colspan="7">${previewInner || '<div class="jobs-loading">No line items</div>'}</td>
+          </tr>
+        `;
+      }).join('');
+
+      estimatesList.innerHTML = `
+        ${graphHtml}
+        <div class="estimate-table-wrapper">
+          <table class="estimate-table">
+            <thead>
+              <tr>
+                <th id="est-title-header" class="est-sort-cell">Title <span class="sort-indicator">${sortDir === 'asc' ? '▲' : '▼'}</span></th>
+                <th>Created</th>
+                <th>Invoice #</th>
+                <th>Total</th>
+                <th>Completed</th>
+                <th>Progress</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
         </div>
-      `).join("")}
-    </div>
-  `;
-}
-
-return `
-  <div class="estimate-item modern-card" data-estimate-id="${estimate._id}">
-    <div class="estimate-header estimate-toggle" style="cursor:pointer;" data-idx="${idx}">
-      <div>
-        <h3 class="estimate-title" style="display:block;">
-          <span class="estimate-title-text" data-estimate-id="${estimate._id}">${estimate.title || ""}</span>
-          <button class="edit-title-btn" title="Edit Title" style="margin-left:0px; background:none; border:none; color:#3b82f6; cursor:pointer; font-size:0.75em;">
-            <i class="fas fa-edit"></i>
-          </button>
-        </h3>
-        <span class="estimate-date"><i class="far fa-calendar-alt"></i> ${createdDate}</span>
-      </div>
-      <div class="estimate-actions">
-        <button class="edit-estimate-button smart-btn" onclick="editEstimate('${projectId}', '${estimate._id}');event.stopPropagation();">
-          <i class="fas fa-edit"></i> Edit
-        </button>
-        <button class="delete-estimate-button smart-btn danger" onclick="deleteEstimate('${estimate._id}');event.stopPropagation();">
-          <i class="fas fa-trash"></i> Delete
-        </button>
-      </div>
-    </div>
-    <div class="estimate-progress-bar">
-      <div class="progress-label">
-        <span>${estCompleted} / ${estTotal} Completed</span>
-        <span>${estPercent}%</span>
-      </div>
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" style="width:${estPercent}%;"></div>
-      </div>
-    </div>
-    <div class="estimate-details">
-      <p><strong>Invoice #:</strong> <span class="mono">${estimate.invoiceNumber}</span></p>
-      <p><strong>Total:</strong> <span class="mono" style="color:#007bff;">$${estimate.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></p>
-    </div>
-    ${lineItemsHtml}
-  </div>
-`;
-      }).join("");
+      `;
 
       totalBudgetEl.textContent = `$${totalBudget.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     }
@@ -1815,18 +2422,55 @@ return `
     // --- Add click event listeners for expanding/collapsing line items ---
    setTimeout(() => {
 
+
     
     
-  // Expand/collapse estimate cards
-  document.querySelectorAll('.estimate-toggle').forEach(header => {
-    header.addEventListener('click', function (e) {
-      const card = header.closest('.estimate-item');
-      const estimateId = card.getAttribute('data-estimate-id');
-      const preview = document.getElementById(`line-items-preview-${estimateId}`);
-      if (preview) {
-        const isOpen = preview.style.display === "block";
-        document.querySelectorAll('.estimate-line-items-preview').forEach(el => el.style.display = "none");
-        preview.style.display = isOpen ? "none" : "block";
+  // Row click toggles expansion (not open edit)
+  document.querySelectorAll('.estimate-row-toggle').forEach(row => {
+    row.addEventListener('click', function () {
+      const estimateId = row.getAttribute('data-estimate-id');
+      if (!estimateId) return;
+      const previewRow = document.getElementById(`preview-row-${estimateId}`);
+      if (!previewRow) return;
+      const isOpen = previewRow.style.display !== 'none';
+      // close all
+      document.querySelectorAll('.estimate-preview-row').forEach(r => r.style.display = 'none');
+      document.querySelectorAll('.row-caret i').forEach(i => i.style.transform = 'rotate(0deg)');
+      // open this if it was closed
+      if (!isOpen) {
+        previewRow.style.display = 'table-row';
+        const caret = row.querySelector('.row-caret i');
+        if (caret) caret.style.transform = 'rotate(90deg)';
+      }
+    });
+  });
+
+  // Clicking Invoice # opens the estimate editor
+  document.querySelectorAll('.invoice-link').forEach(a => {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const estimateId = this.getAttribute('data-estimate-id');
+      if (estimateId) editEstimate(projectId, estimateId);
+    });
+  });
+
+  // Caret click toggles expansion only
+  document.querySelectorAll('.row-caret').forEach(btn => {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      const row = btn.closest('.estimate-row-toggle');
+      if (!row) return;
+      const estimateId = row.getAttribute('data-estimate-id');
+      const previewRow = document.getElementById(`preview-row-${estimateId}`);
+      if (!previewRow) return;
+      const isOpen = previewRow.style.display !== 'none';
+      document.querySelectorAll('.estimate-preview-row').forEach(r => r.style.display = 'none');
+      document.querySelectorAll('.row-caret i').forEach(i => i.style.transform = 'rotate(0deg)');
+      if (!isOpen) {
+        previewRow.style.display = 'table-row';
+        const caret = row.querySelector('.row-caret i');
+        if (caret) caret.style.transform = 'rotate(90deg)';
       }
     });
   });
@@ -1850,6 +2494,48 @@ return `
     });
   });
 
+  // Inline status change for line items (in preview)
+  document.querySelectorAll('.estimate-item-status-select').forEach(sel => {
+    // Prevent row toggle or edit navigation when interacting with the select
+    sel.addEventListener('click', e => e.stopPropagation());
+    sel.dataset.prev = sel.value;
+    // Apply initial color class based on current value
+    applyStatusSelectClass(sel);
+    sel.addEventListener('change', async function(e) {
+      e.stopPropagation();
+      const estimateId = this.dataset.estimateId; // used to recalc row UI
+      const itemId = this.dataset.itemId;
+      const newStatus = this.value;
+      const previous = this.dataset.prev;
+      this.disabled = true;
+      // Optimistically update color class
+      applyStatusSelectClass(this);
+      // Show a tiny loader on the estimate row while updating
+      const row = estimateId ? document.querySelector(`.estimate-row-toggle[data-estimate-id="${estimateId}"]`) : null;
+      if (row) showRowLoader(row);
+      try {
+        if (itemId) {
+          await updateLineItemStatus(itemId, newStatus, projectId);
+          if (estimateId) {
+            recalcEstimateRowFromPreview(estimateId);
+          }
+          // Update top graph live (percent and counters)
+          updateTopGraphLive(previous, newStatus);
+        } else {
+          throw new Error('Missing item ID');
+        }
+        this.dataset.prev = newStatus;
+      } catch (err) {
+        console.error('Failed updating line item status:', err);
+        this.value = previous;
+        applyStatusSelectClass(this);
+      } finally {
+        if (row) hideRowLoader(row);
+        this.disabled = false;
+      }
+    });
+  });
+
 
   // Inline edit for estimate title
   document.querySelectorAll('.edit-title-btn').forEach(btn => {
@@ -1863,7 +2549,7 @@ return `
       input.type = 'text';
       input.value = currentTitle;
       input.className = 'inline-title-input';
-      input.style.fontSize = '1.08em';
+  input.style.fontSize = '1em';
       input.style.width = '80%';
       titleSpan.replaceWith(input);
       input.focus();
@@ -1903,16 +2589,1280 @@ return `
       }
     });
   });
+
+  // Add sort click handler for Title header
+  const th = document.getElementById('est-title-header');
+  if (th) {
+    th.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cur = localStorage.getItem('estSortDir') || 'asc';
+      const next = cur === 'asc' ? 'desc' : 'asc';
+      localStorage.setItem('estSortDir', next);
+      loadEstimates(projectId);
+    });
+  }
+
+  // Ensure 'Add Line Item' is present in Create New dropdown
+  installAddLineItemMenuEntry(projectId);
+
 }, 0);
 
     loadTasks(projectId);
   } catch (error) {
+    if (error && error.name === 'AbortError') { return; }
     console.error("Error loading estimates:", error);
     estimatesList.innerHTML = "<p>An error occurred while loading estimates.</p>";
     totalBudgetEl.textContent = "$0.00";
   } finally {
     hideLoader();
   }
+}
+
+// Update a single line item's status for an estimate
+async function updateLineItemStatus(itemId, status, projectId) {
+  if (!itemId) {
+    showToast('Missing item ID to update status.');
+    return;
+  }
+  try {
+    const res = await fetch(`/api/estimates/line-items/${itemId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    if (!res.ok) throw new Error('Failed to update line item status');
+    showToast('Status updated');
+  } catch (err) {
+    console.error('Error updating line item status:', err);
+    showToast('Error updating status');
+    throw err;
+  } finally {
+  }
+}
+
+// Recalculate and update a single estimate row's Completed and Progress cells from the preview DOM
+function recalcEstimateRowFromPreview(estimateId) {
+  try {
+    const previewRow = document.getElementById(`preview-row-${estimateId}`);
+    if (!previewRow) return;
+    const selects = Array.from(previewRow.querySelectorAll('.estimate-item-status-select'));
+    const total = selects.length;
+    let completed = 0;
+    selects.forEach(s => {
+      const v = (s.value || '').toLowerCase();
+      if (v === 'completed' || v === 'approved') completed++;
+    });
+    const percent = total ? Math.round((completed / total) * 100) : 0;
+
+    const row = document.querySelector(`.estimate-row-toggle[data-estimate-id="${estimateId}"]`);
+    if (!row) return;
+    const cells = row.querySelectorAll('td');
+    // Completed column (5th column, index 4)
+    if (cells[4]) cells[4].textContent = `${completed} / ${total}`;
+    // Progress column
+    const progressCell = row.querySelector('.progress-cell');
+    if (progressCell) {
+      const fill = progressCell.querySelector('.progress-bar-fill');
+      const pct = progressCell.querySelector('.progress-percent');
+      if (fill) fill.style.width = `${percent}%`;
+      if (pct) pct.textContent = `${percent}%`;
+    }
+  } catch (e) {
+    console.warn('Failed to recalc estimate row UI:', e);
+  }
+}
+
+// Apply color class to status <select> based on its current value
+function applyStatusSelectClass(sel) {
+  try {
+    sel.classList.remove('status-in-progress', 'status-approved', 'status-completed');
+    const v = (sel.value || 'in-progress').toLowerCase();
+    const cls = v === 'completed' ? 'status-completed' : v === 'approved' ? 'status-approved' : 'status-in-progress';
+    sel.classList.add(cls);
+  } catch {}
+}
+
+// Live-update the top summary graph counts and percentage based on a single item status change
+function updateTopGraphLive(prevStatus, newStatus) {
+  try {
+    const container = document.getElementById('alt-estimate-graph');
+    if (!container) return;
+    const total = parseInt(container.dataset.total || '0', 10);
+    let completed = parseInt(container.dataset.completed || '0', 10);
+    let inprogress = parseInt(container.dataset.inprogress || '0', 10);
+
+    const wasCompleted = (prevStatus || '').toLowerCase() === 'completed' || (prevStatus || '').toLowerCase() === 'approved';
+    const isCompleted = (newStatus || '').toLowerCase() === 'completed' || (newStatus || '').toLowerCase() === 'approved';
+    const wasInProgress = (prevStatus || '').toLowerCase() === 'in-progress';
+    const isInProgress = (newStatus || '').toLowerCase() === 'in-progress';
+
+    // Adjust counters based on transition
+    if (wasInProgress && isCompleted) {
+      completed += 1; inprogress = Math.max(0, inprogress - 1);
+    } else if (wasCompleted && isInProgress) {
+      completed = Math.max(0, completed - 1); inprogress += 1;
+    }
+    // No change for approved <-> completed as both count as completed
+
+    container.dataset.completed = String(completed);
+    container.dataset.inprogress = String(inprogress);
+
+    const percent = total ? Math.round((completed / total) * 100) : 0;
+
+    const percentText = document.getElementById('alt-graph-percent-text');
+    const completedEl = document.getElementById('alt-graph-completed');
+    const inprogressEl = document.getElementById('alt-graph-inprogress');
+    const circle = document.getElementById('alt-graph-circle-progress');
+
+    if (percentText) percentText.textContent = `${percent}%`;
+    if (completedEl) completedEl.textContent = `${completed}`;
+    if (inprogressEl) inprogressEl.textContent = `${inprogress}`;
+    if (circle) {
+      const r = 40; const c = 2 * Math.PI * r;
+      circle.style.strokeDashoffset = String(c * (1 - percent / 100));
+    }
+
+    // Estimated completion date remains unchanged here; recomputation would require item dates across all estimates.
+  } catch (e) {
+    console.warn('Failed to update top graph live:', e);
+  }
+}
+
+// Row-level tiny loader helpers
+function showRowLoader(row) {
+  try {
+    row.classList.add('row-updating');
+    const cell = row.querySelector('.progress-cell') || row.lastElementChild;
+    if (cell && !cell.querySelector('.row-spinner')) {
+      const sp = document.createElement('span');
+      sp.className = 'row-spinner';
+      sp.setAttribute('aria-label', 'Updating…');
+      cell.appendChild(sp);
+    }
+  } catch {}
+}
+
+function hideRowLoader(row) {
+  try {
+    row.classList.remove('row-updating');
+    const sp = row.querySelector('.row-spinner');
+    if (sp) sp.remove();
+  } catch {}
+}
+
+// Install an 'Add Line Item…' entry into the Create New dropdown (if present)
+function installAddLineItemMenuEntry(projectId) {
+  try {
+    const menu = document.getElementById('estimateDropdown');
+    if (!menu) return;
+    if (document.getElementById('add-line-item-menu')) return; // avoid dup
+
+    const item = document.createElement('div');
+    item.id = 'add-line-item-menu';
+    item.style.padding = '8px 22px';
+    item.style.cursor = 'pointer';
+    item.style.display = 'flex';
+    item.style.alignItems = 'center';
+    item.innerHTML = `<i class="fas fa-plus" style="margin-right:8px; color:#3b82f6;"></i> Add Line Item…`;
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openAddLineItemModal(projectId);
+      // close the dropdown if possible
+      const dd = document.getElementById('estimateDropdown');
+      if (dd) dd.style.display = 'none';
+    });
+    menu.appendChild(item);
+  } catch {}
+}
+
+// ===== Add Line Item to Estimate(s) Modal and Logic =====
+function openAddLineItemModal(projectId) {
+  const modal = ensureAddLineItemModal();
+  // Populate estimates checkbox list when opening
+  const box = document.getElementById('ali-estimates-box');
+  const selAll = document.getElementById('ali-select-all');
+  // Preload labor cost suggestions in background
+  try { ensureLaborCostList(); } catch {}
+  if (box) {
+    const list = Array.isArray(window._lastEstimates) ? window._lastEstimates : [];
+    const safe = (s) => (s || 'Untitled').toString().replace(/</g,'&lt;');
+    box.innerHTML = list.map(e => `
+      <label class="ali-estimate-item">
+        <input type="checkbox" class="ali-estimate-chk" value="${e._id}">
+        <span class="ali-estimate-title" title="${safe(e.title)}">${safe(e.title)}</span>
+      </label>
+    `).join('');
+    // Delegate change events to keep selected chips in sync
+    box.onchange = () => aliSyncSelectedChips();
+  }
+  if (selAll) selAll.checked = false;
+  // Reset selected chips on open
+  aliSyncSelectedChips();
+  modal.style.display = 'flex';
+  // Reset the multi-row table each time we open
+  try { aliInitMultiItemTable(); } catch {}
+  // Wire submit
+  const submit = document.getElementById('ali-submit-btn');
+  submit.onclick = () => handleAddLineItemSubmit(projectId);
+  // Enter key handling is per-row suggestion now (no global Enter-to-submit)
+}
+
+// Keep the Selected area in sync with checked estimates
+function aliSyncSelectedChips() {
+  try {
+    const chipsBox = document.getElementById('ali-selected-chips');
+    const listBox = document.getElementById('ali-estimates-box');
+    if (!chipsBox || !listBox) return;
+
+    // Clear existing chips
+    chipsBox.innerHTML = '';
+
+    const checks = Array.from(document.querySelectorAll('.ali-estimate-chk'));
+    const selected = checks.filter(cb => cb.checked);
+    if (!selected.length) return; // nothing selected
+
+    selected.forEach(cb => {
+      const wrap = cb.closest('.ali-estimate-item');
+      const title = (wrap?.querySelector('.ali-estimate-title')?.textContent || 'Untitled').trim();
+      const id = cb.value;
+      const chip = document.createElement('span');
+      chip.className = 'ali-chip';
+      chip.dataset.id = id;
+      // escape minimal for title in attribute
+      const safeTitle = title.replace(/</g, '&lt;');
+      chip.innerHTML = `<span class="ali-chip-text" title="${safeTitle}">${safeTitle}</span><span class="ali-chip-x" title="Remove">×</span>`;
+      chipsBox.appendChild(chip);
+    });
+
+    // Removal handler (delegate)
+    chipsBox.onclick = (e) => {
+      const x = e.target && e.target.classList && e.target.classList.contains('ali-chip-x') ? e.target : null;
+      if (x) {
+        const chip = x.parentElement;
+        const id = chip?.dataset?.id;
+        if (id) {
+          const all = document.querySelectorAll('.ali-estimate-chk');
+          for (const cb of all) {
+            if (cb.value === id) { cb.checked = false; break; }
+          }
+          aliSyncSelectedChips();
+        }
+      }
+    };
+  } catch {}
+}
+
+// Fetch and cache labor cost list (shared with estimate-edit.js contract)
+async function ensureLaborCostList() {
+  if (Array.isArray(window.laborCostList) && window.laborCostList.length) return window.laborCostList;
+  try {
+    const res = await fetch('/api/labor-costs');
+    if (!res.ok) throw new Error('Failed loading labor costs');
+    const list = await res.json();
+    window.laborCostList = Array.isArray(list) ? list : [];
+    return window.laborCostList;
+  } catch (e) {
+    console.warn('Labor cost suggestions unavailable:', e);
+    window.laborCostList = window.laborCostList || [];
+    return window.laborCostList;
+  }
+}
+
+// Fetch and cache vendors list for assignment in Add Line Item modal
+async function ensureVendorsList() {
+  if (Array.isArray(window._vendorsList) && window._vendorsList.length) return window._vendorsList;
+  try {
+    const res = await fetch('/api/vendors');
+    if (!res.ok) throw new Error('Failed to fetch vendors');
+    const list = await res.json();
+    window._vendorsList = Array.isArray(list) ? list : [];
+    return window._vendorsList;
+  } catch (e) {
+    console.warn('Vendor list unavailable:', e);
+    window._vendorsList = window._vendorsList || [];
+    return window._vendorsList;
+  }
+}
+
+async function aliPopulateVendorSelect(selectEl) {
+  if (!selectEl) return;
+  const vendors = await ensureVendorsList();
+  const current = selectEl.value;
+  // Reset and add default
+  selectEl.innerHTML = '<option value="">Unassigned</option>';
+  vendors.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v._id || '';
+    opt.textContent = v.name ? String(v.name) : (v.email || 'Vendor');
+    selectEl.appendChild(opt);
+  });
+  if (current) selectEl.value = current;
+}
+
+// Wire up item name suggestions to auto-fill cost code and price
+function aliWireItemSuggestions() {
+  const input = document.getElementById('ali-name');
+  const box = document.getElementById('ali-suggest-box');
+  if (!input || !box) return;
+
+  const hideBox = () => { box.style.display = 'none'; box.innerHTML = ''; };
+  let activeIndex = -1;
+  const setActive = (idx) => {
+    const items = Array.from(box.children);
+    items.forEach((el, i) => {
+      if (i === idx) el.classList.add('active'); else el.classList.remove('active');
+    });
+    if (idx >= 0 && items[idx] && items[idx].scrollIntoView) {
+      const el = items[idx];
+      const boxRect = box.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      if (elRect.top < boxRect.top) el.scrollIntoView({ block: 'nearest' });
+      if (elRect.bottom > boxRect.bottom) el.scrollIntoView({ block: 'nearest' });
+    }
+  };
+
+  const render = (matches) => {
+    if (!matches || !matches.length) { hideBox(); return; }
+    box.innerHTML = '';
+    matches.slice(0, 30).forEach((m, idx) => {
+      const item = document.createElement('div');
+      item.className = 'ali-suggest-item';
+      item.dataset.index = String(idx);
+      const name = (m.name || m.title || '').toString();
+      const code = (m.costCode || '').toString();
+      const rate = parseFloat(m.rate);
+      const labor = (m.laborCost != null) ? parseFloat(m.laborCost) : (m.totalCost != null ? parseFloat(m.totalCost) : NaN);
+      const material = (m.materialCost != null) ? parseFloat(m.materialCost) : NaN;
+      const descText = (m.description || '').toString();
+
+      const metaParts = [];
+      if (code) metaParts.push(`<span>Code: ${escapeHtml(code)}</span>`);
+      if (!isNaN(rate)) metaParts.push(`<span>Rate: $${rate.toFixed(2)}</span>`);
+      if (!isNaN(labor)) metaParts.push(`<span>Labor: $${labor.toFixed(2)}</span>`);
+      if (!isNaN(material)) metaParts.push(`<span>Material: $${material.toFixed(2)}</span>`);
+
+      item.innerHTML = `
+        <div class="ali-sg-title">${escapeHtml(name)}</div>
+        <div class="ali-sg-meta">${metaParts.join(' ')}</div>
+        ${descText ? `<div class="ali-sg-desc">${escapeHtml(descText)}</div>` : ''}`;
+      item.addEventListener('click', () => {
+        try {
+          input.value = name;
+          const costEl = document.getElementById('ali-cost');
+          const priceEl = document.getElementById('ali-price');
+          const descEl = document.getElementById('ali-desc');
+          const laborEl = document.getElementById('ali-labor');
+          const materialEl = document.getElementById('ali-material');
+          if (costEl && code) costEl.value = code;
+          if (priceEl) {
+            const r = parseFloat(m.rate);
+            const total = !isNaN(parseFloat(m.totalCost)) ? parseFloat(m.totalCost) : ( (!isNaN(labor) || !isNaN(material)) ? ((isNaN(labor)?0:labor) + (isNaN(material)?0:material)) : 0 );
+            const unit = !isNaN(r) ? r : total;
+            priceEl.value = (unit || 0).toFixed(2);
+          }
+          if (laborEl && !isNaN(labor)) laborEl.value = labor.toFixed(2);
+          if (materialEl && !isNaN(material)) materialEl.value = material.toFixed(2);
+          if (descEl) descEl.value = descText || '';
+          // default qty to 1 if empty
+          const qtyEl = document.getElementById('ali-qty');
+          if (qtyEl && (!qtyEl.value || parseInt(qtyEl.value, 10) <= 0)) qtyEl.value = '1';
+        } finally { hideBox(); }
+      });
+      box.appendChild(item);
+    });
+    // position already absolute under input; just show
+    box.style.display = 'block';
+    activeIndex = 0;
+    setActive(activeIndex);
+  };
+
+  const onInput = async () => {
+    const q = input.value.trim().toLowerCase();
+    if (!q) { hideBox(); return; }
+    const list = await ensureLaborCostList();
+    const matches = list.filter(m => {
+      const name = (m.name || m.title || '').toString().toLowerCase();
+      const code = (m.costCode || '').toString().toLowerCase();
+      return name.includes(q) || (!!code && code.includes(q));
+    });
+    render(matches);
+  };
+
+  input.addEventListener('input', onInput);
+  input.addEventListener('focus', onInput);
+  input.addEventListener('keydown', (e) => {
+    const visible = box.style.display !== 'none' && box.childElementCount > 0;
+    const len = box.childElementCount;
+    if (!visible && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      // open suggestions on first arrow
+      onInput();
+      e.preventDefault();
+      return;
+    }
+    if (!visible) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % len;
+      setActive(activeIndex);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = (activeIndex - 1 + len) % len;
+      setActive(activeIndex);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeIndex >= 0 && activeIndex < len) {
+        const el = box.children[activeIndex];
+        if (el) el.dispatchEvent(new Event('click', { bubbles: true }));
+      }
+    } else if (e.key === 'Escape') {
+      hideBox();
+    }
+  });
+  // Close on outside click
+  document.addEventListener('mousedown', (e) => {
+    if (!box.contains(e.target) && e.target !== input) hideBox();
+  });
+}
+
+function escapeHtml(s) {
+  return (s || '').toString().replace(/[&<>\"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+// Wire up category suggestions based on selected estimates
+function aliWireCategorySuggestions() {
+  const input = document.getElementById('ali-category');
+  const box = document.getElementById('ali-cat-suggest-box');
+  if (!input || !box) return;
+
+  const hide = () => { box.style.display = 'none'; box.innerHTML = ''; };
+  let activeIndex = -1;
+  const setActive = (idx) => {
+    const items = Array.from(box.children);
+    items.forEach((el, i) => {
+      if (i === idx) el.classList.add('active'); else el.classList.remove('active');
+    });
+    if (idx >= 0 && items[idx] && items[idx].scrollIntoView) {
+      const el = items[idx];
+      const boxRect = box.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      if (elRect.top < boxRect.top) el.scrollIntoView({ block: 'nearest' });
+      if (elRect.bottom > boxRect.bottom) el.scrollIntoView({ block: 'nearest' });
+    }
+  };
+
+  const getSelectedIds = () => Array.from(document.querySelectorAll('.ali-estimate-chk'))
+      .filter(cb => cb.checked).map(cb => cb.value);
+
+  const collectCategories = () => {
+    const ids = getSelectedIds();
+    const all = Array.isArray(window._lastEstimates) ? window._lastEstimates : [];
+    const pool = ids.length ? all.filter(e => ids.includes(e._id)) : all;
+    const set = new Set();
+    pool.forEach(e => {
+      (e.lineItems || []).forEach(cat => {
+        const name = (cat.category || '').toString().trim();
+        if (name) set.add(name);
+      });
+    });
+    return Array.from(set).sort((a,b) => a.localeCompare(b));
+  };
+
+  const render = (cats, q) => {
+    const list = cats.filter(c => !q || c.toLowerCase().includes(q.toLowerCase())).slice(0, 40);
+    if (!list.length) { hide(); return; }
+    box.innerHTML = '';
+    list.forEach((c, idx) => {
+      const div = document.createElement('div');
+      div.className = 'ali-cat-item';
+      div.dataset.index = String(idx);
+      div.textContent = c;
+      div.title = c;
+      div.addEventListener('click', () => { input.value = c; hide(); });
+      box.appendChild(div);
+    });
+    box.style.display = 'block';
+    activeIndex = 0;
+    setActive(activeIndex);
+  };
+
+  const onInput = () => {
+    const q = input.value.trim();
+    const cats = collectCategories();
+    render(cats, q);
+  };
+
+  input.addEventListener('focus', onInput);
+  input.addEventListener('input', onInput);
+  input.addEventListener('keydown', (e) => {
+    const visible = box.style.display !== 'none' && box.childElementCount > 0;
+    const len = box.childElementCount;
+    if (!visible && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      onInput();
+      e.preventDefault();
+      return;
+    }
+    if (!visible) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % len;
+      setActive(activeIndex);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = (activeIndex - 1 + len) % len;
+      setActive(activeIndex);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeIndex >= 0 && activeIndex < len) {
+        const el = box.children[activeIndex];
+        if (el) el.dispatchEvent(new Event('click', { bubbles: true }));
+      }
+    } else if (e.key === 'Escape') {
+      hide();
+    }
+  });
+  document.addEventListener('mousedown', (e) => {
+    if (!box.contains(e.target) && e.target !== input) hide();
+  });
+
+  // Also refresh when estimate selection changes
+  const listBox = document.getElementById('ali-estimates-box');
+  if (listBox) {
+    listBox.addEventListener('change', () => {
+      if (document.activeElement === input) onInput();
+    });
+  }
+}
+
+function ensureAddLineItemModal() {
+  let modal = document.getElementById('add-lineitem-modal');
+  if (modal) return modal;
+  modal = document.createElement('div');
+  modal.id = 'add-lineitem-modal';
+  modal.className = 'modal-container';
+  modal.style.display = 'none';
+  modal.innerHTML = `
+    <div class="modal-content" style="min-width: 320px; max-width: 1000px; padding:25px 12px;">
+      <h3 style="margin-top:0;">Add Line Items</h3>
+      <div class="ali-form">
+        <div class="ali-row" id="ali-estimates-row" style="align-items:flex-start;">
+          <div class="ali-multibox" style="display:flex; flex-direction:column; gap:6px; flex:1;">
+            <div class="ali-section-title">Estimates</div>
+            <label style="font-size:0.92em; color:#64748b;"><input type="checkbox" id="ali-select-all"> Select all</label>
+            <div id="ali-selected-chips" class="ali-selected-chips" style="display:flex; flex-wrap:wrap; gap:6px; min-height:28px;"></div>
+            <div id="ali-estimates-box" class="ali-estimates-box" style="flex:1; max-height:220px; overflow:auto; border:1px solid #e5e7eb; border-radius:8px; padding:6px 8px; display:flex; flex-wrap:wrap; gap:6px 8px;"></div>
+          </div>
+        </div>
+        <div class="ali-row" style="align-items:flex-start;">
+          <div style="flex:1;">
+
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+              <div class="ali-section-title">Items</div>
+              <button id="ali-add-row-btn" class="smart-btn" type="button"><i class="fas fa-plus"></i>&nbsp;Add Row</button>
+            </div>
+            <div class="ali-table-wrap">
+              <table class="ali-table" style="width:100%; border-collapse:separate; border-spacing:0;">
+                <thead>
+                  <tr>
+                    <th style="width:180px;">Category</th>
+                    <th style="width:240px;">Item</th>
+                    <th style="width:240px;">Description</th>
+                    <th style="width:60px;">Qty</th>
+                    <th style="width:90px;">Unit</th>
+                    <th style="width:90px;">Labor</th>
+                    <th style="width:90px;">Material</th>
+                    <th style="width:140px;">Cost Code</th>
+                    <th style="width:180px;">Vendor</th>
+                    <th style="width:140px;">Status</th>
+                    <th style="width:50px;"></th>
+                  </tr>
+                </thead>
+                <tbody id="ali-items-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ali-actions" style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
+        <button id="ali-cancel-btn">Cancel</button>
+  <button id="ali-submit-btn" class="smart-btn"><i class="fas fa-plus"></i>&nbsp;Add All</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  // Behavior: select all toggle
+  const selAll = modal.querySelector('#ali-select-all');
+  selAll.addEventListener('change', () => {
+    const checked = selAll.checked;
+    document.querySelectorAll('.ali-estimate-chk').forEach((cb) => { cb.checked = checked; });
+    aliSyncSelectedChips();
+  });
+
+  // Initialize multi-row table
+  try { aliInitMultiItemTable(); } catch {}
+
+  // Cancel button
+  modal.querySelector('#ali-cancel-btn').addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
+
+  // Close on outside click
+  modal.addEventListener('mousedown', (e) => {
+    if (e.target === modal) modal.style.display = 'none';
+  });
+
+  // Inline styles for rows (minimal)
+  const style = document.createElement('style');
+  style.innerHTML = `
+    /* Base form row + inputs */
+    #add-lineitem-modal .ali-form .ali-row { display:flex; align-items:center; gap:6px; padding:4px ; }
+    #add-lineitem-modal .ali-form label { color:#334155; font-size:0.9em; }
+    #add-lineitem-modal .ali-form input[type=text],
+    #add-lineitem-modal .ali-form input[type=number],
+    #add-lineitem-modal .ali-form textarea,
+    #add-lineitem-modal .ali-form select { border:1px solid #e5e7eb; border-radius:8px; padding:3px 3px; font-size:0.9em; }
+
+    /* Override aggressive modal defaults for our checkboxes */
+    #add-lineitem-modal .modal-content input[type="checkbox"] {
+      width: auto !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      height: auto !important;
+    }
+
+    /* Compact checkbox list container */
+    #add-lineitem-modal #ali-estimates-box {
+      background:#fff;
+      display:flex !important;
+      flex-wrap:wrap !important;
+      gap:6px 8px !important;
+      align-items:center;
+    }
+
+    /* Individual estimate pill */
+    #add-lineitem-modal .ali-estimate-item {
+      display:inline-flex !important;
+      align-items:center; gap:6px;
+      background:#f8fafc; border:1px solid #e5e7eb; border-radius:14px;
+      padding:4px 8px; font-size:0.9em; white-space:nowrap;
+      margin:0 !important; cursor:pointer;
+    }
+    #add-lineitem-modal .ali-estimate-item input { margin:0 !important; }
+    #add-lineitem-modal .ali-estimate-title { max-width:260px; overflow:hidden; text-overflow:ellipsis; display:inline-block; }
+
+    /* Selected chips */
+    #add-lineitem-modal .ali-selected-chips { color:#334155; }
+    #add-lineitem-modal .ali-chip { display:inline-flex; align-items:center; gap:6px; background:#e0f2fe; color:#075985; border:1px solid #bae6fd; border-radius:999px; padding:4px 10px; font-size:0.85em; }
+    #add-lineitem-modal .ali-chip .ali-chip-x { cursor:pointer; font-weight:600; padding-left:2px; }
+
+    /* Multi-row table styles (compact) */
+    #add-lineitem-modal .ali-table { font-size:12px; }
+    #add-lineitem-modal .ali-table-wrap { border:1px solid #e5e7eb; border-radius:8px; overflow:auto; }
+    #add-lineitem-modal .ali-table th, #add-lineitem-modal .ali-table td { border-bottom:1px solid #f1f5f9; padding:4px 6px; text-align:left; vertical-align:top; }
+    #add-lineitem-modal .ali-table thead th { position:sticky; top:0; background:#f8fafc; z-index:1; font-weight:600; font-size:0.9em; color:#334155; }
+    #add-lineitem-modal .ali-table tr:last-child td { border-bottom:none; }
+    #add-lineitem-modal .ali-cell { position:relative; }
+    #add-lineitem-modal .ali-input, #add-lineitem-modal .ali-textarea, #add-lineitem-modal .ali-select { width:100%; border:1px solid #e5e7eb; border-radius:6px; padding:4px 6px; font-size:0.86em; }
+    #add-lineitem-modal .ali-input, #add-lineitem-modal .ali-select { height:28px; }
+    #add-lineitem-modal .ali-textarea { min-height:28px; resize:vertical; line-height:1.25; }
+    #add-lineitem-modal .ali-remove-btn { color:#ef4444; background:#fee2e2; border:1px solid #fecaca; border-radius:6px; padding:4px 6px; font-size:12px; }
+    #add-lineitem-modal .ali-remove-btn:hover { background:#fecaca; }
+    #add-lineitem-modal #ali-add-row-btn { padding:4px 8px; font-size:12px; }
+
+    /* Make numeric fields a bit smaller to free space for Category/Item */
+    #add-lineitem-modal .ali-input.ali-i-qty,
+    #add-lineitem-modal .ali-input.ali-i-price,
+    #add-lineitem-modal .ali-input.ali-i-labor,
+    #add-lineitem-modal .ali-input.ali-i-material {
+      font-size: 0.8em;
+      padding: 3px 4px;
+      height: 26px;
+      text-align: right;
+    }
+
+    /* Suggestion dropdowns per-row */
+    #add-lineitem-modal .ali-suggest-box { position:relative; left:0; right:0; top:100%; background:#fff; border:1px solid #e5e7eb; border-radius:8px; box-shadow:0 6px 16px rgba(2,6,23,0.12); max-height:220px; overflow:auto; z-index:10000; display:none; -ms-overflow-style:none; scrollbar-width:thin; }
+    #add-lineitem-modal .ali-suggest-item { padding:6px 8px; display:flex; flex-direction:column; cursor:pointer; border-bottom:1px solid #f1f5f9; }
+    #add-lineitem-modal .ali-suggest-item:last-child { border-bottom:none; }
+    #add-lineitem-modal .ali-suggest-item:hover { background:#f8fafc; }
+    #add-lineitem-modal .ali-suggest-item.active { background:#eef2ff; }
+    #add-lineitem-modal .ali-sg-title { font-weight:600; color:#0f172a; font-size:0.88em; }
+    #add-lineitem-modal .ali-sg-meta { display:flex; gap:10px; font-size:0.76em; color:#475569; }
+    #add-lineitem-modal .ali-sg-desc { margin-top:4px; font-size:0.74em; color:#6b7280; line-height:1.25; }
+
+    /* Section titles */
+    #add-lineitem-modal .ali-section-title {
+      font-weight:700; color:#334155; font-size:0.95em; margin:2px 0 6px 0;
+    }
+  `;
+  document.head.appendChild(style);
+
+  return modal;
+}
+
+// Initialize the multi-row items table
+function aliInitMultiItemTable() {
+  const tbody = document.getElementById('ali-items-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  const addBtn = document.getElementById('ali-add-row-btn');
+  const addRow = (prefill) => {
+    const tr = aliCreateItemRow(prefill);
+    tbody.appendChild(tr);
+    // Focus first empty input
+    setTimeout(() => { tr.querySelector('.ali-i-name')?.focus(); }, 0);
+  };
+  if (addBtn) addBtn.onclick = () => addRow();
+  // Start with one blank row
+  addRow();
+}
+
+// Create a table row for an item with suggestion wiring
+function aliCreateItemRow(prefill) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td class="ali-cell">
+      <div style="position:relative;">
+        <input type="text" class="ali-input ali-i-cat" placeholder="Category" />
+        <div class="ali-suggest-box ali-cat-box"></div>
+      </div>
+    </td>
+    <td class="ali-cell">
+      <div style="position:relative;">
+        <input type="text" class="ali-input ali-i-name" placeholder="Item name" />
+        <div class="ali-suggest-box ali-name-box"></div>
+      </div>
+    </td>
+    <td><textarea class="ali-textarea ali-i-desc" placeholder="Optional"></textarea></td>
+    <td><input type="number" min="1" step="1" value="1" class="ali-input ali-i-qty" /></td>
+    <td><input type="number" min="0" step="0.01" value="0" class="ali-input ali-i-price" /></td>
+    <td><input type="number" min="0" step="0.01" value="0" class="ali-input ali-i-labor" /></td>
+    <td><input type="number" min="0" step="0.01" value="0" class="ali-input ali-i-material" /></td>
+    <td><input type="text" class="ali-input ali-i-cost" placeholder="Code" /></td>
+    <td>
+      <select class="ali-select ali-i-vendor">
+        <option value="">Unassigned</option>
+      </select>
+    </td>
+    <td>
+      <select class="ali-select ali-i-status">
+        <option value="in-progress" selected>In Progress</option>
+        <option value="approved">Approved</option>
+        <option value="completed">Completed</option>
+      </select>
+    </td>
+    <td style="text-align:right;">
+      <button type="button" class="ali-remove-btn" title="Remove">✕</button>
+    </td>
+  `;
+
+  const catInput = tr.querySelector('.ali-i-cat');
+  const catBox = tr.querySelector('.ali-cat-box');
+  const nameInput = tr.querySelector('.ali-i-name');
+  const nameBox = tr.querySelector('.ali-name-box');
+  const descEl = tr.querySelector('.ali-i-desc');
+  const qtyEl = tr.querySelector('.ali-i-qty');
+  const priceEl = tr.querySelector('.ali-i-price');
+  const laborEl = tr.querySelector('.ali-i-labor');
+  const materialEl = tr.querySelector('.ali-i-material');
+  const costEl = tr.querySelector('.ali-i-cost');
+  const vendorSel = tr.querySelector('.ali-i-vendor');
+  const statusEl = tr.querySelector('.ali-i-status');
+
+  // Prefill if provided
+  if (prefill && typeof prefill === 'object') {
+    if (prefill.categoryName) catInput.value = prefill.categoryName;
+    if (prefill.name) nameInput.value = prefill.name;
+    if (prefill.description) descEl.value = prefill.description;
+    if (Number.isFinite(prefill.quantity)) qtyEl.value = prefill.quantity;
+    if (Number.isFinite(prefill.unitPrice)) priceEl.value = prefill.unitPrice;
+    if (Number.isFinite(prefill.labor)) laborEl.value = prefill.labor;
+    if (Number.isFinite(prefill.material)) materialEl.value = prefill.material;
+    if (prefill.costCode) costEl.value = prefill.costCode;
+    if (prefill.assignedTo) vendorSel.value = prefill.assignedTo;
+    if (prefill.status) statusEl.value = prefill.status;
+  }
+
+  // Remove row
+  tr.querySelector('.ali-remove-btn').onclick = () => {
+    const tbody = tr.parentElement;
+    tr.remove();
+    // Always keep at least one row
+    if (tbody && tbody.children.length === 0) {
+      tbody.appendChild(aliCreateItemRow());
+    }
+  };
+
+  // Wire category suggestions per-row
+  aliWireCategorySuggest(catInput, catBox);
+  // Wire item suggestions per-row
+  aliWireNameSuggest(nameInput, nameBox, { descEl, qtyEl, priceEl, laborEl, materialEl, costEl });
+
+  // Populate vendor select
+  try { aliPopulateVendorSelect(vendorSel); } catch {}
+
+  return tr;
+}
+
+function aliWireCategorySuggest(input, box) {
+  if (!input || !box) return;
+  const hide = () => { box.style.display = 'none'; box.innerHTML = ''; };
+  let activeIndex = -1;
+  const setActive = (idx) => {
+    const items = Array.from(box.children);
+    items.forEach((el, i) => { if (i === idx) el.classList.add('active'); else el.classList.remove('active'); });
+    if (idx >= 0 && items[idx] && items[idx].scrollIntoView) {
+      const el = items[idx];
+      const boxRect = box.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      if (elRect.top < boxRect.top) el.scrollIntoView({ block: 'nearest' });
+      if (elRect.bottom > boxRect.bottom) el.scrollIntoView({ block: 'nearest' });
+    }
+  };
+  const collectCategories = () => {
+    const ids = Array.from(document.querySelectorAll('.ali-estimate-chk')).filter(cb => cb.checked).map(cb => cb.value);
+    const all = Array.isArray(window._lastEstimates) ? window._lastEstimates : [];
+    const pool = ids.length ? all.filter(e => ids.includes(e._id)) : all;
+    const set = new Set();
+    pool.forEach(e => { (e.lineItems || []).forEach(cat => { const name = (cat.category || '').toString().trim(); if (name) set.add(name); }); });
+    return Array.from(set).sort((a,b) => a.localeCompare(b));
+  };
+  const render = (cats, q) => {
+    const list = cats.filter(c => !q || c.toLowerCase().includes(q.toLowerCase())).slice(0, 40);
+    if (!list.length) { hide(); return; }
+    box.innerHTML = '';
+    list.forEach((c, idx) => {
+      const div = document.createElement('div');
+      div.className = 'ali-suggest-item';
+      div.dataset.index = String(idx);
+      div.textContent = c;
+      div.title = c;
+      div.addEventListener('click', () => { input.value = c; hide(); });
+      box.appendChild(div);
+    });
+    activeIndex = 0; setActive(activeIndex); box.style.display = 'block';
+  };
+  const onInput = () => { const q = input.value.trim(); render(collectCategories(), q); };
+  input.addEventListener('focus', onInput);
+  input.addEventListener('input', onInput);
+  input.addEventListener('keydown', (e) => {
+    const visible = box.style.display !== 'none' && box.childElementCount > 0;
+    const len = box.childElementCount;
+    if (!visible && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { onInput(); e.preventDefault(); return; }
+    if (!visible) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); activeIndex = (activeIndex + 1) % len; setActive(activeIndex); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); activeIndex = (activeIndex - 1 + len) % len; setActive(activeIndex); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (activeIndex >= 0 && activeIndex < len) { const el = box.children[activeIndex]; if (el) el.dispatchEvent(new Event('click', { bubbles:true })); } }
+    else if (e.key === 'Escape') { hide(); }
+  });
+  document.addEventListener('mousedown', (e) => { if (!box.contains(e.target) && e.target !== input) hide(); });
+}
+
+function aliWireNameSuggest(input, box, refs) {
+  if (!input || !box) return;
+  const hideBox = () => { box.style.display = 'none'; box.innerHTML = ''; };
+  let activeIndex = -1;
+  const setActive = (idx) => {
+    const items = Array.from(box.children);
+    items.forEach((el, i) => { if (i === idx) el.classList.add('active'); else el.classList.remove('active'); });
+    if (idx >= 0 && items[idx] && items[idx].scrollIntoView) {
+      const el = items[idx];
+      const boxRect = box.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      if (elRect.top < boxRect.top) el.scrollIntoView({ block:'nearest' });
+      if (elRect.bottom > boxRect.bottom) el.scrollIntoView({ block:'nearest' });
+    }
+  };
+  const render = (matches) => {
+    if (!matches || !matches.length) { hideBox(); return; }
+    box.innerHTML='';
+    matches.slice(0,30).forEach((m, idx) => {
+      const item = document.createElement('div');
+      item.className = 'ali-suggest-item';
+      item.dataset.index = String(idx);
+      const name = (m.name || m.title || '').toString();
+      const code = (m.costCode || '').toString();
+      const rate = parseFloat(m.rate);
+      const labor = (m.laborCost != null) ? parseFloat(m.laborCost) : (m.totalCost != null ? parseFloat(m.totalCost) : NaN);
+      const material = (m.materialCost != null) ? parseFloat(m.materialCost) : NaN;
+      const descText = (m.description || '').toString();
+      const metaParts = [];
+      if (code) metaParts.push(`<span>Code: ${escapeHtml(code)}</span>`);
+      if (!isNaN(rate)) metaParts.push(`<span>Rate: $${rate.toFixed(2)}</span>`);
+      if (!isNaN(labor)) metaParts.push(`<span>Labor: $${labor.toFixed(2)}</span>`);
+      if (!isNaN(material)) metaParts.push(`<span>Material: $${material.toFixed(2)}</span>`);
+      item.innerHTML = `
+        <div class="ali-sg-title">${escapeHtml(name)}</div>
+        <div class="ali-sg-meta">${metaParts.join(' ')}</div>
+        ${descText ? `<div class="ali-sg-desc">${escapeHtml(descText)}</div>` : ''}`;
+      item.addEventListener('click', () => {
+        try {
+          input.value = name;
+          if (refs?.costEl && code) refs.costEl.value = code;
+          if (refs?.priceEl) {
+            const r = parseFloat(m.rate);
+            const total = !isNaN(parseFloat(m.totalCost)) ? parseFloat(m.totalCost) : ((!isNaN(labor) || !isNaN(material)) ? ((isNaN(labor)?0:labor) + (isNaN(material)?0:material)) : 0);
+            const unit = !isNaN(r) ? r : total;
+            refs.priceEl.value = (unit || 0).toFixed(2);
+          }
+          if (refs?.laborEl && !isNaN(labor)) refs.laborEl.value = labor.toFixed(2);
+          if (refs?.materialEl && !isNaN(material)) refs.materialEl.value = material.toFixed(2);
+          if (refs?.descEl) refs.descEl.value = descText || '';
+          if (refs?.qtyEl && (!refs.qtyEl.value || parseInt(refs.qtyEl.value,10) <= 0)) refs.qtyEl.value = '1';
+        } finally { hideBox(); }
+      });
+      box.appendChild(item);
+    });
+    activeIndex = 0; setActive(activeIndex); box.style.display = 'block';
+  };
+  const onInput = async () => {
+    const q = input.value.trim().toLowerCase(); if (!q) { hideBox(); return; }
+    const list = await ensureLaborCostList();
+    const matches = list.filter(m => {
+      const name = (m.name || m.title || '').toString().toLowerCase();
+      const code = (m.costCode || '').toString().toLowerCase();
+      return name.includes(q) || (!!code && code.includes(q));
+    });
+    render(matches);
+  };
+  input.addEventListener('input', onInput);
+  input.addEventListener('focus', onInput);
+  input.addEventListener('keydown', (e) => {
+    const visible = box.style.display !== 'none' && box.childElementCount > 0;
+    const len = box.childElementCount;
+    if (!visible && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { onInput(); e.preventDefault(); return; }
+    if (!visible) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); activeIndex = (activeIndex + 1) % len; setActive(activeIndex); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); activeIndex = (activeIndex - 1 + len) % len; setActive(activeIndex); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (activeIndex >= 0 && activeIndex < len) { const el = box.children[activeIndex]; if (el) el.dispatchEvent(new Event('click', { bubbles:true })); } }
+    else if (e.key === 'Escape') { hideBox(); }
+  });
+  document.addEventListener('mousedown', (e) => { if (!box.contains(e.target) && e.target !== input) hideBox(); });
+}
+
+async function handleAddLineItemSubmit(projectId) {
+  try {
+  const selAll = document.getElementById('ali-select-all');
+    let targetIds = [];
+    const checks = Array.from(document.querySelectorAll('.ali-estimate-chk'));
+    if (selAll && selAll.checked) {
+      targetIds = checks.map(c => c.value);
+    } else {
+      targetIds = checks.filter(c => c.checked).map(c => c.value);
+    }
+    if (!targetIds.length) return showToast('Select at least one estimate');
+
+    // Collect rows
+    const tbody = document.getElementById('ali-items-tbody');
+    const rows = Array.from(tbody?.querySelectorAll('tr') || []);
+    if (!rows.length) return showToast('Add at least one item row');
+
+    const payloadRows = [];
+    let skipped = 0;
+    for (const tr of rows) {
+      const cat = (tr.querySelector('.ali-i-cat')?.value || '').trim();
+      const name = (tr.querySelector('.ali-i-name')?.value || '').trim();
+      const desc = (tr.querySelector('.ali-i-desc')?.value || '').trim();
+      let qty = Math.max(1, parseInt(tr.querySelector('.ali-i-qty')?.value || '1', 10));
+      const price = Math.max(0, parseFloat(tr.querySelector('.ali-i-price')?.value || '0'));
+      const laborRate = Math.max(0, parseFloat(tr.querySelector('.ali-i-labor')?.value || '0'));
+      const materialRate = Math.max(0, parseFloat(tr.querySelector('.ali-i-material')?.value || '0'));
+  const costCode = (tr.querySelector('.ali-i-cost')?.value || '').trim();
+  const vendorId = (tr.querySelector('.ali-i-vendor')?.value || '').trim();
+      const status = tr.querySelector('.ali-i-status')?.value || 'in-progress';
+      if (!name) { skipped++; continue; }
+      if (!Number.isFinite(qty) || qty <= 0) qty = 1;
+      const item = { name, description: desc, quantity: qty, unitPrice: price, total: qty * price, status };
+      // Multiply labor/material by qty like estimate-edit flow (inputs treated as per-unit rates)
+      if (!isNaN(laborRate)) item.laborCost = qty * laborRate;
+      if (!isNaN(materialRate)) item.materialCost = qty * materialRate;
+      if (costCode) item.costCode = costCode;
+  if (vendorId) { item.assignedTo = vendorId; item.assignedToModel = 'vendor'; }
+      payloadRows.push({ categoryName: cat, item });
+    }
+    if (!payloadRows.length) return showToast('All rows are empty. Please enter at least one item name.');
+
+    showLoader();
+    let success = 0, failed = 0;
+    for (const id of targetIds) {
+      try { await aliAddLineItemsToEstimate(id, payloadRows); success++; } catch { failed++; }
+    }
+
+    const skippedMsg = skipped ? ` (${skipped} row${skipped===1?'':'s'} skipped)` : '';
+    showToast(`Added to ${success} estimate(s)${failed ? `, ${failed} failed` : ''}.${skippedMsg}`);
+    document.getElementById('add-lineitem-modal').style.display = 'none';
+    if (projectId) loadEstimates(projectId);
+  } catch (e) {
+    console.error('Add line item error:', e);
+    showToast('Failed to add line item');
+  } finally {
+    hideLoader();
+  }
+}
+
+async function aliAddLineItemToEstimate(estimateId, categoryName, item) {
+  // Fetch estimate
+  const res = await fetch(`/api/estimates/${estimateId}`);
+  if (!res.ok) throw new Error('Failed to load estimate');
+  const { estimate } = await res.json();
+  const lineItems = Array.isArray(estimate.lineItems) ? JSON.parse(JSON.stringify(estimate.lineItems)) : [];
+
+  // Sanitize any malformed items coming from previous data (e.g., description objects)
+  function sanitizeLineItems(arr) {
+    if (!Array.isArray(arr)) return [];
+    return arr.map(cat => {
+      const cleanCat = {
+        type: cat.type === 'category' ? 'category' : (cat.type || 'category'),
+        category: (cat.category || '').toString(),
+        status: (cat.status || 'in-progress').toString(),
+        items: []
+      };
+      const items = Array.isArray(cat.items) ? cat.items : [];
+      cleanCat.items = items.map(it => {
+        const out = { ...it };
+        // Ensure required string fields are strings
+        out.name = (out.name || '').toString();
+        if (out.description && typeof out.description === 'object') {
+          // If description is an object, try to pull a sensible string
+          const obj = out.description || {};
+          const fromField = typeof obj.description === 'string' ? obj.description
+                            : (typeof obj.name === 'string' ? obj.name : '');
+          out.description = fromField;
+        } else {
+          out.description = (out.description || '').toString();
+        }
+        if (out.costCode != null) out.costCode = out.costCode.toString();
+  // Numeric coercions
+        out.quantity = isNaN(parseFloat(out.quantity)) ? 0 : parseFloat(out.quantity);
+        out.unitPrice = isNaN(parseFloat(out.unitPrice)) ? 0 : parseFloat(out.unitPrice);
+  if (out.laborCost != null) out.laborCost = isNaN(parseFloat(out.laborCost)) ? 0 : parseFloat(out.laborCost);
+  if (out.materialCost != null) out.materialCost = isNaN(parseFloat(out.materialCost)) ? 0 : parseFloat(out.materialCost);
+        out.total = (out.quantity || 0) * (out.unitPrice || 0);
+        // Normalize type/status
+        out.type = out.type === 'item' ? 'item' : 'item';
+        out.status = (out.status || 'in-progress').toString();
+        return out;
+      });
+      return cleanCat;
+    });
+  }
+
+  // Work on a sanitized copy to avoid schema cast errors when saving
+  let clean = sanitizeLineItems(lineItems);
+
+  // Choose target category:
+  // - If a categoryName was provided, use a matching one (case-insensitive) or create it.
+  // - Otherwise, add to the first existing category; if none exists, create a default 'General'.
+  let cat = null;
+  const desired = (categoryName || '').trim();
+  if (desired) {
+    const key = desired.toLowerCase();
+    cat = clean.find(c => (c.category || '').toString().toLowerCase() === key) || null;
+    if (!cat) {
+      cat = { type: 'category', category: desired, status: 'in-progress', items: [] };
+      clean.push(cat);
+    }
+  } else {
+    cat = Array.isArray(clean) && clean.length ? clean[0] : null;
+    if (!cat) {
+      cat = { type: 'category', category: 'General', status: 'in-progress', items: [] };
+      clean.push(cat);
+    }
+  }
+  // Sanitize the new item to avoid schema cast errors
+  const newItem = (() => {
+    const out = { ...item };
+    out.type = 'item';
+    out.name = (out.name || '').toString();
+    if (out.description && typeof out.description === 'object') {
+      const obj = out.description || {};
+      out.description = typeof obj.description === 'string' ? obj.description
+                        : (typeof obj.name === 'string' ? obj.name : '');
+    } else {
+      out.description = (out.description || '').toString();
+    }
+    if (out.costCode != null) out.costCode = out.costCode.toString();
+  out.quantity = isNaN(parseFloat(out.quantity)) ? 0 : parseFloat(out.quantity);
+  out.unitPrice = isNaN(parseFloat(out.unitPrice)) ? 0 : parseFloat(out.unitPrice);
+  if (out.laborCost != null) out.laborCost = isNaN(parseFloat(out.laborCost)) ? 0 : parseFloat(out.laborCost);
+  if (out.materialCost != null) out.materialCost = isNaN(parseFloat(out.materialCost)) ? 0 : parseFloat(out.materialCost);
+    out.total = (out.quantity || 0) * (out.unitPrice || 0);
+    out.status = (out.status || 'in-progress').toString();
+    return out;
+  })();
+  cat.items = Array.isArray(cat.items) ? cat.items : [];
+  cat.items.push(newItem);
+
+  const payload = {
+    projectId: estimate.projectId,
+    title: estimate.title,
+    lineItems: clean,
+    tax: estimate.tax || 0
+  };
+
+  const put = await fetch(`/api/estimates/${estimateId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!put.ok) throw new Error('Failed to update estimate');
+  return put.json();
+}
+
+// Batch: add multiple line items across categories, single PUT per estimate
+async function aliAddLineItemsToEstimate(estimateId, rows) {
+  if (!estimateId || !Array.isArray(rows) || !rows.length) return;
+  const res = await fetch(`/api/estimates/${estimateId}`);
+  if (!res.ok) throw new Error('Failed to load estimate');
+  const dto = await res.json();
+  const estimate = dto?.estimate || dto;
+  const projectId = estimate?.projectId || (dto?.projectId);
+  const title = estimate?.title || (dto?.title) || '';
+  const tax = estimate?.tax || 0;
+  let lineItems = Array.isArray(estimate?.lineItems) ? JSON.parse(JSON.stringify(estimate.lineItems)) : [];
+
+  function sanitizeLineItems(arr) {
+    return (Array.isArray(arr) ? arr : []).map(cat => {
+      const name = (cat?.category || '').toString() || 'General';
+      const items = Array.isArray(cat?.items) ? cat.items : [];
+      const cleanCat = { type: 'category', category: name, status: (cat?.status || 'in-progress').toString(), items: [] };
+      cleanCat.items = items.map(obj => {
+        const out = Object.assign({}, obj);
+        out.type = 'item';
+        if (out.description && typeof out.description === 'object') {
+          const obj = out.description;
+          out.description = (obj.text != null) ? String(obj.text)
+            : (obj.value != null) ? String(obj.value)
+            : (typeof obj.name === 'string' ? obj.name : '');
+        } else {
+          out.description = (out.description || '').toString();
+        }
+        if (out.costCode != null) out.costCode = out.costCode.toString();
+        // Numeric coercions
+        out.quantity = isNaN(parseFloat(out.quantity)) ? 0 : parseFloat(out.quantity);
+        out.unitPrice = isNaN(parseFloat(out.unitPrice)) ? 0 : parseFloat(out.unitPrice);
+        if (out.laborCost != null) out.laborCost = isNaN(parseFloat(out.laborCost)) ? 0 : parseFloat(out.laborCost);
+        if (out.materialCost != null) out.materialCost = isNaN(parseFloat(out.materialCost)) ? 0 : parseFloat(out.materialCost);
+        out.total = (out.quantity || 0) * (out.unitPrice || 0);
+        out.status = (out.status || 'in-progress').toString();
+        return out;
+      });
+      return cleanCat;
+    });
+  }
+
+  // Ensure there is at least one category to target if rows omit category
+  let clean = sanitizeLineItems(lineItems);
+
+  // Track original counts per category (case-insensitive key) to identify newly appended items later
+  const catKey = (n) => (n || 'General').toString().trim().toLowerCase() || 'general';
+  const beforeCounts = new Map();
+  clean.forEach(c => { beforeCounts.set(catKey(c.category), Array.isArray(c.items) ? c.items.length : 0); });
+
+  // Group incoming rows by category key for stable pairing later
+  const rowsByCat = new Map();
+  rows.forEach(r => {
+    const k = catKey(r.categoryName);
+    if (!rowsByCat.has(k)) rowsByCat.set(k, []);
+    rowsByCat.get(k).push(r);
+  });
+
+  // Helper: get or create category by name (case-insensitive)
+  const getCategory = (name) => {
+    let targetName = (name || '').trim();
+    if (!targetName) {
+      targetName = clean.length ? (clean[0]?.category || 'General') : 'General';
+    }
+    let found = clean.find(c => (c.category || '').toLowerCase() === targetName.toLowerCase());
+    if (!found) { found = { type: 'category', category: targetName, status: 'in-progress', items: [] }; clean.push(found); }
+    return found;
+  };
+
+  // Append items per row
+  for (const row of rows) {
+    const cat = getCategory(row.categoryName);
+    // Sanitize new item similarly
+    const obj = Object.assign({ type: 'item' }, row.item);
+    if (obj.description && typeof obj.description === 'object') {
+      const o = obj.description;
+      obj.description = (o.text != null) ? String(o.text)
+        : (o.value != null) ? String(o.value)
+        : (typeof o.name === 'string' ? o.name : '');
+    } else {
+      obj.description = (obj.description || '').toString();
+    }
+    if (obj.costCode != null) obj.costCode = obj.costCode.toString();
+    obj.quantity = isNaN(parseFloat(obj.quantity)) ? 0 : parseFloat(obj.quantity);
+    obj.unitPrice = isNaN(parseFloat(obj.unitPrice)) ? 0 : parseFloat(obj.unitPrice);
+    if (obj.laborCost != null) obj.laborCost = isNaN(parseFloat(obj.laborCost)) ? 0 : parseFloat(obj.laborCost);
+    if (obj.materialCost != null) obj.materialCost = isNaN(parseFloat(obj.materialCost)) ? 0 : parseFloat(obj.materialCost);
+    obj.total = (obj.quantity || 0) * (obj.unitPrice || 0);
+    obj.status = (obj.status || 'in-progress').toString();
+    cat.items.push(obj);
+  }
+
+  const payload = { projectId, title, lineItems: sanitizeLineItems(clean), tax };
+  const putRes = await fetch(`/api/estimates/${estimateId}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+  });
+  if (!putRes.ok) throw new Error('Failed to update estimate');
+  const updated = await putRes.json().catch(() => ({}));
+
+  // Attempt vendor assignment via POST /api/assign-items for rows that chose a vendor
+  try {
+    const updatedEstimate = updated?.estimate || updated;
+    const updatedLineItems = Array.isArray(updatedEstimate?.lineItems) ? updatedEstimate.lineItems : [];
+    const itemsToAssignByVendor = new Map(); // vendorId -> array of {item}
+
+    // Build pairing of newly added items per category with original rows
+    updatedLineItems.forEach(cat => {
+      const k = catKey(cat.category);
+      const prior = beforeCounts.get(k) || 0;
+      const newItems = (cat.items || []).slice(prior);
+      const srcRows = rowsByCat.get(k) || [];
+      const len = Math.min(newItems.length, srcRows.length);
+      for (let i = 0; i < len; i++) {
+        const row = srcRows[i];
+        const vendorId = row?.item?.assignedTo || row?.assignedTo;
+        if (vendorId) {
+          const ni = newItems[i];
+          if (!itemsToAssignByVendor.has(vendorId)) itemsToAssignByVendor.set(vendorId, []);
+          itemsToAssignByVendor.get(vendorId).push({ item: ni });
+        }
+      }
+    });
+
+    // Execute assignments per vendor
+    const vendorIds = Array.from(itemsToAssignByVendor.keys());
+    for (const vId of vendorIds) {
+      const pack = itemsToAssignByVendor.get(vId) || [];
+      if (!pack.length) continue;
+      const itemsPayload = pack.map(({ item }) => ({
+        itemId: String(item?._id || ''),
+        name: item?.name || '',
+        description: item?.description || '',
+        quantity: Number(item?.quantity || 0),
+        unitPrice: Number(item?.unitPrice || 0),
+        laborCost: Number(item?.laborCost || 0),
+        materialCost: Number(item?.materialCost || 0),
+        total: Number(item?.laborCost || 0), // server derives laborCost; align with estimate-edit behavior
+        costCode: item?.costCode || 'Uncategorized'
+      })).filter(x => x.itemId);
+      if (!itemsPayload.length) continue;
+      try {
+        await fetch('/api/assign-items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ vendorId: vId, projectId: updatedEstimate.projectId, estimateId: updatedEstimate._id, items: itemsPayload })
+        });
+      } catch (e) {
+        console.warn('assign-items failed for vendor', vId, e);
+      }
+    }
+  } catch (e) {
+    console.warn('Post-append vendor assignment skipped/error:', e);
+  }
+
+  return updated;
 }
 
 // Add this helper function:
@@ -1965,6 +3915,113 @@ if (!document.getElementById("estimate-line-item-hover-styles")) {
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(-8px);}
       to { opacity: 1; transform: translateY(0);}
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// Ensure vendor-badge styles are loaded last with higher precedence
+if (!document.getElementById('vendor-badge-styles')) {
+  const style = document.createElement('style');
+  style.id = 'vendor-badge-styles';
+  style.innerHTML = `
+    /* Vendor badge enhanced styles (high specificity and important flags) */
+    .estimate-items-list .estimate-item-row .vendor-badge {
+      position: relative !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      width: 25px !important;
+      height: 25px !important;
+      border-radius: 50% !important;
+      background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%) !important;
+      color: #fff !important;
+      font-weight: 700 !important;
+      font-size: 0.80em !important;
+      line-height: 1 !important;
+      margin-left: 6px !important;
+      box-shadow: 0 4px 10px rgba(2,6,23,0.12), inset 0 0 0 2px rgba(255,255,255,0.85) !important;
+      transition: transform 160ms ease, box-shadow 180ms ease, filter 180ms ease !important;
+      user-select: none !important;
+    }
+    .estimate-items-list .estimate-item-row .vendor-badge:hover {
+      transform: translateY(-1px) scale(1.07) !important;
+      box-shadow: 0 6px 14px rgba(2,6,23,0.18), inset 0 0 0 2px rgba(255,255,255,0.95) !important;
+      filter: brightness(1.03) !important;
+    }
+    .estimate-items-list .estimate-item-row .vendor-badge[data-fullname]:hover::after {
+      content: attr(data-fullname);
+      position: absolute;
+      left: 50%;
+      top: -6px;
+      transform: translate(-50%, -100%) scale(0.98);
+      background: #0f172a;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.78em;
+      white-space: nowrap;
+      box-shadow: 0 8px 24px rgba(15,23,42,0.22);
+      opacity: 0.98;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    .estimate-items-list .estimate-item-row .vendor-badge[data-fullname]:hover::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: -6px;
+      transform: translate(-50%, -50%);
+      width: 0; height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 6px solid #0f172a;
+      pointer-events: none;
+      z-index: 9999;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// Styles for Jobs flyout (desktop + mobile responsive)
+if (!document.getElementById('jobs-flyout-styles')) {
+  const style = document.createElement('style');
+  style.id = 'jobs-flyout-styles';
+  style.innerHTML = `
+    .jobs-flyout {
+      position: fixed;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12);
+      width: 380px;
+      max-height: 70vh;
+      overflow: hidden;
+      z-index: 9999;
+    }
+    .jobs-flyout-search { position: sticky; top: 0; background: #fff; padding: 10px; border-bottom: 1px solid #eef2f7; }
+    .jobs-flyout .search-input { width: 100%; padding: 9px 11px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 0.96em; }
+    #jobs-flyout-content { max-height: calc(70vh - 54px); overflow-y: auto; padding: 8px 10px; }
+    #jobs-flyout-content::-webkit-scrollbar { width: 0; height: 0; }
+    #jobs-flyout-content { scrollbar-width: none; }
+    .jobs-loading { color: #64748b; padding: 8px; font-size: 0.95em; }
+    .jobs-status-group { margin-bottom: 12px; }
+    .jobs-status-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 2px; color: #0f172a; font-weight: 700; }
+    .jobs-list { list-style: none; padding: 0; margin: 4px 0 0 0; }
+    .job-item { display: flex; gap: 10px; align-items: center; padding: 8px 6px; border-radius: 8px; cursor: pointer; }
+    .job-item:hover { background: #f8fafc; }
+    .job-avatar { width: 28px; height: 28px; border-radius: 50%; color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 0.95em; }
+    .job-meta { display: flex; flex-direction: column; min-width: 0; }
+    .job-meta .job-name { font-weight: 600; color: #0f172a; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+    .job-meta .job-sub { font-size: 0.85em; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+
+    @media (max-width: 640px) {
+      .jobs-flyout { width: calc(100vw - 24px) !important; left: 12px !important; max-height: 80vh; border-radius: 12px; }
+      #jobs-flyout-content { max-height: calc(80vh - 54px); padding: 6px 8px; }
+      .jobs-flyout .search-input { padding: 10px 12px; }
+      .job-item { padding: 10px 8px; gap: 12px; }
+      .job-avatar { width: 32px; height: 32px; font-size: 1em; }
+      .job-meta .job-name, .job-meta .job-sub { max-width: calc(100vw - 120px); }
     }
   `;
   document.head.appendChild(style);
@@ -2034,9 +4091,67 @@ if (!document.getElementById("estimate-progress-bar-styles")) {
     }
     .estimate-item-name {
       flex: 1;
+    .estimate-item-row .vendor-badge {
+      position: relative;
+      display:inline-flex; align-items:center; justify-content:center;
+      width:20px; height:20px; border-radius:50%;
+      background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+      color:#fff; font-weight:700; font-size:0.72em;
+      line-height:1; margin-left:6px;
+      box-shadow: 0 4px 10px rgba(2,6,23,0.12), inset 0 0 0 2px rgba(255,255,255,0.85);
+      transition: transform 160ms ease, box-shadow 180ms ease, filter 180ms ease;
+      user-select: none;
+    }
+    .estimate-item-row .vendor-badge:hover {
+      transform: translateY(-1px) scale(1.07);
+      box-shadow: 0 6px 14px rgba(2,6,23,0.18), inset 0 0 0 2px rgba(255,255,255,0.95);
+      filter: brightness(1.03);
+    }
+    /* Modern tooltip for vendor full name */
+    .estimate-item-row .vendor-badge[data-fullname]:hover::after {
+      content: attr(data-fullname);
+      position: absolute;
+      left: 50%;
+      top: -6px;
+      transform: translate(-50%, -100%) scale(0.98);
+      background: #0f172a;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.78em;
+      white-space: nowrap;
+      box-shadow: 0 8px 24px rgba(15,23,42,0.22);
+      opacity: 0.98;
+      pointer-events: none;
+    }
+    .estimate-item-row .vendor-badge[data-fullname]:hover::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: -6px;
+      transform: translate(-50%, -50%);
+      width: 0; height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 6px solid #0f172a;
+      pointer-events: none;
+    }
+    .estimate-item-labor, .estimate-item-material { color:#475569; font-size:0.9em; }
       font-weight: 500;
       color: #334155;
     }
+    .estimate-item-status-select {
+      font-size: 0.9em;
+      padding: 2px 6px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #334155;
+    }
+    /* Color the select based on status */
+    .estimate-item-status-select.status-in-progress { color: #f59e42; background: #fffbeb; border-color: #fde68a; }
+    .estimate-item-status-select.status-approved { color: #3b82f6; background: #eff6ff; border-color: #bfdbfe; }
+    .estimate-item-status-select.status-completed { color: #10b981; background: #ecfdf5; border-color: #bbf7d0; }
 
     .estimate-item-status.approved {
       color: #3b82f6;
@@ -2051,13 +4166,73 @@ if (!document.getElementById("estimate-progress-bar-styles")) {
       color: #f59e42;
       font-weight: 600;
     }
-    .estimate-item-qty, .estimate-item-total {
+    .estimate-item-qty, .estimate-item-material, .estimate-item-labor {
       color: #64748b;
       font-size: 0.97em;
+    }
+      .estimate-item-total {
+      color: #0f4c75;
+      font-weight: 600;
     }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(-8px);}
       to { opacity: 1; transform: translateY(0);}
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// Add styles for the estimates table view
+if (!document.getElementById("estimate-table-styles")) {
+  const style = document.createElement("style");
+  style.id = "estimate-table-styles";
+  style.innerHTML = `
+    .estimate-table-wrapper { margin-top: 10px; }
+    .estimate-table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
+  .estimate-table thead th { text-align: left; background: #f8fafc; color: #334155; font-weight: 600; padding: 9px 10px; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 1; }
+  .estimate-table tbody td { padding: 8px 10px; border-bottom: 1px solid #eef2f7; vertical-align: middle; }
+    .estimate-table tbody tr:hover { background: #f9fbff; }
+  .est-title-cell { display: flex; align-items: center; gap: 4px; }
+  .row-caret { background: none; border: none; cursor: pointer; color: #64748b; font-size: 0.8em; padding: 2px; }
+    .row-caret i { transition: transform 0.18s ease; }
+    .est-actions { white-space: nowrap; }
+    .est-actions .smart-btn { background: #f1f5f9; border: 1px solid #e5e7eb; padding: 6px 8px; margin-right: 6px; border-radius: 6px; color: #334155; cursor: pointer; }
+    .est-actions .smart-btn:hover { background: #e2e8f0; }
+    .est-actions .smart-btn.danger { color: #64748b; }
+    .progress-bar-bg.mini { height: 10px; }
+
+    /* Sortable header */
+    .estimate-table .est-sort-cell { cursor: pointer; user-select: none; }
+    .estimate-table .est-sort-cell .sort-indicator { font-size: 0.85em; color: #64748b; margin-left: 6px; }
+
+    /* Make estimate title smaller and more compact inside the table */
+    .estimate-table .estimate-title { display: flex; align-items: center; gap: 4px; margin: 0; line-height: 1.05; }
+    .estimate-table .estimate-title-text { font-size: inherit; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 32ch; }
+    .estimate-table .edit-title-btn { font-size: 0.75em !important; margin-left: 4px !important; }
+
+    /* Progress cell layout and percentage label */
+    .estimate-table .progress-cell { display: flex; align-items: center; gap: 8px; }
+    .estimate-table .progress-percent { font-size: 0.9em; color: #475569; min-width: 3ch; text-align: right; }
+
+    /* Row-level tiny spinner when updating */
+    .estimate-table .row-spinner {
+      width: 14px; height: 14px; margin-left: 6px; display: inline-block;
+      border: 2px solid #cbd5e1; border-top-color: #3b82f6; border-radius: 50%;
+      animation: rowspin 0.8s linear infinite;
+    }
+    .estimate-table .row-updating .progress-bar-fill { opacity: 0.5; }
+    @keyframes rowspin { to { transform: rotate(360deg); } }
+
+    /* Mobile responsiveness */
+    .estimate-table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    @media (max-width: 640px) {
+      .estimate-table { font-size: 0.92em; min-width: 760px; }
+      .estimate-table thead th, .estimate-table tbody td { padding: 8px 8px; }
+      /* Show all columns on mobile; horizontal scroll enabled via wrapper */
+      .est-title-cell { align-items: center; }
+      .estimate-table .estimate-title-text { max-width: 22ch; }
+      .estimate-table .progress-percent { font-size: 0.85em; }
+      .row-caret { padding: 4px; }
     }
   `;
   document.head.appendChild(style);
@@ -2095,6 +4270,13 @@ if (!document.getElementById("estimate-progress-bar-styles")) {
       position: absolute;
       left: 0; top: 0;
     }
+    /* Mobile tweaks for preview list */
+    @media (max-width: 640px) {
+      .estimate-line-items-preview { padding: 10px 12px; }
+      .estimate-item-row { flex-wrap: wrap; gap: 8px; padding: 6px 0; }
+      .estimate-item-name { flex: 1 1 100%; }
+      .estimate-item-status-select, .estimate-item-qty, .estimate-item-total { font-size: 0.9em; }
+    }
   `;
   document.head.appendChild(style);
 }
@@ -2127,12 +4309,7 @@ if (!document.getElementById("modern-estimate-styles")) {
       align-items: center;
       gap: 12px;
     }
-    .estimate-title {
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: #0f172a;
-      margin: 0;
-    }
+
     .estimate-date {
       font-size: 0.95rem;
       color: #64748b;
@@ -2162,7 +4339,7 @@ if (!document.getElementById("modern-estimate-styles")) {
     }
     .smart-btn.danger {
       color: #ef4444;
-      background: #fef2f2;
+      background: #ffffffff;
     }
     .smart-btn.danger:hover {
       background: #fee2e2;
@@ -2178,7 +4355,7 @@ if (!document.getElementById("modern-estimate-styles")) {
     }
     .mono {
       font-family: 'Roboto Mono', 'Menlo', 'Consolas', monospace;
-      font-size: 1.05em;
+      font-size: 0.95em;
       letter-spacing: 0.5px;
     }
     .empty-estimates {
@@ -2267,6 +4444,7 @@ if (!document.getElementById("modern-estimate-styles")) {
       .alt-graph-circle {
         margin-right: 0;
         margin-bottom: 10px;
+        width: 95px; height: 72px;
       }
       .alt-graph-details {
         min-width: 0;
@@ -2275,7 +4453,7 @@ if (!document.getElementById("modern-estimate-styles")) {
   `;
   document.head.appendChild(style);
 }
-
+  
   function openFinancialReport(projectId) {
     if (!projectId) {
       alert("Project ID is missing!");
@@ -2305,7 +4483,6 @@ if (!document.getElementById("modern-estimate-styles")) {
       menu.style.display = 'none';
     }
   });
-
 
 
 
@@ -2343,20 +4520,20 @@ function viewEstimate(estimateId) {
 // Function to delete an estimate
 async function deleteEstimate(estimateId) {
   if (!confirm("Are you sure you want to delete this estimate?")) return;
-showLoader(); // 👈 START
+  showLoader(); // 👈 START
   try {
     const response = await fetch(`/api/estimates/${estimateId}`, { method: "DELETE" });
 
     if (!response.ok) throw new Error("Failed to delete estimate");
 
     showToast("Estimate deleted successfully!");
-
+    
     const projectId = getProjectId(); // Use the helper function
     loadEstimates(projectId); // Refresh the estimates after deletion
   } catch (error) {
     console.error("Error deleting estimate:", error);
-     showToast("Failed to delete estimate. Please try again.");
-     } finally {
+    showToast("Failed to delete estimate. Please try again.");
+  } finally {
     hideLoader(); // 👈 END
   }
 }
@@ -2383,7 +4560,7 @@ async function importEstimate() {
   fileInput.addEventListener("change", async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-  showLoader(); // 👈 START
+    showLoader(); // 👈 START
     try {
       const reader = new FileReader();
       reader.onload = async function (e) {
@@ -2407,7 +4584,7 @@ async function importEstimate() {
         );
         
         if (missingFields.length) {
-           showToast(`Invalid Excel file. Missing required fields: ${missingFields.join(", ")}`);
+          showToast(`Invalid Excel file. Missing required fields: ${missingFields.join(", ")}`);
           return;
         }
         
@@ -2442,7 +4619,7 @@ async function importEstimate() {
         const result = await response.json();
         console.log("✅ Created New Estimate:", result);
 
-         showToast("Estimate imported and created successfully!");
+        showToast("Estimate imported and created successfully!");
 
         // ✅ Update the UI with the new estimate
         loadEstimates(projectId);
@@ -2457,8 +4634,8 @@ async function importEstimate() {
       reader.readAsArrayBuffer(file);
     } catch (error) {
       console.error("❌ Error importing estimate:", error);
-       showToast("Error importing estimate. Please check the file and try again.");
-          } finally {
+      showToast("Error importing estimate. Please check the file and try again.");
+    } finally {
       hideLoader(); // 👈 END
     }
   });
@@ -2515,6 +4692,22 @@ function formatEstimateFromExcel(data) {
 }
 
 
+
+ 
+
+
+// Placeholder for using a template
+function downloadTemplate() {
+  const link = document.createElement("a");
+  link.href = "/files/EstimateTemplate3.xlsx"; // Adjust this path based on your server setup
+  link.download = "EstimateTemplate3.xlsx";
+  document.body.appendChild(link); // Needed for Firefox
+  link.click();
+  document.body.removeChild(link);
+}
+
+
+
 // Initialize the Estimates Section
 document.addEventListener("DOMContentLoaded", () => {
   const path = window.location.pathname; // Example: "/details/projects/6786e1f79dd13d8bd5533d12"
@@ -2534,20 +4727,6 @@ document.addEventListener("DOMContentLoaded", () => {
   loadEstimates(projectId);
 });
 
-
-
-  
-  // Placeholder for using a template
-function downloadTemplate() {
-  const link = document.createElement("a");
-  link.href = "/files/EstimateTemplate3.xlsx"; // Adjust this path based on your server setup
-  link.download = "EstimateTemplate3.xlsx";
-  document.body.appendChild(link); // Needed for Firefox
-  link.click();
-  document.body.removeChild(link);
-}
-
-
 function showFileSectionLoader() {
   document.getElementById('file-loader').style.display = 'flex';
 }
@@ -2564,11 +4743,6 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchFiles(projectId);
   }
 
-  function getProjectId() {
-    const segments = window.location.pathname.split('/');
-    const index = segments.indexOf('projects');
-    return index !== -1 ? segments[index + 1] : null;
-  }
 
 
 
@@ -2744,7 +4918,7 @@ function displayFiles(files) {
   toggleActionDropdown();
 }
 
-  // --- File Preview Functions ---
+// --- File Preview Functions ---
 let isMouseOverPopup = false;
 let isMouseOverFileItem = false;
 
@@ -2965,6 +5139,7 @@ function previewFile(fileUrl, mimetype) {
   window.performFileAction = performFileAction;
  
 });
+
   
   
   
@@ -2973,6 +5148,9 @@ function previewFile(fileUrl, mimetype) {
     window.location.href = `/Selection-Board.html`;
   }
   
+
+
+
   
   async function sendNotificationEmail(to, subject, text) {
     try {
@@ -2995,7 +5173,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadProjectDetails(projectId);
   loadTasks(projectId);
   loadEstimates(projectId);
- 
+  
   loadSidebarProjects();
   setupManageTeamModal();
   renderQualityControlItems(projectId);
@@ -3009,7 +5187,7 @@ if (financialBtn && projectId) {
   financialBtn.onclick = () => openFinancialReport(projectId);
 }
 
-  
+
   // Sidebar toggle functionality
   const sidebar = document.querySelector('.sidebar');
   const toggleButton = document.createElement('button');
@@ -3023,6 +5201,7 @@ if (financialBtn && projectId) {
   });
 
   
+  
 
   // Redirect to Home/Dashboard
   const homeLink = document.querySelector('.home-option a');
@@ -3033,7 +5212,6 @@ if (financialBtn && projectId) {
     });
   }
 });
-
 
 
 /** 
@@ -3129,6 +5307,7 @@ async function fetchVendors() {
   }
 }
 
+
 /** 
  * Remove Vendor
  */
@@ -3171,6 +5350,13 @@ async function updateVendor(vendorId, name, email, phone) {
     console.error("Error updating vendor:", error);
   }
 }
+
+
+
+
+
+
+
 
 // ✅ Fetch and Render Quality Control Summary Only
 async function renderQualityControlItems(projectId) {
@@ -3219,6 +5405,11 @@ async function renderQualityControlItems(projectId) {
 function navigateToQCControl(projectId) {
   window.location.href = `/qccontrol.html?projectId=${projectId}`;
 }
+
+
+
+
+
 
 
 // Add/replace these functions near your notification logic
@@ -3453,11 +5644,46 @@ window.addLineItemToEstimate = async function(estimateId, unitNumber, descriptio
         // Add to first category (or you can prompt for category selection)
         updatedLineItems[0].items.push(newItem);
 
-        // Update estimate, preserving the title
-        const updateRes = await fetch(`/api/estimates/${estimateId}`, {
+    // Sanitize categories/items to avoid schema cast errors
+    const sanitizeForSave = (arr) => {
+      if (!Array.isArray(arr)) return [];
+      return arr.map(cat => {
+        const cleanCat = {
+          type: 'category',
+          category: (cat?.category || '').toString(),
+          status: (cat?.status || 'in-progress').toString(),
+          items: []
+        };
+        const items = Array.isArray(cat?.items) ? cat.items : [];
+        cleanCat.items = items.map(it => {
+          const out = { ...it };
+          out.type = 'item';
+          out.name = (out.name || '').toString();
+          if (out.description && typeof out.description === 'object') {
+            const obj = out.description || {};
+            out.description = typeof obj.description === 'string' ? obj.description
+                    : (typeof obj.name === 'string' ? obj.name : '');
+          } else {
+            out.description = (out.description || '').toString();
+          }
+          if (out.costCode != null) out.costCode = out.costCode.toString();
+          const qty = isNaN(parseFloat(out.quantity)) ? 0 : parseFloat(out.quantity);
+          const price = isNaN(parseFloat(out.unitPrice)) ? 0 : parseFloat(out.unitPrice);
+          out.quantity = qty; out.unitPrice = price; out.total = qty * price;
+          out.status = (out.status || 'in-progress').toString();
+          return out;
+        });
+        return cleanCat;
+      });
+    };
+
+    const safeLineItems = sanitizeForSave(updatedLineItems);
+
+    // Update estimate, preserving the title
+    const updateRes = await fetch(`/api/estimates/${estimateId}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: preservedTitle, lineItems: updatedLineItems })
+      body: JSON.stringify({ title: preservedTitle, lineItems: safeLineItems })
         });
 
         if (!updateRes.ok) throw new Error("Failed to update estimate");
@@ -3465,7 +5691,7 @@ window.addLineItemToEstimate = async function(estimateId, unitNumber, descriptio
         showToast("Line item added to estimate!");
         closeSelectEstimateModal();
         // Optionally, redirect to edit page
-        window.location.href = `/estimate-edit.html?projectId=${projectId}&estimateId=${estimateId}`;
+       
     } catch (error) {
         showToast("Error adding line item.");
     } finally {
@@ -3661,3 +5887,29 @@ function getProjectIdFromPage() {
 
 // Run on page load
 document.addEventListener('DOMContentLoaded', updateMaintenanceNotificationBar);
+
+
+
+
+// Auto-open task details from URL (?taskId=...)
+document.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const openTaskId = params.get('taskId');
+  if (!openTaskId) return;
+
+  // Ensure DOM is ready, then open the task details panel
+  const tryOpen = () => {
+    try {
+      displayTaskDetails(openTaskId);
+      const panel = document.getElementById('task-details');
+      if (panel) {
+        panel.style.display = 'block';
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } catch (_) {
+      // retry shortly if functions not ready yet
+      return setTimeout(tryOpen, 150);
+    }
+  };
+  setTimeout(tryOpen, 150);
+});
