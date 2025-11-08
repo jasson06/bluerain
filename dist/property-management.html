@@ -6738,7 +6738,7 @@ function renderPayments() {
                         <tr class="payment-row" onclick="editPayment('${payment._id}')">
                             <td>${tenant ? tenant.name : 'N/A'}</td>
                             <td>${unit ? unit.number : 'N/A'}</td>
-                            <td>${payment.type || ''}</td>
+                            <td>${(payment.type || '').charAt(0).toUpperCase() + (payment.type || '').slice(1)}</td>
                             <td>$${payment.amount.toFixed(2)}</td>
                             <td>${payment.method.charAt(0).toUpperCase() + payment.method.slice(1)}</td>
                             <td>${new Date(payment.date).toLocaleDateString()}</td>
@@ -6803,7 +6803,15 @@ document.getElementById('paymentUnit')?.addEventListener('change', function() {
     }
 });
 
-
+// Normalize and validate payment type against server enum
+function normalizePaymentType(raw) {
+    if (!raw) return null;
+    const t = String(raw).trim().toLowerCase();
+    if (t === 'rent') return 'rent';
+    // Map common synonyms to HUB if user types them
+    if (t === 'hub' || t === 'section8' || t === 'voucher' || t === 'subsidy') return 'hub';
+    return null; // not acceptable by server enum
+}
 
 function editPayment(paymentId) {
     const payment = state.payments.find(p => p._id === paymentId);
@@ -6842,10 +6850,18 @@ async function handleAddPayment(event) {
     const lateFeePercent = Number(document.getElementById('paymentLateFee').value) || 0;
     const lateFee = amount * (lateFeePercent / 100);
 
+        // Validate/normalize type for server enum
+    const rawType = document.getElementById('paymentType').value;
+    const normalizedType = normalizePaymentType(rawType);
+    if (!normalizedType) {
+        showNotification('Invalid payment type. Use "Rent" or "HUB".', 'error');
+        return;
+    }
+
     const paymentData = {
         tenantId: document.getElementById('paymentTenant').value,
         unitId: document.getElementById('paymentUnit').value,
-        type: document.getElementById('paymentType').value,
+        type: normalizedType,
         amount,
         method: document.getElementById('paymentMethod').value,
         date: document.getElementById('paymentDate').value,
@@ -7459,6 +7475,7 @@ window.deletePayment = deletePayment;
     </script>
 </body>
 </html>
+
 
 
 
