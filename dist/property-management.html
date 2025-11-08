@@ -3205,6 +3205,7 @@ select {
        // Global state management
 const state = {
     currentProperty: null,
+    currentTab: 'units',
     properties: [],
     units: [],
     tenants: [],
@@ -3240,6 +3241,15 @@ function shouldUseCache(key, propertyId) {
 }
 function touchCache(key, propertyId) {
     state._cache[key] = { propertyId, ts: Date.now() };
+}
+
+// Invalidate one or more cache buckets (used after any create/update/delete)
+function invalidateCache(...keys) {
+    keys.forEach(k => {
+        if (state._cache[k]) {
+            delete state._cache[k];
+        }
+    });
 }
 
 // Initialize application
@@ -3328,10 +3338,17 @@ function initializeTabs() {
             tabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             const tabId = tab.getAttribute('data-tab');
+            // Track current active tab
+            state.currentTab = tabId;
             showTabContent(tabId);
             loadTabContent(tabId);
         });
     });
+    // Initialize currentTab based on any pre-marked active tab button
+    const activeBtn = document.querySelector('.tab-btn.active');
+    if (activeBtn) {
+        state.currentTab = activeBtn.getAttribute('data-tab') || 'units';
+    }
 }
 
 document.getElementById('leaseType').addEventListener('change', function() {
@@ -3364,32 +3381,38 @@ function updateTabCounts() {
     document.getElementById('tabCountPayments').textContent = state.payments?.length || 0;
 }
 
-async function loadTabContent(tabId) {
+async function loadTabContent(tabId, force = false) {
     if (!state.currentProperty) return;
 
     try {
         switch(tabId) {
             case 'units':
-                await loadUnits(state.currentProperty._id);
+                await loadUnits(state.currentProperty._id, force);
                 break;
             case 'tenants':
-                await loadTenants(state.currentProperty._id);
+                await loadTenants(state.currentProperty._id, force);
                 break;
             case 'maintenance':
-                await loadMaintenanceRequests(state.currentProperty._id);
+                await loadMaintenanceRequests(state.currentProperty._id, force);
                 await loadMaintenanceSchedules(); 
                 break;
             case 'documents':
-                await loadDocuments(state.currentProperty._id);
+                await loadDocuments(state.currentProperty._id, force);
                 break;
                         case 'payments':
-                await loadPayments(state.currentProperty._id);
+                await loadPayments(state.currentProperty._id, force);
                 break;
         }
     } catch (error) {
         console.error(`Error loading ${tabId} content:`, error);
         showNotification(`Error loading ${tabId}`, 'error');
     }
+}
+
+// Universal refresh that bypasses cache for the active or specified tab
+async function refreshContent(section) {
+    const target = section || state.currentTab || 'units';
+    await loadTabContent(target, true);
 }
 
 // Property Management
@@ -3576,10 +3599,10 @@ async function selectProperty(propertyId) {
 }
 
 // Update the loadUnits function
-async function loadUnits(propertyId) {
+async function loadUnits(propertyId, force = false) {
     
     try {
-        if (shouldUseCache('units', propertyId)) {
+        if (!force && shouldUseCache('units', propertyId)) {
             renderUnits();
             updatePropertyStats();
             populateUnitSelect();
@@ -3884,7 +3907,8 @@ async function handleUpdateUnit(unitId) {
         // Restore the add handler and remove the custom update handler
         form.onsubmit = handleAddUnit;
 
-        await loadUnits(state.currentProperty._id);
+    invalidateCache('units');
+    await refreshContent('units');
         closeModal('addUnitModal');
         showNotification('Unit updated successfully', 'success');
     } catch (error) {
@@ -4144,10 +4168,8 @@ async function deleteUnit(unitId) {
             throw new Error('Failed to delete unit');
         }
 
-        // Remove unit from state and re-render
-        state.units = state.units.filter(u => u._id !== unitId);
-        renderUnits();
-        updatePropertyStats();
+    invalidateCache('units');
+    await refreshContent('units');
         showNotification('Unit deleted successfully', 'success');
     } catch (error) {
         console.error('Error deleting unit:', error);
@@ -4347,15 +4369,18 @@ async function handleAddTenant(event) {
             });
         }
 
+        // Bust caches and refresh tenants and units to reflect changes instantly
+        invalidateCache('tenants', 'units');
         await Promise.all([
-            loadTenants(state.currentProperty._id),
-            loadUnits(state.currentProperty._id)
+            refreshContent('tenants'),
+            refreshContent('units')
         ]);
         
         closeModal('addTenantModal');
         showNotification('Tenant added successfully', 'success');
         event.target.reset();
-        await loadAllUnitsAndTenants();
+    // Optional: refresh global summary lazily
+    runWhenIdle(() => loadAllUnitsAndTenants());
     } catch (error) {
         console.error('Error adding tenant:', error);
         showNotification(error.message || 'Error adding tenant', 'error');
@@ -4442,10 +4467,10 @@ document.getElementById('petCount').addEventListener('input', updatePetFields);
 
 
 // Update the loadTenants function
-async function loadTenants(propertyId) {
+async function loadTenants(propertyId, force = false) {
     
     try {
-        if (shouldUseCache('tenants', propertyId)) {
+        if (!force && shouldUseCache('tenants', propertyId)) {
             renderTenants();
             updateTabCounts();
             return;
@@ -5222,9 +5247,10 @@ async function handleUpdateTenant(tenantId) {
             });
         }
 
+        invalidateCache('tenants','units');
         await Promise.all([
-            loadTenants(state.currentProperty._id),
-            loadUnits(state.currentProperty._id)
+            refreshContent('tenants'),
+            refreshContent('units')
         ]);
         
         // Reset form and close modal
@@ -5242,7 +5268,7 @@ async function handleUpdateTenant(tenantId) {
         
         closeModal('addTenantModal');
         showNotification('Tenant updated successfully', 'success');
-        await loadAllUnitsAndTenants();
+    runWhenIdle(() => loadAllUnitsAndTenants());
     } catch (error) {
         console.error('Error updating tenant:', error);
         showNotification('Error updating tenant', 'error');
@@ -5301,10 +5327,11 @@ async function deleteTenant(tenantId) {
             });
         }
 
-        // Reload both tenants and units
+        // Reload both tenants and units using universal refresh
+        invalidateCache('tenants', 'units');
         await Promise.all([
-            loadTenants(state.currentProperty._id),
-            loadUnits(state.currentProperty._id)
+            refreshContent('tenants'),
+            refreshContent('units')
         ]);
 
         showNotification('Tenant deleted successfully', 'success');
@@ -5354,7 +5381,8 @@ showLoader();
         event.target.reset();
         closeModal('addMaintenanceModal');
         
-        await loadMaintenanceRequests(state.currentProperty._id);
+    invalidateCache('maintenance');
+    await refreshContent('maintenance');
         showNotification('Maintenance request created successfully', 'success');
         
 
@@ -5378,10 +5406,10 @@ function updateMaintenanceTabBadge() {
 }
 
 
-async function loadMaintenanceRequests(propertyId) {
+async function loadMaintenanceRequests(propertyId, force = false) {
     
     try {
-        const response = await fetch(`${API_URL}/properties/${propertyId}/maintenance`);
+    const response = await fetch(`${API_URL}/properties/${propertyId}/maintenance${force ? `?_=${Date.now()}` : ''}`);
         if (!response.ok) throw new Error('Failed to fetch maintenance requests');
         
         const requests = await response.json();
@@ -5559,7 +5587,8 @@ async function deleteMaintenance(requestId) {
 
         if (!response.ok) throw new Error('Failed to delete maintenance request');
 
-        await loadMaintenanceRequests(state.currentProperty._id);
+    invalidateCache('maintenance');
+    await refreshContent('maintenance');
         showNotification('Maintenance request deleted successfully', 'success');
     } catch (error) {
         console.error('Error deleting maintenance request:', error);
@@ -5590,7 +5619,8 @@ async function updateMaintenanceStatus(requestId) {
 
         if (!response.ok) throw new Error('Failed to update maintenance status');
         
-        await loadMaintenanceRequests(state.currentProperty._id);
+    invalidateCache('maintenance');
+    await refreshContent('maintenance');
         showNotification('Maintenance status updated successfully', 'success');
     } catch (error) {
         console.error('Error updating maintenance status:', error);
@@ -5765,7 +5795,8 @@ async function markScheduleCompleted(scheduleId) {
       if (!res.ok) throw new Error('Failed to complete schedule');
       showNotification('Schedule marked as completed and reset!', 'success');
       modal.style.display = 'none';
-      await loadMaintenanceSchedules();
+    // Force-refresh maintenance tab to reflect changes
+    await refreshContent('maintenance');
     } catch (err) {
       showNotification('Error completing schedule', 'error');
     } finally {
@@ -6230,7 +6261,7 @@ async function handleUpdateMaintenanceSchedule(scheduleId) {
     if (!res.ok) throw new Error('Failed to update schedule');
     closeModal('addScheduleModal');
     showNotification('Schedule updated!', 'success');
-    await loadMaintenanceSchedules();
+    await refreshContent('maintenance');
   } catch (err) {
     showNotification('Error updating schedule', 'error');
   } finally {
@@ -6249,7 +6280,7 @@ async function deleteMaintenanceSchedule(scheduleId) {
     });
     if (!res.ok) throw new Error('Failed to delete schedule');
     showNotification('Schedule deleted!', 'success');
-    await loadMaintenanceSchedules();
+    await refreshContent('maintenance');
   } catch (err) {
     showNotification('Error deleting schedule', 'error');
   } finally {
@@ -6340,9 +6371,10 @@ async function handleDocumentUpload(event) {
             body: formData // Don't set Content-Type header, let browser set it with boundary
         });
 
-        if (!response.ok) throw new Error('Failed to upload document');
+    if (!response.ok) throw new Error('Failed to upload document');
         
-        await loadDocuments(state.currentProperty._id);
+    invalidateCache('documents');
+    await refreshContent('documents');
         closeModal('uploadDocumentModal');
         showNotification('Document uploaded successfully', 'success');
         event.target.reset();
@@ -6507,10 +6539,10 @@ document.getElementById('toggleCalendarIcon').addEventListener('click', () => {
 
 
 
-async function loadDocuments(propertyId) {
+async function loadDocuments(propertyId, force = false) {
     
     try {
-        if (shouldUseCache('documents', propertyId)) {
+        if (!force && shouldUseCache('documents', propertyId)) {
             renderDocuments();
             updateTabCounts();
             return;
@@ -6674,7 +6706,8 @@ showLoader();
 
         if (!response.ok) throw new Error('Failed to delete document');
         
-        await loadDocuments(state.currentProperty._id);
+    invalidateCache('documents');
+    await refreshContent('documents');
         showNotification('Document deleted successfully', 'success');
     } catch (error) {
         console.error('Error deleting document:', error);
@@ -6686,10 +6719,10 @@ showLoader();
 
 
 // Load payments when Payments tab is selected
-async function loadPayments(propertyId) {
+async function loadPayments(propertyId, force = false) {
 
     try {
-        if (shouldUseCache('payments', propertyId)) {
+        if (!force && shouldUseCache('payments', propertyId)) {
             renderPayments();
             updateTabCounts();
             return;
@@ -6888,7 +6921,8 @@ async function handleAddPayment(event) {
             });
         }
         if (!response.ok) throw new Error('Failed to save payment');
-        await loadPayments(state.currentProperty._id);
+    invalidateCache('payments');
+    await refreshContent('payments');
         closeModal('addPaymentModal');
         showNotification(isEdit ? 'Payment updated successfully' : 'Payment recorded successfully', 'success');
         event.target.reset();
@@ -6912,7 +6946,8 @@ async function deletePayment(paymentId) {
             method: 'DELETE'
         });
         if (!response.ok) throw new Error('Failed to delete payment');
-        await loadPayments(state.currentProperty._id);
+    invalidateCache('payments');
+    await refreshContent('payments');
         showNotification('Payment deleted successfully', 'success');
     } catch (error) {
         console.error('Error deleting payment:', error);
@@ -7475,14 +7510,3 @@ window.deletePayment = deletePayment;
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
