@@ -6057,11 +6057,24 @@ app.delete('/api/properties/:propertyId/payments/:paymentId', async (req, res) =
   }
 });
 
+// POST a new payment (rent or HUB)
+// Helper to normalize incoming payment type to enum values
+function normalizePaymentTypeServer(raw) {
+  const t = String(raw || '').trim().toLowerCase();
+  if (t === 'rent') return 'rent';
+  if (['hub', 'section8', 'voucher', 'subsidy'].includes(t)) return 'hub';
+  return null;
+}
+
 
 // POST a new payment (rent or HUB)
 app.post('/api/properties/:propertyId/payments', async (req, res) => {
   try {
-    const { tenantId, unitId, type, amount, method, date, lateFee } = req.body;
+      const { tenantId, unitId, amount, method, date, lateFee } = req.body;
+    const type = normalizePaymentTypeServer(req.body.type);
+    if (!type) {
+      return res.status(400).json({ message: 'Invalid payment type. Allowed: rent, hub' });
+    }
     if (!tenantId || !type || !method || !date) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
@@ -6160,7 +6173,11 @@ app.post('/api/properties/:propertyId/payments', async (req, res) => {
 // --- Update PUT /api/properties/:propertyId/payments/:paymentId ---
 app.put('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
   try {
-    const { tenantId, unitId, type, amount, method, date, lateFee } = req.body;
+       const { tenantId, unitId, amount, method, date, lateFee } = req.body;
+    const type = normalizePaymentTypeServer(req.body.type);
+    if (!type) {
+      return res.status(400).json({ message: 'Invalid payment type. Allowed: rent, hub' });
+    }
     if (!tenantId || !type || !method || !date) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
