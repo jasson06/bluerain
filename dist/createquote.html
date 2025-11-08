@@ -1343,13 +1343,45 @@ autocomplete="off"
 
     <div class="payment-terms">
       <h3>Payment Terms</h3>
-      <p>The total project amount shall be paid in the following phases:</p>
-      <ul style="margin-top: 10px; padding-left: 20px;">
-        <li><strong>30%</strong> at project start</li>
-        <li><strong>30%</strong> at 50% project completion</li>
-        <li><strong>30%</strong> at 75% project completion</li>
-        <li><strong>10%</strong> at final completion</li>
-      </ul>
+      <p>The total project amount shall be paid in the following phases. Adjust the percentages as needed:</p>
+      <div id="paymentTermsEditor" style="display: grid; grid-template-columns: 1fr auto auto; gap: 8px 12px; align-items: center; max-width: 520px;">
+        <div>Project start</div>
+        <div>
+          <input id="pt1" type="number" min="0" max="100" step="0.1" value="30" style="width: 80px;" /> %
+        </div>
+        <div style="text-align:right; color:#0f172a; font-variant-numeric: tabular-nums;">
+          $<span id="pt1Amt">0.00</span>
+        </div>
+
+        <div>50% project completion</div>
+        <div>
+          <input id="pt2" type="number" min="0" max="100" step="0.1" value="30" style="width: 80px;" /> %
+        </div>
+        <div style="text-align:right; color:#0f172a; font-variant-numeric: tabular-nums;">
+          $<span id="pt2Amt">0.00</span>
+        </div>
+
+        <div>75% project completion</div>
+        <div>
+          <input id="pt3" type="number" min="0" max="100" step="0.1" value="30" style="width: 80px;" /> %
+        </div>
+        <div style="text-align:right; color:#0f172a; font-variant-numeric: tabular-nums;">
+          $<span id="pt3Amt">0.00</span>
+        </div>
+
+        <div>Final completion</div>
+        <div>
+          <input id="pt4" type="number" min="0" max="100" step="0.1" value="10" style="width: 80px;" /> %
+        </div>
+        <div style="text-align:right; color:#0f172a; font-variant-numeric: tabular-nums;">
+          $<span id="pt4Amt">0.00</span>
+        </div>
+
+        <div style="grid-column: 1 / -1; display:flex; justify-content: space-between; align-items:center; margin-top: 6px;">
+          <div style="font-size:12px; color:#64748b;">Tip: Sum doesn't have to be exactly 100%, but we'll show you the total below.</div>
+          <div style="font-weight:600;">Total %: <span id="ptSum" style="font-variant-numeric: tabular-nums;">100.0</span>%</div>
+        </div>
+      </div>
       <p style="margin-top: 10px;">Each payment is due within 7 days of invoice unless otherwise agreed in writing. Late payments may be subject to additional fees.</p>
     </div>
     
@@ -1747,6 +1779,15 @@ function recalcLineItemTotal() {
       try { recalcLineItemTotal(); } catch (_) {}
     });
   }
+      // Payment terms: wire up listeners and initial calc
+      ['pt1','pt2','pt3','pt4'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', () => {
+          try { updatePaymentTermsUI(); } catch(_) {}
+        });
+      });
+      try { updatePaymentTermsUI(); } catch(_) {}
+
     };
 
     document.getElementById('itemName').addEventListener('input', showLaborSuggestions);
@@ -1878,6 +1919,45 @@ function formatCurrency(value) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })}`;
+}
+
+// --- Payment Terms helpers ---
+function getPaymentPercentagesFromInputs() {
+  const ids = ['pt1','pt2','pt3','pt4'];
+  const defaults = [30,30,30,10];
+  return ids.map((id, i) => {
+    const el = document.getElementById(id);
+    const v = parseFloat(el?.value);
+    return isNaN(v) ? defaults[i] : v;
+  });
+}
+
+function setPaymentPercentages(percs) {
+  const ids = ['pt1','pt2','pt3','pt4'];
+  ids.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el && typeof percs?.[i] === 'number') el.value = percs[i];
+  });
+  try { updatePaymentTermsUI(); } catch(_) {}
+}
+
+function updatePaymentTermsUI() {
+  // Read grand total from UI
+  const gtEl = document.getElementById('grandTotal');
+  const total = parseFloat((gtEl?.textContent || '0').replace(/,/g, '')) || 0;
+  const [p1,p2,p3,p4] = getPaymentPercentagesFromInputs();
+  const amts = [p1,p2,p3,p4].map(p => (total * (p/100)));
+  const idsAmt = ['pt1Amt','pt2Amt','pt3Amt','pt4Amt'];
+  idsAmt.forEach((id, i) => {
+    const s = document.getElementById(id);
+    if (s) s.textContent = (amts[i] || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
+  });
+  const sum = [p1,p2,p3,p4].reduce((a,b)=>a+(parseFloat(b)||0),0);
+  const ptSumEl = document.getElementById('ptSum');
+  if (ptSumEl) {
+    ptSumEl.textContent = (Math.round(sum * 10) / 10).toFixed(1);
+    ptSumEl.style.color = Math.abs(sum - 100) < 0.001 ? '#16a34a' : '#dc2626';
+  }
 }
 
 
@@ -2723,6 +2803,8 @@ function renderTable() {
   document.getElementById('grandTotal').textContent = formatCurrency(total).replace('$', '');
   // Keep suggestions footer in sync with summary-box totals
   try { updateLaborSuggestionsFooter(); } catch (_) {}
+  // Update payment terms breakdown amounts
+  try { updatePaymentTermsUI(); } catch (_) {}
 }
 
 function capitalizeCategory(category) {
@@ -3209,9 +3291,10 @@ function updateTotalsPreviewWithEdit(editIndex) {
   const tax = 0;
   const total = subtotal + tax;
 
-  // ✅ Calculate milestone amounts
-const total30 = (total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
-const total10 = (total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
+  // ✅ Calculate milestone amounts from editable percentages
+  const percs = (typeof getPaymentPercentagesFromInputs === 'function') ? getPaymentPercentagesFromInputs() : [30,30,30,10];
+  const labels = ['project start','50% project completion','75% project completion','final completion'];
+  const amounts = percs.map(p => (total * (p/100)).toLocaleString(undefined, { minimumFractionDigits: 2 }));
 
 
   document.getElementById("quotePreviewContent").innerHTML = `
@@ -3259,10 +3342,7 @@ const total10 = (total * 0.10).toLocaleString(undefined, { minimumFractionDigits
   <h3>Payment Terms</h3>
   <p>The total project amount shall be paid in the following phases:</p>
   <ul style="margin-top: 10px; padding-left: 20px;">
-    <li><strong>30%</strong> at project start: <strong>$${total30}</strong></li>
-    <li><strong>30%</strong> at 50% project completion: <strong>$${total30}</strong></li>
-    <li><strong>30%</strong> at 75% project completion: <strong>$${total30}</strong></li>
-    <li><strong>10%</strong> at final completion: <strong>$${total10}</strong></li>
+    ${percs.map((p, i) => `<li><strong>${Number(p).toFixed(1)}%</strong> at ${labels[i]}: <strong>$${amounts[i]}</strong></li>`).join('')}
   </ul>
   <p style="margin-top: 10px;">All payments are due within 7 days of invoice unless otherwise agreed upon in writing. Late payments may be subject to additional fees.</p>
 </div>
@@ -3343,6 +3423,11 @@ async function loadQuoteForEditing(quoteId) {
     // Set discount and tax values
     document.getElementById('inputDiscount').value = quote.totals?.discount || 0;
     document.getElementById('inputTax').value = quote.totals?.tax || 0;
+
+    // Restore payment terms if present
+    if (quote.paymentTerms && Array.isArray(quote.paymentTerms.percentages)) {
+      try { setPaymentPercentages(quote.paymentTerms.percentages); } catch(_) {}
+    }
     
     // Fill in line items (preserve markup if present)
     lineItems = quote.lineItems.map(item => ({
@@ -3361,6 +3446,8 @@ async function loadQuoteForEditing(quoteId) {
     
     // Render the table with the line items
     renderTable();
+  // Ensure payment terms amounts reflect loaded totals
+  try { updatePaymentTermsUI(); } catch(_) {}
     
     // If client signature name was stored, restore it
     if (quote.to.name) {
@@ -3426,6 +3513,9 @@ function saveQuote() {
       discount: parseFloat(document.getElementById('discount').textContent.replace(/,/g, '')),
       tax: parseFloat(document.getElementById('tax').textContent.replace(/,/g, '')),
       total: parseFloat(document.getElementById('grandTotal').textContent.replace(/,/g, ''))
+    },
+    paymentTerms: {
+      percentages: (typeof getPaymentPercentagesFromInputs === 'function') ? getPaymentPercentagesFromInputs() : [30,30,30,10]
     }
   };
   
@@ -3555,10 +3645,11 @@ async function showQuoteDetail(id) {
         const detail = document.getElementById('quoteDetailContent');
         detail.setAttribute('data-id', q._id);
 
-        // ✅ Add this block to calculate dollar amounts
+  // ✅ Calculate milestone amounts using saved or default percentages
 const total = parseFloat(q.totals.total || 0);
-const total30 = (total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
-const total10 = (total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
+const percsDetail = (q.paymentTerms && Array.isArray(q.paymentTerms.percentages)) ? q.paymentTerms.percentages : [30,30,30,10];
+const labelsDetail = ['project start','50% project completion','75% project completion','final completion'];
+const amountsDetail = percsDetail.map(p => (total * (p/100)).toLocaleString(undefined, { minimumFractionDigits: 2 }));
 
 
 const signatureClientInput = document.getElementById("signatureClientName");
@@ -3623,10 +3714,7 @@ const clientSignatureName = signatureClientInput?.value || q.to?.name || "______
   <h3>Payment Terms</h3>
   <p>The total project amount shall be paid in the following phases:</p>
   <ul style="margin-top: 10px; padding-left: 20px;">
-    <li><strong>30%</strong> at project start: <strong>$${total30}</strong></li>
-    <li><strong>30%</strong> at 50% project completion: <strong>$${total30}</strong></li>
-    <li><strong>30%</strong> at 75% project completion: <strong>$${total30}</strong></li>
-    <li><strong>10%</strong> at final completion: <strong>$${total10}</strong></li>
+    ${percsDetail.map((p, i) => `<li><strong>${Number(p).toFixed(1)}%</strong> at ${labelsDetail[i]}: <strong>$${amountsDetail[i]}</strong></li>`).join('')}
   </ul>
   <p style="margin-top: 10px;">All payments are due within 7 days of invoice unless otherwise agreed upon in writing. Late payments may be subject to additional fees.</p>
 </div>
