@@ -779,6 +779,10 @@ const quoteSchema = new mongoose.Schema({
     enum: ['Draft', 'Sent', 'Approved'],
     default: 'Draft'
   },
+  // ✅ Store editable payment term percentages for milestones (frontend uses 4 by default)
+  paymentTerms: {
+    percentages: { type: [Number], default: [30, 30, 30, 10] }
+  },
    payments: [
     {
       label: String,
@@ -4552,6 +4556,14 @@ app.post('/api/quotes', async (req, res) => {
         return { ...item, markup, laborCost, materialCost };
       });
     }
+    // Ensure paymentTerms exists with percentages if provided by client
+    if (req.body.paymentTerms && Array.isArray(req.body.paymentTerms.percentages)) {
+      const cleaned = req.body.paymentTerms.percentages
+        .map(n => Number(n))
+        .filter(n => Number.isFinite(n))
+        .map(n => Math.max(0, Math.min(100, n)));
+      req.body.paymentTerms = { percentages: cleaned };
+    }
     const newQuote = new Quote(req.body);
     const savedQuote = await newQuote.save();
     res.status(201).json(savedQuote);
@@ -4615,7 +4627,7 @@ app.put('/api/quotes/:id', async (req, res) => {
   try {
     const quoteId = req.params.id;
     const {
-      to, from, quoteNumber, date, validTill, notes, lineItems, status, totals, paymentSchedules // 👈 add paymentSchedules
+      to, from, quoteNumber, date, validTill, notes, lineItems, status, totals, paymentSchedules, paymentTerms // 👈 include paymentTerms
     } = req.body;
 
     if (!to?.name || !Array.isArray(lineItems) || lineItems.length === 0) {
@@ -4649,6 +4661,48 @@ app.put('/api/quotes/:id', async (req, res) => {
     };
     if (status) updateFields.status = status;
     if (paymentSchedules) updateFields.paymentSchedules = paymentSchedules; // 👈 add this
+    if (paymentTerms && Array.isArray(paymentTerms.percentages)) {
+      const cleaned = paymentTerms.percentages
+        .map(n => Number(n))
+        .filter(n => Number.isFinite(n))
+        .map(n => Math.max(0, Math.min(100, n)));
+      updateFields.paymentTerms = { percentages: cleaned };
+      // 🔁 Auto-regenerate base payments schedule (legacy payments array) ONLY if no payments are Paid yet
+      // and client did not explicitly send a payments array in this request.
+      // This keeps existing paid history intact but syncs future milestone amounts to new percentages.
+      if (!req.body.payments) {
+          const existing = await Quote.findById(quoteId).select('payments paymentTerms totals paymentSchedules').lean();
+          if (existing) {
+            const anyPaidLegacy = Array.isArray(existing.payments) && existing.payments.some(p => p.status === 'Paid');
+            const anyPaidSchedules = Array.isArray(existing.paymentSchedules) && existing.paymentSchedules.some(s => Array.isArray(s.payments) && s.payments.some(p => p.status === 'Paid'));
+            const anyPaid = anyPaidLegacy || anyPaidSchedules;
+            if (!anyPaid) {
+              const percsForSchedule = cleaned.slice(0, 4);
+              const totalForSchedule = Number(updateFields.totals?.total || existing.totals?.total || 0);
+              const stageSuffixes = [
+                'at project start',
+                'at 50% completion',
+                'at 75% completion',
+                'at final completion'
+              ];
+              const regeneratedPayments = percsForSchedule.map((pct, i) => ({
+                label: `${pct}% ${stageSuffixes[i] || 'milestone'}`,
+                amount: +(totalForSchedule * (pct / 100)).toFixed(2),
+                status: 'Pending',
+                date: ''
+              }));
+              updateFields.payments = regeneratedPayments;
+              updateFields.paymentSchedules = [
+                {
+                  name: 'Payment Schedule',
+                  description: 'Auto-generated from payment terms',
+                  payments: regeneratedPayments
+                }
+              ];
+            }
+          }
+      }
+    }
 
     const updatedQuote = await Quote.findByIdAndUpdate(quoteId, updateFields, { new: true });
 
@@ -4838,6 +4892,52 @@ app.put('/api/quotes/:id/payments', async (req, res) => {
   }
 });
 
+// Update only the payment terms percentages for a quote
+app.patch('/api/quotes/:id/payment-terms', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const percs = req.body?.percentages;
+    if (!Array.isArray(percs)) {
+      return res.status(400).json({ message: 'percentages array is required' });
+    }
+    const cleaned = percs
+      .map(n => Number(n))
+      .filter(n => Number.isFinite(n))
+      .map(n => Math.max(0, Math.min(100, n)));
+
+  // Retrieve existing to decide whether to regenerate payments and schedules
+  const existing = await Quote.findById(id).select('payments totals paymentTerms paymentSchedules').lean();
+    if (!existing) return res.status(404).json({ message: 'Quote not found' });
+    const anyPaidLegacy = Array.isArray(existing.payments) && existing.payments.some(p => p.status === 'Paid');
+    const anyPaidSchedules = Array.isArray(existing.paymentSchedules) && existing.paymentSchedules.some(s => Array.isArray(s.payments) && s.payments.some(p => p.status === 'Paid'));
+    const anyPaid = anyPaidLegacy || anyPaidSchedules;
+    const updateOps = { 'paymentTerms.percentages': cleaned };
+    if (!anyPaid) {
+      const totalForSchedule = Number(existing.totals?.total || 0);
+      const stageSuffixes = [
+        'at project start',
+        'at 50% completion',
+        'at 75% completion',
+        'at final completion'
+      ];
+      const regenerated = cleaned.slice(0, 4).map((pct, i) => ({
+        label: `${pct}% ${stageSuffixes[i] || 'milestone'}`,
+        amount: +(totalForSchedule * (pct / 100)).toFixed(2),
+        status: 'Pending',
+        date: ''
+      }));
+      updateOps['payments'] = regenerated;
+      updateOps['paymentSchedules'] = [{ name: 'Payment Schedule', description: 'Auto-generated from payment terms', payments: regenerated }];
+    }
+
+  const updated = await Quote.findByIdAndUpdate(id, { $set: updateOps }, { new: true });
+  if (!updated) return res.status(404).json({ message: 'Quote not found' });
+  res.json({ paymentTerms: updated.paymentTerms || { percentages: [] }, payments: updated.payments || [], paymentSchedules: updated.paymentSchedules || [] });
+  } catch (err) {
+    console.error('Error updating payment terms:', err);
+    res.status(500).json({ message: 'Failed to update payment terms' });
+  }
+});
 
 // Get all labor cost suggestions
 app.get('/api/labor-costs', async (req, res) => {
