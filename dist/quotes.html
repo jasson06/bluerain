@@ -836,6 +836,9 @@
   overflow-y: auto;
   box-sizing: border-box;
 }
+
+
+
   </style>
 </head>
 <body>
@@ -950,6 +953,9 @@
   </div>
 </div>
 
+
+
+
 <div id="paymentsModal" class="modal">
   <div class="modal-content" style="max-width: 700px;">
     <div class="modal-header">
@@ -972,6 +978,7 @@
     <button id="selectScheduleBtn" style="margin-top: 18px; background: #0ea5e9;">Select</button>
   </div>
 </div>
+
 
 <!-- Import Quote Modal -->
 <div id="importQuoteModal" class="modal" style="display:none; z-index:20001;">
@@ -1003,7 +1010,7 @@
     </form>
   </div>
 </div>
-  
+
 <!-- Toast Notification -->
 <div id="toast" style="
   position: fixed;
@@ -1128,6 +1135,55 @@ function getPaymentStatus(payments) {
   if (anyOverdue) return "Overdue";
   if (anyPaid) return "Partial";
   return "Pending";
+}
+
+// ---------- Payment Terms Helpers (use saved percentages if available) ----------
+function getPaymentPercentages(quote) {
+  const percs = Array.isArray(quote?.paymentTerms?.percentages)
+    ? quote.paymentTerms.percentages
+    : [30, 30, 30, 10];
+  // sanitize numbers and clamp 0-100
+  return percs.map(p => {
+    const n = Number(p);
+    return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 0;
+  });
+}
+
+function getStageLabels() {
+  // Keep legacy stage labels aligned to the 4 default stages
+  return [
+    "at project start",
+    "at 50% completion",
+    "at 75% completion",
+    "at final completion"
+  ];
+}
+
+function formatMoney(n) {
+  return Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function buildPaymentTermsListHTML(quote, percentages) {
+  const labels = getStageLabels();
+  const total = Number(quote?.totals?.total) || 0;
+  const items = percentages.slice(0, 4).map((pct, i) => {
+    const amt = total * (pct / 100);
+    const label = labels[i] || `Payment ${i + 1}`;
+    return `<li><strong>${pct}%</strong> ${label}: <strong>$${formatMoney(amt)}</strong></li>`;
+  }).join("");
+  return `<ul>${items}</ul>`;
+}
+
+function buildDefaultPaymentsSchedule(quote, percentages) {
+  const stageSuffixes = getStageLabels();
+  const total = Number(quote?.totals?.total) || 0;
+  const percs = percentages.slice(0, 4);
+  return percs.map((pct, i) => ({
+    label: `${pct}% ${stageSuffixes[i] || "payment"}`,
+    amount: +(total * (pct / 100)).toFixed(2),
+    status: "Pending",
+    date: ""
+  }));
 }
 
 function renderQuotes(quotes) {
@@ -1423,9 +1479,10 @@ async function viewQuote(id) {
     const res = await fetch(`/api/quotes/${id}`);
     const q = await res.json();
     
-    let schedule = q.payments || [ ...defaultSchedule ];
-    const total30 = (q.totals.total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
-    const total10 = (q.totals.total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
+    const percs = getPaymentPercentages(q);
+    let schedule = (q.payments && q.payments.length > 0)
+      ? q.payments
+      : buildDefaultPaymentsSchedule(q, percs);
 
 
     // --- Group line items by category (copied from downloadQuoteAsPDF) ---
@@ -1451,43 +1508,44 @@ async function viewQuote(id) {
 
     // --- Render grouped line items as HTML ---
     let groupedLineItemsHTML = '';
-    Object.keys(grouped).forEach(category => {
-      groupedLineItemsHTML += `
-        <tr>
-          <td colspan="5" style="
-            background: #f1f5f9;
-            font-weight: 500;
-            color: #217dbb;
-            font-size: 1.06rem;
-            letter-spacing: 0.5px;
-            padding: 12px 0 12px 16px;
-            margin-top: 8px;
-            ">
-            ${capitalizeCategory(category)}
-          </td>
-        </tr>
-      `;
-      grouped[category].forEach(item => {
-        groupedLineItemsHTML += `
-          <tr>
-            <td>${item.name}</td>
-            <td>${item.description}</td>
-            <td>$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-            <td>${item.qty}</td>
-            <td>$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-          </tr>
-        `;
-      });
-    });
+Object.keys(grouped).forEach(category => {
+  // Calculate category total
+  const categoryTotal = grouped[category].reduce((sum, item) => sum + (item.rate * item.qty), 0);
 
-      let payments = (q.payments && q.payments.length > 0)
+  groupedLineItemsHTML += `
+    <tr>
+      <td colspan="4" style="
+        background: #f1f5f9;
+        font-weight: 500;
+        color: #217dbb;
+        font-size: 1.06rem;
+        letter-spacing: 0.5px;
+        padding: 12px 0 12px 16px;
+        margin-top: 8px;
+        ">
+        ${capitalizeCategory(category)}
+      </td>
+      <td style="background: #f1f5f9; font-weight: bold; color: #217dbb;">
+        $${categoryTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+      </td>
+    </tr>
+  `;
+  grouped[category].forEach(item => {
+    groupedLineItemsHTML += `
+      <tr>
+        <td>${item.name}</td>
+        <td>${item.description}</td>
+        <td>$${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+        <td>${item.qty}</td>
+        <td>$${(item.rate * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+      </tr>
+    `;
+  });
+});
+
+    let payments = (q.payments && q.payments.length > 0)
   ? q.payments
-  : [
-      { label: "30% at project start", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
-      { label: "30% at 50% completion", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
-      { label: "30% at 75% completion", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
-      { label: "10% at final completion", amount: +(q.totals.total * 0.1).toFixed(2), status: "Pending", date: "" }
-    ];
+  : buildDefaultPaymentsSchedule(q, percs);
 
 const totalPaid = payments
   .filter(p => p.status === "Paid")
@@ -1528,6 +1586,7 @@ const paymentsTable = `
   </div>
 `;
 
+    const paymentTermsHTML = buildPaymentTermsListHTML(q, percs);
     const html = `
       <div style="background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(30,41,59,0.10); padding: 32px 28px 24px 28px; max-width: 865px; margin: 32px auto; font-family: 'Segoe UI',sans-serif;">
         <div class="modal-header" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #e5e7eb; padding-bottom: 12px; margin-bottom: 18px;">
@@ -1580,6 +1639,11 @@ const paymentsTable = `
           <p style="margin: 6px 0 0 0; color:#0f172a;">${q.notes || 'None'}</p>
         </div>
         ${paymentsTable}
+        <div class="section" style="margin-top: 24px; background:#f8fafc; border-radius:8px; padding: 14px 18px;">
+          <h3 style="color:#217dbb; font-size:1.08rem; margin-top:0;">Payment Terms</h3>
+          ${paymentTermsHTML}
+          <p style="margin-top:8px; color:#475569;">All payments are due within 7 days of invoice unless otherwise agreed in writing. Late payments may be subject to additional fees.</p>
+        </div>
         <div style="margin-top: 30px; background: #f1f5f9; border-radius: 8px; padding: 18px 18px 10px 18px;">
           <h3 style="color:#217dbb; font-size:1.08rem; margin-top:0;">Agreement</h3>
           <p style="margin-bottom:8px;">If you accept this quote, please sign and return.</p>
@@ -1798,9 +1862,8 @@ async function downloadQuoteAsPDF(id) {
   try {
     const res = await fetch(`/api/quotes/${id}`);
     const q = await res.json();
-
-    const total30 = (q.totals.total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
-    const total10 = (q.totals.total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
+    const percs = getPaymentPercentages(q);
+    const paymentTermsHTML = buildPaymentTermsListHTML(q, percs);
     const clientNameSafe = q.to.name.replace(/[^a-z0-9]/gi, '_'); // sanitize for safe filename
 
     // --- Group line items by category ---
@@ -1968,12 +2031,7 @@ async function downloadQuoteAsPDF(id) {
             </div>
 
             <h4>Payment Terms</h4>
-            <ul>
-              <li><strong>30%</strong> at project start: <strong>$${total30}</strong></li>
-              <li><strong>30%</strong> at 50% completion: <strong>$${total30}</strong></li>
-              <li><strong>30%</strong> at 75% completion: <strong>$${total30}</strong></li>
-              <li><strong>10%</strong> at final completion: <strong>$${total10}</strong></li>
-            </ul>
+            ${paymentTermsHTML}
             <p>All payments are due within 7 days of invoice unless otherwise agreed in writing. Late payments may be subject to additional fees.</p>
 
             <div class="section" style="margin-top: 30px;">
@@ -2275,12 +2333,14 @@ async function downloadInvoiceWithSchedule(q, selectedPayments) {
     } else if (q.payments && q.payments.length > 0) {
       allPayments = q.payments;
     } else {
-      allPayments = [
-        { label: "30% at project start", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
-        { label: "30% at 50% completion", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
-        { label: "30% at 75% completion", amount: +(q.totals.total * 0.3).toFixed(2), status: "Pending", date: "" },
-        { label: "10% at final completion", amount: +(q.totals.total * 0.1).toFixed(2), status: "Pending", date: "" }
-      ];
+      const percs = getPaymentPercentages(q);
+      allPayments = buildDefaultPaymentsSchedule(q, percs);
+    }
+
+    // Fallback: if paymentSchedules existed but produced zero payments, regenerate from terms
+    if (allPayments.length === 0) {
+      const percs = getPaymentPercentages(q);
+      allPayments = buildDefaultPaymentsSchedule(q, percs);
     }
 
     // Find which payments are selected (by label+amount+date for uniqueness)
@@ -2572,9 +2632,8 @@ async function printQuote(id) {
   try {
     const res = await fetch(`/api/quotes/${id}`);
     const q = await res.json();
-
-    const total30 = (q.totals.total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
-    const total10 = (q.totals.total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
+    const percs = getPaymentPercentages(q);
+    const paymentTermsHTML = buildPaymentTermsListHTML(q, percs);
 
     const items = q.lineItems.map(item => `
       <tr>
@@ -2708,12 +2767,7 @@ async function printQuote(id) {
 
         <div class="section">
           <h3>Payment Terms</h3>
-          <ul style="margin-top: 10px; padding-left: 20px;">
-            <li><strong>30%</strong> at project start: <strong>$${total30}</strong></li>
-            <li><strong>30%</strong> at 50% completion: <strong>$${total30}</strong></li>
-            <li><strong>30%</strong> at 75% completion: <strong>$${total30}</strong></li>
-            <li><strong>10%</strong> at final completion: <strong>$${total10}</strong></li>
-          </ul>
+          ${paymentTermsHTML}
           <p>Each payment is due within 7 days of invoice unless otherwise agreed in writing.</p>
         </div>
 
@@ -2770,9 +2824,8 @@ async function shareQuote(id) {
   try {
     const res = await fetch(`/api/quotes/${id}`);
     const q = await res.json();
-
-    const total30 = (q.totals.total * 0.30).toLocaleString(undefined, { minimumFractionDigits: 2 });
-    const total10 = (q.totals.total * 0.10).toLocaleString(undefined, { minimumFractionDigits: 2 });
+    const percs = getPaymentPercentages(q);
+    const paymentTermsHTML = buildPaymentTermsListHTML(q, percs);
 
     const items = q.lineItems.map(item => `
       <tr>
@@ -2920,12 +2973,7 @@ async function shareQuote(id) {
 
         <div class="payment-terms">
           <h3>Payment Terms</h3>
-          <ul style="margin-top: 10px; padding-left: 20px;">
-            <li><strong>30%</strong> at project start: <strong>$${total30}</strong></li>
-            <li><strong>30%</strong> at 50% completion: <strong>$${total30}</strong></li>
-            <li><strong>30%</strong> at 75% completion: <strong>$${total30}</strong></li>
-            <li><strong>10%</strong> at final completion: <strong>$${total10}</strong></li>
-          </ul>
+          ${paymentTermsHTML}
           <p style="margin-top: 10px;">Each payment is due within 7 days of invoice unless otherwise agreed in writing. Late payments may be subject to additional fees.</p>
         </div>
 
@@ -3080,16 +3128,12 @@ async function openPaymentsModal(quoteId) {
       return;
     }
 
-    // Default schedule if not present
+    // Default schedule uses saved payment term percentages if not present
 const total = q.totals && q.totals.total ? q.totals.total : 0;
+const percs = getPaymentPercentages(q);
 let schedule = (q.payments && q.payments.length > 0)
   ? q.payments
-  : [
-      { label: "30% at project start", amount: +(total * 0.3).toFixed(2), status: "Pending", date: "" },
-      { label: "30% at 50% completion", amount: +(total * 0.3).toFixed(2), status: "Pending", date: "" },
-      { label: "30% at 75% completion", amount: +(total * 0.3).toFixed(2), status: "Pending", date: "" },
-      { label: "10% at final completion", amount: +(total * 0.1).toFixed(2), status: "Pending", date: "" }
-    ];
+  : buildDefaultPaymentsSchedule(q, percs);
 
 const totalPaid = schedule
   .filter(p => p.status === "Paid")
@@ -3191,6 +3235,7 @@ const newSchedule = schedule.map((p, i) => ({
 function closePaymentsModal() {
   document.getElementById('paymentsModal').style.display = 'none';
 }
+
 
 // Toggle menu on + button click
   document.getElementById('addQuoteBtn').onclick = function(e) {
@@ -3403,6 +3448,7 @@ document.getElementById('importQuoteForm').onsubmit = async function(e) {
     hideLoader();
   }
 };
+
 
   </script>
 </body>
