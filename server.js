@@ -1020,6 +1020,8 @@ leaseRenewal: { type: String, enum: ['renew', 'terminate'], default: 'renew' },
   leaseEnd: Date,
   baseRent: { type: Number, default: 0 },
   deposit: { type: Number, default: 0 },
+  // Track how much of the security deposit has been paid
+  depositPaid: { type: Number, default: 0 },
   waterFee: { type: Number, default: 0 },      // <-- Add this line
   trashFee: { type: Number, default: 0 },      // <-- Add this line
   adminFee: { type: Number, default: 0 }, 
@@ -1089,7 +1091,21 @@ const paymentSchema = new mongoose.Schema({
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
   tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: true },
   unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit' }, // <-- Add this line
-  type: { type: String, enum: ['rent', 'hub'], required: true },
+  type: { type: String, enum: ['rent', 'hub', 'partial', 'adjustment', 'custom'], required: true },
+  customType: { type: String, default: '' }, // when type === 'custom'
+  // What the payment is applied to: rent (monthly), deposit (security), or fee (one-off)
+  applyTo: { type: String, enum: ['rent', 'deposit', 'fee', 'late', 'water', 'electric', 'trash', 'admin', 'other'], default: 'rent' },
+  // For fee payments: categorize the fee and optionally provide a label
+  feeType: { type: String, default: '' },
+  feeLabel: { type: String, default: '' },
+  // Optional period identifier (e.g., '2025-11' or a Date) when the payment applies to a specific month
+  periodMonth: { type: String, default: '' },
+  // Optional free-form note (e.g., credit reason, memo)
+  note: { type: String, default: '' },
+  // Credit carry forward: if true and balance < 0, mark credit to auto-apply next month
+  carryForward: { type: Boolean, default: false },
+  // How much prior credit was applied to this month
+  appliedCredit: { type: Number, default: 0 },
   amount: { type: Number, required: true },
   method: { type: String, enum: ['cash', 'check', 'bank', 'online'], required: true },
   date: { type: Date, required: true },
@@ -6045,17 +6061,31 @@ app.get('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
 // DELETE a payment
 app.delete('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
   try {
-    const payment = await Payment.findOneAndDelete({
-      _id: req.params.paymentId,
-      projectId: req.params.propertyId
-    });
+    const payment = await Payment.findOne({ _id: req.params.paymentId, projectId: req.params.propertyId });
     if (!payment) return res.status(404).json({ message: 'Payment not found' });
-    res.json({ message: 'Payment deleted successfully' });
+
+    // If payment applied to deposit, roll back tenant.depositPaid
+    if (payment.applyTo === 'deposit') {
+      try {
+        const t = await Tenant.findById(payment.tenantId);
+        if (t) {
+          t.depositPaid = Math.max(0, (t.depositPaid || 0) - (payment.amount || 0));
+          await t.save();
+        }
+      } catch (err) {
+        console.error('Error rolling back tenant.depositPaid on payment delete:', err);
+      }
+    }
+
+  const wasCredit = (payment.amount || 0) < 0;
+  await payment.deleteOne();
+  res.json({ message: 'Payment deleted successfully', creditRemoved: wasCredit });
   } catch (error) {
     console.error('Error deleting payment:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 // POST a new payment (rent or HUB)
 // Helper to normalize incoming payment type to enum values
@@ -6063,20 +6093,77 @@ function normalizePaymentTypeServer(raw) {
   const t = String(raw || '').trim().toLowerCase();
   if (t === 'rent') return 'rent';
   if (['hub', 'section8', 'voucher', 'subsidy'].includes(t)) return 'hub';
+  if (['partial', 'adjustment', 'custom'].includes(t)) return t;
   return null;
 }
 
+// Utility: days in a given month/year
+function daysInMonth(year, monthIndex) { // monthIndex: 0-11
+  return new Date(year, monthIndex + 1, 0).getDate();
+}
 
-// POST a new payment (rent or HUB)
+// Compute prorated base rent for the first lease month (baseRent only)
+// Returns a number (rounded to 2 decimals) or null if not first month or data missing
+function computeFirstMonthProratedBaseRent(tenant, dateLike) {
+  try {
+    if (!tenant) return null;
+    const leaseStart = tenant.leaseStart ? new Date(tenant.leaseStart) : null;
+    if (!leaseStart || isNaN(leaseStart.getTime())) return null;
+    const d = new Date(dateLike);
+    if (!d || isNaN(d.getTime())) return null;
+    if (leaseStart.getFullYear() !== d.getFullYear() || leaseStart.getMonth() !== d.getMonth()) return null;
+    const base = Number(tenant.baseRent) || 0;
+    if (base <= 0) return 0;
+    const totalDays = daysInMonth(d.getFullYear(), d.getMonth());
+    const startDay = leaseStart.getDate();
+    const occupiedDays = Math.max(1, totalDays - (startDay - 1));
+    const daily = base / totalDays;
+    return Number((occupiedDays * daily).toFixed(2));
+  } catch {
+    return null;
+  }
+}
+
+// Compute expected rent amount for a given month
+// For the first lease month: prorate baseRent only per requirements
+// For subsequent months: full baseRent + recurring monthly fees
+function computeExpectedRentForMonth(tenant, dateLike, paymentType) {
+  const d = new Date(dateLike);
+  const isRentType = (paymentType === 'rent');
+  if (isRentType) {
+    const prorated = computeFirstMonthProratedBaseRent(tenant, d);
+    if (prorated !== null) {
+      return prorated; // base rent prorated for first month; exclude add-ons
+    }
+  }
+  // Default full monthly charges
+  return (
+    (Number(tenant.baseRent) || 0) +
+    (Number(tenant.waterFee) || 0) +
+    (Number(tenant.trashFee) || 0) +
+    (Number(tenant.adminFee) || 0) +
+    (tenant.additionalFee?.amount || 0) +
+    (tenant.pets?.hasPets ? (Number(tenant.pets.monthlyRent) || 0) : 0)
+  );
+}
+
 app.post('/api/properties/:propertyId/payments', async (req, res) => {
   try {
-      const { tenantId, unitId, amount, method, date, lateFee } = req.body;
+    const { tenantId, unitId, amount, method, date, lateFee, note, customType, carryForward } = req.body;
     const type = normalizePaymentTypeServer(req.body.type);
+    const applyTo = String(req.body.applyTo || 'rent').toLowerCase();
+    const feeType = req.body.feeType || '';
+    const feeLabel = req.body.feeLabel || '';
+    const periodMonth = req.body.periodMonth || '';
+
     if (!type) {
       return res.status(400).json({ message: 'Invalid payment type. Allowed: rent, hub' });
     }
     if (!tenantId || !type || !method || !date) {
       return res.status(400).json({ message: 'Missing required fields' });
+    }
+    if (!['rent', 'deposit', 'fee', 'late', 'water', 'electric', 'trash', 'admin', 'other'].includes(applyTo)) {
+      return res.status(400).json({ message: 'Invalid applyTo value. Allowed: rent, deposit, fee, late, water, electric, trash, admin, other' });
     }
 
     // Fetch tenant data to get rental details
@@ -6089,15 +6176,10 @@ app.post('/api/properties/:propertyId/payments', async (req, res) => {
     let expectedAmount = 0;
     let calculatedLateFee = 0;
 
-    if (type === 'rent') {
-      // For regular rent payment, include base rent and all recurring monthly fees
-      expectedAmount = 
-        (Number(tenant.baseRent) || 0) +
-        (Number(tenant.waterFee) || 0) +
-        (Number(tenant.trashFee) || 0) +
-        (Number(tenant.adminFee) || 0) +
-        (tenant.additionalFee?.amount || 0) +
-        (tenant.pets?.hasPets ? (Number(tenant.pets.monthlyRent) || 0) : 0);
+    // Default: rent logic (compute expected amount before credits)
+    if (applyTo === 'rent' && type === 'rent') {
+      // Prorate base rent for the first month based on tenant.leaseStart; otherwise full monthly charges
+      expectedAmount = computeExpectedRentForMonth(tenant, date, 'rent');
 
       // Calculate late fee if provided as percentage
       if (lateFee && lateFee > 0) {
@@ -6109,16 +6191,123 @@ app.post('/api/properties/:propertyId/payments', async (req, res) => {
           calculatedLateFee = lateFee;
         }
       }
-    } else if (type === 'hub') {
+    } else if (type === 'hub' && applyTo === 'rent') {
       // For HUB payments, use the HUB contribution amount
       expectedAmount = Number(tenant.hubContribution) || 0;
     }
+    // Use provided amount if specified, otherwise use calculated amount (for rent/hub)
+    let finalAmount = (amount !== undefined && amount !== null && amount !== '') ? Number(amount) : expectedAmount;
+    let appliedCredit = 0;
 
-    // Use provided amount if specified, otherwise use calculated amount
-    const finalAmount = amount || expectedAmount;
+    // Apply prior month credits automatically if first rent payment of the month
+    if (applyTo === 'rent') {
+      const paymentDateObj = new Date(date);
+      const monthStart = new Date(paymentDateObj.getFullYear(), paymentDateObj.getMonth(), 1);
+      const monthEnd = new Date(paymentDateObj.getFullYear(), paymentDateObj.getMonth() + 1, 0, 23, 59, 59, 999);
+      const existingRentPaymentsThisMonth = await Payment.find({
+        tenantId,
+        applyTo: 'rent',
+        date: { $gte: monthStart, $lte: monthEnd }
+      });
+      if (existingRentPaymentsThisMonth.length === 0) {
+        // Gather prior credits marked carryForward
+        const priorCredits = await Payment.find({
+          tenantId,
+          applyTo: 'rent',
+          carryForward: true,
+          date: { $lt: monthStart }
+        });
+        const creditTotal = priorCredits.reduce((s, p) => {
+          if (p.amount < 0) return s + Math.abs(p.amount);
+          if (p.balance < 0) return s + Math.abs(p.balance);
+          return s;
+        }, 0);
+        if (creditTotal > 0) {
+          const originalExpected = expectedAmount;
+          expectedAmount = Math.max(0, expectedAmount - creditTotal);
+          appliedCredit = Math.min(creditTotal, originalExpected); // amount actually consumed
+          // Adjust default finalAmount if user left amount blank (auto-calc scenario)
+          if (amount === undefined || amount === null || amount === '') {
+            finalAmount = expectedAmount; // after credit application
+          }
+        }
+      }
+    }
     const finalLateFee = calculatedLateFee;
 
-    // Calculate balance (expected - paid for this month)
+    // Handle different applyTo behaviors
+    if (applyTo === 'deposit') {
+      // For deposit payments, compute deposit remaining and update tenant.depositPaid
+      const expectedDeposit = Number(tenant.deposit) || 0;
+
+      // Sum previous deposit payments
+      const prevDepositPayments = await Payment.find({ tenantId, applyTo: 'deposit' });
+      const totalPrevDeposit = prevDepositPayments.reduce((s, p) => s + (p.amount || 0), 0);
+
+      // If amount not provided, assume remaining deposit
+      if (!amount) finalAmount = Math.max(0, expectedDeposit - totalPrevDeposit);
+
+      const depositBalance = expectedDeposit - (totalPrevDeposit + finalAmount);
+
+      const payment = new Payment({
+        projectId: req.params.propertyId,
+        tenantId,
+        unitId,
+        type,
+        applyTo: 'deposit',
+        amount: finalAmount,
+        method,
+        date,
+        lateFee: finalLateFee,
+        balance: depositBalance, // can be negative if overpaid (credit)
+        note: note || '',
+        customType: type === 'custom' ? (customType || '').substring(0,60) : '',
+        carryForward: Boolean(carryForward) && finalAmount < 0,
+        appliedCredit
+      });
+
+      await payment.save();
+
+      // Update tenant.depositPaid
+      tenant.depositPaid = (tenant.depositPaid || 0) + finalAmount;
+      await tenant.save();
+
+      return res.status(201).json({
+        payment,
+        calculationDetails: {
+          expectedDeposit,
+          totalPrevDeposit,
+          depositBalance
+        }
+      });
+    }
+
+    if (applyTo === 'fee') {
+      // One-off fee payment: record feeType/label, no monthly balance
+      const payment = new Payment({
+        projectId: req.params.propertyId,
+        tenantId,
+        unitId,
+        type,
+        applyTo: 'fee',
+        feeType,
+        feeLabel,
+        periodMonth,
+        amount: finalAmount,
+        method,
+        date,
+        lateFee: finalLateFee,
+        balance: 0,
+        note: note || '',
+        customType: type === 'custom' ? (customType || '').substring(0,60) : '',
+        carryForward: Boolean(carryForward) && finalAmount < 0,
+        appliedCredit
+      });
+      await payment.save();
+      return res.status(201).json({ payment });
+    }
+
+    // Default: rent/hub monthly logic
     const paymentDate = new Date(date);
     const monthStart = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), 1);
     const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
@@ -6126,11 +6315,12 @@ app.post('/api/properties/:propertyId/payments', async (req, res) => {
     // Get all payments for this tenant in the current month
     const paymentsThisMonth = await Payment.find({
       tenantId,
+      applyTo: 'rent',
       date: { $gte: monthStart, $lte: monthEnd }
     });
 
     // Calculate total paid (excluding this payment)
-    const totalPaid = paymentsThisMonth.reduce((sum, p) => sum + p.amount, 0);
+  const totalPaid = paymentsThisMonth.reduce((sum, p) => sum + Math.abs(p.amount || 0), 0); // count credits positively
 
     // Calculate total late fees (excluding this payment)
     const totalLateFees = paymentsThisMonth.reduce((sum, p) => sum + (p.lateFee || 0), 0);
@@ -6138,18 +6328,23 @@ app.post('/api/properties/:propertyId/payments', async (req, res) => {
     // Calculate balance:
     // (Expected amount + total late fees) - (already paid + current payment + current late fee)
     const totalMonthlyCharges = expectedAmount + totalLateFees + finalLateFee;
-    const balance = totalMonthlyCharges - (totalPaid + finalAmount);
+  const balance = totalMonthlyCharges - (totalPaid + Math.abs(finalAmount));
 
     const payment = new Payment({
       projectId: req.params.propertyId,
       tenantId,
       unitId,
       type,
+      applyTo: 'rent',
       amount: finalAmount,
       method,
       date,
       lateFee: finalLateFee,
-      balance: balance > 0 ? balance : 0 // Don't show negative balance
+      balance, // allow negative (credit forward)
+      note: note || '',
+      customType: type === 'custom' ? (customType || '').substring(0,60) : '',
+      carryForward: Boolean(carryForward) && finalAmount < 0,
+      appliedCredit
     });
 
     await payment.save();
@@ -6161,7 +6356,8 @@ app.post('/api/properties/:propertyId/payments', async (req, res) => {
         calculatedLateFee: finalLateFee,
         totalMonthlyCharges,
         totalPaidPreviously: totalPaid,
-        balance
+        balance,
+        appliedCredit
       }
     });
   } catch (error) {
@@ -6173,27 +6369,186 @@ app.post('/api/properties/:propertyId/payments', async (req, res) => {
 // --- Update PUT /api/properties/:propertyId/payments/:paymentId ---
 app.put('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
   try {
-       const { tenantId, unitId, amount, method, date, lateFee } = req.body;
-    const type = normalizePaymentTypeServer(req.body.type);
-    if (!type) {
-      return res.status(400).json({ message: 'Invalid payment type. Allowed: rent, hub' });
+    const payment = await Payment.findById(req.params.paymentId);
+    if (!payment) return res.status(404).json({ message: 'Payment not found' });
+
+    // Normalize incoming fields
+    const amount = req.body.amount;
+    const method = req.body.method;
+    const date = req.body.date;
+  const lateFee = req.body.lateFee;
+  const note = req.body.note;
+  const customType = req.body.customType;
+  const carryForward = req.body.carryForward;
+    const newType = normalizePaymentTypeServer(req.body.type) || payment.type;
+    const newApplyTo = String(req.body.applyTo || payment.applyTo || 'rent').toLowerCase();
+    const newFeeType = req.body.feeType || payment.feeType || '';
+    const newFeeLabel = req.body.feeLabel || payment.feeLabel || '';
+    const newPeriodMonth = req.body.periodMonth || payment.periodMonth || '';
+
+    // Adjust tenant.depositPaid if applyTo or amount changed
+    const tenant = await Tenant.findById(payment.tenantId);
+    if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
+
+    const oldApplyTo = payment.applyTo || 'rent';
+    const oldAmount = payment.amount || 0;
+    const newAmount = amount !== undefined ? Number(amount) : oldAmount;
+
+    if (oldApplyTo === 'deposit') {
+      tenant.depositPaid = Math.max(0, (tenant.depositPaid || 0) - oldAmount);
     }
-    if (!tenantId || !type || !method || !date) {
-      return res.status(400).json({ message: 'Missing required fields' });
+    if (newApplyTo === 'deposit') {
+      tenant.depositPaid = (tenant.depositPaid || 0) + newAmount;
+    }
+    await tenant.save();
+
+    // Update payment fields
+    payment.type = newType;
+    payment.applyTo = newApplyTo;
+    payment.feeType = newFeeType;
+    payment.feeLabel = newFeeLabel;
+    payment.periodMonth = newPeriodMonth;
+    if (amount !== undefined) payment.amount = newAmount;
+    if (method) payment.method = method;
+    if (date) payment.date = date;
+  if (lateFee !== undefined) payment.lateFee = lateFee;
+  if (note !== undefined) payment.note = note;
+    if (payment.type === 'custom' && customType !== undefined) {
+      payment.customType = (customType || '').substring(0,60);
+    }
+    if (carryForward !== undefined) {
+      payment.carryForward = Boolean(carryForward) && payment.amount < 0;
     }
 
-    // Fetch tenant data to get rental details
+    // Recalculate balance for rent payments only
+    if (payment.applyTo === 'rent') {
+      const paymentDate = new Date(payment.date);
+      const monthStart = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), 1);
+      const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
+      const tenantData = await Tenant.findById(payment.tenantId);
+  let expectedAmount = 0;
+      let calculatedLateFee = 0;
+      if (payment.type === 'rent') {
+        // Recompute with proration for first month; otherwise full monthly charges
+        expectedAmount = computeExpectedRentForMonth(tenantData, payment.date, 'rent');
+        if (payment.lateFee && payment.lateFee > 0) calculatedLateFee = payment.lateFee;
+      } else if (payment.type === 'hub') {
+        expectedAmount = Number(tenantData.hubContribution) || 0;
+        if (payment.lateFee && payment.lateFee > 0) calculatedLateFee = payment.lateFee;
+      }
+      const paymentsThisMonth = await Payment.find({
+        tenantId: payment.tenantId,
+        applyTo: 'rent',
+        date: { $gte: monthStart, $lte: monthEnd },
+        _id: { $ne: payment._id }
+      });
+  const totalPaid = paymentsThisMonth.reduce((sum, p) => sum + Math.abs(p.amount || 0), 0);
+      const totalLateFees = paymentsThisMonth.reduce((sum, p) => sum + (p.lateFee || 0), 0);
+      const totalMonthlyCharges = expectedAmount + totalLateFees + calculatedLateFee;
+  const balance = totalMonthlyCharges - (totalPaid + Math.abs(payment.amount));
+  payment.balance = balance; // allow negative credit
+    } else if (payment.applyTo === 'deposit') {
+      // Set balance to remaining deposit
+      const tenantData = await Tenant.findById(payment.tenantId);
+      const expectedDeposit = Number(tenantData.deposit) || 0;
+      // Sum all deposit payments excluding this one (we already updated amount above)
+      const otherDepositPayments = await Payment.find({ tenantId: payment.tenantId, applyTo: 'deposit', _id: { $ne: payment._id } });
+      const totalOther = otherDepositPayments.reduce((s, p) => s + (p.amount || 0), 0);
+      const depositBalance = expectedDeposit - (totalOther + payment.amount);
+  payment.balance = depositBalance; // can be negative if overpaid deposit
+    } else {
+      // Fee entries have no running balance
+      payment.balance = 0;
+    }
+
+    await payment.save();
+    return res.json({ payment });
+  } catch (error) {
+    console.error('Error updating payment:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Apply a credit to a target (rent/deposit/fees) by creating an adjustment payment and consuming credit
+app.post('/api/properties/:propertyId/payments/:creditPaymentId/apply-credit', async (req, res) => {
+  try {
+    const { propertyId, creditPaymentId } = req.params;
+    const { tenantId, unitId, amount, targetApplyTo, feeType, feeLabel, periodMonth, note } = req.body;
+    const applyTo = String(targetApplyTo || 'rent').toLowerCase();
+    if (!['rent','deposit','fee','late','water','electric','trash','admin','other'].includes(applyTo)) {
+      return res.status(400).json({ message: 'Invalid target applyTo' });
+    }
+    if (!tenantId) return res.status(400).json({ message: 'tenantId is required' });
+
+    const credit = await Payment.findOne({ _id: creditPaymentId, projectId: propertyId, tenantId });
+    if (!credit) return res.status(404).json({ message: 'Credit payment not found' });
+    const creditBase = (credit.amount || 0) < 0
+      ? Math.abs(credit.amount || 0)
+      : ((credit.balance || 0) < 0 ? Math.abs(credit.balance || 0) : 0);
+    const available = Math.max(0, creditBase - Math.abs(credit.appliedCredit || 0));
+    if (available <= 0) return res.status(400).json({ message: 'No available credit to apply' });
+
+    let applyAmount = Number(amount);
+    if (!Number.isFinite(applyAmount) || applyAmount <= 0) applyAmount = available;
+    if (applyAmount > available) applyAmount = available;
+
     const tenant = await Tenant.findById(tenantId);
-    if (!tenant) {
-      return res.status(404).json({ message: 'Tenant not found' });
+    if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
+
+    const today = new Date();
+    // Determine unitId fallback: prefer provided, else credit.unitId, else tenant.unitId if stored
+    let resolvedUnitId = unitId;
+    if (!resolvedUnitId) {
+      if (credit.unitId) resolvedUnitId = credit.unitId;
+      else if (tenant.unitId) resolvedUnitId = tenant.unitId; // might be object or id
     }
+    const commonFields = {
+      projectId: propertyId,
+      tenantId,
+      unitId: resolvedUnitId || undefined,
+      type: 'adjustment',
+      amount: applyAmount, // consume credit as a positive payment toward the target
+      method: 'online',
+      date: today,
+      lateFee: 0,
+      note: (note ? String(note) + ' ' : '') + `(Applied from credit ${credit._id.toString().slice(-6)})`,
+      customType: '',
+      carryForward: false,
+      appliedCredit: 0
+    };
 
-    // Calculate expected payment amount based on tenant's rental details
-    let expectedAmount = 0;
-    let calculatedLateFee = 0;
+    let newPayment;
 
-    if (type === 'rent') {
-      expectedAmount = 
+    if (applyTo === 'deposit') {
+      const expectedDeposit = Number(tenant.deposit) || 0;
+      // Sum previous deposit payments
+      const prevDepositPayments = await Payment.find({ tenantId, applyTo: 'deposit' });
+      const totalPrevDeposit = prevDepositPayments.reduce((s, p) => s + (p.amount || 0), 0);
+      const depositBalance = expectedDeposit - (totalPrevDeposit + applyAmount);
+      newPayment = new Payment({
+        ...commonFields,
+        applyTo: 'deposit',
+        balance: depositBalance
+      });
+      await newPayment.save();
+      tenant.depositPaid = (tenant.depositPaid || 0) + applyAmount;
+      await tenant.save();
+    } else if (applyTo === 'fee' || ['late','water','electric','trash','admin','other'].includes(applyTo)) {
+      // Record fee category payment
+      newPayment = new Payment({
+        ...commonFields,
+        applyTo,
+        feeType: feeType || '',
+        feeLabel: feeLabel || '',
+        periodMonth: periodMonth || '',
+        balance: 0
+      });
+      await newPayment.save();
+    } else {
+      // applyTo === 'rent' : compute balance like POST /payments
+      let expectedAmount = 0;
+      // For adjustment toward rent, treat like rent components
+      expectedAmount =
         (Number(tenant.baseRent) || 0) +
         (Number(tenant.waterFee) || 0) +
         (Number(tenant.trashFee) || 0) +
@@ -6201,73 +6556,44 @@ app.put('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
         (tenant.additionalFee?.amount || 0) +
         (tenant.pets?.hasPets ? (Number(tenant.pets.monthlyRent) || 0) : 0);
 
-      if (lateFee && lateFee > 0) {
-        if (lateFee < 1) {
-          calculatedLateFee = expectedAmount * lateFee;
-        } else if (lateFee <= 100) {
-          calculatedLateFee = expectedAmount * (lateFee / 100);
-        } else {
-          calculatedLateFee = lateFee;
-        }
-      }
-    } else if (type === 'hub') {
-      expectedAmount = Number(tenant.hubContribution) || 0;
-    }
+      const paymentDate = today;
+      const monthStart = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), 1);
+      const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
+      const paymentsThisMonth = await Payment.find({ tenantId, applyTo: 'rent', date: { $gte: monthStart, $lte: monthEnd } });
+      const totalPaid = paymentsThisMonth.reduce((sum, p) => sum + Math.abs(p.amount || 0), 0);
+      const totalLateFees = paymentsThisMonth.reduce((sum, p) => sum + (p.lateFee || 0), 0);
+      const totalMonthlyCharges = expectedAmount + totalLateFees;
+      const balance = totalMonthlyCharges - (totalPaid + Math.abs(applyAmount));
 
-    const finalAmount = amount || expectedAmount;
-    const finalLateFee = calculatedLateFee;
-
-    const paymentDate = new Date(date);
-    const monthStart = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), 1);
-    const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
-
-    // Get all payments for this tenant in the current month (excluding this payment)
-    const paymentsThisMonth = await Payment.find({
-      tenantId,
-      date: { $gte: monthStart, $lte: monthEnd },
-      _id: { $ne: req.params.paymentId }
-    });
-
-    const totalPaid = paymentsThisMonth.reduce((sum, p) => sum + p.amount, 0);
-    const totalLateFees = paymentsThisMonth.reduce((sum, p) => sum + (p.lateFee || 0), 0);
-
-    const totalMonthlyCharges = expectedAmount + totalLateFees + finalLateFee;
-    const balance = totalMonthlyCharges - (totalPaid + finalAmount);
-
-    const payment = await Payment.findOneAndUpdate(
-      { _id: req.params.paymentId, projectId: req.params.propertyId },
-      { 
-        tenantId, 
-        unitId, 
-        type, 
-        amount: finalAmount, 
-        method, 
-        date, 
-        lateFee: finalLateFee,
-        balance: balance > 0 ? balance : 0
-      },
-      { new: true }
-    );
-
-    if (!payment) {
-      return res.status(404).json({ message: 'Payment not found' });
-    }
-
-    res.json({
-      payment,
-      calculationDetails: {
-        expectedAmount,
-        calculatedLateFee: finalLateFee,
-        totalMonthlyCharges,
-        totalPaidPreviously: totalPaid,
+      newPayment = new Payment({
+        ...commonFields,
+        applyTo: 'rent',
         balance
-      }
+      });
+      await newPayment.save();
+    }
+
+    // Consume credit using the same base we used to compute availability
+    const newApplied = Math.min(creditBase, Math.abs(credit.appliedCredit || 0) + applyAmount);
+    credit.appliedCredit = newApplied;
+    // If the credit originated from an overpaid balance (negative balance), bring that balance toward zero
+    if ((credit.amount || 0) >= 0 && (credit.balance || 0) < 0) {
+      const remainingAfter = Math.max(0, creditBase - newApplied);
+      credit.balance = -remainingAfter; // 0 when fully consumed, still negative if partial
+    }
+    await credit.save();
+
+    return res.status(201).json({
+      applied: applyAmount,
+      fromCreditId: credit._id,
+      newPayment
     });
   } catch (error) {
-    console.error('Error updating payment:', error);
+    console.error('Error applying credit:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 // Get all room packages
 app.get('/api/room-packages', async (req, res) => {
