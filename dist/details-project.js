@@ -3028,6 +3028,13 @@ function escapeHtml(s) {
   return (s || '').toString().replace(/[&<>\"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 }
 
+// Escape value for safe placement in HTML attributes
+function escapeHtmlAttr(s) {
+  return (s || '').toString().replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
 // Wire up category suggestions based on selected estimates
 function aliWireCategorySuggestions() {
   const input = document.getElementById('ali-category');
@@ -5520,18 +5527,62 @@ function renderMaintenanceNotifDropdown(requests) {
                 <span><i class="far fa-calendar-alt"></i> Requested: ${new Date(r.createdAt).toLocaleDateString()}</span>
             </div>
             <div style="margin-top:10px; text-align:right; position:relative;">
-                <button class="btn-primary create-order-btn" 
-                    style="padding:7px 18px; font-size:0.97em; border-radius:7px;"
-                    onclick="window.toggleOrderDropdown(${idx})">
+            <button type="button" class="btn-primary create-order-btn" 
+                style="padding:7px 18px; font-size:0.97em; border-radius:7px;"
+                data-idx="${idx}">
                     <i class="fas fa-file-invoice-dollar"></i> Create Order
                 </button>
                 <div class="order-dropdown" id="orderDropdown-${idx}" style="display:none; position:absolute; right:0; top:50px;">
-                    <button class="order-dropdown-btn" onclick="createOrderFromMaintenance('${r.unitId?.number || ''}', '${r.description.replace(/'/g, "\\'")}', '${projectId}', '${r._id}')">Create New Estimate</button>
-                    <button class="order-dropdown-btn" onclick="showEstimateSelectModal('${r.unitId?.number || ''}', '${r.description.replace(/'/g, "\\'")}', '${projectId}', '${r._id}')">Add Line Item to Existing Estimate</button>
+              <button type="button" class="order-dropdown-btn order-create-new-btn"
+                data-unit="${escapeHtmlAttr(r.unitId?.number || '')}"
+                data-desc="${escapeHtmlAttr(r.description || '')}"
+                data-project="${escapeHtmlAttr(projectId)}"
+                data-maint="${escapeHtmlAttr(r._id)}">Create New Estimate</button>
+              <button type="button" class="order-dropdown-btn order-add-existing-btn"
+                data-unit="${escapeHtmlAttr(r.unitId?.number || '')}"
+                data-desc="${escapeHtmlAttr(r.description || '')}"
+                data-project="${escapeHtmlAttr(projectId)}"
+                data-maint="${escapeHtmlAttr(r._id)}">Add Line Item to Existing Estimate</button>
                 </div>
             </div>
         </div>
     `).join('');
+
+    // Wire delegated handlers for maintenance actions to avoid inline JS issues
+    // Toggle dropdown button
+    notifList.querySelectorAll('.create-order-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const idx = btn.getAttribute('data-idx');
+        if (typeof window.toggleOrderDropdown === 'function') window.toggleOrderDropdown(parseInt(idx, 10));
+      });
+    });
+    // Create new estimate
+    notifList.querySelectorAll('.order-create-new-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const unit = btn.getAttribute('data-unit') || '';
+        const desc = btn.getAttribute('data-desc') || '';
+        const proj = btn.getAttribute('data-project') || '';
+        const maint = btn.getAttribute('data-maint') || '';
+        if (typeof window.createOrderFromMaintenance === 'function') {
+          window.createOrderFromMaintenance(unit, desc, proj, maint);
+        }
+      });
+    });
+    // Add to existing estimate
+    notifList.querySelectorAll('.order-add-existing-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const unit = btn.getAttribute('data-unit') || '';
+        const desc = btn.getAttribute('data-desc') || '';
+        const proj = btn.getAttribute('data-project') || '';
+        const maint = btn.getAttribute('data-maint') || '';
+        if (typeof window.showEstimateSelectModal === 'function') {
+          window.showEstimateSelectModal(unit, desc, proj, maint);
+        }
+      });
+    });
 }
 
 // Toggle dropdown for each request
@@ -5589,11 +5640,30 @@ window.showEstimateSelectModal = async function(unitNumber, description, project
         const list = modal.querySelector('#estimateSelectList');
         list.innerHTML = estimates.length ? estimates.map(e => `
             <div style="margin-bottom:10px;">
-                <button class="btn-primary" style="width:100%; text-align:left;" onclick="addLineItemToEstimate('${e._id}', '${unitNumber}', '${description.replace(/'/g, "\\'")}', '${projectId}', '${maintenanceRequestId}')">
+                <button type="button" class="btn-primary add-to-estimate-btn" style="width:100%; text-align:left;"
+                  data-estimate="${escapeHtmlAttr(e._id)}"
+                  data-unit="${escapeHtmlAttr(unitNumber)}"
+                  data-desc="${escapeHtmlAttr(description || '')}"
+                  data-project="${escapeHtmlAttr(projectId)}"
+                  data-maint="${escapeHtmlAttr(maintenanceRequestId)}">
                     ${e.title || 'Untitled'} <span style="float:right; color:#888;">${new Date(e.createdAt).toLocaleDateString()}</span>
                 </button>
             </div>
         `).join('') : `<div style="color:#888; padding:12px;">No estimates found.</div>`;
+        // Wire delegated action for add to estimate
+        list.querySelectorAll('.add-to-estimate-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            const est = btn.getAttribute('data-estimate') || '';
+            const unit = btn.getAttribute('data-unit') || '';
+            const desc = btn.getAttribute('data-desc') || '';
+            const proj = btn.getAttribute('data-project') || '';
+            const maint = btn.getAttribute('data-maint') || '';
+            if (typeof window.addLineItemToEstimate === 'function') {
+              window.addLineItemToEstimate(est, unit, desc, proj, maint);
+            }
+          });
+        });
         modal.style.display = 'flex';
     } catch (error) {
         showToast("Error loading estimates.");
