@@ -2690,6 +2690,31 @@ async function loadAllTasks() {
   }
 }
 
+// Helper: convert YYYY-MM-DD from input to ISO at local noon to avoid tz shifts
+function dateInputToISOAtNoon(dateStr) {
+  if (!dateStr) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr) === false) return '';
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d, 12, 0, 0, 0);
+  return dt.toISOString();
+}
+
+// Helper: get safe YYYY-MM-DD string for a date input without off-by-one
+function valueForDateInput(dateLike) {
+  if (!dateLike) return '';
+  if (typeof dateLike === 'string') {
+    // If already in YYYY-MM-DD, use as-is
+    const m = dateLike.match(/^\d{4}-\d{2}-\d{2}/);
+    if (m) return m[0];
+  }
+  const d = new Date(dateLike);
+  if (isNaN(d)) return '';
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 // Add/Edit Task Modal logic
 document.addEventListener('DOMContentLoaded', () => {
   const addBtn = document.getElementById('add-task-btn');
@@ -2791,7 +2816,7 @@ document.addEventListener('DOMContentLoaded', () => {
     addForm.dataset.editingTaskId = task._id;
     document.getElementById('newTaskTitle').value = task.title || '';
     document.getElementById('newTaskDesc').value = task.description || '';
-    document.getElementById('newTaskDueDate').value = task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '';
+    document.getElementById('newTaskDueDate').value = task.dueDate ? valueForDateInput(task.dueDate) : '';
     if (submitBtn) submitBtn.textContent = 'Update Task';
     let projectId = '';
     if (task.projectId && typeof task.projectId === 'object') {
@@ -2816,7 +2841,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const payload = {
       title: document.getElementById('newTaskTitle').value,
       description: document.getElementById('newTaskDesc').value,
-      dueDate: document.getElementById('newTaskDueDate').value,
+      // Normalize to ISO at local noon to avoid date shifting on server
+      dueDate: dateInputToISOAtNoon(document.getElementById('newTaskDueDate').value),
       projectId: document.getElementById('newTaskProject').value,
       assignedTo: document.getElementById('newTaskAssignedTo').value
     };
@@ -2861,7 +2887,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 });
-
 
 // Load tasks when Tasks tab is shown
 document.addEventListener('DOMContentLoaded', () => {
