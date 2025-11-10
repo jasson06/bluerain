@@ -3853,6 +3853,39 @@ function formatAddress(address) {
     return parts.join(', ') || 'No address provided';
 }
 
+// --- Date Helpers to avoid off-by-one (timezone) issues ---
+// Convert an <input type="date"> value (YYYY-MM-DD) to an ISO string at local noon
+function dateInputToISOAtNoon(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const y = Number(parts[0]);
+    const m = Number(parts[1]);
+    const d = Number(parts[2]);
+    const dt = new Date(y, m - 1, d, 12, 0, 0, 0); // local noon avoids day shifting
+    return dt.toISOString();
+}
+
+// Safer display formatter: prefer YYYY-MM-DD prefix if present; else render in UTC to avoid shift
+function formatDateDisplay(value, locale = 'en-US') {
+    if (!value) return '';
+    const s = String(value);
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) {
+        const y = Number(m[1]);
+        const mo = Number(m[2]);
+        const d = Number(m[3]);
+        return new Date(y, mo - 1, d).toLocaleDateString(locale);
+    }
+    try {
+        const d = new Date(value);
+        // Render using UTC so midnight UTC doesn't shift date in local TZ
+        return d.toLocaleDateString(locale, { timeZone: 'UTC' });
+    } catch {
+        return s;
+    }
+}
+
 // --- Rent proration helpers (frontend) ---
 // Mirrors server-side behavior: only first month gets prorated, and only base rent is prorated
 function daysInMonth(year, monthIndex) {
@@ -4479,8 +4512,9 @@ async function handleAddTenant(event) {
         },
         leaseRenewal: document.getElementById('leaseRenewal').value,
         unitId: document.getElementById('tenantUnit').value,
-        leaseStart: document.getElementById('leaseStart').value,
-        leaseEnd: document.getElementById('leaseEnd').value,
+    // Send ISO at local noon to avoid timezone shifting
+    leaseStart: dateInputToISOAtNoon(document.getElementById('leaseStart').value),
+    leaseEnd: dateInputToISOAtNoon(document.getElementById('leaseEnd').value),
         baseRent: Number(document.getElementById('baseRent').value),
         deposit: Number(document.getElementById('deposit').value) || 0,
         waterFee: Number(document.getElementById('waterFee').value) || 0,
@@ -4695,19 +4729,8 @@ function renderTenants() {
             state.units.find(u => u._id === tenant.unitId || u._id?.toString() === tenant.unitId?.toString());
 
         // Format lease dates
-        const leaseStart = tenant.leaseStart ? 
-            new Date(tenant.leaseStart).toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-            }) : 'Not set';
-        
-        const leaseEnd = tenant.leaseEnd ? 
-            new Date(tenant.leaseEnd).toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-            }) : 'Not set';
+        const leaseStart = tenant.leaseStart ? formatDateDisplay(tenant.leaseStart, 'en-US') : 'Not set';
+        const leaseEnd = tenant.leaseEnd ? formatDateDisplay(tenant.leaseEnd, 'en-US') : 'Not set';
 
         // Only sum monthly pet rent for totals
         const petFees = (tenant.pets?.hasPets ? (Number(tenant.pets.monthlyRent) || 0) : 0);
@@ -4865,19 +4888,8 @@ async function viewTenantDetails(tenantId) {
             : '<span class="tenant-detail-value">None listed</span>';
 
         // Format dates
-        const leaseStart = tenant.leaseStart ?
-            new Date(tenant.leaseStart).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            }) : 'Not set';
-
-        const leaseEnd = tenant.leaseEnd ?
-            new Date(tenant.leaseEnd).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            }) : 'Not set';
+        const leaseStart = tenant.leaseStart ? formatDateDisplay(tenant.leaseStart, 'en-US') : 'Not set';
+        const leaseEnd = tenant.leaseEnd ? formatDateDisplay(tenant.leaseEnd, 'en-US') : 'Not set';
 
         // Unit info
         let unitInfoHtml = '<p>No unit assigned</p>';
@@ -5357,8 +5369,8 @@ async function handleUpdateTenant(tenantId) {
         },
         leaseRenewal: document.getElementById('leaseRenewal').value,
         unitId: newUnitId,
-        leaseStart: document.getElementById('leaseStart').value,
-        leaseEnd: document.getElementById('leaseEnd').value,
+    leaseStart: dateInputToISOAtNoon(document.getElementById('leaseStart').value),
+    leaseEnd: dateInputToISOAtNoon(document.getElementById('leaseEnd').value),
         baseRent: Number(document.getElementById('baseRent').value),
         deposit: Number(document.getElementById('deposit').value) || 0,
         waterFee: Number(document.getElementById('waterFee').value) || 0,
@@ -6030,11 +6042,11 @@ function renderMaintenanceSchedules(schedules) {
 
   scheduleList.innerHTML = schedules.map(schedule => {
     const nextDate = schedule.nextScheduledDate
-      ? new Date(schedule.nextScheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? formatDateDisplay(schedule.nextScheduledDate, 'en-US')
       : 'N/A';
 
     const startDateLabel = schedule.startDate
-      ? new Date(schedule.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? formatDateDisplay(schedule.startDate, 'en-US')
       : 'N/A';
 
     let freqLabel = schedule.frequency.charAt(0).toUpperCase() + schedule.frequency.slice(1);
@@ -6176,7 +6188,7 @@ function renderMaintenanceSchedulesList(schedules) {
         <tbody>
           ${schedules.map((schedule, idx) => {
             const nextDate = schedule.nextScheduledDate
-              ? new Date(schedule.nextScheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+              ? formatDateDisplay(schedule.nextScheduledDate, 'en-US')
               : 'N/A';
             let freqLabel = schedule.frequency.charAt(0).toUpperCase() + schedule.frequency.slice(1);
             if (schedule.frequency === 'custom' && schedule.intervalDays) {
@@ -6220,7 +6232,7 @@ function renderMaintenanceSchedulesList(schedules) {
                 <td style="padding:10px 8px;font-weight:600;color:#2c3e50;">${schedule.title}</td>
                 <td style="padding:10px 8px;color:#555;">${schedule.description || ''}</td>
                 <td style="padding:10px 8px;">${freqLabel}</td>
-                <td style="padding:10px 8px;">${new Date(schedule.startDate).toLocaleDateString('en-US')}</td>
+                <td style="padding:10px 8px;">${formatDateDisplay(schedule.startDate, 'en-US')}</td>
                 <td style="padding:10px 8px;color:#217dbb;font-weight:600;">${nextDate}</td>
                 <td style="padding:10px 8px;">${vendorName}</td>
                 <td style="padding:10px 8px;">${unitLabel}</td>
@@ -6301,7 +6313,8 @@ document.getElementById('addScheduleBtn').addEventListener('click', async () => 
     const description = document.getElementById('scheduleDescription').value;
     const frequency = document.getElementById('scheduleFrequency').value;
     const intervalDays = frequency === 'custom' ? Number(document.getElementById('scheduleIntervalDays').value) : null;
-    const startDate = document.getElementById('scheduleStartDate').value;
+    const startDateRaw = document.getElementById('scheduleStartDate').value;
+    const startDate = dateInputToISOAtNoon(startDateRaw);
     const assignedVendor = document.getElementById('scheduleVendor').value;
     const unitId = document.getElementById('scheduleUnit').value || null;
     const status = document.getElementById('scheduleStatus').value;
@@ -6310,7 +6323,7 @@ document.getElementById('addScheduleBtn').addEventListener('click', async () => 
 
     showLoader();
     try {
-      const payload = { title, description, frequency, intervalDays, startDate, assignedVendor: vendorValue, unitId, status, cost };
+    const payload = { title, description, frequency, intervalDays, startDate, assignedVendor: vendorValue, unitId, status, cost };
       const res = await fetch(`/api/properties/${state.currentProperty._id}/maintenance-schedules`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -6391,7 +6404,7 @@ async function editMaintenanceSchedule(scheduleId) {
     document.getElementById('scheduleFrequency').value = schedule.frequency || 'monthly';
     document.getElementById('customIntervalGroup').style.display = schedule.frequency === 'custom' ? 'block' : 'none';
     document.getElementById('scheduleIntervalDays').value = schedule.intervalDays || '';
-    document.getElementById('scheduleStartDate').value = schedule.startDate ? new Date(schedule.startDate).toISOString().split('T')[0] : '';
+    document.getElementById('scheduleStartDate').value = schedule.startDate ? (String(schedule.startDate).substring(0,10)) : '';
     document.getElementById('scheduleVendor').value = schedule.assignedVendor?._id || '';
     document.getElementById('scheduleUnit').value = schedule.unitId?._id || schedule.unitId || '';
     document.getElementById('scheduleStatus').value = schedule.status || 'pending';
@@ -6420,8 +6433,9 @@ async function handleUpdateMaintenanceSchedule(scheduleId) {
   const title = document.getElementById('scheduleTitle').value;
   const description = document.getElementById('scheduleDescription').value;
   const frequency = document.getElementById('scheduleFrequency').value;
-  const intervalDays = frequency === 'custom' ? Number(document.getElementById('scheduleIntervalDays').value) : null;
-  const startDate = document.getElementById('scheduleStartDate').value;
+    const intervalDays = frequency === 'custom' ? Number(document.getElementById('scheduleIntervalDays').value) : null;
+    const startDateRaw = document.getElementById('scheduleStartDate').value;
+    const startDate = dateInputToISOAtNoon(startDateRaw);
   const assignedVendor = document.getElementById('scheduleVendor').value || null;
   const unitId = document.getElementById('scheduleUnit').value || null;
   const status = document.getElementById('scheduleStatus').value;
@@ -6437,7 +6451,7 @@ async function handleUpdateMaintenanceSchedule(scheduleId) {
         description,
         frequency,
         intervalDays,
-        startDate,
+    startDate,
         assignedVendor,
         unitId,
         status,
@@ -6969,7 +6983,7 @@ function renderPayments() {
                             <td>${payment.applyTo ? payment.applyTo.charAt(0).toUpperCase() + payment.applyTo.slice(1) : 'Rent'}</td>
                             <td>${(payment.amount < 0 ? '<span style="color:#dc2626" title="Credit">-$' + Math.abs(payment.amount).toFixed(2) + '</span>' : '$' + payment.amount.toFixed(2))}</td>
                             <td>${payment.method.charAt(0).toUpperCase() + payment.method.slice(1)}</td>
-                            <td>${new Date(payment.date).toLocaleDateString()}</td>
+                            <td>${formatDateDisplay(payment.date)}</td>
                             <td>$${payment.lateFee?.toFixed(2) || '0.00'}</td>
                                                         <td>
                                                             ${payment.balance < 0 || payment.amount < 0
@@ -7308,7 +7322,8 @@ async function handleAddPayment(event) {
         type: normalizedType,
         amount: (amount || amount === 0) ? amount : undefined, // allow blank for deposit auto-calc, permit negatives
         method: document.getElementById('paymentMethod').value,
-        date: document.getElementById('paymentDate').value,
+    // Normalize date to ISO at local noon to avoid off-by-one when stored/parsed as UTC
+    date: dateInputToISOAtNoon(document.getElementById('paymentDate').value),
         lateFee,
         applyTo: document.getElementById('paymentApplyTo').value,
         feeType: document.getElementById('paymentFeeType').value.trim() || undefined,
@@ -7739,7 +7754,7 @@ async function exportReceipt(paymentId) {
     doc.setFontSize(10);
     doc.setTextColor(textMuted.r, textMuted.g, textMuted.b);
     doc.text(`Receipt # : ${receiptNo}`, metaX + 4, boxTop + 15);
-    doc.text(`Date      : ${new Date(payment.date).toLocaleDateString()}`, metaX + 4, boxTop + 21);
+    doc.text(`Date      : ${formatDateDisplay(payment.date)}`, metaX + 4, boxTop + 21);
     doc.text(`Payment ID: ${(payment._id || '').substring(0, 12)}...`, metaX + 4, boxTop + 27);
 
     // Property address (actual address, not project name)
@@ -8053,7 +8068,7 @@ function openTenantBalanceModal(tenantId) {
             if (headerRow) colCount = headerRow.children.length || colCount;
         }
         for (const p of allTenantPayments) {
-            const monthKey = p.date ? (()=>{ const d=new Date(p.date); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; })() : 'Unknown';
+            const monthKey = p.date ? (()=>{ const base = String(p.date).substring(0,10); const parts = base.split('-'); if(parts.length===3){return `${parts[0]}-${parts[1]}`;} const d=new Date(p.date); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; })() : 'Unknown';
             if (monthKey !== lastMonthKey) {
                 const groupTr = document.createElement('tr');
                 groupTr.className = 'month-group-row';
@@ -8067,7 +8082,7 @@ function openTenantBalanceModal(tenantId) {
             const bal = typeof p.balance === 'number' ? Number(p.balance) : undefined;
             const note = (p.note || '').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
             tr.innerHTML = `
-              <td>${p.date ? new Date(p.date).toLocaleDateString() : ''}</td>
+              <td>${p.date ? formatDateDisplay(p.date) : ''}</td>
               <td>${typeLabel}</td>
               <td>${p.applyTo || ''}${p.feeType ? ` • ${p.feeType}` : ''}${p.feeLabel ? ` (${p.feeLabel})` : ''}</td>
               <td style="${amount < 0 ? 'color:#065f46;font-weight:600;' : ''}">${amount < 0 ? '-' : ''}${tenantCurrency(Math.abs(amount))}</td>
