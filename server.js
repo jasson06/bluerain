@@ -6380,29 +6380,57 @@ app.put('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
   const note = req.body.note;
   const customType = req.body.customType;
   const carryForward = req.body.carryForward;
+    // Allow updating tenant and unit references
+    const incomingTenantId = req.body.tenantId || payment.tenantId;
+    const incomingUnitId = req.body.unitId !== undefined ? req.body.unitId : payment.unitId;
+    const oldTenantId = payment.tenantId?.toString();
+    const newTenantId = incomingTenantId?.toString();
+    const newUnitId = incomingUnitId || undefined;
     const newType = normalizePaymentTypeServer(req.body.type) || payment.type;
     const newApplyTo = String(req.body.applyTo || payment.applyTo || 'rent').toLowerCase();
     const newFeeType = req.body.feeType || payment.feeType || '';
     const newFeeLabel = req.body.feeLabel || payment.feeLabel || '';
     const newPeriodMonth = req.body.periodMonth || payment.periodMonth || '';
 
-    // Adjust tenant.depositPaid if applyTo or amount changed
-    const tenant = await Tenant.findById(payment.tenantId);
-    if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
-
+    // Adjust depositPaid on the correct tenant(s) if applyTo/amount/tenant changed
     const oldApplyTo = payment.applyTo || 'rent';
     const oldAmount = payment.amount || 0;
     const newAmount = amount !== undefined ? Number(amount) : oldAmount;
 
-    if (oldApplyTo === 'deposit') {
-      tenant.depositPaid = Math.max(0, (tenant.depositPaid || 0) - oldAmount);
+    // If tenant changed, revert effect on old tenant (if any) and apply on new tenant
+    if (oldTenantId !== newTenantId) {
+      if (oldTenantId) {
+        const oldTenant = await Tenant.findById(oldTenantId);
+        if (!oldTenant) return res.status(404).json({ message: 'Old tenant not found' });
+        if (oldApplyTo === 'deposit') {
+          oldTenant.depositPaid = Math.max(0, (oldTenant.depositPaid || 0) - oldAmount);
+          await oldTenant.save();
+        }
+      }
+      if (newTenantId) {
+        const newTenant = await Tenant.findById(newTenantId);
+        if (!newTenant) return res.status(404).json({ message: 'Tenant not found' });
+        if (newApplyTo === 'deposit') {
+          newTenant.depositPaid = (newTenant.depositPaid || 0) + newAmount;
+          await newTenant.save();
+        }
+      }
+    } else {
+      // Tenant not changed: adjust on same tenant if applyTo changed or amount changed
+      const tenant = await Tenant.findById(payment.tenantId);
+      if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
+      if (oldApplyTo === 'deposit') {
+        tenant.depositPaid = Math.max(0, (tenant.depositPaid || 0) - oldAmount);
+      }
+      if (newApplyTo === 'deposit') {
+        tenant.depositPaid = (tenant.depositPaid || 0) + newAmount;
+      }
+      await tenant.save();
     }
-    if (newApplyTo === 'deposit') {
-      tenant.depositPaid = (tenant.depositPaid || 0) + newAmount;
-    }
-    await tenant.save();
 
     // Update payment fields
+    if (newTenantId) payment.tenantId = newTenantId;
+    payment.unitId = newUnitId; // can be undefined/null
     payment.type = newType;
     payment.applyTo = newApplyTo;
     payment.feeType = newFeeType;
