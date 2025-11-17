@@ -1041,6 +1041,16 @@ leaseStatus: { type: String, enum: ['active', 'pending', 'expired', 'terminated'
 leaseHolders: {
   type: [{ name: String, phone: String, email: String }],
   default: []
+},
+// Per-month manual overrides for expected rent and late fee. Keyed by 'YYYY-MM'.
+monthlyOverrides: {
+  type: Map,
+  of: new mongoose.Schema({
+    expectedRent: { type: Number, default: null },
+    lateFee: { type: Number, default: null },
+    lateFeeMode: { type: String, enum: ['amount','percent'], default: 'amount' }
+  }, { _id: false }),
+  default: {}
 }
 
 }, { timestamps: true });
@@ -6129,6 +6139,18 @@ function computeFirstMonthProratedBaseRent(tenant, dateLike) {
 // For subsequent months: full baseRent + recurring monthly fees
 function computeExpectedRentForMonth(tenant, dateLike, paymentType) {
   const d = new Date(dateLike);
+  const period = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
+  // Check for manual expected rent override for this month
+  const mo = tenant?.monthlyOverrides;
+  let monthOverride = null;
+  if (mo) {
+    // Support both Map and plain object
+    monthOverride = typeof mo.get === 'function' ? mo.get(period) : mo[period];
+  }
+  if (monthOverride && paymentType === 'rent') {
+    const er = Number(monthOverride.expectedRent);
+    if (Number.isFinite(er) && er >= 0) return er;
+  }
   const isRentType = (paymentType === 'rent');
   if (isRentType) {
     const prorated = computeFirstMonthProratedBaseRent(tenant, d);
@@ -6150,6 +6172,7 @@ function computeExpectedRentForMonth(tenant, dateLike, paymentType) {
 app.post('/api/properties/:propertyId/payments', async (req, res) => {
   try {
     const { tenantId, unitId, amount, method, date, lateFee, note, customType, carryForward } = req.body;
+    const lateFeeMode = (req.body.lateFeeMode || 'amount').toLowerCase(); // 'amount' | 'percent'
     const type = normalizePaymentTypeServer(req.body.type);
     const applyTo = String(req.body.applyTo || 'rent').toLowerCase();
     const feeType = req.body.feeType || '';
@@ -6173,22 +6196,41 @@ app.post('/api/properties/:propertyId/payments', async (req, res) => {
     }
 
     // Calculate expected payment amount based on tenant's rental details
-    let expectedAmount = 0;
-    let calculatedLateFee = 0;
+  let expectedAmount = 0;
+  let calculatedLateFee = 0;
+  let overrideLateApplied = false;
 
-    // Default: rent logic (compute expected amount before credits)
-    if (applyTo === 'rent' && type === 'rent') {
+  // Default: rent logic (compute expected amount before credits)
+  if (applyTo === 'rent' && type === 'rent') {
       // Prorate base rent for the first month based on tenant.leaseStart; otherwise full monthly charges
       expectedAmount = computeExpectedRentForMonth(tenant, date, 'rent');
 
-      // Calculate late fee if provided as percentage
-      if (lateFee && lateFee > 0) {
-        if (lateFee < 1) { // e.g., 0.05 for 5%
-          calculatedLateFee = expectedAmount * lateFee;
-        } else if (lateFee <= 100) { // e.g., 5 for 5%
-          calculatedLateFee = expectedAmount * (lateFee / 100);
-        } else { // Absolute amount
-          calculatedLateFee = lateFee;
+      // Monthly override late fee takes precedence; when present, roll it into expectedAmount (do not attach per-payment late fee)
+      const d = new Date(date);
+      const period = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      const mo = tenant?.monthlyOverrides;
+      const ov = mo ? (typeof mo.get === 'function' ? mo.get(period) : mo[period]) : null;
+      let overrideMonthlyLate = 0;
+      if (ov && (ov.lateFee != null)) {
+        const mode = String(ov.lateFeeMode || 'amount').toLowerCase();
+        const lfVal = Number(ov.lateFee);
+        if (mode === 'percent' && Number.isFinite(lfVal)) {
+          overrideMonthlyLate = expectedAmount * (lfVal / 100);
+        } else if (Number.isFinite(lfVal)) {
+          overrideMonthlyLate = lfVal;
+        }
+      }
+      if (overrideMonthlyLate > 0) {
+        expectedAmount += overrideMonthlyLate;
+        calculatedLateFee = 0; // do not store per-payment late fee when override exists
+        overrideLateApplied = true;
+      } else if (lateFee && Number.isFinite(Number(lateFee)) && Number(lateFee) > 0) {
+        // Respect mode: amount (default) or percent (manual per-payment only when no override)
+        const lf = Number(lateFee);
+        if (lateFeeMode === 'percent') {
+          calculatedLateFee = expectedAmount * (lf / 100);
+        } else {
+          calculatedLateFee = lf; // absolute dollar amount
         }
       }
     } else if (type === 'hub' && applyTo === 'rent') {
@@ -6322,12 +6364,12 @@ app.post('/api/properties/:propertyId/payments', async (req, res) => {
     // Calculate total paid (excluding this payment)
   const totalPaid = paymentsThisMonth.reduce((sum, p) => sum + Math.abs(p.amount || 0), 0); // count credits positively
 
-    // Calculate total late fees (excluding this payment)
-    const totalLateFees = paymentsThisMonth.reduce((sum, p) => sum + (p.lateFee || 0), 0);
+  // Calculate total late fees (excluding this payment)
+  const totalLateFees = paymentsThisMonth.reduce((sum, p) => sum + (p.lateFee || 0), 0);
 
-    // Calculate balance:
-    // (Expected amount + total late fees) - (already paid + current payment + current late fee)
-    const totalMonthlyCharges = expectedAmount + totalLateFees + finalLateFee;
+  // Calculate balance:
+  // If override late fee was rolled into expectedAmount above, avoid double-counting by ignoring per-payment late fees
+  const totalMonthlyCharges = overrideLateApplied ? expectedAmount : (expectedAmount + totalLateFees + finalLateFee);
   const balance = totalMonthlyCharges - (totalPaid + Math.abs(finalAmount));
 
     const payment = new Payment({
@@ -6455,14 +6497,45 @@ app.put('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
       const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
       const tenantData = await Tenant.findById(payment.tenantId);
   let expectedAmount = 0;
-      let calculatedLateFee = 0;
-      if (payment.type === 'rent') {
+    let calculatedLateFee = 0;
+    let overrideLateApplied = false;
+  if (payment.type === 'rent') {
         // Recompute with proration for first month; otherwise full monthly charges
         expectedAmount = computeExpectedRentForMonth(tenantData, payment.date, 'rent');
-        if (payment.lateFee && payment.lateFee > 0) calculatedLateFee = payment.lateFee;
+        // Monthly late fee override takes precedence; else allow manual payment lateFee, else 0
+        const period = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth()+1).padStart(2,'0')}`;
+        const mo = tenantData?.monthlyOverrides;
+        const ov = mo ? (typeof mo.get === 'function' ? mo.get(period) : mo[period]) : null;
+        if (ov && (ov.lateFee != null)) {
+          const mode = String(ov.lateFeeMode || 'amount').toLowerCase();
+          const lfVal = Number(ov.lateFee);
+          const overrideMonthlyLate = (mode === 'percent' && Number.isFinite(lfVal)) ? (expectedAmount * (lfVal/100)) : (Number.isFinite(lfVal) ? lfVal : 0);
+          expectedAmount += overrideMonthlyLate; // roll into expected
+          calculatedLateFee = 0;
+          overrideLateApplied = true;
+        } else if (lateFee !== undefined) {
+          calculatedLateFee = Number(lateFee) || 0;
+        } else if (payment.lateFee && payment.lateFee > 0) {
+          calculatedLateFee = payment.lateFee;
+        }
       } else if (payment.type === 'hub') {
         expectedAmount = Number(tenantData.hubContribution) || 0;
-        if (payment.lateFee && payment.lateFee > 0) calculatedLateFee = payment.lateFee;
+        // Late fee override for month still applies to hub-type rent months; roll into expected
+        const period = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth()+1).padStart(2,'0')}`;
+        const mo = tenantData?.monthlyOverrides;
+        const ov = mo ? (typeof mo.get === 'function' ? mo.get(period) : mo[period]) : null;
+        if (ov && (ov.lateFee != null)) {
+          const mode = String(ov.lateFeeMode || 'amount').toLowerCase();
+          const lfVal = Number(ov.lateFee);
+          const overrideMonthlyLate = (mode === 'percent' && Number.isFinite(lfVal)) ? (expectedAmount * (lfVal/100)) : (Number.isFinite(lfVal) ? lfVal : 0);
+          expectedAmount += overrideMonthlyLate; // roll into expected
+          calculatedLateFee = 0;
+          overrideLateApplied = true;
+        } else if (lateFee !== undefined) {
+          calculatedLateFee = Number(lateFee) || 0;
+        } else if (payment.lateFee && payment.lateFee > 0) {
+          calculatedLateFee = payment.lateFee;
+        }
       }
       const paymentsThisMonth = await Payment.find({
         tenantId: payment.tenantId,
@@ -6472,7 +6545,10 @@ app.put('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
       });
   const totalPaid = paymentsThisMonth.reduce((sum, p) => sum + Math.abs(p.amount || 0), 0);
       const totalLateFees = paymentsThisMonth.reduce((sum, p) => sum + (p.lateFee || 0), 0);
-      const totalMonthlyCharges = expectedAmount + totalLateFees + calculatedLateFee;
+      const totalMonthlyCharges = overrideLateApplied ? expectedAmount : (expectedAmount + totalLateFees + calculatedLateFee);
+      if (overrideLateApplied) {
+        payment.lateFee = 0; // clear per-payment late fee when override controls month late fee
+      }
   const balance = totalMonthlyCharges - (totalPaid + Math.abs(payment.amount));
   payment.balance = balance; // allow negative credit
     } else if (payment.applyTo === 'deposit') {
@@ -6493,6 +6569,78 @@ app.put('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
     return res.json({ payment });
   } catch (error) {
     console.error('Error updating payment:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// --- Monthly Overrides API ---
+// Get all overrides for a tenant
+app.get('/api/tenants/:tenantId/monthly-overrides', async (req, res) => {
+  try {
+    const t = await Tenant.findById(req.params.tenantId);
+    if (!t) return res.status(404).json({ message: 'Tenant not found' });
+    const mo = t.monthlyOverrides || {};
+    // Convert Map to plain object if needed
+    let data = {};
+    if (typeof mo.forEach === 'function') {
+      mo.forEach((v, k) => { data[k] = v; });
+    } else {
+      data = mo;
+    }
+    res.json({ overrides: data });
+  } catch (e) {
+    console.error('Error fetching monthly overrides:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get override for a specific period YYYY-MM
+app.get('/api/tenants/:tenantId/monthly-overrides/:period', async (req, res) => {
+  try {
+    const t = await Tenant.findById(req.params.tenantId);
+    if (!t) return res.status(404).json({ message: 'Tenant not found' });
+    const { period } = req.params;
+    const mo = t.monthlyOverrides || {};
+    const v = (typeof mo.get === 'function') ? mo.get(period) : mo[period];
+    res.json({ period, override: v || null });
+  } catch (e) {
+    console.error('Error fetching monthly override:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Upsert override for a specific period; pass nulls to clear
+app.put('/api/tenants/:tenantId/monthly-overrides/:period', async (req, res) => {
+  try {
+    const t = await Tenant.findById(req.params.tenantId);
+    if (!t) return res.status(404).json({ message: 'Tenant not found' });
+    const { period } = req.params;
+    let { expectedRent, lateFee, lateFeeMode } = req.body;
+    // Normalize numbers or nulls
+    expectedRent = expectedRent === '' || expectedRent === undefined ? null : Number(expectedRent);
+    lateFee = lateFee === '' || lateFee === undefined ? null : Number(lateFee);
+    const mode = (lateFeeMode === 'percent' || lateFeeMode === 'amount') ? lateFeeMode : undefined;
+
+    if ((expectedRent === null || Number.isNaN(expectedRent)) && (lateFee === null || Number.isNaN(lateFee)) && (mode === undefined)) {
+      // remove override
+      if (typeof t.monthlyOverrides?.delete === 'function') t.monthlyOverrides.delete(period);
+      else if (t.monthlyOverrides) delete t.monthlyOverrides[period];
+    } else {
+      const val = {
+        expectedRent: Number.isFinite(expectedRent) ? expectedRent : null,
+        lateFee: Number.isFinite(lateFee) ? lateFee : null,
+        lateFeeMode: mode || 'amount'
+      };
+      if (typeof t.monthlyOverrides?.set === 'function') t.monthlyOverrides.set(period, val);
+      else {
+        t.monthlyOverrides = t.monthlyOverrides || {};
+        t.monthlyOverrides[period] = val;
+      }
+    }
+    await t.save();
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Error saving monthly override:', e);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -6535,14 +6683,16 @@ app.post('/api/properties/:propertyId/payments/:creditPaymentId/apply-credit', a
       tenantId,
       unitId: resolvedUnitId || undefined,
       type: 'adjustment',
-      amount: applyAmount, // consume credit as a positive payment toward the target
+      // Do NOT add to collected totals; represent credit allocation with amount=0
+      amount: 0,
       method: 'online',
       date: today,
       lateFee: 0,
       note: (note ? String(note) + ' ' : '') + `(Applied from credit ${credit._id.toString().slice(-6)})`,
       customType: '',
       carryForward: false,
-      appliedCredit: 0
+      // Track consumption of credit on this allocation entry
+      appliedCredit: applyAmount
     };
 
     let newPayment;
