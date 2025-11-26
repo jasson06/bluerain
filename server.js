@@ -1763,19 +1763,33 @@ app.put("/api/vendors/:id", async (req, res) => {
 
 // Upload W9 for a vendor
 // Ensure the uploads/vendors/w9 directory exists
-const w9Dir = path.join(__dirname, '/mnt/data/uploads/vendors/w9');
+const uploadDir = '/mnt/data/uploads';
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+const w9Dir = path.join(uploadDir, 'vendors', 'w9');
 if (!fs.existsSync(w9Dir)) {
   fs.mkdirSync(w9Dir, { recursive: true });
 }
 
+function sanitizeFilename(name) {
+  return name
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
+}
+
 const w9Storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/vendors/w9');
+    cb(null, w9Dir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const sanitized = file.originalname.replace(/\s+/g, '_');
-    cb(null, uniqueSuffix + '-' + sanitized);
+    const sanitized = sanitizeFilename(file.originalname);
+    const safeName = sanitized || 'document.pdf';
+    cb(null, `${uniqueSuffix}-${safeName}`);
   }
 });
 const w9Upload = multer({ storage: w9Storage });
@@ -1796,7 +1810,7 @@ app.post('/api/vendors/:id/upload-w9', w9Upload.single('w9'), async (req, res) =
       return res.status(404).json({ success: false, message: 'Vendor not found.' });
     }
 
-    const publicPath = `/mnt/data/uploads/vendors/w9/${req.file.filename}`;
+   const publicPath = `/uploads/vendors/w9/${req.file.filename}`;
     vendor.documents = vendor.documents || {};
     vendor.documents.w9Path = publicPath;
     vendor.documents.w9UploadedAt = new Date();
@@ -1825,7 +1839,8 @@ app.delete('/api/vendors/:id/w9', async (req, res) => {
     const w9Path = vendor.documents && vendor.documents.w9Path ? vendor.documents.w9Path : '';
     if (w9Path) {
       const rel = w9Path.startsWith('/') ? w9Path.slice(1) : w9Path;
-      const filePath = path.join(__dirname, rel);
+      const normalizedRel = rel.startsWith('uploads/') ? rel.replace('uploads/', '') : rel;
+      const filePath = path.join(uploadDir, normalizedRel);
       try {
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
