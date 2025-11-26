@@ -1762,11 +1762,6 @@ app.put("/api/vendors/:id", async (req, res) => {
 
 
 // Upload W9 for a vendor
-// Ensure the uploads/vendors/w9 directory exists
-const uploadDir = '/mnt/data/uploads';
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
 const w9Dir = path.join(uploadDir, 'vendors', 'w9');
 if (!fs.existsSync(w9Dir)) {
   fs.mkdirSync(w9Dir, { recursive: true });
