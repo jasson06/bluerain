@@ -1308,76 +1308,38 @@ function isMobileView() {
 
 // Open inline section and load vendors
 function openSubcontractorsModal() {
-  if (!subcontractorsSection) return;
-
-  const mainContent = document.querySelector('.main-content');
-  const dailyUpdatesPanel = document.getElementById('daily-updates-panel');
-  const hideDailyUpdates = isMobileView();
-
-  // Hide all main content children except Daily Updates panel and Subcontractors section
-  if (mainContent) {
-    mainContent.classList.add('only-subcontractors');
-    Array.from(mainContent.children).forEach(el => {
-      const id = el.id || '';
-      const tag = (el.tagName || '').toLowerCase();
-      const keep = id === 'daily-updates-panel' || id === 'subcontractors-section' || tag === 'header';
-      if (!keep) el.style.display = 'none';
-    });
-
-    // Explicitly hide known sections as a fallback
-    const toHideSelectors = [
-      '.columns-container', '.tab-container', '#projectFilters', '#map-section', '#assignments-section', '#lineItemsModal', '#todoModal', '#customReportModal'
-    ];
-    toHideSelectors.forEach(sel => {
-      const node = mainContent.querySelector(sel);
-      if (node) node.style.display = 'none';
-    });
-    // Ensure these are visible
-    if (subcontractorsSection) subcontractorsSection.style.display = 'block';
-    if (dailyUpdatesPanel) dailyUpdatesPanel.style.display = hideDailyUpdates ? 'none' : '';
+  if (window.innerWidth <= 768 && dailyUpdatesPanel) {
+    if (dailyUpdatesPanel.style.display !== 'none') {
+      dailyUpdatesPanel.dataset.prevDisplay = dailyUpdatesPanel.style.display || '';
+      dailyUpdatesPanel.style.display = 'none';
+      restoreDailyUpdatesAfterSubModal = true;
+    }
+  } else {
+    restoreDailyUpdatesAfterSubModal = false;
   }
-
-  // Ensure Daily Updates panel remains visible
-  if (dailyUpdatesPanel) dailyUpdatesPanel.style.display = hideDailyUpdates ? 'none' : '';
-
-  // Show Subcontractors section and load data
-  subcontractorsSection.style.display = 'block';
+  subModal.style.display = "block";
   fetchVendors();
-
-  // Scroll into view for better UX
-  subcontractorsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-  // Only add Back to Dashboard button to subcontractors section if not present
-  if (!document.getElementById('backToDashboardSubcontractors')) {
-    const backBtn = document.createElement('button');
-    backBtn.id = 'backToDashboardSubcontractors';
-    backBtn.textContent = '← Back to Dashboard';
-    backBtn.style.cssText = 'margin-bottom:18px;margin-top:8px;padding:7px 18px;font-size:1rem;border-radius:7px;background:#3282b8;color:#fff;border:none;cursor:pointer;font-weight:600;box-shadow:0 2px 8px rgba(37,99,235,0.08);';
-    subcontractorsSection.insertBefore(backBtn, subcontractorsSection.firstChild);
-    backBtn.addEventListener('click', () => {
-      const mainContent = document.querySelector('.main-content');
-      if (mainContent) {
-        mainContent.classList.remove('only-subcontractors');
-        Array.from(mainContent.children).forEach(el => {
-          // Restore all sections including those we previously hid
-          // Do NOT restore the assignments section; keep it hidden
-          if (el.id === 'assignments-section') return;
-          el.style.display = '';
-        });
-        // Also clear explicit display on known sections
-        ['.columns-container', '.tab-container', '#projectFilters', '#map-section', '#lineItemsModal', '#todoModal', '#customReportModal']
-          .forEach(sel => {
-            const node = mainContent.querySelector(sel);
-            if (node) node.style.display = '';
-          });
-      }
-      // Ensure assignments section explicitly remains hidden
-      const assignmentSection = document.getElementById('assignments-section');
-      if (assignmentSection) assignmentSection.style.display = 'none';
-      if (subcontractorsSection) subcontractorsSection.style.display = 'none';
-    });
-  }
 }
+
+// Close modal logic
+closeSubModal.onclick = () => {
+  subModal.style.display = "none";
+  if (restoreDailyUpdatesAfterSubModal && dailyUpdatesPanel) {
+    dailyUpdatesPanel.style.display = dailyUpdatesPanel.dataset.prevDisplay || '';
+    delete dailyUpdatesPanel.dataset.prevDisplay;
+    restoreDailyUpdatesAfterSubModal = false;
+  }
+};
+window.addEventListener('click', (e) => {
+  if (e.target === subModal) {
+    subModal.style.display = "none";
+    if (restoreDailyUpdatesAfterSubModal && dailyUpdatesPanel) {
+      dailyUpdatesPanel.style.display = dailyUpdatesPanel.dataset.prevDisplay || '';
+      delete dailyUpdatesPanel.dataset.prevDisplay;
+      restoreDailyUpdatesAfterSubModal = false;
+    }
+  }
+});
 
 // Fetch vendors and render the table
 async function fetchVendors() {
@@ -1852,39 +1814,13 @@ if (sidebarNav && !document.getElementById('assignment-nav-item')) {
   sidebarNav.insertBefore(assignmentLi, sidebarNav.lastElementChild);
 }
 
-// --- Assignment Section Show/Hide Logic ---
-const mainContent = document.querySelector('.main-content');
-const assignmentSection = document.getElementById('assignments-section');
-const columnsContainer = document.querySelector('.columns-container');
-const mapSection = document.getElementById('map-section');
-const dailyUpdatesPanel = document.getElementById('daily-updates-panel');
-
-// Add Back to Dashboard button to assignments section if not present
-if (assignmentSection && !document.getElementById('backToDashboardAssignments')) {
-  const backBtn = document.createElement('button');
-  backBtn.id = 'backToDashboardAssignments';
-  backBtn.textContent = '← Back to Dashboard';
-  backBtn.style.cssText = 'margin-bottom:18px;margin-top:8px;padding:7px 18px;font-size:1rem;border-radius:7px;background:#3282b8;color:#fff;border:none;cursor:pointer;font-weight:600;box-shadow:0 2px 8px rgba(37,99,235,0.08);';
-  assignmentSection.insertBefore(backBtn, assignmentSection.firstChild);
-  backBtn.addEventListener('click', () => {
-    // Restore dashboard sections
-    if (columnsContainer) columnsContainer.style.display = '';
-    if (mapSection) mapSection.style.display = '';
-    if (dailyUpdatesPanel) dailyUpdatesPanel.style.display = '';
-    const tabContainer = document.querySelector('.tab-container');
-    if (tabContainer) tabContainer.style.display = '';
-    const mapFilter = document.getElementById('projectFilters');
-    if (mapFilter) mapFilter.style.display = '';
-    if (assignmentSection) assignmentSection.style.display = 'none';
-    // Also hide the subcontractors section and remove its back button if present
-    const subcontractorsSection = document.getElementById('subcontractors-section');
-    if (subcontractorsSection) {
-      subcontractorsSection.style.display = 'none';
-      const subBtn = document.getElementById('backToDashboardSubcontractors');
-      if (subBtn) subBtn.remove();
-    }
-  });
-}
+  // --- Assignment Section Show/Hide Logic ---
+  const mainContent = document.querySelector('.main-content');
+  const assignmentSection = document.getElementById('assignments-section');
+  const columnsContainer = document.querySelector('.columns-container');
+  const mapSection = document.getElementById('map-section');
+  const dailyUpdatesPanel = document.getElementById('daily-updates-panel');
+  let restoreDailyUpdatesAfterSubModal = false;
 
 // Hide assignment section by default
 if (assignmentSection) assignmentSection.style.display = 'none';
