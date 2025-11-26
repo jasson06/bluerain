@@ -483,9 +483,18 @@ const estimateSchema = new mongoose.Schema({
 // Schemas and Models
 const vendorSchema = new mongoose.Schema({
   name: { type: String, required: false, trim: true },  // Name is now optional
-  email: { type: String, required: true, unique: true, trim: true },
+  email: { type: String, required: false, trim: true },
   phone: { type: String, trim: true },
   password: { type: String, required: false },  // Password is now optional
+
+  // New basic profile fields
+  title: { type: String, trim: true, default: "" },
+
+  // Vendor documents (e.g., W9)
+  documents: {
+    w9Path: { type: String, default: "" },
+    w9UploadedAt: { type: Date }
+  },
 
   role: { type: String, enum: ["vendor", "project-manager"], default: "vendor" }, 
 
@@ -544,6 +553,7 @@ assignedItems: [
   // New fields to track invitation status
   isInvited: { type: Boolean, default: false },  // Track if the vendor was invited
   isActive: { type: Boolean, default: false },   // Becomes true when vendor activates account
+  status: { type: String, enum: ["active", "inactive"], default: "inactive" }, // Explicit lifecycle status
 },
 { timestamps: true });
 
@@ -551,6 +561,8 @@ assignedItems: [
 // ✅ Indexing for Faster Queries
 vendorSchema.index({ "assignedItems.itemId": 1 });
 vendorSchema.index({ "assignedItems.projectId": 1 });
+// Unique sparse index on email allows multiple docs without email, enforces uniqueness when present
+vendorSchema.index({ email: 1 }, { unique: true, sparse: true });
 
 
 // Hash the password before saving the vendor
@@ -570,6 +582,7 @@ vendorSchema.pre('save', async function (next) {
     next(error);
   }
 });
+
 
 
 // Project schema
@@ -1573,31 +1586,26 @@ app.get('/estimate-view.html', (req, res) => {
 // Add Vendor
 app.post('/api/add-vendor', async (req, res) => {
   try {
-    const { name, email, phone } = req.body;
+    const { name, email, phone, title } = req.body;
 
-    if (!email || !name) {
-      return res.status(400).json({ success: false, message: "Name and email are required." });
+    if (!name) {
+      return res.status(400).json({ success: false, message: "Name is required." });
     }
 
-    const existing = await Vendor.findOne({ email });
-    if (existing) {
-      return res.status(400).json({ success: false, message: "Vendor already exists with this email." });
+    if (email) {
+      const existing = await Vendor.findOne({ email });
+      if (existing) {
+        return res.status(400).json({ success: false, message: "Vendor already exists with this email." });
+      }
     }
 
-    const newVendor = new Vendor({ name, email, phone });
+    const newVendor = new Vendor({ name, email, phone, title, status: 'inactive', isInvited: false, isActive: false });
     await newVendor.save();
 
-    // Create an invite token (no project)
-    const token = crypto.randomBytes(32).toString("hex");
-    const invite = new Invitation({ email, role: "vendor", token });
-    await invite.save();
-
-    // Send activation email
-    await sendNewUserInviteEmail(email, "vendor", null, token);
-
+    // Do NOT auto-invite here; invitation happens explicitly via /api/invite
     res.status(201).json({
       success: true,
-      message: 'Vendor added and invited successfully',
+      message: 'Vendor added successfully',
       vendor: newVendor
     });
   } catch (error) {
@@ -1605,7 +1613,6 @@ app.post('/api/add-vendor', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-
 
 // API Endpoint to Get All Vendors
 app.get('/api/vendors', async (req, res) => {
@@ -1750,6 +1757,93 @@ app.put("/api/vendors/:id", async (req, res) => {
   } catch (error) {
     console.error("❌ Error updating vendor:", error);
     res.status(500).json({ success: false, message: "Failed to update vendor. Please try again." });
+  }
+});
+
+
+// Upload W9 for a vendor
+// Ensure the uploads/vendors/w9 directory exists
+const w9Dir = path.join(__dirname, 'uploads/vendors/w9');
+if (!fs.existsSync(w9Dir)) {
+  fs.mkdirSync(w9Dir, { recursive: true });
+}
+
+const w9Storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/vendors/w9');
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const sanitized = file.originalname.replace(/\s+/g, '_');
+    cb(null, uniqueSuffix + '-' + sanitized);
+  }
+});
+const w9Upload = multer({ storage: w9Storage });
+
+// POST /api/vendors/:id/upload-w9
+app.post('/api/vendors/:id/upload-w9', w9Upload.single('w9'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid vendor ID.' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded.' });
+    }
+
+    const vendor = await Vendor.findById(id);
+    if (!vendor) {
+      return res.status(404).json({ success: false, message: 'Vendor not found.' });
+    }
+
+    const publicPath = `/uploads/vendors/w9/${req.file.filename}`;
+    vendor.documents = vendor.documents || {};
+    vendor.documents.w9Path = publicPath;
+    vendor.documents.w9UploadedAt = new Date();
+    await vendor.save();
+
+    res.status(200).json({ success: true, w9Url: publicPath, message: 'W9 uploaded successfully.' });
+  } catch (error) {
+    console.error('❌ Error uploading W9:', error);
+    res.status(500).json({ success: false, message: 'Failed to upload W9.' });
+  }
+});
+
+// DELETE /api/vendors/:id/w9 — remove W9 file and clear reference
+app.delete('/api/vendors/:id/w9', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid vendor ID.' });
+    }
+
+    const vendor = await Vendor.findById(id);
+    if (!vendor) {
+      return res.status(404).json({ success: false, message: 'Vendor not found.' });
+    }
+
+    const w9Path = vendor.documents && vendor.documents.w9Path ? vendor.documents.w9Path : '';
+    if (w9Path) {
+      const rel = w9Path.startsWith('/') ? w9Path.slice(1) : w9Path;
+      const filePath = path.join(__dirname, rel);
+      try {
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      } catch (e) {
+        console.warn('⚠️ Failed to delete W9 file from disk:', e.message);
+      }
+    }
+
+    vendor.documents = vendor.documents || {};
+    vendor.documents.w9Path = '';
+    vendor.documents.w9UploadedAt = undefined;
+    await vendor.save();
+
+    res.status(200).json({ success: true, message: 'W9 removed.' });
+  } catch (error) {
+    console.error('❌ Error deleting W9:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete W9.' });
   }
 });
 
@@ -3532,34 +3626,64 @@ app.post("/api/invite", async (req, res) => {
 
     const invitedUsers = [];
 
-    for (const email of emails) {
-      let existingUser =
-        role === "vendor"
-          ? await Vendor.findOne({ email })
-          : await Manager.findOne({ email });
+    for (const rawEmail of emails) {
+      const email = (rawEmail || '').toLowerCase();
+      if (!email) continue;
 
-      if (existingUser) {
-        if (projectId && role === "vendor") {
-          const isAlreadyAssigned = existingUser.assignedProjects?.some(
-            (p) => p.projectId.toString() === projectId
-          );
-
-          if (!isAlreadyAssigned) {
-            existingUser.assignedProjects = existingUser.assignedProjects || [];
-            existingUser.assignedProjects.push({ projectId, status: "new" });
-            await existingUser.save();
+      if (role === 'vendor') {
+        let vendor = await Vendor.findOne({ email });
+        if (vendor) {
+          // Existing vendor: if inactive -> treat as new invite
+          if (vendor.status === 'inactive') {
+            const token = crypto.randomBytes(32).toString('hex');
+            const invitation = new Invitation({ email, role, projectId, token });
+            await invitation.save();
+            vendor.isInvited = true;
+            await vendor.save();
+            invitedUsers.push({ email, status: 'invited-inactive' });
+            await sendNewUserInviteEmail(email, role, projectId, token);
+          } else {
+            // Active vendor
+            if (projectId) {
+              const alreadyAssigned = vendor.assignedProjects?.some(p => p.projectId.toString() === projectId);
+              if (!alreadyAssigned) {
+                vendor.assignedProjects = vendor.assignedProjects || [];
+                vendor.assignedProjects.push({ projectId, status: 'new' });
+                await vendor.save();
+              }
+            }
+            invitedUsers.push({ email, status: 'existing-active' });
+            await sendExistingUserEmail(email, role, projectId);
           }
+        } else {
+          // No vendor: create invitation only
+            const token = crypto.randomBytes(32).toString('hex');
+            const invitation = new Invitation({ email, role, projectId, token });
+            await invitation.save();
+            invitedUsers.push({ email, status: 'invited-new' });
+            await sendNewUserInviteEmail(email, role, projectId, token);
         }
-
-        invitedUsers.push({ email, status: "existing-user" });
-        await sendExistingUserEmail(email, role, projectId); // projectId may be null
       } else {
-        const token = crypto.randomBytes(32).toString("hex");
-        const invitation = new Invitation({ email, role, projectId, token });
-        await invitation.save();
-
-        invitedUsers.push({ email, status: "invited" });
-        await sendNewUserInviteEmail(email, role, projectId, token); // projectId may be null
+        // Manager flow unchanged but annotate status
+        let manager = await Manager.findOne({ email });
+        if (manager) {
+          if (projectId) {
+            const alreadyAssigned = manager.assignedProjects?.some(p => p.projectId.toString() === projectId);
+            if (!alreadyAssigned) {
+              manager.assignedProjects = manager.assignedProjects || [];
+              manager.assignedProjects.push({ projectId });
+              await manager.save();
+            }
+          }
+          invitedUsers.push({ email, status: 'existing-manager' });
+          await sendExistingUserEmail(email, role, projectId);
+        } else {
+          const token = crypto.randomBytes(32).toString('hex');
+          const invitation = new Invitation({ email, role, projectId, token });
+          await invitation.save();
+          invitedUsers.push({ email, status: 'invited-manager' });
+          await sendNewUserInviteEmail(email, role, projectId, token);
+        }
       }
     }
 
@@ -3707,6 +3831,9 @@ app.post("/api/invite/accept", async (req, res) => {
           }
         }
 
+        existingVendor.isActive = true;
+        existingVendor.status = 'active';
+        existingVendor.isInvited = false;
         await existingVendor.save();
       } else {
         // New vendor
@@ -3716,6 +3843,9 @@ app.post("/api/invite/accept", async (req, res) => {
           password: hashedPassword,
           assignedProjects: invitation.projectId ? [{ projectId: invitation.projectId, status: "new" }] : []
         });
+        newVendor.isActive = true;
+        newVendor.status = 'active';
+        newVendor.isInvited = false;
         await newVendor.save();
       }
     } else if (invitation.role === "project-manager") {
