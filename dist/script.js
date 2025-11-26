@@ -1261,9 +1261,12 @@ setInterval(() => {
 });
 
 
+// ✅ Sign In As Vendor Function
+
+
 function signInAsVendor(vendorId) {
   if (!vendorId) {
-    alert("Vendor ID missing.");
+    showToast("Vendor ID missing.");
     return;
   }
 
@@ -1276,58 +1279,278 @@ function signInAsVendor(vendorId) {
     })
     .catch(err => {
       console.error("Sign-in error:", err);
-      alert("Unable to sign in as this vendor.");
+      showToast("Unable to sign in as this vendor.");
     });
 }
 
-// Subcontractor modal elements
-const subModal = document.getElementById("subcontractorsModal");
-const closeSubModal = document.getElementById("closeSubModal");
+
+
+
+// Subcontractors inline section (replaces modal)
+const subcontractorsSection = document.getElementById("subcontractors-section");
 const addVendorForm = document.getElementById("addVendorForm");
-const vendorList = document.getElementById("vendorList");
+// Table body for vendors
+const vendorTableBody = document.getElementById("vendorTableBody");
+// Toolbar controls
+const vendorSearch = document.getElementById("vendorSearch");
+const addVendorPanel = document.getElementById("addVendorPanel");
+const toggleAddVendor = document.getElementById("toggleAddVendor");
+const vendorFormSubmit = document.getElementById('vendorFormSubmit');
+const vendorFormCancel = document.getElementById('vendorFormCancel');
 
-// ✅ NEW: Detail display section
-const vendorDetails = document.getElementById("vendorDetails");
+// Editing state
+let vendorEditId = null;
+let vendorsCache = [];
 
-// Open modal and load vendors
-function openSubcontractorsModal() {
-  subModal.style.display = "block";
-  fetchVendors();
+function isMobileView() {
+  return window.matchMedia('(max-width: 768px)').matches;
 }
 
-// Close modal logic
-closeSubModal.onclick = () => subModal.style.display = "none";
-window.onclick = (e) => { if (e.target === subModal) subModal.style.display = "none"; };
+// Open inline section and load vendors
+function openSubcontractorsModal() {
+  if (!subcontractorsSection) return;
 
-// Fetch vendors and render the list
+  const mainContent = document.querySelector('.main-content');
+  const dailyUpdatesPanel = document.getElementById('daily-updates-panel');
+  const hideDailyUpdates = isMobileView();
+
+  // Hide all main content children except Daily Updates panel and Subcontractors section
+  if (mainContent) {
+    mainContent.classList.add('only-subcontractors');
+    Array.from(mainContent.children).forEach(el => {
+      const id = el.id || '';
+      const tag = (el.tagName || '').toLowerCase();
+      const keep = id === 'daily-updates-panel' || id === 'subcontractors-section' || tag === 'header';
+      if (!keep) el.style.display = 'none';
+    });
+
+    // Explicitly hide known sections as a fallback
+    const toHideSelectors = [
+      '.columns-container', '.tab-container', '#projectFilters', '#map-section', '#assignments-section', '#lineItemsModal', '#todoModal', '#customReportModal'
+    ];
+    toHideSelectors.forEach(sel => {
+      const node = mainContent.querySelector(sel);
+      if (node) node.style.display = 'none';
+    });
+    // Ensure these are visible
+    if (subcontractorsSection) subcontractorsSection.style.display = 'block';
+    if (dailyUpdatesPanel) dailyUpdatesPanel.style.display = hideDailyUpdates ? 'none' : '';
+  }
+
+  // Ensure Daily Updates panel remains visible
+  if (dailyUpdatesPanel) dailyUpdatesPanel.style.display = hideDailyUpdates ? 'none' : '';
+
+  // Show Subcontractors section and load data
+  subcontractorsSection.style.display = 'block';
+  fetchVendors();
+
+  // Scroll into view for better UX
+  subcontractorsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Only add Back to Dashboard button to subcontractors section if not present
+  if (!document.getElementById('backToDashboardSubcontractors')) {
+    const backBtn = document.createElement('button');
+    backBtn.id = 'backToDashboardSubcontractors';
+    backBtn.textContent = '← Back to Dashboard';
+    backBtn.style.cssText = 'margin-bottom:18px;margin-top:8px;padding:7px 18px;font-size:1rem;border-radius:7px;background:#3282b8;color:#fff;border:none;cursor:pointer;font-weight:600;box-shadow:0 2px 8px rgba(37,99,235,0.08);';
+    subcontractorsSection.insertBefore(backBtn, subcontractorsSection.firstChild);
+    backBtn.addEventListener('click', () => {
+      const mainContent = document.querySelector('.main-content');
+      if (mainContent) {
+        mainContent.classList.remove('only-subcontractors');
+        Array.from(mainContent.children).forEach(el => {
+          // Restore all sections including those we previously hid
+          // Do NOT restore the assignments section; keep it hidden
+          if (el.id === 'assignments-section') return;
+          el.style.display = '';
+        });
+        // Also clear explicit display on known sections
+        ['.columns-container', '.tab-container', '#projectFilters', '#map-section', '#lineItemsModal', '#todoModal', '#customReportModal']
+          .forEach(sel => {
+            const node = mainContent.querySelector(sel);
+            if (node) node.style.display = '';
+          });
+      }
+      // Ensure assignments section explicitly remains hidden
+      const assignmentSection = document.getElementById('assignments-section');
+      if (assignmentSection) assignmentSection.style.display = 'none';
+      if (subcontractorsSection) subcontractorsSection.style.display = 'none';
+    });
+  }
+}
+
+// Fetch vendors and render the table
 async function fetchVendors() {
   try {
     const res = await fetch('/api/vendors');
-    const vendors = await res.json();
-    vendorList.innerHTML = '';
-    if (vendorDetails) vendorDetails.style.display = 'none';
+    const data = await res.json();
+    const vendors = data.vendors || data || [];
+    vendorsCache = Array.isArray(vendors) ? vendors : [];
+
+    if (vendorTableBody) vendorTableBody.innerHTML = '';
 
     vendors.forEach(vendor => {
-      const li = document.createElement('li');
-      li.style.position = 'relative'; // to position dropdown
-    
-      li.innerHTML = `
-        <span style="cursor: pointer;" onclick="showVendorDetails(${JSON.stringify(vendor).replace(/"/g, '&quot;')})">
-          ${vendor.name}
-        </span>
+      const tr = document.createElement('tr');
+      tr.dataset.name = (vendor.name || '').toLowerCase();
+      tr.dataset.email = (vendor.email || '').toLowerCase();
+      tr.dataset.phone = (vendor.phone || '').toLowerCase();
+      tr.dataset.title = (vendor.title || '').toLowerCase();
+      tr.dataset.status = (vendor.status || 'inactive').toLowerCase();
+
+      const nameTd = document.createElement('td');
+      nameTd.textContent = vendor.name || '';
+
+      const titleTd = document.createElement('td');
+      titleTd.textContent = vendor.title || '';
+
+      const statusTd = document.createElement('td');
+      const statusValue = vendor.status || 'inactive';
+      // Inline editable status dropdown
+      const statusSelect = document.createElement('select');
+      statusSelect.className = 'vendor-status-select';
+      ['inactive','active'].forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt; o.textContent = opt.charAt(0).toUpperCase() + opt.slice(1);
+        if (opt === statusValue) o.selected = true;
+        statusSelect.appendChild(o);
+      });
+      // apply initial styling class based on value
+      applyStatusSelectStyle(statusSelect);
+      statusSelect.onchange = (e) => {
+        applyStatusSelectStyle(statusSelect);
+        updateVendorStatus(vendor._id, e.target.value, tr, statusSelect);
+      };
+      statusTd.appendChild(statusSelect);
+
+      const emailTd = document.createElement('td');
+      emailTd.textContent = vendor.email || '';
+
+      const phoneTd = document.createElement('td');
+      phoneTd.textContent = vendor.phone || '';
+
+      const w9Td = document.createElement('td');
+      const w9Path = vendor.documents && vendor.documents.w9Path ? vendor.documents.w9Path : '';
+      if (w9Path) {
+        // Green pill with check icon and link
+        const pill = document.createElement('span');
+        pill.className = 'w9-status-pill';
+        pill.style.display = 'inline-flex';
+        pill.style.alignItems = 'center';
+        pill.style.gap = '0px';
+        
+        pill.style.color = '#fff';
+        pill.style.padding = '4px 12px';
+        pill.style.borderRadius = '20px';
+        pill.style.fontSize = '0.85em';
+        pill.style.fontWeight = '600';
+        // Check icon
+        const check = document.createElement('span');
+        check.textContent = '✓';
+        check.style.display = 'inline-flex';
+        check.style.justifyContent = 'center';
+        check.style.alignItems = 'center';
+        check.style.width = '20px';
+        check.style.height = '20px';
+        check.style.borderRadius = '50%';
+        check.style.background = '#10b981';
+        check.style.color = '#fff';
+        check.style.fontSize = '1em';
+        check.style.boxShadow = '0 0 0 2px #03b800ff, 0 1px 3px rgba(0,0,0,0.15)';
+        pill.appendChild(check);
+        // Link
+        const a = document.createElement('a');
+        a.href = w9Path;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = 'View W9';
+        a.style.color = '#2563eb';
+        a.style.textDecoration = 'underline';
+        a.style.marginLeft = '6px';
+        pill.appendChild(a);
+        w9Td.appendChild(pill);
+        // Delete icon (optional, keep as before)
+        const del = document.createElement('span');
+        del.textContent = '×';
+        del.title = 'Remove W9';
+        del.style.cursor = 'pointer';
+        del.style.color = '#ff0000ff';
+        del.style.fontWeight = 'bold';
+        del.style.padding = '0 0px';
+        del.setAttribute('aria-label', 'Remove W9');
+        del.onclick = (e) => { e.stopPropagation(); deleteVendorW9(vendor._id); };
+        pill.appendChild(del);
+      } else {
+        // Red text for missing W9
+        const missing = document.createElement('span');
+        missing.textContent = 'Missing';
+        missing.style.color = '#dc2626';
+        missing.style.fontWeight = '600';
+        missing.style.fontSize = '0.95em';
+        w9Td.appendChild(missing);
+      }
+
+      const actionsTd = document.createElement('td');
+      actionsTd.className = 'vendor-actions-cell';
+      actionsTd.innerHTML = `
         <span class="vendor-menu-toggle" onclick="toggleVendorMenu(event, '${vendor._id}')">⋮</span>
         <div class="vendor-dropdown-menu" id="vendor-menu-${vendor._id}">
-          <button onclick="event.stopPropagation(); editVendor('${vendor._id}', '${vendor.name}', '${vendor.email}', '${vendor.phone}')">✏️ Edit</button>
+          <button onclick="event.stopPropagation(); openEditVendor('${vendor._id}')">✏️ Edit</button>
           <button onclick="event.stopPropagation(); deleteVendor('${vendor._id}')">🗑️ Delete</button>
+          <button onclick="event.stopPropagation(); inviteVendor('${vendor._id}')">✉️ Invite</button>
+          <button onclick="event.stopPropagation(); uploadVendorW9('${vendor._id}')">📄 Upload W9</button>
           <button onclick="event.stopPropagation(); signInAsVendor('${vendor._id}')">🔐 Sign In</button>
+        </div>`;
 
-        </div>
-      `;
-    
-      vendorList.appendChild(li);
+      tr.appendChild(nameTd);
+      tr.appendChild(titleTd);
+      tr.appendChild(statusTd);
+      tr.appendChild(emailTd);
+      tr.appendChild(phoneTd);
+      tr.appendChild(w9Td);
+      tr.appendChild(actionsTd);
+
+      if (vendorTableBody) vendorTableBody.appendChild(tr);
     });
   } catch (err) {
     console.error("Error fetching vendors:", err);
+  }
+}
+
+// Inline status update
+async function updateVendorStatus(id, newStatus, rowEl, selectEl) {
+  try {
+    const resp = await fetch(`/api/vendors/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+    const json = await resp.json();
+    if (!resp.ok) {
+      showToast(json.message || 'Failed to update status');
+      // revert select to previous dataset status
+      const prev = rowEl.dataset.status || 'inactive';
+      selectEl.value = prev;
+      applyStatusSelectStyle(selectEl);
+      return;
+    }
+    // Success: update dataset + toast
+    rowEl.dataset.status = newStatus.toLowerCase();
+    applyStatusSelectStyle(selectEl);
+    showToast('Status updated');
+  } catch (e) {
+    console.error('Status update error', e);
+    showToast('Error updating status');
+  }
+}
+
+// Helper to toggle color classes for status selects
+function applyStatusSelectStyle(select) {
+  const val = (select.value || '').toLowerCase();
+  select.classList.remove('status-active','status-inactive');
+  if (val === 'active') {
+    select.classList.add('status-active');
+  } else {
+    select.classList.add('status-inactive');
   }
 }
 
@@ -1335,47 +1558,136 @@ async function fetchVendors() {
 addVendorForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  const vendor = {
+  const vendorPayload = {
     name: document.getElementById("vendorName").value,
+    title: document.getElementById("vendorTitle").value,
     email: document.getElementById("vendorEmail").value,
-    phone: document.getElementById("vendorPhone").value
+    phone: document.getElementById("vendorPhone").value,
+    status: (document.getElementById("vendorStatus")?.value || 'inactive')
   };
-showLoader(); // 👈 START
+  showLoader();
   try {
-    // Step 1: Add the vendor
-    const addRes = await fetch('/api/add-vendor', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(vendor)
-    });
-
-    const addedVendor = await addRes.json();
-
-    // Step 2: Send invite (without projectId)
-    if (addedVendor.vendor && addedVendor.vendor.email) {
-      await fetch("/api/invite", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          emails: [addedVendor.vendor.email],
-          role: "vendor",         // 👈 Make sure your backend handles "vendor" role
-          projectId: null         // No project attached to this invite
-        })
+    if (vendorEditId) {
+      // Edit flow
+      const putRes = await fetch(`/api/vendors/${vendorEditId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(vendorPayload)
       });
-
-      showToast("✅ Invite sent to new vendor");
+      const putJson = await putRes.json();
+      if (!putRes.ok) {
+        console.error('Update failed', putJson);
+        showToast(putJson.message || 'Failed to update vendor.');
+      } else {
+        showToast('Vendor updated.');
+      }
+    } else {
+      // Add flow (no auto-invite)
+      const addRes = await fetch('/api/add-vendor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(vendorPayload)
+      });
+      const addedVendor = await addRes.json();
+      if (!addRes.ok) {
+        console.error('Add vendor failed', addedVendor);
+        showToast(addedVendor.message || 'Failed to add vendor');
+      } else {
+        showToast('Vendor added. You can invite them later from actions.');
+      }
     }
 
+    // Reset to add mode
+    vendorEditId = null;
+    if (vendorFormSubmit) vendorFormSubmit.textContent = 'Add';
+    if (vendorFormCancel) vendorFormCancel.style.display = 'none';
     addVendorForm.reset();
+    if (addVendorPanel) addVendorPanel.style.display = 'none';
     fetchVendors();
   } catch (error) {
     console.error("❌ Error adding vendor or sending invite:", error);
     showToast("Failed to add vendor or send invite.");
-              } finally {
-      hideLoader(); // 👈 END
+  } finally {
+      hideLoader();
   }
 });
 
+async function inviteVendor(id) {
+  try {
+    const v = vendorsCache.find(x => x._id === id);
+    if (!v) return;
+    let email = v.email || '';
+    if (!email) {
+      email = prompt('Enter email to invite this subcontractor:') || '';
+      email = email.trim();
+      if (!email) {
+        showToast('Email is required to send invite.');
+        return;
+      }
+      // basic email sanity check
+      const emailOk = /.+@.+\..+/.test(email);
+      if (!emailOk) {
+        showToast('Please enter a valid email.');
+        return;
+      }
+      // Update vendor with email before inviting
+      const putRes = await fetch(`/api/vendors/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      if (!putRes.ok) {
+        const j = await putRes.json().catch(() => ({}));
+        showToast(j.message || 'Failed to set email on vendor.');
+        return;
+      }
+    }
+
+    const res = await fetch('/api/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emails: [email], role: 'vendor', projectId: null })
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      console.error('Invite failed:', json);
+      showToast(json.message || 'Failed to send invite.');
+    } else {
+      showToast('Invite sent.');
+      // Refresh cache so email shows in table if it was missing before
+      fetchVendors();
+    }
+  } catch (e) {
+    console.error('Error sending invite:', e);
+    showToast('Error sending invite');
+  }
+}
+
+// Toggle Add Vendor panel
+if (toggleAddVendor && addVendorPanel) {
+  toggleAddVendor.addEventListener('click', () => {
+    const isHidden = addVendorPanel.style.display === 'none' || !addVendorPanel.style.display;
+    // Switch to add mode when toggling from toolbar
+    vendorEditId = null;
+    if (vendorFormSubmit) vendorFormSubmit.textContent = 'Add';
+    if (vendorFormCancel) vendorFormCancel.style.display = 'none';
+    addVendorForm.reset();
+    const statusEl = document.getElementById('vendorStatus');
+    if (statusEl) statusEl.value = 'inactive';
+    addVendorPanel.style.display = isHidden ? 'block' : 'none';
+  });
+}
+
+// Search filter for vendors table
+if (vendorSearch && vendorTableBody) {
+  vendorSearch.addEventListener('input', () => {
+    const q = vendorSearch.value.toLowerCase().trim();
+    Array.from(vendorTableBody.querySelectorAll('tr')).forEach(row => {
+      const hay = `${row.dataset.name} ${row.dataset.title} ${row.dataset.status} ${row.dataset.email} ${row.dataset.phone}`;
+      row.style.display = hay.includes(q) ? '' : 'none';
+    });
+  });
+}
 
 function toggleVendorMenu(event, id) {
   event.stopPropagation();
@@ -1394,7 +1706,6 @@ document.addEventListener('click', () => {
 });
 
 
-
 // Delete vendor by ID with confirmation
 async function deleteVendor(id) {
   const confirmDelete = confirm("Are you sure you want to delete this vendor? This action cannot be undone.");
@@ -1404,7 +1715,7 @@ async function deleteVendor(id) {
       const response = await fetch(`/api/vendors/${id}`, { method: 'DELETE' });
       
       if (response.ok) {
-       showToast("Vendor deleted successfully.");
+        showToast("Vendor deleted successfully.");
         fetchVendors();
       } else {
         const errorData = await response.json();
@@ -1414,38 +1725,121 @@ async function deleteVendor(id) {
 
     } catch (error) {
       console.error("Error:", error);
-      showToast("An error occurred while deleting the vendor.");
+     showToast("An error occurred while deleting the vendor.");
     }
   }
 }
 
 
 // Edit vendor info
-async function editVendor(id, name, email, phone) {
-  const newName = prompt("Update name:", name);
-  const newEmail = prompt("Update email:", email);
-  const newPhone = prompt("Update phone:", phone);
-  if (newName) {
-    await fetch(`/api/vendors/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName, email: newEmail, phone: newPhone })
+function openEditVendor(id) {
+  const v = vendorsCache.find(x => x._id === id);
+  if (!v) return;
+  document.querySelectorAll('.vendor-dropdown-menu').forEach(menu => menu.style.display = 'none');
+  vendorEditId = id;
+  // populate form
+  document.getElementById('vendorName').value = v.name || '';
+  document.getElementById('vendorTitle').value = v.title || '';
+  document.getElementById('vendorEmail').value = v.email || '';
+  document.getElementById('vendorPhone').value = v.phone || '';
+  const statusEl = document.getElementById('vendorStatus');
+  if (statusEl) statusEl.value = (v.status || 'inactive');
+  if (vendorFormSubmit) vendorFormSubmit.textContent = 'Save';
+  if (vendorFormCancel) vendorFormCancel.style.display = 'inline-block';
+  if (addVendorPanel) addVendorPanel.style.display = 'block';
+  // Smoothly bring the panel into view and focus the first field
+  setTimeout(() => {
+    if (addVendorPanel) {
+      addVendorPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    const firstField = document.getElementById('vendorName');
+    if (firstField) {
+      firstField.focus();
+      firstField.select();
+    }
+  }, 0);
+}
+
+if (vendorFormCancel) {
+  vendorFormCancel.addEventListener('click', () => {
+    vendorEditId = null;
+    if (vendorFormSubmit) vendorFormSubmit.textContent = 'Add';
+    vendorFormCancel.style.display = 'none';
+    addVendorForm.reset();
+    const statusEl = document.getElementById('vendorStatus');
+    if (statusEl) statusEl.value = 'inactive';
+    addVendorPanel.style.display = 'none';
+  });
+}
+
+async function uploadVendorW9(id) {
+  try {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf,.png,.jpg,.jpeg';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    input.addEventListener('change', async () => {
+      const file = input.files && input.files[0];
+      if (!file) {
+        document.body.removeChild(input);
+        return;
+      }
+      const formData = new FormData();
+      formData.append('w9', file);
+      showLoader();
+      try {
+        const resp = await fetch(`/api/vendors/${id}/upload-w9`, {
+          method: 'POST',
+          body: formData
+        });
+        const json = await resp.json();
+        if (!resp.ok) {
+          console.error('Upload failed', json);
+          showToast(json.message || 'Failed to upload W9');
+        } else {
+          showToast('W9 uploaded successfully');
+          fetchVendors();
+        }
+      } catch (e) {
+        console.error('Error uploading W9', e);
+        showToast('Error uploading W9');
+      } finally {
+        hideLoader();
+        document.body.removeChild(input);
+      }
     });
-    fetchVendors();
+    input.click();
+  } catch (e) {
+    console.error('Upload init error:', e);
+    showToast('Unable to start upload');
+  }
+}
+
+async function deleteVendorW9(id) {
+  const confirmed = confirm('Remove W9 document for this vendor?');
+  if (!confirmed) return;
+  showLoader();
+  try {
+    const resp = await fetch(`/api/vendors/${id}/w9`, { method: 'DELETE' });
+    const json = await resp.json();
+    if (!resp.ok) {
+      console.error('Delete W9 failed', json);
+      showToast(json.message || 'Failed to remove W9');
+    } else {
+      showToast('W9 removed');
+      fetchVendors();
+    }
+  } catch (e) {
+    console.error('Error deleting W9', e);
+    showToast('Error deleting W9');
+  } finally {
+    hideLoader();
   }
 }
 
 // ✅ NEW: Show vendor details in the modal
-function showVendorDetails(vendor) {
-  if (!vendorDetails) return;
-  vendorDetails.style.display = "block";
-  vendorDetails.innerHTML = `
-    <h3>${vendor.name}</h3>
-    <p><strong>Email:</strong> ${vendor.email || "N/A"}</p>
-    <p><strong>Phone:</strong> ${vendor.phone || "N/A"}</p>
-
-  `;
-}
+// Details panel removed – no separate details view.
 
 
 // --- Assignments Section Logic ---
@@ -1458,32 +1852,67 @@ if (sidebarNav && !document.getElementById('assignment-nav-item')) {
   sidebarNav.insertBefore(assignmentLi, sidebarNav.lastElementChild);
 }
 
-  // --- Assignment Section Show/Hide Logic ---
-  const mainContent = document.querySelector('.main-content');
-  const assignmentSection = document.getElementById('assignments-section');
-  const columnsContainer = document.querySelector('.columns-container');
-  const mapSection = document.getElementById('map-section');
-  const dailyUpdatesPanel = document.getElementById('daily-updates-panel');
+// --- Assignment Section Show/Hide Logic ---
+const mainContent = document.querySelector('.main-content');
+const assignmentSection = document.getElementById('assignments-section');
+const columnsContainer = document.querySelector('.columns-container');
+const mapSection = document.getElementById('map-section');
+const dailyUpdatesPanel = document.getElementById('daily-updates-panel');
 
-  // Hide assignment section by default
-  if (assignmentSection) assignmentSection.style.display = 'none';
-
-  // Show assignments and hide main dashboard when clicked
-document.getElementById('open-assignment-section').addEventListener('click', (e) => {
-    e.preventDefault();
-    // Hide dashboard columns and other main sections
-    if (columnsContainer) columnsContainer.style.display = 'none';
-    if (mapSection) mapSection.style.display = 'none';
-    if (dailyUpdatesPanel) dailyUpdatesPanel.style.display = 'none';
-    // Hide project tabs and map filter tab
+// Add Back to Dashboard button to assignments section if not present
+if (assignmentSection && !document.getElementById('backToDashboardAssignments')) {
+  const backBtn = document.createElement('button');
+  backBtn.id = 'backToDashboardAssignments';
+  backBtn.textContent = '← Back to Dashboard';
+  backBtn.style.cssText = 'margin-bottom:18px;margin-top:8px;padding:7px 18px;font-size:1rem;border-radius:7px;background:#3282b8;color:#fff;border:none;cursor:pointer;font-weight:600;box-shadow:0 2px 8px rgba(37,99,235,0.08);';
+  assignmentSection.insertBefore(backBtn, assignmentSection.firstChild);
+  backBtn.addEventListener('click', () => {
+    // Restore dashboard sections
+    if (columnsContainer) columnsContainer.style.display = '';
+    if (mapSection) mapSection.style.display = '';
+    if (dailyUpdatesPanel) dailyUpdatesPanel.style.display = '';
     const tabContainer = document.querySelector('.tab-container');
-    if (tabContainer) tabContainer.style.display = 'none';
+    if (tabContainer) tabContainer.style.display = '';
     const mapFilter = document.getElementById('projectFilters');
-    if (mapFilter) mapFilter.style.display = 'none';
-    // Show assignments
-    if (assignmentSection) assignmentSection.style.display = 'block';
-    // Optionally reload assignments
-    loadAssignments();
+    if (mapFilter) mapFilter.style.display = '';
+    if (assignmentSection) assignmentSection.style.display = 'none';
+    // Also hide the subcontractors section and remove its back button if present
+    const subcontractorsSection = document.getElementById('subcontractors-section');
+    if (subcontractorsSection) {
+      subcontractorsSection.style.display = 'none';
+      const subBtn = document.getElementById('backToDashboardSubcontractors');
+      if (subBtn) subBtn.remove();
+    }
+  });
+}
+
+// Hide assignment section by default
+if (assignmentSection) assignmentSection.style.display = 'none';
+
+// Show assignments and hide main dashboard when clicked
+document.getElementById('open-assignment-section').addEventListener('click', (e) => {
+  e.preventDefault();
+  // Hide dashboard columns and other main sections
+  if (columnsContainer) columnsContainer.style.display = 'none';
+  if (mapSection) mapSection.style.display = 'none';
+  const hideDailyUpdates = isMobileView();
+  if (dailyUpdatesPanel) dailyUpdatesPanel.style.display = hideDailyUpdates ? 'none' : '';
+  // Hide project tabs and map filter tab
+  const tabContainer = document.querySelector('.tab-container');
+  if (tabContainer) tabContainer.style.display = 'none';
+  const mapFilter = document.getElementById('projectFilters');
+  if (mapFilter) mapFilter.style.display = 'none';
+  // Hide subcontractors section if present and remove only-subcontractors class
+  const subcontractorsSection = document.getElementById('subcontractors-section');
+  if (subcontractorsSection) subcontractorsSection.style.display = 'none';
+  const mainContent = document.querySelector('.main-content');
+  if (mainContent && mainContent.classList.contains('only-subcontractors')) {
+    mainContent.classList.remove('only-subcontractors');
+  }
+  // Show assignments
+  if (assignmentSection) assignmentSection.style.display = 'block';
+  // Optionally reload assignments
+  loadAssignments();
 });
 
 // Optionally, add a way to go back to dashboard (e.g., clicking "Home" or another tab)
@@ -1573,7 +2002,7 @@ estimates.forEach(e => estimateMap[e._id.toString()] = e);
       });
 
         // Debug: log what is found
-  console.log('Vendor:', vendor.name, 'Items by Estimate:', itemsByEstimate);
+  
 
 Object.entries(itemsByEstimate).forEach(([estimateId, items]) => {
   const estimate = estimateMap[estimateId.toString()];
@@ -1793,7 +2222,6 @@ window.onclick = function(event) {
 
 // Load assignments on page load
 document.addEventListener('DOMContentLoaded', loadAssignments);
-
 
 
 // --- Custom Report Modal Logic ---
