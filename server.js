@@ -1796,7 +1796,7 @@ app.post('/api/vendors/:id/upload-w9', w9Upload.single('w9'), async (req, res) =
       return res.status(404).json({ success: false, message: 'Vendor not found.' });
     }
 
-    const publicPath = `/uploads/vendors/w9/${req.file.filename}`;
+    const publicPath = `/mnt/data/uploads/vendors/w9/${req.file.filename}`;
     vendor.documents = vendor.documents || {};
     vendor.documents.w9Path = publicPath;
     vendor.documents.w9UploadedAt = new Date();
