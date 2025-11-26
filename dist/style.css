@@ -109,6 +109,11 @@ button, input, textarea {
   margin-top: 65px;
 }
 
+/* When showing Subcontractors inline, hide everything except header, Daily Updates, and Subcontractors */
+.main-content.only-subcontractors > *:not(#daily-updates-panel):not(#subcontractors-section):not(header) {
+  display: none !important;
+}
+
 .sidebar.open + .main-content {
   margin-left: 250px;
 }
