@@ -114,6 +114,22 @@ button, input, textarea {
   display: none !important;
 }
 
+/* Extra safety: hide known sections when Subcontractors view is active */
+.main-content.only-subcontractors .columns-container,
+.main-content.only-subcontractors .tab-container,
+.main-content.only-subcontractors #projectFilters,
+.main-content.only-subcontractors #map-section,
+.main-content.only-subcontractors #assignments-section,
+.main-content.only-subcontractors #lineItemsModal,
+.main-content.only-subcontractors #todoModal,
+.main-content.only-subcontractors #customReportModal {
+  display: none !important;
+}
+
+.main-content.only-subcontractors #subcontractors-section {
+  display: block !important;
+}
+
 .sidebar.open + .main-content {
   margin-left: 250px;
 }
