@@ -279,27 +279,56 @@
   </div>
 </div>    
 
-      <!-- Subcontractors Modal -->
-<div id="subcontractorsModal" class="modal">
-  <div class="modal-content">
-    <span class="close" id="closeSubModal">&times;</span>
+    <!-- Subcontractors Inline Section (replaces modal) -->
+<section id="subcontractors-section" style="display:none; margin-top: 28px;">
+  <div class="subcontractors-toolbar">
     <h2>Manage Subcontractors</h2>
+    <div class="toolbar-actions">
+      <input type="text" id="vendorSearch" class="subcontractors-search" placeholder="Search subcontractors..." />
+      <button id="toggleAddVendor" class="icon-button" title="Add Subcontractor"><i class="fas fa-plus"></i></button>
+      <!-- Back to Dashboard button is now injected by JS only to avoid duplicates -->
+    </div>
+  </div>
 
-    <!-- Add Vendor Form -->
-    <form id="addVendorForm">
-      <input type="text" id="vendorName" placeholder="Name" required />
+  <!-- Collapsible Add Vendor Panel -->
+  <div id="addVendorPanel" class="collapsible" style="display:none;">
+    <form id="addVendorForm" class="add-vendor-form">
+      <input type="text" id="vendorName" placeholder="Full name" required />
+      <input type="text" id="vendorTitle" placeholder="Title (e.g., Owner)" />
       <input type="email" id="vendorEmail" placeholder="Email" />
       <input type="tel" id="vendorPhone" placeholder="Phone" />
-      <button type="submit">Add Vendor</button>
+      <!-- New: Status dropdown to allow manual status management -->
+      <select id="vendorStatus" class="vendor-status-select" style="min-height:38px;">
+        <option value="inactive" selected>Inactive</option>
+        <option value="active">Active</option>
+      </select>
+      <div style="grid-column: 1 / -1; display:flex; align-items:center; gap:8px;">
+        <button type="submit" id="vendorFormSubmit" class="btn-primary">Add</button>
+        <button type="button" id="vendorFormCancel" class="btn-secondary" style="display:none;">Cancel</button>
+      </div>
     </form>
-
-    <!-- Vendor List -->
-    <ul id="vendorList" class="vendor-list"></ul>
-
-    <!-- Vendor Details View -->
-    <div id="vendorDetails" class="vendor-details" style="display: none;"></div>
   </div>
-</div>
+
+  <div class="subcontractors-content-grid">
+    <!-- Vendor Table Only -->
+    <div>
+      <table id="vendorTable" class="vendor-table">
+        <thead>
+          <tr>
+            <th style="width:22%;">Name</th>
+            <th style="width:18%;">Title</th>
+            <th style="width:10%;">Status</th>
+            <th style="width:20%;">Email</th>
+            <th style="width:12%;">Phone</th>
+            <th style="width:8%;">W9</th>
+            <th style="width:10%; text-align:right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="vendorTableBody"><!-- populated by JS --></tbody>
+      </table>
+    </div>
+  </div>
+</section>
 
 <!-- Custom Report Modal -->
 <div id="customReportModal" class="modal">
