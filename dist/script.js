@@ -1,3 +1,4 @@
+
     function showLoader() {
       document.getElementById('loader').style.display = 'flex';
     }
@@ -38,10 +39,11 @@
       toast.style.display = 'block';
       setTimeout(() => { toast.style.display = 'none'; }, 3000);
     }
+    
 
 
+document.addEventListener('DOMContentLoaded', async () => {
 
-document.addEventListener('DOMContentLoaded', () => {
     // ✅ Check if managerId is in localStorage, if not, redirect to login page
     const managerId = localStorage.getItem("managerId");
     if (!managerId) {
@@ -50,11 +52,28 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    console.log(`✅ Manager ID Found: ${managerId}`); // Debugging
-        
+   
+
+    // ✅ Fetch manager name and display in header label
+    try {
+        const res = await fetch(`/api/managers/${managerId}?t=${Date.now()}`);
+        if (res.ok) {
+            const data = await res.json();
+            const name = data.name || data.managername || data.manager?.name || "";
+            const label = document.getElementById("manager-name-label");
+            if (label && name) {
+                label.textContent = `Welcome (${name})`;
+                label.style.display = "block";
+            }
+        }
+    } catch (e) {
+        console.warn("Could not fetch manager name.", e);
+    }
+
     setTimeout(() => {
         updateProjectCounts(); // Give time for API responses
     }, 500);
+
     
     // Tab Navigation
     const tabs = document.querySelectorAll('.tab');
@@ -98,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
             column.style.display = index === activeProjectsIndex ? 'block' : 'none';
         });
         
-        console.log(`✅ Initialized page to Active Projects tab (index: ${activeProjectsIndex})`);
+        
     }
 
     // Drag and Drop for Columns
@@ -149,7 +168,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-
     let map;
 let markers = [];
 let markerCluster;
@@ -161,7 +179,12 @@ const projectFilters = {
   onMarket: true
 };
 
-    
+
+
+
+
+
+
     // Form Submissions
     const formConfigurations = [
         { formId: 'add-project-form', apiEndpoint: '/api/add-project' },
@@ -207,7 +230,7 @@ const projectFilters = {
                     });
 
                     if (response.ok) {
-                        showToast(`${formId.replace('-', ' ')} submitted successfully!`);
+                      showToast(`${formId.replace('-', ' ')} submitted successfully!`);
                         form.reset();
                     } else {
                         const error = await response.json();
@@ -231,9 +254,9 @@ const projectFilters = {
         const errors = [];
 
         if (formId === 'add-project-form') {
-            if (!payload.name) errors.push('Project name is required.');
+            if (!payload.name) errors.push('Project name is required.');   
             if (!payload.type) errors.push('Project type is required.');
-        
+            
         }
 
         if (formId === 'add-client-form') {
@@ -244,6 +267,7 @@ const projectFilters = {
           if (!payload.phone) errors.push('Client phone is required.');
           if (!payload.address) errors.push('Client address is required.');
       }
+      
 
         if (formId === 'add-estimate-form') {
             if (!payload.name) errors.push('Estimate name is required.');
@@ -260,7 +284,7 @@ const projectFilters = {
         }
 
         if (errors.length > 0) {
-            alert(`Please fix the following errors:\n- ${errors.join('\n- ')}`);
+          showToast(`Please fix the following errors:\n- ${errors.join('\n- ')}`);
             return false;
         }
 
@@ -268,8 +292,6 @@ const projectFilters = {
     }
 
     
-
-
 function renderUtilityIconsForProject(project) {
   // Example: expects project.utilityAccounts = { water: {status}, gas: {status}, electricity: {status} }
   if (!project.utilityAccounts) return '';
@@ -283,9 +305,41 @@ function renderUtilityIconsForProject(project) {
       ${utilities.map(util => {
         const acc = project.utilityAccounts[util.key] || {};
         let color = '#bdbdbd'; // default gray
-        if (acc.status === 'active' || acc.status === 'on') color = '#27ae60'; // green
-        else if (acc.status === 'disconnected' || acc.status === 'off') color = '#e74c3c'; // red
-        return `<i class="fas ${util.icon}" title="${util.label}" style="color:${color};font-size:1.2em;"></i>`;
+        let tooltip = util.label;
+        if (util.key === 'water') {
+          if (acc.status === 'active' || acc.status === 'on') {
+            color = '#27ae60';
+            tooltip = 'Water Connected';
+          } else if (acc.status === 'disconnected' || acc.status === 'off') {
+            color = '#e74c3c';
+            tooltip = 'Water Disconnected';
+          } else {
+            tooltip = 'Water Status Unknown';
+          }
+        }
+        if (util.key === 'gas') {
+          if (acc.status === 'active' || acc.status === 'on') {
+            color = '#27ae60';
+            tooltip = 'Gas Active';
+          } else if (acc.status === 'disconnected' || acc.status === 'off') {
+            color = '#e74c3c';
+            tooltip = 'Gas Disconnected';
+          } else {
+            tooltip = 'Gas Status Unknown';
+          }
+        }
+        if (util.key === 'electricity') {
+          if (acc.status === 'active' || acc.status === 'on') {
+            color = '#27ae60';
+            tooltip = 'Electricity On';
+          } else if (acc.status === 'disconnected' || acc.status === 'off') {
+            color = '#e74c3c';
+            tooltip = 'Electricity Off';
+          } else {
+            tooltip = 'Electricity Status Unknown';
+          }
+        }
+        return `<i class="fas ${util.icon}" title="${tooltip}" style="color:${color};font-size:1.2em;cursor:help;"></i>`;
       }).join('')}
     </span>
   `;
@@ -297,21 +351,21 @@ function renderUtilityIconsForProject(project) {
 function navigateToDetails(section, id) {
     const baseURL = window.location.origin; // Automatically detects the current base URL
     const fullURL = `${baseURL}/details/${section}/${id}`;
-    console.log('Navigating to:', fullURL); // Log the full URL for debugging
+ 
     window.location.href = fullURL; // Navigate to the constructed URL
   }
   
   // Function to load projects dynamically
 async function loadProjects() {
   const projectsList = document.getElementById('projects-list');
-     projectsList.innerHTML = `<div id="projects-list-loader" style="display:flex;justify-content:center;align-items:center;height:120px;">
+    projectsList.innerHTML = `<div id="projects-list-loader" style="display:flex;justify-content:center;align-items:center;height:120px;">
     <div style="border:5px solid #e5e7eb;border-top:5px solid #3b82f6;border-radius:50%;width:38px;height:38px;animation:spin 0.8s linear infinite;"></div>
   </div>`;
 
   // 📅 Get today's date in YYYY-MM-DD
   const today = new Date().toISOString().split("T")[0];
 
-
+  
 
   try {
     // Fetch projects, today's updates, and all estimates
@@ -859,6 +913,7 @@ function addEditIconToProjectCard(itemDiv, project) {
   itemDiv.appendChild(editIcon);
 }
 
+    
 
 
 // 📍 Marker Icon Based on Type
@@ -924,6 +979,7 @@ function createMarker(lat, lng, title, markerType) {
   return marker;
 }
 
+
 // 🗺️ Convert Address → Lat/Lng (with cache)
 async function getLatLngFromAddress(address) {
   if (geocodeCache.has(address)) return geocodeCache.get(address);
@@ -946,7 +1002,7 @@ async function getLatLngFromAddress(address) {
 
 // ✅ Load All Project Locations
 async function loadProjectLocations() {
- 
+  
   
 
   try {
@@ -1045,9 +1101,7 @@ window.initMap = initMap;
 document.addEventListener("DOMContentLoaded", initMap);
 
 
-    
 
-    
   
   // Sidebar Toggle with Hamburger
   const hamburger = document.querySelector('.hamburger');
@@ -1079,7 +1133,7 @@ document.addEventListener("DOMContentLoaded", initMap);
   
   async function updateProjectCounts() {
     try {
-      console.log("Fetching project counts...");
+      
   
       const timestamp = new Date().getTime(); // Prevent caching
   
@@ -1107,12 +1161,7 @@ document.addEventListener("DOMContentLoaded", initMap);
       const onMarketData = await onMarketResponse.json();
       const onMarketCount = onMarketData.projects.length || 0;
   
-      console.log("✅ Counts:", { 
-        upcomingCount, 
-        inProgressCount, 
-        completedCount, 
-        onMarketCount 
-      });
+
   
       // ✅ Update DOM Elements
       const upcomingElement = document.getElementById("upcoming-count");
@@ -1129,12 +1178,13 @@ document.addEventListener("DOMContentLoaded", initMap);
       console.error("❌ Error updating project counts:", error);
     }
   }
+  
 
 
         
 // ✅ Function to Load Daily Updates from Multiple Projects (with Manager ID)
 async function loadTeamDailyUpdates(selectedDate = null) {
-    const updatesFeed = document.getElementById("daily-updates-feed");
+  const updatesFeed = document.getElementById("daily-updates-feed");
   // Show loader only inside the daily updates panel
   updatesFeed.innerHTML = `<div id="daily-updates-loader" style="display:flex;justify-content:center;align-items:center;height:120px;"><div style="border:5px solid #e5e7eb;border-top:5px solid #3b82f6;border-radius:50%;width:38px;height:38px;animation:spin 0.8s linear infinite;"></div></div>`;
     try {
@@ -1207,7 +1257,7 @@ async function loadTeamDailyUpdates(selectedDate = null) {
         console.error("❌ Error loading team updates:", error);
         updatesFeed.innerHTML = "<p>Error loading updates.</p>";
       } finally {
-               // Remove loader from daily updates panel only
+        // Remove loader from daily updates panel only
         const loaderDiv = document.getElementById("daily-updates-loader");
         if (loaderDiv) loaderDiv.remove();
     }
@@ -1249,6 +1299,7 @@ setInterval(() => {
 }, 300000);
 
 
+
   // Expose the function globally
   window.navigateToDetails = navigateToDetails;
       // Call loadProjects to populate the Projects column on page load
@@ -1256,9 +1307,12 @@ setInterval(() => {
       loadUpcomingProjects();
       loadOnMarketProjects();
       loadCompletedProjects();
-      initMap();
       updateProjectCounts();
+      initMap();
 });
+
+
+
 
 
 // ✅ Sign In As Vendor Function
@@ -1846,7 +1900,7 @@ const sidebarNav = document.querySelector('.sidebar nav ul');
 if (sidebarNav && !document.getElementById('assignment-nav-item')) {
   const assignmentLi = document.createElement('li');
   assignmentLi.id = 'assignment-nav-item';
-  assignmentLi.innerHTML = `<a href="#" id="open-assignment-section"><i class="fas fa-tasks"></i> Assignments</a>`;
+  assignmentLi.innerHTML = `<a href="#" id="open-assignment-section"><i class="fas fa-clipboard-check"></i> Assignments</a>`;
   sidebarNav.insertBefore(assignmentLi, sidebarNav.lastElementChild);
 }
 
@@ -1856,6 +1910,25 @@ const assignmentSection = document.getElementById('assignments-section');
 const columnsContainer = document.querySelector('.columns-container');
 const mapSection = document.getElementById('map-section');
 const dailyUpdatesPanel = document.getElementById('daily-updates-panel');
+
+function showAssignmentsSection() {
+  if (columnsContainer) columnsContainer.style.display = 'none';
+  if (mapSection) mapSection.style.display = 'none';
+  if (dailyUpdatesPanel) dailyUpdatesPanel.style.display = isMobileView() ? 'none' : '';
+  const tabContainer = document.querySelector('.tab-container');
+  if (tabContainer) tabContainer.style.display = 'none';
+  const mapFilter = document.getElementById('projectFilters');
+  if (mapFilter) mapFilter.style.display = 'none';
+  const subcontractorsSectionEl = document.getElementById('subcontractors-section');
+  if (subcontractorsSectionEl) subcontractorsSectionEl.style.display = 'none';
+  const mainContentEl = document.querySelector('.main-content');
+  if (mainContentEl && mainContentEl.classList.contains('only-subcontractors')) {
+    mainContentEl.classList.remove('only-subcontractors');
+  }
+  if (assignmentSection) assignmentSection.style.display = 'block';
+  loadAssignments();
+}
+window.showAssignmentsSection = showAssignmentsSection;
 
 // Add Back to Dashboard button to assignments section if not present
 if (assignmentSection && !document.getElementById('backToDashboardAssignments')) {
@@ -1890,27 +1963,7 @@ if (assignmentSection) assignmentSection.style.display = 'none';
 // Show assignments and hide main dashboard when clicked
 document.getElementById('open-assignment-section').addEventListener('click', (e) => {
   e.preventDefault();
-  // Hide dashboard columns and other main sections
-  if (columnsContainer) columnsContainer.style.display = 'none';
-  if (mapSection) mapSection.style.display = 'none';
-  const hideDailyUpdates = isMobileView();
-  if (dailyUpdatesPanel) dailyUpdatesPanel.style.display = hideDailyUpdates ? 'none' : '';
-  // Hide project tabs and map filter tab
-  const tabContainer = document.querySelector('.tab-container');
-  if (tabContainer) tabContainer.style.display = 'none';
-  const mapFilter = document.getElementById('projectFilters');
-  if (mapFilter) mapFilter.style.display = 'none';
-  // Hide subcontractors section if present and remove only-subcontractors class
-  const subcontractorsSection = document.getElementById('subcontractors-section');
-  if (subcontractorsSection) subcontractorsSection.style.display = 'none';
-  const mainContent = document.querySelector('.main-content');
-  if (mainContent && mainContent.classList.contains('only-subcontractors')) {
-    mainContent.classList.remove('only-subcontractors');
-  }
-  // Show assignments
-  if (assignmentSection) assignmentSection.style.display = 'block';
-  // Optionally reload assignments
-  loadAssignments();
+  showAssignmentsSection();
 });
 
 // Optionally, add a way to go back to dashboard (e.g., clicking "Home" or another tab)
@@ -2221,6 +2274,8 @@ window.onclick = function(event) {
 // Load assignments on page load
 document.addEventListener('DOMContentLoaded', loadAssignments);
 
+
+
 // --- Custom Report Modal Logic ---
 const customReportModal = document.getElementById('customReportModal');
 const closeCustomReportModal = document.getElementById('closeCustomReportModal');
@@ -2235,11 +2290,28 @@ openCustomReportBtn.onclick = async function() {
   customReportResult.innerHTML = '';
   // Load projects
   reportProjectSelect.innerHTML = `<option value="">-- Select Project --</option>`;
-  const res = await fetch('/api/projects');
-  const data = await res.json();
-  (data.projects || []).forEach(p => {
-    reportProjectSelect.innerHTML += `<option value="${p._id}">${p.name}</option>`;
-  });
+  const [activeRes, completedRes] = await Promise.all([
+    fetch('/api/projects'),
+    fetch('/api/completed-projects')
+  ]);
+  const activeData = await activeRes.json();
+  const completedData = await completedRes.json();
+
+  // Add active projects
+  if (activeData.projects && activeData.projects.length) {
+    reportProjectSelect.innerHTML += `<optgroup label="Active Projects"></optgroup>`;
+    activeData.projects.forEach(p => {
+      reportProjectSelect.innerHTML += `<option value="${p._id}">${p.name}</option>`;
+    });
+  }
+
+  // Add completed projects
+  if (completedData.projects && completedData.projects.length) {
+    reportProjectSelect.innerHTML += `<optgroup label="Completed Projects"></optgroup>`;
+    completedData.projects.forEach(p => {
+      reportProjectSelect.innerHTML += `<option value="${p._id}">${p.name} (Completed)</option>`;
+    });
+  }
 };
 
 // Close modal
@@ -2254,6 +2326,17 @@ customReportForm.onsubmit = async function(e) {
   if (!projectId) return customReportResult.innerHTML = 'Please select a project.';
   // Get selected columns
   const columns = Array.from(customReportForm.querySelectorAll('input[name="columns"]:checked')).map(cb => cb.value);
+
+  
+const summaryOptions = [
+  "address",
+  "totalItems",
+  "completed",
+  "inProgress",
+  "percentComplete",
+  ...Array.from(customReportForm.querySelectorAll('input[name="summary"]:checked')).map(cb => cb.value)
+];
+
 
   // Fetch all estimates for this project
   const res = await fetch(`/api/estimates?projectId=${projectId}`);
@@ -2340,7 +2423,7 @@ customReportForm.onsubmit = async function(e) {
               }</td>` : ''}
               ${columns.includes('laborCost') ? `<td>$${Number(item.laborCost || 0).toFixed(2)}</td>` : ''}
               ${columns.includes('materialCost') ? `<td>$${Number(item.materialCost || 0).toFixed(2)}</td>` : ''}
-              ${columns.includes('total') ? `<td>$${Number(item.total || 0).toFixed(2)}</td>` : ''}
+              ${columns.includes('total') ? `<td>$${Number(item.total || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>` : ''}
               ${columns.includes('profit') ? `<td>$${profit.toFixed(2)}</td>` : ''}
             </tr>`;
           }).join('');
@@ -2359,71 +2442,97 @@ customReportForm.onsubmit = async function(e) {
     : '';
 
   // Summary
-  let summary = `
-    <div class="summary">
+  let summary = `<div class="summary">`;
+
+  if (summaryOptions.includes('address')) {
+    summary += `
       <div class="summary-address">
         <span class="summary-address-label"><i class="fas fa-map-marker-alt"></i> Project Address:</span>
         <span class="summary-address-value">${projectAddress}</span>
-      </div>
+      </div>`;
+  }
+  if (summaryOptions.includes('totalItems')) {
+    summary += `
       <div class="summary-metric">
         <span class="metric-icon"><i class="fas fa-tasks"></i></span>
         <span class="metric-value">${lineItems.length.toLocaleString()}</span>
         <span class="metric-label">Total Items</span>
-      </div>
+      </div>`;
+  }
+  if (summaryOptions.includes('completed')) {
+    summary += `
       <div class="summary-metric">
         <span class="metric-icon" style="color:#22c55e;background:#e7fbe9;"><i class="fas fa-check-circle"></i></span>
         <span class="metric-value" style="color:#22c55e;">${completedCount.toLocaleString()}</span>
         <span class="metric-label">Completed</span>
-      </div>
+      </div>`;
+  }
+  if (summaryOptions.includes('inProgress')) {
+    summary += `
       <div class="summary-metric">
         <span class="metric-icon" style="color:#f59e42;background:#fff7e6;"><i class="fas fa-spinner"></i></span>
         <span class="metric-value" style="color:#f59e42;">${inProgressCount.toLocaleString()}</span>
         <span class="metric-label">In Progress</span>
-      </div>
-      ${columns.includes('laborCost') ? `
+      </div>`;
+  }
+  if (summaryOptions.includes('laborCost')) {
+    summary += `
       <div class="summary-metric">
         <span class="metric-icon" style="color:#0ea5e9;background:#e0f7fa;"><i class="fas fa-user-cog"></i></span>
         <span class="metric-value">$${laborCostToDate.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
         <span class="metric-label">Total Labor Cost to Date</span>
-      </div>
-      ` : ''}
-      ${columns.includes('materialCost') ? `
+      </div>`;
+  }
+  if (summaryOptions.includes('materialCost')) {
+    summary += `
       <div class="summary-metric">
         <span class="metric-icon" style="color:#f59e42;background:#fff7e6;"><i class="fas fa-cubes"></i></span>
         <span class="metric-value">$${materialCostToDate.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
         <span class="metric-label">Total Material Cost to Date</span>
-      </div>
-      ` : ''}
-      ${columns.includes('profit') ? `
+      </div>`;
+  }
+  if (summaryOptions.includes('profit')) {
+    summary += `
       <div class="summary-metric">
         <span class="metric-icon" style="color:#22c55e;background:#e7fbe9;"><i class="fas fa-chart-line"></i></span>
         <span class="metric-value">$${totalProfit.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
         <span class="metric-label">Total Profit</span>
-      </div>
-      ` : ''}
+      </div>`;
+  }
+  if (summaryOptions.includes('actualCost')) {
+    summary += `
       <div class="summary-metric">
         <span class="metric-icon" style="color:#0284c7;background:#e0f2fe;"><i class="fas fa-dollar-sign"></i></span>
         <span class="metric-value">$${actualCost.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
         <span class="metric-label">Completed Budget to Date</span>
-      </div>
+      </div>`;
+  }
+  if (summaryOptions.includes('totalBudget')) {
+    summary += `
       <div class="summary-metric">
         <span class="metric-icon" style="color:#6366f1;background:#e0e7ff;"><i class="fas fa-coins"></i></span>
         <span class="metric-value">$${totalBudget.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
         <span class="metric-label">Estimate At Completion</span>
-      </div>
+      </div>`;
+  }
+  if (summaryOptions.includes('budgetRemaining')) {
+    summary += `
       <div class="summary-metric">
         <span class="metric-icon" style="color:#ef4444;background:#fee2e2;"><i class="fas fa-wallet"></i></span>
         <span class="metric-value">$${budgetRemaining.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
         <span class="metric-label">Budget Remaining</span>
-      </div>
+      </div>`;
+  }
+  if (summaryOptions.includes('percentComplete')) {
+    summary += `
       <div class="summary-progress">
         <div class="summary-progress-bar">
           <div class="summary-progress-bar-inner" style="width:${percentComplete}%;"></div>
         </div>
         <span class="summary-progress-label">${percentComplete}% Completed</span>
-      </div>
-    </div>
-  `;
+      </div>`;
+  }
+  summary += `</div>`;
 
   // Add Download PDF button
   let pdfBtn = `<button id="downloadReportPdf" style="margin-bottom:12px;">Download PDF</button>`;
@@ -2490,13 +2599,302 @@ customReportForm.onsubmit = async function(e) {
     tableLineColor: [224, 231, 235],
     tableLineWidth: 0.5,
     theme: 'striped' ,
-    showHead: 'firstPage'
+    
   });
 
   const safeProjectName = (selectedProject?.name || "project").replace(/[^a-z0-9_\-]+/gi, "_");
 pdf.save(`project-report-${safeProjectName}.pdf`);
 };
 };
+
+//bottom toolbar logic
+
+
+
+// Highlight active toolbar icon based on page
+function setActiveToolbarIcon() {
+  document.querySelectorAll('.bottom-toolbar .toolbar-icon').forEach(icon => icon.classList.remove('active'));
+  const path = window.location.pathname;
+  if (path.includes('property-management.html')) {
+    document.getElementById('toolbar-rentals').classList.add('active');
+  } else if (path.includes('quotes.html')) {
+    document.getElementById('toolbar-quotes').classList.add('active');
+  } else if (path.includes('daily')) {
+    document.getElementById('toolbar-daily').classList.add('active');
+  }
+}
+
+// Run on page load
+document.addEventListener('DOMContentLoaded', setActiveToolbarIcon);
+
+function openAddMenu() {
+  let addModal = document.getElementById('mobileAddModal');
+  if (!addModal) {
+    addModal = document.createElement('div');
+    addModal.id = 'mobileAddModal';
+    addModal.style.cssText = `
+      position: fixed; left: 0; right: 0; bottom: 0; top: 0;
+      z-index: 999999; background: rgba(30,41,59,0.18);
+      display: flex; align-items: flex-end; justify-content: center;
+    `;
+    addModal.innerHTML = `
+      <div style="
+        background: #fff;
+        border-radius: 22px 22px 0 0;
+        box-shadow: 0 -8px 32px rgba(30,64,175,0.13);
+        width: 100vw; max-width: 370px; min-height: 180px;
+        padding: 28px 18px 32px 18px;
+        position: relative;
+        animation: slideUpMenu 0.22s cubic-bezier(.4,1.4,.6,1);
+      ">
+        <span id="closeMobileAddMenu" style="
+          position: absolute; top: 16px; right: 22px; font-size: 2rem; color: #2563eb; cursor: pointer; font-weight: bold; opacity: 0.85; transition: color 0.2s;
+        ">&times;</span>
+        <h3 style="margin-bottom:18px; color:#2563eb; font-size:1.18rem;">Quick Add</h3>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <a href="createquote.html" class="toolbar-icon menu-link"><i class="fas fa-file-invoice-dollar"></i> <span>New Quote</span></a>
+          <a href="add-project.html" class="toolbar-icon menu-link"><i class="fas fa-tasks"></i> <span>New Job</span></a>
+          <a href="add-client.html" class="toolbar-icon menu-link"><i class="fas fa-user-plus"></i> <span>New Client</span></a>
+        </div>
+      </div>
+      <style>
+        @keyframes slideUpMenu {
+          from { transform: translateY(100%) scale(0.98); opacity: 0; }
+          to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        #mobileAddModal .menu-link {
+          font-size: 1.12em;
+          color: #334155;
+          text-decoration: none;
+          padding: 12px 0 12px 6px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          transition: background 0.18s, color 0.18s;
+        }
+        #mobileAddModal .menu-link:hover {
+          background: #f3f6fa;
+          color: #2563eb;
+        }
+        #mobileAddModal .menu-link i {
+          font-size: 1.18em;
+          min-width: 28px;
+          text-align: center;
+        }
+        #mobileAddModal .menu-link span {
+          font-size: 1em;
+          font-weight: 500;
+        }
+        #closeMobileAddMenu:hover {
+          color: #1e293b;
+        }
+      </style>
+    `;
+    document.body.appendChild(addModal);
+
+    document.getElementById('closeMobileAddMenu').onclick = () => addModal.style.display = 'none';
+    addModal.onclick = (e) => {
+      if (e.target === addModal) addModal.style.display = 'none';
+    };
+  } else {
+    addModal.style.display = 'flex';
+  }
+}
+
+function navigateToDailyUpdates() {
+  const dailyUpdatesPanelEl = document.getElementById('daily-updates-panel');
+  if (dailyUpdatesPanelEl) {
+    dailyUpdatesPanelEl.style.display = '';
+    dailyUpdatesPanelEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  if (columnsContainer) columnsContainer.style.display = 'none';
+  if (assignmentSection) assignmentSection.style.display = 'none';
+  const tabContainer = document.querySelector('.tab-container');
+  if (tabContainer) tabContainer.style.display = 'none';
+  if (mapSection) mapSection.style.display = 'none';
+  const mapFilter = document.getElementById('projectFilters');
+  if (mapFilter) mapFilter.style.display = 'none';
+
+  const mainContentEl = document.querySelector('.main-content');
+  if (mainContentEl && mainContentEl.classList.contains('only-subcontractors')) {
+    mainContentEl.classList.remove('only-subcontractors');
+  }
+
+  const subcontractorsSectionEl = document.getElementById('subcontractors-section');
+  if (subcontractorsSectionEl) subcontractorsSectionEl.style.display = 'none';
+
+  const datePicker = document.getElementById('date-picker');
+  if (datePicker) {
+    const today = new Date().toISOString().split('T')[0];
+    datePicker.value = today;
+    datePicker.dispatchEvent(new Event('change'));
+  }
+}
+
+// Attach event to Add icon
+document.addEventListener('DOMContentLoaded', function() {
+  const toolbarAdd = document.getElementById('toolbar-add');
+  if (toolbarAdd) {
+    toolbarAdd.addEventListener('click', function(e) {
+      e.preventDefault();
+      openAddMenu();
+    });
+  }
+  const toolbarMore = document.getElementById('toolbar-more');
+  if (toolbarMore) {
+    toolbarMore.addEventListener('click', function(e) {
+      e.preventDefault();
+      openMobileMenu();
+    });
+  }
+
+
+   const toolbarDaily = document.getElementById('toolbar-daily');
+  if (toolbarDaily) {
+    toolbarDaily.addEventListener('click', function(e) {
+      e.preventDefault();
+      navigateToDailyUpdates();
+    });
+  }
+});
+
+// --- Mobile "More" Toolbar Menu ---
+function openMobileMenu() {
+  let menuModal = document.getElementById('mobileMenuModal');
+  if (!menuModal) {
+    menuModal = document.createElement('div');
+    menuModal.id = 'mobileMenuModal';
+    menuModal.className = 'mobile-menu-modal';
+    menuModal.innerHTML = `
+      <div class="mobile-menu-content">
+        <h3 class="mobile-menu-title">Menu</h3>
+        <div class="mobile-menu-links">
+          <a href="index.html" class="toolbar-icon menu-link"><i class="fas fa-home"></i> <span>Home</span></a>
+          <a href="#projects-column" class="toolbar-icon menu-link"><i class="fas fa-tasks"></i> <span>Projects</span></a>
+          <a href="files.html" class="toolbar-icon menu-link"><i class="fas fa-folder-open"></i> <span>Files</span></a>
+          <a href="clients.html" class="toolbar-icon menu-link"><i class="fas fa-list-alt"></i> <span>Clients</span></a>
+          <a href="quotes.html" class="toolbar-icon menu-link"><i class="fas fa-list-alt"></i> <span>Quotes</span></a>
+          <a href="pricinglist.html" class="toolbar-icon menu-link"><i class="fas fa-tasks"></i> <span>Pricing List</span></a>
+          <a href="#" class="toolbar-icon menu-link" data-action="assignments"><i class="fas fa-clipboard-check"></i> <span>Assignments</span></a>
+          <a href="#" onclick="openSubcontractorsModal();return false;" class="toolbar-icon menu-link"><i class="fas fa-users-cog"></i> <span>Subcontractors</span></a>
+          <a href="property-management.html" class="toolbar-icon menu-link"><i class="fas fa-building"></i> <span>Rental Management</span></a>
+          <a href="project-financials.html" class="toolbar-icon menu-link"><i class="fas fa-dollar-sign"></i> <span>Project Financials</span></a>
+          <a href="selection-Board.html" class="toolbar-icon menu-link"><i class="fas fa-list-alt"></i> <span>Selection Boards</span></a>
+          <a href="#" id="openCustomReportMobile" class="toolbar-icon menu-link"><i class="fas fa-chart-line"></i> <span>Reports</span></a>
+          <a href="#" class="toolbar-icon menu-link"><i class="fas fa-calendar-alt"></i> <span>Schedule</span></a>
+          <a href="#" class="toolbar-icon menu-link" data-action="daily-updates"><i class="fas fa-sync-alt"></i> <span>Daily Updates</span></a>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(menuModal);
+
+    // Swipe down to close logic
+    let startY = null;
+    let currentY = null;
+    let isDragging = false;
+    let allowSwipeClose = false;
+    const content = menuModal.querySelector('.mobile-menu-content');
+
+    content.addEventListener('touchstart', function(e) {
+      if (e.touches.length === 1) {
+        startY = e.touches[0].clientY;
+        // Only allow swipe-to-close if touch starts within top 40px of content
+        const rect = content.getBoundingClientRect();
+        const touchY = e.touches[0].clientY - rect.top;
+        allowSwipeClose = touchY < 40;
+        isDragging = true;
+        content.style.transition = '';
+      }
+    });
+
+    content.addEventListener('touchmove', function(e) {
+      if (!isDragging || !allowSwipeClose) return;
+      currentY = e.touches[0].clientY;
+      const diff = currentY - startY;
+      if (diff > 0) {
+        content.style.transform = `translateY(${diff}px)`;
+        content.style.opacity = `${1 - Math.min(diff / 300, 0.5)}`;
+      }
+    });
+
+    content.addEventListener('touchend', function(e) {
+      if (!isDragging) return;
+      isDragging = false;
+      if (!allowSwipeClose) {
+        content.style.transition = 'transform 0.2s, opacity 0.2s';
+        content.style.transform = '';
+        content.style.opacity = '';
+        return;
+      }
+      const diff = currentY - startY;
+      if (diff > 80) {
+        // If swiped down enough, close modal
+        menuModal.style.display = 'none';
+        content.style.transform = '';
+        content.style.opacity = '';
+      } else {
+        // Snap back
+        content.style.transition = 'transform 0.2s, opacity 0.2s';
+        content.style.transform = '';
+        content.style.opacity = '';
+      }
+    });
+
+    // Also close when tapping outside the modal content
+    menuModal.onclick = (e) => {
+      if (e.target === menuModal) menuModal.style.display = 'none';
+    };
+
+    // Reports button logic
+    const openCustomReportMobile = document.getElementById('openCustomReportMobile');
+    if (openCustomReportMobile) {
+      openCustomReportMobile.onclick = function(e) {
+        e.preventDefault();
+        menuModal.style.display = 'none';
+        document.getElementById('customReportModal').style.display = 'block';
+      };
+    }
+
+    const assignmentsLink = menuModal.querySelector('[data-action="assignments"]');
+    if (assignmentsLink) {
+      assignmentsLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        menuModal.style.display = 'none';
+        showAssignmentsSection();
+      });
+    }
+
+    const dailyUpdatesLink = menuModal.querySelector('[data-action="daily-updates"]');
+    if (dailyUpdatesLink) {
+      dailyUpdatesLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        menuModal.style.display = 'none';
+        navigateToDailyUpdates();
+      });
+    }
+
+    menuModal.querySelectorAll('.mobile-menu-links a').forEach(link => {
+      link.addEventListener('click', () => {
+        menuModal.style.display = 'none';
+      });
+    });
+  }
+  menuModal.style.display = 'flex';
+}
+
+// Attach event to More icon (wait for DOMContentLoaded)
+document.addEventListener('DOMContentLoaded', function() {
+  const toolbarMore = document.getElementById('toolbar-more');
+  if (toolbarMore) {
+    toolbarMore.addEventListener('click', function(e) {
+      e.preventDefault();
+      openMobileMenu();
+    });
+  }
+});
+
 
 
 // --- Maintenance Notification Logic for Dashboard ---
@@ -2650,6 +3048,8 @@ async function handleMaintenanceRequestClick(requestId, projectId, unitNumber) {
     console.error(err);
   }
 }
+
+
 
 
 // --- Load all tasks for all projects and render in Tasks tab ---
@@ -2836,11 +3236,11 @@ async function loadAllTasks() {
     const payload = await res.json();
     const tasks = Array.isArray(payload?.tasks) ? payload.tasks : [];
 
-     // Sort: open tasks first (by most recent), then completed (by most recent)
-   const getDate = t => new Date(t.updatedAt || t.createdAt || 0).getTime();
-   const sortedTasks = tasks
-   .slice()
-   .sort((a, b) => {
+    // Sort: open tasks first (by most recent), then completed (by most recent)
+const getDate = t => new Date(t.updatedAt || t.createdAt || 0).getTime();
+const sortedTasks = tasks
+  .slice()
+  .sort((a, b) => {
     // Open tasks first
     if (!a.completed && b.completed) return -1;
     if (a.completed && !b.completed) return 1;
@@ -2848,10 +3248,10 @@ async function loadAllTasks() {
     return getDate(b) - getDate(a);
   });
 
-   populateCombinedFilter(sortedTasks);
+    populateCombinedFilter(sortedTasks);
 
     tasksFeed.innerHTML = '';
-    sortedTasks.forEach((task) => {
+     sortedTasks.forEach((task) => {
       const title = esc(task.title || 'Untitled Task');
       const description = esc(task.description || '');
       const projectName = esc(task.projectName || task.projectId || 'Unknown Project');
@@ -3313,6 +3713,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 });
 
+
 // Load tasks when Tasks tab is shown
 document.addEventListener('DOMContentLoaded', () => {
   // Show Tasks tab by default on page load
@@ -3503,3 +3904,4 @@ Thank you!
     hideLoader();
   }
 }
+
