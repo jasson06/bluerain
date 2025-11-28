@@ -431,6 +431,64 @@ button, input, textarea {
 }
 
 
+.project-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 0px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid #d1d9e6;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+  max-width: 340px;
+}
+
+.project-search-icon {
+  color: #2563eb;
+  font-size: 1rem;
+}
+
+.project-search-bar input {
+  border: none;
+  outline: none;
+  flex: 1;
+  font-size: 0.95rem;
+  background: transparent;
+  color: #0f172a;
+  margin: 0px 0;
+  padding: 0px;
+}
+
+.project-search-bar button {
+  border: none;
+  background: none;
+  color: #64748b;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px;
+  border-radius: 6px;
+  transition: color 0.18s ease, background 0.18s ease;
+}
+
+.project-search-bar button:hover {
+  color: #1e293b;
+  background: #e2e8f0;
+}
+
+.project-search-no-results {
+  display: none;
+  margin: 6px 0 12px;
+  color: #52627b;
+  font-size: 0.95rem;
+  font-style: italic;
+}
+
+
 
 .columns-container {
   display: flex;
@@ -2639,6 +2697,7 @@ input, textarea {
   margin-right: 18px;
   padding: 0 8px;
   transition: color 0.18s;
+  top: 10px;
 }
 .notif-icon-btn:hover {
   color: #d35400;
@@ -2757,9 +2816,9 @@ input, textarea {
     padding-right: 8px;
   }
   .notif-icon-btn {
-    right: 35px;
+    right: 0px;
     font-size: 1.2em;
-    top: 20px;
+    top: 15px;
   }
   .notif-count-badge {
     top: -23px;
