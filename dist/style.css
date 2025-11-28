@@ -1400,9 +1400,7 @@ input, textarea {
   margin: 0;
   margin-top: -85px;
   border-bottom: 2px solid #a9d2ee;
-  
-  
-  background: #ffffff; /* Clean white background */
+  background: #ffffff00; /* Clean white background */
   width: 96%;
   padding: 10px 15px;
   display: flex;
