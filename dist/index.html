@@ -77,11 +77,15 @@
   </div>
 
   <!-- Main Content -->
-  <div class="main-content">
-   <header>
+    <div class="main-content">
+<header>
   <div class="header-logo">
     <div class="avatar">B</div>
-    <h1 id="manager-name">BlueRain<span 
+    <h1 id="manager-name">  <div class="project-search-bar">
+    <i class="fas fa-search project-search-icon"></i>
+    <input type="text" id="project-search-input" placeholder="Search jobs" autocomplete="off">
+    <button type="button" id="project-search-clear" aria-label="Clear job search">&times;</button>
+  </div><span 
         style="
           font-size:16px;
           font-weight:500;
@@ -124,6 +128,8 @@
         Completed <span id="completed-count">0</span>
     </button>
 </div>
+
+  <div id="project-search-no-results" class="project-search-no-results">No matching jobs.</div>
     
       <div class="columns-container">
         <div class="column" id="Upcoming-projects-column">
