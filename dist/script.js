@@ -41,6 +41,81 @@
     }
     
 
+let projectSearchInput = null;
+let projectSearchClearBtn = null;
+let projectNoResultsEl = null;
+const projectSearchState = { activeTabIndex: 0, isSearchActive: false };
+
+function restoreProjectColumnsToActiveTab() {
+  const columns = document.querySelectorAll('.column');
+  const tabs = document.querySelectorAll('.tab');
+
+  columns.forEach((column, idx) => {
+    column.style.display = idx === projectSearchState.activeTabIndex ? 'block' : 'none';
+  });
+
+  tabs.forEach((tab, idx) => {
+    if (idx === projectSearchState.activeTabIndex) {
+      tab.classList.add('active');
+    } else {
+      tab.classList.remove('active');
+    }
+  });
+}
+
+function applyProjectSearchFilter() {
+  const columns = document.querySelectorAll('.column');
+  if (!columns.length) return;
+
+  const query = (projectSearchInput ? projectSearchInput.value : '').trim().toLowerCase();
+  const hasQuery = query.length > 0;
+  const tabs = document.querySelectorAll('.tab');
+
+  if (projectSearchClearBtn) {
+    projectSearchClearBtn.style.display = hasQuery ? 'inline-flex' : 'none';
+  }
+
+  let totalMatches = 0;
+
+  columns.forEach(column => {
+    const items = column.querySelectorAll('.item');
+    let columnMatches = 0;
+
+    items.forEach(item => {
+      const hay = String(item.dataset.search || item.textContent || '').toLowerCase();
+      const isMatch = !hasQuery || hay.includes(query);
+      item.style.display = isMatch ? '' : 'none';
+      if (isMatch) {
+        columnMatches++;
+        totalMatches++;
+      }
+    });
+
+    if (hasQuery) {
+      column.style.display = columnMatches > 0 ? 'block' : 'none';
+    } else {
+      column.style.display = '';
+    }
+  });
+
+  if (!hasQuery) {
+    projectSearchState.isSearchActive = false;
+    if (projectNoResultsEl) {
+      projectNoResultsEl.style.display = 'none';
+    }
+    restoreProjectColumnsToActiveTab();
+    return;
+  }
+
+  projectSearchState.isSearchActive = true;
+  tabs.forEach(tab => tab.classList.remove('active'));
+
+  if (projectNoResultsEl) {
+    projectNoResultsEl.style.display = totalMatches === 0 ? 'block' : 'none';
+  }
+}
+
+
 
 document.addEventListener('DOMContentLoaded', async () => {
 
@@ -74,50 +149,49 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateProjectCounts(); // Give time for API responses
     }, 500);
 
+    projectSearchInput = document.getElementById('project-search-input');
+    projectSearchClearBtn = document.getElementById('project-search-clear');
+    projectNoResultsEl = document.getElementById('project-search-no-results');
+
+    if (projectSearchInput) {
+      projectSearchInput.addEventListener('input', applyProjectSearchFilter);
+    }
+
+    if (projectSearchClearBtn) {
+      projectSearchClearBtn.addEventListener('click', () => {
+        if (!projectSearchInput) return;
+        projectSearchInput.value = '';
+        applyProjectSearchFilter();
+        projectSearchInput.focus();
+      });
+    }
+
     
     // Tab Navigation
     const tabs = document.querySelectorAll('.tab');
     const columns = document.querySelectorAll('.column');
 
-    if (tabs && columns) {
-        tabs.forEach((tab, index) => {
-            tab.addEventListener('click', () => {
-                const activeTab = document.querySelector('.tab.active');
-                if (activeTab) activeTab.classList.remove('active');
+    if (tabs.length && columns.length) {
+      let activeProjectsIndex = 0;
 
-                tab.classList.add('active');
+      tabs.forEach((tab, index) => {
+        if (tab.textContent.includes('Active') || tab.textContent.includes('In Progress')) {
+          activeProjectsIndex = index;
+        }
 
-                columns.forEach((column, colIndex) => {
-                    column.style.display = colIndex === index ? 'block' : 'none';
-                });
-            });
+        tab.addEventListener('click', () => {
+          if (projectSearchInput && projectSearchInput.value.trim() !== '') {
+            projectSearchInput.value = '';
+          }
+          projectSearchState.activeTabIndex = index;
+          projectSearchState.isSearchActive = false;
+          applyProjectSearchFilter();
         });
+      });
 
-        // ✅ Find the "Active Projects" tab (typically index 1)
-        let activeProjectsIndex = 0; // Default to first tab
-        
-        // Look for tab with text containing "Active" or "In Progress"
-        tabs.forEach((tab, index) => {
-            if (tab.textContent.includes('Active') || 
-                tab.textContent.includes('In Progress')) {
-                activeProjectsIndex = index;
-            }
-        });
-
-        // Initialize to show Active Projects tab
-        tabs.forEach((tab, index) => {
-            if (index === activeProjectsIndex) {
-                tab.classList.add('active');
-            } else {
-                tab.classList.remove('active');
-            }
-        });
-
-        columns.forEach((column, index) => {
-            column.style.display = index === activeProjectsIndex ? 'block' : 'none';
-        });
-        
-        
+      projectSearchState.activeTabIndex = activeProjectsIndex;
+      restoreProjectColumnsToActiveTab();
+      applyProjectSearchFilter();
     }
 
     // Drag and Drop for Columns
@@ -423,6 +497,17 @@ async function loadProjects() {
         itemDiv.className = 'item';
         itemDiv.addEventListener('click', () => navigateToDetails('projects', project._id));
 
+        const projectAddress = project.address || {};
+        const searchAddressParts = [
+          projectAddress.addressLine1,
+          projectAddress.addressLine2,
+          projectAddress.city,
+          projectAddress.state,
+          projectAddress.zip
+        ].filter(Boolean).join(' ');
+        itemDiv.dataset.search = [project.name || '', searchAddressParts, project.code || '', 'in progress'].join(' ').toLowerCase();
+        itemDiv.dataset.status = 'in-progress';
+
         itemDiv.innerHTML = `
           <div class="project-item-header">
             <p>${project.name} ${renderUtilityIconsForProject(project)}</p>
@@ -472,6 +557,7 @@ async function loadProjects() {
        // Remove loader from projects list panel only
     const loaderDiv = document.getElementById("projects-list-loader");
     if (loaderDiv) loaderDiv.remove();
+    applyProjectSearchFilter();
   }
 }
   
@@ -522,6 +608,17 @@ async function loadUpcomingProjects() {
         const itemDiv = document.createElement("div");
         itemDiv.className = "item";
         itemDiv.addEventListener("click", () => navigateToDetails("projects", project._id));
+
+        const projectAddress = project.address || {};
+        const searchAddressParts = [
+          projectAddress.addressLine1,
+          projectAddress.addressLine2,
+          projectAddress.city,
+          projectAddress.state,
+          projectAddress.zip
+        ].filter(Boolean).join(' ');
+        itemDiv.dataset.search = [project.name || '', searchAddressParts, project.code || '', 'upcoming'].join(' ').toLowerCase();
+        itemDiv.dataset.status = 'upcoming';
   
         const fullAddress = `${project.address.addressLine1 || ""} ${project.address.addressLine2 || ""}, ${project.address.city}, ${project.address.state} ${project.address.zip || ""}`;
   
@@ -561,6 +658,7 @@ async function loadUpcomingProjects() {
       projectsList.innerHTML = "<p>Error loading upcoming projects. Please try again later.</p>";
     } finally {
       hideLoader(); // 👈 END
+      applyProjectSearchFilter();
     }
   }
   
@@ -605,6 +703,17 @@ async function loadUpcomingProjects() {
         const itemDiv = document.createElement("div");
         itemDiv.className = "item";
         itemDiv.addEventListener("click", () => navigateToDetails("projects", project._id));
+
+        const projectAddress = project.address || {};
+        const searchAddressParts = [
+          projectAddress.addressLine1,
+          projectAddress.addressLine2,
+          projectAddress.city,
+          projectAddress.state,
+          projectAddress.zip
+        ].filter(Boolean).join(' ');
+        itemDiv.dataset.search = [project.name || '', searchAddressParts, project.code || '', 'on market'].join(' ').toLowerCase();
+        itemDiv.dataset.status = 'on-market';
   
         const fullAddress = `${project.address.addressLine1 || ""} ${project.address.addressLine2 || ""}, ${project.address.city}, ${project.address.state} ${project.address.zip || ""}`;
   
@@ -644,6 +753,7 @@ async function loadUpcomingProjects() {
       projectsList.innerHTML = "<p>Error loading 'On Market' projects. Please try again later.</p>";
     } finally {
       hideLoader(); // 👈 END
+      applyProjectSearchFilter();
     }
   }
   
@@ -688,6 +798,17 @@ async function loadUpcomingProjects() {
           const itemDiv = document.createElement("div");
           itemDiv.className = "item";
           itemDiv.addEventListener("click", () => navigateToDetails("projects", project._id));
+
+          const projectAddress = project.address || {};
+          const searchAddressParts = [
+            projectAddress.addressLine1,
+            projectAddress.addressLine2,
+            projectAddress.city,
+            projectAddress.state,
+            projectAddress.zip
+          ].filter(Boolean).join(' ');
+          itemDiv.dataset.search = [project.name || '', searchAddressParts, project.code || '', 'completed'].join(' ').toLowerCase();
+          itemDiv.dataset.status = 'completed';
   
           itemDiv.innerHTML = `
             <div class="project-item-header">
@@ -726,6 +847,7 @@ async function loadUpcomingProjects() {
       projectsList.innerHTML = "<p>Error loading completed projects. Please try again later.</p>";
     } finally {
       hideLoader(); // 👈 END
+      applyProjectSearchFilter();
     }
   }
   
