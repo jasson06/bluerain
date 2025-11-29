@@ -1091,7 +1091,9 @@ const maintenanceRequestSchema = new mongoose.Schema({
     default: 'pending'
   },
   assignedTo: String,
-  completedAt: Date
+  completedAt: Date,
+  // New: photo file paths relative to /uploads
+  photos: [{ type: String }]
 }, { timestamps: true });
 
 const documentSchema = new mongoose.Schema({
@@ -5987,11 +5989,70 @@ app.get('/api/properties/:propertyId/maintenance', async (req, res) => {
   }
 });
 
-app.post('/api/properties/:propertyId/maintenance', async (req, res) => {
+// Storage for maintenance photos
+const maintenancePhotoStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, 'uploads', 'maintenance');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const unique = Date.now() + '-' + Math.round(Math.random()*1e9) + path.extname(file.originalname);
+    cb(null, unique);
+  }
+});
+const maintenancePhotoUpload = multer({ storage: maintenancePhotoStorage });
+
+// Temp storage for pre-save uploads
+const maintenanceTempStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, 'uploads', 'maintenance', 'temp');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const unique = 'temp-' + Date.now() + '-' + Math.round(Math.random()*1e9) + path.extname(file.originalname);
+    cb(null, unique);
+  }
+});
+const maintenanceTempUpload = multer({ storage: maintenanceTempStorage });
+
+// Create with optional photos (multipart or JSON)
+app.post('/api/properties/:propertyId/maintenance', maintenancePhotoUpload.array('photos', 10), async (req, res) => {
   try {
+    let photos = (req.files || []).map(f => `/uploads/maintenance/${f.filename}`);
+    // Accept temp photo paths and move them to permanent
+    if (req.body.tempPhotosPaths) {
+      let tempPaths = [];
+      try {
+        tempPaths = JSON.parse(req.body.tempPhotosPaths);
+      } catch {
+        if (typeof req.body.tempPhotosPaths === 'string') {
+          tempPaths = req.body.tempPhotosPaths.split(',').map(s => s.trim()).filter(Boolean);
+        }
+      }
+      for (const tempUrl of tempPaths) {
+        const rel = tempUrl.replace(/^\/+/, '');
+        const abs = path.join(__dirname, rel);
+        const permanentDir = path.join(__dirname, 'uploads', 'maintenance');
+        try {
+          if (fs.existsSync(abs)) {
+            const filename = path.basename(abs).replace(/^temp-/, '');
+            const dest = path.join(permanentDir, filename);
+            fs.renameSync(abs, dest);
+            photos.push(`/uploads/maintenance/${path.basename(dest)}`);
+          }
+        } catch {}
+      }
+    }
     const request = new MaintenanceRequest({
       projectId: req.params.propertyId,
-      ...req.body
+      title: req.body.title,
+      description: req.body.description,
+      priority: req.body.priority,
+      unitId: req.body.unitId || null,
+      status: req.body.status || 'pending',
+      photos
     });
     await request.save();
     res.status(201).json(request);
@@ -6001,22 +6062,150 @@ app.post('/api/properties/:propertyId/maintenance', async (req, res) => {
   }
 });
 
+// Upload temp photos before creating a request
+app.post('/api/properties/:propertyId/maintenance/temp-photos', maintenanceTempUpload.array('photos', 10), async (req, res) => {
+  try {
+    const photos = (req.files || []).map(f => `/uploads/maintenance/temp/${f.filename}`);
+    res.status(201).json({ photos });
+  } catch (error) {
+    console.error('Error uploading temp maintenance photos:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Legacy status-only patch retained for quick status updates
 app.patch('/api/properties/:propertyId/maintenance/:requestId', async (req, res) => {
   try {
+    const update = { status: req.body.status };
+    if (req.body.status === 'completed') update.completedAt = new Date();
     const request = await MaintenanceRequest.findByIdAndUpdate(
       req.params.requestId,
-      { 
-        status: req.body.status,
-        ...(req.body.status === 'completed' ? { completedAt: new Date() } : {})
-      },
+      update,
       { new: true }
     );
-    if (!request) {
-      return res.status(404).json({ message: 'Maintenance request not found' });
-    }
+    if (!request) return res.status(404).json({ message: 'Maintenance request not found' });
     res.json(request);
   } catch (error) {
-    console.error('Error updating maintenance request:', error);
+    console.error('Error updating maintenance request status:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Full edit (all fields + append/replace photos)
+app.put('/api/properties/:propertyId/maintenance/:requestId', maintenancePhotoUpload.array('photos', 10), async (req, res) => {
+  try {
+    const request = await MaintenanceRequest.findById(req.params.requestId);
+    if (!request) return res.status(404).json({ message: 'Maintenance request not found' });
+
+    // Update basic fields
+    ['title','description','priority','status','unitId'].forEach(f => {
+      if (typeof req.body[f] !== 'undefined' && req.body[f] !== '') {
+        request[f] = req.body[f];
+      }
+    });
+
+    // Completed timestamp handling
+    if (req.body.status === 'completed' && !request.completedAt) {
+      request.completedAt = new Date();
+    } else if (req.body.status && req.body.status !== 'completed') {
+      request.completedAt = null;
+    }
+
+    // Photos logic
+    const newPhotos = (req.files || []).map(f => `/uploads/maintenance/${f.filename}`);
+    // Also accept temp photos and move them to permanent
+    if (req.body.tempPhotosPaths) {
+      let tempPaths = [];
+      try {
+        tempPaths = JSON.parse(req.body.tempPhotosPaths);
+      } catch {
+        if (typeof req.body.tempPhotosPaths === 'string') {
+          tempPaths = req.body.tempPhotosPaths.split(',').map(s => s.trim()).filter(Boolean);
+        }
+      }
+      const permanentDir = path.join(__dirname, 'uploads', 'maintenance');
+      for (const tempUrl of tempPaths) {
+        try {
+          const rel = tempUrl.replace(/^\/+/, '');
+          const abs = path.join(__dirname, rel);
+          if (fs.existsSync(abs)) {
+            const filename = path.basename(abs).replace(/^temp-/, '');
+            const dest = path.join(permanentDir, filename);
+            fs.renameSync(abs, dest);
+            newPhotos.push(`/uploads/maintenance/${path.basename(dest)}`);
+          }
+        } catch {}
+      }
+    }
+    // Parse removal list (supports JSON array, repeated fields, or comma-separated)
+    let removeList = [];
+    const raw = req.body.removePhotos;
+    const rawArr = req.body['removePhotos[]'];
+    if (Array.isArray(rawArr)) {
+      removeList = rawArr;
+    } else if (typeof raw === 'string' && raw.trim()) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) removeList = parsed;
+        else removeList = raw.split(',').map(s => s.trim()).filter(Boolean);
+      } catch {
+        removeList = raw.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
+
+    // Remove selected photos
+    if (removeList.length && Array.isArray(request.photos)) {
+      const baseDir = path.join(__dirname, 'uploads', 'maintenance');
+      request.photos = request.photos.filter(p => {
+        const keep = !removeList.includes(p);
+        if (!keep) {
+          // Best-effort file removal if within maintenance folder
+          try {
+            const rel = p.replace(/^\/+/, '');
+            const abs = path.join(__dirname, rel);
+            if (abs.startsWith(baseDir) && fs.existsSync(abs)) fs.unlinkSync(abs);
+          } catch {}
+        }
+        return keep;
+      });
+    }
+
+    if (newPhotos.length) {
+      if (req.body.replacePhotos === 'true') {
+        request.photos = newPhotos;
+      } else {
+        request.photos = [...(request.photos || []), ...newPhotos];
+      }
+    }
+
+    await request.save();
+    res.json(request);
+  } catch (error) {
+    console.error('Error fully updating maintenance request:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Delete a specific photo from a maintenance request
+app.delete('/api/properties/:propertyId/maintenance/:requestId/photos', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ message: 'Photo URL required' });
+    const request = await MaintenanceRequest.findById(requestId);
+    if (!request) return res.status(404).json({ message: 'Maintenance request not found' });
+    request.photos = (request.photos || []).filter(p => p !== url);
+    await request.save();
+    // Attempt to delete file if under uploads/maintenance
+    try {
+      const rel = url.replace(/^\/+/, '');
+      const abs = path.join(__dirname, rel);
+      const baseDir = path.join(__dirname, 'uploads', 'maintenance');
+      if (abs.startsWith(baseDir) && fs.existsSync(abs)) fs.unlinkSync(abs);
+    } catch {}
+    res.json({ message: 'Photo deleted', request });
+  } catch (error) {
+    console.error('Error deleting maintenance photo:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
