@@ -5992,7 +5992,7 @@ app.get('/api/properties/:propertyId/maintenance', async (req, res) => {
 // Storage for maintenance photos
 const maintenancePhotoStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(__dirname, 'uploads', 'maintenance');
+    const dir = path.join(__dirname, 'maintenance');
     fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
@@ -6006,7 +6006,7 @@ const maintenancePhotoUpload = multer({ storage: maintenancePhotoStorage });
 // Temp storage for pre-save uploads
 const maintenanceTempStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(__dirname, 'uploads', 'maintenance', 'temp');
+    const dir = path.join(__dirname, 'maintenance', 'temp');
     fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
