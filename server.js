@@ -5990,179 +5990,137 @@ app.get('/api/properties/:propertyId/maintenance', async (req, res) => {
 });
 
 // Storage for maintenance photos
-const maintenancePhotoStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, 'maintenance');
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
+const maintenanceStrictStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, maintenancePhotosDir);
   },
-  filename: (req, file, cb) => {
-    const unique = Date.now() + '-' + Math.round(Math.random()*1e9) + path.extname(file.originalname);
-    cb(null, unique);
+  filename: function (req, file, cb) {
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const sanitized = sanitizeFilename(file.originalname);
+    cb(null, `${unique}-${(sanitized || 'photo')}`);
   }
 });
-const maintenancePhotoUpload = multer({ storage: maintenancePhotoStorage });
-
-// Temp storage for pre-save uploads
 const maintenanceTempStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, 'maintenance', 'temp');
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
+  destination: function (req, file, cb) {
+    cb(null, maintenanceTempDir);
   },
-  filename: (req, file, cb) => {
-    const unique = 'temp-' + Date.now() + '-' + Math.round(Math.random()*1e9) + path.extname(file.originalname);
-    cb(null, unique);
+  filename: function (req, file, cb) {
+    const unique = 'temp-' + Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const sanitized = sanitizeFilename(file.originalname);
+    cb(null, `${unique}-${(sanitized || 'photo')}`);
   }
 });
-const maintenanceTempUpload = multer({ storage: maintenanceTempStorage });
+const maintenanceUploadStrict = multer({ storage: maintenanceStrictStorage });
+const maintenanceUploadTemp = multer({ storage: maintenanceTempStorage });
 
-// Create with optional photos (multipart or JSON)
-app.post('/api/properties/:propertyId/maintenance', maintenancePhotoUpload.array('photos', 10), async (req, res) => {
+// Upload temp photos before create/edit (instant preview)
+app.post('/api/properties/:propertyId/maintenance/temp-photos', maintenanceUploadTemp.array('photos', 10), async (req, res) => {
   try {
-    let photos = (req.files || []).map(f => `/uploads/maintenance/${f.filename}`);
-    // Accept temp photo paths and move them to permanent
-    if (req.body.tempPhotosPaths) {
-      let tempPaths = [];
-      try {
-        tempPaths = JSON.parse(req.body.tempPhotosPaths);
-      } catch {
-        if (typeof req.body.tempPhotosPaths === 'string') {
-          tempPaths = req.body.tempPhotosPaths.split(',').map(s => s.trim()).filter(Boolean);
-        }
-      }
-      for (const tempUrl of tempPaths) {
-        const rel = tempUrl.replace(/^\/+/, '');
-        const abs = path.join(__dirname, rel);
-        const permanentDir = path.join(__dirname, 'uploads', 'maintenance');
-        try {
-          if (fs.existsSync(abs)) {
-            const filename = path.basename(abs).replace(/^temp-/, '');
-            const dest = path.join(permanentDir, filename);
-            fs.renameSync(abs, dest);
-            photos.push(`/uploads/maintenance/${path.basename(dest)}`);
-          }
-        } catch {}
-      }
+    const photos = (req.files || []).map(f => `/uploads/maintenance/temp/${f.filename}`);
+    res.status(201).json({ photos });
+  } catch (err) {
+    console.error('❌ Temp upload error:', err);
+    res.status(500).json({ message: 'Failed to upload temp maintenance photos.' });
+  }
+});
+
+// Helper: move temp files to permanent and return URLs
+function moveTempPhotosToPermanent(tempPaths) {
+  const moved = [];
+  const list = Array.isArray(tempPaths) ? tempPaths : [];
+  for (const tempUrl of list) {
+    try {
+      const rel = tempUrl.replace(/^\/uploads\//, ''); // maintenance/temp/filename
+      const abs = path.join(uploadRoot, rel);
+      if (!fs.existsSync(abs)) continue;
+      const filename = path.basename(abs).replace(/^temp-/, '');
+      const dest = path.join(maintenancePhotosDir, filename);
+      fs.renameSync(abs, dest);
+      moved.push(`/uploads/maintenance/photos/${path.basename(dest)}`);
+    } catch (e) {
+      console.warn('Temp move error:', e.message);
     }
+  }
+  return moved;
+}
+
+// Create Maintenance Request (accepts strict uploads + temp paths)
+app.post('/api/properties/:propertyId/maintenance', maintenanceUploadStrict.array('photos', 10), async (req, res) => {
+  try {
+    let photos = (req.files || []).map(f => `/uploads/maintenance/photos/${f.filename}`);
+
+    // Merge deduped temp photos moved to permanent
+    let tempPaths = [];
+    if (req.body.tempPhotosPaths) {
+      try { tempPaths = JSON.parse(req.body.tempPhotosPaths); } catch {
+        tempPaths = String(req.body.tempPhotosPaths).split(',').map(s => s.trim()).filter(Boolean);
+      }
+      photos = Array.from(new Set(photos.concat(moveTempPhotosToPermanent(tempPaths))));
+    }
+
     const request = new MaintenanceRequest({
       projectId: req.params.propertyId,
+      unitId: req.body.unitId || null,
       title: req.body.title,
       description: req.body.description,
-      priority: req.body.priority,
-      unitId: req.body.unitId || null,
+      priority: req.body.priority || 'medium',
       status: req.body.status || 'pending',
       photos
     });
     await request.save();
     res.status(201).json(request);
-  } catch (error) {
-    console.error('Error creating maintenance request:', error);
+  } catch (err) {
+    console.error('❌ Create maintenance error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Upload temp photos before creating a request
-app.post('/api/properties/:propertyId/maintenance/temp-photos', maintenanceTempUpload.array('photos', 10), async (req, res) => {
-  try {
-    const photos = (req.files || []).map(f => `/uploads/maintenance/temp/${f.filename}`);
-    res.status(201).json({ photos });
-  } catch (error) {
-    console.error('Error uploading temp maintenance photos:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Legacy status-only patch retained for quick status updates
-app.patch('/api/properties/:propertyId/maintenance/:requestId', async (req, res) => {
-  try {
-    const update = { status: req.body.status };
-    if (req.body.status === 'completed') update.completedAt = new Date();
-    const request = await MaintenanceRequest.findByIdAndUpdate(
-      req.params.requestId,
-      update,
-      { new: true }
-    );
-    if (!request) return res.status(404).json({ message: 'Maintenance request not found' });
-    res.json(request);
-  } catch (error) {
-    console.error('Error updating maintenance request status:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Full edit (all fields + append/replace photos)
-app.put('/api/properties/:propertyId/maintenance/:requestId', maintenancePhotoUpload.array('photos', 10), async (req, res) => {
+// Edit Maintenance (full fields + append photos; accepts strict uploads + temp paths)
+app.put('/api/properties/:propertyId/maintenance/:requestId', maintenanceUploadStrict.array('photos', 10), async (req, res) => {
   try {
     const request = await MaintenanceRequest.findById(req.params.requestId);
     if (!request) return res.status(404).json({ message: 'Maintenance request not found' });
 
-    // Update basic fields
     ['title','description','priority','status','unitId'].forEach(f => {
-      if (typeof req.body[f] !== 'undefined' && req.body[f] !== '') {
-        request[f] = req.body[f];
-      }
+      if (typeof req.body[f] !== 'undefined' && req.body[f] !== '') request[f] = req.body[f];
     });
 
-    // Completed timestamp handling
-    if (req.body.status === 'completed' && !request.completedAt) {
-      request.completedAt = new Date();
-    } else if (req.body.status && req.body.status !== 'completed') {
-      request.completedAt = null;
-    }
+    if (req.body.status === 'completed' && !request.completedAt) request.completedAt = new Date();
+    else if (req.body.status && req.body.status !== 'completed') request.completedAt = null;
 
-    // Photos logic
-    const newPhotos = (req.files || []).map(f => `/uploads/maintenance/${f.filename}`);
-    // Also accept temp photos and move them to permanent
+    let newPhotos = (req.files || []).map(f => `/uploads/maintenance/photos/${f.filename}`);
+
+    // Move temp photos to permanent and append
     if (req.body.tempPhotosPaths) {
       let tempPaths = [];
-      try {
-        tempPaths = JSON.parse(req.body.tempPhotosPaths);
-      } catch {
-        if (typeof req.body.tempPhotosPaths === 'string') {
-          tempPaths = req.body.tempPhotosPaths.split(',').map(s => s.trim()).filter(Boolean);
-        }
+      try { tempPaths = JSON.parse(req.body.tempPhotosPaths); } catch {
+        tempPaths = String(req.body.tempPhotosPaths).split(',').map(s => s.trim()).filter(Boolean);
       }
-      const permanentDir = path.join(__dirname, 'uploads', 'maintenance');
-      for (const tempUrl of tempPaths) {
-        try {
-          const rel = tempUrl.replace(/^\/+/, '');
-          const abs = path.join(__dirname, rel);
-          if (fs.existsSync(abs)) {
-            const filename = path.basename(abs).replace(/^temp-/, '');
-            const dest = path.join(permanentDir, filename);
-            fs.renameSync(abs, dest);
-            newPhotos.push(`/uploads/maintenance/${path.basename(dest)}`);
-          }
-        } catch {}
-      }
+      newPhotos = newPhotos.concat(moveTempPhotosToPermanent(tempPaths));
     }
-    // Parse removal list (supports JSON array, repeated fields, or comma-separated)
+
+    // Optional removal list
     let removeList = [];
     const raw = req.body.removePhotos;
     const rawArr = req.body['removePhotos[]'];
-    if (Array.isArray(rawArr)) {
-      removeList = rawArr;
-    } else if (typeof raw === 'string' && raw.trim()) {
+    if (Array.isArray(rawArr)) removeList = rawArr;
+    else if (typeof raw === 'string' && raw.trim()) {
       try {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) removeList = parsed;
-        else removeList = raw.split(',').map(s => s.trim()).filter(Boolean);
+        removeList = Array.isArray(parsed) ? parsed : raw.split(',').map(s => s.trim()).filter(Boolean);
       } catch {
         removeList = raw.split(',').map(s => s.trim()).filter(Boolean);
       }
     }
 
-    // Remove selected photos
     if (removeList.length && Array.isArray(request.photos)) {
-      const baseDir = path.join(__dirname, 'uploads', 'maintenance');
       request.photos = request.photos.filter(p => {
         const keep = !removeList.includes(p);
         if (!keep) {
-          // Best-effort file removal if within maintenance folder
           try {
-            const rel = p.replace(/^\/+/, '');
-            const abs = path.join(__dirname, rel);
+            const rel = p.replace(/^\/uploads\//, ''); // maintenance/photos/filename
+            const abs = path.join(uploadRoot, rel);
+            const baseDir = maintenancePhotosDir;
             if (abs.startsWith(baseDir) && fs.existsSync(abs)) fs.unlinkSync(abs);
           } catch {}
         }
@@ -6171,42 +6129,101 @@ app.put('/api/properties/:propertyId/maintenance/:requestId', maintenancePhotoUp
     }
 
     if (newPhotos.length) {
-      if (req.body.replacePhotos === 'true') {
-        request.photos = newPhotos;
-      } else {
-        request.photos = [...(request.photos || []), ...newPhotos];
-      }
+      if (req.body.replacePhotos === 'true') request.photos = Array.from(new Set(newPhotos));
+      else request.photos = Array.from(new Set([...(request.photos || []), ...newPhotos]));
     }
 
     await request.save();
     res.json(request);
-  } catch (error) {
-    console.error('Error fully updating maintenance request:', error);
+  } catch (err) {
+    console.error('❌ Update maintenance error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Delete a specific photo from a maintenance request
+// Upload photos to an existing request (mirror W9)
+app.post('/api/properties/:propertyId/maintenance/:requestId/upload-photos', maintenanceUploadStrict.array('photos', 10), async (req, res) => {
+  try {
+    const { propertyId, requestId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(propertyId) || !mongoose.Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({ success: false, message: 'Invalid IDs.' });
+    }
+    const request = await MaintenanceRequest.findOne({ _id: requestId, projectId: propertyId });
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Maintenance request not found.' });
+    }
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ success: false, message: 'No files uploaded.' });
+    }
+
+    const newUrls = req.files.map(f => `/uploads/maintenance/photos/${f.filename}`);
+    const existing = Array.isArray(request.photos) ? request.photos : [];
+    request.photos = Array.from(new Set([...existing, ...newUrls]));
+    await request.save();
+
+    res.status(200).json({ success: true, added: newUrls, photos: request.photos });
+  } catch (err) {
+    console.error('❌ Error uploading maintenance photos:', err);
+    res.status(500).json({ success: false, message: 'Failed to upload photos.' });
+  }
+});
+
+// Delete specific photo by URL (immediate)
 app.delete('/api/properties/:propertyId/maintenance/:requestId/photos', async (req, res) => {
   try {
-    const { requestId } = req.params;
+    const { propertyId, requestId } = req.params;
     const { url } = req.body;
     if (!url) return res.status(400).json({ message: 'Photo URL required' });
-    const request = await MaintenanceRequest.findById(requestId);
+
+    const request = await MaintenanceRequest.findOne({ _id: requestId, projectId: propertyId });
     if (!request) return res.status(404).json({ message: 'Maintenance request not found' });
+
+    const before = request.photos?.length || 0;
     request.photos = (request.photos || []).filter(p => p !== url);
+    const removed = before !== request.photos.length;
     await request.save();
-    // Attempt to delete file if under uploads/maintenance
-    try {
-      const rel = url.replace(/^\/+/, '');
-      const abs = path.join(__dirname, rel);
-      const baseDir = path.join(__dirname, 'uploads', 'maintenance');
-      if (abs.startsWith(baseDir) && fs.existsSync(abs)) fs.unlinkSync(abs);
-    } catch {}
-    res.json({ message: 'Photo deleted', request });
-  } catch (error) {
-    console.error('Error deleting maintenance photo:', error);
+
+    if (removed) {
+      try {
+        const rel = url.replace(/^\/uploads\//, ''); // maintenance/photos/filename
+        const abs = path.join(uploadRoot, rel);
+        if (abs.startsWith(maintenancePhotosDir) && fs.existsSync(abs)) fs.unlinkSync(abs);
+      } catch (e) {
+        console.warn('⚠️ Disk delete error:', e.message);
+      }
+    }
+
+    res.json({ message: removed ? 'Photo deleted' : 'Photo not found', photos: request.photos });
+  } catch (err) {
+    console.error('❌ Error deleting maintenance photo:', err);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Delete specific photo by filename (mirror W9 deletion)
+app.delete('/api/properties/:propertyId/maintenance/:requestId/photos/:filename', async (req, res) => {
+  try {
+    const { propertyId, requestId, filename } = req.params;
+    if (!filename) return res.status(400).json({ success: false, message: 'Filename required.' });
+
+    const request = await MaintenanceRequest.findOne({ _id: requestId, projectId: propertyId });
+    if (!request) return res.status(404).json({ success: false, message: 'Maintenance request not found.' });
+
+    const url = `/uploads/maintenance/photos/${filename}`;
+    const before = request.photos?.length || 0;
+    request.photos = (request.photos || []).filter(p => p !== url);
+    const removed = before !== request.photos.length;
+    await request.save();
+
+    const filePath = path.join(maintenancePhotosDir, filename);
+    if (removed && fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch (e) { console.warn('File delete error:', e.message); }
+    }
+
+    res.json({ success: removed, message: removed ? 'Photo deleted.' : 'Photo not found.', photos: request.photos });
+  } catch (err) {
+    console.error('❌ Error deleting maintenance photo by filename:', err);
+    res.status(500).json({ success: false, message: 'Failed to delete photo.' });
   }
 });
 
