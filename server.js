@@ -5989,6 +5989,34 @@ app.get('/api/properties/:propertyId/maintenance', async (req, res) => {
   }
 });
 
+// Storage for maintenance photos
+const maintenancePhotoStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, 'uploads', 'maintenance');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const unique = Date.now() + '-' + Math.round(Math.random()*1e9) + path.extname(file.originalname);
+    cb(null, unique);
+  }
+});
+const maintenancePhotoUpload = multer({ storage: maintenancePhotoStorage });
+
+// Temp storage for pre-save uploads
+const maintenanceTempStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, 'uploads', 'maintenance', 'temp');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const unique = 'temp-' + Date.now() + '-' + Math.round(Math.random()*1e9) + path.extname(file.originalname);
+    cb(null, unique);
+  }
+});
+const maintenanceTempUpload = multer({ storage: maintenanceTempStorage });
+
 // Create with optional photos (multipart or JSON)
 app.post('/api/properties/:propertyId/maintenance', maintenancePhotoUpload.array('photos', 10), async (req, res) => {
   try {
