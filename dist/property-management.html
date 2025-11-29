@@ -3052,6 +3052,11 @@ select {
                     </select>
                 </div>
             </div>
+            <div class="form-group">
+                <label>Photos</label>
+                <input type="file" id="maintenancePhotos" multiple accept="image/*">
+                <div id="maintenancePhotosPreview" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+            </div>
             <div class="modal-buttons">
                 <button type="button" class="btn-secondary" onclick="closeModal('addMaintenanceModal')">Cancel</button>
                 <button type="submit" class="btn-primary">Submit Request</button>
@@ -4645,6 +4650,7 @@ function updateCarFields() {
                 <label>Car #${i + 1} Make</label>
                 <input type="text" class="car-make" data-index="${i}">
                 <label>Model</label>
+                        <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Photos</th>
                 <input type="text" class="car-model" data-index="${i}">
                 <label>Color</label>
                 <input type="text" class="car-color" data-index="${i}">
@@ -4657,7 +4663,6 @@ function updateCarFields() {
     }
 }
 
-// Add/replace this function to dynamically render pet fields for each pet:
 function updatePetFields() {
     const count = parseInt(document.getElementById('petCount').value) || 0;
     const container = document.getElementById('petFieldsContainer');
@@ -5614,22 +5619,40 @@ async function handleAddMaintenance(event) {
         return;
     }
 
-    const maintenanceData = {
-        title: document.getElementById('maintenanceTitle').value.trim(),
-        description: document.getElementById('maintenanceDescription').value.trim(),
-        priority: document.getElementById('maintenancePriority').value,
-        unitId: document.getElementById('maintenanceUnit').value,
-        status: 'pending'
-    };
-showLoader();
+    const photosInput = document.getElementById('maintenancePhotos');
+    const preview = document.getElementById('maintenancePhotosPreview');
+    const hasPhotos = photosInput && photosInput.files && photosInput.files.length;
+    // If photos were uploaded earlier as temp, they are stored in form dataset
+    const tempPhotosPaths = (event.target.dataset.tempPhotosPaths ? JSON.parse(event.target.dataset.tempPhotosPaths) : []);
+    let response;
+    showLoader();
     try {
-        const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/maintenance`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(maintenanceData)
-        });
+        if (tempPhotosPaths.length) {
+            const formData = new FormData();
+            formData.append('title', document.getElementById('maintenanceTitle').value.trim());
+            formData.append('description', document.getElementById('maintenanceDescription').value.trim());
+            formData.append('priority', document.getElementById('maintenancePriority').value);
+            formData.append('unitId', document.getElementById('maintenanceUnit').value);
+            formData.append('status', 'pending');
+            formData.append('tempPhotosPaths', JSON.stringify(tempPhotosPaths));
+            response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/maintenance`, {
+                method: 'POST',
+                body: formData
+            });
+        } else {
+            const maintenanceData = {
+                title: document.getElementById('maintenanceTitle').value.trim(),
+                description: document.getElementById('maintenanceDescription').value.trim(),
+                priority: document.getElementById('maintenancePriority').value,
+                unitId: document.getElementById('maintenanceUnit').value,
+                status: 'pending'
+            };
+            response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/maintenance`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(maintenanceData)
+            });
+        }
 
         if (!response.ok) {
             const error = await response.json();
@@ -5638,6 +5661,8 @@ showLoader();
 
         // Reset form before loading new data
         event.target.reset();
+        event.target.dataset.tempPhotosPaths = JSON.stringify([]);
+        if (preview) preview.innerHTML = '';
         closeModal('addMaintenanceModal');
         
     invalidateCache('maintenance');
@@ -5652,6 +5677,53 @@ showLoader();
         hideLoader();
     }
 }
+
+// Immediate temp upload on file selection with deletion confirmation
+document.getElementById('maintenancePhotos')?.addEventListener('change', async function() {
+    const input = this;
+    const preview = document.getElementById('maintenancePhotosPreview');
+    const form = document.getElementById('addMaintenanceForm');
+    if (!input.files || !input.files.length || !form) return;
+    try {
+        const fd = new FormData();
+        Array.from(input.files).forEach(f => fd.append('photos', f));
+        const resp = await fetch(`${API_URL}/properties/${state.currentProperty._id}/maintenance/temp-photos`, { method: 'POST', body: fd });
+        if (!resp.ok) throw new Error('Failed to upload photos');
+        const data = await resp.json();
+        const current = form.dataset.tempPhotosPaths ? JSON.parse(form.dataset.tempPhotosPaths) : [];
+        const all = Array.from(new Set(current.concat(data.photos || [])));
+        form.dataset.tempPhotosPaths = JSON.stringify(all);
+        // Render previews with removable X
+        preview.innerHTML = all.map(url => {
+            return `<div class="maint-thumb" data-url="${url}" style="position:relative;width:72px;height:72px;border-radius:6px;overflow:hidden;box-shadow:0 0 4px rgba(0,0,0,0.15);">
+                <img src="${url}" style="width:100%;height:100%;object-fit:cover;">
+                <button type="button" class="thumb-remove" title="Remove" style="position:absolute;top:4px;right:4px;width:18px;height:18px;border:none;border-radius:50%;background:rgba(0,0,0,0.65);color:#fff;font-size:12px;line-height:18px;text-align:center;cursor:pointer;">×</button>
+            </div>`;
+        }).join('');
+        preview.querySelectorAll('.thumb-remove').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const wrap = e.currentTarget.closest('.maint-thumb');
+                const url = wrap?.getAttribute('data-url');
+                if (!url) return;
+                // Confirm deletion
+                if (!confirm('Remove this photo from the request?')) return;
+                // Remove from dataset and UI; also delete temp file on server (optional)
+                const list = JSON.parse(form.dataset.tempPhotosPaths || '[]').filter(p => p !== url);
+                form.dataset.tempPhotosPaths = JSON.stringify(list);
+                wrap.remove();
+                // Attempt to delete temp file
+                try {
+                    // No dedicated temp delete API; rely on server cleanup or ignore
+                } catch {}
+            });
+        });
+        // Clear input so same files can be re-selected again
+        input.value = '';
+    } catch (err) {
+        console.error('Temp upload error:', err);
+        showNotification(err.message || 'Error uploading photos', 'error');
+    }
+});
 
 function updateMaintenanceTabBadge() {
     const badge = document.getElementById('maintenancePendingBadge');
@@ -5726,7 +5798,7 @@ function renderMaintenanceRequestsList(requests) {
                 <td style="padding:10px 8px;">${statusBadge}</td>
                 <td style="padding:10px 8px;">${createdDate}</td>
                 <td style="padding:10px 8px;">
-                  <button onclick="updateMaintenanceStatus('${request._id}')" class="btn-secondary" title="Edit" style="margin-right:6px;">
+                  <button onclick="editMaintenance('${request._id}')" class="btn-secondary" title="Edit" style="margin-right:6px;">
                     <i class="fas fa-edit"></i>
                   </button>
                   <button onclick="deleteMaintenance('${request._id}')" class="btn-icon delete-btn" title="Delete" style="margin-left:2px;">
@@ -5806,7 +5878,7 @@ function renderMaintenanceRequests() {
             <span style="margin-left:12px;">${priorityBadge}</span>
           </div>
           <div class="maintenance-actions">
-            <button onclick="updateMaintenanceStatus('${request._id}')" class="btn-secondary" style="margin-right:6px;font-size:0.97em;">
+            <button onclick="editMaintenance('${request._id}')" class="btn-secondary" style="margin-right:6px;font-size:0.97em;">
               <i class="fas fa-edit"></i> Edit
             </button>
             <button onclick="deleteMaintenance('${request._id}')" class="btn-icon delete-btn" title="Delete Request" style="font-size:0.97em;">
@@ -5815,15 +5887,24 @@ function renderMaintenanceRequests() {
           </div>
         </div>
         <div class="maintenance-content" style="padding:14px 18px;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
             <div>
               ${descriptionHtml}
               <div style="margin-bottom:8px;"><strong><i class="fas fa-calendar-alt"></i> Created:</strong> <span style="color:#217dbb;">${createdDate}</span></div>
               <div style="margin-bottom:8px;"><strong><i class="fas fa-info-circle"></i> Status:</strong> ${statusBadge}</div>
             </div>
-            <div>
-              <div style="margin-bottom:8px;"> ${unit ? `<i class="fas fa-door-open"></i> Unit ${unit.number}` : '<span style="color:#888;font-size:0.97em;"><i class="fas fa-door-closed"></i> None</span>'}</div>
-            </div>
+                        <div>
+                            <div style="margin-bottom:8px;"> ${unit ? `<i class="fas fa-door-open"></i> Unit ${unit.number}` : '<span style="color:#888;font-size:0.97em;"><i class="fas fa-door-closed"></i> None</span>'}</div>
+                            ${Array.isArray(request.photos) && request.photos.length ? `
+                                <div class="maintenance-photos" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
+                                    ${request.photos.map((src, idx) => `
+                                        <div class="photo-thumb" style="width:74px;height:74px;border-radius:6px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.12);cursor:pointer;">
+                                            <img src="${src}" alt="Photo ${idx+1}" style="width:100%;height:100%;object-fit:cover;" onclick="openMaintenancePhotoViewer('${request._id}', ${idx})">
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
           </div>
         </div>
       </div>
@@ -5857,6 +5938,55 @@ async function deleteMaintenance(requestId) {
     }
 }
 
+// Photo viewer modal (full-screen, next/prev)
+(function setupMaintenancePhotoViewer(){
+    if (!document.getElementById('maintenancePhotoViewer')) {
+        const viewerHtml = `
+            <div id="maintenancePhotoViewer" class="modal" style="display:none;background:rgba(0,0,0,0.8);">
+                <div class="modal-content" style="max-width:900px;background:#000;color:#fff;">
+                    <div id="mpvBody" style="position:relative;display:flex;align-items:center;justify-content:center;min-height:480px;">
+                        <button id="mpvPrev" class="btn-secondary" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:0.9;">⟨</button>
+                        <img id="mpvImage" src="" alt="Photo" style="max-width:100%;max-height:80vh;object-fit:contain;border-radius:6px;">
+                        <button id="mpvNext" class="btn-secondary" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:0.9;">⟩</button>
+                        <button id="mpvClose" class="btn-secondary" style="position:absolute;right:10px;top:10px;">✕</button>
+                    </div>
+                    <div id="mpvCaption" style="padding:8px 12px;color:#ddd;font-size:0.9em;"></div>
+                </div>
+            </div>`;
+        document.body.insertAdjacentHTML('beforeend', viewerHtml);
+    }
+    const viewer = document.getElementById('maintenancePhotoViewer');
+    const img = document.getElementById('mpvImage');
+    const caption = document.getElementById('mpvCaption');
+    const btnPrev = document.getElementById('mpvPrev');
+    const btnNext = document.getElementById('mpvNext');
+    const btnClose = document.getElementById('mpvClose');
+    let currentList = [];
+    let currentIndex = 0;
+
+    function render() {
+        if (!currentList.length) return;
+        img.src = currentList[currentIndex];
+        caption.textContent = `Photo ${currentIndex+1} of ${currentList.length}`;
+        btnPrev.disabled = currentIndex === 0;
+        btnNext.disabled = currentIndex === currentList.length - 1;
+    }
+
+    window.openMaintenancePhotoViewer = (requestId, startIdx = 0) => {
+        const req = (state.maintenanceRequests || []).find(r => r._id === requestId);
+        const photos = Array.isArray(req?.photos) ? req.photos : [];
+        if (!photos.length) return;
+        currentList = photos;
+        currentIndex = Math.max(0, Math.min(startIdx, photos.length-1));
+        render();
+        openModal('maintenancePhotoViewer');
+    };
+
+    btnPrev.addEventListener('click', () => { if (currentIndex > 0) { currentIndex--; render(); } });
+    btnNext.addEventListener('click', () => { if (currentIndex < currentList.length - 1) { currentIndex++; render(); } });
+    btnClose.addEventListener('click', () => closeModal('maintenancePhotoViewer'));
+})();
+
 
 async function updateMaintenanceStatus(requestId) {
     try {
@@ -5887,6 +6017,222 @@ async function updateMaintenanceStatus(requestId) {
     } finally {
         hideLoader();
     }
+}
+
+// Full edit (all fields + photos append)
+async function editMaintenance(requestId) {
+        try {
+                const request = state.maintenanceRequests.find(r => r._id === requestId);
+                if (!request) throw new Error('Maintenance request not found');
+
+                let modal = document.getElementById('editMaintenanceModal');
+                if (!modal) {
+                        const html = `
+                        <div class="modal" id="editMaintenanceModal" style="display:none;">
+                            <div class="modal-content">
+                                <h2>Edit Maintenance Request</h2>
+                                <form id="editMaintenanceForm">
+                                    <div class="form-group">
+                                        <label>Title</label>
+                                        <input type="text" id="editMaintenanceTitle" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Description</label>
+                                        <textarea id="editMaintenanceDescription" required style="min-height:110px;"></textarea>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>Priority</label>
+                                            <select id="editMaintenancePriority" required>
+                                                <option value="urgent">Urgent</option>
+                                                <option value="high">High</option>
+                                                <option value="medium">Medium</option>
+                                                <option value="low">Low</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Status</label>
+                                            <select id="editMaintenanceStatus" required>
+                                                <option value="pending">Pending</option>
+                                                <option value="in-progress">In-Progress</option>
+                                                <option value="completed">Completed</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Unit</label>
+                                            <select id="editMaintenanceUnit"><option value="">None</option></select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Photos (add more)</label>
+                                        <input type="file" id="editMaintenancePhotos" multiple accept="image/*">
+                                    </div>
+                                    <div id="existingMaintenancePhotos" style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;"></div>
+                                    <div class="modal-buttons">
+                                        <button type="button" id="cancelEditMaintenanceBtn" class="btn-secondary">Cancel</button>
+                                        <button type="submit" class="btn-primary">Save Changes</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>`;
+                        document.body.insertAdjacentHTML('beforeend', html);
+                        modal = document.getElementById('editMaintenanceModal');
+                }
+
+                // Populate fields
+                document.getElementById('editMaintenanceTitle').value = request.title || '';
+                document.getElementById('editMaintenanceDescription').value = request.description || '';
+                document.getElementById('editMaintenancePriority').value = request.priority || 'medium';
+                document.getElementById('editMaintenanceStatus').value = request.status || 'pending';
+
+                // Units
+                const unitSelect = document.getElementById('editMaintenanceUnit');
+                if (unitSelect) {
+                        const currentId = request.unitId && (request.unitId._id || request.unitId);
+                        unitSelect.innerHTML = `<option value="">None</option>` + (state.units || [])
+                            .map(u => `<option value="${u._id}" ${currentId === u._id ? 'selected' : ''}>Unit ${u.number}</option>`)
+                            .join('');
+                }
+
+                                // Existing photos preview with remove controls
+                                const existing = document.getElementById('existingMaintenancePhotos');
+                                const photos = request.photos || [];
+                                const thumbStyle = 'position:relative;display:inline-block;width:72px;height:72px;border-radius:6px;overflow:hidden;box-shadow:0 0 4px rgba(0,0,0,0.15);';
+                                const closeStyle = 'position:absolute;top:4px;right:4px;width:18px;height:18px;border:none;border-radius:50%;background:rgba(0,0,0,0.65);color:#fff;font-size:12px;line-height:18px;text-align:center;cursor:pointer;';
+                                existing.innerHTML = photos.length ? photos.map(p => `
+                                    <div class="maint-thumb" data-url="${p}" style="${thumbStyle}">
+                                        <img src="${p}" style="width:100%;height:100%;object-fit:cover;">
+                                        <button type="button" class="thumb-remove" title="Remove" style="${closeStyle}">×</button>
+                                    </div>
+                                `).join('') : '<em style="color:#888;">No photos yet.</em>';
+                                existing.querySelectorAll('.thumb-remove').forEach(btn => {
+                                    btn.addEventListener('click', (e) => {
+                                        const wrap = e.currentTarget.closest('.maint-thumb');
+                                        const url = wrap?.getAttribute('data-url');
+                                        if (!url) return;
+                                        if (!confirm('Delete this photo permanently?')) return;
+                                        (async () => {
+                                            try {
+                                                showLoader();
+                                                const resp = await fetch(`${API_URL}/properties/${state.currentProperty._id}/maintenance/${requestId}/photos`, {
+                                                    method: 'DELETE',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ url })
+                                                });
+                                                if (!resp.ok) throw new Error('Failed to delete photo');
+                                                wrap.remove();
+                                                const idx = (request.photos || []).indexOf(url);
+                                                if (idx >= 0) request.photos.splice(idx, 1);
+                                                showNotification('Photo deleted', 'success');
+                                                // Refresh global list so cards reflect changes immediately
+                                                try {
+                                                    invalidateCache('maintenance');
+                                                    await refreshContent('maintenance');
+                                                } catch {}
+                                            } catch (err) {
+                                                console.error('Photo delete error:', err);
+                                                showNotification(err.message || 'Error deleting photo', 'error');
+                                            } finally {
+                                                hideLoader();
+                                            }
+                                        })();
+                                    });
+                                });
+
+                // Show modal
+                modal.style.display = 'block';
+                openModal('editMaintenanceModal');
+
+                document.getElementById('cancelEditMaintenanceBtn').onclick = () => {
+                        closeModal('editMaintenanceModal');
+                };
+
+                const form = document.getElementById('editMaintenanceForm');
+                form.onsubmit = async (e) => {
+                        e.preventDefault();
+                        showLoader();
+                        try {
+                                const fd = new FormData();
+                                fd.append('title', document.getElementById('editMaintenanceTitle').value.trim());
+                                fd.append('description', document.getElementById('editMaintenanceDescription').value.trim());
+                                fd.append('priority', document.getElementById('editMaintenancePriority').value);
+                                fd.append('status', document.getElementById('editMaintenanceStatus').value);
+                                fd.append('unitId', document.getElementById('editMaintenanceUnit').value);
+                                const photoInput = document.getElementById('editMaintenancePhotos');
+                                if (photoInput && photoInput.files.length) {
+                                        Array.from(photoInput.files).forEach(f => fd.append('photos', f));
+                                }
+                        // Include any temp-uploaded new photos collected before save
+                        const tempNew = form.dataset.tempPhotosPaths ? JSON.parse(form.dataset.tempPhotosPaths) : [];
+                        if (tempNew.length) {
+                            fd.append('tempPhotosPaths', JSON.stringify(tempNew));
+                        }
+                                const resp = await fetch(`${API_URL}/properties/${state.currentProperty._id}/maintenance/${requestId}`, {
+                                        method: 'PUT',
+                                        body: fd
+                                });
+                                if (!resp.ok) throw new Error('Failed to update maintenance request');
+                                closeModal('editMaintenanceModal');
+                                invalidateCache('maintenance');
+                                await refreshContent('maintenance');
+                                showNotification('Maintenance request updated', 'success');
+                        } catch (err) {
+                                console.error('Error updating maintenance request:', err);
+                                showNotification(err.message || 'Error updating maintenance', 'error');
+                        } finally {
+                                hideLoader();
+                        }
+                };
+                // Instant temp upload on new photo selection in edit modal
+                const editInput = document.getElementById('editMaintenancePhotos');
+                // Avoid attaching duplicate listeners if modal reopened
+                if (!modal.dataset.photosListenerAttached && editInput) {
+                modal.dataset.photosListenerAttached = 'true';
+                editInput.addEventListener('change', async function() {
+                    if (!this.files || !this.files.length) return;
+                    try {
+                        const fd = new FormData();
+                        Array.from(this.files).forEach(f => fd.append('photos', f));
+                        const resp = await fetch(`${API_URL}/properties/${state.currentProperty._id}/maintenance/temp-photos`, { method: 'POST', body: fd });
+                        if (!resp.ok) throw new Error('Failed to upload photos');
+                        const data = await resp.json();
+                        const current = form.dataset.tempPhotosPaths ? JSON.parse(form.dataset.tempPhotosPaths) : [];
+                        const all = Array.from(new Set(current.concat(data.photos || [])));
+                        form.dataset.tempPhotosPaths = JSON.stringify(all);
+                        // Render appended previews right in the existing section
+                        const existing = document.getElementById('existingMaintenancePhotos');
+                        const thumbStyle = 'position:relative;display:inline-block;width:72px;height:72px;border-radius:6px;overflow:hidden;box-shadow:0 0 4px rgba(0,0,0,0.15);';
+                        const closeStyle = 'position:absolute;top:4px;right:4px;width:18px;height:18px;border:none;border-radius:50%;background:rgba(0,0,0,0.65);color:#fff;font-size:12px;line-height:18px;text-align:center;cursor:pointer;';
+                        (data.photos || []).forEach(url => {
+                            // If placeholder text is present, clear it before adding real thumbnails
+                            if (existing && existing.textContent && existing.textContent.includes('No photos yet')) {
+                                existing.innerHTML = '';
+                            }
+                            const wrap = document.createElement('div');
+                            wrap.className = 'maint-thumb';
+                            wrap.setAttribute('data-url', url);
+                            wrap.style = thumbStyle;
+                            wrap.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;"><button type="button" class="thumb-remove" title="Remove" style="${closeStyle}">×</button>`;
+                            existing.appendChild(wrap);
+                            wrap.querySelector('.thumb-remove')?.addEventListener('click', (e) => {
+                                if (!confirm('Remove this photo from the update?')) return;
+                                const list = JSON.parse(form.dataset.tempPhotosPaths || '[]').filter(p => p !== url);
+                                form.dataset.tempPhotosPaths = JSON.stringify(list);
+                                wrap.remove();
+                                // No server delete required; these are temp files not yet committed if removed
+                            });
+                        });
+                        this.value = '';
+                    } catch (err) {
+                        console.error('Temp upload error:', err);
+                        showNotification(err.message || 'Error uploading photos', 'error');
+                    }
+                });
+                }
+        } catch (error) {
+                console.error('Error preparing maintenance edit:', error);
+                showNotification('Error loading maintenance request for edit', 'error');
+        }
 }
 
 
@@ -9036,4 +9382,3 @@ window.exportTenantPaymentsReportFromModal = exportTenantPaymentsReportFromModal
     </script>
 </body>
 </html>
-
