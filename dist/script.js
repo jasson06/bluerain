@@ -1515,6 +1515,16 @@ function openSubcontractorsModal() {
 
   // Show Subcontractors section and load data
   subcontractorsSection.style.display = 'block';
+     // Show modern loading spinner in vendor table while loading
+  if (vendorTableBody) {
+    vendorTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px 0;">
+      <div style="display:inline-flex;align-items:center;justify-content:center;gap:16px;">
+        <div style="width:38px;height:38px;border:5px solid #e5e7eb;border-top:5px solid #3b82f6;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+        <span style="font-size:1.1em;color:#3b82f6;font-weight:500;">Loading vendors...</span>
+      </div>
+      <style>@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style>
+    </td></tr>`;
+  }
   fetchVendors();
 
   // Scroll into view for better UX
