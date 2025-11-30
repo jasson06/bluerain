@@ -574,7 +574,7 @@ async function loadUpcomingProjects() {
   
     const today = new Date().toISOString().split("T")[0];
   
-    showLoader(); // 👈 START
+   
 
     try {
       // Fetch upcoming projects and today's updates
@@ -657,7 +657,7 @@ async function loadUpcomingProjects() {
       console.error("❌ Error loading upcoming projects:", error);
       projectsList.innerHTML = "<p>Error loading upcoming projects. Please try again later.</p>";
     } finally {
-      hideLoader(); // 👈 END
+      
       applyProjectSearchFilter();
     }
   }
@@ -670,7 +670,7 @@ async function loadUpcomingProjects() {
   
     const today = new Date().toISOString().split("T")[0];
   
-    showLoader(); // 👈 START
+   
 
     try {
       const [projectsRes, updatesRes] = await Promise.all([
@@ -752,7 +752,7 @@ async function loadUpcomingProjects() {
       console.error("❌ Error loading 'On Market' projects:", error);
       projectsList.innerHTML = "<p>Error loading 'On Market' projects. Please try again later.</p>";
     } finally {
-      hideLoader(); // 👈 END
+      
       applyProjectSearchFilter();
     }
   }
@@ -766,7 +766,6 @@ async function loadUpcomingProjects() {
   
     const today = new Date().toISOString().split("T")[0];
   
-    showLoader(); // 👈 START
 
     try {
       // Fetch completed projects and today's updates
@@ -846,7 +845,7 @@ async function loadUpcomingProjects() {
       console.error("❌ Error loading completed projects:", error);
       projectsList.innerHTML = "<p>Error loading completed projects. Please try again later.</p>";
     } finally {
-      hideLoader(); // 👈 END
+     
       applyProjectSearchFilter();
     }
   }
