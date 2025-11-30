@@ -2017,7 +2017,6 @@ async function deleteVendorW9(id) {
 
 
 // --- Assignments Section Logic ---
-
 const sidebarNav = document.querySelector('.sidebar nav ul');
 if (sidebarNav && !document.getElementById('assignment-nav-item')) {
   const assignmentLi = document.createElement('li');
@@ -2112,20 +2111,55 @@ document.getElementById('filter-assignment-name').addEventListener('input', filt
 document.getElementById('filter-assignment-address').addEventListener('input', filterAssignmentsTable);
 document.getElementById('filter-assignment-estimate').addEventListener('input', filterAssignmentsTable);
 
+// Add event listener for status filter (dropdown)
+let statusFilterEl = document.getElementById('filter-assignment-status');
+if (!statusFilterEl) {
+  // Create the dropdown if it doesn't exist
+  statusFilterEl = document.createElement('select');
+  statusFilterEl.id = 'filter-assignment-status';
+  statusFilterEl.style.margin = '0 8px';
+  statusFilterEl.innerHTML = `
+    <option value="">All Statuses</option>
+    <option value="completed">Completed</option>
+    <option value="in-progress">In Progress</option>
+    <option value="pending">Pending</option>
+    <option value="approved">Approved</option>
+    <option value="rejected">Rejected</option>
+  `;
+  const filterBar = document.getElementById('assignments-filter-bar') || document.querySelector('.assignments-filter-bar');
+  if (filterBar) {
+    filterBar.appendChild(statusFilterEl);
+  } else {
+    // fallback: insert before table
+    const assignmentsTable = document.getElementById('assignments-table');
+    if (assignmentsTable && assignmentsTable.parentNode) {
+      assignmentsTable.parentNode.insertBefore(statusFilterEl, assignmentsTable);
+    }
+  }
+}
+statusFilterEl.addEventListener('change', () => {
+  loadAssignments();
+});
+
 function filterAssignmentsTable() {
   const nameVal = document.getElementById('filter-assignment-name').value.toLowerCase();
   const addressVal = document.getElementById('filter-assignment-address').value.toLowerCase();
   const estimateVal = document.getElementById('filter-assignment-estimate').value.toLowerCase();
+  const statusVal = (document.getElementById('filter-assignment-status')?.value || '').toLowerCase();
   const rows = document.querySelectorAll('#assignments-table tbody tr');
   rows.forEach(row => {
+    // Columns: 0=name, 1=address, 2=estimate, 3=line items (not status), so status is not in col 3
+    // Find status from line items modal or add a data-status attribute to each row if needed
+    // For now, skip status filter in this function, as status is already filtered in loadAssignments
     const name = row.children[0]?.textContent.toLowerCase() || '';
     const address = row.children[1]?.textContent.toLowerCase() || '';
     const estimate = row.children[2]?.textContent.toLowerCase() || '';
-    if (
+    // Combine filters: all must match
+    const matches =
       name.includes(nameVal) &&
       address.includes(addressVal) &&
-      estimate.includes(estimateVal)
-    ) {
+      estimate.includes(estimateVal);
+    if (matches) {
       row.style.display = '';
     } else {
       row.style.display = 'none';
@@ -2134,9 +2168,21 @@ function filterAssignmentsTable() {
 }
 
 async function loadAssignments() {
+  // Only set default status filter to 'in-progress' on initial page load
+  const statusFilterEl = document.getElementById('filter-assignment-status');
+  if (statusFilterEl && typeof loadAssignments._initialLoad === 'undefined') {
+    statusFilterEl.value = 'in-progress';
+    loadAssignments._initialLoad = true;
+  }
   const tableBody = document.querySelector("#assignments-table tbody");
-  tableBody.innerHTML = `<tr><td colspan="8">Loading...</td></tr>`;
-  showLoader();
+  tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px 0;">
+    <div style="display:inline-flex;align-items:center;justify-content:center;gap:16px;">
+      <div style="width:38px;height:38px;border:5px solid #e5e7eb;border-top:5px solid #3b82f6;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+      <span style="font-size:1.1em;color:#3b82f6;font-weight:500;">Loading assignments...</span>
+    </div>
+    <style>@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style>
+  </td></tr>`;
+  
 
   try {
     // Fetch all vendors with their assigned projects/items
@@ -2161,6 +2207,8 @@ const estimateMap = {};
 estimates.forEach(e => estimateMap[e._id.toString()] = e);
 
     let rows = [];
+    // Get status filter value (for assignments)
+    const statusFilter = (document.getElementById('filter-assignment-status')?.value || '').toLowerCase();
 
     vendors.forEach(vendor => {
       if (!vendor.assignedItems || vendor.assignedItems.length === 0) return;
@@ -2174,22 +2222,28 @@ estimates.forEach(e => estimateMap[e._id.toString()] = e);
         itemsByEstimate[key].push(item);
       });
 
-        // Debug: log what is found
-  
+      Object.entries(itemsByEstimate).forEach(([estimateId, items]) => {
+        const estimate = estimateMap[estimateId.toString()];
+        if (!estimate) return;
 
-Object.entries(itemsByEstimate).forEach(([estimateId, items]) => {
-  const estimate = estimateMap[estimateId.toString()];
-  if (!estimate) return;
+        // Handle populated projectId or plain ObjectId
+        let projectId = '';
+        if (estimate.projectId && typeof estimate.projectId === 'object' && estimate.projectId._id) {
+          projectId = estimate.projectId._id.toString();
+        } else if (estimate.projectId) {
+          projectId = estimate.projectId.toString();
+        }
+        const project = projectMap[projectId];
+        if (!project) return;
 
-  // Handle populated projectId or plain ObjectId
-  let projectId = '';
-  if (estimate.projectId && typeof estimate.projectId === 'object' && estimate.projectId._id) {
-    projectId = estimate.projectId._id.toString();
-  } else if (estimate.projectId) {
-    projectId = estimate.projectId.toString();
-  }
-  const project = projectMap[projectId];
-  if (!project) return;
+ 
+
+        // If status filter is set, only show assignments with at least one matching line item
+        let hasStatusMatch = true;
+        if (statusFilter) {
+          hasStatusMatch = items.some(i => (i.status || '').toLowerCase() === statusFilter);
+        }
+        if (!hasStatusMatch) return;
 
         const totalAssignment = items.reduce((sum, i) => sum + (i.total || 0), 0);
 
@@ -2249,8 +2303,7 @@ Object.entries(itemsByEstimate).forEach(([estimateId, items]) => {
   } catch (err) {
     tableBody.innerHTML = `<tr><td colspan="9">Error loading assignments.</td></tr>`;
     console.error(err);
-  } finally {
-    hideLoader();
+
   }
 }
 
@@ -2258,7 +2311,13 @@ Object.entries(itemsByEstimate).forEach(([estimateId, items]) => {
 function showLineItemsModal(vendorId, projectId, estimateId) {
   const modal = document.getElementById('lineItemsModal');
   const table = document.getElementById('lineItemsDetailsTable').querySelector('tbody');
-  table.innerHTML = `<tr><td colspan="7">Loading...</td></tr>`;
+  table.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px 0;">
+    <div style="display:inline-flex;align-items:center;justify-content:center;gap:16px;">
+      <div style="width:38px;height:38px;border:5px solid #e5e7eb;border-top:5px solid #3b82f6;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+      <span style="font-size:1.1em;color:#3b82f6;font-weight:500;">Loading line items...</span>
+    </div>
+    <style>@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style>
+  </td></tr>`;
   modal.style.display = 'block';
 
   fetch(`/api/vendors/${vendorId}`)
