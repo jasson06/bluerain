@@ -154,13 +154,21 @@
     </div>
 
 
-    <section id="assignments-section" style="margin-top: 40px;">
+  <section id="assignments-section" style="margin-top: 40px;">
   <h2>Assignments</h2>
-  <div id="assignments-filters">
-  <input type="text" id="filter-assignment-name" placeholder="Filter by Subcontractor Name">
-  <input type="text" id="filter-assignment-address" placeholder="Filter by Address">
-  <input type="text" id="filter-assignment-estimate" placeholder="Filter by Estimate">
-</div>
+  <div id="assignments-filters" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+    <input type="text" id="filter-assignment-name" placeholder="Filter by Subcontractor Name" style="padding:7px 12px;border-radius:6px;border:1px solid #d1d5db;min-width:180px;max-width:220px;">
+    <input type="text" id="filter-assignment-address" placeholder="Filter by Address" style="padding:7px 12px;border-radius:6px;border:1px solid #d1d5db;min-width:180px;max-width:220px;">
+    <input type="text" id="filter-assignment-estimate" placeholder="Filter by Estimate" style="padding:7px 12px;border-radius:6px;border:1px solid #d1d5db;min-width:180px;max-width:220px;">
+    <select id="filter-assignment-status" style="padding:7px 12px;border-radius:6px;border:1px solid #d1d5db;min-width:160px;max-width:200px;">
+      <option value="">All Statuses</option>
+      <option value="new">New</option>
+      <option value="in-progress">In Progress</option>
+      <option value="completed">Completed</option>
+      <option value="approved">Approved</option>
+      <option value="rework">Rework</option>
+    </select>
+  </div>
   <table id="assignments-table" style="width:100%; border-collapse:collapse;">
     <thead>
       <tr>
