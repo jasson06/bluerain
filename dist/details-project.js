@@ -5435,9 +5435,23 @@ async function fetchMaintenanceNotifications(projectId) {
 }
 
 // Add this function globally
-window.createOrderFromMaintenance = async function(unitNumber, description, projectId, maintenanceRequestId) {
+window.createOrderFromMaintenance = async function(unitNumber, description, projectId, maintenanceRequestId, photos = []) {
     showLoader();
     try {
+        // Attach photo URLs directly to the line item
+        const newItem = {
+            type: "item",
+            name: "Unit " + unitNumber,
+            description: description || "",
+            quantity: 1,
+            unitPrice: 0,
+            total: 0,
+            costCode: "12-200 Property Maintenance",
+            status: "in-progress",
+            maintenanceRequestId,
+            photos: { before: Array.isArray(photos) ? photos : [], after: [] }
+        };
+
         const estimatePayload = {
             projectId,
             title: `Unit ${unitNumber}`,
@@ -5446,24 +5460,13 @@ window.createOrderFromMaintenance = async function(unitNumber, description, proj
                     type: "category",
                     category: "Maintenance Requests",
                     status: "in-progress",
-                    items: [
-                        {
-                            type: "item",
-                            name: unitNumber,
-                            description: description || "",
-                            quantity: 1,
-                            unitPrice: 0,
-                            total: 0,
-                            costCode: "12-200 Property Maintenance",
-                            status: "in-progress",
-                            maintenanceRequestId // <-- Pass the request ID here
-                        }
-                    ]
+                    items: [newItem]
                 }
             ],
             tax: 0
         };
 
+        // Create the estimate with the photos already attached
         const response = await fetch("/api/estimates", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -5471,10 +5474,9 @@ window.createOrderFromMaintenance = async function(unitNumber, description, proj
         });
 
         if (!response.ok) throw new Error("Failed to create order/estimate.");
-
         const result = await response.json();
-        showToast("Order created successfully!");
 
+        showToast("Order created successfully!");
         if (result.estimate && result.estimate._id) {
             window.location.href = `/estimate-edit.html?projectId=${projectId}&estimateId=${result.estimate._id}`;
         }
@@ -5485,7 +5487,6 @@ window.createOrderFromMaintenance = async function(unitNumber, description, proj
         hideLoader();
     }
 };
-
 
 function renderMaintenanceNotifDropdown(requests) {
     const notifCount = document.getElementById('maintenanceNotifCount');
@@ -5506,7 +5507,21 @@ function renderMaintenanceNotifDropdown(requests) {
 
     const projectId = window.currentProjectId || getProjectIdFromPage();
 
-    notifList.innerHTML = requests.map((r, idx) => `
+    notifList.innerHTML = requests.map((r, idx) => {
+        // --- Add photo preview if present ---
+        let photoHtml = "";
+        if (Array.isArray(r.photos) && r.photos.length) {
+            photoHtml = `
+                <div class="notif-photos" style="margin:8px 0; display:flex; gap:8px;">
+                    ${r.photos.slice(0, 3).map(url => `
+                        <img src="${url}" alt="Maintenance Photo" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;" />
+                    `).join('')}
+                    ${r.photos.length > 3 ? `<span style="color:#888;font-size:0.95em;">+${r.photos.length - 3} more</span>` : ""}
+                </div>
+            `;
+        }
+
+        return `
         <div class="notif-list-item modern-notif-item">
             <div class="notif-list-row">
                 <div class="notif-title">
@@ -5522,6 +5537,7 @@ function renderMaintenanceNotifDropdown(requests) {
             <div class="notif-desc">
                 ${r.description}
             </div>
+            ${photoHtml}
             <div class="notif-meta">
                 <span class="notif-unit"><i class="fas fa-door-open"></i> Unit: ${r.unitId?.number || 'N/A'}</span>
                 <span><i class="far fa-calendar-alt"></i> Requested: ${new Date(r.createdAt).toLocaleDateString()}</span>
@@ -5537,19 +5553,21 @@ function renderMaintenanceNotifDropdown(requests) {
                 data-unit="${escapeHtmlAttr(r.unitId?.number || '')}"
                 data-desc="${escapeHtmlAttr(r.description || '')}"
                 data-project="${escapeHtmlAttr(projectId)}"
-                data-maint="${escapeHtmlAttr(r._id)}">Create New Estimate</button>
+                data-maint="${escapeHtmlAttr(r._id)}"
+                data-photos='${JSON.stringify(r.photos || [])}'>Create New Estimate</button>
               <button type="button" class="order-dropdown-btn order-add-existing-btn"
                 data-unit="${escapeHtmlAttr(r.unitId?.number || '')}"
                 data-desc="${escapeHtmlAttr(r.description || '')}"
                 data-project="${escapeHtmlAttr(projectId)}"
-                data-maint="${escapeHtmlAttr(r._id)}">Add Line Item to Existing Estimate</button>
+                data-maint="${escapeHtmlAttr(r._id)}"
+                data-photos='${JSON.stringify(r.photos || [])}'>Add Line Item to Existing Estimate</button>
                 </div>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 
     // Wire delegated handlers for maintenance actions to avoid inline JS issues
-    // Toggle dropdown button
     notifList.querySelectorAll('.create-order-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault(); e.stopPropagation();
@@ -5565,8 +5583,9 @@ function renderMaintenanceNotifDropdown(requests) {
         const desc = btn.getAttribute('data-desc') || '';
         const proj = btn.getAttribute('data-project') || '';
         const maint = btn.getAttribute('data-maint') || '';
+        const photos = JSON.parse(btn.getAttribute('data-photos') || '[]');
         if (typeof window.createOrderFromMaintenance === 'function') {
-          window.createOrderFromMaintenance(unit, desc, proj, maint);
+          window.createOrderFromMaintenance(unit, desc, proj, maint, photos);
         }
       });
     });
@@ -5578,8 +5597,9 @@ function renderMaintenanceNotifDropdown(requests) {
         const desc = btn.getAttribute('data-desc') || '';
         const proj = btn.getAttribute('data-project') || '';
         const maint = btn.getAttribute('data-maint') || '';
+        const photos = JSON.parse(btn.getAttribute('data-photos') || '[]');
         if (typeof window.showEstimateSelectModal === 'function') {
-          window.showEstimateSelectModal(unit, desc, proj, maint);
+          window.showEstimateSelectModal(unit, desc, proj, maint, photos);
         }
       });
     });
@@ -5615,14 +5635,13 @@ document.querySelectorAll('.order-dropdown').forEach(dropdown => {
 });
 
 // Show modal to select estimate
-window.showEstimateSelectModal = async function(unitNumber, description, projectId, maintenanceRequestId) {
+window.showEstimateSelectModal = async function(unitNumber, description, projectId, maintenanceRequestId, photos = []) {
     showLoader();
     try {
         const response = await fetch(`/api/estimates?projectId=${projectId}`);
         if (!response.ok) throw new Error("Failed to fetch estimates");
         const { estimates } = await response.json();
 
-        // Create modal if not exists
         let modal = document.getElementById('selectEstimateModal');
         if (!modal) {
             modal = document.createElement('div');
@@ -5645,22 +5664,23 @@ window.showEstimateSelectModal = async function(unitNumber, description, project
                   data-unit="${escapeHtmlAttr(unitNumber)}"
                   data-desc="${escapeHtmlAttr(description || '')}"
                   data-project="${escapeHtmlAttr(projectId)}"
-                  data-maint="${escapeHtmlAttr(maintenanceRequestId)}">
+                  data-maint="${escapeHtmlAttr(maintenanceRequestId)}"
+                  data-photos='${JSON.stringify(photos)}'>
                     ${e.title || 'Untitled'} <span style="float:right; color:#888;">${new Date(e.createdAt).toLocaleDateString()}</span>
                 </button>
             </div>
         `).join('') : `<div style="color:#888; padding:12px;">No estimates found.</div>`;
-        // Wire delegated action for add to estimate
         list.querySelectorAll('.add-to-estimate-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
+          btn.addEventListener('click', async (e) => {
             e.preventDefault(); e.stopPropagation();
             const est = btn.getAttribute('data-estimate') || '';
             const unit = btn.getAttribute('data-unit') || '';
             const desc = btn.getAttribute('data-desc') || '';
             const proj = btn.getAttribute('data-project') || '';
             const maint = btn.getAttribute('data-maint') || '';
+            const photos = JSON.parse(btn.getAttribute('data-photos') || '[]');
             if (typeof window.addLineItemToEstimate === 'function') {
-              window.addLineItemToEstimate(est, unit, desc, proj, maint);
+              await window.addLineItemToEstimate(est, unit, desc, proj, maint, photos);
             }
           });
         });
@@ -5678,19 +5698,21 @@ window.closeSelectEstimateModal = function() {
 };
 
 // Add line item to selected estimate
-window.addLineItemToEstimate = async function(estimateId, unitNumber, description, projectId, maintenanceRequestId) {
+window.addLineItemToEstimate = async function(estimateId, unitNumber, description, projectId, maintenanceRequestId, photos = []) {
     showLoader();
     try {
+        // Prepare the new line item and transfer photo URLs directly
         const newItem = {
             type: "item",
-            name: unitNumber,
+            name: "Unit " + unitNumber,
             description: description || "",
             quantity: 1,
             unitPrice: 0,
             total: 0,
             costCode: "12-200 Property Maintenance",
             status: "in-progress",
-            maintenanceRequestId // <-- Pass it here
+            maintenanceRequestId,
+            photos: { before: Array.isArray(photos) ? photos : [], after: [] }
         };
 
         // Fetch the estimate to get its categories and title
@@ -5698,77 +5720,74 @@ window.addLineItemToEstimate = async function(estimateId, unitNumber, descriptio
         if (!response.ok) throw new Error("Failed to fetch estimate");
         const { estimate } = await response.json();
 
-        // Preserve the existing title
         const preservedTitle = estimate.title;
 
-        // Add to first category or create new if none
-        let updatedLineItems = estimate.lineItems && estimate.lineItems.length
-            ? [...estimate.lineItems]
-            : [{
+        let updatedLineItems = Array.isArray(estimate.lineItems) ? [...estimate.lineItems] : [];
+        let maintCat = updatedLineItems.find(cat => (cat.category || '').toLowerCase() === "maintenance requests");
+        if (!maintCat) {
+            maintCat = {
                 type: "category",
                 category: "Maintenance Requests",
                 status: "in-progress",
                 items: []
-            }];
+            };
+            updatedLineItems.push(maintCat);
+        }
+        maintCat.items.push(newItem);
 
-        // Add to first category (or you can prompt for category selection)
-        updatedLineItems[0].items.push(newItem);
-
-    // Sanitize categories/items to avoid schema cast errors
-    const sanitizeForSave = (arr) => {
-      if (!Array.isArray(arr)) return [];
-      return arr.map(cat => {
-        const cleanCat = {
-          type: 'category',
-          category: (cat?.category || '').toString(),
-          status: (cat?.status || 'in-progress').toString(),
-          items: []
+        // Sanitize and update
+        const sanitizeForSave = (arr) => {
+            if (!Array.isArray(arr)) return [];
+            return arr.map(cat => {
+                const cleanCat = {
+                    type: 'category',
+                    category: (cat?.category || '').toString(),
+                    status: (cat?.status || 'in-progress').toString(),
+                    items: []
+                };
+                const items = Array.isArray(cat?.items) ? cat.items : [];
+                cleanCat.items = items.map(it => {
+                    const out = { ...it };
+                    out.type = 'item';
+                    out.name = (out.name || '').toString();
+                    out.description = (out.description || '').toString();
+                    out.costCode = (out.costCode || '').toString();
+                    out.quantity = isNaN(parseFloat(out.quantity)) ? 0 : parseFloat(out.quantity);
+                    out.unitPrice = isNaN(parseFloat(out.unitPrice)) ? 0 : parseFloat(out.unitPrice);
+                    out.total = out.quantity * out.unitPrice;
+                    out.status = (out.status || 'in-progress').toString();
+                    // Ensure photos object is present and preserve URLs
+                    out.photos = out.photos && typeof out.photos === 'object'
+                        ? {
+                            before: Array.isArray(out.photos.before) ? out.photos.before : [],
+                            after: Array.isArray(out.photos.after) ? out.photos.after : []
+                        }
+                        : { before: [], after: [] };
+                    return out;
+                });
+                return cleanCat;
+            });
         };
-        const items = Array.isArray(cat?.items) ? cat.items : [];
-        cleanCat.items = items.map(it => {
-          const out = { ...it };
-          out.type = 'item';
-          out.name = (out.name || '').toString();
-          if (out.description && typeof out.description === 'object') {
-            const obj = out.description || {};
-            out.description = typeof obj.description === 'string' ? obj.description
-                    : (typeof obj.name === 'string' ? obj.name : '');
-          } else {
-            out.description = (out.description || '').toString();
-          }
-          if (out.costCode != null) out.costCode = out.costCode.toString();
-          const qty = isNaN(parseFloat(out.quantity)) ? 0 : parseFloat(out.quantity);
-          const price = isNaN(parseFloat(out.unitPrice)) ? 0 : parseFloat(out.unitPrice);
-          out.quantity = qty; out.unitPrice = price; out.total = qty * price;
-          out.status = (out.status || 'in-progress').toString();
-          return out;
-        });
-        return cleanCat;
-      });
-    };
 
-    const safeLineItems = sanitizeForSave(updatedLineItems);
+        const safeLineItems = sanitizeForSave(updatedLineItems);
 
-    // Update estimate, preserving the title
-    const updateRes = await fetch(`/api/estimates/${estimateId}`, {
+        // Update the estimate with the new line item (with transferred photos)
+        const updateRes = await fetch(`/api/estimates/${estimateId}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: preservedTitle, lineItems: safeLineItems })
+            body: JSON.stringify({ title: preservedTitle, lineItems: safeLineItems })
         });
 
         if (!updateRes.ok) throw new Error("Failed to update estimate");
 
         showToast("Line item added to estimate!");
         closeSelectEstimateModal();
-        // Optionally, redirect to edit page
-       
     } catch (error) {
         showToast("Error adding line item.");
     } finally {
         hideLoader();
     }
 };
-
 // Add styles for dropdown and modal
 if (!document.getElementById('order-dropdown-styles')) {
     const style = document.createElement('style');
