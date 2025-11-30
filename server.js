@@ -1242,7 +1242,7 @@ app.get('/api/clients', async (req, res) => {
 // Add a new estimate to a project
 app.post('/api/estimates', async (req, res) => { 
   try {
-    console.log('Request Body:', req.body);
+    console.log('Request Body:', JSON.stringify(req.body, null, 2));
 
     const { projectId, lineItems, tax, title } = req.body;
 
@@ -1255,7 +1255,7 @@ app.post('/api/estimates', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid Project ID.' });
     }
 
-    // Organize Line Items into Categories
+    // Organize Line Items into Categories and PRESERVE photos field
     const structuredLineItems = lineItems.map(category => {
       if (category.type === 'category') {
         if (!category.category) {
@@ -1271,13 +1271,19 @@ app.post('/api/estimates', async (req, res) => {
             type: 'item',
             name: item.name,
             description: item.description || '',
-            costCode: item.costCode || 'Uncategorized', // ✅ Add cost code
+            costCode: item.costCode || 'Uncategorized',
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             total: item.total || item.quantity * item.unitPrice,
             status: item.status || 'in-progress',
             assignedTo: item.assignedTo || null,
-            maintenanceRequestId: item.maintenanceRequestId 
+            maintenanceRequestId: item.maintenanceRequestId,
+            photos: item.photos && typeof item.photos === 'object'
+              ? {
+                  before: Array.isArray(item.photos.before) ? item.photos.before : [],
+                  after: Array.isArray(item.photos.after) ? item.photos.after : []
+                }
+              : { before: [], after: [] }
           };
         });
 
@@ -1310,11 +1316,11 @@ app.post('/api/estimates', async (req, res) => {
 
     await newEstimate.save();
 
- // ✅ Log the estimate creation in daily logs
- await logDailyUpdate(
-  projectId,
-  `A new estimate (${invoiceNumber}) was created${title ? `: "${title}"` : ""}.`
-);
+    // ✅ Log the estimate creation in daily logs
+    await logDailyUpdate(
+      projectId,
+      `A new estimate (${invoiceNumber}) was created${title ? `: "${title}"` : ""}.`
+    );
 
     res.status(201).json({ success: true, estimate: newEstimate });
 
@@ -1343,8 +1349,7 @@ app.get('/api/estimates/:id', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Estimate not found.' });
     }
 
-    // 🔍 Debugging: Log the response to check if photos exist
-    console.log("📸 Estimate Photos Debugging:", JSON.stringify(estimate, null, 2));
+ 
 
     res.status(200).json({ success: true, estimate });
   } catch (error) {
