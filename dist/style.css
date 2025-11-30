@@ -3480,4 +3480,22 @@ input, textarea {
   padding-right: 28px; /* reduce right padding to show full text */
 }
 
+/* --- Assignments Tab: Filters Dropdown --- */
+#assignments-filters select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 1rem;
+  background: #f8fafc;
+  color: #22223b;
+  transition: border 0.2s, box-shadow 0.2s;
+  min-width: 160px;
+  outline: none;
+  margin-bottom: 0px;
+}
 
+#assignments-filters select:focus {
+  border-color: #2563eb;
+  background: #fff;
+  box-shadow: 0 0 0 2px #2563eb22;
+}
