@@ -3041,6 +3041,104 @@ async function updateMaintenanceNotificationBar() {
     renderMaintenanceNotifDropdown(requests);
 }
 
+function openPhotoFullView(srcOrArray, startIdx = 0) {
+  let photos = [];
+  let currentIdx = 0;
+  if (Array.isArray(srcOrArray)) {
+    photos = srcOrArray;
+    currentIdx = startIdx;
+  } else {
+    photos = [srcOrArray];
+    currentIdx = 0;
+  }
+
+  let photoModal = document.getElementById('photoFullViewModal');
+  if (!photoModal) {
+    photoModal = document.createElement('div');
+    photoModal.id = 'photoFullViewModal';
+    photoModal.style.cssText = `
+      position: fixed; z-index: 99999; left: 0; top: 0; width: 100vw; height: 100vh;
+      background: rgba(30,41,59,0.85); display: flex; align-items: center; justify-content: center;
+    `;
+    photoModal.innerHTML = `
+      <img id="photoFullViewImg" src="" style="max-width:90vw; max-height:90vh; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.25);" />
+      <span id="photoFullViewClose" style="position:absolute;top:24px;right:40px;font-size:2.5rem;color:#fff;cursor:pointer;font-weight:bold;z-index:2;">&times;</span>
+      <button id="photoFullViewPrev" style="
+        position:absolute;left:32px;top:50%;transform:translateY(-50%);
+        background:rgba(37,99,235,0.92);color:#fff;border:none;
+        border-radius:50%;width:54px;height:54px;cursor:pointer;z-index:2;
+        box-shadow:0 2px 12px rgba(37,99,235,0.18);
+        display:none;transition:background 0.18s;
+        font-size:2.2rem;display:flex;align-items:center;justify-content:center;
+      " onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='rgba(37,99,235,0.92)'">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <button id="photoFullViewNext" style="
+        position:absolute;right:32px;top:50%;transform:translateY(-50%);
+        background:rgba(37,99,235,0.92);color:#fff;border:none;
+        border-radius:50%;width:54px;height:54px;cursor:pointer;z-index:2;
+        box-shadow:0 2px 12px rgba(37,99,235,0.18);
+        display:none;transition:background 0.18s;
+        font-size:2.2rem;display:flex;align-items:center;justify-content:center;
+      " onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='rgba(37,99,235,0.92)'">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    `;
+    document.body.appendChild(photoModal);
+
+    document.getElementById('photoFullViewClose').onclick = () => photoModal.style.display = 'none';
+    photoModal.onclick = (e) => {
+      if (e.target === photoModal) photoModal.style.display = 'none';
+    };
+  }
+
+  const imgEl = document.getElementById('photoFullViewImg');
+  const prevBtn = document.getElementById('photoFullViewPrev');
+  const nextBtn = document.getElementById('photoFullViewNext');
+
+  function updatePhoto() {
+    imgEl.src = photos[currentIdx];
+    prevBtn.style.display = photos.length > 1 && currentIdx > 0 ? 'flex' : 'none';
+    nextBtn.style.display = photos.length > 1 && currentIdx < photos.length - 1 ? 'flex' : 'none';
+  }
+
+  prevBtn.onclick = (e) => {
+    e.stopPropagation();
+    if (currentIdx > 0) {
+      currentIdx--;
+      updatePhoto();
+    }
+  };
+  nextBtn.onclick = (e) => {
+    e.stopPropagation();
+    if (currentIdx < photos.length - 1) {
+      currentIdx++;
+      updatePhoto();
+    }
+  };
+
+  // Keyboard navigation
+  photoModal.onkeydown = function(e) {
+    if (e.key === 'ArrowLeft' && currentIdx > 0) {
+      currentIdx--;
+      updatePhoto();
+    }
+    if (e.key === 'ArrowRight' && currentIdx < photos.length - 1) {
+      currentIdx++;
+      updatePhoto();
+    }
+    if (e.key === 'Escape') {
+      photoModal.style.display = 'none';
+    }
+  };
+
+  updatePhoto();
+  photoModal.style.display = 'flex';
+  imgEl.focus();
+  photoModal.tabIndex = 0;
+  photoModal.focus();
+}
+
 async function renderMaintenanceNotifDropdown(requests) {
   const notifCount = document.getElementById('maintenanceNotifCount');
   const notifDropdown = document.getElementById('maintenanceNotifDropdown');
@@ -3080,31 +3178,50 @@ async function renderMaintenanceNotifDropdown(requests) {
   const propertyMap = {};
   allProjects.forEach(p => propertyMap[p._id] = p.name);
 
-  notifList.innerHTML = requests.map(r => `
-    <div class="notif-list-item modern-notif-item" 
-         style="cursor:pointer;" 
-         onclick="handleMaintenanceRequestClick('${r._id}', '${r.projectId}', '${r.unitId?.number || ''}')">
-      <div class="notif-list-row">
-        <div class="notif-title">
-          <i class="fas fa-tools"></i> ${r.title}
-        </div>
-        <span class="notif-priority">
-          Priority: ${r.priority}
-        </span>
-        <span class="notif-status">
-          Status: ${r.status}
-        </span>
-      </div>
-      <div class="notif-desc">
-        ${r.description}
-      </div>
-      <div class="notif-meta">
-        <span class="notif-unit"><i class="fas fa-door-open"></i> Unit: ${r.unitId?.number || 'N/A'}</span>
-        <span><i class="far fa-calendar-alt"></i> Requested: ${new Date(r.createdAt).toLocaleDateString()}</span>
-        <span class="notif-property"><i class="fas fa-building"></i> Property: ${propertyMap[r.projectId] || 'Unknown'}</span>
-      </div>
+  notifList.innerHTML = requests.map(r => {
+    let photosHtml = '';
+    if (Array.isArray(r.photos) && r.photos.length) {
+  photosHtml = `
+    <div class="notif-photos" style="margin:8px 0; display:flex; gap:8px; flex-wrap:wrap;">
+      ${r.photos.slice(0, 4).map((url, idx) => `
+        <img src="${url}" alt="Maintenance Photo"
+          style="width:48px;height:48px;object-fit:cover;border-radius:6px;box-shadow:0 1px 4px #0001;cursor:pointer;"
+          onclick='event.stopPropagation(); window.openPhotoFullView(${JSON.stringify(r.photos)}, ${idx})'
+          title="Click to view full photo"
+        />
+      `).join('')}
+      ${r.photos.length > 4 ? `<span style="align-self:center;color:#2563eb;font-weight:600;">+${r.photos.length - 4} more</span>` : ''}
     </div>
-  `).join('');
+  `;
+}
+
+    return `
+      <div class="notif-list-item modern-notif-item" 
+           style="cursor:pointer;" 
+           onclick="handleMaintenanceRequestClick('${r._id}', '${r.projectId}', '${r.unitId?.number || ''}')">
+        <div class="notif-list-row">
+          <div class="notif-title">
+            <i class="fas fa-tools"></i> ${r.title}
+          </div>
+          <span class="notif-priority">
+            Priority: ${r.priority}
+          </span>
+          <span class="notif-status">
+            Status: ${r.status}
+          </span>
+        </div>
+        ${photosHtml}
+        <div class="notif-desc">
+          ${r.description}
+        </div>
+        <div class="notif-meta">
+          <span class="notif-unit"><i class="fas fa-door-open"></i> Unit: ${r.unitId?.number || 'N/A'}</span>
+          <span><i class="far fa-calendar-alt"></i> Requested: ${new Date(r.createdAt).toLocaleDateString()}</span>
+          <span class="notif-property"><i class="fas fa-building"></i> Property: ${propertyMap[r.projectId] || 'Unknown'}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 async function updateMaintenanceNotificationBar() {
