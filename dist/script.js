@@ -2193,7 +2193,8 @@ function renderAssignmentsActiveFilters() {
       'background:#eef2ff',
       'border:1px solid #c7d2fe',
       'color:#3730a3',
-      'font-weight:500'
+      'font-weight:500',
+      'height:30px'
     ].join(';');
     badge.innerHTML = `<span>Status: ${label}</span>`;
 
@@ -2227,7 +2228,8 @@ function renderAssignmentsActiveFilters() {
       'background:#ecfeff',
       'border:1px solid #a5f3fc',
       'color:#155e75',
-      'font-weight:500'
+      'font-weight:500',
+      'height:30px'
     ].join(';');
     badge.innerHTML = `<span>Name: ${nameVal}</span>`;
     const clearBtn = document.createElement('button');
@@ -2259,7 +2261,8 @@ function renderAssignmentsActiveFilters() {
       'background:#fef3c7',
       'border:1px solid #fde68a',
       'color:#92400e',
-      'font-weight:500'
+      'font-weight:500',
+      'height:30px'
     ].join(';');
     badge.innerHTML = `<span>Address: ${addressVal}</span>`;
     const clearBtn = document.createElement('button');
@@ -2291,7 +2294,8 @@ function renderAssignmentsActiveFilters() {
       'background:#f1f5f9',
       'border:1px solid #cbd5e1',
       'color:#0f172a',
-      'font-weight:500'
+      'font-weight:500',
+      'height:30px'
     ].join(';');
     badge.innerHTML = `<span>Estimate: ${estimateVal}</span>`;
     const clearBtn = document.createElement('button');
@@ -2347,8 +2351,6 @@ function renderAssignmentsActiveFilters() {
     badgeWrap.appendChild(clearAll);
   }
 }
-
-
 
 function filterAssignmentsTable() {
   const nameVal = document.getElementById('filter-assignment-name').value.toLowerCase();
