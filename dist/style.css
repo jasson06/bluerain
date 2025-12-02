@@ -2148,7 +2148,7 @@ input, textarea {
 /* Responsive: stack filters vertically on small screens */
 @media (max-width: 600px) {
   #assignments-filters {
-    flex-direction: column;
+   
     gap: 8px;
     align-items: stretch;
   }
