@@ -2116,9 +2116,18 @@ document.querySelectorAll('.sidebar nav ul li a').forEach(link => {
 });
 
 
-document.getElementById('filter-assignment-name').addEventListener('input', filterAssignmentsTable);
-document.getElementById('filter-assignment-address').addEventListener('input', filterAssignmentsTable);
-document.getElementById('filter-assignment-estimate').addEventListener('input', filterAssignmentsTable);
+document.getElementById('filter-assignment-name').addEventListener('input', () => { 
+  filterAssignmentsTable();
+  renderAssignmentsActiveFilters();
+});
+document.getElementById('filter-assignment-address').addEventListener('input', () => {
+  filterAssignmentsTable();
+  renderAssignmentsActiveFilters();
+});
+document.getElementById('filter-assignment-estimate').addEventListener('input', () => {
+  filterAssignmentsTable();
+  renderAssignmentsActiveFilters();
+});
 
 // Add event listener for status filter (dropdown)
 let statusFilterEl = document.getElementById('filter-assignment-status');
@@ -2147,7 +2156,159 @@ if (!statusFilterEl) {
 }
 statusFilterEl.addEventListener('change', () => {
   loadAssignments();
+  renderAssignmentsActiveFilters();
 });
+
+// Render an active filter badge for the status filter
+function renderAssignmentsActiveFilters() {
+  const filtersWrap = document.getElementById('assignments-filters');
+  if (!filtersWrap) return;
+
+  let badgeWrap = document.getElementById('assignments-active-filters');
+  if (!badgeWrap) {
+    badgeWrap = document.createElement('div');
+    badgeWrap.id = 'assignments-active-filters';
+    badgeWrap.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px;';
+  }
+
+  // Ensure badges render directly below the filters row
+  if (filtersWrap.parentNode) {
+    filtersWrap.parentNode.insertBefore(badgeWrap, filtersWrap.nextSibling);
+  }
+
+  // Clear previous badges
+  badgeWrap.innerHTML = '';
+
+  const statusEl = document.getElementById('filter-assignment-status');
+  const hasStatus = !!(statusEl && statusEl.value);
+  if (hasStatus) {
+    const label = statusEl.options[statusEl.selectedIndex]?.text || 'Selected';
+    const badge = document.createElement('span');
+    badge.style.cssText = [
+      'display:inline-flex',
+      'align-items:center',
+      'gap:8px',
+      'padding:6px 10px',
+      'border-radius:9999px',
+      'background:#eef2ff',
+      'border:1px solid #c7d2fe',
+      'color:#3730a3',
+      'font-weight:500'
+    ].join(';');
+    badge.innerHTML = `<span>Status: ${label}</span>`;
+
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.setAttribute('aria-label', 'Clear status filter');
+    clearBtn.title = 'Clear';
+    clearBtn.textContent = '×';
+    clearBtn.style.cssText = 'border:none;background:transparent;color:#3730a3;cursor:pointer;font-size:16px;line-height:1;padding:0 2px;';
+    clearBtn.addEventListener('click', () => {
+      statusEl.value = '';
+      loadAssignments();
+      renderAssignmentsActiveFilters();
+    });
+
+    badge.appendChild(clearBtn);
+    badgeWrap.appendChild(badge);
+  }
+
+  // Name filter badge
+  const nameEl = document.getElementById('filter-assignment-name');
+  const nameVal = (nameEl?.value || '').trim();
+  if (nameVal) {
+    const badge = document.createElement('span');
+    badge.style.cssText = [
+      'display:inline-flex',
+      'align-items:center',
+      'gap:8px',
+      'padding:6px 10px',
+      'border-radius:9999px',
+      'background:#ecfeff',
+      'border:1px solid #a5f3fc',
+      'color:#155e75',
+      'font-weight:500'
+    ].join(';');
+    badge.innerHTML = `<span>Name: ${nameVal}</span>`;
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.setAttribute('aria-label', 'Clear name filter');
+    clearBtn.title = 'Clear';
+    clearBtn.textContent = '×';
+    clearBtn.style.cssText = 'border:none;background:transparent;color:#155e75;cursor:pointer;font-size:16px;line-height:1;padding:0 2px;';
+    clearBtn.addEventListener('click', () => {
+      nameEl.value = '';
+      filterAssignmentsTable();
+      renderAssignmentsActiveFilters();
+    });
+    badge.appendChild(clearBtn);
+    badgeWrap.appendChild(badge);
+  }
+
+  // Address filter badge
+  const addressEl = document.getElementById('filter-assignment-address');
+  const addressVal = (addressEl?.value || '').trim();
+  if (addressVal) {
+    const badge = document.createElement('span');
+    badge.style.cssText = [
+      'display:inline-flex',
+      'align-items:center',
+      'gap:8px',
+      'padding:6px 10px',
+      'border-radius:9999px',
+      'background:#fef3c7',
+      'border:1px solid #fde68a',
+      'color:#92400e',
+      'font-weight:500'
+    ].join(';');
+    badge.innerHTML = `<span>Address: ${addressVal}</span>`;
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.setAttribute('aria-label', 'Clear address filter');
+    clearBtn.title = 'Clear';
+    clearBtn.textContent = '×';
+    clearBtn.style.cssText = 'border:none;background:transparent;color:#92400e;cursor:pointer;font-size:16px;line-height:1;padding:0 2px;';
+    clearBtn.addEventListener('click', () => {
+      addressEl.value = '';
+      filterAssignmentsTable();
+      renderAssignmentsActiveFilters();
+    });
+    badge.appendChild(clearBtn);
+    badgeWrap.appendChild(badge);
+  }
+
+  // Estimate filter badge
+  const estimateEl = document.getElementById('filter-assignment-estimate');
+  const estimateVal = (estimateEl?.value || '').trim();
+  if (estimateVal) {
+    const badge = document.createElement('span');
+    badge.style.cssText = [
+      'display:inline-flex',
+      'align-items:center',
+      'gap:8px',
+      'padding:6px 10px',
+      'border-radius:9999px',
+      'background:#f1f5f9',
+      'border:1px solid #cbd5e1',
+      'color:#0f172a',
+      'font-weight:500'
+    ].join(';');
+    badge.innerHTML = `<span>Estimate: ${estimateVal}</span>`;
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.setAttribute('aria-label', 'Clear estimate filter');
+    clearBtn.title = 'Clear';
+    clearBtn.textContent = '×';
+    clearBtn.style.cssText = 'border:none;background:transparent;color:#0f172a;cursor:pointer;font-size:16px;line-height:1;padding:0 2px;';
+    clearBtn.addEventListener('click', () => {
+      estimateEl.value = '';
+      filterAssignmentsTable();
+      renderAssignmentsActiveFilters();
+    });
+    badge.appendChild(clearBtn);
+    badgeWrap.appendChild(badge);
+  }
+}
 
 function filterAssignmentsTable() {
   const nameVal = document.getElementById('filter-assignment-name').value.toLowerCase();
@@ -2182,6 +2343,8 @@ async function loadAssignments() {
     statusFilterEl.value = 'in-progress';
     loadAssignments._initialLoad = true;
   }
+  // Reflect the current status selection with an active filter badge
+  renderAssignmentsActiveFilters();
   const tableBody = document.querySelector("#assignments-table tbody");
   tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px 0;">
     <div style="display:inline-flex;align-items:center;justify-content:center;gap:16px;">
