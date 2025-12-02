@@ -2129,11 +2129,10 @@ if (!statusFilterEl) {
   statusFilterEl.style.margin = '0 8px';
   statusFilterEl.innerHTML = `
     <option value="">All Statuses</option>
-    <option value="completed">Completed</option>
     <option value="in-progress">In Progress</option>
-    <option value="pending">Pending</option>
+    <option value="completed">Completed</option>
     <option value="approved">Approved</option>
-    <option value="rejected">Rejected</option>
+    <option value="rework">Rework</option>
   `;
   const filterBar = document.getElementById('assignments-filter-bar') || document.querySelector('.assignments-filter-bar');
   if (filterBar) {
@@ -2250,7 +2249,13 @@ estimates.forEach(e => estimateMap[e._id.toString()] = e);
         // If status filter is set, only show assignments with at least one matching line item
         let hasStatusMatch = true;
         if (statusFilter) {
-          hasStatusMatch = items.some(i => (i.status || '').toLowerCase() === statusFilter);
+          hasStatusMatch = items.some(i => {
+            const s = (i.status || '').toLowerCase();
+            if (statusFilter === 'in-progress') {
+              return s === 'in-progress' || s === 'new';
+            }
+            return s === statusFilter;
+          });
         }
         if (!hasStatusMatch) return;
 
@@ -2547,7 +2552,7 @@ const summaryOptions = [
 
   // Summary calculations
   const completed = lineItems.filter(i => i.status === 'completed' || i.status === 'approved');
-  const inProgress = lineItems.filter(i => i.status === 'in-progress');
+  const inProgress = lineItems.filter(i => i.status === 'in-progress' || i.status === 'new');
   const completedCount = completed.length;
   const inProgressCount = inProgress.length;
   const percentComplete = lineItems.length ? Math.round((completedCount / lineItems.length) * 100) : 0;
