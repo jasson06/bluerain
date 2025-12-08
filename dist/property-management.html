@@ -2618,8 +2618,25 @@ select {
     <div class="payments-header">
         <h2>Payments</h2>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <button class="btn-secondary" id="addPaymentBtn">+ Record Payment</button>
-          <button class="btn-secondary" id="editMonthChargesBtn" title="Edit expected rent and late fee for a month">✎ Edit Month Charges</button>
+            <button class="btn-secondary" id="addPaymentBtn">+ Record Payment</button>
+            <button class="btn-secondary" id="editMonthChargesBtn" title="Edit expected rent and late fee for a month">✎ Edit Month Charges</button>
+        </div>
+    </div>
+    <div id="paymentsFilterBar" style="margin-top: 9px;border-radius:12px;padding:0px;display:flex;flex-wrap:wrap;gap:0px;align-items:flex-start;position:relative;">
+        <div style="position:relative;flex:1 1 100%;min-width:280px;display:flex;align-items:center;gap:6px;justify-content:flex-start;">
+            <i class="fas fa-magnifying-glass" style="color:#6b7280;margin-left:6px;"></i>
+            <input id="paymentSearchBar" type="text" placeholder="Search payments by" title="Type to search. Supported tokens: tenant:, unit:, type:, method:, apply:, date:, amount:, note:" style="flex:0 1 390px;max-width:300px;border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px;background:#fff;font-size:0.95rem;" />
+            <button class="btn-secondary" id="clearPaymentFiltersBtn" title="Clear search" style="margin-right:6px;padding:6px 10px;font-size:0.9rem;">Clear</button>
+        </div>
+        <div id="activeFilterChips" style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 8px 0 36px;flex:1 1 100%;"></div>
+        <div id="paymentSearchSuggestions" style="position:absolute;top:50px;left:10px;right:auto;min-width:280px;max-width:520px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,0.15);padding:4px 0;display:none;z-index:1000;max-height:300px;overflow:auto;">
+            <div id="paymentSuggestHeader" style="padding:8px 12px;font-size:.9em;color:#374151;border-bottom:1px solid #eef2f7;display:flex;justify-content:space-between;align-items:center;">
+                <span id="paymentSuggestTitle">Choose a filter</span>
+                <button id="paymentSuggestBack" style="display:none;background:transparent;border:none;color:#217dbb;cursor:pointer;font-weight:600;">Back</button>
+            </div>
+            <ul id="paymentSuggestList" style="list-style:none;margin:0;padding:4px 0;"></ul>
+            <ul id="paymentSuggestValues" style="list-style:none;margin:0;padding:4px 0;display:none;"></ul>
+            <div style="border-top:1px solid #eef2f7;margin-top:4px;padding:8px 12px;font-size:.85em;color:#6b7280;"></div>
         </div>
     </div>
     <div class="payments-list" id="paymentsList">
@@ -7359,6 +7376,12 @@ function renderPayments() {
         paymentsList.innerHTML = `<div class="empty-state"><i class="fas fa-money-check-alt"></i><p>No payments recorded</p></div>`;
         return;
     }
+    // Ensure search/sort are initialized once
+    if (!window.__paymentsFiltersInitialized) {
+        initializeSimplePaymentSearchAndSort();
+        window.__paymentsFiltersInitialized = true;
+    }
+    const { query, sort } = getPaymentSearchAndSort();
     // Helper to derive YYYY-MM from a date-like
     const toYYYYMM = (d) => {
         if (!d) return '';
@@ -7366,18 +7389,101 @@ function renderPayments() {
         if (isNaN(dt)) return '';
         return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
     };
+    // Apply token-based search filters
+    const filtered = (state.payments || []).filter(p => {
+        const tenant = state.tenants.find(t => t._id === p.tenantId);
+        const unit = state.units.find(u => u._id === p.unitId);
+        const tokens = query.tokens;
+        // generalized text search across tenant name, unit number, note, type, method, appliedTo
+        const haystack = [
+            (tenant?.name || ''),
+            (unit?.number != null ? String(unit.number) : ''),
+            (p.note || ''),
+            (p.type || ''),
+            (p.method || ''),
+            (p.applyTo || '')
+        ].join(' ').toLowerCase();
+        if (query.text && !haystack.includes(query.text)) return false;
+        // token checks with multi-value support (comma-separated)
+        const tname = (tenant?.name || '').toLowerCase();
+        const uname = (String(unit?.number || '')).toLowerCase();
+        // Prefer exact tenantId filtering when provided
+        if (tokens.tenantIdList.length) {
+            if (!tokens.tenantIdList.includes(String(p.tenantId))) return false;
+        } else if (tokens.tenantList.length) {
+            const nameParts = tname.split(/\s+/).filter(Boolean);
+            const matchesTenant = tokens.tenantList.some(raw => {
+                const x = String(raw || '').toLowerCase().trim();
+                if (!x) return false;
+                // Space in value: allow substring match on full name
+                if (x.includes(' ')) return tname.includes(x);
+                // Single token: match includes, any part equals, or any part startsWith
+                if (tname.includes(x)) return true;
+                if (nameParts.some(p => p === x)) return true;
+                if (nameParts.some(p => p.startsWith(x))) return true;
+                return false;
+            });
+            if (!matchesTenant) return false;
+        }
+        if (tokens.unitList.length && !tokens.unitList.some(x=>uname.includes(x))) return false;
+        const ptype = (p.type || '').toLowerCase();
+        if (tokens.typeList.length && !tokens.typeList.includes(ptype)) return false;
+        const pmeth = (p.method || '').toLowerCase();
+        if (tokens.methodList.length && !tokens.methodList.includes(pmeth)) return false;
+        const pappl = (p.applyTo || '').toLowerCase();
+        if (tokens.applyList.length && !tokens.applyList.includes(pappl)) return false;
+        if (tokens.date) {
+            const pd = new Date(p.date);
+            const [y,m,d] = tokens.date.split('-').map(Number);
+            if (isNaN(pd)) return false;
+            if (y && pd.getFullYear() !== y) return false;
+            if (m && (pd.getMonth()+1) !== m) return false;
+            if (d && pd.getDate() !== d) return false;
+        }
+        if (tokens.amountOp) {
+            const amt = Number(p.amount) || 0;
+            const val = Number(tokens.amountVal) || 0;
+            if (tokens.amountOp === '>' && !(amt > val)) return false;
+            if (tokens.amountOp === '<' && !(amt < val)) return false;
+            if (tokens.amountOp === '>=' && !(amt >= val)) return false;
+            if (tokens.amountOp === '<=' && !(amt <= val)) return false;
+            if (tokens.amountOp === '=' && !(amt === val)) return false;
+        }
+        const pnote = (p.note||'').toLowerCase();
+        if (tokens.noteList.length && !tokens.noteList.some(x=>pnote.includes(x))) return false;
+        return true;
+    });
+    // Apply sorting
+    const sortCmp = (a,b) => {
+        const getTenant = p => state.tenants.find(t=>t._id===p.tenantId)?.name || '';
+        const getApplied = p => (p.applyTo || 'rent');
+        const getMethod = p => (p.method || '');
+        const getAmount = p => Number(p.amount)||0;
+        const getDate = p => new Date(p.date);
+        const dir = (sort.dir === 'desc') ? -1 : 1;
+        let va,vb;
+        switch(sort.key){
+            case 'tenant': va=getTenant(a).toLowerCase(); vb=getTenant(b).toLowerCase(); return va>vb?dir:(va<vb?-dir:0);
+            case 'applied': va=getApplied(a).toLowerCase(); vb=getApplied(b).toLowerCase(); return va>vb?dir:(va<vb?-dir:0);
+            case 'method': va=getMethod(a).toLowerCase(); vb=getMethod(b).toLowerCase(); return va>vb?dir:(va<vb?-dir:0);
+            case 'amount': va=getAmount(a); vb=getAmount(b); return (va-vb)*dir;
+            case 'date': va=getDate(a).getTime(); vb=getDate(b).getTime(); return (va-vb)*dir;
+            default: return 0;
+        }
+    };
+    if (sort.key) filtered.sort(sortCmp);
     paymentsList.innerHTML = `
     <div class="table-responsive">
     <table class="payments-table">
             <thead>
                 <tr>
-                    <th>Tenant</th>
+                    <th class="sortable" data-sort-key="tenant">Tenant <span class="sort-arrow" id="arrow-tenant"></span></th>
                     <th>Unit #</th>
                     <th>Type</th>
-                    <th>Applied To</th>
-                    <th>Amount</th>
-                    <th>Method</th>
-                    <th>Date</th>
+                    <th class="sortable" data-sort-key="applied">Applied To <span class="sort-arrow" id="arrow-applied"></span></th>
+                    <th class="sortable" data-sort-key="amount">Amount <span class="sort-arrow" id="arrow-amount"></span></th>
+                    <th class="sortable" data-sort-key="method">Method <span class="sort-arrow" id="arrow-method"></span></th>
+                    <th class="sortable" data-sort-key="date">Date <span class="sort-arrow" id="arrow-date"></span></th>
                     <th>Late Fee</th>
                     <th>Balance</th>
                     <th>Note</th>
@@ -7386,7 +7492,7 @@ function renderPayments() {
                 </tr>
             </thead>
             <tbody>
-                ${state.payments.map(payment => {
+                ${filtered.map(payment => {
                     const tenant = state.tenants.find(t => t._id === payment.tenantId);
                     const unit = state.units.find(u => u._id === payment.unitId);
                     // Compute display balance with monthly override awareness (client-side immediate view)
@@ -7476,6 +7582,371 @@ function renderPayments() {
     </table>
     </div>
     `;
+    // Wire clickable header sort and update arrows
+    wireClickableHeaderSort();
+    updateSortArrows();
+}
+
+// Initialize single search bar and header sort controls
+function initializeSimplePaymentSearchAndSort() {
+    const search = document.getElementById('paymentSearchBar');
+    if (search) {
+        search.addEventListener('input', ()=> { positionSearchSuggestions(); autoSuggestBasedOnInput(); showSearchSuggestions(true); renderPayments(); });
+        search.addEventListener('change', ()=> { positionSearchSuggestions(); renderPayments(); });
+        search.addEventListener('focus', ()=> { positionSearchSuggestions(); showSearchSuggestions(true); });
+        search.addEventListener('blur', ()=> setTimeout(()=>showSearchSuggestions(false), 120));
+        // basic keyboard navigation for the dropdown
+        search.addEventListener('keydown', (e)=>{
+            const list = document.getElementById('paymentSuggestList');
+            const box = document.getElementById('paymentSearchSuggestions');
+            if (!list || box.style.display === 'none') return;
+            const items = Array.from(list.querySelectorAll('.suggest-item'));
+            if (!items.length) return;
+            window.__suggestIndex = (typeof window.__suggestIndex === 'number') ? window.__suggestIndex : -1;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                window.__suggestIndex = Math.min(items.length-1, window.__suggestIndex + 1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                window.__suggestIndex = Math.max(0, window.__suggestIndex - 1);
+            } else if (e.key === 'Enter') {
+                if (window.__suggestIndex >= 0) {
+                    e.preventDefault();
+                    const item = items[window.__suggestIndex];
+                    const token = item.getAttribute('data-token') || '';
+                    const acc = (window.__accumulatedQuery || '').trim();
+                    const sep = acc ? ' ' : '';
+                    window.__accumulatedQuery = `${acc}${sep}${token}`;
+                    search.value = '';
+                    renderPayments();
+                    showSearchSuggestions(false);
+                    window.__suggestIndex = -1;
+                    // Defocus so the field is ready for the next filter (user clicks to reopen)
+                    search.blur();
+                }
+            }
+            // update highlight
+            items.forEach((li, idx) => li.style.background = idx === window.__suggestIndex ? '#f1f5f9' : 'transparent');
+        });
+    }
+    const clr = document.getElementById('clearPaymentFiltersBtn');
+    if (clr) clr.onclick = ()=>{ if (search) search.value=''; window.__accumulatedQuery=''; renderPayments(); showSearchSuggestions(false); };
+
+    const sug = document.getElementById('paymentSearchSuggestions');
+    if (sug) {
+        renderSuggestionTokens();
+        sug.addEventListener('mousedown', (e)=>{
+            const item = e.target.closest('.suggest-item');
+            const valItem = e.target.closest('.suggest-value');
+            e.preventDefault();
+            if (item) {
+                // Choose token -> show values for that token
+                const token = item.getAttribute('data-token') || '';
+                showValueSuggestions(token);
+            } else if (valItem) {
+                const token = valItem.getAttribute('data-token') || '';
+                const value = valItem.getAttribute('data-value') || '';
+                if (search) {
+                    const acc = (window.__accumulatedQuery || '').trim();
+                    const sep = acc ? ' ' : '';
+                    window.__accumulatedQuery = `${acc}${sep}${token}${value}`;
+                    search.value = '';
+                    renderPayments();
+                    showSearchSuggestions(false);
+                    // Defocus to keep box closed until user clicks again
+                    search.blur();
+                }
+            }
+        });
+        // Back button returns to token list
+        const backBtn = document.getElementById('paymentSuggestBack');
+        if (backBtn) backBtn.addEventListener('mousedown', (e)=>{ e.preventDefault(); renderSuggestionTokens(); });
+        // hover highlight
+        sug.addEventListener('mousemove', (e)=>{
+            const item = e.target.closest('.suggest-item');
+            const valItem = e.target.closest('.suggest-value');
+            document.querySelectorAll('#paymentSuggestList .suggest-item').forEach(li => {
+                li.style.background = li === item ? '#f8fafc' : 'transparent';
+            });
+            document.querySelectorAll('#paymentSuggestValues .suggest-value').forEach(li => {
+                li.style.background = li === valItem ? '#f8fafc' : 'transparent';
+            });
+        });
+    }
+}
+
+function parsePaymentSearch(queryStr) {
+    const tokens = { tenant:'', unit:'', type:'', method:'', apply:'', date:'', amountOp:'', amountVal:'', note:'', text:'',
+                     tenantList:[], tenantIdList:[], unitList:[], typeList:[], methodList:[], applyList:[], noteList:[] };
+    const q = (queryStr || '').trim();
+    if (!q) return { tokens, text:'' };
+    const parts = q.split(/\s+/);
+    const rest = [];
+    for (const part of parts) {
+        const low = part.toLowerCase();
+        const takeVal = (pfx) => part.slice(pfx.length);
+        if (low.startsWith('tenant:')) { const v = takeVal('tenant:').toLowerCase(); tokens.tenantList.push(...v.split(',').filter(Boolean)); }
+        else if (low.startsWith('tenantid:')) { const v = takeVal('tenantid:'); tokens.tenantIdList.push(...v.split(',').filter(Boolean)); }
+        else if (low.startsWith('unit:')) { const v = takeVal('unit:').toLowerCase(); tokens.unitList.push(...v.split(',').filter(Boolean)); }
+        else if (low.startsWith('type:')) { const v = takeVal('type:').toLowerCase(); tokens.typeList.push(...v.split(',').filter(Boolean)); }
+        else if (low.startsWith('method:')) { const v = takeVal('method:').toLowerCase(); tokens.methodList.push(...v.split(',').filter(Boolean)); }
+        else if (low.startsWith('apply:')) { const v = takeVal('apply:').toLowerCase(); tokens.applyList.push(...v.split(',').filter(Boolean)); }
+        else if (low.startsWith('date:')) tokens.date = takeVal('date:');
+        else if (low.startsWith('amount:')) {
+            const val = takeVal('amount:');
+            const m = val.match(/^(>=|<=|>|<|=)?\s*(\-?\d+(?:\.\d+)?)$/);
+            if (m) { tokens.amountOp = m[1] || '='; tokens.amountVal = m[2]; }
+        }
+        else if (low.startsWith('note:')) { const v = takeVal('note:').toLowerCase(); tokens.noteList.push(...v.split(',').filter(Boolean)); }
+        else rest.push(part);
+    }
+    // Normalize: trim, dedupe, and set scalar mirrors for chips display
+    const dedupe = (arr)=>Array.from(new Set(arr.map(v=>String(v).trim()).filter(Boolean)));
+    tokens.tenantList = dedupe(tokens.tenantList);
+    tokens.tenantIdList = dedupe(tokens.tenantIdList);
+    tokens.unitList = dedupe(tokens.unitList);
+    tokens.typeList = dedupe(tokens.typeList);
+    tokens.methodList = dedupe(tokens.methodList);
+    tokens.applyList = dedupe(tokens.applyList);
+    tokens.noteList = dedupe(tokens.noteList);
+    tokens.tenant = tokens.tenantList.join(',');
+    tokens.unit = tokens.unitList.join(',');
+    tokens.type = tokens.typeList.join(',');
+    tokens.method = tokens.methodList.join(',');
+    tokens.apply = tokens.applyList.join(',');
+    tokens.note = tokens.noteList.join(',');
+    tokens.text = rest.join(' ').toLowerCase();
+    return { tokens, text: tokens.text };
+}
+
+function getPaymentSearchAndSort() {
+    const currentInput = document.getElementById('paymentSearchBar')?.value || '';
+    const combined = `${(window.__accumulatedQuery || '').trim()} ${currentInput.trim()}`.trim();
+    const query = parsePaymentSearch(combined);
+    const sort = window.__paymentSortState || { key:'', dir:'asc' };
+    renderActiveFilterChips(query.tokens);
+    return { query, sort };
+}
+
+function renderActiveFilterChips(tokens) {
+    const container = document.getElementById('activeFilterChips');
+    if (!container) return;
+    const chipHtml = [];
+    const pushChip = (key, value, displayLabel) => {
+        chipHtml.push(`
+        <span class="filter-chip" data-key="${key}" data-value="${value}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#eef2f7;color:#374151;border:1px solid #e5e7eb;font-size:.9em;">
+            <span style="color:#0b5cab;font-weight:600">${key === 'tenantid:' ? 'tenant:' : key}</span>
+            <span>${displayLabel ?? value}</span>
+            <button class="chip-remove" title="Remove" style="background:transparent;border:none;color:#6b7280;cursor:pointer;font-weight:700;">×</button>
+        </span>`);
+    };
+    // Split multi-value lists into individual chips for fine-grained removal
+    // Prefer ID-based chips with display names
+    if (tokens.tenantIdList && tokens.tenantIdList.length) {
+        tokens.tenantIdList.forEach(id => {
+            const t = (state.tenants || []).find(tt => String(tt._id) === String(id));
+            const label = t?.name || String(id);
+            pushChip('tenantid:', String(id), label);
+        });
+    } else {
+        (tokens.tenantList || []).forEach(v => pushChip('tenant:', v));
+    }
+    (tokens.unitList || []).forEach(v => pushChip('unit:', v));
+    (tokens.typeList || []).forEach(v => pushChip('type:', v));
+    (tokens.methodList || []).forEach(v => pushChip('method:', v));
+    (tokens.applyList || []).forEach(v => pushChip('apply:', v));
+    if (tokens.date) pushChip('date:', tokens.date);
+    if (tokens.amountOp) pushChip('amount:', `${tokens.amountOp}${tokens.amountVal}`);
+    (tokens.noteList || []).forEach(v => pushChip('note:', v));
+    container.innerHTML = chipHtml.join('');
+    container.querySelectorAll('.chip-remove').forEach(btn=>{
+        btn.addEventListener('click', (e)=>{
+            const chip = e.target.closest('.filter-chip');
+            if (!chip) return;
+            const key = chip.getAttribute('data-key') || '';
+            const value = chip.getAttribute('data-value') || '';
+            removeFilterTokenFromSearch(key, value);
+        });
+    });
+}
+
+function removeFilterTokenFromSearch(key, value) {
+    // Robust approach: parse current tokens, remove the specific value, then rebuild the query
+    const currentInput = document.getElementById('paymentSearchBar')?.value || '';
+    const combined = `${(window.__accumulatedQuery || '').trim()} ${currentInput.trim()}`.trim();
+    const { tokens } = parsePaymentSearch(combined);
+    const normVal = (value || '').toLowerCase();
+    const removeFrom = (list) => {
+        const idx = list.findIndex(v => v.toLowerCase() === normVal);
+        if (idx >= 0) list.splice(idx, 1);
+    };
+    switch (key) {
+        case 'tenant:': removeFrom(tokens.tenantList); break;
+        case 'tenantid:': removeFrom(tokens.tenantIdList); break;
+        case 'unit:': removeFrom(tokens.unitList); break;
+        case 'type:': removeFrom(tokens.typeList); break;
+        case 'method:': removeFrom(tokens.methodList); break;
+        case 'apply:': removeFrom(tokens.applyList); break;
+        case 'note:': removeFrom(tokens.noteList); break;
+        case 'date:': tokens.date = ''; break;
+        case 'amount:': tokens.amountOp = ''; tokens.amountVal = ''; break;
+        default: break;
+    }
+    // Rebuild accumulated query string from remaining tokens (exclude free text input)
+    const parts = [];
+    if (tokens.tenantIdList.length) parts.push(`tenantid:${tokens.tenantIdList.join(',')}`);
+    else if (tokens.tenantList.length) parts.push(`tenant:${tokens.tenantList.join(',')}`);
+    if (tokens.unitList.length) parts.push(`unit:${tokens.unitList.join(',')}`);
+    if (tokens.typeList.length) parts.push(`type:${tokens.typeList.join(',')}`);
+    if (tokens.methodList.length) parts.push(`method:${tokens.methodList.join(',')}`);
+    if (tokens.applyList.length) parts.push(`apply:${tokens.applyList.join(',')}`);
+    if (tokens.date) parts.push(`date:${tokens.date}`);
+    if (tokens.amountOp) parts.push(`amount:${tokens.amountOp}${tokens.amountVal}`);
+    if (tokens.noteList.length) parts.push(`note:${tokens.noteList.join(',')}`);
+    window.__accumulatedQuery = parts.join(' ').trim();
+    // Clear input to avoid reintroducing removed values; re-render
+    const search = document.getElementById('paymentSearchBar');
+    if (search) search.value = '';
+    renderPayments();
+}
+
+function showSearchSuggestions(show) {
+    const box = document.getElementById('paymentSearchSuggestions');
+    if (!box) return;
+    if (show) renderSuggestionTokens();
+    box.style.display = show ? 'block' : 'none';
+}
+
+function positionSearchSuggestions() {
+    const bar = document.getElementById('paymentsFilterBar');
+    const input = document.getElementById('paymentSearchBar');
+    const box = document.getElementById('paymentSearchSuggestions');
+    if (!bar || !input || !box) return;
+    const barRect = bar.getBoundingClientRect();
+    const inRect = input.getBoundingClientRect();
+    const left = inRect.left - barRect.left;
+    const top = inRect.bottom - barRect.top + 6;
+    box.style.left = `${left}px`;
+    box.style.top = `${top}px`;
+    box.style.minWidth = `${Math.max(inRect.width, 320)}px`;
+}
+
+function renderSuggestionTokens() {
+    const list = document.getElementById('paymentSuggestList');
+    const header = document.getElementById('paymentSuggestHeader');
+    const title = document.getElementById('paymentSuggestTitle');
+    const values = document.getElementById('paymentSuggestValues');
+    if (!list) return;
+    const tokens = ['tenant:','unit:','type:','method:','apply:','date:','amount:','note:'];
+    list.innerHTML = tokens.map(k => `
+        <li class='suggest-item' data-token='${k}' style='padding:8px 12px;cursor:pointer;display:flex;gap:8px;align-items:center;'>
+            <span style='font-weight:600;color:#1f2937'>${k}</span>
+            <span style='font-size:.85em;color:#6b7280'>Add ${k} filter</span>
+        </li>
+    `).join('');
+    if (title) title.textContent = 'Choose a filter';
+    const backBtn = document.getElementById('paymentSuggestBack');
+    if (backBtn) backBtn.style.display = 'none';
+    if (values) { values.style.display = 'none'; values.innerHTML = ''; }
+    // Ensure token list is visible when resetting
+    list.style.display = 'block';
+}
+
+function showValueSuggestions(token) {
+    const list = document.getElementById('paymentSuggestList');
+    const values = document.getElementById('paymentSuggestValues');
+    const title = document.getElementById('paymentSuggestTitle');
+    const backBtn = document.getElementById('paymentSuggestBack');
+    if (!list || !values || !title) return;
+    // Build values by token
+    let items = [];
+    if (token === 'tenant:' || token === 'tenantid:') {
+        items = (state.tenants || []).map(t=>({label: t?.name || 'Unknown', value: t?._id || ''}));
+        token = 'tenantid:'; // force ID-based token for reliability
+    } else if (token === 'unit:') {
+        items = (state.units || []).map(u=>({label: String(u?.number ?? ''), value: String(u?.number ?? '').toLowerCase()}));
+    } else if (token === 'type:') {
+        items = ['rent','deposit','fee','credit'].map(v=>({label:v, value:v}));
+    } else if (token === 'method:') {
+        items = ['cash','check','card','bank','online'].map(v=>({label:v, value:v}));
+    } else if (token === 'apply:') {
+        items = ['rent','deposit','late','water','electric','trash','admin','other'].map(v=>({label:v, value:v}));
+    } else if (token === 'date:') {
+        // Suggest recent months
+        const now = new Date();
+        items = Array.from({length:6}, (_,i)=>{
+            const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+            const label = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+            return {label, value:label};
+        });
+    } else if (token === 'amount:') {
+        items = ['>100','>500','>1000','<100','<500','=0'].map(v=>({label:v, value:v}));
+    } else if (token === 'note:') {
+        items = ['late','credit','deposit','partial'].map(v=>({label:v, value:v}));
+    }
+    if (title) title.textContent = `Choose a value for ${token}`;
+    if (backBtn) backBtn.style.display = 'inline';
+    // Hide token list when showing values
+    list.style.display = 'none';
+    values.innerHTML = items.map(it=>`<li class='suggest-value' data-token='${token}' data-value='${it.value}' style='padding:8px 12px;cursor:pointer;display:flex;gap:8px;align-items:center;'>
+        <span style='font-weight:600;color:#1f2937'>${it.label}</span>
+    </li>`).join('');
+    values.style.display = items.length ? 'block' : 'none';
+}
+
+// Auto switch to value suggestions based on text after a token prefix
+function autoSuggestBasedOnInput() {
+    const inp = document.getElementById('paymentSearchBar');
+    const val = (inp?.value || '').trim();
+    const match = val.match(/(tenant:|unit:|type:|method:|apply:|date:|amount:|note:)([^\s]*)$/i);
+    if (match) {
+        const token = match[1].toLowerCase();
+        const partial = match[2].toLowerCase();
+        // Show values filtered by partial
+        showValueSuggestions(token);
+        // Filter list by partial if available
+        const values = document.getElementById('paymentSuggestValues');
+        if (values && partial) {
+            Array.from(values.querySelectorAll('.suggest-value')).forEach(li => {
+                const v = (li.getAttribute('data-value') || '').toLowerCase();
+                li.style.display = v.includes(partial) ? 'flex' : 'none';
+            });
+        }
+    } else {
+        renderSuggestionTokens();
+    }
+}
+
+function wireClickableHeaderSort() {
+    const headers = document.querySelectorAll('.payments-table thead .sortable');
+    headers.forEach(h => {
+        h.style.cursor = 'pointer';
+        h.addEventListener('click', () => {
+            const key = h.getAttribute('data-sort-key');
+            const cur = window.__paymentSortState || { key:'', dir:'asc' };
+            let dir = 'asc';
+            if (cur.key === key) dir = cur.dir === 'asc' ? 'desc' : 'asc';
+            window.__paymentSortState = { key, dir };
+            renderPayments();
+        });
+    });
+}
+
+function updateSortArrows() {
+    const cur = window.__paymentSortState || { key:'', dir:'asc' };
+    const keys = ['tenant','applied','amount','method','date'];
+    keys.forEach(k => {
+        const el = document.getElementById(`arrow-${k}`);
+        if (!el) return;
+        if (cur.key === k) {
+            el.textContent = cur.dir === 'asc' ? '▲' : '▼';
+            el.style.color = '#217dbb';
+            el.style.fontSize = '0.85em';
+            el.style.marginLeft = '4px';
+        } else {
+            el.textContent = '';
+        }
+    });
 }
 
 // Floating credit apply menu
@@ -9382,3 +9853,4 @@ window.exportTenantPaymentsReportFromModal = exportTenantPaymentsReportFromModal
     </script>
 </body>
 </html>
+
