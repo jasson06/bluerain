@@ -1271,7 +1271,7 @@ app.post('/api/rental-applications', async (req, res) => {
 
     // Prepare email summary
     const isProd = process.env.NODE_ENV === 'production';
-    const baseUrl = process.env.APP_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://bluerain.onrender.com' : `http://localhost:${PORT}`);
+    const baseUrl = process.env.APP_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://bluerainrealestate.com' : `http://localhost:${PORT}`);
     const viewLink = `${baseUrl}/applications/review/${saved._id}`;
     const toEmail = process.env.DEFAULT_NOTIFICATION_EMAIL || process.env.EMAIL_USER;
 
