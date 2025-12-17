@@ -1210,6 +1210,20 @@ const Payment = mongoose.model('Payment', paymentSchema);
 const RoomPackage = mongoose.model('RoomPackage', roomPackageSchema);
 const MaintenanceSchedule = mongoose.model('MaintenanceSchedule', maintenanceScheduleSchema);
 const Application = mongoose.model('Application', applicationSchema);
+const ApplicationInvite = mongoose.model('ApplicationInvite', new mongoose.Schema({
+  name: { type: String, default: 'Applicant' },
+  email: { type: String, required: true, index: true },
+  propertyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
+  propertyName: { type: String },
+  unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit' },
+  unitNumber: { type: String },
+  context: { type: String },
+  applicationUrl: { type: String },
+  sentAt: { type: Date, default: Date.now },
+  openedAt: { type: Date },
+  openCount: { type: Number, default: 0 },
+  status: { type: String, enum: ['sent','opened','delivered','bounced'], default: 'sent' }
+}));
 
 module.exports = {
   Task,
@@ -1227,6 +1241,18 @@ module.exports = {
 
 // Serve Blue Rain rental application page (if not covered by static)
 app.get('/applications/new', (req, res) => {
+    // Track invite opens when accessed via ?inviteId=
+  try {
+    const inviteId = req.query.inviteId;
+    if (inviteId && mongoose.Types.ObjectId.isValid(inviteId)) {
+      ApplicationInvite.findByIdAndUpdate(inviteId, {
+        $set: { openedAt: new Date(), status: 'opened' },
+        $inc: { openCount: 1 }
+      }).catch(err => console.warn('Invite open track error:', err?.message || err));
+    }
+  } catch (e) {
+    console.warn('Invite tracking error:', e?.message || e);
+  }
   const htmlPathPublic = path.join(__dirname, 'public', 'blue-rain-rental-application.html');
   const htmlPathDist = path.join(__dirname, 'dist', 'blue-rain-rental-application.html');
   if (fs.existsSync(htmlPathPublic)) {
@@ -1384,6 +1410,136 @@ app.post('/api/rental-applications', async (req, res) => {
 // Simple health check for Render
 app.get('/healthz', (req, res) => {
   res.status(200).send('ok');
+});
+
+// POST: send a rental application link (invite) with optional property/unit context
+app.post('/api/rental-applications/send-link', async (req, res) => {
+  try {
+    const { name = 'Applicant', email, propertyId, propertyName, unitId, unitNumber, context } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email is required' });
+
+    const baseUrl = process.env.APP_BASE_URL || `http://localhost:${PORT}`;
+    // Create invite first to embed inviteId in the URL
+    const invite = await ApplicationInvite.create({
+      name: name || 'Applicant',
+      email,
+      propertyId: propertyId || undefined,
+      propertyName: propertyName || undefined,
+      unitId: unitId || undefined,
+      unitNumber: unitNumber || undefined,
+      context: context || undefined,
+      applicationUrl: '',
+      status: 'sent'
+    });
+
+    const applicationUrl = `${baseUrl}/applications/new?inviteId=${invite._id}`;
+
+    const subjBits = [];
+    if (propertyName) subjBits.push(propertyName);
+    if (unitNumber) subjBits.push(`Unit ${unitNumber}`);
+    const subject = `Rental Application Link${subjBits.length ? ' • ' + subjBits.join(' • ') : ''}`;
+
+    // Build a human-friendly property address if propertyId provided (outside of template)
+    let propertyAddressText = '';
+    try {
+      if (propertyId && mongoose.Types.ObjectId.isValid(propertyId)) {
+        const proj = await Project.findById(propertyId).select('address name').lean();
+        const addr = proj?.address || {};
+        const parts = [];
+        if (addr.addressLine1) parts.push(addr.addressLine1);
+        if (addr.addressLine2 && String(addr.addressLine2).trim()) parts.push(addr.addressLine2);
+        const cityState = [addr.city, addr.state].filter(Boolean).join(', ');
+        if (cityState) parts.push(cityState);
+        if (addr.zip) parts.push(addr.zip);
+        propertyAddressText = parts.filter(Boolean).join(' • ');
+      }
+    } catch (e) {
+      // Non-fatal: leave propertyAddressText empty on failures
+      console.warn('Unable to build property address for invite:', e?.message || e);
+    }
+
+    const html = `
+      <div style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:#f5f7fb; padding:24px;">
+        <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e6ebf5;border-radius:14px;overflow:hidden;color:#1a1f2b;box-shadow:0 8px 24px rgba(0,0,0,.06);">
+          <div style="padding:16px 18px;border-bottom:1px solid #eef2fb;background:#f8fafc;">
+            <div style="font-size:14px;color:#5b6b88;">Blue Rain MF LLC</div>
+            <div style="font-size:18px;font-weight:700;color:#1a1f2b;">Rental Application Invitation</div>
+          </div>
+          <div style="padding:18px;">
+            <p style="margin:0 0 12px;">Hi ${name || 'Applicant'},</p>
+            <p style="margin:0 0 16px; line-height:1.6;">Start your rental application using the link below.</p>
+            ${(propertyName || unitNumber || context) ? `
+            <div style="margin:10px 0 18px; padding:10px 12px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px;">
+              ${propertyAddressText ? `<div style=\"font-size:13px; color:#1f2937;\"><strong>Address:</strong> ${propertyAddressText}</div>` : (propertyName ? `<div style=\"font-size:13px; color:#1f2937;\"><strong>Property:</strong> ${propertyName}</div>` : '')}
+              ${unitNumber ? `<div style=\"font-size:13px; color:#1f2937;\"><strong>Unit:</strong> ${unitNumber}</div>` : ''}
+              ${context ? `<div style=\"font-size:12px; color:#6b7280; margin-top:6px;\">${context}</div>` : ''}
+            </div>` : ''}
+            <div style="margin:16px 0 24px;">
+              <a href="${applicationUrl}" style="display:inline-block;padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#3b82f6,#7c4dff);color:#ffffff;text-decoration:none;font-weight:600;">Start Application</a>
+            </div>
+            <p style="margin:0 0 8px; font-size:13px; color:#64748b;">If the button doesn’t work, copy and paste this URL:</p>
+            <code style="display:block; background:#f8fafc; border:1px solid #e5e7eb; padding:10px; border-radius:8px; font-size:12px; color:#0f172a;">${applicationUrl}</code>
+          </div>
+        </div>
+      </div>`;
+
+    // Configure SMTP properly (fallback to Gmail if env not set)
+    const smtpPort = Number(process.env.SMTP_PORT) || 465;
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: smtpPort,
+      secure: smtpPort === 465, // true for 465, false for 587
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+      tls: { rejectUnauthorized: false }
+    });
+
+    const mailOptions = {
+      from: `"BlueRain Team" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject,
+      html
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+
+    // Update invite record with the final URL
+    await ApplicationInvite.findByIdAndUpdate(invite._id, { $set: { applicationUrl } });
+
+    return res.json({ ok: true, message: 'Application link sent', applicationUrl, messageId: info?.messageId });
+  } catch (err) {
+    console.error('Send application link error:', err);
+    return res.status(500).json({ message: 'Failed to send application link' });
+  }
+});
+
+// GET: list rental applications (optional ?limit=, default 100, max 500)
+app.get('/api/rental-applications', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit || '100', 10) || 100, 500);
+    const apps = await Application.find({})
+      .sort({ submitted: -1 })
+      .limit(limit)
+      .lean();
+    return res.json(apps);
+  } catch (err) {
+    console.error('List rental applications error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// GET: list application invites (optional ?limit=, default 100, max 500)
+app.get('/api/application-invites', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit || '100', 10) || 100, 500);
+    const invites = await ApplicationInvite.find({})
+      .sort({ sentAt: -1 })
+      .limit(limit)
+      .lean();
+    return res.json(invites);
+  } catch (err) {
+    console.error('List application invites error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 // GET: fetch a rental application by id
