@@ -1174,6 +1174,17 @@ const maintenanceScheduleSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const applicationSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  phone: String,
+  email: { type: String, required: true },
+  unit: String,
+  moveIn: Date,
+  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  notes: String,
+  submitted: { type: Date, default: Date.now }
+});
+
 const Task = mongoose.model('Task', taskSchema);
 const Comment = mongoose.model("Comment", commentSchema);
 const Client = mongoose.model('Client', clientSchema);
@@ -1198,6 +1209,7 @@ const Document = mongoose.model('Document', documentSchema);
 const Payment = mongoose.model('Payment', paymentSchema);
 const RoomPackage = mongoose.model('RoomPackage', roomPackageSchema);
 const MaintenanceSchedule = mongoose.model('MaintenanceSchedule', maintenanceScheduleSchema);
+const Application = mongoose.model('Application', applicationSchema);
 
 module.exports = {
   Task,
@@ -1213,6 +1225,206 @@ module.exports = {
 };
 
 
+// Serve Blue Rain rental application page (if not covered by static)
+app.get('/applications/new', (req, res) => {
+  const htmlPathPublic = path.join(__dirname, 'public', 'blue-rain-rental-application.html');
+  const htmlPathDist = path.join(__dirname, 'dist', 'blue-rain-rental-application.html');
+  if (fs.existsSync(htmlPathPublic)) {
+    return res.sendFile(htmlPathPublic);
+  } else if (fs.existsSync(htmlPathDist)) {
+    return res.sendFile(htmlPathDist);
+  }
+  return res.status(404).send('blue-rain-rental-application.html not found');
+});
+
+// Serve Blue Rain rental application page in review mode
+app.get('/applications/review/:id', (req, res) => {
+  const htmlPathPublic = path.join(__dirname, 'public', 'blue-rain-rental-application.html');
+  const htmlPathDist = path.join(__dirname, 'dist', 'blue-rain-rental-application.html');
+  if (fs.existsSync(htmlPathPublic)) {
+    return res.sendFile(htmlPathPublic);
+  } else if (fs.existsSync(htmlPathDist)) {
+    return res.sendFile(htmlPathDist);
+  }
+  return res.status(404).send('blue-rain-rental-application.html not found');
+});
+
+// Rental Applications API
+// POST: create a rental application, save to MongoDB, send summary email
+app.post('/api/rental-applications', async (req, res) => {
+  try {
+    // Basic validation; rely on schema defaults beyond this
+    const { name, email, phone, unit, moveIn, notes } = req.body;
+    if (!name || !email) {
+      return res.status(400).json({ message: 'Missing required fields: name, email' });
+    }
+
+    const doc = new Application({
+      name,
+      email,
+      phone: phone || '',
+      unit: unit || '',
+      moveIn: moveIn ? new Date(moveIn) : undefined,
+      notes: notes || ''
+    });
+    const saved = await doc.save();
+
+    // Prepare email summary
+    const isProd = process.env.NODE_ENV === 'production';
+    const baseUrl = process.env.APP_BASE_URL || (isProd ? 'https://bluerain.onrender.com' : `http://localhost:${PORT}`);
+    const viewLink = `${baseUrl}/applications/review/${saved._id}`;
+    const toEmail = process.env.DEFAULT_NOTIFICATION_EMAIL || process.env.EMAIL_USER;
+
+    // Common strings
+    const submittedStr = saved.submitted ? new Date(saved.submitted).toLocaleString('en-US') : new Date().toLocaleString('en-US');
+    const moveInStr = saved.moveIn ? new Date(saved.moveIn).toLocaleDateString('en-US') : 'N/A';
+
+    // Try to extract property address and unit from notes JSON
+    let propertyAddress = '';
+    let unitNumber = saved.unit || '';
+    try {
+      if (saved.notes) {
+        const parsed = JSON.parse(saved.notes);
+        propertyAddress = parsed.propertyAddress || '';
+        unitNumber = parsed.unitNumber || unitNumber;
+      }
+    } catch {}
+
+    const subject = `New Rental Application — ${saved.name}`;
+    const textSummary = [
+      `Blue Rain MF LLC — Rental Application`,
+      `Submitted: ${submittedStr}`,
+      ``,
+      `Applicant: ${saved.name}`,
+      `Email: ${saved.email}`,
+      `Phone: ${saved.phone || 'N/A'}`,
+      `Property Address: ${propertyAddress || 'N/A'}`,
+      `Unit: ${unitNumber || 'N/A'}`,
+      `Move-In: ${moveInStr}`,
+      `Status: ${saved.status}`,
+      ``,
+      `View: ${viewLink}`
+    ].join('\n');
+
+    const htmlSummary = `
+      <div style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:#f5f7fb; padding:24px;">
+        <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e6ebf5;border-radius:14px;overflow:hidden;color:#1a1f2b;box-shadow:0 8px 24px rgba(0,0,0,.06);">
+          <div style="padding:16px 18px;border-bottom:1px solid #eef2fb;background:#f8fafc;">
+            <div style="font-size:14px;color:#5b6b88;">Blue Rain MF LLC</div>
+            <div style="font-size:18px;font-weight:700;color:#1a1f2b;">New Rental Application</div>
+          </div>
+          <div style="padding:18px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;color:#1a1f2b;">
+              <tr>
+                <td style="padding:8px 0;width:160px;color:#5b6b88;">Submitted</td>
+                <td style="padding:8px 0;">${submittedStr}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0;width:160px;color:#5b6b88;">Applicant</td>
+                <td style="padding:8px 0;">${saved.name}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0;width:160px;color:#5b6b88;">Email</td>
+                <td style="padding:8px 0;">${saved.email}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0;width:160px;color:#5b6b88;">Phone</td>
+                <td style="padding:8px 0;">${saved.phone || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0;width:160px;color:#5b6b88;">Property Address</td>
+                <td style="padding:8px 0;">${propertyAddress || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0;width:160px;color:#5b6b88;">Unit</td>
+                <td style="padding:8px 0;">${unitNumber || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0;width:160px;color:#5b6b88;">Move-In</td>
+                <td style="padding:8px 0;">${moveInStr}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0;width:160px;color:#5b6b88;">Status</td>
+                <td style="padding:8px 0;">${saved.status}</td>
+              </tr>
+            </table>
+            <div style="margin-top:18px;">
+              <a href="${viewLink}" style="display:inline-block;padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#3b82f6,#7c4dff);color:#ffffff;text-decoration:none;font-weight:600;">View Application</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Send email if at least one recipient is configured
+    const recipients = [toEmail, 'bluerainrealestate@gmail.com'].filter(Boolean);
+    if (recipients.length > 0) {
+      try {
+        await transporter.sendMail({
+          from: `"BlueRain Team" <${process.env.EMAIL_USER}>`,
+          to: recipients,
+          subject,
+          text: textSummary,
+          html: htmlSummary
+        });
+      } catch (mailErr) {
+        console.error('Email send error:', mailErr);
+        // Continue even if email fails
+      }
+    }
+
+    // Respond with saved application
+    return res.json({ id: saved._id, application: saved });
+  } catch (err) {
+    console.error('Create rental application error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Simple health check for Render
+app.get('/healthz', (req, res) => {
+  res.status(200).send('ok');
+});
+
+// GET: fetch a rental application by id
+app.get('/api/rental-applications/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const doc = await Application.findById(id);
+    if (!doc) return res.status(404).json({ message: 'Application not found' });
+    return res.json(doc);
+  } catch (err) {
+    console.error('Get rental application error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// PUT: update a rental application by id
+app.put('/api/rental-applications/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, phone, unit, moveIn, notes, status } = req.body;
+
+    const update = {};
+    if (typeof name === 'string') update.name = name;
+    if (typeof email === 'string') update.email = email;
+    if (typeof phone === 'string') update.phone = phone;
+    if (typeof unit === 'string') update.unit = unit;
+    if (typeof notes === 'string') update.notes = notes;
+    if (typeof status === 'string') update.status = status;
+    if (moveIn) {
+      const d = new Date(moveIn);
+      if (!isNaN(d.getTime())) update.moveIn = d;
+    }
+
+    const updated = await Application.findByIdAndUpdate(id, { $set: update }, { new: true });
+    if (!updated) return res.status(404).json({ message: 'Application not found' });
+    return res.json({ message: 'Application updated', application: updated });
+  } catch (err) {
+    console.error('Update rental application error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 
 // Add Client
