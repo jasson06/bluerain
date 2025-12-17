@@ -1418,7 +1418,7 @@ app.post('/api/rental-applications/send-link', async (req, res) => {
     const { name = 'Applicant', email, propertyId, propertyName, unitId, unitNumber, context } = req.body;
     if (!email) return res.status(400).json({ message: 'Email is required' });
 
-    const baseUrl = process.env.APP_BASE_URL || `http://localhost:${PORT}`;
+    const baseUrl = process.env.APP_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://bluerainrealestate.com' : `http://localhost:${PORT}`);
     // Create invite first to embed inviteId in the URL
     const invite = await ApplicationInvite.create({
       name: name || 'Applicant',
