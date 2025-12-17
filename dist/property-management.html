@@ -2053,7 +2053,7 @@ select {
   .payments-table thead,
   .payments-table tbody,
   .payments-table tr {
-    
+   
     width: 100%;
     table-layout: auto;
   }
@@ -2067,8 +2067,8 @@ select {
     margin-left: 0;
   }
 
- .payments-header {
-display: inline !important;
+   .payments-header {
+    display: inline !important;
 }
 }
 
@@ -2525,6 +2525,9 @@ display: inline !important;
     <button class="tab-btn" data-tab="payments">
         Payments <span class="tab-count-badge" id="tabCountPayments"></span>
     </button>
+    <button class="tab-btn" data-tab="applications">
+        Applications <span class="tab-count-badge" id="tabCountApplications"></span>
+    </button>
 </div>
 
                 <!-- Tab Content -->
@@ -2615,6 +2618,73 @@ display: inline !important;
                             <button class="btn-secondary" id="uploadDocumentBtn">+ Upload Document</button>
                         </div>
                         <div class="documents-grid" id="documentsGrid"></div>
+                    </div>
+
+                    <!-- Applications Tab -->
+                    <div class="tab-pane" id="applications">
+                        <div class="maintenance-tabs" id="applicationsSubtabs">
+                            <button class="maintenance-tab-btn active applications-tab-btn" data-subtab="applications">
+                                <i class="fas fa-file-alt"></i> Applications
+                            </button>
+                            <button class="maintenance-tab-btn applications-tab-btn" data-subtab="invites">
+                                <i class="fas fa-paper-plane"></i> Invites
+                            </button>
+                        </div>
+
+                        <div id="applicationsPane-applications">
+                            <div id="applicationsFilterBar" style="margin: 9px 0;border-radius:12px;padding:0px;display:flex;flex-wrap:wrap;gap:0px;align-items:flex-start;position:relative;">
+                                <div style="position:relative;flex:1 1 100%;min-width:280px;display:flex;align-items:center;gap:6px;justify-content:flex-start;">
+                                    <i class="fas fa-magnifying-glass" style="color:#6b7280;margin-left:6px;"></i>
+                                    <input id="applicationsSearchBar" type="text" placeholder="Search applications by" title="Try: name:, email:, phone:, property:, unit:, status:, movein:, submitted:" style="flex:0 1 390px;max-width:300px;border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px;background:#fff;font-size:0.95rem;" />
+                                    <button class="btn-secondary" id="clearApplicationsFiltersBtn" title="Clear search" style="margin-right:6px;padding:6px 10px;font-size:0.9rem;">Clear</button>
+                                </div>
+                                <div id="applicationsActiveFilterChips" style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 8px 0 36px;flex:1 1 100%;"></div>
+                                <div id="applicationsSearchSuggestions" style="position:absolute;top:50px;left:10px;right:auto;min-width:280px;max-width:520px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,0.15);padding:4px 0;display:none;z-index:1000;max-height:300px;overflow:auto;">
+                                    <div id="applicationsSuggestHeader" style="padding:8px 12px;font-size:.9em;color:#374151;border-bottom:1px solid #eef2f7;display:flex;justify-content:space-between;align-items:center;">
+                                        <span id="applicationsSuggestTitle">Choose a filter</span>
+                                        <button id="applicationsSuggestBack" style="display:none;background:transparent;border:none;color:#217dbb;cursor:pointer;font-weight:600;">Back</button>
+                                    </div>
+                                    <ul id="applicationsSuggestList" style="list-style:none;margin:0;padding:4px 0;"></ul>
+                                    <ul id="applicationsSuggestValues" style="list-style:none;margin:0;padding:4px 0;display:none;"></ul>
+                                    <div style="border-top:1px solid #eef2f7;margin-top:4px;padding:8px 12px;font-size:.85em;color:#6b7280;"></div>
+                                </div>
+                            </div>
+                            <div class="payments-header">
+                                <h2>Applications</h2>
+                                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                                    <button class="btn-secondary" id="sendApplicationBtn">Send Application</button>
+                                    <button class="btn-secondary" id="refreshApplicationsBtn">Refresh</button>
+                                </div>
+                            </div>
+                            <div id="applicationsList" class="maintenance-list" style="margin-top:10px;"></div>
+                        </div>
+
+                        <div id="applicationsPane-invites" style="display:none;">
+                            <div id="invitesFilterBar" style="margin: 9px 0;border-radius:12px;padding:0px;display:flex;flex-wrap:wrap;gap:0px;align-items:flex-start;position:relative;">
+                                <div style="position:relative;flex:1 1 100%;min-width:280px;display:flex;align-items:center;gap:6px;justify-content:flex-start;">
+                                    <i class="fas fa-magnifying-glass" style="color:#6b7280;margin-left:6px;"></i>
+                                    <input id="invitesSearchBar" type="text" placeholder="Search invites by" title="Try: name:, email:, property:, unit:, status:, sent:, opened:, openedcount:" style="flex:0 1 390px;max-width:300px;border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px;background:#fff;font-size:0.95rem;" />
+                                    <button class="btn-secondary" id="clearInvitesFiltersBtn" title="Clear search" style="margin-right:6px;padding:6px 10px;font-size:0.9rem;">Clear</button>
+                                </div>
+                                <div id="invitesActiveFilterChips" style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 8px 0 36px;flex:1 1 100%;"></div>
+                                <div id="invitesSearchSuggestions" style="position:absolute;top:50px;left:10px;right:auto;min-width:280px;max-width:520px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,0.15);padding:4px 0;display:none;z-index:1000;max-height:300px;overflow:auto;">
+                                    <div id="invitesSuggestHeader" style="padding:8px 12px;font-size:.9em;color:#374151;border-bottom:1px solid #eef2f7;display:flex;justify-content:space-between;align-items:center;">
+                                        <span id="invitesSuggestTitle">Choose a filter</span>
+                                        <button id="invitesSuggestBack" style="display:none;background:transparent;border:none;color:#217dbb;cursor:pointer;font-weight:600;">Back</button>
+                                    </div>
+                                    <ul id="invitesSuggestList" style="list-style:none;margin:0;padding:4px 0;"></ul>
+                                    <ul id="invitesSuggestValues" style="list-style:none;margin:0;padding:4px 0;display:none;"></ul>
+                                    <div style="border-top:1px solid #eef2f7;margin-top:4px;padding:8px 12px;font-size:.85em;color:#6b7280;"></div>
+                                </div>
+                            </div>
+                            <div class="payments-header">
+                                <h2>Invites</h2>
+                                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                                    <button class="btn-secondary" id="refreshInvitesBtn">Refresh</button>
+                                </div>
+                            </div>
+                            <div id="invitesList" class="maintenance-list" style="margin-top:10px;"></div>
+                        </div>
                     </div>
 
                     <!-- Payments Tab -->
@@ -3402,7 +3472,9 @@ const state = {
     documents: [],
     allUnits: [],
 allTenants: [],
-    payments: []
+    payments: [],
+    applications: [],
+    invites: []
 };
 
 const API_URL = '/api';
@@ -3445,6 +3517,9 @@ function invalidateCache(...keys) {
 document.addEventListener('DOMContentLoaded', () => {
     initializeEventListeners();
     initializeTabs();
+    initializeApplicationsSubtabs();
+    initializeApplicationsSearch();
+    initializeInvitesSearch();
     loadProperties();
 });
 
@@ -3524,6 +3599,463 @@ document.getElementById('addPaymentForm')?.addEventListener('submit', handleAddP
     };
 }
 
+// Applications subtabs toggle (Applications vs Invites)
+function initializeApplicationsSubtabs() {
+    const buttons = document.querySelectorAll('.applications-tab-btn');
+    const paneApps = document.getElementById('applicationsPane-applications');
+    const paneInvites = document.getElementById('applicationsPane-invites');
+    if (!buttons.length || !paneApps || !paneInvites) return;
+    buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            buttons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const sub = btn.getAttribute('data-subtab');
+            if (sub === 'invites') {
+                paneApps.style.display = 'none';
+                paneInvites.style.display = 'block';
+            } else {
+                paneApps.style.display = 'block';
+                paneInvites.style.display = 'none';
+            }
+        });
+    });
+}
+
+// ===== Applications Search =====
+function initializeApplicationsSearch() {
+    const search = document.getElementById('applicationsSearchBar');
+    if (!search) return;
+    search.addEventListener('input', ()=>{ positionApplicationsSearchSuggestions(); autoSuggestApplications(); showApplicationsSearchSuggestions(true); renderFilteredApplications(); });
+    search.addEventListener('change', ()=>{ positionApplicationsSearchSuggestions(); renderFilteredApplications(); });
+    search.addEventListener('focus', ()=>{ positionApplicationsSearchSuggestions(); showApplicationsSearchSuggestions(true); });
+    search.addEventListener('blur', ()=> setTimeout(()=>showApplicationsSearchSuggestions(false), 120));
+    const clr = document.getElementById('clearApplicationsFiltersBtn');
+    if (clr) clr.onclick = ()=>{ search.value=''; window.__appsAccumulatedQuery=''; renderFilteredApplications(); showApplicationsSearchSuggestions(false); };
+    const sug = document.getElementById('applicationsSearchSuggestions');
+    if (sug) {
+        renderApplicationsSuggestionTokens();
+        sug.addEventListener('mousedown', (e)=>{
+            const tokenEl = e.target.closest('.suggest-item');
+            const valEl = e.target.closest('.suggest-value');
+            e.preventDefault();
+            if (tokenEl) {
+                const token = tokenEl.getAttribute('data-token') || '';
+                showApplicationsValueSuggestions(token);
+            } else if (valEl) {
+                const token = valEl.getAttribute('data-token') || '';
+                const value = valEl.getAttribute('data-value') || '';
+                const acc = (window.__appsAccumulatedQuery || '').trim();
+                const sep = acc ? ' ' : '';
+                window.__appsAccumulatedQuery = `${acc}${sep}${token}${value}`;
+                const input = document.getElementById('applicationsSearchBar');
+                if (input) input.value = '';
+                renderFilteredApplications();
+                showApplicationsSearchSuggestions(false);
+            }
+        });
+        const backBtn = document.getElementById('applicationsSuggestBack');
+        if (backBtn) backBtn.addEventListener('mousedown', (e)=>{ e.preventDefault(); renderApplicationsSuggestionTokens(); });
+    }
+}
+
+function parseApplicationsSearch(queryStr) {
+    const tokens = { nameList:[], emailList:[], phoneList:[], propertyList:[], unitList:[], statusList:[], movein:'', submitted:'', text:'' };
+    const parts = (queryStr||'').trim().split(/\s+/).filter(Boolean);
+    const rest = [];
+    for (const part of parts) {
+        const low = part.toLowerCase();
+        const take = (pfx)=> part.slice(pfx.length);
+        if (low.startsWith('name:')) tokens.nameList.push(...take('name:').split(',').filter(Boolean));
+        else if (low.startsWith('email:')) tokens.emailList.push(...take('email:').split(',').filter(Boolean));
+        else if (low.startsWith('phone:')) tokens.phoneList.push(...take('phone:').split(',').filter(Boolean));
+        else if (low.startsWith('property:')) tokens.propertyList.push(...take('property:').split(',').filter(Boolean));
+        else if (low.startsWith('unit:')) tokens.unitList.push(...take('unit:').split(',').filter(Boolean));
+        else if (low.startsWith('status:')) tokens.statusList.push(...take('status:').split(',').filter(Boolean));
+        else if (low.startsWith('movein:')) tokens.movein = take('movein:');
+        else if (low.startsWith('submitted:')) tokens.submitted = take('submitted:');
+        else rest.push(part);
+    }
+    const norm = (arr)=> Array.from(new Set(arr.map(v=>String(v).trim().toLowerCase()).filter(Boolean)));
+    tokens.nameList = norm(tokens.nameList);
+    tokens.emailList = norm(tokens.emailList);
+    tokens.phoneList = norm(tokens.phoneList);
+    tokens.propertyList = norm(tokens.propertyList);
+    tokens.unitList = norm(tokens.unitList);
+    tokens.statusList = norm(tokens.statusList);
+    tokens.text = rest.join(' ').toLowerCase();
+    return { tokens, text: tokens.text };
+}
+
+function getApplicationsSearch() {
+    const input = document.getElementById('applicationsSearchBar');
+    const current = input ? input.value : '';
+    const combined = `${(window.__appsAccumulatedQuery||'').trim()} ${current.trim()}`.trim();
+    const query = parseApplicationsSearch(combined);
+    renderApplicationsFilterChips(query.tokens);
+    return query;
+}
+
+function renderApplicationsFilterChips(tokens) {
+    const container = document.getElementById('applicationsActiveFilterChips');
+    if (!container) return;
+    const mkChip = (k,v,disp)=>`<span class="filter-chip" data-key="${k}" data-value="${v}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#eef2f7;color:#374151;border:1px solid #e5e7eb;font-size:.9em;"><span style="color:#0b5cab;font-weight:600">${k}</span><span>${disp ?? v}</span><button class="chip-remove" style="background:transparent;border:none;color:#6b7280;cursor:pointer;font-weight:700;">×</button></span>`;
+    const chips = [];
+    tokens.nameList.forEach(v=>chips.push(mkChip('name:',v)));
+    tokens.emailList.forEach(v=>chips.push(mkChip('email:',v)));
+    tokens.phoneList.forEach(v=>chips.push(mkChip('phone:',v)));
+    tokens.propertyList.forEach(v=>chips.push(mkChip('property:',v)));
+    tokens.unitList.forEach(v=>chips.push(mkChip('unit:',v)));
+    tokens.statusList.forEach(v=>chips.push(mkChip('status:',v)));
+    if (tokens.movein) chips.push(mkChip('movein:', tokens.movein));
+    if (tokens.submitted) chips.push(mkChip('submitted:', tokens.submitted));
+    container.innerHTML = chips.join('');
+    container.querySelectorAll('.chip-remove').forEach(btn=>{
+        btn.addEventListener('click', (e)=>{
+            const chip = e.target.closest('.filter-chip');
+            removeApplicationsFilterToken(chip.getAttribute('data-key')||'', chip.getAttribute('data-value')||'');
+        });
+    });
+}
+
+function removeApplicationsFilterToken(key, value) {
+    const input = document.getElementById('applicationsSearchBar');
+    const combined = `${(window.__appsAccumulatedQuery||'').trim()} ${(input?.value||'').trim()}`.trim();
+    const { tokens } = parseApplicationsSearch(combined);
+    const rem = (arr)=>{ const i = arr.findIndex(v=>v===value.toLowerCase()); if(i>=0) arr.splice(i,1); };
+    switch(key){
+        case 'name:': rem(tokens.nameList); break;
+        case 'email:': rem(tokens.emailList); break;
+        case 'phone:': rem(tokens.phoneList); break;
+        case 'property:': rem(tokens.propertyList); break;
+        case 'unit:': rem(tokens.unitList); break;
+        case 'status:': rem(tokens.statusList); break;
+        case 'movein:': tokens.movein=''; break;
+        case 'submitted:': tokens.submitted=''; break;
+    }
+    const parts=[];
+    if (tokens.nameList.length) parts.push(`name:${tokens.nameList.join(',')}`);
+    if (tokens.emailList.length) parts.push(`email:${tokens.emailList.join(',')}`);
+    if (tokens.phoneList.length) parts.push(`phone:${tokens.phoneList.join(',')}`);
+    if (tokens.propertyList.length) parts.push(`property:${tokens.propertyList.join(',')}`);
+    if (tokens.unitList.length) parts.push(`unit:${tokens.unitList.join(',')}`);
+    if (tokens.statusList.length) parts.push(`status:${tokens.statusList.join(',')}`);
+    if (tokens.movein) parts.push(`movein:${tokens.movein}`);
+    if (tokens.submitted) parts.push(`submitted:${tokens.submitted}`);
+    window.__appsAccumulatedQuery = parts.join(' ');
+    if (input) input.value='';
+    renderFilteredApplications();
+}
+
+function showApplicationsSearchSuggestions(show){
+    const box = document.getElementById('applicationsSearchSuggestions');
+    if (!box) return;
+    if (show) renderApplicationsSuggestionTokens();
+    box.style.display = show ? 'block' : 'none';
+}
+function positionApplicationsSearchSuggestions(){
+    const bar = document.getElementById('applicationsFilterBar');
+    const input = document.getElementById('applicationsSearchBar');
+    const box = document.getElementById('applicationsSearchSuggestions');
+    if (!bar || !input || !box) return;
+    const barRect = bar.getBoundingClientRect();
+    const inRect = input.getBoundingClientRect();
+    box.style.left = `${inRect.left - barRect.left}px`;
+    box.style.top = `${inRect.bottom - barRect.top + 6}px`;
+    box.style.minWidth = `${Math.max(inRect.width, 320)}px`;
+}
+function renderApplicationsSuggestionTokens(){
+    const list = document.getElementById('applicationsSuggestList');
+    const title = document.getElementById('applicationsSuggestTitle');
+    const values = document.getElementById('applicationsSuggestValues');
+    const backBtn = document.getElementById('applicationsSuggestBack');
+    if (!list) return;
+    const tokens = ['name:','email:','phone:','property:','unit:','status:','movein:','submitted:'];
+    list.innerHTML = tokens.map(k=>`<li class='suggest-item' data-token='${k}' style='padding:8px 12px;cursor:pointer;display:flex;gap:8px;align-items:center;'><span style='font-weight:600;color:#1f2937'>${k}</span><span style='font-size:.85em;color:#6b7280'>Add ${k} filter</span></li>`).join('');
+    if (title) title.textContent = 'Choose a filter';
+    if (backBtn) backBtn.style.display='none';
+    if (values) { values.style.display='none'; values.innerHTML=''; }
+    list.style.display='block';
+}
+function showApplicationsValueSuggestions(token){
+    const list = document.getElementById('applicationsSuggestList');
+    const values = document.getElementById('applicationsSuggestValues');
+    const title = document.getElementById('applicationsSuggestTitle');
+    const backBtn = document.getElementById('applicationsSuggestBack');
+    if (!list || !values || !title) return;
+    let items=[];
+    if (token==='property:') items = (state.properties||[]).map(p=>({label:p.name,value:(p.name||'').toLowerCase()}));
+    else if (token==='unit:') items = (state.units||[]).map(u=>({label:`${u.number}`, value:String(u.number).toLowerCase()}));
+    else if (token==='status:') items = ['pending','approved','rejected'].map(v=>({label:v,value:v}));
+    else if (token==='movein:' || token==='submitted:') {
+        const now = new Date();
+        items = Array.from({length:6},(_,i)=>{ const d=new Date(now.getFullYear(),now.getMonth()-i,1); const m=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; return {label:m,value:m}; });
+    } else if (token==='name:' || token==='email:' || token==='phone:') {
+        items = (state.applications||[]).slice(0,10).map(a=>({label: a.name||a.email||a.phone||'', value: (a.name||a.email||a.phone||'').toLowerCase()}));
+    }
+    title.textContent = `Choose a value for ${token}`;
+    if (backBtn) backBtn.style.display='inline';
+    list.style.display='none';
+    values.innerHTML = items.map(it=>`<li class='suggest-value' data-token='${token}' data-value='${it.value}' style='padding:8px 12px;cursor:pointer;display:flex;gap:8px;align-items:center;'><span style='font-weight:600;color:#1f2937'>${it.label}</span></li>`).join('');
+    values.style.display = items.length ? 'block' : 'none';
+}
+function autoSuggestApplications(){
+    const input = document.getElementById('applicationsSearchBar');
+    const val = (input?.value||'').trim();
+    const m = val.match(/(name:|email:|phone:|property:|unit:|status:|movein:|submitted:)([^\s]*)$/i);
+    if (!m) { renderApplicationsSuggestionTokens(); return; }
+    const token = m[1].toLowerCase();
+    const partial = (m[2]||'').toLowerCase();
+    showApplicationsValueSuggestions(token);
+    const values = document.getElementById('applicationsSuggestValues');
+    if (values && partial) Array.from(values.querySelectorAll('.suggest-value')).forEach(li=>{ const v=(li.getAttribute('data-value')||'').toLowerCase(); li.style.display = v.includes(partial) ? 'flex' : 'none'; });
+}
+function renderFilteredApplications(){
+    const { tokens, text } = getApplicationsSearch();
+    const items = (state.applications||[]).filter(a=>{
+        const nm = (a.name||'').toLowerCase();
+        const em = (a.email||'').toLowerCase();
+        const ph = (a.phone||'').toLowerCase();
+        let propertyName=''; let unitNumber = a.unit || '';
+        if (a.notes) { try { const n=JSON.parse(a.notes); propertyName = (n.propertyAddress||'').toLowerCase(); unitNumber = (n.unitNumber||unitNumber); } catch{} }
+        const un = String(unitNumber||'').toLowerCase();
+        const st = (a.status||'').toLowerCase();
+        const mv = (a.moveIn||'');
+        const sb = (a.submitted||'');
+        const hitText = !text || nm.includes(text) || em.includes(text) || ph.includes(text) || un.includes(text) || propertyName.includes(text);
+        const hitName = !tokens.nameList.length || tokens.nameList.some(v=>nm.includes(v));
+        const hitEmail = !tokens.emailList.length || tokens.emailList.some(v=>em.includes(v));
+        const hitPhone = !tokens.phoneList.length || tokens.phoneList.some(v=>ph.includes(v));
+        const hitProp = !tokens.propertyList.length || tokens.propertyList.some(v=>propertyName.includes(v));
+        const hitUnit = !tokens.unitList.length || tokens.unitList.some(v=>un.includes(v));
+        const hitStatus = !tokens.statusList.length || tokens.statusList.includes(st);
+        const hitMoveIn = !tokens.movein || String(mv).startsWith(tokens.movein);
+        const hitSubmitted = !tokens.submitted || String(sb).startsWith(tokens.submitted);
+        return hitText && hitName && hitEmail && hitPhone && hitProp && hitUnit && hitStatus && hitMoveIn && hitSubmitted;
+    });
+    renderApplications(items);
+}
+
+// ===== Invites Search =====
+function initializeInvitesSearch() {
+    const search = document.getElementById('invitesSearchBar');
+    if (!search) return;
+    search.addEventListener('input', ()=>{ positionInvitesSearchSuggestions(); autoSuggestInvites(); showInvitesSearchSuggestions(true); renderFilteredInvites(); });
+    search.addEventListener('change', ()=>{ positionInvitesSearchSuggestions(); renderFilteredInvites(); });
+    search.addEventListener('focus', ()=>{ positionInvitesSearchSuggestions(); showInvitesSearchSuggestions(true); });
+    search.addEventListener('blur', ()=> setTimeout(()=>showInvitesSearchSuggestions(false), 120));
+    const clr = document.getElementById('clearInvitesFiltersBtn');
+    if (clr) clr.onclick = ()=>{ search.value=''; window.__invAccumulatedQuery=''; renderFilteredInvites(); showInvitesSearchSuggestions(false); };
+    const sug = document.getElementById('invitesSearchSuggestions');
+    if (sug) {
+        renderInvitesSuggestionTokens();
+        sug.addEventListener('mousedown', (e)=>{
+            const tokenEl = e.target.closest('.suggest-item');
+            const valEl = e.target.closest('.suggest-value');
+            e.preventDefault();
+            if (tokenEl) {
+                const token = tokenEl.getAttribute('data-token') || '';
+                showInvitesValueSuggestions(token);
+            } else if (valEl) {
+                const token = valEl.getAttribute('data-token') || '';
+                const value = valEl.getAttribute('data-value') || '';
+                const acc = (window.__invAccumulatedQuery || '').trim();
+                const sep = acc ? ' ' : '';
+                window.__invAccumulatedQuery = `${acc}${sep}${token}${value}`;
+                const input = document.getElementById('invitesSearchBar');
+                if (input) input.value = '';
+                renderFilteredInvites();
+                showInvitesSearchSuggestions(false);
+            }
+        });
+        const backBtn = document.getElementById('invitesSuggestBack');
+        if (backBtn) backBtn.addEventListener('mousedown', (e)=>{ e.preventDefault(); renderInvitesSuggestionTokens(); });
+    }
+}
+
+function parseInvitesSearch(queryStr) {
+    const tokens = { nameList:[], emailList:[], propertyList:[], unitList:[], statusList:[], sent:'', opened:'', openedcount:'', text:'' };
+    const parts = (queryStr||'').trim().split(/\s+/).filter(Boolean);
+    const rest = [];
+    for (const part of parts) {
+        const low = part.toLowerCase();
+        const take=(p)=>part.slice(p.length);
+        if (low.startsWith('name:')) tokens.nameList.push(...take('name:').split(',').filter(Boolean));
+        else if (low.startsWith('email:')) tokens.emailList.push(...take('email:').split(',').filter(Boolean));
+        else if (low.startsWith('property:')) tokens.propertyList.push(...take('property:').split(',').filter(Boolean));
+        else if (low.startsWith('unit:')) tokens.unitList.push(...take('unit:').split(',').filter(Boolean));
+        else if (low.startsWith('status:')) tokens.statusList.push(...take('status:').split(',').filter(Boolean));
+        else if (low.startsWith('sent:')) tokens.sent = take('sent:');
+        else if (low.startsWith('opened:')) tokens.opened = take('opened:');
+        else if (low.startsWith('openedcount:')) tokens.openedcount = take('openedcount:');
+        else rest.push(part);
+    }
+    const norm=(arr)=>Array.from(new Set(arr.map(v=>String(v).trim().toLowerCase()).filter(Boolean)));
+    tokens.nameList = norm(tokens.nameList);
+    tokens.emailList = norm(tokens.emailList);
+    tokens.propertyList = norm(tokens.propertyList);
+    tokens.unitList = norm(tokens.unitList);
+    tokens.statusList = norm(tokens.statusList);
+    tokens.text = rest.join(' ').toLowerCase();
+    return { tokens, text: tokens.text };
+}
+
+function getInvitesSearch(){
+    const input = document.getElementById('invitesSearchBar');
+    const current = input ? input.value : '';
+    const combined = `${(window.__invAccumulatedQuery||'').trim()} ${current.trim()}`.trim();
+    const query = parseInvitesSearch(combined);
+    renderInvitesFilterChips(query.tokens);
+    return query;
+}
+
+function renderInvitesFilterChips(tokens){
+    const container = document.getElementById('invitesActiveFilterChips');
+    if (!container) return;
+    const mkChip = (k,v,disp)=>`<span class="filter-chip" data-key="${k}" data-value="${v}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#eef2f7;color:#374151;border:1px solid #e5e7eb;font-size:.9em;"><span style=\"color:#0b5cab;font-weight:600\">${k}</span><span>${disp ?? v}</span><button class="chip-remove" style="background:transparent;border:none;color:#6b7280;cursor:pointer;font-weight:700;">×</button></span>`;
+    const chips=[];
+    tokens.nameList.forEach(v=>chips.push(mkChip('name:',v)));
+    tokens.emailList.forEach(v=>chips.push(mkChip('email:',v)));
+    tokens.propertyList.forEach(v=>chips.push(mkChip('property:',v)));
+    tokens.unitList.forEach(v=>chips.push(mkChip('unit:',v)));
+    tokens.statusList.forEach(v=>chips.push(mkChip('status:',v)));
+    if (tokens.sent) chips.push(mkChip('sent:', tokens.sent));
+    if (tokens.opened) chips.push(mkChip('opened:', tokens.opened));
+    if (tokens.openedcount) chips.push(mkChip('openedcount:', tokens.openedcount));
+    container.innerHTML = chips.join('');
+    container.querySelectorAll('.chip-remove').forEach(btn=>{
+        btn.addEventListener('click', (e)=>{
+            const chip = e.target.closest('.filter-chip');
+            removeInvitesFilterToken(chip.getAttribute('data-key')||'', chip.getAttribute('data-value')||'');
+        });
+    });
+}
+
+function removeInvitesFilterToken(key, value){
+    const input = document.getElementById('invitesSearchBar');
+    const combined = `${(window.__invAccumulatedQuery||'').trim()} ${(input?.value||'').trim()}`.trim();
+    const { tokens } = parseInvitesSearch(combined);
+    const rem=(arr)=>{ const i=arr.findIndex(v=>v===value.toLowerCase()); if(i>=0) arr.splice(i,1); };
+    switch(key){
+        case 'name:': rem(tokens.nameList); break;
+        case 'email:': rem(tokens.emailList); break;
+        case 'property:': rem(tokens.propertyList); break;
+        case 'unit:': rem(tokens.unitList); break;
+        case 'status:': rem(tokens.statusList); break;
+        case 'sent:': tokens.sent=''; break;
+        case 'opened:': tokens.opened=''; break;
+        case 'openedcount:': tokens.openedcount=''; break;
+    }
+    const parts=[];
+    if (tokens.nameList.length) parts.push(`name:${tokens.nameList.join(',')}`);
+    if (tokens.emailList.length) parts.push(`email:${tokens.emailList.join(',')}`);
+    if (tokens.propertyList.length) parts.push(`property:${tokens.propertyList.join(',')}`);
+    if (tokens.unitList.length) parts.push(`unit:${tokens.unitList.join(',')}`);
+    if (tokens.statusList.length) parts.push(`status:${tokens.statusList.join(',')}`);
+    if (tokens.sent) parts.push(`sent:${tokens.sent}`);
+    if (tokens.opened) parts.push(`opened:${tokens.opened}`);
+    if (tokens.openedcount) parts.push(`openedcount:${tokens.openedcount}`);
+    window.__invAccumulatedQuery = parts.join(' ');
+    if (input) input.value='';
+    renderFilteredInvites();
+}
+
+function showInvitesSearchSuggestions(show){
+    const box = document.getElementById('invitesSearchSuggestions');
+    if (!box) return;
+    if (show) renderInvitesSuggestionTokens();
+    box.style.display = show ? 'block' : 'none';
+}
+function positionInvitesSearchSuggestions(){
+    const bar = document.getElementById('invitesFilterBar');
+    const input = document.getElementById('invitesSearchBar');
+    const box = document.getElementById('invitesSearchSuggestions');
+    if (!bar || !input || !box) return;
+    const barRect = bar.getBoundingClientRect();
+    const inRect = input.getBoundingClientRect();
+    box.style.left = `${inRect.left - barRect.left}px`;
+    box.style.top = `${inRect.bottom - barRect.top + 6}px`;
+    box.style.minWidth = `${Math.max(inRect.width, 320)}px`;
+}
+function renderInvitesSuggestionTokens(){
+    const list = document.getElementById('invitesSuggestList');
+    const title = document.getElementById('invitesSuggestTitle');
+    const values = document.getElementById('invitesSuggestValues');
+    const backBtn = document.getElementById('invitesSuggestBack');
+    if (!list) return;
+    const tokens = ['name:','email:','property:','unit:','status:','sent:','opened:','openedcount:'];
+    list.innerHTML = tokens.map(k=>`<li class='suggest-item' data-token='${k}' style='padding:8px 12px;cursor:pointer;display:flex;gap:8px;align-items:center;'><span style='font-weight:600;color:#1f2937'>${k}</span><span style='font-size:.85em;color:#6b7280'>Add ${k} filter</span></li>`).join('');
+    if (title) title.textContent='Choose a filter';
+    if (backBtn) backBtn.style.display='none';
+    if (values) { values.style.display='none'; values.innerHTML=''; }
+    list.style.display='block';
+}
+function showInvitesValueSuggestions(token){
+    const list = document.getElementById('invitesSuggestList');
+    const values = document.getElementById('invitesSuggestValues');
+    const title = document.getElementById('invitesSuggestTitle');
+    const backBtn = document.getElementById('invitesSuggestBack');
+    if (!list || !values || !title) return;
+    let items=[];
+    if (token==='property:') items = (state.properties||[]).map(p=>({label:p.name,value:(p.name||'').toLowerCase()}));
+    else if (token==='unit:') items = (state.units||[]).map(u=>({label:`${u.number}`, value:String(u.number).toLowerCase()}));
+    else if (token==='status:') items = ['sent','opened','bounced','failed'].map(v=>({label:v,value:v}));
+    else if (token==='sent:' || token==='opened:') {
+        const now=new Date();
+        items = Array.from({length:6},(_,i)=>{ const d=new Date(now.getFullYear(),now.getMonth()-i,1); const m=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; return {label:m,value:m}; });
+    } else if (token==='openedcount:') {
+        items = ['=0','>0','>=2','>=5'].map(v=>({label:v,value:v}));
+    } else if (token==='name:' || token==='email:') {
+        items = (state.invites||[]).slice(0,10).map(i=>({label:i.name||i.email||'', value:(i.name||i.email||'').toLowerCase()}));
+    }
+    title.textContent = `Choose a value for ${token}`;
+    if (backBtn) backBtn.style.display='inline';
+    list.style.display='none';
+    values.innerHTML = items.map(it=>`<li class='suggest-value' data-token='${token}' data-value='${it.value}' style='padding:8px 12px;cursor:pointer;display:flex;gap:8px;align-items:center;'><span style='font-weight:600;color:#1f2937'>${it.label}</span></li>`).join('');
+    values.style.display = items.length ? 'block' : 'none';
+}
+function autoSuggestInvites(){
+    const input = document.getElementById('invitesSearchBar');
+    const val = (input?.value||'').trim();
+    const m = val.match(/(name:|email:|property:|unit:|status:|sent:|opened:|openedcount:)([^\s]*)$/i);
+    if (!m) { renderInvitesSuggestionTokens(); return; }
+    const token = m[1].toLowerCase();
+    const partial = (m[2]||'').toLowerCase();
+    showInvitesValueSuggestions(token);
+    const values = document.getElementById('invitesSuggestValues');
+    if (values && partial) Array.from(values.querySelectorAll('.suggest-value')).forEach(li=>{ const v=(li.getAttribute('data-value')||'').toLowerCase(); li.style.display = v.includes(partial) ? 'flex' : 'none'; });
+}
+function renderFilteredInvites(){
+    const { tokens, text } = getInvitesSearch();
+    const items = (state.invites||[]).filter(inv=>{
+        const nm = (inv.name||'').toLowerCase();
+        const em = (inv.email||'').toLowerCase();
+        const prop = (inv.propertyName||'').toLowerCase();
+        const un = String(inv.unitNumber||'').toLowerCase();
+        const st = (inv.status||'').toLowerCase();
+        const sent = String(inv.sentAt||'');
+        const opened = String(inv.openedAt||'');
+        const oc = Number.isFinite(inv.openCount) ? Number(inv.openCount) : 0;
+        const hitText = !text || nm.includes(text) || em.includes(text) || prop.includes(text) || un.includes(text);
+        const hitName = !tokens.nameList.length || tokens.nameList.some(v=>nm.includes(v));
+        const hitEmail = !tokens.emailList.length || tokens.emailList.some(v=>em.includes(v));
+        const hitProp = !tokens.propertyList.length || tokens.propertyList.some(v=>prop.includes(v));
+        const hitUnit = !tokens.unitList.length || tokens.unitList.some(v=>un.includes(v));
+        const hitStatus = !tokens.statusList.length || tokens.statusList.includes(st);
+        const hitSent = !tokens.sent || sent.startsWith(tokens.sent);
+        const hitOpened = !tokens.opened || opened.startsWith(tokens.opened);
+        let hitOpenCount = true;
+        if (tokens.openedcount) {
+            const m = tokens.openedcount.match(/^(>=|<=|>|<|=)?\s*(\d+)$/);
+            if (m) {
+                const op = m[1] || '='; const val = Number(m[2]);
+                if (op==='>') hitOpenCount = oc > val; else if (op==='>=') hitOpenCount = oc >= val; else if (op==='<') hitOpenCount = oc < val; else if (op==='<=') hitOpenCount = oc <= val; else hitOpenCount = oc === val;
+            }
+        }
+        return hitText && hitName && hitEmail && hitProp && hitUnit && hitStatus && hitSent && hitOpened && hitOpenCount;
+    });
+    renderInvites(items);
+}
+
 // Tab Management
 function initializeTabs() {
     const tabs = document.querySelectorAll('.tab-btn');
@@ -3573,6 +4105,9 @@ function updateTabCounts() {
     document.getElementById('tabCountDocuments').textContent = state.documents?.length || 0;
     // Payments
     document.getElementById('tabCountPayments').textContent = state.payments?.length || 0;
+    // Applications
+    const appsBadge = document.getElementById('tabCountApplications');
+    if (appsBadge) appsBadge.textContent = state.applications?.length || 0;
 }
 
 async function loadTabContent(tabId, force = false) {
@@ -3595,6 +4130,10 @@ async function loadTabContent(tabId, force = false) {
                 break;
                         case 'payments':
                 await loadPayments(state.currentProperty._id, force);
+                break;
+            case 'applications':
+                await loadApplications(force);
+                await loadInvites(force);
                 break;
         }
     } catch (error) {
@@ -7231,6 +7770,249 @@ function renderDocuments() {
     `).join('');
 }
 
+// Applications: fetch and render
+async function loadApplications(force = false) {
+    try {
+        if (!force && Array.isArray(state.applications) && state.applications.length) {
+            renderApplications();
+            updateTabCounts();
+            return;
+        }
+        const res = await fetch('/api/rental-applications?limit=200');
+        if (!res.ok) throw new Error('Failed to fetch applications');
+        state.applications = await res.json();
+        renderApplications();
+        updateTabCounts();
+    } catch (err) {
+        console.error('Error loading applications:', err);
+        showNotification('Error loading applications', 'error');
+    }
+}
+
+// Invites: fetch and render
+async function loadInvites(force = false) {
+    try {
+        if (!force && Array.isArray(state.invites) && state.invites.length) {
+            renderInvites();
+            return;
+        }
+        const res = await fetch('/api/application-invites?limit=200');
+        if (!res.ok) throw new Error('Failed to fetch invites');
+        state.invites = await res.json();
+        renderInvites();
+    } catch (err) {
+        console.error('Error loading invites:', err);
+        showNotification('Error loading invites', 'error');
+    }
+}
+
+function renderInvites(items) {
+    const list = document.getElementById('invitesList');
+    if (!list) return;
+    const invites = items || state.invites || [];
+    if (!invites.length) {
+        list.innerHTML = `
+            <div class="empty-state" style="text-align:center;padding:24px;">
+                <i class="fas fa-paper-plane" style="font-size:2em;color:#3498db;margin-bottom:8px;"></i>
+                <p>No invites sent</p>
+            </div>`;
+        return;
+    }
+    const rows = invites.map(inv => {
+        const sentAt = inv.sentAt ? new Date(inv.sentAt).toLocaleString('en-US') : '';
+        const openedAt = inv.openedAt ? new Date(inv.openedAt).toLocaleString('en-US') : '';
+        const status = inv.status || 'sent';
+        const statusBadge = `<span class="status-badge ${status}" style="padding:4px 10px;border-radius:12px;font-size:.85em;">${status.charAt(0).toUpperCase() + status.slice(1)}</span>`;
+        const link = inv.applicationUrl || '';
+        return `
+            <tr style="border-bottom:1px solid #e1e8ed;">
+                <td style="padding:10px 8px;font-weight:600;color:#2c3e50;">${inv.name || ''}</td>
+                <td style="padding:10px 8px;">${inv.email || ''}</td>
+                <td style="padding:10px 8px;">${inv.propertyName || '—'}</td>
+                <td style="padding:10px 8px;">${inv.unitNumber || '—'}</td>
+                <td style="padding:10px 8px;">${sentAt || '—'}</td>
+                <td style="padding:10px 8px;">${openedAt || '—'}</td>
+                <td style="padding:10px 8px;">${typeof inv.openCount === 'number' ? inv.openCount : 0}</td>
+                <td style="padding:10px 8px;">${statusBadge}</td>
+                <td style="padding:10px 8px;">${link ? `<a href="${link}" target="_blank" rel="noopener" class="btn-secondary" style="text-decoration:none;padding:6px 10px;border-radius:8px;display:inline-block;">Open Link</a>` : '—'}</td>
+            </tr>`;
+    }).join('');
+    list.innerHTML = `
+      <div style="overflow-x:auto;">
+        <table class="maintenance-table" style="width:100%;border-collapse:collapse;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(44,62,80,0.07);">
+          <thead>
+            <tr style="background:#f6fafd;">
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Name</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Email</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Property</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Unit</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Sent</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Opened</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Open Count</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Status</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+      </div>
+    `;
+}
+
+// Hook up invites refresh button
+document.getElementById('refreshInvitesBtn')?.addEventListener('click', async () => {
+    showLoader();
+    try {
+        state.invites = [];
+        await loadInvites(true);
+        showNotification('Invites refreshed', 'success');
+    } catch {} finally {
+        hideLoader();
+    }
+});
+
+function renderApplications(items) {
+    const list = document.getElementById('applicationsList');
+    if (!list) return;
+    const apps = items || state.applications || [];
+    if (!apps.length) {
+        list.innerHTML = `
+            <div class="empty-state" style="text-align:center;padding:24px;">
+                <i class="fas fa-file-alt" style="font-size:2em;color:#3498db;margin-bottom:8px;"></i>
+                <p>No rental applications found</p>
+            </div>`;
+        return;
+    }
+
+    const rows = apps.map(a => {
+        // Safely parse notes for propertyAddress and unitNumber
+        let propertyAddress = '';
+        let unitNumber = a.unit || '';
+        if (a.notes) {
+            try {
+                const n = JSON.parse(a.notes);
+                propertyAddress = n.propertyAddress || '';
+                unitNumber = n.unitNumber || unitNumber;
+            } catch {}
+        }
+        const moveIn = a.moveIn ? new Date(a.moveIn).toLocaleDateString('en-US') : '';
+        const submitted = a.submitted ? new Date(a.submitted).toLocaleString('en-US') : '';
+        const status = (a.status || 'pending');
+        let notesJson = '';
+        if (a.notes) {
+            try { notesJson = encodeURIComponent(a.notes); } catch {}
+        }
+                const statusSelect = `
+                    <select class="app-status-select"
+                                    data-app-id="${a._id}"
+                                    data-name="${(a.name||'').replace(/\"/g,'&quot;')}"
+                                    data-email="${(a.email||'').replace(/\"/g,'&quot;')}"
+                                    data-phone="${(a.phone||'').replace(/\"/g,'&quot;')}"
+                                    data-unit="${(unitNumber||'').toString().replace(/\"/g,'&quot;')}"
+                                    data-movein="${a.moveIn ? new Date(a.moveIn).toISOString() : ''}"
+                                    data-notes="${notesJson}"
+                                    style="padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;background:#fff;">
+                        <option value="pending" ${status==='pending'?'selected':''}>Pending</option>
+                        <option value="approved" ${status==='approved'?'selected':''}>Approved</option>
+                        <option value="rejected" ${status==='rejected'?'selected':''}>Rejected</option>
+                    </select>`;
+        const viewLink = `/applications/review/${a._id}`;
+        return `
+            <tr style="border-bottom:1px solid #e1e8ed;">
+                <td style="padding:10px 8px;font-weight:600;color:#2c3e50;">${a.name || ''}</td>
+                <td style="padding:10px 8px;">${a.email || ''}</td>
+                <td style="padding:10px 8px;">${a.phone || ''}</td>
+                <td style="padding:10px 8px;">${propertyAddress || '—'}</td>
+                <td style="padding:10px 8px;">${unitNumber || '—'}</td>
+                <td style="padding:10px 8px;">${moveIn || '—'}</td>
+                <td style="padding:10px 8px;">${submitted || '—'}</td>
+                <td style="padding:10px 8px;">${statusSelect}</td>
+                <td style="padding:10px 8px;">
+                    <a class="btn-secondary" href="${viewLink}" target="_blank" rel="noopener" style="text-decoration:none;padding:6px 10px;border-radius:8px;display:inline-block;">
+                        <i class="fas fa-eye"></i> View
+                    </a>
+                </td>
+            </tr>`;
+    }).join('');
+
+    list.innerHTML = `
+      <div style="overflow-x:auto;">
+        <table class="maintenance-table" style="width:100%;border-collapse:collapse;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(44,62,80,0.07);">
+          <thead>
+            <tr style="background:#f6fafd;">
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Applicant</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Email</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Phone</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Property Address</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Unit</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Move-In</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Submitted</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Status</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    // Attach change handlers for status dropdowns
+    document.querySelectorAll('.app-status-select').forEach(sel => {
+        sel.addEventListener('change', async (e) => {
+            const el = e.currentTarget;
+            const appId = el.dataset.appId;
+            const newStatus = el.value;
+            try {
+                showLoader();
+                const res = await fetch(`/api/rental-applications/${appId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                if (!res.ok) throw new Error('Failed to update application status');
+                // Update local state
+                const idx = (state.applications||[]).findIndex(a => a._id === appId);
+                if (idx >= 0) state.applications[idx].status = newStatus;
+                showNotification('Application status updated', 'success');
+
+                if (newStatus === 'approved') {
+                    const appData = {
+                        name: el.dataset.name || '',
+                        phone: el.dataset.phone || '',
+                        email: el.dataset.email || '',
+                        unit: el.dataset.unit || '',
+                        moveIn: el.dataset.movein || ''
+                    };
+                    prefillTenantFromApplication(appData);
+                    openModal('addTenantModal');
+                }
+            } catch (err) {
+                console.error('Update status error:', err);
+                showNotification('Could not update status', 'error');
+                renderApplications();
+            } finally {
+                hideLoader();
+            }
+        });
+    });
+}
+
+// Hook up refresh button
+document.getElementById('refreshApplicationsBtn')?.addEventListener('click', async () => {
+    showLoader();
+    try {
+        state.applications = [];
+        await loadApplications(true);
+        showNotification('Applications refreshed', 'success');
+    } catch {} finally {
+        hideLoader();
+    }
+});
+
 // Helper function to determine file icon
 function getFileIcon(filename) {
     const ext = filename.split('.').pop().toLowerCase();
@@ -7242,6 +8024,227 @@ function getFileIcon(filename) {
         case 'jpeg':
         case 'png': return 'image';
         default: return 'alt';
+    }
+}
+
+// Prefill tenant modal fields based on an approved application
+function prefillTenantFromApplication(app) {
+    try {
+        resetTenantForm();
+        populateUnitSelect();
+
+        const nameEl = document.getElementById('tenantName');
+        const phoneEl = document.getElementById('tenantPhone');
+        const emailEl = document.getElementById('tenantEmail');
+        const unitEl = document.getElementById('tenantUnit');
+        const leaseStartEl = document.getElementById('leaseStart');
+
+        if (nameEl) nameEl.value = app.name || '';
+        if (phoneEl) phoneEl.value = app.phone || '';
+        if (emailEl) emailEl.value = app.email || '';
+
+        if (leaseStartEl && app.moveIn) {
+            const d = new Date(app.moveIn);
+            if (!isNaN(d.getTime())) {
+                leaseStartEl.value = new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+            }
+        }
+
+        if (unitEl && app.unit && Array.isArray(state.units)) {
+            const match = state.units.find(u => String(u.number) === String(app.unit) && u.status === 'vacant');
+            if (match) unitEl.value = match._id;
+        }
+
+        // Decode notes JSON (if provided) and prefill extended fields: pets, cars, emergency contact, lease holders, occupants
+        if (app.notes) {
+            try {
+                const raw = decodeURIComponent(app.notes);
+                const n = JSON.parse(raw) || {};
+
+                // Normalize application JSON (flat keys) into tenant schema shape
+                const norm = {
+                    emergencyContact: n.emergencyContact || {
+                        name: n.emName || '',
+                        phone: n.emPhone || '',
+                        email: n.emEmail || '',
+                        address: n.emAddress || '',
+                        relation: n.emRel || ''
+                    },
+                    leaseHolders: Array.isArray(n.leaseHolders) ? n.leaseHolders : (()=>{
+                        const full = [n.caFirst, n.caMiddle, n.caLast].filter(Boolean).join(' ').trim();
+                        const email = n.caEmail || '';
+                        const phone = n.caPhone || '';
+                        return full || email || phone ? [{ name: full, email, phone }] : [];
+                    })(),
+                    authorizedOccupants: (()=>{
+                        const names = [];
+                        for (let i=1;i<=5;i++){
+                            const nm = n[`occ${i}Name`];
+                            if (nm && String(nm).trim()) names.push(String(nm).trim());
+                        }
+                        return names;
+                    })(),
+                    pets: (()=>{
+                        const details = [];
+                        for (let i=1;i<=3;i++){
+                            const type = n[`pet${i}Type`];
+                            const weight = n[`pet${i}Weight`];
+                            const age = n[`pet${i}Age`];
+                            const vaccinated = n[`pet${i}Vaccinated`];
+                            if ((type && String(type).trim()) || (weight && String(weight).trim()) || (age && String(age).trim()) || (vaccinated && String(vaccinated).trim())){
+                                details.push({
+                                    type: type || '',
+                                    name: '',
+                                    breed: '',
+                                    weight: weight || '',
+                                    age: age || '',
+                                    gender: '',
+                                    vaccination: vaccinated || ''
+                                });
+                            }
+                        }
+                        return {
+                            hasPets: details.length > 0,
+                            count: details.length,
+                            fee: 0,
+                            nonRefundableFee: 0,
+                            monthlyRent: 0,
+                            depositIncrease: 0,
+                            details
+                        };
+                    })(),
+                    cars: (()=>{
+                        const details = [];
+                        const addCar = (mm, year, plate) => {
+                            if (!mm && !year && !plate) return;
+                            details.push({
+                                make: mm || '',
+                                model: '',
+                                color: '',
+                                licensePlate: plate || '',
+                                year: year || ''
+                            });
+                        };
+                        addCar(n.veh1MakeModel, n.veh1Year, n.veh1Plate);
+                        addCar(n.veh2MakeModel, n.veh2Year, n.veh2Plate);
+                        let count = parseInt(n.vehCount, 10);
+                        if (!Number.isFinite(count) || count <= 0) count = details.length;
+                        return {
+                            hasCar: details.length > 0,
+                            count,
+                            details
+                        };
+                    })()
+                };
+
+                // Emergency Contact
+                const ecName = document.getElementById('emergencyContactName');
+            const ecPhone = document.getElementById('emergencyContactPhone');
+            const ecEmail = document.getElementById('emergencyContactEmail');
+            const ecAddress = document.getElementById('emergencyContactAddress');
+            const ecRelation = document.getElementById('emergencyContactRelation');
+                if (ecName) ecName.value = norm.emergencyContact.name || '';
+                if (ecPhone) ecPhone.value = norm.emergencyContact.phone || '';
+                if (ecEmail) ecEmail.value = norm.emergencyContact.email || '';
+                if (ecAddress) ecAddress.value = norm.emergencyContact.address || '';
+                if (ecRelation) ecRelation.value = norm.emergencyContact.relation || '';
+
+                // Lease Holders (co-applicants)
+                if (Array.isArray(norm.leaseHolders) && norm.leaseHolders.length) {
+                    populateLeaseHolders(norm.leaseHolders);
+                }
+
+                // Authorized Occupants
+                const occ = Array.isArray(norm.authorizedOccupants) ? norm.authorizedOccupants : [];
+                if (occ.length) {
+                    const ta = document.getElementById('authorizedOccupants');
+                    if (ta) ta.value = occ.join('\n');
+                }
+
+                // Pets
+                if (norm.pets && (norm.pets.hasPets || (Array.isArray(norm.pets.details) && norm.pets.details.length > 0))) {
+                    const hasPetsEl = document.getElementById('hasPets');
+                    if (hasPetsEl) {
+                        hasPetsEl.checked = !!norm.pets.hasPets || (Array.isArray(norm.pets.details) && norm.pets.details.length > 0);
+                        document.getElementById('petDetails').style.display = hasPetsEl.checked ? 'block' : 'none';
+                    }
+                    if (typeof norm.pets.count === 'number') {
+                        const petCountEl = document.getElementById('petCount');
+                        if (petCountEl) petCountEl.value = String(norm.pets.count);
+                        updatePetFields();
+                    } else {
+                        updatePetFields();
+                    }
+                    // Fees
+                    const petNRF = document.getElementById('petNonRefundableFee');
+                    const petMR = document.getElementById('petMonthlyRent');
+                    const petDI = document.getElementById('petDepositIncrease');
+                    if (petNRF && typeof norm.pets.nonRefundableFee === 'number') petNRF.value = String(norm.pets.nonRefundableFee);
+                    if (petMR && typeof norm.pets.monthlyRent === 'number') petMR.value = String(norm.pets.monthlyRent);
+                    if (petDI && typeof norm.pets.depositIncrease === 'number') petDI.value = String(norm.pets.depositIncrease);
+                    // Details per pet
+                    if (Array.isArray(norm.pets.details)) {
+                        // Ensure petCount matches
+                        const countEl = document.getElementById('petCount');
+                        if (countEl) {
+                            countEl.value = String(norm.pets.details.length);
+                            updatePetFields();
+                        }
+                        norm.pets.details.forEach((pd, i) => {
+                            const pt = document.querySelector(`.pet-type[data-index="${i}"]`);
+                            const pn = document.querySelector(`.pet-name[data-index="${i}"]`);
+                            const pb = document.querySelector(`.pet-breed[data-index="${i}"]`);
+                            const pw = document.querySelector(`.pet-weight[data-index="${i}"]`);
+                            const pa = document.querySelector(`.pet-age[data-index="${i}"]`);
+                            const gSel = document.querySelector(`.pet-gender[data-index="${i}"]`);
+                            const pv = document.querySelector(`.pet-vaccination[data-index="${i}"]`);
+                            if (pt) pt.value = pd.type || '';
+                            if (pn) pn.value = pd.name || '';
+                            if (pb) pb.value = pd.breed || '';
+                            if (pw) pw.value = pd.weight || '';
+                            if (pa) pa.value = pd.age || '';
+                            if (gSel && pd.gender) gSel.value = pd.gender;
+                            if (pv) pv.value = pd.vaccination || '';
+                        });
+                    }
+                }
+
+                // Vehicles
+                if (norm.cars && (norm.cars.hasCar || (Array.isArray(norm.cars.details) && norm.cars.details.length > 0))) {
+                    const hasCarEl = document.getElementById('hasCar');
+                    if (hasCarEl) {
+                        hasCarEl.checked = !!norm.cars.hasCar || (Array.isArray(norm.cars.details) && norm.cars.details.length > 0);
+                        document.getElementById('carDetails').style.display = hasCarEl.checked ? 'block' : 'none';
+                    }
+                    const carCountEl = document.getElementById('carCount');
+                    if (Array.isArray(norm.cars.details)) {
+                        if (carCountEl) {
+                            carCountEl.value = String(norm.cars.details.length);
+                            updateCarFields();
+                        }
+                        norm.cars.details.forEach((cd, i) => {
+                            const cm = document.querySelector(`.car-make[data-index="${i}"]`);
+                            const cmo = document.querySelector(`.car-model[data-index="${i}"]`);
+                            const cc = document.querySelector(`.car-color[data-index="${i}"]`);
+                            const cp = document.querySelector(`.car-plate[data-index="${i}"]`);
+                            const cy = document.querySelector(`.car-year[data-index="${i}"]`);
+                            if (cm) cm.value = cd.make || '';
+                            if (cmo) cmo.value = cd.model || '';
+                            if (cc) cc.value = cd.color || '';
+                            if (cp) cp.value = cd.licensePlate || '';
+                            if (cy) cy.value = cd.year || '';
+                        });
+                    }
+                }
+            } catch (e) {
+                console.warn('Unable to parse application notes for prefill:', e?.message || e);
+            }
+        }
+
+        // Focus for quick confirmation/edit
+        nameEl?.focus();
+    } catch (e) {
+        console.warn('Unable to prefill tenant from application:', e?.message || e);
     }
 }
 
@@ -9854,9 +10857,142 @@ window.openTenantBalanceModal = openTenantBalanceModal;
 window.exportTenantPaymentsReportFromModal = exportTenantPaymentsReportFromModal;
 
 
+// Setup Send Application modal and actions
+document.addEventListener('DOMContentLoaded', () => {
+    // Create modal if missing
+    if (!document.getElementById('sendApplicationModal')) {
+        const modal = document.createElement('div');
+        modal.id = 'sendApplicationModal';
+        modal.className = 'modal';
+        modal.style.display = 'none';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width:480px;">
+                <h2>Send Rental Application</h2>
+                <form id="sendApplicationForm">
+                    <div class="form-group">
+                        <label>Property (optional)</label>
+                        <select id="sendAppProperty">
+                            <option value="">Select a property</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Unit (optional)</label>
+                        <select id="sendAppUnit" disabled>
+                            <option value="">Select a unit</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Full Name (optional)</label>
+                        <input type="text" id="sendAppName" placeholder="e.g., John Doe" />
+                    </div>
+                    <div class="form-group">
+                        <label>Email (required)</label>
+                        <input type="email" id="sendAppEmail" placeholder="applicant@example.com" required />
+                        <div id="sendAppError" style="display:none; color:#b91c1c; font-size:12px; margin-top:8px;">Please enter a valid email.</div>
+                    </div>
+                    <div class="modal-buttons">
+                        <button type="button" class="btn-secondary" id="cancelSendAppBtn">Cancel</button>
+                        <button type="submit" class="btn-primary" id="confirmSendAppBtn">Send Link</button>
+                    </div>
+                </form>
+            </div>`;
+        document.body.appendChild(modal);
+    }
+
+    const sendBtn = document.getElementById('sendApplicationBtn');
+    const cancelBtn = document.getElementById('cancelSendAppBtn');
+    const formEl = document.getElementById('sendApplicationForm');
+    const errorEl = document.getElementById('sendAppError');
+    const emailInput = document.getElementById('sendAppEmail');
+    const nameInput = document.getElementById('sendAppName');
+    const propertySelect = document.getElementById('sendAppProperty');
+    const unitSelect = document.getElementById('sendAppUnit');
+    let modalUnits = [];
+
+    function isValidEmail(email) { return /[^\s@]+@[^\s@]+\.[^\s@]+/.test(email); }
+
+    async function populateUnitsForProperty(propertyId) {
+        modalUnits = [];
+        unitSelect.innerHTML = '<option value="">Select a unit</option>';
+        unitSelect.disabled = true;
+        if (!propertyId) return;
+        try {
+            const res = await fetch(`${API_URL}/properties/${propertyId}/units`);
+            if (!res.ok) throw new Error('Failed to load units');
+            const data = await res.json();
+            modalUnits = data.property?.units || [];
+            if (modalUnits.length) {
+                unitSelect.disabled = false;
+                unitSelect.innerHTML = ['<option value="">Select a unit</option>',
+                    ...modalUnits.map(u => `<option value="${u._id}">Unit ${u.number}</option>`)
+                ].join('');
+            }
+        } catch (e) {
+            console.error('Error loading units for property:', e);
+        }
+    }
+
+    function openSendAppModal() {
+        errorEl.style.display = 'none';
+        nameInput.value = '';
+        emailInput.value = '';
+        // Populate properties list (default to current property if available)
+        if (propertySelect) {
+            propertySelect.innerHTML = '<option value="">Select a property</option>' +
+                (state.properties || []).map(p => `<option value="${p._id}">${p.name}</option>`).join('');
+            if (state.currentProperty?._id) {
+                propertySelect.value = state.currentProperty._id;
+            }
+            // Populate units for the selected property
+            populateUnitsForProperty(propertySelect.value);
+        }
+        openModal('sendApplicationModal');
+    }
+    function closeSendAppModal() { closeModal('sendApplicationModal'); }
+
+    sendBtn?.addEventListener('click', openSendAppModal);
+    cancelBtn?.addEventListener('click', closeSendAppModal);
+    propertySelect?.addEventListener('change', (e) => {
+        const propId = e.target.value || '';
+        populateUnitsForProperty(propId);
+    });
+    formEl?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = emailInput.value.trim();
+        const name = nameInput.value.trim();
+        const selectedPropertyId = propertySelect?.value || '';
+        const selectedProperty = (state.properties || []).find(p => p._id === selectedPropertyId);
+        const selectedUnitId = unitSelect?.value || '';
+        const selectedUnit = (modalUnits || []).find(u => u._id === selectedUnitId);
+        if (!isValidEmail(email)) { errorEl.style.display = 'block'; return; }
+        try {
+            showLoader();
+            const res = await fetch('/api/rental-applications/send-link', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email,
+                    name,
+                    propertyId: selectedProperty?._id || state.currentProperty?._id || undefined,
+                    propertyName: selectedProperty?.name || state.currentProperty?.name || undefined,
+                    unitId: selectedUnit?._id || undefined,
+                    unitNumber: selectedUnit?.number || undefined
+                })
+            });
+            hideLoader();
+            if (!res.ok) throw new Error('Failed to send link');
+            closeSendAppModal();
+            showNotification('Application link sent successfully', 'success');
+            // Refresh invites list to show the new record
+            runWhenIdle(() => loadInvites(true));
+        } catch (err) {
+            console.error('Send application error:', err);
+            errorEl.textContent = 'Failed to send link. Please try again.';
+            errorEl.style.display = 'block';
+        }
+    });
+});
+
     </script>
 </body>
 </html>
-
-
-
