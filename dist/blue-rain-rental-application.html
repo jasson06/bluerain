@@ -1,0 +1,1247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blue Rain MF LLC – Rental Application</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --card:#111a2e;
+      --muted:#93a4c7;
+      --text:#e8eefc;
+      --line:rgba(255,255,255,.10);
+      --accent:#4da3ff;
+      --accent2:#7c4dff;
+      --danger:#ff6b6b;
+      --ok:#2dd4bf;
+      --shadow: 0 12px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 20% -10%, rgba(77,163,255,.25), transparent 60%),
+                  radial-gradient(900px 700px at 90% 0%, rgba(124,77,255,.20), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+      line-height:1.35;
+    }
+    a{color:inherit}
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px 16px 56px;
+    }
+    header{
+      display:flex;
+      gap:14px;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom: 18px;
+    }
+    .brand{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .brand h1{
+      margin:0;
+      font-size: 20px;
+      letter-spacing:.6px;
+      text-transform: uppercase;
+    }
+    .brand .sub{
+      color:var(--muted);
+      font-size: 13px;
+    }
+    .pillbar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .pill{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      color:var(--muted);
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .pill strong{color:var(--text); font-weight:600}
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .topbar{
+      display:flex;
+      gap:14px;
+      align-items:center;
+      justify-content:space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(0,0,0,.18);
+    }
+    .progress{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      width: 100%;
+    }
+    .progress .track{
+      flex:1;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      overflow:hidden;
+      border: 1px solid rgba(255,255,255,.06);
+    }
+    .progress .bar{
+      height:100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 999px;
+      transition: width .25s ease;
+    }
+    .progress .label{
+      min-width: 160px;
+      text-align:right;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    form{padding: 10px 16px 16px;}
+    .section{
+      display:none;
+      padding: 14px 0 6px;
+    }
+    .section.active{display:block;}
+    .section h2{
+      font-size: 16px;
+      margin: 6px 0 2px;
+    }
+    .section p.help{
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 10px;
+    }
+    .field{
+      grid-column: span 6;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .field.sm{grid-column: span 3;}
+    .field.lg{grid-column: span 12;}
+    .field label{
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .field input, .field textarea, .field select{
+      width:100%;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.22);
+      color: var(--text);
+      outline: none;
+    }
+    .field textarea{min-height: 90px; resize: vertical;}
+    .field input::placeholder, .field textarea::placeholder{color: rgba(147,164,199,.55);}
+    .field input:focus, .field textarea:focus, .field select:focus{
+      border-color: rgba(77,163,255,.55);
+      box-shadow: 0 0 0 3px rgba(77,163,255,.14);
+    }
+    .row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .radio{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      padding: 10px 12px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.22);
+      border-radius: 12px;
+      width: fit-content;
+    }
+    .radio input{accent-color: var(--accent);} 
+    /* Improve selected visibility for radios and checkbox */
+    label.radio:has(input:checked){
+      border-color: rgba(77,163,255,.75);
+      background: linear-gradient(180deg, rgba(77,163,255,.18), rgba(124,77,255,.12));
+      box-shadow: 0 0 0 3px rgba(77,163,255,.14);
+    }
+    label.radio input:checked + span{
+      color: #fff;
+      font-weight: 600;
+      text-shadow: 0 0 6px rgba(77,163,255,.35);
+    }
+    /* Keyboard focus cue */
+    label.radio:has(input:focus-visible){
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .hint{
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .divider{
+      height:1px;
+      background: var(--line);
+      margin: 14px 0;
+    }
+    .actions{
+      display:flex;
+      gap:10px;
+      justify-content:space-between;
+      align-items:center;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+    .btn{
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-weight: 600;
+      display:inline-flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+      user-select:none;
+    }
+    .btn:hover{border-color: rgba(255,255,255,.24);}
+    .btn.primary{
+      background: linear-gradient(90deg, rgba(77,163,255,.95), rgba(124,77,255,.92));
+      border-color: transparent;
+    }
+    .btn.primary:hover{filter: brightness(1.04);}
+    .btn.danger{border-color: rgba(255,107,107,.35); color: #ffd7d7;}
+    .btn.ghost{background: transparent;}
+    .left, .right{display:flex; gap:10px; flex-wrap:wrap;}
+    .small{
+      font-size: 12px; color: var(--muted);
+    }
+
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      background: rgba(17,26,46,.92);
+      border: 1px solid rgba(255,255,255,.14);
+      padding: 10px 12px;
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+      color: var(--text);
+      display:none;
+      gap:10px;
+      align-items:center;
+      max-width: 92vw;
+    }
+    .toast.show{display:flex;}
+    .toast .dot{
+      width:9px; height:9px; border-radius: 50%;
+      background: var(--ok);
+      box-shadow: 0 0 0 3px rgba(45,212,191,.18);
+    }
+
+    /* Submit loader overlay */
+    .loaderOverlay{
+      position: fixed;
+      inset: 0;
+      background: rgba(11,18,32,.55);
+      backdrop-filter: blur(3px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .loaderOverlay.show{ display:flex; }
+    .spinner{
+      width: 64px; height: 64px;
+      border: 4px solid rgba(255,255,255,.25);
+      border-top-color: var(--accent);
+      border-right-color: var(--accent2);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      box-shadow: var(--shadow);
+    }
+    @keyframes spin{ to{ transform: rotate(360deg); } }
+
+    @media (max-width: 720px){
+      .field{grid-column: span 12;}
+      .field.sm{grid-column: span 6;}
+      .progress .label{min-width: 120px;}
+    }
+
+    /* Print-friendly */
+    @media print{
+      body{background:#fff; color:#000;}
+      .wrap{max-width: none; padding: 0;}
+      header,.topbar,.actions,.pillbar,.toast{display:none !important;}
+      .card{box-shadow:none; border:none; background:#fff;}
+      .section{display:block !important;}
+      .field input, .field textarea, .field select{background:#fff; color:#000; border:1px solid #ccc;}
+      .radio{background:#fff; border:1px solid #ccc;}
+      .hint,.help{color:#333;}
+    }
+
+    /* Review mini-nav */
+    .miniNav{
+      position: sticky;
+      top: 12px;
+      z-index: 10;
+      display: none;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 0 0 12px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.05);
+    }
+    .miniNav.show{ display: flex; }
+    .miniNav .chip{
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      color: var(--text);
+      background: rgba(0,0,0,.18);
+      font-size: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .miniNav .chip.active{
+      background: linear-gradient(90deg, rgba(77,163,255,.45), rgba(124,77,255,.40));
+      border-color: transparent;
+    }
+
+    /* Review meta strip */
+    .reviewMeta{
+      position: sticky;
+      top: 12px;
+      z-index: 9;
+      display: none;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 0 0 12px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.18);
+    }
+    .reviewMeta.show{ display:flex; }
+    .reviewMeta .chip{
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      color: var(--text);
+      background: rgba(255,255,255,.06);
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <h1>Blue Rain MF LLC – Rental Application</h1>
+        <div class="sub">
+          <a href="mailto:bluerainrealestate@gmail.com">bluerainrealestate@gmail.com</a> ·
+          <a href="tel:+12109819251">210.981.9251</a>
+        </div>
+      </div>
+      <div class="pillbar">
+        <div class="pill"><strong>Autosave</strong><span id="autosaveState">On</span></div>
+        <div class="pill"><strong>Print</strong><span>PDF-ready</span></div>
+        <div class="pill"><strong>Download</strong><span>JSON</span></div>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="miniNav" id="miniNav"></div>
+      <div class="reviewMeta" id="reviewMeta"></div>
+      <div class="topbar">
+        <div class="progress">
+          <div class="track"><div class="bar" id="bar"></div></div>
+          <div class="label" id="stepLabel">Step 1 of 10</div>
+        </div>
+      </div>
+
+      <form id="appForm" novalidate>
+        <!-- 1 Property -->
+        <section class="section active" data-title="Property">
+          <h2>Property Being Applied For</h2>
+          <p class="help">Enter the property and intended move-in date.</p>
+          <div class="grid">
+            <div class="field lg">
+              <label for="propertyAddress">Street Address</label>
+              <input id="propertyAddress" name="propertyAddress" autocomplete="street-address" placeholder="123 Main St" required>
+            </div>
+            <div class="field sm">
+              <label for="unitNumber">Unit Number</label>
+              <input id="unitNumber" name="unitNumber" placeholder="Apt 2B">
+            </div>
+            <div class="field sm">
+              <label for="moveInDate">Proposed Move-in Date</label>
+              <input id="moveInDate" name="moveInDate" type="date" required>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2 Primary Applicant -->
+        <section class="section" data-title="Primary Applicant">
+          <h2>Primary Applicant</h2>
+          <p class="help">Primary applicant personal and contact information.</p>
+          <div class="grid">
+            <div class="field">
+              <label for="paFirst">First Name</label>
+              <input id="paFirst" name="paFirst" autocomplete="given-name" required>
+            </div>
+            <div class="field">
+              <label for="paMiddle">Middle Name</label>
+              <input id="paMiddle" name="paMiddle" autocomplete="additional-name">
+            </div>
+            <div class="field">
+              <label for="paLast">Last Name</label>
+              <input id="paLast" name="paLast" autocomplete="family-name" required>
+            </div>
+            <div class="field">
+              <label for="paDob">Date of Birth</label>
+              <input id="paDob" name="paDob" type="date" required>
+            </div>
+            <div class="field">
+              <label for="paPhone">Phone Number</label>
+              <input id="paPhone" name="paPhone" type="tel" inputmode="tel" placeholder="210.981.9251" required>
+              <div class="hint">Tip: any format is accepted; it will be saved as entered.</div>
+            </div>
+            <div class="field">
+              <label for="paEmail">Email Address</label>
+              <input id="paEmail" name="paEmail" type="email" autocomplete="email" placeholder="name@email.com" required>
+            </div>
+
+            <div class="field lg">
+              <label for="paStreet">Street Address</label>
+              <input id="paStreet" name="paStreet" autocomplete="street-address" required>
+            </div>
+            <div class="field">
+              <label for="paCity">City</label>
+              <input id="paCity" name="paCity" autocomplete="address-level2" required>
+            </div>
+            <div class="field sm">
+              <label for="paState">State</label>
+              <input id="paState" name="paState" autocomplete="address-level1" placeholder="TX" required>
+            </div>
+            <div class="field sm">
+              <label for="paZip">ZIP Code</label>
+              <input id="paZip" name="paZip" autocomplete="postal-code" inputmode="numeric" required>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3 Co-Applicant -->
+        <section class="section" data-title="Co-Applicant">
+          <h2>Co-Applicant</h2>
+          <p class="help">If no co-applicant, you can leave these fields blank.</p>
+          <div class="grid">
+            <div class="field">
+              <label for="caFirst">First Name</label>
+              <input id="caFirst" name="caFirst" autocomplete="given-name">
+            </div>
+            <div class="field">
+              <label for="caMiddle">Middle Name</label>
+              <input id="caMiddle" name="caMiddle" autocomplete="additional-name">
+            </div>
+            <div class="field">
+              <label for="caLast">Last Name</label>
+              <input id="caLast" name="caLast" autocomplete="family-name">
+            </div>
+            <div class="field">
+              <label for="caDob">Date of Birth</label>
+              <input id="caDob" name="caDob" type="date">
+            </div>
+            <div class="field">
+              <label for="caPhone">Phone Number</label>
+              <input id="caPhone" name="caPhone" type="tel" inputmode="tel" placeholder="210.000.0000">
+            </div>
+            <div class="field">
+              <label for="caEmail">Email Address</label>
+              <input id="caEmail" name="caEmail" type="email" autocomplete="email" placeholder="name@email.com">
+            </div>
+
+            <div class="field lg">
+              <label for="caStreet">Street Address</label>
+              <input id="caStreet" name="caStreet" autocomplete="street-address">
+            </div>
+            <div class="field">
+              <label for="caCity">City</label>
+              <input id="caCity" name="caCity" autocomplete="address-level2">
+            </div>
+            <div class="field sm">
+              <label for="caState">State</label>
+              <input id="caState" name="caState" autocomplete="address-level1" placeholder="TX">
+            </div>
+            <div class="field sm">
+              <label for="caZip">ZIP Code</label>
+              <input id="caZip" name="caZip" autocomplete="postal-code" inputmode="numeric">
+            </div>
+          </div>
+        </section>
+
+        <!-- 4 Additional Occupants -->
+        <section class="section" data-title="Occupants">
+          <h2>Additional Occupants</h2>
+          <p class="help">List any additional occupants (up to 5).</p>
+
+          <div class="grid" id="occGrid"></div>
+
+          <template id="occTpl">
+            <div class="field">
+              <label>Full Name</label>
+              <input>
+            </div>
+            <div class="field sm">
+              <label>Date of Birth</label>
+              <input type="date">
+            </div>
+            <div class="field sm">
+              <label>Relationship</label>
+              <input placeholder="Child, Parent, etc.">
+            </div>
+          </template>
+
+          <div class="hint">If fewer than 5 occupants, leave the extra rows blank.</div>
+        </section>
+
+        <!-- 5 Employment -->
+        <section class="section" data-title="Employment">
+          <h2>Primary Employment &amp; Financial</h2>
+          <p class="help">Employment and income details.</p>
+          <div class="grid">
+            <div class="field lg">
+              <label for="empName">Employer Name</label>
+              <input id="empName" name="empName">
+            </div>
+            <div class="field lg">
+              <label for="empStreet">Employer Street Address</label>
+              <input id="empStreet" name="empStreet">
+            </div>
+            <div class="field">
+              <label for="empCity">City</label>
+              <input id="empCity" name="empCity">
+            </div>
+            <div class="field sm">
+              <label for="empState">State</label>
+              <input id="empState" name="empState" placeholder="TX">
+            </div>
+            <div class="field sm">
+              <label for="empZip">ZIP Code</label>
+              <input id="empZip" name="empZip" inputmode="numeric">
+            </div>
+
+            <div class="field">
+              <label for="jobTitle">Job Title</label>
+              <input id="jobTitle" name="jobTitle">
+            </div>
+            <div class="field">
+              <label for="employmentLength">Length of Employment</label>
+              <input id="employmentLength" name="employmentLength" placeholder="e.g., 2 years">
+            </div>
+            <div class="field">
+              <label for="monthlyIncome">Monthly Income</label>
+              <input id="monthlyIncome" name="monthlyIncome" inputmode="decimal" placeholder="$">
+            </div>
+            <div class="field lg">
+              <label for="otherIncome">Other Income (source &amp; amount)</label>
+              <textarea id="otherIncome" name="otherIncome" placeholder="Optional"></textarea>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6 Rental History #1 -->
+        <section class="section" data-title="Rental History #1">
+          <h2>Rental History – Last 5 Years (Previous Residence #1)</h2>
+          <p class="help">Enter the most recent previous residence.</p>
+          <div class="grid" data-prefix="rh1">
+            <div class="field lg"><label>Street Address</label><input name="rh1Street"></div>
+            <div class="field"><label>City</label><input name="rh1City"></div>
+            <div class="field sm"><label>State</label><input name="rh1State" placeholder="TX"></div>
+            <div class="field sm"><label>ZIP Code</label><input name="rh1Zip" inputmode="numeric"></div>
+
+            <div class="field"><label>Landlord Name</label><input name="rh1LandlordName"></div>
+            <div class="field"><label>Landlord Phone</label><input name="rh1LandlordPhone" type="tel"></div>
+
+            <div class="field"><label>Move-in Date</label><input name="rh1MoveIn" type="date"></div>
+            <div class="field"><label>Move-out Date</label><input name="rh1MoveOut" type="date"></div>
+            <div class="field"><label>Monthly Rent</label><input name="rh1MonthlyRent" inputmode="decimal" placeholder="$"></div>
+
+            <div class="field lg"><label>Reason for Leaving</label><textarea name="rh1Reason"></textarea></div>
+          </div>
+        </section>
+
+        <!-- 7 Rental History #2 -->
+        <section class="section" data-title="Rental History #2">
+          <h2>Previous Residence #2</h2>
+          <p class="help">Enter additional rental history if applicable.</p>
+          <div class="grid" data-prefix="rh2">
+            <div class="field lg"><label>Street Address</label><input name="rh2Street"></div>
+            <div class="field"><label>City</label><input name="rh2City"></div>
+            <div class="field sm"><label>State</label><input name="rh2State" placeholder="TX"></div>
+            <div class="field sm"><label>ZIP Code</label><input name="rh2Zip" inputmode="numeric"></div>
+
+            <div class="field"><label>Landlord Name</label><input name="rh2LandlordName"></div>
+            <div class="field"><label>Landlord Phone</label><input name="rh2LandlordPhone" type="tel"></div>
+
+            <div class="field"><label>Move-in Date</label><input name="rh2MoveIn" type="date"></div>
+            <div class="field"><label>Move-out Date</label><input name="rh2MoveOut" type="date"></div>
+            <div class="field"><label>Monthly Rent</label><input name="rh2MonthlyRent" inputmode="decimal" placeholder="$"></div>
+
+            <div class="field lg"><label>Reason for Leaving</label><textarea name="rh2Reason"></textarea></div>
+          </div>
+        </section>
+
+        <!-- 8 Rental History #3 + Vehicles + Emergency -->
+        <section class="section" data-title="Residence #3 + Vehicle + Emergency">
+          <h2>Previous Residence #3</h2>
+          <p class="help">Additional residence, plus vehicles and emergency contact.</p>
+          <div class="grid" data-prefix="rh3">
+            <div class="field lg"><label>Street Address</label><input name="rh3Street"></div>
+            <div class="field"><label>City</label><input name="rh3City"></div>
+            <div class="field sm"><label>State</label><input name="rh3State" placeholder="TX"></div>
+            <div class="field sm"><label>ZIP Code</label><input name="rh3Zip" inputmode="numeric"></div>
+
+            <div class="field"><label>Landlord Name</label><input name="rh3LandlordName"></div>
+            <div class="field"><label>Landlord Phone</label><input name="rh3LandlordPhone" type="tel"></div>
+
+            <div class="field"><label>Move-in Date</label><input name="rh3MoveIn" type="date"></div>
+            <div class="field"><label>Move-out Date</label><input name="rh3MoveOut" type="date"></div>
+            <div class="field"><label>Monthly Rent</label><input name="rh3MonthlyRent" inputmode="decimal" placeholder="$"></div>
+
+            <div class="field lg"><label>Reason for Leaving</label><textarea name="rh3Reason"></textarea></div>
+          </div>
+
+          <div class="divider"></div>
+
+          <h2 style="margin-top:0;">Vehicle Information</h2>
+          <p class="help">Provide vehicle details (up to 2 vehicles).</p>
+          <div class="grid">
+            <div class="field sm"><label for="vehCount">Number of Vehicles</label><input id="vehCount" name="vehCount" inputmode="numeric"></div>
+
+            <div class="field"><label for="veh1MakeModel">Vehicle #1 Make/Model</label><input id="veh1MakeModel" name="veh1MakeModel"></div>
+            <div class="field sm"><label for="veh1Year">Vehicle #1 Year</label><input id="veh1Year" name="veh1Year" inputmode="numeric"></div>
+            <div class="field"><label for="veh1Plate">Vehicle #1 License Plate</label><input id="veh1Plate" name="veh1Plate"></div>
+
+            <div class="field"><label for="veh2MakeModel">Vehicle #2 Make/Model</label><input id="veh2MakeModel" name="veh2MakeModel"></div>
+            <div class="field sm"><label for="veh2Year">Vehicle #2 Year</label><input id="veh2Year" name="veh2Year" inputmode="numeric"></div>
+            <div class="field"><label for="veh2Plate">Vehicle #2 License Plate</label><input id="veh2Plate" name="veh2Plate"></div>
+          </div>
+
+          <div class="divider"></div>
+
+          <h2 style="margin-top:0;">Emergency Contact</h2>
+          <p class="help">Who should we contact in an emergency?</p>
+          <div class="grid">
+            <div class="field"><label for="emName">Full Name</label><input id="emName" name="emName"></div>
+            <div class="field"><label for="emRel">Relationship</label><input id="emRel" name="emRel"></div>
+            <div class="field"><label for="emPhone">Phone Number</label><input id="emPhone" name="emPhone" type="tel"></div>
+            <div class="field"><label for="emEmail">Email</label><input id="emEmail" name="emEmail" type="email"></div>
+          </div>
+        </section>
+
+        <!-- 9 Pets -->
+        <section class="section" data-title="Pets">
+          <h2>Pet Information</h2>
+          <p class="help">List pets (up to 3). If none, leave blank.</p>
+
+          <div class="grid" id="petGrid"></div>
+
+          <template id="petTpl">
+            <div class="field">
+              <label>Pet Type/Breed</label>
+              <input>
+            </div>
+            <div class="field sm">
+              <label>Weight</label>
+              <input placeholder="lbs">
+            </div>
+            <div class="field sm">
+              <label>Age</label>
+              <input inputmode="numeric">
+            </div>
+            <div class="field sm">
+              <label>Vaccinated?</label>
+              <div class="row">
+                <label class="radio"><input type="radio" value="Yes"><span>Yes</span></label>
+                <label class="radio"><input type="radio" value="No"><span>No</span></label>
+              </div>
+            </div>
+          </template>
+
+          <div class="hint">For each pet, choose Yes/No for vaccination if applicable.</div>
+        </section>
+
+        <!-- 10 Screening + Authorization + Signatures -->
+        <section class="section" data-title="Screening + Signatures">
+          <h2>Screening Questions</h2>
+          <p class="help">Answer each question with Yes or No.</p>
+
+          <div class="grid" id="screenGrid"></div>
+
+          <div class="divider"></div>
+
+          <h2 style="margin-top:0;">Authorization for Background &amp; Credit Check</h2>
+          <p class="help">
+            I hereby authorize Blue Rain MF LLC and its designated agents to obtain my credit report,
+            background check, rental history, criminal history, employment verification, and any other screening
+            information necessary for evaluating my rental application.
+          </p>
+          <div class="field lg">
+            <label class="radio" style="width:100%; justify-content:flex-start;">
+              <input type="checkbox" id="authAgree" name="authAgree" required>
+              <span>I agree and authorize the screening described above.</span>
+            </label>
+          </div>
+
+          <div class="divider"></div>
+
+          <h2 style="margin-top:0;">Signatures</h2>
+          <p class="help">Type your full name as an electronic signature.</p>
+          <div class="grid">
+            <div class="field">
+              <label for="sigPrimary">Primary Applicant Signature</label>
+              <input id="sigPrimary" name="sigPrimary" placeholder="Type full name" required>
+            </div>
+            <div class="field">
+              <label for="sigCo">Co-Applicant Signature</label>
+              <input id="sigCo" name="sigCo" placeholder="Type full name (optional)">
+            </div>
+            <div class="field sm">
+              <label for="sigDate">Signature Date</label>
+              <input id="sigDate" name="sigDate" type="date" required>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <h2 style="margin-top:0;">Submit</h2>
+          <p class="help">
+            This standalone file can't email anything by itself. Use one of the options below:
+            (1) Download JSON and upload to your system, or (2) Print to PDF.
+            If you add a server endpoint later, you can wire up real submissions.
+          </p>
+
+          <div class="row">
+            <button type="button" class="btn" id="printBtn">Print / Save as PDF</button>
+            <button type="button" class="btn danger" id="clearBtn">Clear Saved Data</button>
+            <button type="button" class="btn primary" id="submitBtn">Submit Application</button>
+            <button type="button" class="btn" id="editBtn" style="display:none">Edit</button>
+          </div>
+          <div class="hint">Autosaves in this browser only (localStorage). Clearing data removes the saved draft on this device.</div>
+        </section>
+
+        <div class="actions">
+          <div class="left">
+            <button type="button" class="btn ghost" id="backBtn">← Back</button>
+            <button type="button" class="btn" id="saveBtn">Save Draft</button>
+          </div>
+          <div class="right">
+            <div class="small" id="validationMsg"></div>
+            <button type="button" class="btn primary" id="nextBtn">Next →</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"><div class="dot"></div><div id="toastMsg">Saved</div></div>
+  <div class="loaderOverlay" id="submitLoader"><div class="spinner"></div></div>
+
+  <script>
+    // ---- Config / helpers ----
+    const STORAGE_KEY = "blue_rain_rental_application_v1";
+    const sections = Array.from(document.querySelectorAll(".section"));
+    const bar = document.getElementById("bar");
+    const stepLabel = document.getElementById("stepLabel");
+    const validationMsg = document.getElementById("validationMsg");
+    const autosaveState = document.getElementById("autosaveState");
+
+    const toast = document.getElementById("toast");
+    const toastMsg = document.getElementById("toastMsg");
+    let toastTimer = null;
+    let isReviewMode = false;
+    let reviewEditing = false;
+
+    function showToast(msg, ok=true){
+      toastMsg.textContent = msg;
+      toast.querySelector(".dot").style.background = ok ? "var(--ok)" : "var(--danger)";
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(()=>toast.classList.remove("show"), 1800);
+    }
+
+    function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+
+    // ---- Dynamic rows: occupants & pets & screening ----
+    const occGrid = document.getElementById("occGrid");
+    const occTpl = document.getElementById("occTpl");
+    for(let i=1;i<=5;i++){
+      const frag = occTpl.content.cloneNode(true);
+      const inputs = frag.querySelectorAll("input");
+      inputs[0].name = `occ${i}Name`;
+      inputs[0].id = `occ${i}Name`;
+      frag.querySelectorAll("label")[0].textContent = `Full Name #${i}`;
+      inputs[1].name = `occ${i}Dob`;
+      inputs[2].name = `occ${i}Rel`;
+      occGrid.appendChild(frag);
+    }
+
+    const petGrid = document.getElementById("petGrid");
+    const petTpl = document.getElementById("petTpl");
+    for(let i=1;i<=3;i++){
+      const frag = petTpl.content.cloneNode(true);
+      const inputs = frag.querySelectorAll("input");
+      // order: type, weight, age, (2 radios)
+      inputs[0].name = `pet${i}Type`;
+      frag.querySelectorAll("label")[0].textContent = `Pet #${i} Type/Breed`;
+      inputs[1].name = `pet${i}Weight`;
+      inputs[2].name = `pet${i}Age`;
+      inputs[3].name = `pet${i}Vaccinated`;
+      inputs[4].name = `pet${i}Vaccinated`;
+      inputs[3].id = `pet${i}VaccYes`;
+      inputs[4].id = `pet${i}VaccNo`;
+      petGrid.appendChild(frag);
+    }
+
+    const screenGrid = document.getElementById("screenGrid");
+    const screeningItems = [
+      ["eviction","Eviction?"],
+      ["brokenLease","Broken Lease?"],
+      ["owePastDueRent","Owe Past-Due Rent?"],
+      ["criminalConviction","Criminal Conviction?"],
+      ["bankruptcy","Filed Bankruptcy?"]
+    ];
+    screeningItems.forEach(([key,label])=>{
+      const div = document.createElement("div");
+      div.className = "field lg";
+      div.innerHTML = `
+        <label>${label}</label>
+        <div class="row">
+          <label class="radio"><input type="radio" name="screen_${key}" value="Yes" required><span>Yes</span></label>
+          <label class="radio"><input type="radio" name="screen_${key}" value="No" required><span>No</span></label>
+        </div>
+      `;
+      screenGrid.appendChild(div);
+    });
+
+    // ---- Step navigation ----
+    let idx = 0;
+
+    function setStep(nextIdx){
+      idx = clamp(nextIdx, 0, sections.length-1);
+      sections.forEach((s,i)=>s.classList.toggle("active", i===idx));
+      const pct = ((idx) / (sections.length-1)) * 100;
+      bar.style.width = pct + "%";
+      stepLabel.textContent = `Step ${idx+1} of ${sections.length} · ${sections[idx].dataset.title || ""}`;
+      validationMsg.textContent = "";
+      window.scrollTo({top:0, behavior:"smooth"});
+      document.getElementById("backBtn").style.visibility = idx===0 ? "hidden" : "visible";
+      document.getElementById("nextBtn").textContent = idx===sections.length-1 ? (isReviewMode ? "Review Complete" : "Done") : "Next →";
+
+      // Update mini-nav active state
+      const chips = document.querySelectorAll('#miniNav .chip');
+      chips.forEach((c,i)=>{
+        c.classList.toggle('active', i===idx);
+      });
+    }
+
+    function validateCurrentSection(){
+      const current = sections[idx];
+      const required = Array.from(current.querySelectorAll("[required]"));
+      let ok = true;
+
+      // custom: required radios/groups
+      const radioNames = new Set(required.filter(el=>el.type==="radio").map(r=>r.name));
+      radioNames.forEach(name=>{
+        const group = Array.from(current.querySelectorAll(`input[type="radio"][name="${CSS.escape(name)}"]`));
+        if(group.length && !group.some(r=>r.checked)) ok = false;
+      });
+
+      required.forEach(el=>{
+        if(el.type==="radio") return;
+        if(el.type==="checkbox"){
+          if(!el.checked) ok = false;
+          return;
+        }
+        if(!el.value || !String(el.value).trim()){
+          ok = false;
+        }
+        if(el.type==="email" && el.value){
+          if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value)) ok = false;
+        }
+      });
+
+      if(!ok){
+        validationMsg.textContent = "Please complete the required fields on this step.";
+        validationMsg.style.color = "var(--danger)";
+        showToast("Missing required fields", false);
+      }
+      return ok;
+    }
+
+    // ---- Save/load ----
+    const form = document.getElementById("appForm");
+
+    function serialize(){
+      const data = {};
+      const fd = new FormData(form);
+
+      // FormData doesn't include unchecked radios/checkboxes; handle authAgree explicitly
+      for(const [k,v] of fd.entries()){
+        // convert repeated names (e.g., radios) to single
+        data[k] = v;
+      }
+      data["authAgree"] = document.getElementById("authAgree").checked ? "Yes" : "No";
+      data["_meta"] = {
+        version: 1,
+        savedAt: new Date().toISOString(),
+        userAgent: navigator.userAgent
+      };
+      return data;
+    }
+
+    function hydrate(data){
+      if(!data || typeof data !== "object") return;
+
+      for(const [k,v] of Object.entries(data)){
+        if(k === "_meta") continue;
+        const els = Array.from(form.querySelectorAll(`[name="${CSS.escape(k)}"]`));
+        if(!els.length) continue;
+
+        els.forEach(el=>{
+          if(el.type==="radio"){
+            el.checked = (el.value === v);
+          }else if(el.type==="checkbox"){
+            el.checked = (v === true || v === "Yes" || v === "true");
+          }else{
+            el.value = v;
+          }
+        });
+      }
+      // special checkbox
+      if("authAgree" in data){
+        document.getElementById("authAgree").checked = (data.authAgree === "Yes" || data.authAgree === true);
+      }
+    }
+
+    function saveDraft(silent=false){
+      try{
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(serialize()));
+        if(!silent) showToast("Draft saved");
+      }catch(e){
+        autosaveState.textContent = "Off";
+        showToast("Autosave unavailable", false);
+      }
+    }
+
+    function loadDraft(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return;
+        hydrate(JSON.parse(raw));
+        showToast("Draft loaded");
+      }catch(e){}
+    }
+
+    function clearDraft(){
+      try{
+        localStorage.removeItem(STORAGE_KEY);
+        form.reset();
+        showToast("Saved data cleared");
+      }catch(e){}
+    }
+
+    // ---- Autosave ----
+    let autosaveTimer = null;
+    form.addEventListener("input", ()=>{
+      clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(()=>saveDraft(true), 350);
+    });
+
+    // ---- Buttons ----
+    document.getElementById("nextBtn").addEventListener("click", ()=>{
+      if(isReviewMode){
+        // In review mode, allow navigation without validation
+        if(idx === sections.length-1){
+          showToast("Review complete");
+          return;
+        }
+        setStep(idx+1);
+        return;
+      }
+      if(idx === sections.length-1){
+        if(!validateCurrentSection()) return;
+        saveDraft(false);
+        showToast("All set — downloaded/print options below");
+        return;
+      }
+      if(!validateCurrentSection()) return;
+      saveDraft(true);
+      setStep(idx+1);
+    });
+
+    document.getElementById("backBtn").addEventListener("click", ()=>{
+      setStep(idx-1);
+    });
+
+    document.getElementById("saveBtn").addEventListener("click", ()=>{
+      saveDraft(false);
+    });
+
+    document.getElementById("clearBtn").addEventListener("click", ()=>{
+      if(confirm("Clear the saved draft on this device?")){
+        clearDraft();
+        setStep(0);
+      }
+    });
+
+    document.getElementById("printBtn").addEventListener("click", ()=>{
+      if(!validateCurrentSection()){
+        // allow print anyway, but warn
+        if(!confirm("Some required fields on this step are missing. Print anyway?")) return;
+      }
+      window.print();
+    });
+
+    // Download JSON removed in normal mode
+
+    async function submitApplication(){
+      const submitLoader = document.getElementById('submitLoader');
+      // Quick validation of final step
+      const prev = idx;
+      let ok = true;
+      for(let i=0;i<sections.length;i++){
+        idx = i;
+        if(!validateCurrentSection()){ ok = false; break; }
+      }
+      idx = prev;
+      setStep(prev);
+      if(!ok){
+        if(!confirm("Some required fields are missing. Submit anyway?")) return;
+      }
+
+      const data = serialize();
+      // Map fields to backend schema
+      const payload = {
+        name: [data.paFirst, data.paMiddle, data.paLast].filter(Boolean).join(" "),
+        email: data.paEmail,
+        phone: data.paPhone,
+        unit: data.unitNumber || "",
+        moveIn: data.moveInDate || "",
+        notes: JSON.stringify(data)
+      };
+
+      try{
+        submitLoader.classList.add('show');
+        const res = await fetch('/api/rental-applications',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        submitLoader.classList.remove('show');
+        if(!res.ok){
+          const err = await res.json().catch(()=>({message:'Submit failed'}));
+          showToast(err.message || 'Submit failed', false);
+          return;
+        }
+        const out = await res.json();
+        // Clear screens and show success message
+        try{ localStorage.removeItem(STORAGE_KEY); }catch{}
+        const card = document.querySelector('.card');
+        card.innerHTML = `
+          <div style="padding:28px 16px; text-align:center;">
+            <h2 style="margin:0 0 8px;">Application submitted successfully</h2>
+            <p style="color:var(--muted); max-width:640px; margin:0 auto 16px;">
+              Blue Rain will contact you soon. Thank you!
+            </p>
+            <div style="margin-top:18px;">
+              <a class="btn" href="/applications/review/${out.id}" style="display:inline-flex;">View your submitted application</a>
+            </div>
+          </div>
+        `;
+        showToast('Application submitted');
+      }catch(e){
+        submitLoader.classList.remove('show');
+        showToast('Network error submitting', false);
+      }
+    }
+
+    document.getElementById('submitBtn').addEventListener('click', submitApplication);
+
+    // ---- Review mode detection & hydrate from server ----
+    function getPathId(){
+      const m = window.location.pathname.match(/\/applications\/review\/(.+)$/);
+      return m ? m[1] : null;
+    }
+
+    async function loadServerApplicationIfPresent(){
+      const id = getPathId();
+      if(!id) return false;
+      try{
+        const res = await fetch(`/api/rental-applications/${encodeURIComponent(id)}`);
+        if(!res.ok) return false;
+        const doc = await res.json();
+        // If notes contains the full JSON, hydrate; else map basic fields
+        let data = null;
+        if(doc.notes){
+          try{ data = JSON.parse(doc.notes); }catch{ data = null; }
+        }
+        if(!data){
+          data = {
+            paFirst: (doc.name||'').split(' ')[0]||'',
+            paLast: (doc.name||'').split(' ').slice(-1)[0]||'',
+            paEmail: doc.email||'',
+            paPhone: doc.phone||'',
+            unitNumber: doc.unit||'',
+            moveInDate: doc.moveIn ? String(doc.moveIn).slice(0,10) : ''
+          };
+        }
+        hydrate(data);
+        // Put page into read-only review mode
+        isReviewMode = true;
+        Array.from(document.querySelectorAll('input, textarea, select')).forEach(el=>{
+          el.setAttribute('disabled','disabled');
+        });
+        // Hide actions that change state (download, clear, submit); show Edit
+        const submitBtn = document.getElementById('submitBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const downloadBtn = document.getElementById('downloadJsonBtn');
+        const editBtn = document.getElementById('editBtn');
+
+        if (submitBtn) submitBtn.style.display = 'none';
+        if (clearBtn) clearBtn.style.display = 'none';
+        if (downloadBtn) downloadBtn.style.display = 'none';
+        if (saveBtn) saveBtn.style.display = 'none';
+        if (editBtn) editBtn.style.display = 'inline-flex';
+        // Keep next/back enabled for review navigation
+        autosaveState.textContent = 'Off';
+
+        // Build mini-nav chips from section titles
+        const mini = document.getElementById('miniNav');
+        mini.innerHTML = '';
+        sections.forEach((s,i)=>{
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'chip';
+          chip.textContent = s.dataset.title || `Step ${i+1}`;
+          chip.addEventListener('click', ()=> setStep(i));
+          mini.appendChild(chip);
+        });
+        mini.classList.add('show');
+
+        // Populate review meta (status + submitted date)
+        const meta = document.getElementById('reviewMeta');
+        const status = (doc.status || 'pending');
+        const statusCap = status.charAt(0).toUpperCase() + status.slice(1);
+        let submittedStr = 'N/A';
+        try{
+          submittedStr = doc.submitted ? new Date(doc.submitted).toLocaleString() : 'N/A';
+        }catch{}
+        meta.innerHTML = `
+          <div class="chip"><strong>Status:</strong>&nbsp;${statusCap}</div>
+          <div class="chip"><strong>Submitted:</strong>&nbsp;${submittedStr}</div>
+        `;
+        meta.classList.add('show');
+        showToast('Loaded saved application');
+        return true;
+      }catch(e){ return false; }
+    }
+
+    // ---- Init ----
+    (async function init(){
+      const loaded = await loadServerApplicationIfPresent();
+      if(!loaded){
+        loadDraft();
+        // default signature date to today if empty
+        const sigDate = document.getElementById("sigDate");
+        if(!sigDate.value){
+          const d = new Date();
+          sigDate.value = d.toISOString().slice(0,10);
+        }
+      }
+      setStep(0);
+    })();
+  </script>
+  <script>
+    // Edit toggle handler (review mode only)
+    document.getElementById('editBtn')?.addEventListener('click', async ()=>{
+      const editBtn = document.getElementById('editBtn');
+      if (!reviewEditing) {
+        // enter editing
+        reviewEditing = true;
+        Array.from(document.querySelectorAll('input, textarea, select')).forEach(el=> el.removeAttribute('disabled'));
+        editBtn.textContent = 'Save Changes';
+        showToast('Editing enabled');
+        return;
+      }
+
+      // Save changes via PUT to server
+      try{
+        const id = (function(){
+          const m = window.location.pathname.match(/\/applications\/review\/(.+)$/);
+          return m ? m[1] : null;
+        })();
+        if(!id){ showToast('Missing application id', false); return; }
+        const data = serialize();
+        const payload = {
+          name: [data.paFirst, data.paMiddle, data.paLast].filter(Boolean).join(" "),
+          email: data.paEmail,
+          phone: data.paPhone,
+          unit: data.unitNumber || "",
+          moveIn: data.moveInDate || "",
+          notes: JSON.stringify(data)
+        };
+        const res = await fetch(`/api/rental-applications/${encodeURIComponent(id)}`,{
+          method:'PUT',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        if(!res.ok){
+          const err = await res.json().catch(()=>({message:'Update failed'}));
+          showToast(err.message || 'Update failed', false);
+          return;
+        }
+        // lock back to view
+        reviewEditing = false;
+        Array.from(document.querySelectorAll('input, textarea, select')).forEach(el=> el.setAttribute('disabled','disabled'));
+        editBtn.textContent = 'Edit';
+        showToast('Application updated');
+      }catch(e){
+        showToast('Network error updating', false);
+      }
+    });
+  </script>
+</body>
+</html>
