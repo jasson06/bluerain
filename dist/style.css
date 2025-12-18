@@ -2760,6 +2760,49 @@ input, textarea {
   border-bottom: none;
 }
 
+/* Center dropdowns on mobile (both Maintenance and Applications) */
+@media (max-width: 600px) {
+  .notif-dropdown {
+    position: fixed !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    top: 70px !important;
+    min-width: 92vw !important;
+    max-width: 92vw !important;
+    z-index: 1000;
+  }
+}
+
+/* Applications notification styling (more professional, application-related) */
+.applications-notification-wrapper .notif-icon-btn {
+  color: #2563eb;
+}
+.applications-notification-wrapper .notif-icon-btn:hover {
+  color: #1d4ed8;
+  background-color: #ffffff;
+}
+.applications-notification-wrapper .notif-count-badge {
+  background: #2563eb;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.13);
+}
+.applications-notif {
+  border-color: #2563eb;
+}
+.applications-notif .notif-dropdown-header {
+  border-bottom-color: #2563eb;
+  color: #1e3a8a;
+}
+
+/* Right-aligned header actions container (icons) */
+#headerActionsRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+
 .notif-list-item {
   padding: 12px 18px;
   border-bottom: 1px solid #f6e58d;
