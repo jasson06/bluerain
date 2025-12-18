@@ -3514,18 +3514,190 @@ document.addEventListener('DOMContentLoaded', () => {
     const notifBtn = document.getElementById('maintenanceNotifBtn');
     const notifDropdown = document.getElementById('maintenanceNotifDropdown');
     if (notifBtn && notifDropdown) {
-        notifBtn.onclick = (e) => {
-            e.stopPropagation();
-            notifDropdown.style.display = notifDropdown.style.display === 'none' || !notifDropdown.style.display ? 'block' : 'none';
-        };
-        // Hide dropdown when clicking outside
-        document.body.addEventListener('click', () => {
-            notifDropdown.style.display = 'none';
-        });
-        notifDropdown.addEventListener('click', (e) => e.stopPropagation());
+      notifBtn.onclick = (e) => {
+        e.stopPropagation();
+        // Close Applications dropdown if open to keep only one visible
+        const appDropdown = document.getElementById('applicationNotifDropdown');
+        if (appDropdown) appDropdown.style.display = 'none';
+        notifDropdown.style.display = notifDropdown.style.display === 'none' || !notifDropdown.style.display ? 'block' : 'none';
+      };
+      // Hide dropdown when clicking outside
+      document.body.addEventListener('click', () => {
+        notifDropdown.style.display = 'none';
+      });
+      notifDropdown.addEventListener('click', (e) => e.stopPropagation());
     }
+    // Ensure header action icons are grouped on the right
+    groupHeaderNotifications();
 });
 
+
+// --- Applications Notification (mirrors Maintenance Notification) ---
+// Group both Maintenance and Applications icons on the right of header
+function groupHeaderNotifications() {
+  try {
+    const h1 = document.querySelector('.header-logo h1');
+    const maint = document.querySelector('.maintenance-notification-wrapper');
+    if (!h1 || !maint) return;
+
+    let actions = document.getElementById('headerActionsRight');
+    if (!actions) {
+      actions = document.createElement('div');
+      actions.id = 'headerActionsRight';
+      actions.className = 'header-actions-right';
+      actions.style.display = 'flex';
+      actions.style.alignItems = 'center';
+      actions.style.gap = '8px';
+      actions.style.marginLeft = 'auto';
+      h1.appendChild(actions);
+    }
+    if (maint.parentNode !== actions) actions.appendChild(maint);
+    const appWrap = document.querySelector('.applications-notification-wrapper');
+    if (appWrap && appWrap.parentNode !== actions) actions.appendChild(appWrap);
+  } catch (e) {
+    console.warn('Could not group header notifications:', e);
+  }
+}
+// Insert Applications notification UI next to Maintenance icon if not present
+function ensureApplicationNotificationUI() {
+  try {
+    const maintenanceBtn = document.getElementById('maintenanceNotifBtn');
+    if (!maintenanceBtn) return; // Header not present
+
+    if (document.getElementById('applicationNotifBtn')) return; // Already injected
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'applications-notification-wrapper';
+    wrapper.style.position = 'relative';
+    wrapper.style.display = 'inline-block';
+    wrapper.style.marginLeft = '8px';
+    wrapper.innerHTML = `
+      <button id="applicationNotifBtn" class="notif-icon-btn" style="position: relative;" title="Rental Applications" aria-label="Rental Applications">
+        <i class="fas fa-file-lines"></i>
+        <span id="applicationNotifCount" class="notif-count-badge" style="display:none;">0</span>
+      </button>
+      <div id="applicationNotifDropdown" class="notif-dropdown applications-notif" style="display:none;">
+        <div class="notif-dropdown-header">
+          <strong>Applications</strong>
+        </div>
+        <div id="applicationNotifList" class="notif-list"></div>
+      </div>
+    `;
+
+    const maintenanceWrapper = maintenanceBtn.closest('div');
+    if (maintenanceWrapper && maintenanceWrapper.parentNode) {
+      maintenanceWrapper.parentNode.insertBefore(wrapper, maintenanceWrapper.nextSibling);
+    }
+  } catch (e) {
+    console.error('Failed to ensure Applications notification UI:', e);
+  }
+}
+
+// Fetch all applications needing attention
+async function fetchAllApplicationNotifications() {
+  try {
+    const res = await fetch(`/api/rental-applications`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const apps = Array.isArray(data) ? data : (data.applications || data.items || []);
+    const HIDE_STATUSES = new Set(['approved', 'rejected', 'archived', 'withdrawn']);
+    const pending = apps.filter(a => {
+      const s = (a.status || 'submitted').toString().toLowerCase();
+      return !HIDE_STATUSES.has(s);
+    });
+    pending.sort((a, b) => new Date(b.createdAt || b.submitted || 0) - new Date(a.createdAt || a.submitted || 0));
+    return pending;
+  } catch (err) {
+    console.error('Error fetching applications notifications:', err);
+    return [];
+  }
+}
+
+function formatDateShort(d) {
+  if (!d) return '';
+  try {
+    return new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch { return ''; }
+}
+
+async function renderApplicationNotifDropdown(apps) {
+  const countEl = document.getElementById('applicationNotifCount');
+  const dropdown = document.getElementById('applicationNotifDropdown');
+  const listEl = document.getElementById('applicationNotifList');
+  if (!countEl || !dropdown || !listEl) return;
+
+  countEl.textContent = apps.length;
+  countEl.style.display = apps.length ? '' : 'none';
+
+  if (!apps.length) {
+    listEl.innerHTML = `<div style="padding:24px; color:#888; text-align:center;">
+      <i class="fas fa-check-circle" style="color:#27ae60; font-size:1.7em;"></i>
+      <div style="margin-top:8px;">No applications pending.</div>
+    </div>`;
+    return;
+  }
+
+  listEl.innerHTML = apps.map(app => {
+    const id = app._id || app.id || '';
+    const name = app.name || app.applicantName || (app.notes && (app.notes.firstName || app.notes.applicantFirstName)) || app.email || 'Applicant';
+    const email = app.email || '';
+    const unit = (app.unit && (app.unit.number || app.unit.unitNumber)) || app.unitNumber || app.unitName || '';
+    const status = (app.status || 'submitted');
+    const submittedAt = app.submitted || app.createdAt || '';
+    const subtitle = [email, unit ? `Unit ${unit}` : null, submittedAt ? `Submitted ${formatDateShort(submittedAt)}` : null]
+      .filter(Boolean).join(' • ');
+
+    return `
+      <a class="notif-list-item modern-notif-item" style="cursor:pointer;text-decoration:none;color:inherit;" href="/applications/review/${id}" target="_blank" rel="noopener">
+        <div class="notif-list-row">
+          <div class="notif-title"><i class="fas fa-file-signature"></i> ${name}</div>
+          <span class="notif-status">Status: ${status}</span>
+        </div>
+        <div class="notif-desc" style="color:#64748b;">${subtitle}</div>
+      </a>
+    `;
+  }).join('');
+}
+
+async function updateApplicationNotificationBar() {
+  const apps = await fetchAllApplicationNotifications();
+  await renderApplicationNotifDropdown(apps);
+}
+
+// Wire toggle and refresh
+document.addEventListener('DOMContentLoaded', () => {
+  ensureApplicationNotificationUI();
+  // Move icons into the right-side actions container
+  groupHeaderNotifications();
+
+  const appBtn = document.getElementById('applicationNotifBtn');
+  const appDropdown = document.getElementById('applicationNotifDropdown');
+  const maintDropdown = document.getElementById('maintenanceNotifDropdown');
+
+  if (appBtn && appDropdown) {
+    appBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (maintDropdown) maintDropdown.style.display = 'none';
+      const next = appDropdown.style.display === 'none' || !appDropdown.style.display ? 'block' : 'none';
+      if (next === 'block') {
+        await updateApplicationNotificationBar();
+      }
+      appDropdown.style.display = next;
+    });
+  }
+
+  document.addEventListener('click', (e) => {
+    if (appDropdown && appDropdown.style.display === 'block') {
+      const target = e.target;
+      const inside = target.closest && target.closest('#applicationNotifDropdown');
+      const btn = target.closest && target.closest('#applicationNotifBtn');
+      if (!inside && !btn) appDropdown.style.display = 'none';
+    }
+  });
+
+  updateApplicationNotificationBar();
+  setInterval(updateApplicationNotificationBar, 2 * 60 * 1000);
+});
 
 
 async function handleMaintenanceRequestClick(requestId, projectId, unitNumber) {
