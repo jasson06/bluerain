@@ -297,6 +297,7 @@
       overflow:hidden;
       background:#0b0e12;
     }
+    .map-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
     @media (max-width:640px){
       #mapCanvas{height:360px}
     }
@@ -627,6 +628,9 @@
             <h3>Locations</h3>
             <p>Tap a pin to view units at that property.</p>
           </div>
+        </div>
+        <div class="map-toolbar">
+          <label><input type="checkbox" id="toggleUnitPins"> Show unit-level pins</label>
         </div>
         <div id="mapCanvas" aria-label="Property locations"></div>
       </div>
@@ -1089,6 +1093,18 @@
       }catch(e){ console.warn('Geocode failed', address, e); }
       return null;
     }
+    function escapeQuotes(s){ return String(s||'').replace(/"/g,'&quot;').replace(/'/g,"\\'"); }
+    function viewUnits(address, unitLabel){
+      const q = document.getElementById('q');
+      if(q){ q.value = unitLabel ? `${address} ${unitLabel}` : address; }
+      document.getElementById('availability').scrollIntoView({behavior:'smooth'});
+      applyFilters();
+    }
+    function scheduleTourFor(interested){
+      document.getElementById('contact').scrollIntoView({behavior:'smooth'});
+      const el = document.getElementById('leadInterested'); if(el) el.value = interested || '';
+      const name = document.getElementById('leadName'); if(name) name.focus();
+    }
     async function initMap(){
       if(!window.L || !document.getElementById('mapCanvas')) return;
       const map = L.map('mapCanvas').setView([29.4237, -98.4934], 11);
@@ -1096,26 +1112,66 @@
         attribution: '&copy; OpenStreetMap contributors'
       }).addTo(map);
 
+      const propertyMarkers = [];
+
       const props = buildPropertiesList();
-      const markers = [];
+      const coordsByAddress = {};
       for(const p of props){
         const c = await geocodeAddress(p.address);
         if(!c) continue;
-        const m = L.marker([c.lat, c.lon]).addTo(map);
-        m.bindPopup(`<b>${p.name}</b><br/><span style="color:var(--muted);font-size:12px">${p.address}</span><br/><button class="btn" data-jump="${p.address}">View units</button>`);
-        markers.push(m);
+        coordsByAddress[p.address] = c;
+        const m = L.marker([c.lat, c.lon]);
+        const gmaps = `https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lon}`;
+        const popup = `
+          <b>${p.name}</b><br/>
+          <span style="color:var(--muted);font-size:12px">${p.address}</span>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+            <button style="color:var(--muted);" class="btn" onclick="viewUnits('${escapeQuotes(p.address)}')">View units</button>
+            <button style="color:var(--muted);" class="btn" onclick="scheduleTourFor('${escapeQuotes(p.name)}')">Book a tour</button>
+            <a class="btn" href="${gmaps}" target="_blank" rel="noopener">Open in Google Maps</a>
+          </div>
+        `;
+        m.bindPopup(popup);
+        m.addTo(map);
+        propertyMarkers.push(m);
       }
-      if(markers.length){
-        const group = L.featureGroup(markers);
+      if(propertyMarkers.length){
+        const group = L.featureGroup(propertyMarkers);
         map.fitBounds(group.getBounds(), { padding:[20,20] });
       }
-      // Delegate popup button clicks
-      document.addEventListener('click', (e)=>{
-        const btn = e.target.closest('[data-jump]');
-        if(!btn) return;
-        document.getElementById('availability').scrollIntoView({behavior:'smooth'});
-        document.getElementById('q').value = btn.getAttribute('data-jump');
-        applyFilters();
+
+      // Unit-level pins toggle
+      const toggle = document.getElementById('toggleUnitPins');
+      let unitPinsBuilt = false;
+      let unitLayer = L.layerGroup();
+      async function buildUnitPins(){
+        unitLayer.clearLayers();
+        for(const rec of allRecords){
+          let coord = coordsByAddress[rec.address];
+          if(!coord){ coord = await geocodeAddress(rec.address); if(coord) coordsByAddress[rec.address] = coord; }
+          if(!coord) continue;
+          const gmaps = `https://www.google.com/maps/search/?api=1&query=${coord.lat},${coord.lon}`;
+          const popup = `
+            <b>${rec.title}</b><br/>
+            <span style="color:var(--muted);font-size:12px">${rec.address}</span>
+            <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+              <button style="color:var(--muted);" class="btn" onclick="viewUnits('${escapeQuotes(rec.address)}','${escapeQuotes(rec.label)}')">View unit</button>
+              <button style="color:var(--muted);" class="btn" onclick="scheduleTourFor('${escapeQuotes(rec.title)}')">Schedule tour</button>
+              <a class="btn" href="${gmaps}" target="_blank" rel="noopener">Open in Google Maps</a>
+            </div>
+          `;
+          const mr = L.marker([coord.lat, coord.lon], { title: rec.title });
+          mr.bindPopup(popup);
+          unitLayer.addLayer(mr);
+        }
+      }
+      toggle?.addEventListener('change', async (e)=>{
+        if(e.target.checked){
+          if(!unitPinsBuilt){ await buildUnitPins(); unitPinsBuilt = true; }
+          map.addLayer(unitLayer);
+        }else{
+          if(map.hasLayer(unitLayer)) map.removeLayer(unitLayer);
+        }
       });
     }
 
