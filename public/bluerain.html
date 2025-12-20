@@ -1,0 +1,1320 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Blue Rain Real Estate | Portfolio</title>
+  <meta name="description" content="Browse properties, units, photos, and availability. Apply online." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#0b0d10;
+      --text:#eaf0f7;
+      --muted:#a9b4c2;
+      --line:rgba(255,255,255,.08);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --shadow2: 0 12px 40px rgba(0,0,0,.45);
+      --accent:#cbb58b;
+      --accent2:#6ee7ff;
+      --good:#6ee7ff;
+      --warn:#cbb58b;
+      --bad:#ff7a7a;
+      --radius:18px;
+      --radius2:26px;
+      --max:1180px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:
+        radial-gradient(900px 600px at 10% 0%, rgba(203,181,139,.18), transparent 60%),
+        radial-gradient(700px 500px at 90% 10%, rgba(110,231,255,.12), transparent 55%),
+        linear-gradient(180deg, #07090c, var(--bg));
+      color:var(--text);
+      letter-spacing:-0.01em;
+    }
+    a{color:inherit;text-decoration:none}
+    .container{max-width:var(--max);margin:0 auto;padding:0 22px}
+
+    .topbar{
+      position:sticky;top:0;z-index:50;
+      background: rgba(11,13,16,.88);
+      border-bottom:1px solid var(--line);
+      contain: paint;
+    }
+    .topbar-inner{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:14px 0; gap:14px;
+    }
+    .brand{display:flex;align-items:center;gap:12px;min-width:220px}
+    .logo{
+      width:40px;height:40px;border-radius:12px;
+      background: linear-gradient(135deg, rgba(203,181,139,.95), rgba(110,231,255,.30));
+      box-shadow: 0 8px 20px rgba(0,0,0,.35);
+      position:relative; overflow:hidden;
+    }
+    .logo::after{
+      content:""; position:absolute; inset:-40%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.25), transparent 55%);
+      transform: rotate(18deg);
+    }
+    .brand h1{font-size:14px;margin:0;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+    .brand p{margin:2px 0 0 0;font-size:12px;color:var(--muted)}
+
+    nav{display:flex;align-items:center;gap:18px}
+    nav a{
+      font-size:13px;color:var(--muted);
+      padding:10px 10px;border-radius:12px;
+      transition:.2s ease;
+    }
+    nav a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+
+    .btn{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      color:var(--text);
+      padding:10px 12px;border-radius:14px;
+      font-size:13px;font-weight:600;
+      transition:.2s ease;
+      display:inline-flex;align-items:center;gap:8px;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+    .btn:hover{transform:translateY(-1px);background:rgba(255,255,255,.07)}
+    .btn.primary{
+      border-color: rgba(203,181,139,.35);
+      background: linear-gradient(135deg, rgba(203,181,139,.22), rgba(110,231,255,.08));
+      box-shadow: 0 10px 26px rgba(0,0,0,.32);
+    }
+    .btn.apply{
+      border-color: rgba(110,231,255,.35);
+      background: linear-gradient(135deg, rgba(110,231,255,.12), rgba(203,181,139,.10));
+    }
+
+    .hero{padding:64px 0 24px 0}
+    .hero-grid{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:22px;
+      align-items:stretch;
+    }
+    .hero-card{
+      border:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border-radius: var(--radius2);
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+      position:relative;
+    }
+    .hero-card .inner{padding:34px; position:relative; z-index:2}
+    .kicker{
+      display:inline-flex;align-items:center;gap:10px;
+      font-size:12px;color:var(--muted);
+      border:1px solid var(--line);
+      padding:8px 12px;border-radius:999px;
+      background: rgba(0,0,0,.18);
+    }
+    .dot{
+      width:8px;height:8px;border-radius:999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 6px rgba(203,181,139,.12);
+    }
+    .hero h2{
+      margin:16px 0 10px 0;
+      font-size:40px; line-height:1.05;
+      letter-spacing:-0.03em;
+    }
+    .hero h2 span{
+      background: linear-gradient(135deg, var(--text), rgba(203,181,139,.85));
+      -webkit-background-clip:text; background-clip:text;
+      color:transparent;
+    }
+    .hero p{margin:0;color:var(--muted);font-size:15px;line-height:1.6;max-width:60ch}
+    .hero-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+    .stats{
+      display:grid; grid-template-columns: repeat(4, 1fr);
+      gap:12px; margin-top:22px;
+    }
+    .stat{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      border-radius:16px;
+      padding:14px 14px;
+    }
+    .stat b{display:block;font-size:18px}
+    .stat span{color:var(--muted);font-size:12px}
+
+    .hero-media{
+      border:1px solid var(--line);
+      border-radius: var(--radius2);
+      overflow:hidden;
+      box-shadow: var(--shadow2);
+      position:relative;
+      min-height: 320px;
+      background:
+        radial-gradient(600px 400px at 30% 20%, rgba(203,181,139,.18), transparent 60%),
+        radial-gradient(500px 360px at 70% 30%, rgba(110,231,255,.10), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    }
+    .hero-media img{width:100%;height:100%;object-fit:cover;opacity:1}
+    .hero-media .badge{
+      position:absolute;left:16px;bottom:16px;
+      border:1px solid var(--line);
+      background: rgba(10,12,15,.55);
+      backdrop-filter: blur(10px);
+      border-radius:16px;
+      padding:12px 12px;
+      max-width: 85%;
+    }
+    .badge b{display:block;font-size:13px}
+    .badge span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+
+    section{padding:26px 0}
+    .section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:14px}
+    .section-head h3{margin:0;font-size:18px;letter-spacing:-0.02em}
+    .section-head p{margin:0;color:var(--muted);font-size:13px}
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap:14px;
+      margin-top:14px;
+    }
+    .card{
+      grid-column: span 4;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      border-radius: var(--radius2);
+      overflow:hidden;
+      box-shadow: var(--shadow);
+      transition:.22s ease;
+      cursor:pointer;
+      position:relative;
+      content-visibility: auto;
+      contain-intrinsic-size: 300px;
+    }
+    .card:hover{transform: translateY(-3px); box-shadow: var(--shadow2)}
+    .card .img{height:190px;background:#0c0f14;position:relative;overflow:hidden}
+    .card .img img{width:100%;height:100%;object-fit:cover}
+    .pill{
+      position:absolute;left:14px;top:14px;
+      font-size:11px;
+      padding:7px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(10,12,15,.55);
+    }
+    .pill.good{border-color:rgba(110,231,255,.35)}
+    .pill.warn{border-color:rgba(203,181,139,.35)}
+    .pill.bad{border-color:rgba(255,122,122,.35)}
+    .pill.waitlist{border-color:rgba(203,181,139,.35)}
+    .card .body{padding:14px 14px 16px 14px}
+    .card .title{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .card h4{margin:0;font-size:14px;letter-spacing:-0.01em}
+    .addr{margin:6px 0 0 0;color:var(--muted);font-size:12px}
+    .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .chip{
+      font-size:11px;color:rgba(234,240,247,.92);
+      border:1px solid rgba(255,255,255,.10);
+      padding:7px 9px;border-radius:999px;
+      background: rgba(0,0,0,.18);
+    }
+    .card-actions{
+      display:flex;gap:10px;flex-wrap:wrap;
+      margin-top:12px;
+    }
+
+    .filters{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      border-radius: var(--radius);
+      padding:14px;
+      display:grid;
+      grid-template-columns: 1.3fr .7fr .7fr .7fr .7fr;
+      gap:12px;
+    }
+    .field label{display:block;font-size:11px;color:var(--muted);margin-bottom:6px}
+    .field input, .field select{
+      width:100%;
+      padding:11px 12px;border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(10,12,15,.55);
+      color:var(--text);
+      outline:none;
+    }
+    .field input::placeholder{color:rgba(169,180,194,.65)}
+    .field input:focus,.field select:focus{border-color: rgba(203,181,139,.40)}
+
+    .units{
+      margin-top:18px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      border-radius: var(--radius2);
+      overflow:hidden;
+    }
+    table{width:100%;border-collapse: collapse;font-size:13px}
+    th, td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+    th{color:var(--muted);font-weight:600;background: rgba(0,0,0,.18)}
+    tr:hover td{background: rgba(255,255,255,.02)}
+    .tag{
+      display:inline-flex;align-items:center;gap:8px;
+      font-size:12px;
+      padding:7px 10px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+    }
+    .tag .mini-dot{width:7px;height:7px;border-radius:999px;background: var(--accent)}
+    .tag.available .mini-dot{background: var(--good)}
+    .tag.coming .mini-dot{background: var(--warn)}
+    .tag.occupied .mini-dot{background: var(--bad)}
+    .tag.waitlist .mini-dot{background: var(--warn)}
+    .link{color:rgba(110,231,255,.95);font-weight:600;cursor:pointer}
+    .link:hover{text-decoration:underline}
+
+    .panel{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      border-radius: var(--radius2);
+      padding:18px;
+      box-shadow: var(--shadow);
+      content-visibility: auto;
+      contain-intrinsic-size: 200px;
+    }
+
+    .footer{
+      padding:34px 0 54px 0;
+      color:var(--muted);
+      font-size:12px;
+      border-top:1px solid var(--line);
+      margin-top:22px;
+    }
+
+    /* Modal */
+    .modal{
+      position:fixed;inset:0;
+      background: rgba(0,0,0,.62);
+      backdrop-filter: blur(8px);
+      display:none;
+      align-items:center;justify-content:center;
+      padding:20px;
+      z-index:100;
+    }
+    .modal.open{display:flex}
+    .modal-card{
+      width:min(980px, 100%);
+      border-radius: var(--radius2);
+      border:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+    }
+    .modal-top{display:flex;gap:0;flex-wrap:wrap}
+    .modal-media{
+      flex: 1.1; min-width:320px;
+      background:#0b0e12; position:relative;
+      min-height:340px;
+    }
+    .modal-media img{width:100%;height:100%;object-fit:cover}
+    .modal-content{
+      flex: .9; min-width:320px;
+      padding:18px;
+      border-left:1px solid var(--line);
+    }
+    .modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .modal-head h4{margin:0;font-size:16px}
+    .close{
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.18);
+      color:var(--text);
+      border-radius:12px;
+      padding:8px 10px;
+      cursor:pointer;
+    }
+    .close:hover{background: rgba(255,255,255,.06)}
+    .modal-sub{margin:6px 0 0 0;color:var(--muted);font-size:12px}
+    .kv{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      margin-top:14px;
+    }
+    .kv .box{
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      border-radius:16px;
+      padding:12px;
+    }
+    .kv .box span{display:block;color:var(--muted);font-size:11px}
+    .kv .box b{display:block;margin-top:4px;font-size:14px}
+    .modal-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    .small{font-size:11px;color:var(--muted);margin:10px 0 0 0;line-height:1.5}
+
+    /* Contact form */
+    .form{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+    .form .row{display:grid;grid-template-columns: 1fr 1fr;gap:10px;margin-bottom:10px}
+    .form input, .form textarea{
+      width:100%;
+      padding:11px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(10,12,15,.55);
+      color:var(--text);
+      outline:none;
+      font-size:13px;
+    }
+    textarea{min-height:84px;resize:vertical}
+
+    @media (max-width: 980px){
+      .hero-grid{grid-template-columns:1fr}
+      .filters{grid-template-columns:1fr 1fr}
+      .card{grid-column: span 6}
+      .modal-content{border-left:none;border-top:1px solid var(--line)}
+      .stats{grid-template-columns: repeat(2, 1fr)}
+    }
+    @media (max-width: 640px){
+      nav{display:none}
+      .filters{grid-template-columns:1fr}
+      .card{grid-column: span 12}
+      .stats{grid-template-columns:1fr}
+      .form .row{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="container">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="logo" aria-hidden="true"></div>
+          <div>
+            <h1>Blue Rain Real Estate</h1>
+            <p>Properties • Photos • Availability</p>
+          </div>
+        </div>
+
+        <nav>
+          <a href="#multifamily">Multifamily</a>
+          <a href="#singlefamily">Single-family</a>
+          <a href="#availability">Availability</a>
+          <a href="#contact">Schedule a tour</a>
+        </nav>
+
+        <div style="display:flex;gap:10px;align-items:center;">
+          <a class="btn apply" href="https://bluerainrealestate.com/blue-rain-rental-application.html" target="_blank" rel="noopener">Apply online</a>
+          <button class="btn" id="btnScrollAvailability">View availability</button>
+          <button class="btn primary" id="btnScrollContact">Schedule tour</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <div class="hero-grid">
+          <div class="hero-card">
+            <div class="inner">
+              <div class="kicker"><span class="dot"></span> San Antonio • Alamo Heights • Multifamily + Homes</div>
+<h2>Modern homes with a <span>quiet-luxury</span> vibe.</h2>
+<p>
+  Clean lines, updated finishes, and spaces that just feel right.
+  Explore our portfolio, view availability, and apply online or schedule a tour in minutes.
+</p>
+
+
+              <div class="hero-actions">
+                <a class="btn primary apply" href="https://bluerainrealestate.com/blue-rain-rental-application.html" target="_blank" rel="noopener">Apply online</a>
+                <button class="btn" id="btnExploreMulti">Explore multifamily</button>
+                <button class="btn" id="btnExploreSFH">Explore single-family</button>
+              </div>
+
+              <div class="stats">
+                <div class="stat">
+                  <b id="statProperties">—</b>
+                  <span>Properties</span>
+                </div>
+                <div class="stat">
+                  <b id="statUnits">—</b>
+                  <span>Total units</span>
+                </div>
+                <div class="stat">
+                  <b id="statAvailable">—</b>
+                  <span>Available now</span>
+                </div>
+                <div class="stat">
+                  <b id="statComingSoon">—</b>
+                  <span>Coming soon</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-media">
+            <img alt="Modern interior"
+              src="images/image52.jpg" loading="eager" fetchpriority="high" decoding="async" />
+            <div class="badge">
+              <b>Apply is one click</b>
+              <span>Apply online anytime, then we’ll follow up with next steps.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Multifamily -->
+    <section id="multifamily">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h3>Multifamily</h3>
+            <p>Tap a property to jump to its units in the Availability table.</p>
+          </div>
+        </div>
+        <div class="grid" id="mfGrid"></div>
+      </div>
+    </section>
+
+    <!-- Single Family -->
+    <section id="singlefamily">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h3>Single-family homes</h3>
+            <p>Tap a home to view details.</p>
+          </div>
+        </div>
+        <div class="grid" id="sfhGrid"></div>
+      </div>
+    </section>
+
+    <!-- Availability -->
+    <section id="availability">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h3>Availability</h3>
+            <p>Filter by type, beds, status, and price.</p>
+          </div>
+        </div>
+
+        <div class="filters" role="region" aria-label="Filters">
+          <div class="field">
+            <label for="q">Search</label>
+            <input id="q" type="text" placeholder="Address, unit #, ZIP..." />
+          </div>
+          <div class="field">
+            <label for="type">Type</label>
+            <select id="type">
+              <option value="">All</option>
+              <option value="Multifamily">Multifamily</option>
+              <option value="Single-family">Single-family</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="beds">Beds</label>
+            <select id="beds">
+              <option value="">Any</option>
+              <option value="1">1+</option>
+              <option value="2">2+</option>
+              <option value="3">3+</option>
+              <option value="4">4+</option>
+              <option value="5">5+</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="status">Status</label>
+            <select id="status">
+              <option value="">Any</option>
+              <option value="Available" selected>Available now</option>
+              <option value="Coming Soon">Coming Soon</option>
+              <option value="Waitlist">Waitlist</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="maxPrice">Max price</label>
+            <input id="maxPrice" type="number" placeholder="e.g., 2200" min="0" step="50" />
+          </div>
+        </div>
+
+        <div class="units" aria-label="Availability table">
+          <table>
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Unit / Home</th>
+                <th>Address</th>
+                <th>Beds/Baths</th>
+                <th>Sq Ft</th>
+                <th>Rent</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact -->
+    <section id="contact">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h3>Schedule a tour</h3>
+            <p>We’ll respond with next steps.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <form id="contactForm">
+            <div class="form">
+              <div class="row">
+                <input id="leadName" placeholder="Full name" required />
+                <input id="leadPhone" placeholder="Phone number" required />
+              </div>
+              <div class="row">
+                <input id="leadEmail" type="email" placeholder="Email" required />
+                <input id="leadMoveIn" placeholder="Preferred move-in date (optional)" />
+              </div>
+              <div class="row">
+                <input id="leadInterested" placeholder="Interested unit/home (optional)" />
+                <input id="leadBudget" placeholder="Budget (optional)" />
+              </div>
+              <textarea id="leadMsg" placeholder="Anything you want us to know?"></textarea>
+
+              <div class="modal-actions">
+                <button class="btn primary" type="submit">Send request</button>
+                <a class="btn apply" href="https://bluerainrealestate.com/blue-rain-rental-application.html" target="_blank" rel="noopener">Apply online</a>
+              </div>
+
+              <p class="small">
+                This form is a demo (no email sending yet). If you want, I can wire it to Formspree or Netlify Forms so it actually delivers.
+              </p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="container">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;">
+          <div style="max-width:70ch;line-height:1.6;">
+            <b style="color:var(--text);display:block;margin-bottom:8px;">Blue Rain Real Estate</b>
+            Availability and pricing subject to change. Equal Housing Opportunity.
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <a class="btn" href="#multifamily">Multifamily</a>
+            <a class="btn" href="#singlefamily">Single-family</a>
+            <a class="btn" href="#availability">Availability</a>
+            <a class="btn apply" href="https://bluerainrealestate.com/blue-rain-rental-application.html" target="_blank" rel="noopener">Apply online</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Modal -->
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Details">
+    <div class="modal-card">
+      <div class="modal-top">
+        <div class="modal-media">
+          <img id="mImg" alt="Photo" decoding="async" />
+        </div>
+        <div class="modal-content">
+          <div class="modal-head">
+            <div>
+              <h4 id="mTitle">—</h4>
+              <div class="modal-sub" id="mSub">—</div>
+            </div>
+            <button class="close" id="mClose" aria-label="Close">✕</button>
+          </div>
+
+          <div class="kv">
+            <div class="box"><span>Type</span><b id="mType">—</b></div>
+            <div class="box"><span>Status</span><b id="mStatus">—</b></div>
+            <div class="box"><span>Beds / Baths</span><b id="mBedsBaths">—</b></div>
+            <div class="box"><span>Sq Ft</span><b id="mSqft">—</b></div>
+            <div class="box"><span>Rent</span><b id="mRent">—</b></div>
+            <div class="box"><span>Apply</span><b id="mApplyHint">—</b></div>
+          </div>
+
+          <div class="modal-actions" id="mActions"></div>
+
+          <p class="small" id="mNotes"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const APPLY_URL = "https://bluerainrealestate.com/blue-rain-rental-application.html";
+
+    // Placeholder photos (swap later with your real photos per property/unit)
+    const placeholderPhotos = [
+ //coming soon image 
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1600&q=75",
+      "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1600&q=75",
+    ];
+
+    // ========= YOUR DATA (wired exactly to what you provided) =========
+
+    // Multifamily properties: most units share same rent/beds/baths/sqft per building,
+    // except 401 Kendall which has per-unit sqft.
+    const multifamily = [
+      {
+        id:"110-webb",
+        name:"110 Webb St",
+        address:"110 Webb St, San Antonio, TX 78223",
+        units: ["101","102","201","202"],
+        rent: 1700,
+        beds: 3, baths: 1,
+        sqftByUnit: { "101":1050,"102":1050,"201":1050,"202":1050 },
+        statusByUnit: { "101":"Available","102":"Available","201":"Available","202":"Available" },
+        photosByUnit: {
+          "101": ["images/image63.jpg","images/image64.jpg","images/image65.jpg","images/image66.jpg","images/image67.jpg","images/image68.jpg","images/image69.jpg","images/image70.jpg","images/image71.jpg","images/image72.jpg"],
+          "102": ["images/image63.jpg","images/image64.jpg","images/image65.jpg","images/image66.jpg","images/image67.jpg","images/image68.jpg","images/image69.jpg","images/image70.jpg","images/image71.jpg","images/image72.jpg"],
+          "201": ["images/image63.jpg","images/image64.jpg","images/image65.jpg","images/image66.jpg","images/image67.jpg","images/image68.jpg","images/image69.jpg","images/image70.jpg","images/image71.jpg","images/image72.jpg"],
+          "202": ["images/image63.jpg","images/image64.jpg","images/image65.jpg","images/image66.jpg","images/image67.jpg","images/image68.jpg","images/image69.jpg","images/image70.jpg","images/image71.jpg","images/image72.jpg"]
+        },
+        status: "Available",
+        hero: "images/image51.jpg",
+      },
+      {
+        id:"401-kendall",
+        name:"401 Kendall St",
+        address:"401 Kendall St, San Antonio, TX 78212",
+        units: ["101","102","201","202"],
+        rent: 2200,
+        beds: 2, baths: 2,
+        sqftByUnit: { "101":886,"102":914,"201":893,"202":954 },
+        statusByUnit: { "101":"Coming Soon","102":"Coming Soon","201":"Coming Soon","202":"Coming Soon" },
+                photosByUnit: {
+          "101": ["images/image51.jpg","images/image52.jpg"],
+          "102": ["images/image52.jpg","images/image51.jpg"],
+          "201": ["images/image53.jpg","images/image52.jpg"],
+          "202": ["images/image54.jpg","images/image52.jpg"]
+        },
+        status: "Coming Soon",
+        hero: "images/image53.jpg",
+      },
+      {
+        id:"413-nopal",
+        name:"413 Nopal Street",
+        address:"413 Nopal Street, San Antonio, TX 78210",
+        units: ["101","102","201"],
+        rent: 1600,
+        beds: 2, baths: 1,
+        sqftByUnit: { "101":850,"102":850,"201":850 },
+        statusByUnit: { "101":"Available","102":"Available","201":"Available" },
+                photosByUnit: {
+          "101": ["images/image51.jpg","images/image52.jpg"],
+          "102": ["images/image52.jpg","images/image51.jpg"],
+          "201": ["images/image53.jpg","images/image52.jpg"],
+          "202": ["images/image54.jpg","images/image52.jpg"]
+        },
+        status: "Available",
+        hero: "images/image53.jpg",
+      },
+      {
+        id:"1635-mulberry",
+        name:"1635 W Mulberry Ave",
+        address:"1635 W Mulberry Ave, San Antonio, TX 78201",
+        units: ["101","102","103","104","205","206","207","208"],
+        rent: 1450,
+        beds: 1, baths: 1,
+        sqftByUnit: { "101":700,"102":700,"103":700,"104":700,"205":700,"206":700,"207":700,"208":700 },
+        statusByUnit: { "101":"Coming Soon","102":"Coming Soon","103":"Coming Soon","104":"Coming Soon","205":"Coming Soon","206":"Coming Soon","207":"Coming Soon","208":"Coming Soon" },
+                photosByUnit: {
+          "101": ["images/image51.jpg","images/image52.jpg"],
+          "102": ["images/image52.jpg","images/image51.jpg"],
+          "201": ["images/image53.jpg","images/image52.jpg"],
+          "202": ["images/image54.jpg","images/image52.jpg"]
+        },
+        status: "Coming Soon",
+        hero: "images/image53.jpg",
+      },
+      {
+        id:"1301-townsend",
+        name:"1301 Townsend Avenue",
+        address:"1301 Townsend Avenue, Alamo Heights, TX 78209",
+        units: ["1","2","3","4"],
+        rent: 2200,
+        beds: 2, baths: 1,
+        sqftByUnit: { "1":750,"2":750,"3":750,"4":750 },
+        statusByUnit: { "1":"Coming Soon","2":"Coming Soon","3":"Coming Soon","4":"Coming Soon" },
+                photosByUnit: {
+          "101": ["images/image51.jpg","images/image52.jpg"],
+          "102": ["images/image52.jpg","images/image51.jpg"],
+          "201": ["images/image53.jpg","images/image52.jpg"],
+          "202": ["images/image54.jpg","images/image52.jpg"]
+        },
+        status: "Coming Soon",
+        hero: "images/image53.jpg",
+      },
+      {
+        id:"1644-mistletoe",
+        name:"1644 W Mistletoe Ave",
+        address:"1644 W Mistletoe Ave, San Antonio, TX 78201",
+        units: ["101","102","201","202"],
+        rent: 1750,
+        beds: 2, baths: 2,
+        sqftByUnit: { "101":836,"102":836,"201":836,"202":836 },
+        statusByUnit: { "101":"Available","102":"Available","201":"Available","202":"Available" },
+                photosByUnit: {
+          "101": ["images/image73.jpg","images/image74.jpg","images/image75.jpg","images/image76.jpg","images/image77.jpg","images/image78.jpg","images/image79.jpg","images/image80.jpg","images/image81.jpg","images/image82.jpg"],
+          "102": ["images/image73.jpg","images/image74.jpg","images/image75.jpg","images/image76.jpg","images/image77.jpg","images/image78.jpg","images/image79.jpg","images/image80.jpg","images/image81.jpg","images/image82.jpg"],
+          "201": ["images/image73.jpg","images/image74.jpg","images/image75.jpg","images/image76.jpg","images/image77.jpg","images/image78.jpg","images/image79.jpg","images/image80.jpg","images/image81.jpg","images/image82.jpg"],
+          "202": ["images/image73.jpg","images/image74.jpg","images/image75.jpg","images/image76.jpg","images/image77.jpg","images/image78.jpg","images/image79.jpg","images/image80.jpg","images/image81.jpg","images/image82.jpg"]
+        },
+        status: "Available",
+        hero: "images/image54.jpg",
+      },
+      {
+        id:"1505-woodlawn",
+        name:"1505 W Woodlawn Ave",
+        address:"1505 W Woodlawn Ave, San Antonio, TX 78201",
+        units: ["1","2","3","4"],
+        rent: 1500,
+        beds: 2, baths: 1,
+        sqftByUnit: { "1":636,"2":636,"3":636,"4":636 },
+        statusByUnit: { "1":"Available","2":"Available","3":"Available","4":"Available" },
+                photosByUnit: {
+          "101": ["images/image51.jpg","images/image52.jpg"],
+          "102": ["images/image52.jpg","images/image51.jpg"],
+          "201": ["images/image53.jpg","images/image52.jpg"],
+          "202": ["images/image54.jpg","images/image52.jpg"]
+        },
+        status: "Available",
+        hero: "images/image55.jpg",
+      },
+      {
+        id:"402-ada",
+        name:"402 Ada",
+        address:"402 Ada, San Antonio, TX 78223",
+        units: ["1","2"],
+        rent: 1450,
+        beds: 3, baths: 2,
+        sqftByUnit: { "1":1100,"2":1100 },
+        statusByUnit: { "1":"Waitlist","2":"Waitlist" },
+                photosByUnit: {
+          "101": ["images/image51.jpg","images/image52.jpg"],
+          "102": ["images/image52.jpg","images/image51.jpg"],
+          "201": ["images/image53.jpg","images/image52.jpg"],
+          "202": ["images/image54.jpg","images/image52.jpg"]
+        },
+        status: "Waitlist",
+        hero: "images/image56.jpg",
+      },
+      {
+        id:"410-regina",
+        name:"410 Regina St",
+        address:"410 Regina St, San Antonio, TX 78223",
+        units: ["1","2","3","4"],
+        rent: 1450,
+        beds: 3, baths: 1,
+        sqftByUnit: { "1":864,"2":864,"3":864,"4":864 },
+        statusByUnit: { "1":"Waitlist","2":"Waitlist","3":"Available","4":"Waitlist" },
+                photosByUnit: {
+          "1": ["images/image87.jpg","images/image88.jpg","images/image89.jpg","images/image90.jpg","images/image91.jpg","images/image83.jpg","images/image92.jpg","images/image93.jpg","images/image84.jpg","images/image86.jpg","images/image85.jpg"],
+          "2": ["images/image87.jpg","images/image88.jpg","images/image89.jpg","images/image90.jpg","images/image91.jpg","images/image83.jpg","images/image92.jpg","images/image93.jpg","images/image84.jpg","images/image86.jpg","images/image85.jpg"],
+          "3": ["images/image87.jpg","images/image88.jpg","images/image89.jpg","images/image90.jpg","images/image91.jpg","images/image83.jpg","images/image92.jpg","images/image93.jpg","images/image84.jpg","images/image86.jpg","images/image85.jpg"],
+          "4": ["images/image87.jpg","images/image88.jpg","images/image89.jpg","images/image90.jpg","images/image91.jpg","images/image83.jpg","images/image92.jpg","images/image93.jpg","images/image84.jpg","images/image86.jpg","images/image85.jpg"]
+        },
+        status: "Available",
+        hero: "images/image57.jpg",
+      },
+      {
+        id:"408-regina",
+        name:"408 Regina St",
+        address:"408 Regina St, San Antonio, TX 78223",
+        units: ["1","2","3","4"],
+        rent: 1450,
+        beds: 3, baths: 1,
+        sqftByUnit: { "1":864,"2":864,"3":864,"4":864 },
+        statusByUnit: { "1":"Waitlist","2":"Available","3":"Waitlist","4":"Waitlist" },
+                photosByUnit: {
+          "1": ["images/image87.jpg","images/image88.jpg","images/image89.jpg","images/image90.jpg","images/image91.jpg","images/image83.jpg","images/image92.jpg","images/image93.jpg","images/image84.jpg","images/image86.jpg","images/image85.jpg"],
+          "2": ["images/image87.jpg","images/image88.jpg","images/image89.jpg","images/image90.jpg","images/image91.jpg","images/image83.jpg","images/image92.jpg","images/image93.jpg","images/image84.jpg","images/image86.jpg","images/image85.jpg"],
+          "3": ["images/image87.jpg","images/image88.jpg","images/image89.jpg","images/image90.jpg","images/image91.jpg","images/image83.jpg","images/image92.jpg","images/image93.jpg","images/image84.jpg","images/image86.jpg","images/image85.jpg"],
+          "4": ["images/image87.jpg","images/image88.jpg","images/image89.jpg","images/image90.jpg","images/image91.jpg","images/image83.jpg","images/image92.jpg","images/image93.jpg","images/image84.jpg","images/image86.jpg","images/image85.jpg"]
+        },
+        status: "Available",
+        hero: "images/image58.jpg",
+      },
+    ].map((p,i)=>({
+      ...p,
+      type:"Multifamily",
+      // Default per-unit status to property status if none provided
+      statusByUnit: p.statusByUnit || Object.fromEntries(p.units.map(u => [u, p.status])),
+      // Default per-unit photos to property photos or placeholders
+      photosByUnit: p.photosByUnit || Object.fromEntries(p.units.map(u => [u, p.photos || placeholderPhotos])),
+      hero: p.hero || placeholderPhotos[i % placeholderPhotos.length],
+      photos: p.photos || placeholderPhotos,
+      tags: [
+        `${p.beds} bd / ${p.baths} ba`,
+        `${money(p.rent)}/mo`,
+        p.status
+      ],
+      notes:
+        p.status === "Waitlist" ? "Join the waitlist — apply online." :
+        p.status === "Coming Soon" ? "Coming soon — apply online to get started." :
+        "Available — apply online or request a tour."
+    }));
+
+    const singlefamily = [
+      {
+        id:"8030-bluewater",
+        name:"8030 Bluewater Cove",
+        address:"8030 Bluewater Cove, San Antonio, TX 78254",
+        rent: 2850, sqft: 2601, beds: 5, baths: 2.5,
+        status: "Waitlist",
+        hero: "images/image62.jpg",
+        photos: ["images/image62.jpg","images/image61.jpg","images/image60.jpg"],
+      },
+      {
+        id:"106-regina",
+        name:"106 Regina St",
+        address:"106 Regina St, San Antonio, TX 78223",
+        rent: 1700, sqft: 924, beds: 3, baths: 2,
+        status: "Waitlist",
+        hero: "images/image59.jpg",
+        photos: ["images/image59.jpg","images/image58.jpg","images/image57.jpg"],
+      },
+      {
+        id:"12851-limestone",
+        name:"12851 Limestone Way",
+        address:"12851 Limestone Way, San Antonio, TX 78253",
+        rent: 2850, sqft: 2375, beds: 4, baths: 3,
+        status: "Waitlist",
+        hero: "images/image61.jpg",
+        photos: ["images/image61.jpg","images/image62.jpg","images/image55.jpg"],
+      },
+      {
+        id:"2007-magnolia",
+        name:"2007 W Magnolia Ave",
+        address:"2007 W Magnolia Ave, San Antonio, TX 78201",
+        rent: 3000, sqft: 2500, beds: 3, baths: 2,
+        status: "Waitlist",
+        hero: "images/image60.jpg",
+        photos: ["images/image60.jpg","images/image55.jpg","images/image54.jpg"],
+      },
+    ].map((h,i)=>({
+      ...h,
+      type:"Single-family",
+      hero: h.hero || ((h.photos && h.photos[0]) || placeholderPhotos[(i+1) % placeholderPhotos.length]),
+      tags: [
+        `${h.beds} bd / ${h.baths} ba`,
+        `${money(h.rent)}/mo`,
+        h.status
+      ],
+      notes: h.status === "Waitlist" ? "Join the waitlist — apply online." : "Apply online or request a tour.",
+      photos: h.photos || placeholderPhotos
+    }));
+
+    // Build records used by Availability table + Modal
+    const allRecords = [
+      ...multifamily.flatMap(p => p.units.map(u => {
+        const unitStatus = (p.statusByUnit && p.statusByUnit[u]) ? p.statusByUnit[u] : p.status;
+        return ({
+          key: `${p.id}::${u}`,
+          type: "Multifamily",
+          label: `Unit ${u}`,
+          title: `${p.name} • Unit ${u}`,
+          address: p.address,
+          beds: p.beds, baths: p.baths,
+          sqft: p.sqftByUnit?.[u] ?? null,
+          rent: p.rent,
+          status: unitStatus,
+          notes: notesForStatus(unitStatus),
+          photos: (p.photosByUnit && Array.isArray(p.photosByUnit[u]) && p.photosByUnit[u].length)
+            ? p.photosByUnit[u]
+            : (p.photos || placeholderPhotos)
+        });
+      })),
+      ...singlefamily.map(h => ({
+        key: `${h.id}::home`,
+        type: "Single-family",
+        label: "Home",
+        title: h.name,
+        address: h.address,
+        beds: h.beds, baths: h.baths,
+        sqft: h.sqft,
+        rent: h.rent,
+        status: h.status,
+        notes: h.notes,
+        photos: h.photos || placeholderPhotos
+      }))
+    ];
+
+    // ========= Helpers =========
+    const $ = (s)=>document.querySelector(s);
+    const $$ = (s)=>document.querySelectorAll(s);
+    function money(n){
+      return (typeof n === "number")
+        ? n.toLocaleString(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0})
+        : "—";
+    }
+    function bedsBaths(b,ba){
+      if(typeof b !== "number" || typeof ba !== "number") return "—";
+      const btxt = (b===0 ? "Studio" : `${b} bd`);
+      return `${btxt} / ${ba} ba`;
+    }
+    function pillForStatus(status){
+      if(status === "Available") return { cls:"pill good", text:"Available" };
+      if(status === "Coming Soon") return { cls:"pill warn", text:"Coming soon" };
+      if(status === "Waitlist") return { cls:"pill waitlist", text:"Waitlist" };
+      return { cls:"pill warn", text:String(status||"Waitlist") };
+    }
+    function tagClass(status){
+      if(status === "Available") return "tag available";
+      if(status === "Coming Soon") return "tag coming";
+      if(status === "Waitlist") return "tag waitlist";
+      return "tag waitlist";
+    }
+    function canApply(status){
+      return status === "Available" || status === "Coming Soon" || status === "Waitlist";
+    }
+    function notesForStatus(status){
+      return status === "Waitlist" ? "Join the waitlist — apply online." :
+             status === "Coming Soon" ? "Coming soon — apply online to get started." :
+             "Available — apply online or request a tour.";
+    }
+
+    // ========= Render cards =========
+    function renderMF(){
+      const grid = $("#mfGrid");
+      grid.innerHTML = "";
+      const frag = document.createDocumentFragment();
+      multifamily.forEach(p=>{
+        const counts = {
+          available: p.units.length * (p.status === "Available" ? 1 : 0),
+          coming: p.units.length * (p.status === "Coming Soon" ? 1 : 0)
+        };
+        const pill = pillForStatus(p.status);
+
+        const el = document.createElement("div");
+        el.className = "card";
+        el.tabIndex = 0;
+        el.setAttribute("role","button");
+
+        el.innerHTML = `
+          <div class="img">
+            <img alt="${p.name}" src="${p.hero}" loading="lazy" decoding="async">
+            <div class="${pill.cls}">${pill.text}</div>
+          </div>
+          <div class="body">
+            <div class="title">
+              <div>
+                <h4>${p.name}</h4>
+                <p class="addr">${p.address}</p>
+              </div>
+              <div style="font-weight:700;font-size:12px;color:rgba(234,240,247,.9)">${money(p.rent)}/mo</div>
+            </div>
+            <div class="meta">
+              <span class="chip">${p.beds} bd / ${p.baths} ba</span>
+              <span class="chip">${p.units.length} units</span>
+              <span class="chip">${p.status}</span>
+            </div>
+            <div class="card-actions">
+              <button class="btn" data-jump="${p.address}">View units</button>
+              ${canApply(p.status) ? `<a class="btn apply" href="${APPLY_URL}" target="_blank" rel="noopener">Apply</a>` : ``}
+            </div>
+          </div>
+        `;
+
+        const open = ()=>{
+          $("#availability").scrollIntoView({behavior:"smooth"});
+          $("#q").value = p.address;
+          applyFilters();
+        };
+
+        el.addEventListener("click", (e)=>{
+          // If they clicked the Apply link, let it work.
+          if(e.target.closest('a')) return;
+          open();
+        });
+        el.addEventListener("keydown",(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open();}});
+
+        // "View units" button
+        el.querySelector('[data-jump]')?.addEventListener("click",(e)=>{
+          e.stopPropagation();
+          open();
+        });
+
+        frag.appendChild(el);
+      });
+      grid.appendChild(frag);
+    }
+
+    function renderSFH(){
+      const grid = $("#sfhGrid");
+      grid.innerHTML = "";
+      const frag = document.createDocumentFragment();
+      singlefamily.forEach(h=>{
+        const pill = pillForStatus(h.status);
+
+        const el = document.createElement("div");
+        el.className = "card";
+        el.tabIndex = 0;
+        el.setAttribute("role","button");
+
+        el.innerHTML = `
+          <div class="img">
+            <img alt="${h.name}" src="${h.hero}" loading="lazy" decoding="async">
+            <div class="${pill.cls}">${pill.text}</div>
+          </div>
+          <div class="body">
+            <div class="title">
+              <div>
+                <h4>${h.name}</h4>
+                <p class="addr">${h.address}</p>
+              </div>
+              <div style="font-weight:700;font-size:12px;color:rgba(234,240,247,.9)">${money(h.rent)}/mo</div>
+            </div>
+            <div class="meta">
+              <span class="chip">${h.beds} bd / ${h.baths} ba</span>
+              <span class="chip">${(h.sqft||0).toLocaleString()} sq ft</span>
+              <span class="chip">${h.status}</span>
+            </div>
+            <div class="card-actions">
+              <button class="btn" data-open="${h.id}::home">View details</button>
+              ${canApply(h.status) ? `<a class="btn apply" href="${APPLY_URL}" target="_blank" rel="noopener">Apply</a>` : ``}
+            </div>
+          </div>
+        `;
+
+        const open = ()=>openModal(`${h.id}::home`);
+        el.addEventListener("click", (e)=>{
+          if(e.target.closest('a')) return;
+          open();
+        });
+        el.addEventListener("keydown",(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open();}});
+
+        el.querySelector('[data-open]')?.addEventListener("click",(e)=>{
+          e.stopPropagation();
+          open();
+        });
+
+        frag.appendChild(el);
+      });
+      grid.appendChild(frag);
+    }
+
+    // ========= Availability table =========
+    function renderTable(rows){
+      const tbody = $("#rows");
+      tbody.innerHTML = "";
+      if(!rows.length){
+        tbody.innerHTML = `<tr><td colspan="8" style="color:var(--muted);padding:18px 14px;">No matches. Try changing filters.</td></tr>`;
+        return;
+      }
+
+      const frag = document.createDocumentFragment();
+      rows.forEach(r=>{
+        const tr = document.createElement("tr");
+        const applyCell = canApply(r.status)
+          ? `<a class="btn apply" style="padding:8px 10px;border-radius:12px;" href="${APPLY_URL}" target="_blank" rel="noopener">Apply</a>`
+          : `<span style="color:var(--muted);font-size:12px;">—</span>`;
+
+        tr.innerHTML = `
+          <td>${r.type}</td>
+          <td><b>${r.label}</b></td>
+          <td>
+            <div style="font-weight:600">${r.title}</div>
+            <div style="color:var(--muted);font-size:12px;margin-top:2px">${r.address}</div>
+          </td>
+          <td>${bedsBaths(r.beds,r.baths)}</td>
+          <td>${(typeof r.sqft === "number") ? r.sqft.toLocaleString() : "—"}</td>
+          <td><b>${money(r.rent)}</b></td>
+          <td><span class="${tagClass(r.status)}"><span class="mini-dot"></span>${r.status}</span></td>
+          <td style="display:flex;gap:10px;align-items:center;">
+            <span class="link" data-open="${r.key}">View</span>
+            ${applyCell}
+          </td>
+        `;
+        frag.appendChild(tr);
+      });
+      tbody.appendChild(frag);
+
+      $$("[data-open]").forEach(a=>{
+        a.addEventListener("click", ()=>openModal(a.getAttribute("data-open")));
+      });
+    }
+
+    function applyFilters(){
+      const q = ($("#q").value || "").toLowerCase().trim();
+      const type = $("#type").value;
+      const bedsMin = $("#beds").value ? parseInt($("#beds").value,10) : null;
+      const status = $("#status").value;
+      const maxPrice = parseInt($("#maxPrice").value || "0", 10);
+
+      let rows = [...allRecords];
+
+      if(type) rows = rows.filter(r=>r.type===type);
+      if(status) rows = rows.filter(r=>r.status===status);
+      if(bedsMin !== null) rows = rows.filter(r=>typeof r.beds==="number" && r.beds >= bedsMin);
+      if(maxPrice > 0) rows = rows.filter(r=>typeof r.rent==="number" && r.rent <= maxPrice);
+
+      if(q){
+        rows = rows.filter(r =>
+          (r.address||"").toLowerCase().includes(q) ||
+          (r.title||"").toLowerCase().includes(q) ||
+          (r.label||"").toLowerCase().includes(q)
+        );
+      }
+
+      renderTable(rows);
+    }
+
+    // ========= Modal =========
+    let modalState = { rec:null, photoIndex:0 };
+
+    function openModal(key){
+      const rec = allRecords.find(r=>r.key===key);
+      if(!rec) return;
+
+      modalState.rec = rec;
+      modalState.photoIndex = 0;
+
+      $("#mTitle").textContent = rec.title;
+      $("#mSub").textContent = rec.address;
+      $("#mType").textContent = rec.type;
+      $("#mStatus").textContent = rec.status;
+      $("#mBedsBaths").textContent = bedsBaths(rec.beds, rec.baths);
+      $("#mSqft").textContent = (typeof rec.sqft === "number") ? rec.sqft.toLocaleString() : "—";
+      $("#mRent").textContent = money(rec.rent);
+      $("#mNotes").textContent = rec.notes || "";
+
+      const can = canApply(rec.status);
+      $("#mApplyHint").textContent = can ? "Available to apply" : "Not accepting applications";
+
+      $("#mImg").src = (rec.photos && rec.photos.length) ? rec.photos[0] : placeholderPhotos[0];
+
+      // Prefill contact form
+      $("#leadInterested").value = rec.type === "Multifamily" ? `${rec.title}` : `${rec.title}`;
+
+      // Actions
+      const actions = $("#mActions");
+      actions.innerHTML = `
+        <button class="btn primary" id="mSchedule">Schedule tour</button>
+        <button class="btn" id="mNext">Next photo</button>
+        ${can ? `<a class="btn apply" href="${APPLY_URL}" target="_blank" rel="noopener">Apply</a>` : ``}
+      `;
+
+      $("#mSchedule").addEventListener("click", ()=>{
+        closeModal();
+        $("#contact").scrollIntoView({behavior:"smooth"});
+        $("#leadName").focus();
+      });
+      $("#mNext").addEventListener("click", nextPhoto);
+
+      $("#modal").classList.add("open");
+    }
+
+    function closeModal(){
+      $("#modal").classList.remove("open");
+      modalState.rec = null;
+      modalState.photoIndex = 0;
+    }
+
+    function nextPhoto(){
+      if(!modalState.rec) return;
+      const photos = modalState.rec.photos || [];
+      if(!photos.length) return;
+      modalState.photoIndex = (modalState.photoIndex + 1) % photos.length;
+      $("#mImg").src = photos[modalState.photoIndex];
+    }
+
+    // ========= Stats =========
+    function updateStats(){
+      const totalProps = multifamily.length + singlefamily.length;
+      const totalUnits = allRecords.filter(r=>r.type==="Multifamily").length;
+      const available = allRecords.filter(r=>r.status==="Available").length;
+      const coming = allRecords.filter(r=>r.status==="Coming Soon").length;
+
+      $("#statProperties").textContent = totalProps;
+      $("#statUnits").textContent = totalUnits;
+      $("#statAvailable").textContent = available;
+      $("#statComingSoon").textContent = coming;
+    }
+
+    // ========= Wire up UI =========
+    $("#btnExploreMulti").addEventListener("click", ()=>$("#multifamily").scrollIntoView({behavior:"smooth"}));
+    $("#btnExploreSFH").addEventListener("click", ()=>$("#singlefamily").scrollIntoView({behavior:"smooth"}));
+    $("#btnScrollAvailability").addEventListener("click", ()=>$("#availability").scrollIntoView({behavior:"smooth"}));
+    $("#btnScrollContact").addEventListener("click", ()=>$("#contact").scrollIntoView({behavior:"smooth"}));
+
+    // Debounce filter updates to reduce layout thrash
+    function debounce(fn, delay){
+      let t; return (...args)=>{ clearTimeout(t); t = setTimeout(()=>fn(...args), delay); };
+    }
+    const debouncedApplyFilters = debounce(applyFilters, 150);
+    ["q","type","beds","status","maxPrice"].forEach(id=>{
+      $("#"+id).addEventListener("input", debouncedApplyFilters);
+      $("#"+id).addEventListener("change", applyFilters);
+    });
+
+    $("#mClose").addEventListener("click", closeModal);
+    $("#modal").addEventListener("click", (e)=>{ if(e.target.id==="modal") closeModal(); });
+    document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeModal(); });
+
+    // Contact form: send to backend
+    $("#contactForm").addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const form = e.target;
+      const btn = form.querySelector('button[type="submit"]');
+      const name = $("#leadName").value.trim();
+      const email = $("#leadEmail").value.trim();
+      const phone = $("#leadPhone").value.trim();
+      const interested = $("#leadInterested").value.trim();
+      const budget = $("#leadBudget").value.trim();
+      const moveIn = $("#leadMoveIn").value.trim();
+      const msg = $("#leadMsg").value.trim();
+
+      const details = [
+        interested ? `Interested: ${interested}` : null,
+        budget ? `Budget: ${budget}` : null,
+        moveIn ? `Preferred Move-in: ${moveIn}` : null,
+        msg ? `Notes: ${msg}` : null
+      ].filter(Boolean).join("\n");
+
+      try{
+        btn.disabled = true;
+        const origText = btn.textContent;
+        btn.textContent = "Sending...";
+        const resp = await fetch("/api/contact",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({ name, email, phone, details })
+        });
+        const data = await resp.json().catch(()=>({success:false}));
+        if(!resp.ok || !data.success){
+          throw new Error(data?.message || "Failed to send");
+        }
+        alert("Request sent! We’ll follow up shortly.");
+        form.reset();
+      }catch(err){
+        alert("Failed to send. Please verify your info and try again.");
+        console.error(err);
+      }finally{
+        btn.disabled = false;
+        btn.textContent = "Send request";
+      }
+    });
+
+    // Init
+    renderMF();
+    renderSFH();
+    updateStats();
+    applyFilters();
+  </script>
+</body>
+</html>
