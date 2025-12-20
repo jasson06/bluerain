@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Leaflet CSS for map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 
   <style>
     :root{
@@ -257,6 +259,7 @@
       border-radius: var(--radius2);
       overflow:hidden;
     }
+    .units .cards{display:none}
     table{width:100%;border-collapse: collapse;font-size:13px}
     th, td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
     th{color:var(--muted);font-weight:600;background: rgba(0,0,0,.18)}
@@ -284,6 +287,18 @@
       box-shadow: var(--shadow);
       content-visibility: auto;
       contain-intrinsic-size: 200px;
+    }
+    /* Map */
+    #mapCanvas{
+      height:420px;
+      border:1px solid var(--line);
+      border-radius: var(--radius2);
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+      background:#0b0e12;
+    }
+    @media (max-width:640px){
+      #mapCanvas{height:360px}
     }
 
     .footer{
@@ -420,6 +435,7 @@
         </div>
 
         <nav>
+          <a href="#map">Map</a>
           <a href="#multifamily">Multifamily</a>
           <a href="#singlefamily">Single-family</a>
           <a href="#availability">Availability</a>
@@ -503,6 +519,8 @@
         </div>
       </div>
     </section>
+
+
 
     <!-- Multifamily -->
     <section id="multifamily">
@@ -600,6 +618,20 @@
       </div>
     </section>
 
+
+        <!-- Map -->
+    <section id="map">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h3>Locations</h3>
+            <p>Tap a pin to view units at that property.</p>
+          </div>
+        </div>
+        <div id="mapCanvas" aria-label="Property locations"></div>
+      </div>
+    </section>
+
     <!-- Contact -->
     <section id="contact">
       <div class="container">
@@ -658,6 +690,9 @@
       </div>
     </footer>
   </main>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
   <!-- Modal -->
   <div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Details">
@@ -1026,6 +1061,64 @@
              "Available — apply online or request a tour.";
     }
 
+    // ========= Map helpers =========
+    function buildPropertiesList(){
+      const mf = multifamily.map(p=>({ id:p.id, name:p.name, address:p.address, type:'Multifamily' }));
+      const sf = singlefamily.map(h=>({ id:h.id, name:h.name, address:h.address, type:'Single-family' }));
+      return [...mf, ...sf];
+    }
+    function loadGeoCache(){
+      try{ return JSON.parse(localStorage.getItem('geoCache')||'{}'); }catch{ return {}; }
+    }
+    function saveGeoCache(cache){
+      try{ localStorage.setItem('geoCache', JSON.stringify(cache)); }catch{}
+    }
+    async function geocodeAddress(address){
+      const cache = loadGeoCache();
+      if(cache[address]) return cache[address];
+      try{
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
+        const resp = await fetch(url, { headers: { 'Accept':'application/json' }});
+        const data = await resp.json();
+        if(Array.isArray(data) && data.length){
+          const lat = parseFloat(data[0].lat); const lon = parseFloat(data[0].lon);
+          cache[address] = { lat, lon };
+          saveGeoCache(cache);
+          return cache[address];
+        }
+      }catch(e){ console.warn('Geocode failed', address, e); }
+      return null;
+    }
+    async function initMap(){
+      if(!window.L || !document.getElementById('mapCanvas')) return;
+      const map = L.map('mapCanvas').setView([29.4237, -98.4934], 11);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      const props = buildPropertiesList();
+      const markers = [];
+      for(const p of props){
+        const c = await geocodeAddress(p.address);
+        if(!c) continue;
+        const m = L.marker([c.lat, c.lon]).addTo(map);
+        m.bindPopup(`<b>${p.name}</b><br/><span style="color:var(--muted);font-size:12px">${p.address}</span><br/><button class="btn" data-jump="${p.address}">View units</button>`);
+        markers.push(m);
+      }
+      if(markers.length){
+        const group = L.featureGroup(markers);
+        map.fitBounds(group.getBounds(), { padding:[20,20] });
+      }
+      // Delegate popup button clicks
+      document.addEventListener('click', (e)=>{
+        const btn = e.target.closest('[data-jump]');
+        if(!btn) return;
+        document.getElementById('availability').scrollIntoView({behavior:'smooth'});
+        document.getElementById('q').value = btn.getAttribute('data-jump');
+        applyFilters();
+      });
+    }
+
     // ========= Render cards =========
     function renderMF(){
       const grid = $("#mfGrid");
@@ -1392,6 +1485,7 @@
     });
 
     // Init
+    initMap();
     renderMF();
     renderSFH();
     updateStats();
