@@ -667,10 +667,48 @@
               </div>
 
               <p class="small">
-                This form is a demo (no email sending yet). If you want, I can wire it to Formspree or Netlify Forms so it actually delivers.
+                By submitting this form, you agree to our use of your information in accordance with our privacy policy. We will contact you regarding your inquiry.
               </p>
             </div>
           </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Company Information -->
+    <section id="company">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h3>Company Information</h3>
+            <p>Get in touch or visit our office.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div style="display:grid;grid-template-columns: 1fr 1fr;gap:14px;align-items:start;">
+            <div>
+              <b>Phone</b>
+              <div style="margin-top:6px;"><a class="btn" href="tel:+17252603319">(210) 981-9251</a></div>
+            </div>
+            <div>
+              <b>Email</b>
+              <div style="margin-top:6px;"><a class="btn" href="mailto:bluerainrealestate@gmail.com">bluerainrealestate@gmail.com</a></div>
+            </div>
+            <div style="grid-column: span 2;">
+              <b>Office</b>
+              <div class="addr" style="margin-top:6px;white-space:pre-line;">
+14546 BROOK HOLLOW BLVD
+SUITE # 251
+SAN ANTONIO, TX 78232-3810
+United States
+              </div>
+            </div>
+            <div style="grid-column: span 2;display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
+              <a class="btn" href="https://www.facebook.com/profile.php?id=61567258626356&mibextid=wwXIfr&rdid=z2fwxfZOGxVBXege&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F17MLzuidQb%2F%3Fmibextid%3DwwXIfr#" target="_blank" rel="noopener">Facebook</a>
+              <a class="btn" href="https://www.google.com/maps/search/?api=1&query=14546%20BROOK%20HOLLOW%20BLVD%20SUITE%20%23%20251%2C%20SAN%20ANTONIO%2C%20TX%2078232-3810%2C%20United%20States" target="_blank" rel="noopener">Open office in Google Maps</a>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -1178,7 +1216,19 @@
       const grid = $("#mfGrid");
       grid.innerHTML = "";
       const frag = document.createDocumentFragment();
-      multifamily.forEach(p=>{
+      const list = [...multifamily].sort((a,b)=>{
+        const weight = (s)=>{
+          if(s === "Available") return 0;
+          if(s === "Waitlist") return 1;
+          if(s === "Coming Soon") return 2;
+          return 3;
+        };
+        const wa = weight(a.status);
+        const wb = weight(b.status);
+        if(wa !== wb) return wa - wb;
+        return a.name.localeCompare(b.name);
+      });
+      list.forEach(p=>{
         const counts = {
           available: p.units.length * (p.status === "Available" ? 1 : 0),
           coming: p.units.length * (p.status === "Coming Soon" ? 1 : 0)
@@ -1547,4 +1597,3 @@
   </script>
 </body>
 </html>
-
