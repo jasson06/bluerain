@@ -294,6 +294,23 @@
       margin-top:22px;
     }
 
+    /* Mobile menu */
+    .mobile-btn{display:none}
+    .mobile-menu{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.60);backdrop-filter:blur(8px);z-index:120;padding:20px}
+    .mobile-menu.open{display:flex}
+    .mobile-menu-card{width:min(420px,100%);border:1px solid var(--line);background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));border-radius:18px;box-shadow:var(--shadow2);overflow:hidden}
+    .mobile-menu-head{display:flex;align-items:center;justify-content:space-between;padding:14px;border-bottom:1px solid var(--line)}
+    .mobile-menu-body{padding:14px;display:flex;flex-direction:column;gap:10px}
+    .mobile-menu-body a{padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.03);font-weight:600;font-size:14px}
+
+    /* Mobile availability cards */
+    .unit-card{border:1px solid var(--line);background:rgba(255,255,255,.03);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
+    .unit-card .head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .unit-card .sub{color:var(--muted);font-size:12px;margin-top:2px}
+    .unit-card .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .unit-card .actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+
+
     /* Modal */
     .modal{
       position:fixed;inset:0;
@@ -378,10 +395,14 @@
     }
     @media (max-width: 640px){
       nav{display:none}
+      .mobile-btn{display:inline-flex}
       .filters{grid-template-columns:1fr}
       .card{grid-column: span 12}
       .stats{grid-template-columns:1fr}
       .form .row{grid-template-columns:1fr}
+      /* Switch table to cards on mobile */
+      .units table{display:none}
+      .units .cards{display:grid;grid-template-columns:1fr;gap:12px;padding:12px}
     }
   </style>
 </head>
@@ -404,7 +425,7 @@
           <a href="#availability">Availability</a>
           <a href="#contact">Schedule a tour</a>
         </nav>
-
+        <button class="btn mobile-btn" id="mobileMenuBtn" aria-label="Open menu">Menu</button>
         <div style="display:flex;gap:10px;align-items:center;">
           <a class="btn apply" href="https://bluerainrealestate.com/blue-rain-rental-application.html" target="_blank" rel="noopener">Apply online</a>
           <button class="btn" id="btnScrollAvailability">View availability</button>
@@ -413,6 +434,22 @@
       </div>
     </div>
   </header>
+
+  <!-- Mobile Menu Overlay -->
+  <div class="mobile-menu" id="mobileMenu" role="dialog" aria-modal="true" aria-label="Menu">
+    <div class="mobile-menu-card">
+      <div class="mobile-menu-head">
+        <b>Menu</b>
+        <button class="close" id="mobileMenuClose" aria-label="Close">✕</button>
+      </div>
+      <div class="mobile-menu-body">
+        <a href="#multifamily" id="mLinkMulti">Multifamily</a>
+        <a href="#singlefamily" id="mLinkSFH">Single-family</a>
+        <a href="#availability" id="mLinkAvail">Availability</a>
+        <a href="#contact" id="mLinkContact">Schedule a tour</a>
+      </div>
+    </div>
+  </div>
 
   <main>
     <section class="hero">
@@ -558,6 +595,7 @@
             </thead>
             <tbody id="rows"></tbody>
           </table>
+          <div class="cards" id="rowsCards" aria-label="Availability cards"></div>
         </div>
       </div>
     </section>
@@ -1112,12 +1150,17 @@
     function renderTable(rows){
       const tbody = $("#rows");
       tbody.innerHTML = "";
+      const cards = $("#rowsCards");
+      cards.innerHTML = "";
       if(!rows.length){
-        tbody.innerHTML = `<tr><td colspan="8" style="color:var(--muted);padding:18px 14px;">No matches. Try changing filters.</td></tr>`;
+        const emptyMsg = `No matches. Try changing filters.`;
+        tbody.innerHTML = `<tr><td colspan="8" style="color:var(--muted);padding:18px 14px;">${emptyMsg}</td></tr>`;
+        cards.innerHTML = `<div class="unit-card" style="color:var(--muted);">${emptyMsg}</div>`;
         return;
       }
 
       const frag = document.createDocumentFragment();
+      const cfrag = document.createDocumentFragment();
       rows.forEach(r=>{
         const tr = document.createElement("tr");
         const applyCell = canApply(r.status)
@@ -1141,8 +1184,38 @@
           </td>
         `;
         frag.appendChild(tr);
+
+        const card = document.createElement("div");
+        card.className = "unit-card";
+        const applyBtn = canApply(r.status)
+          ? `<a class="btn apply" href="${APPLY_URL}" target="_blank" rel="noopener">Apply</a>`
+          : "";
+        card.innerHTML = `
+          <div class="head">
+            <div>
+              <b>${r.label}</b>
+              <div class="sub">${r.type}</div>
+            </div>
+            <div><span class="${tagClass(r.status)}"><span class="mini-dot"></span>${r.status}</span></div>
+          </div>
+          <div style="margin-top:10px;">
+            <div style="font-weight:600">${r.title}</div>
+            <div class="sub">${r.address}</div>
+          </div>
+          <div class="meta">
+            <span class="chip">${bedsBaths(r.beds,r.baths)}</span>
+            <span class="chip">${(typeof r.sqft === "number") ? r.sqft.toLocaleString()+" sq ft" : "Sq ft —"}</span>
+            <span class="chip">${money(r.rent)}/mo</span>
+          </div>
+          <div class="actions">
+            <button class="btn" data-open="${r.key}">View</button>
+            ${applyBtn}
+          </div>
+        `;
+        cfrag.appendChild(card);
       });
       tbody.appendChild(frag);
+      cards.appendChild(cfrag);
 
       $$("[data-open]").forEach(a=>{
         a.addEventListener("click", ()=>openModal(a.getAttribute("data-open")));
@@ -1265,6 +1338,14 @@
     $("#mClose").addEventListener("click", closeModal);
     $("#modal").addEventListener("click", (e)=>{ if(e.target.id==="modal") closeModal(); });
     document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeModal(); });
+
+    // Mobile menu wiring
+    $("#mobileMenuBtn")?.addEventListener("click",()=>$("#mobileMenu").classList.add("open"));
+    $("#mobileMenuClose")?.addEventListener("click",()=>$("#mobileMenu").classList.remove("open"));
+    $("#mobileMenu")?.addEventListener("click",(e)=>{ if(e.target.id==="mobileMenu") $("#mobileMenu").classList.remove("open"); });
+    ["mLinkMulti","mLinkSFH","mLinkAvail","mLinkContact"].forEach(id=>{
+      const el = document.getElementById(id); if(el){ el.addEventListener("click",()=>$("#mobileMenu").classList.remove("open")); }
+    });
 
     // Contact form: send to backend
     $("#contactForm").addEventListener("submit", async (e)=>{
