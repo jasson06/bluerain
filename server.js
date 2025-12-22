@@ -8245,52 +8245,6 @@ app.delete('/api/properties/:propertyId/maintenance-schedules/:scheduleId', asyn
 });
 
 
-app.patch('/api/properties/:propertyId/maintenance-schedules/:scheduleId/complete', async (req, res) => {
-  try {
-    const { propertyId, scheduleId } = req.params;
-    const { completedBy, notes } = req.body || {};
-
-    // Find the schedule
-    const schedule = await MaintenanceSchedule.findOne({ _id: scheduleId, projectId: propertyId });
-    if (!schedule) return res.status(404).json({ message: 'Schedule not found.' });
-
-    // Record completion in history
-    schedule.history = schedule.history || [];
-    schedule.history.push({
-      completedAt: new Date(),
-      completedBy: completedBy || 'System',
-      notes: notes || ''
-    });
-
-    // Advance nextScheduledDate based on frequency
-    let nextDate = new Date(schedule.nextScheduledDate);
-    switch (schedule.frequency) {
-      case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
-      case 'weekly': nextDate.setDate(nextDate.getDate() + 7); break;
-      case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
-      case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
-      case 'custom':
-        if (schedule.intervalDays && schedule.intervalDays > 0) {
-          nextDate.setDate(nextDate.getDate() + schedule.intervalDays);
-        }
-        break;
-    }
-
-    // Reset status and completedAt for the next cycle
-    schedule.status = 'pending';
-    schedule.completedAt = null;
-    schedule.nextScheduledDate = nextDate;
-
-    await schedule.save();
-
-    res.json({ success: true, schedule });
-  } catch (err) {
-    console.error('Error completing maintenance schedule:', err);
-    res.status(500).json({ message: 'Failed to complete and reset schedule.' });
-  }
-});
-
-
 // Contact Form Submission Endpoint
 app.post('/api/contact', async (req, res) => {
   const { name, email, phone, details } = req.body;
