@@ -7653,48 +7653,57 @@ if (status === "completed" && itemName && projectId) {
   }
 
   if (schedule) {
-    // Only push if not already logged for today
+    // Only push if no completion is already logged for today (by anyone)
     const todayStr = new Date().toISOString().slice(0, 10);
-    const alreadyLogged = schedule.history?.some(
-      h => h.completedBy === "Estimate/Manager" && h.completedAt?.toISOString().slice(0, 10) === todayStr
+    const alreadyLogged = (schedule.history || []).some(
+      h => h.completedAt && h.completedAt.toISOString().slice(0, 10) === todayStr
     );
     if (!alreadyLogged) {
       schedule.history = schedule.history || [];
+      const completedBy = (typeof req.body?.completedBy === "string" && req.body.completedBy.trim())
+        ? req.body.completedBy.trim()
+        : "Estimate/Manager";
+      const notes = (typeof req.body?.notes === "string" && req.body.notes.trim())
+        ? req.body.notes.trim()
+        : "Marked as completed from estimate";
       schedule.history.push({
         completedAt: new Date(),
-        completedBy: "Estimate/Manager",
-        notes: "Marked as completed from estimate"
+        completedBy,
+        notes
       });
-    }
+    } 
 
-        // --- Determine base date for next schedule (use today if overdue) ---
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        let baseDate = schedule.nextScheduledDate < today ? today : schedule.nextScheduledDate;
+        // --- Reschedule only if today's completion wasn't already processed ---
+        if (!alreadyLogged) {
+          // Determine base date for next schedule (use today if overdue)
+          const now = new Date();
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          let baseDate = schedule.nextScheduledDate < today ? today : schedule.nextScheduledDate;
 
-        // Advance nextScheduledDate based on frequency, using baseDate
-        let nextDate = new Date(baseDate);
-        switch (schedule.frequency) {
-          case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
-          case 'weekly': nextDate.setDate(nextDate.getDate() + 7); break;
-          case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
-          case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
-          case 'custom':
-            if (schedule.intervalDays && schedule.intervalDays > 0) {
-              nextDate.setDate(nextDate.getDate() + schedule.intervalDays);
-            }
-            break;
+          // Advance nextScheduledDate based on frequency, using baseDate
+          let nextDate = new Date(baseDate);
+          switch (schedule.frequency) {
+            case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
+            case 'weekly': nextDate.setDate(nextDate.getDate() + 7); break;
+            case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
+            case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
+            case 'custom':
+              if (schedule.intervalDays && schedule.intervalDays > 0) {
+                nextDate.setDate(nextDate.getDate() + schedule.intervalDays);
+              }
+              break;
+          }
+
+          // Reset status and completedAt for the next cycle
+          schedule.status = 'pending';
+          schedule.completedAt = null;
+          schedule.nextScheduledDate = nextDate;
+
+          await schedule.save();
+          console.log(`✅ Maintenance schedule "${schedule.title}" marked as completed and rescheduled from estimate.`);
         }
-
-        // Reset status and completedAt for the next cycle
-        schedule.status = 'pending';
-        schedule.completedAt = null;
-        schedule.nextScheduledDate = nextDate;
-
-        await schedule.save();
-        console.log(`✅ Maintenance schedule "${schedule.title}" marked as completed and rescheduled from estimate.`);
       }
-    }
+    }  
 
     res.json({ success: true, status, estimate });
   } catch (error) {
