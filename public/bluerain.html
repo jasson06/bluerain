@@ -40,6 +40,13 @@
       color:var(--text);
       letter-spacing:-0.01em;
     }
+    /* Dim background when modal is open (without affecting modal itself) */
+    body.modal-open .topbar,
+    body.modal-open main,
+    body.modal-open footer{
+      filter: brightness(.78) contrast(.98) saturate(.9);
+      transition: filter .2s ease;
+    }
     a{color:inherit;text-decoration:none}
     .container{max-width:var(--max);margin:0 auto;padding:0 22px}
 
@@ -202,7 +209,9 @@
     }
     .card:hover{transform: translateY(-3px); box-shadow: var(--shadow2)}
     .card .img{height:190px;background:#0c0f14;position:relative;overflow:hidden}
-    .card .img img{width:100%;height:100%;object-fit:cover}
+    .card .img img{width:100%;height:100%;object-fit:cover;opacity:1;transform:scale(1) translateX(0);transition:opacity .24s ease, transform .24s ease;will-change:opacity,transform}
+    .card .img img.fade-out{opacity:0;transform:scale(.985) translateX(-6px)}
+    .card .img img.fade-in{opacity:1;transform:scale(1) translateX(0)}
     .img-next{
       position:absolute;right:10px;bottom:10px;z-index:4;
       width:36px;height:36px;
@@ -359,12 +368,13 @@
     }
     .modal.open{display:flex}
     .modal-card{
-      width:min(980px, 100%);
+      width:min(1100px, 100%);
       border-radius: var(--radius2);
       border:1px solid var(--line);
       background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
       box-shadow: var(--shadow2);
       overflow:hidden;
+      max-height: 100vh; /* keep modal within viewport height */
     }
     .modal-top{display:flex;gap:0;flex-wrap:wrap}
     .modal-media{
@@ -372,12 +382,39 @@
       background:#0b0e12; position:relative;
       min-height:340px;
     }
-    .modal-media img{width:100%;height:100%;object-fit:cover}
-    .modal-content{
-      flex: .9; min-width:320px;
-      padding:18px;
-      border-left:1px solid var(--line);
+    .modal-media img{width:100%;height:100%;object-fit:cover;opacity:1;transform:scale(1) translateX(0);transition:opacity .24s ease, transform .24s ease;will-change:opacity,transform}
+    .modal-media img.fade-out{opacity:0;transform:scale(.985) translateX(-8px)}
+    .modal-media img.fade-in{opacity:1;transform:scale(1) translateX(0)}
+    .modal-media .modal-nav{
+      position:absolute;top:50%;transform:translateY(-50%);
+      z-index:3;
+      width:40px;height:40px;border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(10,12,15,.55);
+      backdrop-filter: blur(6px);
+      color:var(--text);
+      display:flex;align-items:center;justify-content:center;
+      font-size:20px;line-height:1;
+      cursor:pointer;
+      box-shadow: 0 8px 18px rgba(0,0,0,.35);
+      transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
+      user-select:none;
     }
+    .modal-media .modal-nav:hover{ transform:translateY(-50%) scale(1.04); background: rgba(255,255,255,.08); box-shadow: 0 10px 24px rgba(0,0,0,.38); }
+    .modal-media .modal-nav:active{ transform:translateY(-50%) scale(0.98); }
+    .modal-media .modal-nav:focus-visible{ outline:none; border-color: rgba(203,181,139,.45); box-shadow: 0 0 0 2px rgba(203,181,139,.35), 0 10px 24px rgba(0,0,0,.38); }
+    .modal-media .modal-nav.prev{left:12px}
+    .modal-media .modal-nav.next{right:12px}
+    .modal-content{
+      flex: 1.1; min-width:320px;
+      padding:3px;
+      border-left:1px solid var(--line);
+      overflow:auto; /* scroll content when tall */
+      max-height: 101vh; /* ensures right panel can scroll within modal */
+      -webkit-overflow-scrolling: touch; /* smooth on iOS */
+    }
+    .modal-top{min-height:0}
+    .modal-media,.modal-content{min-height:0}
     .modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
     .modal-head h4{margin:0;font-size:16px}
     .close{
@@ -406,6 +443,25 @@
     .kv .box b{display:block;margin-top:4px;font-size:14px}
     .modal-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
     .small{font-size:11px;color:var(--muted);margin:10px 0 0 0;line-height:1.5}
+
+    /* Modal sections */
+    .modal-section{margin-top:14px}
+    .modal-section h5{margin:0 0 8px 0;font-size:13px;color:var(--text)}
+    .hl-list{display:flex;flex-wrap:wrap;gap:8px}
+    .hl-list .chip{background:rgba(0,0,0,.22)}
+    .avail-list{display:flex;flex-direction:column;gap:8px}
+    .avail-row{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid var(--line);background:rgba(255,255,255,.03);border-radius:12px;padding:10px;transition: transform .16s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease}
+    .avail-row:hover{transform: translateY(-2px); background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03)); border-color: rgba(203,181,139,.35); box-shadow: 0 8px 24px rgba(0,0,0,.32)}
+    .avail-row:active{transform: translateY(0) scale(.99)}
+    .avail-row:focus-within{outline:none; background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.035)); border-color: rgba(203,181,139,.45); box-shadow: 0 0 0 2px rgba(203,181,139,.25), 0 8px 24px rgba(0,0,0,.34)}
+    .avail-row .left{display:flex;gap:10px;align-items:center}
+    .avail-row .right{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+    /* Constrain long unit lists inside modal */
+    #mAvailList .avail-list{max-height:320px;overflow:auto;padding-right:6px;-webkit-overflow-scrolling: touch}
+
+    /* Hide scrollbars but keep scrolling */
+    .modal-content, #mAvailList .avail-list{ scrollbar-width: none; -ms-overflow-style: none; }
+    .modal-content::-webkit-scrollbar, #mAvailList .avail-list::-webkit-scrollbar{ width:0; height:0; display:none; }
 
     /* Contact form */
     .form{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
@@ -439,6 +495,24 @@
       /* Switch table to cards on mobile */
       .units table{display:none}
       .units .cards{display:grid;grid-template-columns:1fr;gap:12px;padding:12px}
+    }
+  </style>
+  <style>
+    /* Mobile-responsive modal adjustments */
+    @media (max-width: 640px){
+      .modal-card{width:100%;max-height:94vh;border-radius:16px}
+      .modal-top{flex-direction:column}
+      .modal-media{min-height:44vh}
+      .modal-content{border-left:none;border-top:1px solid var(--line);max-height:calc(94vh - 44vh);overflow:auto;padding:14px}
+      .modal-media .modal-nav{width:44px;height:44px}
+      #mAvailList .avail-list{max-height:240px}
+      /* Make Available units rows compact */
+      #mAvailList .avail-row{padding:8px;gap:8px}
+      #mAvailList .avail-row .left{gap:8px}
+      #mAvailList .avail-row .left b{font-size:13px}
+      #mAvailList .avail-row .right{gap:6px}
+      #mAvailList .avail-row .right .btn{padding:8px 10px;border-radius:10px;font-size:12px}
+      #mAvailList .avail-row .tag{font-size:11px;padding:6px 8px}
     }
   </style>
 </head>
@@ -760,6 +834,8 @@ United States
       <div class="modal-top">
         <div class="modal-media">
           <img id="mImg" alt="Photo" decoding="async" />
+          <button class="modal-nav prev" id="mPrev" aria-label="Previous photo">‹</button>
+          <button class="modal-nav next" id="mNext" aria-label="Next photo">›</button>
         </div>
         <div class="modal-content">
           <div class="modal-head">
@@ -779,7 +855,8 @@ United States
             <div class="box"><span>Apply</span><b id="mApplyHint">—</b></div>
           </div>
 
-          <div class="modal-actions" id="mActions"></div>
+          <div class="modal-section" id="mHighlights"></div>
+          <div class="modal-section" id="mAvailList"></div>
 
           <p class="small" id="mNotes"></p>
         </div>
@@ -1175,6 +1252,172 @@ United States
       const el = document.getElementById('leadInterested'); if(el) el.value = interested || '';
       const name = document.getElementById('leadName'); if(name) name.focus();
     }
+    // Smooth image swap helpers
+    function preloadImage(src){
+      return new Promise((resolve)=>{
+        const i = new Image();
+        i.src = src;
+        if(i.complete){ resolve(); }
+        else{
+          i.onload = ()=>resolve();
+          i.onerror = ()=>resolve();
+        }
+      });
+    }
+    function waitTransition(el, timeout=400){
+      return new Promise((resolve)=>{
+        let done = false;
+        const handler = (e)=>{
+          if(e.target === el && (e.propertyName === 'opacity' || e.propertyName === 'transform')){
+            if(!done){ done = true; el.removeEventListener('transitionend', handler); resolve(); }
+          }
+        };
+        el.addEventListener('transitionend', handler);
+        setTimeout(()=>{ if(!done){ done = true; el.removeEventListener('transitionend', handler); resolve(); } }, timeout);
+      });
+    }
+    async function smoothSwap(imgEl, nextSrc){
+      try{
+        await preloadImage(nextSrc);
+        imgEl.classList.add('fade-out');
+        await waitTransition(imgEl);
+        imgEl.src = nextSrc;
+        imgEl.classList.remove('fade-out');
+        imgEl.classList.add('fade-in');
+        await waitTransition(imgEl);
+      }finally{
+        imgEl.classList.remove('fade-in');
+      }
+    }
+
+    // Scroll lock helpers for modal
+    let __bodyScrollY = 0;
+    function lockBodyScroll(){
+      try{
+        __bodyScrollY = window.scrollY || window.pageYOffset || 0;
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${__bodyScrollY}px`;
+        document.body.style.left = '0';
+        document.body.style.right = '0';
+        document.body.style.width = '100%';
+        document.body.classList.add('modal-open');
+      }catch{}
+    }
+    function unlockBodyScroll(){
+      try{
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.width = '';
+        document.body.classList.remove('modal-open');
+        window.scrollTo(0, __bodyScrollY || 0);
+      }catch{}
+    }
+
+    // Property modal
+    function openPropertyModal(kind, id){
+      let prop = null;
+      if(kind === 'Multifamily'){
+        prop = multifamily.find(p=>p.id===id);
+      }else if(kind === 'Single-family'){
+        prop = singlefamily.find(h=>h.id===id);
+      }
+      if(!prop) return;
+
+      modalState.mode = 'property';
+      modalState.rec = null;
+      modalState.photoIndex = 0;
+      const photos = Array.isArray(prop.heroPhotos) && prop.heroPhotos.length ? prop.heroPhotos : (prop.photos || placeholderPhotos);
+      modalState.photos = photos;
+
+      // Header
+      document.getElementById('mTitle').textContent = prop.name;
+      document.getElementById('mSub').textContent = prop.address;
+      document.getElementById('mType').textContent = kind;
+      document.getElementById('mStatus').textContent = prop.status || '—';
+      const bb = (typeof prop.beds==='number' && typeof prop.baths==='number') ? `${prop.beds} bd / ${prop.baths} ba` : '—';
+      document.getElementById('mBedsBaths').textContent = bb;
+      document.getElementById('mSqft').textContent = '—';
+      document.getElementById('mRent').textContent = money(prop.rent);
+      document.getElementById('mApplyHint').textContent = canApply(prop.status) ? 'Available to apply' : 'Not accepting applications';
+      document.getElementById('mNotes').textContent = prop.notes || '';
+      document.getElementById('mImg').src = photos[0] || placeholderPhotos[0];
+
+      // Compute unit count for highlights or other uses
+      const unitCount = kind==='Multifamily' ? (prop.units?.length || 0) : 1;
+
+      // Highlights (curated list; first item is dynamic beds/baths)
+      const mHL = document.getElementById('mHighlights');
+      const hl = [];
+      if(bb !== '—') hl.push(bb);
+      hl.push(
+        'Open-concept living & kitchen area',
+        'High-end finishes and modern fixtures',
+        'Stainless steel appliances',
+        'In-unit washer & dryer',
+        'Designer exterior lighting',
+        'Energy-efficient windows',
+        'On-site parking',
+        'Pet-friendly',
+        'Move-in ready'
+      );
+      mHL.innerHTML = `<h5>Highlights</h5><div class="hl-list">${hl.map(c=>`<span class=\"chip\">${c}</span>`).join('')}</div>`;
+
+      // Available units list
+      const mAvail = document.getElementById('mAvailList');
+      if(kind==='Multifamily'){
+        const items = (prop.units||[]).map(u=>{
+          const st = (prop.statusByUnit && prop.statusByUnit[u]) ? prop.statusByUnit[u] : (prop.status||'Waitlist');
+          const rowKey = `${prop.id}::${u}`;
+          const can = canApply(st);
+          return `
+            <div class=\"avail-row\">
+              <div class=\"left\"><b>Unit ${u}</b><span class=\"${tagClass(st)}\"><span class=\"mini-dot\"></span>${st}</span></div>
+              <div class=\"right\">
+                <button class=\"btn\" data-open=\"${rowKey}\">View</button>
+                <button class=\"btn\" data-sch=\"${prop.name} • Unit ${u}\">Schedule</button>
+                ${can ? `<a class=\"btn apply\" href=\"${APPLY_URL}\" target=\"_blank\" rel=\"noopener\">Apply</a>` : ''}
+              </div>
+            </div>`;
+        }).join('');
+        mAvail.innerHTML = `<h5>Available units</h5><div class=\"avail-list\">${items || '<div style="color:var(--muted);font-size:13px">No units to show.</div>'}</div>`;
+      }else{
+        const rowKey = `${prop.id}::home`;
+        const st = prop.status || 'Waitlist';
+        const can = canApply(st);
+        mAvail.innerHTML = `
+          <h5>Available units</h5>
+          <div class=\"avail-list\">
+            <div class=\"avail-row\">
+              <div class=\"left\"><b>Home</b><span class=\"${tagClass(st)}\"><span class=\"mini-dot\"></span>${st}</span></div>
+              <div class=\"right\">
+                <button class=\"btn\" data-open=\"${rowKey}\">View details</button>
+                <button class=\"btn\" data-sch=\"${prop.name}\">Schedule</button>
+                ${can ? `<a class=\"btn apply\" href=\"${APPLY_URL}\" target=\"_blank\" rel=\"noopener\">Apply</a>` : ''}
+              </div>
+            </div>
+          </div>`;
+      }
+
+      // Wire inner buttons
+      document.querySelectorAll('#mAvailList [data-open]').forEach(btn=>{
+        btn.addEventListener('click', (e)=>{
+          const key = btn.getAttribute('data-open');
+          openModal(key);
+        });
+      });
+      document.querySelectorAll('#mAvailList [data-sch]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const interested = btn.getAttribute('data-sch');
+          closeModal();
+          scheduleTourFor(interested);
+        });
+      });
+
+      lockBodyScroll();
+      document.getElementById('modal').classList.add('open');
+    }
     async function initMap(){
       if(!window.L || !document.getElementById('mapCanvas')) return;
       const map = L.map('mapCanvas').setView([29.4237, -98.4934], 11);
@@ -1272,7 +1515,7 @@ United States
         const el = document.createElement("div");
         el.className = "card";
         el.tabIndex = 0;
-        el.setAttribute("role","button");
+        
 
         el.innerHTML = `
           <div class="img">
@@ -1306,12 +1549,7 @@ United States
           applyFilters();
         };
 
-        el.addEventListener("click", (e)=>{
-          // If they clicked the Apply link, let it work.
-          if(e.target.closest('a')) return;
-          open();
-        });
-        el.addEventListener("keydown",(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open();}});
+        
 
         // Hero photo slider button
         const imgWrapP = el.querySelector('.img');
@@ -1321,11 +1559,13 @@ United States
         let swipingP = false;
         if(Array.isArray(p.heroPhotos) && p.heroPhotos.length > 1){
           if(nextBtnP){
+            let animP = false;
             nextBtnP.addEventListener('click', (e)=>{
               e.stopPropagation();
+              if(animP) return;
               idxP = (idxP + 1) % p.heroPhotos.length;
-              imgElP.src = p.heroPhotos[idxP];
-              updateDotsP();
+              animP = true;
+              smoothSwap(imgElP, p.heroPhotos[idxP]).then(()=>{ animP = false; updateDotsP(); });
             });
           }
           // Touch swipe left/right to navigate photos
@@ -1346,9 +1586,7 @@ United States
               }else{
                 idxP = (idxP - 1 + p.heroPhotos.length) % p.heroPhotos.length; // swipe right -> prev
               }
-              imgElP.src = p.heroPhotos[idxP];
-              setTimeout(()=>{ swipingP = false; }, 200);
-              updateDotsP();
+              smoothSwap(imgElP, p.heroPhotos[idxP]).then(()=>{ swipingP = false; updateDotsP(); });
             }
           }, { passive: false });
 
@@ -1366,6 +1604,12 @@ United States
           }
           updateDotsP();
         }
+
+        // Card click opens property modal (ignore image area and buttons)
+        el.addEventListener('click', (e)=>{
+          if(e.target.closest('.img') || e.target.closest('.btn')) return;
+          openPropertyModal('Multifamily', p.id);
+        });
 
         // "View units" button
         el.querySelector('[data-jump]')?.addEventListener("click",(e)=>{
@@ -1388,7 +1632,7 @@ United States
         const el = document.createElement("div");
         el.className = "card";
         el.tabIndex = 0;
-        el.setAttribute("role","button");
+        
 
         el.innerHTML = `
           <div class="img">
@@ -1417,11 +1661,7 @@ United States
         `;
 
         const open = ()=>openModal(`${h.id}::home`);
-        el.addEventListener("click", (e)=>{
-          if(e.target.closest('a')) return;
-          open();
-        });
-        el.addEventListener("keydown",(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open();}});
+        
 
         // Hero photo slider button for single-family card
         const imgWrapH = el.querySelector('.img');
@@ -1431,11 +1671,13 @@ United States
         let swipingH = false;
         if(Array.isArray(h.heroPhotos) && h.heroPhotos.length > 1){
           if(nextBtnH){
+            let animH = false;
             nextBtnH.addEventListener('click', (e)=>{
               e.stopPropagation();
+              if(animH) return;
               idxH = (idxH + 1) % h.heroPhotos.length;
-              imgElH.src = h.heroPhotos[idxH];
-              updateDotsH();
+              animH = true;
+              smoothSwap(imgElH, h.heroPhotos[idxH]).then(()=>{ animH = false; updateDotsH(); });
             });
           }
           // Touch swipe left/right to navigate photos
@@ -1456,9 +1698,7 @@ United States
               }else{
                 idxH = (idxH - 1 + h.heroPhotos.length) % h.heroPhotos.length; // right -> prev
               }
-              imgElH.src = h.heroPhotos[idxH];
-              setTimeout(()=>{ swipingH = false; }, 200);
-              updateDotsH();
+              smoothSwap(imgElH, h.heroPhotos[idxH]).then(()=>{ swipingH = false; updateDotsH(); });
             }
           }, { passive: false });
 
@@ -1476,6 +1716,12 @@ United States
           }
           updateDotsH();
         }
+
+        // Card click opens property modal (ignore image area and buttons)
+        el.addEventListener('click', (e)=>{
+          if(e.target.closest('.img') || e.target.closest('.btn')) return;
+          openPropertyModal('Single-family', h.id);
+        });
 
         el.querySelector('[data-open]')?.addEventListener("click",(e)=>{
           e.stopPropagation();
@@ -1596,6 +1842,8 @@ United States
       if(!rec) return;
 
       modalState.rec = rec;
+      modalState.mode = 'unit';
+      modalState.photos = rec.photos || [];
       modalState.photoIndex = 0;
 
       $("#mTitle").textContent = rec.title;
@@ -1606,6 +1854,9 @@ United States
       $("#mSqft").textContent = (typeof rec.sqft === "number") ? rec.sqft.toLocaleString() : "—";
       $("#mRent").textContent = money(rec.rent);
       $("#mNotes").textContent = rec.notes || "";
+      // clear property-only sections
+      const mHL = document.getElementById('mHighlights'); if(mHL) mHL.innerHTML = "";
+      const mAvail = document.getElementById('mAvailList'); if(mAvail) mAvail.innerHTML = "";
 
       const can = canApply(rec.status);
       $("#mApplyHint").textContent = can ? "Available to apply" : "Not accepting applications";
@@ -1615,21 +1866,7 @@ United States
       // Prefill contact form
       $("#leadInterested").value = rec.type === "Multifamily" ? `${rec.title}` : `${rec.title}`;
 
-      // Actions
-      const actions = $("#mActions");
-      actions.innerHTML = `
-        <button class="btn primary" id="mSchedule">Schedule tour</button>
-        <button class="btn" id="mNext">Next photo</button>
-        ${can ? `<a class="btn apply" href="${APPLY_URL}" target="_blank" rel="noopener">Apply</a>` : ``}
-      `;
-
-      $("#mSchedule").addEventListener("click", ()=>{
-        closeModal();
-        $("#contact").scrollIntoView({behavior:"smooth"});
-        $("#leadName").focus();
-      });
-      $("#mNext").addEventListener("click", nextPhoto);
-
+      lockBodyScroll();
       $("#modal").classList.add("open");
     }
 
@@ -1637,14 +1874,26 @@ United States
       $("#modal").classList.remove("open");
       modalState.rec = null;
       modalState.photoIndex = 0;
+      unlockBodyScroll();
     }
 
     function nextPhoto(){
-      if(!modalState.rec) return;
-      const photos = modalState.rec.photos || [];
+      const photos = (modalState && modalState.mode === 'property')
+        ? (modalState.photos || [])
+        : (modalState.rec?.photos || []);
       if(!photos.length) return;
       modalState.photoIndex = (modalState.photoIndex + 1) % photos.length;
-      $("#mImg").src = photos[modalState.photoIndex];
+      const img = document.getElementById('mImg');
+      smoothSwap(img, photos[modalState.photoIndex]);
+    }
+    function prevPhoto(){
+      const photos = (modalState && modalState.mode === 'property')
+        ? (modalState.photos || [])
+        : (modalState.rec?.photos || []);
+      if(!photos.length) return;
+      modalState.photoIndex = (modalState.photoIndex - 1 + photos.length) % photos.length;
+      const img = document.getElementById('mImg');
+      smoothSwap(img, photos[modalState.photoIndex]);
     }
 
     // ========= Stats =========
@@ -1678,7 +1927,16 @@ United States
 
     $("#mClose").addEventListener("click", closeModal);
     $("#modal").addEventListener("click", (e)=>{ if(e.target.id==="modal") closeModal(); });
-    document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeModal(); });
+    document.addEventListener("keydown", (e)=>{
+      if(e.key==="Escape") closeModal();
+      if($("#modal").classList.contains("open")){
+        if(e.key === 'ArrowRight') nextPhoto();
+        if(e.key === 'ArrowLeft') prevPhoto();
+      }
+    });
+    // Modal image nav buttons
+    document.getElementById('mNext')?.addEventListener('click', (e)=>{ e.stopPropagation(); nextPhoto(); });
+    document.getElementById('mPrev')?.addEventListener('click', (e)=>{ e.stopPropagation(); prevPhoto(); });
 
     // Mobile menu wiring
     $("#mobileMenuBtn")?.addEventListener("click",()=>$("#mobileMenu").classList.add("open"));
@@ -1741,4 +1999,3 @@ United States
   </script>
 </body>
 </html>
-
