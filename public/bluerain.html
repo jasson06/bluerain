@@ -203,6 +203,26 @@
     .card:hover{transform: translateY(-3px); box-shadow: var(--shadow2)}
     .card .img{height:190px;background:#0c0f14;position:relative;overflow:hidden}
     .card .img img{width:100%;height:100%;object-fit:cover}
+    .img-next{
+      position:absolute;right:10px;bottom:10px;z-index:4;
+      width:36px;height:36px;
+      display:flex;align-items:center;justify-content:center;
+      border:1px solid var(--line);
+      background: rgba(10,12,15,.55);
+      backdrop-filter: blur(6px);
+      color:var(--text);
+      border-radius:999px;
+      font-size:18px;line-height:1;
+      box-shadow: 0 8px 18px rgba(0,0,0,.35);
+      cursor:pointer;
+      transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
+    }
+    .img-next:hover{ transform: translateY(-1px) scale(1.04); background: rgba(255,255,255,.08); box-shadow: 0 10px 24px rgba(0,0,0,.38); }
+    .img-next:active{ transform: translateY(0) scale(0.98); }
+    .img-next:focus-visible{ outline:none; border-color: rgba(203,181,139,.45); box-shadow: 0 0 0 2px rgba(203,181,139,.35), 0 10px 24px rgba(0,0,0,.38); }
+    .img-dots{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);display:flex;gap:6px;z-index:3;background:rgba(0,0,0,.25);padding:6px 8px;border-radius:999px;border:1px solid var(--line)}
+    .img-dots .pip{width:7px;height:7px;border-radius:999px;background:rgba(234,240,247,.5)}
+    .img-dots .pip.active{background:rgba(234,240,247,.95)}
     .pill{
       position:absolute;left:14px;top:14px;
       font-size:11px;
@@ -335,7 +355,7 @@
       display:none;
       align-items:center;justify-content:center;
       padding:20px;
-      z-index:100;
+      z-index:1000;
     }
     .modal.open{display:flex}
     .modal-card{
@@ -798,7 +818,7 @@ United States
           "202": ["images/image63.jpg","images/image64.jpg","images/image65.jpg","images/image66.jpg","images/image67.jpg","images/image68.jpg","images/image69.jpg","images/image70.jpg","images/image71.jpg","images/image72.jpg"]
         },
         status: "Available",
-        hero: "images/image51.jpg",
+        heroPhotos: ["images/image51.jpg","images/image52.jpg","images/image113.jpg","images/image114.jpg","images/image115.jpg","images/image116.jpg","images/image63.jpg","images/image64.jpg","images/image65.jpg","images/image66.jpg","images/image67.jpg","images/image68.jpg","images/image69.jpg","images/image70.jpg","images/image71.jpg","images/image72.jpg"],
       },
       {
         id:"401-kendall",
@@ -888,7 +908,7 @@ United States
           "202": ["images/image73.jpg","images/image74.jpg","images/image75.jpg","images/image76.jpg","images/image77.jpg","images/image78.jpg","images/image79.jpg","images/image80.jpg","images/image81.jpg","images/image82.jpg"]
         },
         status: "Available",
-        hero: "images/image54.jpg",
+        heroPhotos: ["images/image54.jpg","images/image117.jpg","images/image118.jpg","images/image119.jpg","images/image120.jpg","images/image121.jpg","images/image73.jpg","images/image74.jpg","images/image75.jpg","images/image76.jpg","images/image77.jpg","images/image78.jpg","images/image79.jpg","images/image80.jpg","images/image81.jpg","images/image82.jpg"],
       },
       {
         id:"1505-woodlawn",
@@ -906,7 +926,7 @@ United States
           "4": ["images/image94.jpg","images/image95.jpg","images/image96.jpg","images/image97.jpg","images/image98.jpg","images/image99.jpg","images/image100.jpg","images/image101.jpg","images/image102.jpg","images/image103.jpg","images/image104.jpg","images/image105.jpg"]
         },
         status: "Available",
-        hero: "images/image55.jpg",
+        heroPhotos: ["images/image55.jpg","images/image106.jpg","images/image107.jpg","images/image108.jpg","images/image109.jpg","images/image110.jpg","images/image111.jpg","images/image94.jpg","images/image95.jpg","images/image96.jpg","images/image97.jpg","images/image98.jpg","images/image99.jpg","images/image100.jpg","images/image101.jpg","images/image102.jpg","images/image103.jpg","images/image104.jpg","images/image105.jpg"],
       },
       {
         id:"402-ada",
@@ -962,14 +982,20 @@ United States
         status: "Available",
         hero: "images/image58.jpg",
       },
-    ].map((p,i)=>({
+    ].map((p,i)=>{
+      const heroPhotos = Array.isArray(p.hero) ? p.hero
+        : (Array.isArray(p.heroPhotos) && p.heroPhotos.length ? p.heroPhotos
+        : (p.hero ? [p.hero]
+        : (p.photos || placeholderPhotos)));
+      return ({
       ...p,
       type:"Multifamily",
       // Default per-unit status to property status if none provided
       statusByUnit: p.statusByUnit || Object.fromEntries(p.units.map(u => [u, p.status])),
       // Default per-unit photos to property photos or placeholders
       photosByUnit: p.photosByUnit || Object.fromEntries(p.units.map(u => [u, p.photos || placeholderPhotos])),
-      hero: p.hero || placeholderPhotos[i % placeholderPhotos.length],
+      heroPhotos,
+      hero: heroPhotos[0] || placeholderPhotos[i % placeholderPhotos.length],
       photos: p.photos || placeholderPhotos,
       tags: [
         `${p.beds} bd / ${p.baths} ba`,
@@ -980,7 +1006,8 @@ United States
         p.status === "Waitlist" ? "Join the waitlist — apply online." :
         p.status === "Coming Soon" ? "Coming soon — apply online to get started." :
         "Available — apply online or request a tour."
-    }));
+    });
+    });
 
     const singlefamily = [
       {
@@ -1019,10 +1046,16 @@ United States
         hero: "images/image60.jpg",
         photos: ["images/image60.jpg","images/image55.jpg","images/image54.jpg"],
       },
-    ].map((h,i)=>({
+    ].map((h,i)=>{
+      const heroPhotos = Array.isArray(h.hero) ? h.hero
+        : (Array.isArray(h.heroPhotos) && h.heroPhotos.length ? h.heroPhotos
+        : (h.hero ? [h.hero]
+        : (h.photos || placeholderPhotos)));
+      return ({
       ...h,
       type:"Single-family",
-      hero: h.hero || ((h.photos && h.photos[0]) || placeholderPhotos[(i+1) % placeholderPhotos.length]),
+      heroPhotos,
+      hero: heroPhotos[0] || ((h.photos && h.photos[0]) || placeholderPhotos[(i+1) % placeholderPhotos.length]),
       tags: [
         `${h.beds} bd / ${h.baths} ba`,
         `${money(h.rent)}/mo`,
@@ -1030,7 +1063,8 @@ United States
       ],
       notes: h.status === "Waitlist" ? "Join the waitlist — apply online." : "Apply online or request a tour.",
       photos: h.photos || placeholderPhotos
-    }));
+    });
+    });
 
     // Build records used by Availability table + Modal
     const allRecords = [
@@ -1243,6 +1277,7 @@ United States
         el.innerHTML = `
           <div class="img">
             <img alt="${p.name}" src="${p.hero}" loading="lazy" decoding="async">
+            ${Array.isArray(p.heroPhotos) && p.heroPhotos.length > 1 ? `<button class="img-next" aria-label="Next photo">›</button>` : ``}
             <div class="${pill.cls}">${pill.text}</div>
           </div>
           <div class="body">
@@ -1278,6 +1313,60 @@ United States
         });
         el.addEventListener("keydown",(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open();}});
 
+        // Hero photo slider button
+        const imgWrapP = el.querySelector('.img');
+        const imgElP = el.querySelector('.img img');
+        const nextBtnP = el.querySelector('.img .img-next');
+        let idxP = 0;
+        let swipingP = false;
+        if(Array.isArray(p.heroPhotos) && p.heroPhotos.length > 1){
+          if(nextBtnP){
+            nextBtnP.addEventListener('click', (e)=>{
+              e.stopPropagation();
+              idxP = (idxP + 1) % p.heroPhotos.length;
+              imgElP.src = p.heroPhotos[idxP];
+              updateDotsP();
+            });
+          }
+          // Touch swipe left/right to navigate photos
+          let startXP = 0, startYP = 0;
+          imgWrapP.addEventListener('touchstart', (e)=>{
+            const t = e.changedTouches[0];
+            startXP = t.clientX; startYP = t.clientY; swipingP = false;
+          }, { passive: true });
+          imgWrapP.addEventListener('touchend', (e)=>{
+            const t = e.changedTouches[0];
+            const dx = t.clientX - startXP; const dy = t.clientY - startYP;
+            if(Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)){
+              e.preventDefault();
+              e.stopPropagation();
+              swipingP = true;
+              if(dx < 0){
+                idxP = (idxP + 1) % p.heroPhotos.length; // swipe left -> next
+              }else{
+                idxP = (idxP - 1 + p.heroPhotos.length) % p.heroPhotos.length; // swipe right -> prev
+              }
+              imgElP.src = p.heroPhotos[idxP];
+              setTimeout(()=>{ swipingP = false; }, 200);
+              updateDotsP();
+            }
+          }, { passive: false });
+
+          // Build and update dots (max 3)
+          const dotsTotal = Math.min(p.heroPhotos.length, 3);
+          const dots = document.createElement('div'); dots.className = 'img-dots';
+          const pipEls = [];
+          for(let i=0;i<dotsTotal;i++){ const s = document.createElement('span'); s.className='pip'; dots.appendChild(s); pipEls.push(s); }
+          imgWrapP.appendChild(dots);
+          function updateDotsP(){
+            const clusterSize = Math.ceil(p.heroPhotos.length / dotsTotal);
+            let active = Math.floor(idxP / clusterSize);
+            if(active < 0) active = 0; if(active >= dotsTotal) active = dotsTotal-1;
+            pipEls.forEach((el,i)=>{ if(i===active) el.classList.add('active'); else el.classList.remove('active'); });
+          }
+          updateDotsP();
+        }
+
         // "View units" button
         el.querySelector('[data-jump]')?.addEventListener("click",(e)=>{
           e.stopPropagation();
@@ -1304,6 +1393,7 @@ United States
         el.innerHTML = `
           <div class="img">
             <img alt="${h.name}" src="${h.hero}" loading="lazy" decoding="async">
+            ${Array.isArray(h.heroPhotos) && h.heroPhotos.length > 1 ? `<button class=\"img-next\" aria-label=\"Next photo\">›</button>` : ``}
             <div class="${pill.cls}">${pill.text}</div>
           </div>
           <div class="body">
@@ -1332,6 +1422,60 @@ United States
           open();
         });
         el.addEventListener("keydown",(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open();}});
+
+        // Hero photo slider button for single-family card
+        const imgWrapH = el.querySelector('.img');
+        const imgElH = el.querySelector('.img img');
+        const nextBtnH = el.querySelector('.img .img-next');
+        let idxH = 0;
+        let swipingH = false;
+        if(Array.isArray(h.heroPhotos) && h.heroPhotos.length > 1){
+          if(nextBtnH){
+            nextBtnH.addEventListener('click', (e)=>{
+              e.stopPropagation();
+              idxH = (idxH + 1) % h.heroPhotos.length;
+              imgElH.src = h.heroPhotos[idxH];
+              updateDotsH();
+            });
+          }
+          // Touch swipe left/right to navigate photos
+          let startXH = 0, startYH = 0;
+          imgWrapH.addEventListener('touchstart', (e)=>{
+            const t = e.changedTouches[0];
+            startXH = t.clientX; startYH = t.clientY; swipingH = false;
+          }, { passive: true });
+          imgWrapH.addEventListener('touchend', (e)=>{
+            const t = e.changedTouches[0];
+            const dx = t.clientX - startXH; const dy = t.clientY - startYH;
+            if(Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)){
+              e.preventDefault();
+              e.stopPropagation();
+              swipingH = true;
+              if(dx < 0){
+                idxH = (idxH + 1) % h.heroPhotos.length; // left -> next
+              }else{
+                idxH = (idxH - 1 + h.heroPhotos.length) % h.heroPhotos.length; // right -> prev
+              }
+              imgElH.src = h.heroPhotos[idxH];
+              setTimeout(()=>{ swipingH = false; }, 200);
+              updateDotsH();
+            }
+          }, { passive: false });
+
+          // Build and update dots (max 3)
+          const dotsTotalH = Math.min(h.heroPhotos.length, 3);
+          const dotsH = document.createElement('div'); dotsH.className = 'img-dots';
+          const pipElsH = [];
+          for(let i=0;i<dotsTotalH;i++){ const s = document.createElement('span'); s.className='pip'; dotsH.appendChild(s); pipElsH.push(s); }
+          imgWrapH.appendChild(dotsH);
+          function updateDotsH(){
+            const clusterSize = Math.ceil(h.heroPhotos.length / dotsTotalH);
+            let active = Math.floor(idxH / clusterSize);
+            if(active < 0) active = 0; if(active >= dotsTotalH) active = dotsTotalH-1;
+            pipElsH.forEach((el,i)=>{ if(i===active) el.classList.add('active'); else el.classList.remove('active'); });
+          }
+          updateDotsH();
+        }
 
         el.querySelector('[data-open]')?.addEventListener("click",(e)=>{
           e.stopPropagation();
@@ -1597,4 +1741,3 @@ United States
   </script>
 </body>
 </html>
-
