@@ -3542,3 +3542,26 @@ input, textarea {
   background: #fff;
   box-shadow: 0 0 0 2px #2563eb22;
 }
+
+  /* Scoped styles for the Custom Report Modal */
+  .report-modal { padding: 18px 22px 22px; border-radius: 16px; }
+  .report-modal-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; }
+  .report-modal-title { margin:0; font-size:1.35rem; color:#1f2937; }
+  .report-form { display:block; }
+  .report-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:18px; align-items:start; }
+  .report-section { background:#f9fafb; border:1px solid #e5e7eb; border-radius:12px; padding:14px; }
+  .report-label { font-weight:600; color:#2563eb; margin-bottom:8px; }
+  .report-select { width:100%; min-height:36px; border-radius:8px; border:1px solid #d1d5db; padding:6px 10px; }
+  .checkbox-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; }
+  .checkbox-grid label { display:flex; align-items:center; gap:8px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:8px 10px; }
+  .summary-options { display:flex; flex-wrap:wrap; gap:10px; }
+  .summary-chip { display:flex; align-items:center; gap:8px; padding:8px 12px; background:#f3f6fa; border:1px solid #e5e7eb; border-radius:10px; font-weight:500; color:#334155; }
+  .summary-chip input { accent-color:#2563eb; width:18px; height:18px; }
+  .report-filters { margin-top:12px; }
+  .report-filters-title { font-weight:600; color:#334155; margin-bottom:6px; }
+  .report-actions { display:flex; justify-content:flex-end; margin-top:14px; }
+  .btn-primary { background: linear-gradient(90deg,#2563eb 0%,#3b82f6 100%); color:#fff; border:none; border-radius:10px; padding:10px 16px; cursor:pointer; box-shadow:0 2px 8px #2563eb22; }
+  .btn-primary:hover { filter: brightness(1.05); }
+  .report-result { margin-top:24px; }
+  @media (max-width: 640px) { .report-actions { justify-content:stretch; } .btn-primary { width:100%; } }
+
