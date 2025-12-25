@@ -975,11 +975,12 @@ label {
 input,
 textarea,
 select {
-  
+  width: 100%;
   padding: 10px;
   margin-bottom: 15px;
   border: 1px solid #c1c0c0;
   border-radius: 4px;
+   accent-color: #2563eb;
 }
 
 textarea {
@@ -1083,7 +1084,7 @@ button:hover {
 }
 
 input, textarea {
- 
+  width: 100%;
   padding: 10px;
   margin: 10px 0;
   font-size: 16px;
