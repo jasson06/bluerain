@@ -345,28 +345,62 @@
 
 <!-- Custom Report Modal -->
 <div id="customReportModal" class="modal">
-  <div class="modal-content" style="max-width:1050px;">
-    <span class="close" id="closeCustomReportModal">&times;</span>
-    <h2>Generate Custom Report</h2>
-    <form id="customReportForm">
-      <label for="reportProjectSelect">Select Project:</label>
-      <select id="reportProjectSelect" required>
-        <option value="">-- Select Project --</option>
-      </select>
-      <br><br>
-      <label>Select Columns:</label>
-      <label><input type="checkbox" name="columns" value="name" checked> Item Name</label>
-      <label><input type="checkbox" name="columns" value="description" checked> Description</label>
-      <label><input type="checkbox" name="columns" value="status" checked> Status</label>
-      <label><input type="checkbox" name="columns" value="subcontractor" checked> Subcontractor</label>
-      <label><input type="checkbox" name="columns" value="laborCost" checked> Labor Cost to Date</label>
-      <label><input type="checkbox" name="columns" value="materialCost" checked> Material Cost to Date</label>
-      <label><input type="checkbox" name="columns" value="total" checked> Total</label>
-<label><input type="checkbox" name="columns" value="profit" checked> Profit</label>
-      <br><br>
-      <button type="submit">Generate Report</button>
+  <div class="modal-content report-modal" style="max-width:1200px;">
+    <div class="report-modal-header">
+      <h2 class="report-modal-title">Generate Custom Report</h2>
+      <span class="close" id="closeCustomReportModal" aria-label="Close">&times;</span>
+    </div>
+    <form id="customReportForm" class="report-form">
+      <div class="report-grid">
+        <section class="report-section">
+          <label for="reportProjectSelect" class="report-label">Select Project</label>
+          <select id="reportProjectSelect" class="report-select" required>
+            <option value="">-- Select Project --</option>
+          </select>
+          <div id="reportFiltersPlaceholder" class="report-filters">
+            <div class="report-filters-title">Filters</div>
+            <!-- Status & Subcontractor filters will be injected here by script.js -->
+          </div>
+        </section>
+
+        <section class="report-section">
+          <div class="report-label">Select Columns</div>
+          <div class="checkbox-grid">
+            <label><input type="checkbox" name="columns" value="name" checked> Item Name</label>
+            <label><input type="checkbox" name="columns" value="description" checked> Description</label>
+            <label><input type="checkbox" name="columns" value="status" checked> Status</label>
+            <label><input type="checkbox" name="columns" value="subcontractor" checked> Subcontractor</label>
+            <label><input type="checkbox" name="columns" value="laborCost" checked> Labor Cost to Date</label>
+            <label><input type="checkbox" name="columns" value="materialCost" checked> Material Cost to Date</label>
+            <label><input type="checkbox" name="columns" value="total" checked> Total</label>
+            <label><input type="checkbox" name="columns" value="profit" checked> Profit</label>
+          </div>
+        </section>
+      </div>
+
+      <section class="report-section">
+        <div class="report-label">Summary Options</div>
+        <div class="summary-options">
+          <label class="summary-chip">
+            <input type="checkbox" name="summary" value="actualCost" checked> Completed Budget to Date
+          </label>
+          <label class="summary-chip">
+            <input type="checkbox" name="summary" value="totalBudget" checked> Estimate At Completion
+          </label>
+          <label class="summary-chip">
+            <input type="checkbox" name="summary" value="budgetRemaining" checked> Budget Remaining
+          </label>
+          <label class="summary-chip">
+            <input type="checkbox" name="summary" value="percentComplete" checked> Percent Complete Bar
+          </label>
+        </div>
+      </section>
+
+      <div class="report-actions">
+        <button type="submit" class="btn-primary">Generate Report</button>
+      </div>
     </form>
-    <div id="customReportResult" style="margin-top:24px;"></div>
+    <div id="customReportResult" class="report-result"></div>
   </div>
 </div>
       
