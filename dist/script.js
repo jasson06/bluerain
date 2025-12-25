@@ -2895,9 +2895,10 @@ function formatAddress(project) {
   return `${line1}${line2}, ${city}, ${state} ${zip}`.replace(/\s+/g, ' ').trim();
 }
 
-openCustomReportBtn.onclick = async () => {
+
+async function openCustomReportModalLogic() {
   try {
-    openCustomReportBtn.disabled = true;
+    if (openCustomReportBtn) openCustomReportBtn.disabled = true;
 
     openModal();
     resetProjectSelect();
@@ -2917,9 +2918,11 @@ openCustomReportBtn.onclick = async () => {
     console.error(err);
     customReportResult.innerHTML = `<div style="color:#b91c1c;">Failed to load projects. ${err.message}</div>`;
   } finally {
-    openCustomReportBtn.disabled = false;
+    if (openCustomReportBtn) openCustomReportBtn.disabled = false;
   }
-};
+}
+
+openCustomReportBtn.onclick = openCustomReportModalLogic;
 
 // Close modal
 closeCustomReportModal.onclick = closeModal;
@@ -3112,7 +3115,7 @@ customReportForm.onsubmit = async (e) => {
         const name = vendorMap.get(subFilterVal) || subFilterVal;
         parts.push(`Subcontractor: ${name}`);
       }
-      summary += `<div class="summary-applied-filters" style="margin-bottom:8px;color:#334155;background:#f3f6fa;padding:8px 12px;border-radius:6px;font-weight:500;">Filters – ${parts.join(' • ')}</div>`;
+      
     }
 
     if (summaryOptions.has('address')) {
@@ -3281,6 +3284,7 @@ customReportForm.onsubmit = async (e) => {
     customReportResult.innerHTML = `<div style="color:#b91c1c;">Failed to generate report. ${err.message}</div>`;
   }
 };
+
 
 //bottom toolbar logic
 
@@ -3525,10 +3529,10 @@ function openMobileMenu() {
     // Reports button logic
     const openCustomReportMobile = document.getElementById('openCustomReportMobile');
     if (openCustomReportMobile) {
-      openCustomReportMobile.onclick = function(e) {
+      openCustomReportMobile.onclick = async function(e) {
         e.preventDefault();
         menuModal.style.display = 'none';
-        document.getElementById('customReportModal').style.display = 'block';
+        await openCustomReportModalLogic();
       };
     }
 
