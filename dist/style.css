@@ -458,6 +458,7 @@ button, input, textarea {
   color: #0f172a;
   margin: 0px 0;
   padding: 0px;
+  width: 100%;
 }
 
 .project-search-bar button {
@@ -975,7 +976,7 @@ label {
 input,
 textarea,
 select {
-  width: 100%;
+ 
   padding: 10px;
   margin-bottom: 15px;
   border: 1px solid #c1c0c0;
@@ -1084,7 +1085,7 @@ button:hover {
 }
 
 input, textarea {
-  width: 100%;
+  
   padding: 10px;
   margin: 10px 0;
   font-size: 16px;
