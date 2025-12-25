@@ -975,11 +975,13 @@ label {
 input,
 textarea,
 select {
-  width: 100%;
+  
   padding: 10px;
   margin-bottom: 15px;
   border: 1px solid #c1c0c0;
   border-radius: 4px;
+    accent-color: #2563eb;
+ 
 }
 
 textarea {
@@ -1083,7 +1085,7 @@ button:hover {
 }
 
 input, textarea {
-  width: 100%;
+  
   padding: 10px;
   margin: 10px 0;
   font-size: 16px;
@@ -1634,7 +1636,7 @@ input, textarea {
 
 .close {
   float: right;
-  font-size: 24px;
+  font-size: 40px;
   cursor: pointer;
 }
 
@@ -1762,6 +1764,7 @@ input, textarea {
   align-items: start;
   overflow: auto;
   max-width: 1150px;
+  min-height: 500px;
 }
 
 .vendor-table {
@@ -2148,7 +2151,7 @@ input, textarea {
 /* Responsive: stack filters vertically on small screens */
 @media (max-width: 600px) {
   #assignments-filters {
-   
+  
     gap: 8px;
     align-items: stretch;
   }
@@ -2801,7 +2804,6 @@ input, textarea {
   gap: 8px;
   margin-left: auto;
 }
-
 
 .notif-list-item {
   padding: 12px 18px;
@@ -3523,6 +3525,7 @@ input, textarea {
   padding-right: 28px; /* reduce right padding to show full text */
 }
 
+
 /* --- Assignments Tab: Filters Dropdown --- */
 #assignments-filters select {
   padding: 8px 12px;
@@ -3541,4 +3544,124 @@ input, textarea {
   border-color: #2563eb;
   background: #fff;
   box-shadow: 0 0 0 2px #2563eb22;
+}
+
+/* === Glassy Report Modal (scoped) === */
+#customReportModal.modal {
+  background: radial-gradient(1200px 800px at 30% 10%, rgba(99,102,241,0.14) 0%, rgba(14,165,233,0.12) 35%, rgba(2,132,199,0.10) 55%, rgba(15,76,117,0.08) 100%),
+              rgba(15,23,42,0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: glassFadeIn 0.22s ease-out;
+}
+
+@keyframes glassFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+#customReportModal .report-modal {
+  background: linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.18) 100%);
+  border: 1px solid rgba(148,163,184,0.35);
+  box-shadow: 0 10px 30px rgba(30,41,59,0.20), inset 0 1px 0 rgba(255,255,255,0.35);
+  backdrop-filter: saturate(180%) blur(16px);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  border-radius: 18px;
+  animation: glassPop 0.24s cubic-bezier(.4,1.4,.6,1);
+}
+
+@keyframes glassPop {
+  from { transform: translateY(8px) scale(0.98); opacity: 0; }
+  to   { transform: translateY(0) scale(1);    opacity: 1; }
+}
+
+#customReportModal .report-modal-header {
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(148,163,184,0.30);
+}
+
+#customReportModal .report-modal-title {
+  background: #ffff; 
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+#customReportModal .close {
+  color: #2563eb;
+  opacity: 0.9;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+#customReportModal .close:hover { color: #1e293b; transform: scale(1.06); }
+
+#customReportModal .report-section {
+  background: rgba(255,255,255,0.20);
+  border: 1px solid rgba(148,163,184,0.28);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);
+}
+
+#customReportModal .report-label { color: #0f4c75; }
+
+#customReportModal .report-select {
+  background: rgba(255,255,255,0.65);
+  border: 1px solid rgba(148,163,184,0.45);
+  box-shadow: 0 1px 2px rgba(30,41,59,0.06);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+#customReportModal .report-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.20);
+  background: rgba(255,255,255,0.80);
+  outline: none;
+}
+
+#customReportModal .checkbox-grid label {
+  background: rgba(255,255,255,0.55);
+  border: 1px solid rgba(148,163,184,0.35);
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+}
+#customReportModal .checkbox-grid label:hover {
+  background: rgba(255,255,255,0.70);
+  border-color: rgba(37,99,235,0.45);
+  box-shadow: 0 4px 12px rgba(30,41,59,0.10);
+  transform: translateY(-1px);
+}
+
+#customReportModal .summary-options { gap: 12px; }
+#customReportModal .summary-chip {
+  background: rgba(243,246,250,0.65);
+  border: 1px solid rgba(148,163,184,0.35);
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+}
+#customReportModal .summary-chip:hover {
+  background: rgba(243,246,250,0.80);
+  border-color: rgba(37,99,235,0.45);
+  box-shadow: 0 4px 12px rgba(30,41,59,0.10);
+  transform: translateY(-1px);
+}
+
+#customReportModal .report-filters-title {
+  color: #334155;
+  background: linear-gradient(90deg, rgba(255,255,255,0.60), rgba(255,255,255,0.30));
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148,163,184,0.30);
+}
+
+#customReportModal .report-actions { margin-top: 18px; }
+#customReportModal .btn-primary {
+  background: linear-gradient(90deg, rgba(37,99,235,0.95) 0%, rgba(59,130,246,0.95) 100%);
+  box-shadow: 0 8px 20px rgba(37,99,235,0.30);
+  transition: transform 0.12s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+#customReportModal .btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(37,99,235,0.35);
+  filter: brightness(1.06);
+}
+
+/* Reduce motion preference */
+@media (prefers-reduced-motion: reduce) {
+  #customReportModal.modal { animation: none; }
+  #customReportModal .report-modal { animation: none; }
 }
