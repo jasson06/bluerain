@@ -1627,7 +1627,7 @@ input, textarea {
 
 .modal-content {
   background: #fff;
-  margin: 10% auto;
+  margin: 0% auto;
   padding: 20px;
   border-radius: 10px;
   width: 90%;
