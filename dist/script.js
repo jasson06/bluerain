@@ -2676,335 +2676,610 @@ document.addEventListener('DOMContentLoaded', loadAssignments);
 
 
 
-// --- Custom Report Modal Logic ---
+// --- Custom Report Modal Logic (improved) ---
 const customReportModal = document.getElementById('customReportModal');
 const closeCustomReportModal = document.getElementById('closeCustomReportModal');
 const openCustomReportBtn = document.getElementById('openCustomReport');
 const reportProjectSelect = document.getElementById('reportProjectSelect');
 const customReportForm = document.getElementById('customReportForm');
 const customReportResult = document.getElementById('customReportResult');
+let reportStatusFilter = null;
+let reportSubcontractorFilter = null;
 
-// Open modal
-openCustomReportBtn.onclick = async function() {
+const moneyFmt = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+let cachedProjects = null;     // { active: [], completed: [] }
+let projectMap = new Map();    // projectId -> project
+let vendorMap = new Map();     // vendorId -> vendorName
+const estimatesCache = new Map(); // projectId -> estimates array
+
+function openModal() {
   customReportModal.style.display = 'block';
   customReportResult.innerHTML = '';
-  // Load projects
-  reportProjectSelect.innerHTML = `<option value="">-- Select Project --</option>`;
-  const [activeRes, completedRes] = await Promise.all([
-    fetch('/api/projects'),
-    fetch('/api/completed-projects')
-  ]);
-  const activeData = await activeRes.json();
-  const completedData = await completedRes.json();
+  // Optional: focus first field
+  setTimeout(() => reportProjectSelect?.focus?.(), 0);
+}
+function closeModal() {
+  customReportModal.style.display = 'none';
+}
 
-  // Add active projects
-  if (activeData.projects && activeData.projects.length) {
-    reportProjectSelect.innerHTML += `<optgroup label="Active Projects"></optgroup>`;
-    activeData.projects.forEach(p => {
-      reportProjectSelect.innerHTML += `<option value="${p._id}">${p.name}</option>`;
-    });
+async function fetchJSON(url, opts) {
+  const res = await fetch(url, opts);
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ''}`);
+  }
+  return res.json();
+}
+
+function resetProjectSelect() {
+  reportProjectSelect.innerHTML = '';
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = '-- Select Project --';
+  reportProjectSelect.appendChild(placeholder);
+}
+
+function addProjectGroup(label, projects) {
+  if (!projects?.length) return;
+
+  const group = document.createElement('optgroup');
+  group.label = label;
+
+  for (const p of projects) {
+    const opt = document.createElement('option');
+    opt.value = p._id;
+    opt.textContent = p.name + (label.includes('Completed') ? ' (Completed)' : '');
+    group.appendChild(opt);
+
+    // cache lookup
+    projectMap.set(String(p._id), p);
   }
 
-  // Add completed projects
-  if (completedData.projects && completedData.projects.length) {
-    reportProjectSelect.innerHTML += `<optgroup label="Completed Projects"></optgroup>`;
-    completedData.projects.forEach(p => {
-      reportProjectSelect.innerHTML += `<option value="${p._id}">${p.name} (Completed)</option>`;
+  reportProjectSelect.appendChild(group);
+}
+
+async function loadProjectsOnce() {
+  if (cachedProjects) return cachedProjects;
+
+  const [activeData, completedData] = await Promise.all([
+    fetchJSON('/api/projects'),
+    fetchJSON('/api/completed-projects')
+  ]);
+
+  const active = activeData.projects || [];
+  const completed = completedData.projects || [];
+
+  cachedProjects = { active, completed };
+
+  // build map (also used by addProjectGroup, but ensure it includes both)
+  projectMap = new Map();
+  for (const p of [...active, ...completed]) projectMap.set(String(p._id), p);
+
+  return cachedProjects;
+}
+
+async function loadVendorsOnce() {
+  if (vendorMap.size) return vendorMap;
+
+  const vendorsData = await fetchJSON('/api/vendors');
+  const vendors = vendorsData.vendors || vendorsData || [];
+  vendorMap = new Map();
+  for (const v of vendors) vendorMap.set(String(v._id), v.name);
+
+  return vendorMap;
+}
+
+function ensureReportFiltersUI() {
+  if (!customReportForm) return;
+
+  if (!document.getElementById('report-filters-row')) {
+    const row = document.createElement('div');
+    row.id = 'report-filters-row';
+    row.style.margin = '8px 0 12px 0';
+    row.style.display = 'flex';
+    row.style.flexWrap = 'wrap';
+    row.style.gap = '12px';
+
+    const statusWrap = document.createElement('div');
+    const statusLabel = document.createElement('label');
+    statusLabel.textContent = 'Filter by Status:';
+    statusLabel.style.display = 'block';
+    const statusSelect = document.createElement('select');
+    statusSelect.id = 'reportStatusFilter';
+    statusSelect.innerHTML = [
+      { value: '', text: 'All Statuses' },
+      { value: 'in-progress', text: 'In Progress' },
+      { value: 'completed', text: 'Completed' },
+      { value: 'approved', text: 'Approved' },
+      { value: 'rework', text: 'Rework' }
+    ].map(o => `<option value="${o.value}">${o.text}</option>`).join('');
+    statusSelect.style.minHeight = '32px';
+    statusWrap.appendChild(statusLabel);
+    statusWrap.appendChild(statusSelect);
+
+    const subWrap = document.createElement('div');
+    const subLabel = document.createElement('label');
+    subLabel.textContent = 'Filter by Subcontractor:';
+    subLabel.style.display = 'block';
+    const subSelect = document.createElement('select');
+    subSelect.id = 'reportSubcontractorFilter';
+    subSelect.innerHTML = `<option value="">All Subcontractors</option>`;
+    subSelect.style.minHeight = '32px';
+    subWrap.appendChild(subLabel);
+    subWrap.appendChild(subSelect);
+
+    row.appendChild(statusWrap);
+    row.appendChild(subWrap);
+
+    const placeholder = customReportForm.querySelector('#reportFiltersPlaceholder');
+    if (placeholder) {
+      placeholder.appendChild(row);
+    } else {
+      const submitBtn = customReportForm.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        customReportForm.insertBefore(row, submitBtn);
+      } else {
+        customReportForm.appendChild(row);
+      }
+    }
+  }
+
+  reportStatusFilter = document.getElementById('reportStatusFilter');
+  reportSubcontractorFilter = document.getElementById('reportSubcontractorFilter');
+}
+
+async function populateSubcontractorFilterForProject(projectId) {
+  if (!projectId) {
+    if (reportSubcontractorFilter) reportSubcontractorFilter.innerHTML = `<option value="">All Subcontractors</option>`;
+    return;
+  }
+
+  await loadVendorsOnce();
+
+  let estimates = estimatesCache.get(projectId);
+  if (!estimates) {
+    try {
+      const data = await fetchJSON(`/api/estimates?projectId=${encodeURIComponent(projectId)}`);
+      estimates = data.estimates || [];
+      estimatesCache.set(projectId, estimates);
+    } catch (e) {
+      estimates = [];
+    }
+  }
+
+  const ids = new Set();
+  for (const est of estimates) {
+    for (const cat of (est.lineItems || [])) {
+      for (const item of (cat.items || [])) {
+        const assignedId = typeof item.assignedTo === 'object' && item.assignedTo?._id
+          ? String(item.assignedTo._id)
+          : item.assignedTo ? String(item.assignedTo) : '';
+        if (assignedId) ids.add(assignedId);
+      }
+    }
+  }
+
+  const options = [`<option value="">All Subcontractors</option>`];
+  Array.from(ids).sort((a,b) => (vendorMap.get(a)||'').localeCompare(vendorMap.get(b)||''))
+    .forEach(id => {
+      const name = vendorMap.get(id) || id;
+      options.push(`<option value="${id}">${name}</option>`);
     });
+
+  if (reportSubcontractorFilter) reportSubcontractorFilter.innerHTML = options.join('');
+}
+
+function normalizeStatus(raw) {
+  const s = String(raw || '').toLowerCase().trim();
+  if (['completed', 'approved', 'done'].includes(s)) return 'completed';
+  if (['in-progress', 'in progress', 'new', 'started'].includes(s)) return 'in-progress';
+  if (['on-hold', 'hold', 'paused'].includes(s)) return 'on-hold';
+  return s || 'unknown';
+}
+
+function getSelectedValues(form, selector) {
+  return Array.from(form.querySelectorAll(selector))
+    .filter(el => el.checked)
+    .map(el => el.value);
+}
+
+function formatAddress(project) {
+  const a = project?.address;
+  if (!a) return '';
+  const line1 = a.addressLine1 || '';
+  const line2 = a.addressLine2 ? ` ${a.addressLine2}` : '';
+  const city = a.city || '';
+  const state = a.state || '';
+  const zip = a.zip || '';
+  return `${line1}${line2}, ${city}, ${state} ${zip}`.replace(/\s+/g, ' ').trim();
+}
+
+openCustomReportBtn.onclick = async () => {
+  try {
+    openCustomReportBtn.disabled = true;
+
+    openModal();
+    resetProjectSelect();
+    ensureReportFiltersUI();
+
+    const { active, completed } = await loadProjectsOnce();
+
+    addProjectGroup('Active Projects', active);
+    addProjectGroup('Completed Projects', completed);
+
+    reportProjectSelect.addEventListener('change', (e) => {
+      const pid = e.target.value;
+      populateSubcontractorFilterForProject(pid);
+    });
+
+  } catch (err) {
+    console.error(err);
+    customReportResult.innerHTML = `<div style="color:#b91c1c;">Failed to load projects. ${err.message}</div>`;
+  } finally {
+    openCustomReportBtn.disabled = false;
   }
 };
 
 // Close modal
-closeCustomReportModal.onclick = () => customReportModal.style.display = 'none';
-window.onclick = (e) => { if (e.target === customReportModal) customReportModal.style.display = 'none'; };
+closeCustomReportModal.onclick = closeModal;
+window.addEventListener('click', (e) => { if (e.target === customReportModal) closeModal(); });
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && customReportModal.style.display === 'block') closeModal(); });
 
-// Handle report form submit
-customReportForm.onsubmit = async function(e) {
+customReportForm.onsubmit = async (e) => {
   e.preventDefault();
   customReportResult.innerHTML = 'Loading...';
+
   const projectId = reportProjectSelect.value;
-  if (!projectId) return customReportResult.innerHTML = 'Please select a project.';
-  // Get selected columns
-  const columns = Array.from(customReportForm.querySelectorAll('input[name="columns"]:checked')).map(cb => cb.value);
+  if (!projectId) {
+    customReportResult.innerHTML = 'Please select a project.';
+    return;
+  }
 
-  
-const summaryOptions = [
-  "address",
-  "totalItems",
-  "completed",
-  "inProgress",
-  "percentComplete",
-  ...Array.from(customReportForm.querySelectorAll('input[name="summary"]:checked')).map(cb => cb.value)
-];
+  const statusFilterVal = (document.getElementById('reportStatusFilter')?.value || '').trim();
+  const subFilterVal = (document.getElementById('reportSubcontractorFilter')?.value || '').trim();
 
+  // Columns selected
+  const columns = getSelectedValues(customReportForm, 'input[name="columns"]:checked');
 
-  // Fetch all estimates for this project
-  const res = await fetch(`/api/estimates?projectId=${projectId}`);
-  const data = await res.json();
-  const estimates = data.estimates || [];
-  let lineItems = [];
-  let totalBudget = 0;
+  // Summary options selected (base set + user choices)
+  const userSummary = getSelectedValues(customReportForm, 'input[name="summary"]:checked');
+  const summaryOptions = new Set([
+    'address',
+    'totalItems',
+    'completed',
+    'inProgress',
+    ...userSummary
+  ]);
 
-  // Flatten all line items
-  estimates.forEach(est => {
-    est.lineItems.forEach(cat => {
-      (cat.items || []).forEach(item => {
-        lineItems.push(item);
-        totalBudget += Number(item.total) || 0;
-      });
-    });
-  });
+  // Optional: auto-enable summary metrics if columns include them
+  if (columns.includes('laborCost')) summaryOptions.add('laborCost');
+  if (columns.includes('materialCost')) summaryOptions.add('materialCost');
+  if (columns.includes('profit')) summaryOptions.add('profit');
 
-  // Summary calculations
-  const completed = lineItems.filter(i => i.status === 'completed' || i.status === 'approved');
-  const inProgress = lineItems.filter(i => i.status === 'in-progress' || i.status === 'new');
-  const completedCount = completed.length;
-  const inProgressCount = inProgress.length;
-  const percentComplete = lineItems.length ? Math.round((completedCount / lineItems.length) * 100) : 0;
-  const actualCost = completed.reduce((sum, i) => sum + (Number(i.total) || 0), 0);
-  const budgetRemaining = totalBudget - actualCost;
-  const laborCostToDate = completed.reduce((sum, i) => sum + (Number(i.laborCost) || 0), 0);
-  const materialCostToDate = completed.reduce((sum, i) => sum + (Number(i.materialCost) || 0), 0);
-  const totalProfit = completed.reduce((sum, i) =>
-    sum + ((Number(i.total) || 0) - (Number(i.laborCost) || 0) - (Number(i.materialCost) || 0)), 0);
+  try {
+    // Make sure caches exist
+    await loadProjectsOnce();
+    await loadVendorsOnce();
 
-  // Fetch all vendors for lookup
-  const vendorsRes = await fetch('/api/vendors');
-  let vendorsData = await vendorsRes.json();
-  let vendors = vendorsData.vendors || vendorsData || [];
-  const vendorMap = {};
-  vendors.forEach(v => {
-    vendorMap[String(v._id)] = v.name;
-  });
+    // Fetch estimates for project
+    const data = await fetchJSON(`/api/estimates?projectId=${encodeURIComponent(projectId)}`);
+    const estimates = data.estimates || [];
 
-  // Group line items by estimate
-  const estimateMap = {};
-  estimates.forEach(est => {
-    estimateMap[est._id] = est;
-  });
+    // Flatten items
+    let lineItems = [];
+    let totalBudget = 0;
 
-  let table = `<table border="1" style="border-collapse:collapse;width:100%;margin-top:12px;">
-    <thead>
-      <tr>${
-  columns.map(col => {
-    if (col === 'laborCost') return `<th>Labor AC</th>`;
-    if (col === 'materialCost') return `<th>Material AC</th>`;
-    return `<th>${col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1').trim()}</th>`;
-  }).join('')
-}</tr>
-    </thead>
-    <tbody>
-      ${
-        estimates.map(est => {
-          const items = [];
-          est.lineItems.forEach(cat => {
-            (cat.items || []).forEach(item => items.push(item));
-          });
-          if (!items.length) return '';
-          let estimateHeader = `<tr style="background:#e0e7ef;">
-            <td colspan="${columns.length}" style="font-weight:bold;color:#2563eb;font-size:1.08rem;">
-              EST: ${est.title || est.name || est.invoiceNumber || est._id}
-            </td>
-          </tr>`;
-          let itemRows = items.map(item => {
-            const profit = (Number(item.total || 0) - Number(item.laborCost || 0) - Number(item.materialCost || 0));
-            return `<tr>
-              ${columns.includes('name') ? `<td>${item.name || ''}</td>` : ''}
-              ${columns.includes('description') ? `<td>${item.description || ''}</td>` : ''}
-              ${columns.includes('status') ? `<td>${item.status || ''}</td>` : ''}
-              ${columns.includes('subcontractor') ? `<td>${
-                item.assignedTo
-                  ? vendorMap[
-                      typeof item.assignedTo === 'object' && item.assignedTo._id
-                        ? String(item.assignedTo._id)
-                        : String(item.assignedTo)
-                    ] || ''
-                  : ''
-              }</td>` : ''}
-              ${columns.includes('laborCost') ? `<td>$${Number(item.laborCost || 0).toFixed(2)}</td>` : ''}
-              ${columns.includes('materialCost') ? `<td>$${Number(item.materialCost || 0).toFixed(2)}</td>` : ''}
-              ${columns.includes('total') ? `<td>$${Number(item.total || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>` : ''}
-              ${columns.includes('profit') ? `<td>$${profit.toFixed(2)}</td>` : ''}
-            </tr>`;
-          }).join('');
-          return estimateHeader + itemRows;
-        }).join('')
+    for (const est of estimates) {
+      for (const cat of (est.lineItems || [])) {
+        for (const item of (cat.items || [])) {
+          lineItems.push(item);
+          totalBudget += Number(item.total) || 0;
+        }
       }
-    </tbody>
-  </table>`;
+    }
 
-  // Fetch all projects to get the selected project's address
-  const projectsRes = await fetch('/api/projects');
-  const projectsData = await projectsRes.json();
-  const selectedProject = (projectsData.projects || []).find(p => p._id === projectId);
-  const projectAddress = selectedProject && selectedProject.address
-    ? `${selectedProject.address.addressLine1 || ''} ${selectedProject.address.addressLine2 || ''}, ${selectedProject.address.city || ''}, ${selectedProject.address.state || ''} ${selectedProject.address.zip || ''}`
-    : '';
+    // Apply filters
+    const passesFilters = (item) => {
+      let ok = true;
+      if (statusFilterVal) {
+        const raw = String(item.status || '').toLowerCase().trim();
+        if (statusFilterVal === 'in-progress' || statusFilterVal === 'completed' || statusFilterVal === 'on-hold') {
+          ok = ok && normalizeStatus(raw) === statusFilterVal;
+        } else {
+          ok = ok && raw === statusFilterVal;
+        }
+      }
+      if (subFilterVal) {
+        const assignedId = typeof item.assignedTo === 'object' && item.assignedTo?._id
+          ? String(item.assignedTo._id)
+          : item.assignedTo ? String(item.assignedTo) : '';
+        ok = ok && assignedId === subFilterVal;
+      }
+      return ok;
+    };
 
-  // Summary
-  let summary = `<div class="summary">`;
+    const filteredItems = lineItems.filter(passesFilters);
 
-  if (summaryOptions.includes('address')) {
-    summary += `
-      <div class="summary-address">
-        <span class="summary-address-label"><i class="fas fa-map-marker-alt"></i> Project Address:</span>
-        <span class="summary-address-value">${projectAddress}</span>
-      </div>`;
+    // Status buckets based on filtered items
+    const completedItems = filteredItems.filter(i => normalizeStatus(i.status) === 'completed');
+    const inProgressItems = filteredItems.filter(i => normalizeStatus(i.status) === 'in-progress');
+
+    const completedCount = completedItems.length;
+    const inProgressCount = inProgressItems.length;
+
+    const percentComplete = filteredItems.length
+      ? Math.round((completedCount / filteredItems.length) * 100)
+      : 0;
+
+    // Costs based on completed items
+    const actualCost = completedItems.reduce((sum, i) => sum + (Number(i.total) || 0), 0);
+    const budgetRemaining = totalBudget - actualCost;
+
+    const laborCostToDate = completedItems.reduce((sum, i) => sum + (Number(i.laborCost) || 0), 0);
+    const materialCostToDate = completedItems.reduce((sum, i) => sum + (Number(i.materialCost) || 0), 0);
+
+    const totalProfit = completedItems.reduce((sum, i) => {
+      const t = Number(i.total) || 0;
+      const l = Number(i.laborCost) || 0;
+      const m = Number(i.materialCost) || 0;
+      return sum + (t - l - m);
+    }, 0);
+
+    // Build HTML table (for on-screen view)
+    const headerLabel = (col) => {
+      if (col === 'laborCost') return 'Labor AC';
+      if (col === 'materialCost') return 'Material AC';
+      return col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1').trim();
+    };
+
+    let tableHtml = `
+      <table border="1" style="border-collapse:collapse;width:100%;margin-top:12px;">
+        <thead><tr>${columns.map(c => `<th>${headerLabel(c)}</th>`).join('')}</tr></thead>
+        <tbody>
+    `;
+
+    // Also build PDF rows in parallel (avoids scraping HTML + fixes colspan row issue)
+    const pdfHeaders = columns.map(headerLabel);
+    const pdfRows = [];
+
+    for (const est of estimates) {
+      const items = [];
+      for (const cat of (est.lineItems || [])) for (const item of (cat.items || [])) items.push(item);
+      const visibleItems = items.filter(passesFilters);
+      if (!visibleItems.length) continue;
+
+      const estTitle = est.title || est.name || est.invoiceNumber || est._id;
+
+      // HTML group header row
+      tableHtml += `
+        <tr style="background:#e0e7ef;">
+          <td colspan="${columns.length}" style="font-weight:bold;color:#2563eb;font-size:1.08rem;">
+            EST: ${String(estTitle)}
+          </td>
+        </tr>
+      `;
+
+      // PDF group header row (pad to column count)
+      const headerRow = new Array(columns.length).fill('');
+      headerRow[0] = `EST: ${String(estTitle)}`;
+      pdfRows.push(headerRow);
+
+      for (const item of visibleItems) {
+        const profit = (Number(item.total) || 0) - (Number(item.laborCost) || 0) - (Number(item.materialCost) || 0);
+
+        const assignedId =
+          typeof item.assignedTo === 'object' && item.assignedTo?._id
+            ? String(item.assignedTo._id)
+            : item.assignedTo
+              ? String(item.assignedTo)
+              : '';
+
+        const rowValues = columns.map(col => {
+          switch (col) {
+            case 'name': return item.name || '';
+            case 'description': return item.description || '';
+            case 'status': return item.status || '';
+            case 'subcontractor': return assignedId ? (vendorMap.get(assignedId) || '') : '';
+            case 'laborCost': return `$${moneyFmt.format(Number(item.laborCost) || 0)}`;
+            case 'materialCost': return `$${moneyFmt.format(Number(item.materialCost) || 0)}`;
+            case 'total': return `$${moneyFmt.format(Number(item.total) || 0)}`;
+            case 'profit': return `$${moneyFmt.format(profit)}`;
+            default: return item[col] ?? '';
+          }
+        });
+
+        // HTML row
+        tableHtml += `<tr>${rowValues.map(v => `<td>${String(v)}</td>`).join('')}</tr>`;
+
+        // PDF row
+        pdfRows.push(rowValues);
+      }
+    }
+
+    tableHtml += `</tbody></table>`;
+
+    // Project summary info
+    const selectedProject = projectMap.get(String(projectId));
+    const projectAddress = formatAddress(selectedProject);
+
+    let summary = `<div class="summary">`;
+
+    if (statusFilterVal || subFilterVal) {
+      const parts = [];
+      if (statusFilterVal) parts.push(`Status: ${statusFilterVal}`);
+      if (subFilterVal) {
+        const name = vendorMap.get(subFilterVal) || subFilterVal;
+        parts.push(`Subcontractor: ${name}`);
+      }
+      summary += `<div class="summary-applied-filters" style="margin-bottom:8px;color:#334155;background:#f3f6fa;padding:8px 12px;border-radius:6px;font-weight:500;">Filters – ${parts.join(' • ')}</div>`;
+    }
+
+    if (summaryOptions.has('address')) {
+      summary += `
+        <div class="summary-address">
+          <span class="summary-address-label"><i class="fas fa-map-marker-alt"></i> Project Address:</span>
+          <span class="summary-address-value">${projectAddress}</span>
+        </div>`;
+    }
+
+    if (summaryOptions.has('totalItems')) {
+      summary += `
+        <div class="summary-metric">
+          <span class="metric-icon"><i class="fas fa-tasks"></i></span>
+          <span class="metric-value">${lineItems.length.toLocaleString()}</span>
+          <span class="metric-label">Total Items</span>
+        </div>`;
+    }
+
+    if (summaryOptions.has('completed')) {
+      summary += `
+        <div class="summary-metric">
+          <span class="metric-icon" style="color:#22c55e;background:#e7fbe9;"><i class="fas fa-check-circle"></i></span>
+          <span class="metric-value" style="color:#22c55e;">${completedCount.toLocaleString()}</span>
+          <span class="metric-label">Completed</span>
+        </div>`;
+    }
+
+    if (summaryOptions.has('inProgress')) {
+      summary += `
+        <div class="summary-metric">
+          <span class="metric-icon" style="color:#f59e42;background:#fff7e6;"><i class="fas fa-spinner"></i></span>
+          <span class="metric-value" style="color:#f59e42;">${inProgressCount.toLocaleString()}</span>
+          <span class="metric-label">In Progress</span>
+        </div>`;
+    }
+
+    if (summaryOptions.has('laborCost')) {
+      summary += `
+        <div class="summary-metric">
+          <span class="metric-icon" style="color:#0ea5e9;background:#e0f7fa;"><i class="fas fa-user-cog"></i></span>
+          <span class="metric-value">$${moneyFmt.format(laborCostToDate)}</span>
+          <span class="metric-label">Total Labor Cost to Date</span>
+        </div>`;
+    }
+
+    if (summaryOptions.has('materialCost')) {
+      summary += `
+        <div class="summary-metric">
+          <span class="metric-icon" style="color:#f59e42;background:#fff7e6;"><i class="fas fa-cubes"></i></span>
+          <span class="metric-value">$${moneyFmt.format(materialCostToDate)}</span>
+          <span class="metric-label">Total Material Cost to Date</span>
+        </div>`;
+    }
+
+    if (summaryOptions.has('profit')) {
+      summary += `
+        <div class="summary-metric">
+          <span class="metric-icon" style="color:#22c55e;background:#e7fbe9;"><i class="fas fa-chart-line"></i></span>
+          <span class="metric-value">$${moneyFmt.format(totalProfit)}</span>
+          <span class="metric-label">Total Profit</span>
+        </div>`;
+    }
+
+    if (summaryOptions.has('actualCost')) {
+      summary += `
+        <div class="summary-metric">
+          <span class="metric-icon" style="color:#0284c7;background:#e0f2fe;"><i class="fas fa-dollar-sign"></i></span>
+          <span class="metric-value">$${moneyFmt.format(actualCost)}</span>
+          <span class="metric-label">Completed Budget to Date</span>
+        </div>`;
+    }
+
+    if (summaryOptions.has('totalBudget')) {
+      summary += `
+        <div class="summary-metric">
+          <span class="metric-icon" style="color:#6366f1;background:#e0e7ff;"><i class="fas fa-coins"></i></span>
+          <span class="metric-value">$${moneyFmt.format(totalBudget)}</span>
+          <span class="metric-label">Estimate At Completion</span>
+        </div>`;
+    }
+
+    if (summaryOptions.has('budgetRemaining')) {
+      summary += `
+        <div class="summary-metric">
+          <span class="metric-icon" style="color:#ef4444;background:#fee2e2;"><i class="fas fa-wallet"></i></span>
+          <span class="metric-value">$${moneyFmt.format(budgetRemaining)}</span>
+          <span class="metric-label">Budget Remaining</span>
+        </div>`;
+    }
+
+    if (summaryOptions.has('percentComplete')) {
+      summary += `
+        <div class="summary-progress">
+          <div class="summary-progress-bar">
+            <div class="summary-progress-bar-inner" style="width:${percentComplete}%;"></div>
+          </div>
+          <span class="summary-progress-label">${percentComplete}% Completed</span>
+        </div>`;
+    }
+
+    summary += `</div>`;
+
+    const pdfBtn = `<button id="downloadReportPdf" style="margin-bottom:12px;">Download PDF</button>`;
+    customReportResult.innerHTML = pdfBtn + summary + tableHtml;
+
+    // PDF generation logic (uses pdfHeaders/pdfRows; no scraping table DOM)
+    document.getElementById('downloadReportPdf').onclick = async () => {
+      const { jsPDF } = window.jspdf;
+
+      // Render summary as image (header)
+      const summaryNode = customReportResult.querySelector('.summary');
+      const summaryClone = summaryNode.cloneNode(true);
+      const summaryWrapper = document.createElement('div');
+      summaryWrapper.style.background = '#fff';
+      summaryWrapper.style.padding = '24px';
+      summaryWrapper.style.width = '800px';
+      summaryWrapper.appendChild(summaryClone);
+      summaryWrapper.style.position = 'fixed';
+      summaryWrapper.style.left = '-9999px';
+      document.body.appendChild(summaryWrapper);
+
+      const summaryCanvas = await html2canvas(summaryWrapper, { scale: 2, useCORS: true });
+      const summaryImg = summaryCanvas.toDataURL('image/png');
+
+      document.body.removeChild(summaryWrapper);
+
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+
+      const summaryImgWidth = pageWidth - 40;
+      const summaryImgHeight = summaryCanvas.height * summaryImgWidth / summaryCanvas.width;
+
+      pdf.addImage(summaryImg, 'PNG', 20, 20, summaryImgWidth, summaryImgHeight);
+
+      pdf.autoTable({
+        head: [pdfHeaders],
+        body: pdfRows,
+        startY: 40 + summaryImgHeight,
+        margin: { left: 20, right: 20 },
+        styles: { fontSize: 10, cellPadding: 4, overflow: 'linebreak', valign: 'middle' },
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [243, 246, 250] },
+        tableLineColor: [224, 231, 235],
+        tableLineWidth: 0.5,
+        theme: 'striped',
+        didParseCell: (data) => {
+          // Style "EST:" rows (we put the text in the first cell only)
+          const row = data.row.raw;
+          if (Array.isArray(row) && typeof row[0] === 'string' && row[0].startsWith('EST:')) {
+            data.cell.styles.fillColor = [224, 231, 239];
+            data.cell.styles.textColor = [37, 99, 235];
+            data.cell.styles.fontStyle = 'bold';
+            // Clear other cells on the row for cleaner look
+            if (data.column.index !== 0) data.cell.text = '';
+          }
+        }
+      });
+
+      const safeProjectName = (selectedProject?.name || "project").replace(/[^a-z0-9_\-]+/gi, "_");
+      pdf.save(`project-report-${safeProjectName}.pdf`);
+    };
+
+  } catch (err) {
+    console.error(err);
+    customReportResult.innerHTML = `<div style="color:#b91c1c;">Failed to generate report. ${err.message}</div>`;
   }
-  if (summaryOptions.includes('totalItems')) {
-    summary += `
-      <div class="summary-metric">
-        <span class="metric-icon"><i class="fas fa-tasks"></i></span>
-        <span class="metric-value">${lineItems.length.toLocaleString()}</span>
-        <span class="metric-label">Total Items</span>
-      </div>`;
-  }
-  if (summaryOptions.includes('completed')) {
-    summary += `
-      <div class="summary-metric">
-        <span class="metric-icon" style="color:#22c55e;background:#e7fbe9;"><i class="fas fa-check-circle"></i></span>
-        <span class="metric-value" style="color:#22c55e;">${completedCount.toLocaleString()}</span>
-        <span class="metric-label">Completed</span>
-      </div>`;
-  }
-  if (summaryOptions.includes('inProgress')) {
-    summary += `
-      <div class="summary-metric">
-        <span class="metric-icon" style="color:#f59e42;background:#fff7e6;"><i class="fas fa-spinner"></i></span>
-        <span class="metric-value" style="color:#f59e42;">${inProgressCount.toLocaleString()}</span>
-        <span class="metric-label">In Progress</span>
-      </div>`;
-  }
-  if (summaryOptions.includes('laborCost')) {
-    summary += `
-      <div class="summary-metric">
-        <span class="metric-icon" style="color:#0ea5e9;background:#e0f7fa;"><i class="fas fa-user-cog"></i></span>
-        <span class="metric-value">$${laborCostToDate.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-        <span class="metric-label">Total Labor Cost to Date</span>
-      </div>`;
-  }
-  if (summaryOptions.includes('materialCost')) {
-    summary += `
-      <div class="summary-metric">
-        <span class="metric-icon" style="color:#f59e42;background:#fff7e6;"><i class="fas fa-cubes"></i></span>
-        <span class="metric-value">$${materialCostToDate.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-        <span class="metric-label">Total Material Cost to Date</span>
-      </div>`;
-  }
-  if (summaryOptions.includes('profit')) {
-    summary += `
-      <div class="summary-metric">
-        <span class="metric-icon" style="color:#22c55e;background:#e7fbe9;"><i class="fas fa-chart-line"></i></span>
-        <span class="metric-value">$${totalProfit.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-        <span class="metric-label">Total Profit</span>
-      </div>`;
-  }
-  if (summaryOptions.includes('actualCost')) {
-    summary += `
-      <div class="summary-metric">
-        <span class="metric-icon" style="color:#0284c7;background:#e0f2fe;"><i class="fas fa-dollar-sign"></i></span>
-        <span class="metric-value">$${actualCost.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-        <span class="metric-label">Completed Budget to Date</span>
-      </div>`;
-  }
-  if (summaryOptions.includes('totalBudget')) {
-    summary += `
-      <div class="summary-metric">
-        <span class="metric-icon" style="color:#6366f1;background:#e0e7ff;"><i class="fas fa-coins"></i></span>
-        <span class="metric-value">$${totalBudget.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-        <span class="metric-label">Estimate At Completion</span>
-      </div>`;
-  }
-  if (summaryOptions.includes('budgetRemaining')) {
-    summary += `
-      <div class="summary-metric">
-        <span class="metric-icon" style="color:#ef4444;background:#fee2e2;"><i class="fas fa-wallet"></i></span>
-        <span class="metric-value">$${budgetRemaining.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-        <span class="metric-label">Budget Remaining</span>
-      </div>`;
-  }
-  if (summaryOptions.includes('percentComplete')) {
-    summary += `
-      <div class="summary-progress">
-        <div class="summary-progress-bar">
-          <div class="summary-progress-bar-inner" style="width:${percentComplete}%;"></div>
-        </div>
-        <span class="summary-progress-label">${percentComplete}% Completed</span>
-      </div>`;
-  }
-  summary += `</div>`;
-
-  // Add Download PDF button
-  let pdfBtn = `<button id="downloadReportPdf" style="margin-bottom:12px;">Download PDF</button>`;
-
-  customReportResult.innerHTML = pdfBtn + summary + table;
-
-  // PDF generation logic
- document.getElementById('downloadReportPdf').onclick = async function() {
-  const { jsPDF } = window.jspdf;
-
-  // 1. Render summary as image (for the header)
-  const summaryNode = customReportResult.querySelector('.summary');
-  const summaryClone = summaryNode.cloneNode(true);
-  const summaryWrapper = document.createElement('div');
-  summaryWrapper.style.background = '#fff';
-  summaryWrapper.style.padding = '24px';
-  summaryWrapper.style.width = '800px';
-  summaryWrapper.appendChild(summaryClone);
-  document.body.appendChild(summaryWrapper);
-  summaryWrapper.style.position = 'fixed';
-  summaryWrapper.style.left = '-9999px';
-  const summaryCanvas = await html2canvas(summaryWrapper, { scale: 2, useCORS: true });
-  const summaryImg = summaryCanvas.toDataURL('image/png');
-  document.body.removeChild(summaryWrapper);
-
-  // 2. Prepare table data for AutoTable
-  const tableNode = customReportResult.querySelector('table');
-  const headers = Array.from(tableNode.querySelectorAll('thead th')).map(th => th.textContent);
-  const rows = Array.from(tableNode.querySelectorAll('tbody tr')).map(tr =>
-    Array.from(tr.querySelectorAll('td')).map(td => td.textContent)
-  );
-
-  // 3. Create PDF and add summary (first page)
-  const pdf = new jsPDF({
-    orientation: 'portrait',
-    unit: 'pt',
-    format: 'a4'
-  });
-  const pageWidth = pdf.internal.pageSize.getWidth();
-
-  // Add summary image at the top
-  const summaryImgWidth = pageWidth - 40;
-  const summaryImgHeight = summaryCanvas.height * summaryImgWidth / summaryCanvas.width;
-  pdf.addImage(summaryImg, 'PNG', 20, 20, summaryImgWidth, summaryImgHeight);
-
-  // Add table using autoTable
-  pdf.autoTable({
-    head: [headers],
-    body: rows,
-    startY: 40 + summaryImgHeight,
-    margin: { left: 20, right: 20 },
-    styles: {
-      fontSize: 10,
-      cellPadding: 4,
-      overflow: 'linebreak',
-      valign: 'middle'
-    },
-    headStyles: {
-      fillColor: [37, 99, 235],
-      textColor: 255,
-      fontStyle: 'bold'
-    },
-    alternateRowStyles: { fillColor: [243, 246, 250] },
-    tableLineColor: [224, 231, 235],
-    tableLineWidth: 0.5,
-    theme: 'striped' ,
-    
-  });
-
-  const safeProjectName = (selectedProject?.name || "project").replace(/[^a-z0-9_\-]+/gi, "_");
-pdf.save(`project-report-${safeProjectName}.pdf`);
-};
 };
 
 //bottom toolbar logic
