@@ -915,12 +915,13 @@ United States
         status: "Coming Soon",
         hero: "images/image53.jpg",
       },
-       {
+      {
         id:"413-nopal",
         name:"413 Nopal Street",
         address:"413 Nopal Street, San Antonio, TX 78210",
         units: ["101","102","201"],
         rent: 1600,
+        rentByUnit: { "101": 1600, "102": 1600, "201": 1700 }, 
         beds: 2, baths: 1,
         sqftByUnit: { "101":850,"102":850,"201":850 },
         statusByUnit: { "101":"Available","102":"Available","201":"Available" },
@@ -1146,6 +1147,7 @@ United States
     const allRecords = [
       ...multifamily.flatMap(p => p.units.map(u => {
         const unitStatus = (p.statusByUnit && p.statusByUnit[u]) ? p.statusByUnit[u] : p.status;
+        const unitRent = (p.rentByUnit && typeof p.rentByUnit[u] === 'number') ? p.rentByUnit[u] : p.rent;
         return ({
           key: `${p.id}::${u}`,
           type: "Multifamily",
@@ -1154,7 +1156,7 @@ United States
           address: p.address,
           beds: p.beds, baths: p.baths,
           sqft: p.sqftByUnit?.[u] ?? null,
-          rent: p.rent,
+          rent: unitRent,
           status: unitStatus,
           notes: notesForStatus(unitStatus),
           photos: (p.photosByUnit && Array.isArray(p.photosByUnit[u]) && p.photosByUnit[u].length)
@@ -1516,6 +1518,23 @@ United States
         el.tabIndex = 0;
         
 
+        // Compute per-unit rent range or list
+        let rentDisplay = '';
+        if (p.rentByUnit && typeof p.rentByUnit === 'object') {
+          const rents = p.units.map(u => p.rentByUnit[u]).filter(r => typeof r === 'number');
+          const uniqueRents = Array.from(new Set(rents));
+          if (uniqueRents.length === 1) {
+            rentDisplay = money(uniqueRents[0]) + '/mo';
+          } else if (uniqueRents.length > 1) {
+            const min = Math.min(...uniqueRents);
+            const max = Math.max(...uniqueRents);
+            rentDisplay = money(min) + ' - ' + money(max) + '/mo';
+          } else {
+            rentDisplay = money(p.rent) + '/mo';
+          }
+        } else {
+          rentDisplay = money(p.rent) + '/mo';
+        }
         el.innerHTML = `
           <div class="img">
             <img alt="${p.name}" src="${p.hero}" loading="lazy" decoding="async">
@@ -1528,7 +1547,7 @@ United States
                 <h4>${p.name}</h4>
                 <p class="addr">${p.address}</p>
               </div>
-              <div style="font-weight:700;font-size:12px;color:rgba(234,240,247,.9)">${money(p.rent)}/mo</div>
+              <div style="font-weight:700;font-size:12px;color:rgba(234,240,247,.9)">${rentDisplay}</div>
             </div>
             <div class="meta">
               <span class="chip">${p.beds} bd / ${p.baths} ba</span>
@@ -1998,5 +2017,3 @@ United States
   </script>
 </body>
 </html>
-
-
