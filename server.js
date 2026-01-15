@@ -6061,8 +6061,21 @@ app.get('/api/projects/:projectId/files/:fileId/download', async (req, res) => {
 // ✅ Get ALL maintenance requests for ALL properties
 app.get('/api/properties/maintenance', async (req, res) => {
   try {
-    const requests = await MaintenanceRequest.find()
+    const { status } = req.query;
+    const filter = {};
+    if (status) {
+      const statuses = String(status)
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+      if (statuses.length) {
+        filter.status = { $in: statuses };
+      }
+    }
+
+    const requests = await MaintenanceRequest.find(filter)
       .populate('unitId')
+      .populate('projectId') // include project name + address so frontend can show property address
       .sort({ createdAt: -1 });
     res.json(requests);
   } catch (error) {
