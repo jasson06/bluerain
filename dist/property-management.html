@@ -48,11 +48,11 @@ body {
     background: #fff;
     border-radius: 16px;
     box-shadow: 0 8px 32px rgba(44,62,80,0.13);
-    padding: 32px 32px 24px 32px;
+    padding: 24px 25px 24px 25px;
     max-width: 1100px;
     margin: -10px auto;
     position: relative;
-    font-size: 1.05rem;
+    font-size: 0.85rem;
 }
 
 .modal h2 {
@@ -287,6 +287,7 @@ body {
     overflow-y: auto;
     z-index: 100;
     transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+    scrollbar-width: none;
 }
 
 
@@ -383,13 +384,110 @@ body {
     color: #217dbb;
     font-weight: 600;
     border-radius: 12px;
-    padding: 2px 10px;
+    padding: 2px 8px;
     font-size: 0.95em;
     margin-left: 7px;
     min-width: 24px;
     text-align: center;
-    border: 1.5px solid #b8e0fa;
+    border: 1.5px solid #2980b9;
     vertical-align: middle;
+}
+
+/* Top tools toolbar (maintenance + applications icons) */
+.top-tools-bar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 4px 12px;
+    margin: 0 16px 0 24px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #f7f7ff 0%, #eaf6ff 50%, #f7f7ff 100%);
+    border: 1px solid #d1e4ff;
+    box-shadow: 0 2px 8px rgba(44,62,80,0.06);
+}
+
+.top-tools-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid #dbeafe;
+    color: #1f2937;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.18s, box-shadow 0.18s, transform 0.12s;
+}
+
+.top-tools-item i {
+    font-size: 1.1rem;
+}
+
+.top-tools-item span {
+    font-weight: 500;
+}
+
+.top-tools-item:hover {
+    background: #eaf6ff;
+    box-shadow: 0 2px 8px rgba(59,130,246,0.25);
+    transform: translateY(-1px);
+}
+
+.top-tools-count {
+    min-width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    padding: 0 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.top-tools-count.maintenance {   
+    background: #fdf8e9;
+    color: #856404;
+    font-weight: bold;
+    border-radius: 50%;
+    font-size: 0.95em;
+    border: 1.5px solid #f1c40f;
+    box-shadow: 0 0 8px 2px #ffe066;
+    vertical-align: middle;
+    animation: attentionPulse 1.2s infinite alternate;
+}
+
+.top-tools-count.applications {
+    background: #e5edfa;
+    color: #044785;
+    font-weight: bold;
+    border-radius: 50%;
+    font-size: 0.95em;
+    border: 1.5px solid #0f5ef1;
+    box-shadow: 0 0 8px 2px #66b3ff;
+    vertical-align: middle;
+    animation: attentionPulse 1.2s infinite alternate;
+}
+
+@media (max-width: 768px) {
+    /* On mobile, hide text labels but keep icons and counts visible */
+    .top-tools-item span:not(.top-tools-count) {
+        display: none;
+    }
+
+    .top-tools-bar {
+        gap: 8px;
+        padding: 4px 10px;
+        margin: 0 8px 0 16px;
+    }
+
+    .top-tools-item {
+        padding: 4px 8px;
+        gap: 4px;
+    }
 }
 
 /* Units Grid Styles */
@@ -535,13 +633,14 @@ body {
     z-index: 1000;
     overflow-y: auto; /* Enable scrolling on the modal overlay */
     padding: 20px;
+    scrollbar-width: none;
 }
 
 
 .modal-content {
     background: white;
     width: 100%;
-    
+    scrollbar-width: none;
     margin: 20px auto;
     padding: 20px;
     border-radius: 8px;
@@ -708,7 +807,7 @@ input[type="file"] {
 
 /* Select Styling */
 select {
-    width: 100%;
+    
     padding: 8px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
@@ -1852,9 +1951,10 @@ select {
     display: flex;
     align-items: center;
     gap: 14px;
-    font-size: 1.45rem;
+    justify-content: space-between;
+    font-size: 1.20rem;
     font-weight: 800;
-    padding: 32px 44px 0 44px;
+    padding: 5px 15px 0 15px;
     letter-spacing: 0.7px;
     background: none;
     color: var(--primary-color);
@@ -1864,6 +1964,12 @@ select {
     position: relative;
 }
 
+.main-summary-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .main-summary-header i.fas.fa-chart-bar {
     font-size: 1.7em;
     color: var(--accent-color);
@@ -1871,7 +1977,7 @@ select {
 }
 
 .main-summary-header .summary-toggle-icon {
-    margin-left: auto;
+    margin-left: 0;
     font-size: 1.2em;
     color: var(--accent-color);
     transition: transform 0.2s;
@@ -2277,36 +2383,8 @@ select {
     border: 1.5px solid #e1e8ed;
 }
 
-.tenant-tab-btn {
-    flex: 1 1 0;
-    padding: 13px 0;
-    font-size: 1.07rem;
-    font-weight: 600;
-    border: none;
-    background: none;
-    color: #2980b9;
-    cursor: pointer;
-    transition: background 0.18s, color 0.18s;
-    outline: none;
-    border-right: 1px solid #e1e8ed;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-}
-.tenant-tab-btn:last-child {
-    border-right: none;
-}
-.tenant-tab-btn.active {
-    background: linear-gradient(90deg, #2c3e50 0%, #2c3e50 100%);
-    color: #fff;
-    box-shadow: 0 2px 8px rgba(52,152,219,0.10);
-    z-index: 1;
-}
-.tenant-tab-btn:not(.active):hover {
-    background: #eaf6ff;
-    color: #217dbb;
-}
+
+
 
 @media (max-width: 600px) {
     .tenant-tabs {
@@ -2338,10 +2416,10 @@ select {
     border: 1.5px solid #e1e8ed;
 }
 
-.maintenance-tab-btn {
+.maintenance-tab-btn,.tenant-tab-btn {
     flex: 1 1 0;
-    padding: 13px 0;
-    font-size: 1.07rem;
+    padding: 10px 0;
+    font-size: 0.90rem;
     font-weight: 600;
     border: none;
     background: none;
@@ -2358,13 +2436,13 @@ select {
 .maintenance-tab-btn:last-child {
     border-right: none;
 }
-.maintenance-tab-btn.active {
+.maintenance-tab-btn.active,.tenant-tab-btn.active {
     background: linear-gradient(90deg, #2c3e50 0%, #2c3e50 100%);
     color: #fff;
     box-shadow: 0 2px 8px rgba(52,152,219,0.10);
     z-index: 1;
 }
-.maintenance-tab-btn:not(.active):hover {
+.maintenance-tab-btn:not(.active):hover,.tenant-tab-btn:not(.active):hover {
     background: #eaf6ff;
     color: #217dbb;
 }
@@ -2375,13 +2453,13 @@ select {
         box-shadow: none;
         border-radius: 8px;
     }
-    .maintenance-tab-btn {
+    .maintenance-tab-btn,.tenant-tab-btn {
         border-right: none;
         border-bottom: 1px solid #e1e8ed;
         padding: 12px 0;
         font-size: 1rem;
     }
-    .maintenance-tab-btn:last-child {
+    .maintenance-tab-btn:last-child,.tenant-tab-btn:last-child {
         border-bottom: none;
     }
 }
@@ -2415,6 +2493,24 @@ select {
   background: #eaf6ff;
   box-shadow: 0 2px 8px rgba(52,152,219,0.10);
 }
+
+/* Highlighted maintenance row/card when jumping from global list */
+.maintenance-highlight {
+    animation: maintenanceHighlightPulse 1.4s ease-out 1;
+    box-shadow: 0 0 0 2px #2563eb, 0 4px 12px rgba(37,99,235,0.35) !important;
+}
+
+@keyframes maintenanceHighlightPulse {
+    0% { background-color: #eff6ff; }
+    50% { background-color: #dbeafe; }
+    100% { background-color: #ffffff; }
+}
+
+/* Highlighted application row when jumping from global list */
+.application-highlight {
+    animation: maintenanceHighlightPulse 1.4s ease-out 1;
+    box-shadow: 0 0 0 2px #10b981, 0 4px 12px rgba(16,185,129,0.35) !important;
+}
    </style>
 </head>
 <body>
@@ -2433,7 +2529,7 @@ select {
         <aside class="sidebar">
             
             <div class="sidebar-header">
-                <h2>🏢 Properties</h2>
+                <h2>🏢 Bluerain</h2>
                 <button class="btn-primary" onclick="window.location.href='/'">
                 <i class="fas fa-home"></i> Home
                 </button>
@@ -2449,35 +2545,52 @@ select {
         <!-- Main Content -->
         <main class="main-content">
 
-<section class="main-summary-section collapsed">
-    <div class="main-summary-header" id="mainSummaryToggle">
-        <i class="fas fa-chart-bar"></i>
-        <span>Main Summary</span>
-        <i class="fas fa-chevron-up summary-toggle-icon" id="mainSummaryChevron"></i>
-    </div>
-    <div class="main-summary" id="mainSummary">
-            <div class="summary-card">
-                <h4>Total Properties</h4>
-                <p id="summaryTotalProperties">--</p>
-            </div>
-            <div class="summary-card">
-                <h4>Total Units</h4>
-                <p id="summaryTotalUnits">--</p>
-            </div>
-            <div class="summary-card">
-                <h4>Total Tenants</h4>
-                <p id="summaryTotalTenants">--</p>
-            </div>
-            <div class="summary-card">
-                <h4>Overall Occupancy</h4>
-                <p id="summaryOccupancyRate">--%</p>
-            </div>
-            <div class="summary-card">
-                <h4>Est. Monthly Income</h4>
-                <p id="summaryMonthlyIncome">$--</p>
-            </div>
-        </div>
-    </section>
+            <section class="main-summary-section collapsed">
+                <div class="main-summary-header" id="mainSummaryToggle">
+                    <div class="main-summary-title">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Main Summary</span>
+                        <i class="fas fa-chevron-up summary-toggle-icon" id="mainSummaryChevron"></i>
+                    </div>
+
+                    <!-- Top Tools Toolbar: quick access icons -->
+                    <div class="top-tools-bar">
+                        <div class="top-tools-item" id="topToolMaintenance" title="View all maintenance requests">
+                            <i class="fas fa-tools"></i>
+                            <span>Maintenance</span>
+                            <span class="top-tools-count maintenance" id="topMaintenanceCount">0</span>
+                        </div>
+                        <div class="top-tools-item" id="topToolApplications" title="View rental applications">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Applications</span>
+                            <span class="top-tools-count applications" id="topApplicationsCount">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="main-summary" id="mainSummary">
+                    <div class="summary-card">
+                        <h4>Total Properties</h4>
+                        <p id="summaryTotalProperties">--</p>
+                    </div>
+                    <div class="summary-card">
+                        <h4>Total Units</h4>
+                        <p id="summaryTotalUnits">--</p>
+                    </div>
+                    <div class="summary-card">
+                        <h4>Total Tenants</h4>
+                        <p id="summaryTotalTenants">--</p>
+                    </div>
+                    <div class="summary-card">
+                        <h4>Overall Occupancy</h4>
+                        <p id="summaryOccupancyRate">--%</p>
+                    </div>
+                    <div class="summary-card">
+                        <h4>Est. Monthly Income</h4>
+                        <p id="summaryMonthlyIncome">$--</p>
+                    </div>
+                </div>
+            </section>
 
 
             <!-- Property Dashboard -->
@@ -3364,7 +3477,7 @@ select {
 
 <!-- Tenant Balance Sheet Modal -->
 <div class="modal" id="tenantBalanceModal">
-    <div class="modal-content" style="max-width:900px;">
+    <div class="modal-content" style="max-width:1000px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
             <h2 style="margin:0;font-size:1.6rem;">Tenant Balance Sheet</h2>
             <div style="display:flex;gap:8px;align-items:center;">
@@ -3407,6 +3520,17 @@ select {
       <button class="btn-primary" onclick="closeModal('viewUnitModal')">Close</button>
     </div>
   </div>
+</div>
+
+<!-- Global Overview Modal (Maintenance / Applications) -->
+<div class="modal" id="globalOverviewModal" style="display:none;">
+    <div class="modal-content" style="max-width:1000px;">
+        <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <h2 id="globalOverviewTitle" style="margin:0;font-size:1.6rem;">Overview</h2>
+            <button class="btn-secondary" onclick="closeModal('globalOverviewModal')">Close</button>
+        </div>
+        <div id="globalOverviewBody" class="modal-body" style="max-height:520px;overflow:auto;scrollbar-width: none;"></div>
+    </div>
 </div>
 
 <!-- Add this just before the closing body tag -->
@@ -3474,7 +3598,9 @@ const state = {
 allTenants: [],
     payments: [],
     applications: [],
-    invites: []
+    invites: [],
+    highlightMaintenanceId: null,
+    highlightApplicationId: null
 };
 
 const API_URL = '/api';
@@ -3521,7 +3647,29 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeApplicationsSearch();
     initializeInvitesSearch();
     loadProperties();
+
+    // Preload global data so toolbar icons are ready on first click
+    runWhenIdle(() => {
+        loadApplications().catch(() => {});
+        loadInvites().catch(() => {});
+        preloadGlobalMaintenanceCount().catch(() => {});
+    });
 });
+
+async function preloadGlobalMaintenanceCount() {
+    try {
+        const res = await fetch('/api/properties/maintenance?status=pending,in-progress&_=' + Date.now());
+        if (!res.ok) return;
+        const items = await res.json();
+        const topMaint = document.getElementById('topMaintenanceCount');
+        if (topMaint && Array.isArray(items)) {
+            const count = items.length || 0;
+            topMaint.textContent = count > 99 ? '99+' : count;
+        }
+    } catch (e) {
+        console.error('Error preloading global maintenance count:', e);
+    }
+}
 
 // Event Listeners Setup
 function initializeEventListeners() {
@@ -4107,7 +4255,11 @@ function updateTabCounts() {
     document.getElementById('tabCountPayments').textContent = state.payments?.length || 0;
     // Applications
     const appsBadge = document.getElementById('tabCountApplications');
-    if (appsBadge) appsBadge.textContent = state.applications?.length || 0;
+    const appsCount = state.applications?.length || 0;
+    if (appsBadge) appsBadge.textContent = appsCount;
+    // Mirror applications count into top toolbar icon
+    const topApps = document.getElementById('topApplicationsCount');
+    if (topApps) topApps.textContent = appsCount > 99 ? '99+' : appsCount;
 }
 
 async function loadTabContent(tabId, force = false) {
@@ -6287,7 +6439,9 @@ document.getElementById('maintenancePhotos')?.addEventListener('change', async f
 
 function updateMaintenanceTabBadge() {
     const badge = document.getElementById('maintenancePendingBadge');
-    const pendingCount = state.maintenanceRequests.filter(r => r.status === 'pending').length;
+    const pendingCount = state.maintenanceRequests.filter(r =>
+        r.status === 'pending' || r.status === 'in-progress'
+    ).length;
     if (pendingCount > 0) {
         badge.textContent = pendingCount > 9 ? '9+' : pendingCount;
         badge.style.display = '';
@@ -6298,11 +6452,10 @@ function updateMaintenanceTabBadge() {
 
 
 async function loadMaintenanceRequests(propertyId, force = false) {
-    
     try {
-    const response = await fetch(`${API_URL}/properties/${propertyId}/maintenance${force ? `?_=${Date.now()}` : ''}`);
+        const response = await fetch(`${API_URL}/properties/${propertyId}/maintenance${force ? `?_=${Date.now()}` : ''}`);
         if (!response.ok) throw new Error('Failed to fetch maintenance requests');
-        
+
         const requests = await response.json();
         state.maintenanceRequests = requests;
         console.log('Loaded maintenance requests:', state.maintenanceRequests);
@@ -6311,7 +6464,6 @@ async function loadMaintenanceRequests(propertyId, force = false) {
     } catch (error) {
         console.error('Error loading maintenance requests:', error);
         showNotification('Error loading maintenance requests', 'error');
-
     }
 }
 
@@ -6349,8 +6501,8 @@ function renderMaintenanceRequestsList(requests) {
             const createdDate = new Date(request.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
             const priorityBadge = `<span class="priority-badge ${request.priority}">${request.priority.charAt(0).toUpperCase() + request.priority.slice(1)}</span>`;
             const statusBadge = `<span class="status-badge ${request.status}">${request.status.charAt(0).toUpperCase() + request.status.slice(1)}</span>`;
-            return `
-              <tr style="border-bottom:1px solid #e1e8ed;">
+                        return `
+                            <tr style="border-bottom:1px solid #e1e8ed;" data-maint-id="${request._id}">
                 <td style="padding:10px 8px;font-weight:600;color:#2c3e50;">${request.title}</td>
                 <td style="padding:10px 8px;color:#555;">${request.description || ''}</td>
                 <td style="padding:10px 8px;">${priorityBadge}</td>
@@ -6372,6 +6524,9 @@ function renderMaintenanceRequestsList(requests) {
       </table>
     </div>
   `;
+
+    // If we navigated here from the global overview, focus the selected request
+    focusMaintenanceRequest();
 }
 
 // Update the renderMaintenanceRequests function
@@ -6430,8 +6585,8 @@ function renderMaintenanceRequests() {
       </div>
     `;
 
-    return `
-      <div class="maintenance-card" style="border:1.5px solid #e1e8ed;box-shadow:0 2px 8px rgba(44,62,80,0.07);margin-bottom:18px;font-size:0.97em;">
+        return `
+            <div class="maintenance-card" data-maint-id="${request._id}" style="border:1.5px solid #e1e8ed;box-shadow:0 2px 8px rgba(44,62,80,0.07);margin-bottom:18px;font-size:0.97em;">
         <div class="maintenance-header" style="background:#f6fafd;padding:12px 18px;border-bottom:1px solid #e1e8ed;display:flex;justify-content:space-between;align-items:center;">
           <div>
             <strong style="font-size:1.08em;color:#2c3e50;"><i class="fas fa-tools" style="color:#217dbb;margin-right:8px;"></i>${request.title}</strong>
@@ -6470,6 +6625,29 @@ function renderMaintenanceRequests() {
       </div>
     `;
   }).join('');
+
+    // If we navigated here from the global overview, focus the selected request
+    focusMaintenanceRequest();
+}
+
+function focusMaintenanceRequest() {
+    try {
+        const targetId = state.highlightMaintenanceId;
+        if (!targetId) return;
+        const el = document.querySelector(`[data-maint-id="${targetId}"]`);
+        if (!el) {
+            state.highlightMaintenanceId = null;
+            return;
+        }
+        el.classList.add('maintenance-highlight');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => {
+            el.classList.remove('maintenance-highlight');
+        }, 2200);
+        state.highlightMaintenanceId = null;
+    } catch (_) {
+        state.highlightMaintenanceId = null;
+    }
 }
 
 
@@ -6878,6 +7056,26 @@ async function loadMaintenanceSchedules() {
   } finally {
     hideLoader();
   }
+}
+
+function focusApplication() {
+    try {
+        const targetId = state.highlightApplicationId;
+        if (!targetId) return;
+        const row = document.querySelector(`[data-app-id="${targetId}"]`);
+        if (!row) {
+            state.highlightApplicationId = null;
+            return;
+        }
+        row.classList.add('application-highlight');
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => {
+            row.classList.remove('application-highlight');
+        }, 2200);
+        state.highlightApplicationId = null;
+    } catch (_) {
+        state.highlightApplicationId = null;
+    }
 }
 
 // Add this event listener after DOMContentLoaded
@@ -7780,7 +7978,11 @@ async function loadApplications(force = false) {
         }
         const res = await fetch('/api/rental-applications?limit=200');
         if (!res.ok) throw new Error('Failed to fetch applications');
-        state.applications = await res.json();
+        const all = await res.json();
+        // Keep only pending applications in state for counts and views
+        state.applications = Array.isArray(all)
+            ? all.filter(a => (a.status || 'pending') === 'pending')
+            : [];
         renderApplications();
         updateTabCounts();
     } catch (err) {
@@ -7920,8 +8122,12 @@ function renderApplications(items) {
                     </select>`;
         const viewLink = `/applications/review/${a._id}`;
         return `
-            <tr style="border-bottom:1px solid #e1e8ed;">
-                <td style="padding:10px 8px;font-weight:600;color:#2c3e50;">${a.name || ''}</td>
+            <tr style="border-bottom:1px solid #e1e8ed;" data-app-id="${a._id}">
+                <td style="padding:10px 8px;font-weight:600;color:#2563eb;">
+                    <button class="application-jump-link" data-app-id="${a._id}" style="background:none;border:none;color:#2563eb;padding:0;margin:0;font:inherit;text-align:left;cursor:pointer;">
+                        ${a.name || ''}
+                    </button>
+                </td>
                 <td style="padding:10px 8px;">${a.email || ''}</td>
                 <td style="padding:10px 8px;">${a.phone || ''}</td>
                 <td style="padding:10px 8px;">${propertyAddress || '—'}</td>
@@ -7931,7 +8137,7 @@ function renderApplications(items) {
                 <td style="padding:10px 8px;">${statusSelect}</td>
                 <td style="padding:10px 8px;">
                     <a class="btn-secondary" href="${viewLink}" target="_blank" rel="noopener" style="text-decoration:none;padding:6px 10px;border-radius:8px;display:inline-block;">
-                        <i class="fas fa-eye"></i> View
+                         View
                     </a>
                 </td>
             </tr>`;
@@ -7959,6 +8165,8 @@ function renderApplications(items) {
         </table>
       </div>
     `;
+
+        focusApplication();
 
     // Attach change handlers for status dropdowns
     document.querySelectorAll('.app-status-select').forEach(sel => {
@@ -8009,6 +8217,202 @@ document.getElementById('refreshApplicationsBtn')?.addEventListener('click', asy
         await loadApplications(true);
         showNotification('Applications refreshed', 'success');
     } catch {} finally {
+        hideLoader();
+    }
+});
+
+// Helper to render the global maintenance overview table into the modal body
+async function renderGlobalMaintenanceOverview() {
+    // Load all maintenance across properties (pending + in-progress only) directly into the overview modal
+    const res = await fetch('/api/properties/maintenance?status=pending,in-progress&_=' + Date.now());
+    if (!res.ok) throw new Error('Failed to fetch maintenance requests');
+    const items = await res.json();
+
+    const body = document.getElementById('globalOverviewBody');
+    const title = document.getElementById('globalOverviewTitle');
+    if (body && title) {
+        title.textContent = 'Maintenance Requests';
+        if (!items.length) {
+            body.innerHTML = '<div class="empty-state" style="text-align:center;padding:24px;"><i class="fas fa-tools" style="font-size:2em;color:#3498db;margin-bottom:8px;"></i><p>No maintenance requests found.</p></div>';
+        } else {
+            body.innerHTML = `
+                                    <div style="overflow-x:auto;">
+                                        <table class="maintenance-table" style="width:100%;border-collapse:collapse;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(44,62,80,0.07);">
+                                            <thead>
+                                                <tr style="background:#f6fafd;">
+                                                    <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Title</th>
+                                                    <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Property Address</th>
+                                                    <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Unit</th>
+                                                    <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Priority</th>
+                                                    <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Status</th>
+                                                    <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Created</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${items.map(r => {
+                                                        const created = r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+                                                        const unitLabel = r.unitId ? `Unit ${r.unitId.number || ''}` : '—';
+                                                        const priority = (r.priority || '').charAt(0).toUpperCase() + (r.priority || '').slice(1);
+                                                        const rawStatus = (r.status || 'pending');
+                                                        const status = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
+                                                        const projectName = r.projectName || (r.projectId && r.projectId.name) || '';
+
+                                                        // Build a best-effort property address string
+                                                        let propertyAddress = r.propertyAddress || '';
+
+                                                        // If embedded project has address fields, derive from those
+                                                        if (!propertyAddress && r.projectId) {
+                                                            const a = (r.projectId.address) || {};
+                                                            const line1 = a.line1 || a.addressLine1 || a.street || r.projectId.line1 || '';
+                                                            const line2 = a.line2 || a.addressLine2 || a.suite || r.projectId.line2 || '';
+                                                            const city = a.city || r.projectId.city || '';
+                                                            const state = a.state || r.projectId.state || '';
+                                                            const zip = a.zip || a.postalCode || r.projectId.zip || '';
+                                                            const parts = [];
+                                                            if (line1) parts.push(line1);
+                                                            if (line2) parts.push(line2);
+                                                            let last = '';
+                                                            if (city) last += city;
+                                                            if (state) last += (last ? ', ' : '') + state;
+                                                            if (zip) last += (last ? ' ' : '') + zip;
+                                                            if (last) parts.push(last);
+                                                            if (parts.length) propertyAddress = parts.join(', ');
+                                                        }
+
+                                                        // As a fallback, try propertyAddress stored in notes JSON (if present)
+                                                        if (!propertyAddress && r.notes) {
+                                                            try {
+                                                                const n = JSON.parse(r.notes);
+                                                                propertyAddress = n.propertyAddress || '';
+                                                            } catch {}
+                                                        }
+
+                                                        return `
+                                                            <tr style="border-bottom:1px solid #e1e8ed;">
+                                                                <td style="padding:10px 8px;font-weight:600;color:#2563eb;">
+                                                                    <button class="maintenance-jump-link" data-project-id="${(r.projectId && r.projectId._id) || r.projectId || ''}" data-request-id="${r._id || ''}" style="background:none;border:none;color:#2563eb;padding:0;margin:0;font:inherit;text-align:left;cursor:pointer;">
+                                                                        ${r.title || ''}
+                                                                    </button>
+                                                                </td>
+                                                                <td style="padding:10px 8px;">${propertyAddress || projectName || '—'}</td>
+                                                                <td style="padding:10px 8px;">${unitLabel}</td>
+                                                                <td style="padding:10px 8px;">${priority || '—'}</td>
+                                                                <td style="padding:10px 8px;">
+                                                                    <select class="maintenance-status-select" data-project-id="${(r.projectId && r.projectId._id) || r.projectId || ''}" data-request-id="${r._id || ''}" style="padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;background:#fff;">
+                                                                        <option value="pending" ${rawStatus==='pending' ? 'selected' : ''}>Pending</option>
+                                                                        <option value="in-progress" ${rawStatus==='in-progress' ? 'selected' : ''}>In-Progress</option>
+                                                                        <option value="completed" ${rawStatus==='completed' ? 'selected' : ''}>Completed</option>
+                                                                    </select>
+                                                                </td>
+                                                                <td style="padding:10px 8px;">${created || '—'}</td>
+                                                            </tr>`;
+                                                }).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>`;
+        }
+    }
+}
+
+// Top toolbar icon clicks: jump to respective tabs
+document.getElementById('topToolMaintenance')?.addEventListener('click', async () => {
+    try {
+        await renderGlobalMaintenanceOverview();
+                openModal('globalOverviewModal');
+    } catch (e) {
+        console.error('Error opening maintenance overview modal:', e);
+        showNotification('Could not open maintenance overview', 'error');
+    }
+});
+
+document.getElementById('topToolApplications')?.addEventListener('click', async () => {
+    try {
+        if (!state.applications || !state.applications.length) {
+            await loadApplications(true);
+        }
+        const body = document.getElementById('globalOverviewBody');
+        const title = document.getElementById('globalOverviewTitle');
+        const source = document.getElementById('applicationsList');
+        if (body && title && source) {
+            title.textContent = 'All Applications';
+            body.innerHTML = source.innerHTML;
+        }
+        openModal('globalOverviewModal');
+    } catch (e) {
+        console.error('Error opening applications overview modal:', e);
+        showNotification('Could not open applications overview', 'error');
+    }
+});
+
+// When clicking a maintenance item in the global overview, jump to that property's Maintenance tab
+document.getElementById('globalOverviewBody')?.addEventListener('click', async (e) => {
+    const maintBtn = e.target.closest('.maintenance-jump-link');
+    if (maintBtn) {
+        const projectId = maintBtn.getAttribute('data-project-id');
+        const requestId = maintBtn.getAttribute('data-request-id');
+        if (!projectId) return;
+        if (requestId) {
+            state.highlightMaintenanceId = requestId;
+        }
+        try {
+            showLoader();
+            await selectProperty(projectId);
+            const maintenanceTabBtn = document.querySelector('.tab-btn[data-tab="maintenance"]');
+            maintenanceTabBtn?.click();
+            closeModal('globalOverviewModal');
+        } catch (err) {
+            console.error('Error navigating to property maintenance from global overview:', err);
+            showNotification('Could not open property maintenance view', 'error');
+        } finally {
+            hideLoader();
+        }
+        return;
+    }
+
+    const appBtn = e.target.closest('.application-jump-link');
+    if (appBtn) {
+        const appId = appBtn.getAttribute('data-app-id');
+        if (!appId) return;
+        state.highlightApplicationId = appId;
+        try {
+            const applicationsTabBtn = document.querySelector('.tab-btn[data-tab="applications"]');
+            applicationsTabBtn?.click();
+            closeModal('globalOverviewModal');
+        } catch (err) {
+            console.error('Error navigating to applications tab from global overview:', err);
+            showNotification('Could not open applications view', 'error');
+        }
+    }
+});
+
+// Handle inline status changes for maintenance rows in the Global Overview modal
+document.getElementById('globalOverviewBody')?.addEventListener('change', async (e) => {
+    const select = e.target.closest('.maintenance-status-select');
+    if (!select) return;
+
+    const newStatus = select.value;
+    const projectId = select.getAttribute('data-project-id');
+    const requestId = select.getAttribute('data-request-id');
+    if (!projectId || !requestId) return;
+
+    try {
+        showLoader();
+        const res = await fetch(`${API_URL}/properties/${projectId}/maintenance/${requestId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        });
+        if (!res.ok) throw new Error('Failed to update maintenance status');
+        await renderGlobalMaintenanceOverview();
+        // Also refresh the top maintenance icon count so it reflects the new status distribution
+        if (typeof preloadGlobalMaintenanceCount === 'function') {
+            try { await preloadGlobalMaintenanceCount(); } catch {}
+        }
+        showNotification('Maintenance status updated', 'success');
+    } catch (err) {
+        console.error('Error updating maintenance status from overview:', err);
+        showNotification('Could not update maintenance status', 'error');
+    } finally {
         hideLoader();
     }
 });
@@ -10773,7 +11177,12 @@ function renderMainSummary() {
 }
 
 
-document.getElementById('mainSummaryToggle').addEventListener('click', function() {
+document.getElementById('mainSummaryToggle').addEventListener('click', function(event) {
+    // Ignore clicks coming from inside the top tools bar so those icons don't toggle the summary
+    if (event.target.closest('.top-tools-bar')) {
+        return;
+    }
+
     const section = document.querySelector('.main-summary-section');
     section.classList.toggle('collapsed');
 });
