@@ -1432,7 +1432,6 @@ app.post('/api/rental-applications/send-link', async (req, res) => {
       status: 'sent'
     });
 
-    const applicationUrl = `${baseUrl}/applications/new?inviteId=${invite._id}`;
 
     const subjBits = [];
     if (propertyName) subjBits.push(propertyName);
@@ -1458,6 +1457,17 @@ app.post('/api/rental-applications/send-link', async (req, res) => {
       console.warn('Unable to build property address for invite:', e?.message || e);
     }
 
+   // Build application URL including property address / unit in query so the form can auto-fill
+    let propertyForUrl = propertyAddressText || propertyName || '';
+    let qs = `inviteId=${invite._id}`;
+    if (propertyForUrl && String(propertyForUrl).trim()) {
+      qs += `&propertyAddress=${encodeURIComponent(propertyForUrl)}`;
+    }
+    if (unitNumber && String(unitNumber).trim()) {
+      qs += `&unitNumber=${encodeURIComponent(String(unitNumber))}`;
+    }
+    const applicationUrl = `${baseUrl}/applications/new?${qs}`;
+    
     const html = `
       <div style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:#f5f7fb; padding:24px;">
         <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e6ebf5;border-radius:14px;overflow:hidden;color:#1a1f2b;box-shadow:0 8px 24px rgba(0,0,0,.06);">
