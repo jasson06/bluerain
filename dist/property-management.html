@@ -46,9 +46,9 @@ body {
 /* --- Modern Modal Styles (Apply Globally) --- */
 .modal .modal-content {
     background: #fff;
-    border-radius: 16px;
+    border-radius: 10px;
     box-shadow: 0 8px 32px rgba(44,62,80,0.13);
-    padding: 24px 25px 24px 25px;
+    padding: 14px 15px 14px 15px;
     max-width: 1100px;
     margin: -10px auto;
     position: relative;
@@ -72,7 +72,7 @@ body {
 }
 
 .modal form .form-group {
-    flex: 1 1 180px;
+    flex: 1 1 70px;
     display: flex;
     flex-direction: column;
     margin-bottom: 18px;
@@ -95,7 +95,7 @@ body {
     font-size: 1.05rem;
     background: #f9fafb;
     transition: border 0.2s;
-    margin-bottom: 2px;
+    margin-bottom: 0px;
 }
 
 .modal form .form-group input:focus,
@@ -154,7 +154,7 @@ body {
         max-width: 99vw;
     }
     .modal form .form-row {
-        flex-direction: column;
+        
         gap: 8px;
     }
     .modal form .form-group {
@@ -170,9 +170,9 @@ body {
 .property-item {
     background: white;
     border-radius: 10px;
-    padding: 15px;
+    padding: 10px;
     margin-bottom: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.308);
     transition: all 0.3s ease;
     cursor: pointer;
     border: 2px solid transparent;
@@ -272,6 +272,30 @@ body {
     margin-top: 3px;
 }
 
+/* Compact per-property stats (occupancy, vacancies) */
+.property-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: #6b7280;
+}
+
+.property-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.03);
+}
+
+.property-stat i {
+    color: var(--accent-color);
+    font-size: 0.8rem;
+}
+
 /* Sidebar Styles */
 .sidebar {
     width: 310px;
@@ -316,9 +340,13 @@ body {
 }
 
 .sidebar-header {
+    position: sticky;
+    top: -20px;
+    z-index: 10;
     padding-bottom: 20px;
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 20px;
+    background: #ffffff;
 }
 
 /* Main Content Styles */
@@ -333,14 +361,14 @@ body {
 
 /* Dashboard Styles */
 .dashboard-header {
-    margin-bottom: 30px;
+    margin-bottom: 15px;
 }
 
 .stats-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin-top: 20px;
+    gap: 10px;
+    margin-top: 10px;
 }
 
 .stat-card {
@@ -354,7 +382,7 @@ body {
 .tabs {
     display: flex;
     gap: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 5px;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 10px;
     position: sticky;
@@ -554,7 +582,7 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 0.97rem;
+    font-size: 0.85rem;
     margin-bottom: 4px;
     padding-left: 2px;
 }
@@ -586,7 +614,7 @@ body {
 .unit-card-actions {
     display: flex;
     gap: 10px;
-    padding: 14px 22px 16px 22px;
+    padding: 10px 22px 5px 22px;
     background: #f8fafd;
     border-top: 1px solid #e1e8ed;
     border-radius: 0 0 14px 14px;
@@ -1244,7 +1272,7 @@ select {
 }
 
 .tenant-card .tenant-header {
-    padding: 20px;
+    padding: 10px;
     background: var(--primary-color);
     color: white;
     display: flex;
@@ -1868,6 +1896,32 @@ select {
     position: relative;
 }
 
+/* Compact, mobile-friendly modal layout */
+@media (max-width: 700px) {
+    .modal .modal-content {
+        width: 94%;
+        max-width: 94%;
+        margin: 40px auto;
+        padding: 16px 16px 18px 16px;
+        font-size: 0.82rem;
+    }
+    .modal h2 {
+        font-size: 1.4rem;
+        margin-bottom: 14px;
+    }
+    .modal form .form-row {
+        
+        gap: 10px;
+    }
+    .modal form .form-group {
+        margin-bottom: 10px;
+    }
+    .modal-content {
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+}
+
 .payments-table {
     width: 100%;
     border-collapse: collapse;
@@ -2048,7 +2102,7 @@ select {
         padding-right: 10px;
     }
     .main-summary {
-        flex-direction: column;
+        
         gap: 14px;
         padding: 14px 8px 0 8px;
     }
@@ -2081,7 +2135,7 @@ select {
     padding: 12px 18px;
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(52,152,219,0.07);
-    margin-left: 15px;
+    margin-left: 30px;
 }
 
 
@@ -2138,7 +2192,7 @@ select {
     padding-right: 8px !important;
   }
   .form-row {
-    flex-direction: column !important;
+    
     gap: 8px !important;
     display: flex !important;
   }
@@ -2906,7 +2960,7 @@ select {
             <div class="form-row">
                 <div class="form-group" style="flex: 1 1 100%;">
                     <label>Unit Amenities & Features</label>
-                    <div id="unitAmenitiesChecklist" style="display: flex; flex-wrap: wrap; gap: 18px;">
+                    <div id="unitAmenitiesChecklist" style="display: flex; flex-wrap: wrap; gap: 10px;">
                         <label><input type="checkbox" name="amenities" value="washerDryer"> Washer & Dryer</label>
                         <label><input type="checkbox" name="amenities" value="washerDryerHookup"> Washer/Dryer Hookup</label>
                         <label><input type="checkbox" name="amenities" value="centralAC"> Central AC/Heat</label>
@@ -4423,6 +4477,14 @@ function renderPropertyList() {
 
     propertyList.innerHTML = state.properties.map(property => {
         const isActive = state.currentProperty && state.currentProperty._id === property._id;
+        const unitsForProperty = (state.allUnits || []).filter(u => {
+            const pid = u.projectId || u.propertyId || u.project; // projectId populated in loadAllUnitsAndTenants
+            return pid && String(pid) === String(property._id);
+        });
+        const totalUnits = unitsForProperty.length;
+        const vacantUnits = unitsForProperty.filter(u => u.status === 'vacant').length;
+        const occupancyRate = totalUnits ? calculateOccupancyRate(unitsForProperty) : '--';
+        const vacantLabel = totalUnits ? `${vacantUnits} vacant` : '--';
         
         return `
             <div class="property-item ${isActive ? 'active' : ''}" 
@@ -4439,6 +4501,16 @@ function renderPropertyList() {
                   <span class="property-status ${property.status?.toLowerCase().replace(/\s+/g, '-') || ''}">
                  <i class="fas fa-circle"></i> ${property.status || 'Active'}
                  </span>
+                </div>
+                <div class="property-stats">
+                    <span class="property-stat" title="Occupancy rate for this property">
+                        <i class="fas fa-user-check" aria-hidden="true"></i>
+                        <span>${occupancyRate}</span>
+                    </span>
+                    <span class="property-stat" title="Number of vacant units for this property">
+                        <i class="fas fa-door-open" aria-hidden="true"></i>
+                        <span>${vacantLabel}</span>
+                    </span>
                 </div>
             </div>
         `;
@@ -11132,7 +11204,11 @@ async function loadAllUnitsAndTenants() {
             if (unitsRes.ok) {
                 const unitsData = await unitsRes.json();
                 if (unitsData.property && Array.isArray(unitsData.property.units)) {
-                    allUnits = allUnits.concat(unitsData.property.units);
+                    const unitsWithProject = unitsData.property.units.map(u => {
+                        u.projectId = property._id;
+                        return u;
+                    });
+                    allUnits = allUnits.concat(unitsWithProject);
                 }
             }
         } catch (e) {
@@ -11154,6 +11230,8 @@ async function loadAllUnitsAndTenants() {
     state.allUnits = allUnits;
     state.allTenants = allTenants;
     renderMainSummary();
+    // Refresh property list so per-property stats (occupancy, vacancies) are shown once data is loaded
+    renderPropertyList();
 }
 
 
