@@ -1190,6 +1190,25 @@
           const d = new Date();
           sigDate.value = d.toISOString().slice(0,10);
         }
+
+        // Prefill from query string when coming from a specific unit/property
+        try{
+          const params = new URLSearchParams(window.location.search);
+          const qAddress = params.get('propertyAddress');
+          const qUnit = params.get('unitNumber');
+          if(qAddress){
+            const addrInput = document.getElementById('propertyAddress');
+            if(addrInput && !addrInput.value){
+              addrInput.value = qAddress;
+            }
+          }
+          if(qUnit){
+            const unitInput = document.getElementById('unitNumber');
+            if(unitInput && !unitInput.value){
+              unitInput.value = qUnit;
+            }
+          }
+        }catch(e){}
       }
       setStep(0);
     })();
