@@ -4255,11 +4255,12 @@ function updateTabCounts() {
     document.getElementById('tabCountPayments').textContent = state.payments?.length || 0;
     // Applications
     const appsBadge = document.getElementById('tabCountApplications');
-    const appsCount = state.applications?.length || 0;
-    if (appsBadge) appsBadge.textContent = appsCount;
-    // Mirror applications count into top toolbar icon
+    const appsAllCount = state.applications?.length || 0;
+    if (appsBadge) appsBadge.textContent = appsAllCount;
+    // Mirror PENDING applications count into top toolbar icon
+    const pendingAppsCount = (state.applications || []).filter(a => (a.status || 'pending') === 'pending').length;
     const topApps = document.getElementById('topApplicationsCount');
-    if (topApps) topApps.textContent = appsCount > 99 ? '99+' : appsCount;
+    if (topApps) topApps.textContent = pendingAppsCount > 99 ? '99+' : pendingAppsCount;
 }
 
 async function loadTabContent(tabId, force = false) {
@@ -7979,10 +7980,8 @@ async function loadApplications(force = false) {
         const res = await fetch('/api/rental-applications?limit=200');
         if (!res.ok) throw new Error('Failed to fetch applications');
         const all = await res.json();
-        // Keep only pending applications in state for counts and views
-        state.applications = Array.isArray(all)
-            ? all.filter(a => (a.status || 'pending') === 'pending')
-            : [];
+        // Keep all applications (Pending, Approved, Rejected) in state for the Applications tab
+        state.applications = Array.isArray(all) ? all : [];
         renderApplications();
         updateTabCounts();
     } catch (err) {
@@ -8332,10 +8331,78 @@ document.getElementById('topToolApplications')?.addEventListener('click', async 
         }
         const body = document.getElementById('globalOverviewBody');
         const title = document.getElementById('globalOverviewTitle');
-        const source = document.getElementById('applicationsList');
-        if (body && title && source) {
-            title.textContent = 'All Applications';
-            body.innerHTML = source.innerHTML;
+        if (body && title) {
+            // Show only pending applications in the global overview
+            const pendingApps = (state.applications || []).filter(a => (a.status || 'pending') === 'pending');
+            title.textContent = 'Pending Applications';
+
+            if (!pendingApps.length) {
+                body.innerHTML = `
+                    <div class="empty-state" style="text-align:center;padding:24px;">
+                        <i class="fas fa-file-alt" style="font-size:2em;color:#3498db;margin-bottom:8px;"></i>
+                        <p>No pending applications found.</p>
+                    </div>`;
+            } else {
+                const rows = pendingApps.map(a => {
+                    let propertyAddress = '';
+                    let unitNumber = a.unit || '';
+                    if (a.notes) {
+                        try {
+                            const n = JSON.parse(a.notes);
+                            propertyAddress = n.propertyAddress || '';
+                            unitNumber = n.unitNumber || unitNumber;
+                        } catch {}
+                    }
+                    const moveIn = a.moveIn ? new Date(a.moveIn).toLocaleDateString('en-US') : '';
+                    const submitted = a.submitted ? new Date(a.submitted).toLocaleString('en-US') : '';
+                    const status = (a.status || 'pending');
+                    const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+                    const viewLink = `/applications/review/${a._id}`;
+                    return `
+                        <tr style="border-bottom:1px solid #e1e8ed;" data-app-id="${a._id}">
+                            <td style="padding:10px 8px;font-weight:600;color:#2563eb;">
+                                <button class="application-jump-link" data-app-id="${a._id}" style="background:none;border:none;color:#2563eb;padding:0;margin:0;font:inherit;text-align:left;cursor:pointer;">
+                                    ${a.name || ''}
+                                </button>
+                            </td>
+                            <td style="padding:10px 8px;">${a.email || ''}</td>
+                            <td style="padding:10px 8px;">${a.phone || ''}</td>
+                            <td style="padding:10px 8px;">${propertyAddress || '—'}</td>
+                            <td style="padding:10px 8px;">${unitNumber || '—'}</td>
+                            <td style="padding:10px 8px;">${moveIn || '—'}</td>
+                            <td style="padding:10px 8px;">${submitted || '—'}</td>
+                            <td style="padding:10px 8px;">${statusLabel}</td>
+                            <td style="padding:10px 8px;">
+                                <a class="btn-secondary" href="${viewLink}" target="_blank" rel="noopener" style="text-decoration:none;padding:6px 10px;border-radius:8px;display:inline-block;">
+                                     View
+                                </a>
+                            </td>
+                        </tr>`;
+                }).join('');
+
+                body.innerHTML = `
+                  <div style="overflow-x:auto;">
+                    <table class="maintenance-table" style="width:100%;border-collapse:collapse;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(44,62,80,0.07);">
+                      <thead>
+                        <tr style="background:#f6fafd;">
+                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Applicant</th>
+                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Email</th>
+                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Phone</th>
+                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Property Address</th>
+                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Unit</th>
+                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Move-In</th>
+                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Submitted</th>
+                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Status</th>
+                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${rows}
+                      </tbody>
+                    </table>
+                  </div>
+                `;
+            }
         }
         openModal('globalOverviewModal');
     } catch (e) {
