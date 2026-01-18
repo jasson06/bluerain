@@ -1552,6 +1552,46 @@ app.get('/api/application-invites', async (req, res) => {
   }
 });
 
+// PUT: update an application invite by id
+app.put('/api/application-invites/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, propertyName, unitNumber, status, applicationUrl } = req.body || {};
+
+    const update = {};
+    if (typeof name === 'string') update.name = name;
+    if (typeof email === 'string') update.email = email;
+    if (typeof propertyName === 'string') update.propertyName = propertyName;
+    if (typeof unitNumber === 'string') update.unitNumber = unitNumber;
+    if (typeof status === 'string') update.status = status;
+    if (typeof applicationUrl === 'string') update.applicationUrl = applicationUrl;
+
+    const updated = await ApplicationInvite.findByIdAndUpdate(id, { $set: update }, { new: true }).lean();
+    if (!updated) {
+      return res.status(404).json({ message: 'Invite not found' });
+    }
+    return res.json({ invite: updated });
+  } catch (err) {
+    console.error('Update application invite error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// DELETE: remove an application invite by id
+app.delete('/api/application-invites/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await ApplicationInvite.findByIdAndDelete(id).lean();
+    if (!deleted) {
+      return res.status(404).json({ message: 'Invite not found' });
+    }
+    return res.json({ message: 'Invite deleted' });
+  } catch (err) {
+    console.error('Delete application invite error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // GET: fetch a rental application by id
 app.get('/api/rental-applications/:id', async (req, res) => {
   try {
@@ -1592,6 +1632,21 @@ app.put('/api/rental-applications/:id', async (req, res) => {
   }
 });
 
+
+// DELETE: remove a rental application by id
+app.delete('/api/rental-applications/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Application.findByIdAndDelete(id).lean();
+    if (!deleted) {
+      return res.status(404).json({ message: 'Application not found' });
+    }
+    return res.json({ message: 'Application deleted' });
+  } catch (err) {
+    console.error('Delete rental application error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 // Add Client
 app.post('/api/add-client', async (req, res) => {
