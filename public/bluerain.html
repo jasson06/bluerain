@@ -867,6 +867,32 @@ United States
   <script>
     const APPLY_URL = "https://bluerainrealestate.com/blue-rain-rental-application.html";
 
+    function buildApplyUrl(address, unitLabel){
+      try{
+        const url = new URL(APPLY_URL);
+          if(address && address.trim()){
+          url.searchParams.set('propertyAddress', address);
+        }
+          if(unitLabel && unitLabel.trim()){
+          const cleanUnit = String(unitLabel).replace(/^Unit\s*/i,'').trim();
+          url.searchParams.set('unitNumber', cleanUnit);
+        }
+        return url.toString();
+      }catch(e){
+        const parts = [];
+          if(address && address.trim()){
+          parts.push(`propertyAddress=${encodeURIComponent(address)}`);
+        }
+          if(unitLabel && unitLabel.trim()){
+          const cleanUnit = String(unitLabel).replace(/^Unit\s*/i,'').trim();
+          parts.push(`unitNumber=${encodeURIComponent(cleanUnit)}`);
+        }
+        if(!parts.length) return APPLY_URL;
+        const sep = APPLY_URL.includes('?') ? '&' : '?';
+        return APPLY_URL + sep + parts.join('&');
+      }
+    }
+
     // Placeholder photos (swap later with your real photos per property/unit)
     const placeholderPhotos = [
  //coming soon image 
@@ -887,7 +913,7 @@ United States
         rent: 1700,
         beds: 3, baths: 1,
         sqftByUnit: { "101":1050,"102":1050,"201":1050,"202":1050 },
-        statusByUnit: { "101":"Available","102":"Available","201":"Available","202":"Available" },
+        statusByUnit: { "101":"Waitlist","102":"Waitlist","201":"Waitlist","202":"Available" },
         photosByUnit: {
           "101": ["images/image63.jpg","images/image64.jpg","images/image65.jpg","images/image66.jpg","images/image67.jpg","images/image68.jpg","images/image69.jpg","images/image70.jpg","images/image71.jpg","images/image72.jpg"],
           "102": ["images/image63.jpg","images/image64.jpg","images/image65.jpg","images/image66.jpg","images/image67.jpg","images/image68.jpg","images/image69.jpg","images/image70.jpg","images/image71.jpg","images/image72.jpg"],
@@ -923,8 +949,8 @@ United States
         rent: 1600,
         rentByUnit: { "101": 1600, "102": 1600, "201": 1700 }, 
         beds: 2, baths: 1,
-        sqftByUnit: { "101":850,"102":850,"201":850 },
-        statusByUnit: { "101":"Available","102":"Available","201":"Available" },
+        sqftByUnit: { "101":743,"102":790,"201":883 },
+        statusByUnit: { "101":"Available","102":"Available","201":"Waitlist" },
                 photosByUnit: {
           "101": ["images/image132.jpg","images/image131.jpg","images/image134.jpg","images/image135.jpg","images/image136.jpg","images/image137.jpg","images/image138.jpg","images/image139.jpg","images/image140.jpg","images/image141.jpg","images/image144.jpg"],
           "102": ["images/image133.jpg","images/image131.jpg","images/image134.jpg","images/image135.jpg","images/image136.jpg","images/image137.jpg","images/image138.jpg","images/image139.jpg","images/image140.jpg","images/image141.jpg","images/image142.jpg"],
@@ -941,14 +967,14 @@ United States
         rent: 1450,
         beds: 1, baths: 1,
         sqftByUnit: { "101":700,"102":700,"103":700,"104":700,"205":700,"206":700,"207":700,"208":700 },
-        statusByUnit: { "101":"Coming Soon","102":"Coming Soon","103":"Coming Soon","104":"Coming Soon","205":"Coming Soon","206":"Coming Soon","207":"Coming Soon","208":"Coming Soon" },
+        statusByUnit: { "101":"Waitlist","102":"Available","103":"Available","104":"Available","205":"Available","206":"Available","207":"Available","208":"Available" },
                 photosByUnit: {
           "101": ["images/image51.jpg","images/image52.jpg"],
           "102": ["images/image52.jpg","images/image51.jpg"],
           "201": ["images/image53.jpg","images/image52.jpg"],
           "202": ["images/image54.jpg","images/image52.jpg"]
         },
-        status: "Coming Soon",
+        status: "Available",
         hero: "images/image53.jpg",
       },
       {
@@ -995,7 +1021,7 @@ United States
         rent: 1500,
         beds: 2, baths: 1,
         sqftByUnit: { "1":636,"2":636,"3":636,"4":636 },
-        statusByUnit: { "1":"Available","2":"Available","3":"Available","4":"Available" },
+        statusByUnit: { "1":"Waitlist","2":"Available","3":"Waitlist","4":"Available" },
                 photosByUnit: {
           "1": ["images/image94.jpg","images/image95.jpg","images/image96.jpg","images/image97.jpg","images/image98.jpg","images/image99.jpg","images/image100.jpg","images/image101.jpg","images/image102.jpg","images/image103.jpg","images/image104.jpg","images/image105.jpg"],
           "2": ["images/image94.jpg","images/image95.jpg","images/image96.jpg","images/image97.jpg","images/image98.jpg","images/image99.jpg","images/image100.jpg","images/image101.jpg","images/image102.jpg","images/image103.jpg","images/image104.jpg","images/image105.jpg"],
@@ -1378,7 +1404,7 @@ United States
               <div class=\"right\">
                 <button class=\"btn\" data-open=\"${rowKey}\">View</button>
                 <button class=\"btn\" data-sch=\"${prop.name} • Unit ${u}\">Schedule</button>
-                ${can ? `<a class=\"btn apply\" href=\"${APPLY_URL}\" target=\"_blank\" rel=\"noopener\">Apply</a>` : ''}
+                ${can ? `<a class=\"btn apply\" href=\"${buildApplyUrl(prop.address, 'Unit ' + u)}\" target=\"_blank\" rel=\"noopener\">Apply</a>` : ''}
               </div>
             </div>`;
         }).join('');
@@ -1395,7 +1421,7 @@ United States
               <div class=\"right\">
                 <button class=\"btn\" data-open=\"${rowKey}\">View details</button>
                 <button class=\"btn\" data-sch=\"${prop.name}\">Schedule</button>
-                ${can ? `<a class=\"btn apply\" href=\"${APPLY_URL}\" target=\"_blank\" rel=\"noopener\">Apply</a>` : ''}
+                ${can ? `<a class=\"btn apply\" href=\"${buildApplyUrl(prop.address, 'Home')}\" target=\"_blank\" rel=\"noopener\">Apply</a>` : ''}
               </div>
             </div>
           </div>`;
@@ -1556,7 +1582,7 @@ United States
             </div>
             <div class="card-actions">
               <button class="btn" data-jump="${p.address}">View units</button>
-              ${canApply(p.status) ? `<a class="btn apply" href="${APPLY_URL}" target="_blank" rel="noopener">Apply</a>` : ``}
+              ${canApply(p.status) ? `<a class="btn apply" href="${buildApplyUrl(p.address, '')}" target="_blank" rel="noopener">Apply</a>` : ``}
             </div>
           </div>
         `;
@@ -1673,7 +1699,7 @@ United States
             </div>
             <div class="card-actions">
               <button class="btn" data-open="${h.id}::home">View details</button>
-              ${canApply(h.status) ? `<a class="btn apply" href="${APPLY_URL}" target="_blank" rel="noopener">Apply</a>` : ``}
+               ${canApply(h.status) ? `<a class="btn apply" href="${buildApplyUrl(h.address, 'Home')}" target="_blank" rel="noopener">Apply</a>` : ``}
             </div>
           </div>
         `;
@@ -1769,7 +1795,7 @@ United States
       rows.forEach(r=>{
         const tr = document.createElement("tr");
         const applyCell = canApply(r.status)
-          ? `<a class="btn apply" style="padding:8px 10px;border-radius:12px;" href="${APPLY_URL}" target="_blank" rel="noopener">Apply</a>`
+          ? `<a class="btn apply" style="padding:8px 10px;border-radius:12px;" href="${buildApplyUrl(r.address, r.label)}" target="_blank" rel="noopener">Apply</a>`
           : `<span style="color:var(--muted);font-size:12px;">—</span>`;
 
         tr.innerHTML = `
@@ -1793,7 +1819,7 @@ United States
         const card = document.createElement("div");
         card.className = "unit-card";
         const applyBtn = canApply(r.status)
-          ? `<a class="btn apply" href="${APPLY_URL}" target="_blank" rel="noopener">Apply</a>`
+          ? `<a class="btn apply" href="${buildApplyUrl(r.address, r.label)}" target="_blank" rel="noopener">Apply</a>`
           : "";
         card.innerHTML = `
           <div class="head">
