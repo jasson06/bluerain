@@ -2831,6 +2831,17 @@ select {
                                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                                     <button class="btn-secondary" id="sendApplicationBtn">Send Application</button>
                                     <button class="btn-secondary" id="refreshApplicationsBtn">Refresh</button>
+                                    <div id="applicationsActionsWrapper" style="display:none;position:relative;">
+                                        <button class="btn-secondary" id="applicationsActionsBtn">Actions ▾</button>
+                                        <div id="applicationsActionsMenu" style="position:absolute;top:110%;right:0;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 10px 30px rgba(15,23,42,0.18);padding:6px 0;min-width:140px;display:none;z-index:1000;">
+                                            <button id="editApplicationBtn" style="display:block;width:100%;padding:6px 14px;text-align:left;background:none;border:none;font-size:0.9rem;color:#111827;cursor:pointer;">
+                                                Edit
+                                            </button>
+                                            <button id="deleteApplicationBtn" style="display:block;width:100%;padding:6px 14px;text-align:left;background:none;border:none;font-size:0.9rem;color:#b91c1c;cursor:pointer;">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div id="applicationsList" class="maintenance-list" style="margin-top:10px;"></div>
@@ -2858,6 +2869,17 @@ select {
                                 <h2>Invites</h2>
                                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                                     <button class="btn-secondary" id="refreshInvitesBtn">Refresh</button>
+                                    <div id="invitesActionsWrapper" style="display:none;position:relative;">
+                                        <button class="btn-secondary" id="invitesActionsBtn">Actions ▾</button>
+                                        <div id="invitesActionsMenu" style="position:absolute;top:110%;right:0;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 10px 30px rgba(15,23,42,0.18);padding:6px 0;min-width:140px;display:none;z-index:1000;">
+                                            <button id="editInviteBtn" style="display:block;width:100%;padding:6px 14px;text-align:left;background:none;border:none;font-size:0.9rem;color:#111827;cursor:pointer;">
+                                                Edit
+                                            </button>
+                                            <button id="deleteInviteBtn" style="display:block;width:100%;padding:6px 14px;text-align:left;background:none;border:none;font-size:0.9rem;color:#b91c1c;cursor:pointer;">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div id="invitesList" class="maintenance-list" style="margin-top:10px;"></div>
@@ -3567,6 +3589,61 @@ select {
             </table>
         </div>
     </div>
+</div>
+
+<!-- Edit Invite Modal -->
+<div class="modal" id="editInviteModal">
+    <div class="modal-content" style="max-width:520px;">
+        <div class="modal-header">
+            <h2>Edit Invite</h2>
+            <button class="btn-close" onclick="closeModal('editInviteModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="editInviteForm">
+                <input type="hidden" id="editInviteId" />
+                <div class="form-row">
+                    <div class="form-group" style="flex:1 1 60%;">
+                        <label for="editInviteName">Name</label>
+                        <input type="text" id="editInviteName" required />
+                    </div>
+                    <div class="form-group" style="flex:1 1 40%;">
+                        <label for="editInviteEmail">Email</label>
+                        <input type="email" id="editInviteEmail" required />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editInviteProperty">Property</label>
+                        <input type="text" id="editInviteProperty" />
+                    </div>
+                    <div class="form-group" style="max-width:140px;">
+                        <label for="editInviteUnit">Unit</label>
+                        <input type="text" id="editInviteUnit" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editInviteStatus">Status</label>
+                        <select id="editInviteStatus">
+                            <option value="sent">Sent</option>
+                            <option value="opened">Opened</option>
+                            <option value="completed">Completed</option>
+                            <option value="expired">Expired</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editInviteUrl">Application Link</label>
+                        <input type="url" id="editInviteUrl" />
+                    </div>
+                </div>
+                <div class="modal-buttons" style="margin-top:16px;">
+                    <button type="button" class="btn-secondary" onclick="closeModal('editInviteModal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
 </div>
 
     <!-- View Unit Modal (example) -->
@@ -8101,14 +8178,19 @@ function renderInvites(items) {
             </div>`;
         return;
     }
+    const currentSelectedInviteId = state.selectedInviteId || null;
     const rows = invites.map(inv => {
         const sentAt = inv.sentAt ? new Date(inv.sentAt).toLocaleString('en-US') : '';
         const openedAt = inv.openedAt ? new Date(inv.openedAt).toLocaleString('en-US') : '';
         const status = inv.status || 'sent';
         const statusBadge = `<span class="status-badge ${status}" style="padding:4px 10px;border-radius:12px;font-size:.85em;">${status.charAt(0).toUpperCase() + status.slice(1)}</span>`;
         const link = inv.applicationUrl || '';
+        const isSelected = currentSelectedInviteId && String(currentSelectedInviteId) === String(inv._id);
         return `
-            <tr style="border-bottom:1px solid #e1e8ed;">
+            <tr style="border-bottom:1px solid #e1e8ed;" data-invite-id="${inv._id}">
+                <td style="padding:10px 8px;width:36px;text-align:center;">
+                    <input type="radio" name="selectedInvite" class="invite-select" value="${inv._id}" ${isSelected ? 'checked' : ''} style="cursor:pointer;" />
+                </td>
                 <td style="padding:10px 8px;font-weight:600;color:#2c3e50;">${inv.name || ''}</td>
                 <td style="padding:10px 8px;">${inv.email || ''}</td>
                 <td style="padding:10px 8px;">${inv.propertyName || '—'}</td>
@@ -8125,6 +8207,7 @@ function renderInvites(items) {
         <table class="maintenance-table" style="width:100%;border-collapse:collapse;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(44,62,80,0.07);">
           <thead>
             <tr style="background:#f6fafd;">
+                            <th style="padding:12px 8px;font-weight:600;color:#2980b9;width:36px;"></th>
               <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Name</th>
               <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Email</th>
               <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Property</th>
@@ -8142,6 +8225,99 @@ function renderInvites(items) {
         </table>
       </div>
     `;
+
+    // Wire invite selection to Actions dropdown
+    const invitesWrapper = document.getElementById('invitesActionsWrapper');
+    const invitesMenu = document.getElementById('invitesActionsMenu');
+    const invitesBtn = document.getElementById('invitesActionsBtn');
+    const editInviteBtn = document.getElementById('editInviteBtn');
+    const deleteInviteBtn = document.getElementById('deleteInviteBtn');
+
+    if (invitesWrapper) {
+        invitesWrapper.style.display = state.selectedInviteId ? 'flex' : 'none';
+    }
+
+    document.querySelectorAll('.invite-select').forEach(input => {
+        input.addEventListener('click', (e) => {
+            const val = e.target.value || null;
+            if (state.selectedInviteId && String(state.selectedInviteId) === String(val)) {
+                // Toggle off when clicking the already selected invite
+                e.target.checked = false;
+                state.selectedInviteId = null;
+                if (invitesWrapper) invitesWrapper.style.display = 'none';
+                if (invitesMenu) invitesMenu.style.display = 'none';
+            } else {
+                state.selectedInviteId = val;
+                if (invitesWrapper) invitesWrapper.style.display = val ? 'flex' : 'none';
+                if (invitesMenu) invitesMenu.style.display = 'none';
+            }
+        });
+    });
+
+    if (invitesBtn && invitesMenu) {
+        invitesBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (!state.selectedInviteId) return;
+            invitesMenu.style.display = invitesMenu.style.display === 'block' ? 'none' : 'block';
+        };
+    }
+
+    // Simple outside-click handler to close the menu
+    document.addEventListener('click', (e) => {
+        if (invitesMenu && invitesMenu.style.display === 'block' && !invitesMenu.contains(e.target) && e.target !== invitesBtn) {
+            invitesMenu.style.display = 'none';
+        }
+    });
+
+    if (editInviteBtn) {
+        editInviteBtn.onclick = () => {
+            const id = state.selectedInviteId;
+            if (!id) return;
+            const invite = (state.invites || []).find(x => String(x._id) === String(id));
+            if (!invite) return;
+
+            const idEl = document.getElementById('editInviteId');
+            const nameEl = document.getElementById('editInviteName');
+            const emailEl = document.getElementById('editInviteEmail');
+            const propEl = document.getElementById('editInviteProperty');
+            const unitEl = document.getElementById('editInviteUnit');
+            const statusEl = document.getElementById('editInviteStatus');
+            const urlEl = document.getElementById('editInviteUrl');
+
+            if (idEl) idEl.value = invite._id || '';
+            if (nameEl) nameEl.value = invite.name || '';
+            if (emailEl) emailEl.value = invite.email || '';
+            if (propEl) propEl.value = invite.propertyName || '';
+            if (unitEl) unitEl.value = invite.unitNumber || '';
+            if (statusEl) statusEl.value = invite.status || 'sent';
+            if (urlEl) urlEl.value = invite.applicationUrl || '';
+
+            openModal('editInviteModal');
+            if (invitesMenu) invitesMenu.style.display = 'none';
+        };
+    }
+
+    if (deleteInviteBtn) {
+        deleteInviteBtn.onclick = async () => {
+            const id = state.selectedInviteId;
+            if (!id) return;
+            if (!confirm('Delete this invite? This cannot be undone.')) return;
+            try {
+                showLoader();
+                const res = await fetch(`/api/application-invites/${id}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('Failed to delete invite');
+                state.invites = (state.invites || []).filter(x => String(x._id) !== String(id));
+                state.selectedInviteId = null;
+                renderInvites();
+                showNotification('Invite deleted', 'success');
+            } catch (err) {
+                console.error('Delete invite error:', err);
+                showNotification('Could not delete invite', 'error');
+            } finally {
+                hideLoader();
+            }
+        };
+    }
 }
 
 // Hook up invites refresh button
@@ -8169,6 +8345,7 @@ function renderApplications(items) {
         return;
     }
 
+    const currentSelectedAppId = state.selectedApplicationId || null;
     const rows = apps.map(a => {
         // Safely parse notes for propertyAddress and unitNumber
         let propertyAddress = '';
@@ -8202,8 +8379,12 @@ function renderApplications(items) {
                         <option value="rejected" ${status==='rejected'?'selected':''}>Rejected</option>
                     </select>`;
         const viewLink = `/applications/review/${a._id}`;
+        const isSelected = currentSelectedAppId && String(currentSelectedAppId) === String(a._id);
         return `
             <tr style="border-bottom:1px solid #e1e8ed;" data-app-id="${a._id}">
+                <td style="padding:10px 8px;width:36px;text-align:center;">
+                    <input type="radio" name="selectedApplication" class="application-select" value="${a._id}" ${isSelected ? 'checked' : ''} style="cursor:pointer;" />
+                </td>
                 <td style="padding:10px 8px;font-weight:600;color:#2563eb;">
                     <button class="application-jump-link" data-app-id="${a._id}" style="background:none;border:none;color:#2563eb;padding:0;margin:0;font:inherit;text-align:left;cursor:pointer;">
                         ${a.name || ''}
@@ -8229,6 +8410,7 @@ function renderApplications(items) {
         <table class="maintenance-table" style="width:100%;border-collapse:collapse;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(44,62,80,0.07);">
           <thead>
             <tr style="background:#f6fafd;">
+                            <th style="padding:12px 8px;font-weight:600;color:#2980b9;width:36px;"></th>
               <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Applicant</th>
               <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Email</th>
               <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Phone</th>
@@ -8288,6 +8470,81 @@ function renderApplications(items) {
             }
         });
     });
+
+    // Wire application selection to Actions dropdown
+    const appsWrapper = document.getElementById('applicationsActionsWrapper');
+    const appsMenu = document.getElementById('applicationsActionsMenu');
+    const appsBtn = document.getElementById('applicationsActionsBtn');
+    const editAppBtn = document.getElementById('editApplicationBtn');
+    const deleteAppBtn = document.getElementById('deleteApplicationBtn');
+
+    if (appsWrapper) {
+        appsWrapper.style.display = state.selectedApplicationId ? 'flex' : 'none';
+    }
+
+    document.querySelectorAll('.application-select').forEach(input => {
+        input.addEventListener('click', (e) => {
+            const val = e.target.value || null;
+            if (state.selectedApplicationId && String(state.selectedApplicationId) === String(val)) {
+                // Toggle off when clicking the already selected application
+                e.target.checked = false;
+                state.selectedApplicationId = null;
+                if (appsWrapper) appsWrapper.style.display = 'none';
+                if (appsMenu) appsMenu.style.display = 'none';
+            } else {
+                state.selectedApplicationId = val;
+                if (appsWrapper) appsWrapper.style.display = val ? 'flex' : 'none';
+                if (appsMenu) appsMenu.style.display = 'none';
+            }
+        });
+    });
+
+    if (appsBtn && appsMenu) {
+        appsBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (!state.selectedApplicationId) return;
+            appsMenu.style.display = appsMenu.style.display === 'block' ? 'none' : 'block';
+        };
+    }
+
+    document.addEventListener('click', (e) => {
+        if (appsMenu && appsMenu.style.display === 'block' && !appsMenu.contains(e.target) && e.target !== appsBtn) {
+            appsMenu.style.display = 'none';
+        }
+    });
+
+    if (editAppBtn) {
+        editAppBtn.onclick = () => {
+            const id = state.selectedApplicationId;
+            if (!id) return;
+            const url = `/applications/review/${id}`;
+            window.open(url, '_blank', 'noopener');
+            if (appsMenu) appsMenu.style.display = 'none';
+        };
+    }
+
+    if (deleteAppBtn) {
+        deleteAppBtn.onclick = async () => {
+            const id = state.selectedApplicationId;
+            if (!id) return;
+            if (!confirm('Delete this application? This cannot be undone.')) return;
+            try {
+                showLoader();
+                const res = await fetch(`/api/rental-applications/${id}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('Failed to delete application');
+                state.applications = (state.applications || []).filter(a => String(a._id) !== String(id));
+                state.selectedApplicationId = null;
+                renderApplications();
+                updateTabCounts();
+                showNotification('Application deleted', 'success');
+            } catch (err) {
+                console.error('Delete application error:', err);
+                showNotification('Could not delete application', 'error');
+            } finally {
+                hideLoader();
+            }
+        };
+    }
 }
 
 // Hook up refresh button
@@ -8877,6 +9134,51 @@ async function downloadDocument(docId) {
         hideLoader(); 
     }
 }
+
+// Handle Edit Invite modal submit
+document.getElementById('editInviteForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const idEl = document.getElementById('editInviteId');
+    const nameEl = document.getElementById('editInviteName');
+    const emailEl = document.getElementById('editInviteEmail');
+    const propEl = document.getElementById('editInviteProperty');
+    const unitEl = document.getElementById('editInviteUnit');
+    const statusEl = document.getElementById('editInviteStatus');
+    const urlEl = document.getElementById('editInviteUrl');
+
+    const id = idEl?.value;
+    if (!id) return;
+
+    const payload = {
+        name: nameEl?.value?.trim() || '',
+        email: emailEl?.value?.trim() || '',
+        propertyName: propEl?.value?.trim() || '',
+        unitNumber: unitEl?.value?.trim() || '',
+        status: statusEl?.value || 'sent',
+        applicationUrl: urlEl?.value?.trim() || ''
+    };
+
+    try {
+        showLoader();
+        const res = await fetch(`/api/application-invites/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Failed to update invite');
+        const updated = await res.json();
+        const invData = updated.invite || updated;
+        state.invites = (state.invites || []).map(x => String(x._id) === String(id) ? invData : x);
+        closeModal('editInviteModal');
+        renderInvites();
+        showNotification('Invite updated', 'success');
+    } catch (err) {
+        console.error('Edit invite submit error:', err);
+        showNotification('Could not update invite', 'error');
+    } finally {
+        hideLoader();
+    }
+});
 
 async function deleteDocument(docId) {
     if (!confirm('Are you sure you want to delete this document?')) {
@@ -11560,4 +11862,3 @@ document.addEventListener('DOMContentLoaded', () => {
     </script>
 </body>
 </html>
-
