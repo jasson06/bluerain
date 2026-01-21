@@ -256,6 +256,177 @@ body {
     color: #856404;
 }
 
+/* Slide-in notes drawer for Applications & Invites */
+.notes-drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    pointer-events: none;
+}
+
+.notes-drawer-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15,23,42,0.30);
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.notes-drawer-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: min(420px, 100%);
+    background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(248,250,252,0.98));
+    box-shadow: -10px 0 35px rgba(15,23,42,0.18);
+    border-left: 1px solid rgba(148,163,184,0.35);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.28s ease-in-out;
+    backdrop-filter: blur(18px);
+}
+
+.notes-drawer-loader {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(2px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+}
+
+.notes-drawer-loader-spinner {
+    border: 5px solid #e5e7eb;
+    border-top: 5px solid #3b82f6;
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    animation: spin 0.8s linear infinite;
+}
+
+.notes-drawer.open {
+    pointer-events: auto;
+}
+
+.notes-drawer.open .notes-drawer-overlay {
+    opacity: 1;
+}
+
+.notes-drawer.open .notes-drawer-panel {
+    transform: translateX(0);
+}
+
+.notes-drawer-header {
+    padding: 14px 18px 10px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(226,232,240,0.9);
+}
+
+.notes-drawer-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.notes-drawer-header small {
+    display: block;
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+.notes-drawer-close {
+    border: none;
+    background: transparent;
+    font-size: 1.3rem;
+    cursor: pointer;
+    color: #64748b;
+}
+
+.notes-drawer-body {
+    flex: 1 1 auto;
+    padding: 10px 16px 8px 16px;
+    overflow-y: auto;
+}
+
+.notes-drawer-empty {
+    text-align: center;
+    padding: 20px 8px;
+    font-size: 0.9rem;
+    color: #9ca3af;
+}
+
+.notes-drawer-message {
+    margin-bottom: 10px;
+    display: flex;
+}
+
+.notes-drawer-bubble {
+    max-width: 100%;
+    padding: 8px 20px;
+    border-radius: 10px;
+    background: rgba(59,130,246,0.08);
+    border: 1px solid rgba(147,197,253,0.7);
+    color: #0f172a;
+    font-size: 0.86rem;
+    position: relative;
+}
+
+.notes-drawer-timestamp {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+.notes-drawer-delete {
+    position: absolute;
+    right: 4px;
+    top: 33px;
+    border: none;
+    background: transparent;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 0;
+}
+
+.notes-drawer-delete:hover {
+    color: #ef4444;
+}
+
+.notes-drawer-footer {
+    padding: 10px 14px 12px 14px;
+    border-top: 1px solid rgba(226,232,240,0.9);
+    display: flex;
+    gap: 8px;
+}
+
+.notes-drawer-footer input[type="text"] {
+    flex: 1 1 auto;
+    border-radius: 999px;
+    border: 1px solid #d1d5db;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+}
+
+.notes-drawer-footer button {
+    border-radius: 999px;
+    border: none;
+    padding: 8px 14px;
+    background: linear-gradient(90deg,#2563eb,#4f46e5);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
 
 .property-address {
     display: flex;
@@ -3661,6 +3832,30 @@ select {
       <button class="btn-primary" onclick="closeModal('viewUnitModal')">Close</button>
     </div>
   </div>
+</div>
+
+<!-- Slide-in Notes Drawer (shared for Applications & Invites) -->
+<div id="notesDrawer" class="notes-drawer">
+    <div id="notesDrawerOverlay" class="notes-drawer-overlay"></div>
+    <div class="notes-drawer-panel">
+        <div id="notesDrawerLoader" class="notes-drawer-loader">
+            <div class="notes-drawer-loader-spinner"></div>
+        </div>
+        <div class="notes-drawer-header">
+            <div>
+                <h3 id="notesDrawerTitle">Notes</h3>
+                <small id="notesDrawerSubtitle"></small>
+            </div>
+            <button type="button" id="notesDrawerClose" class="notes-drawer-close">&times;</button>
+        </div>
+        <div id="notesDrawerBody" class="notes-drawer-body">
+            <div class="notes-drawer-empty">No notes yet. Start the conversation below.</div>
+        </div>
+        <form id="notesDrawerForm" class="notes-drawer-footer">
+            <input type="text" id="notesDrawerInput" placeholder="Type a note and press Enter" autocomplete="off" />
+            <button type="submit">Add</button>
+        </form>
+    </div>
 </div>
 
 <!-- Global Overview Modal (Maintenance / Applications) -->
@@ -8185,19 +8380,32 @@ function renderInvites(items) {
         const status = inv.status || 'sent';
         const statusBadge = `<span class="status-badge ${status}" style="padding:4px 10px;border-radius:12px;font-size:.85em;">${status.charAt(0).toUpperCase() + status.slice(1)}</span>`;
         const link = inv.applicationUrl || '';
+        const notesCount = Array.isArray(inv.notesHistory) ? inv.notesHistory.length : 0;
         const isSelected = currentSelectedInviteId && String(currentSelectedInviteId) === String(inv._id);
         return `
             <tr style="border-bottom:1px solid #e1e8ed;" data-invite-id="${inv._id}">
                 <td style="padding:10px 8px;width:36px;text-align:center;">
                     <input type="radio" name="selectedInvite" class="invite-select" value="${inv._id}" ${isSelected ? 'checked' : ''} style="cursor:pointer;" />
                 </td>
-                <td style="padding:10px 8px;font-weight:600;color:#2c3e50;">${inv.name || ''}</td>
+                <td style="padding:10px 8px;font-weight:600;color:#2c3e50;">
+                    <button class="invite-notes-link" data-invite-id="${inv._id}" style="background:none;border:none;padding:0;margin:0;font:inherit;color:#2563eb;cursor:pointer;">
+                        ${inv.name || ''}
+                    </button>
+                </td>
                 <td style="padding:10px 8px;">${inv.email || ''}</td>
                 <td style="padding:10px 8px;">${inv.propertyName || '—'}</td>
                 <td style="padding:10px 8px;">${inv.unitNumber || '—'}</td>
                 <td style="padding:10px 8px;">${sentAt || '—'}</td>
                 <td style="padding:10px 8px;">${openedAt || '—'}</td>
                 <td style="padding:10px 8px;">${typeof inv.openCount === 'number' ? inv.openCount : 0}</td>
+                <td style="padding:10px 8px;">
+                    <button class="invite-notes-link" data-invite-id="${inv._id}" style="background:none;border:none;padding:0;margin:0;font:inherit;cursor:pointer;">
+                        <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#4f46e5;font-size:0.8rem;">
+                            <i class="fas fa-sticky-note"></i>
+                            ${notesCount}
+                        </span>
+                    </button>
+                </td>
                 <td style="padding:10px 8px;">${statusBadge}</td>
                 <td style="padding:10px 8px;">${link ? `<a href="${link}" target="_blank" rel="noopener" class="btn-secondary" style="text-decoration:none;padding:6px 10px;border-radius:8px;display:inline-block;">Open Link</a>` : '—'}</td>
             </tr>`;
@@ -8215,6 +8423,7 @@ function renderInvites(items) {
               <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Sent</th>
               <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Opened</th>
               <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Open Count</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Notes</th>
               <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Status</th>
               <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Actions</th>
             </tr>
@@ -8318,6 +8527,16 @@ function renderInvites(items) {
             }
         };
     }
+
+    // Wire invite name click to open notes drawer
+    list.querySelectorAll('.invite-notes-link').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const id = btn.getAttribute('data-invite-id');
+            if (!id) return;
+            openNotesDrawerForInvite(id);
+        });
+    });
 }
 
 // Hook up invites refresh button
@@ -8364,6 +8583,7 @@ function renderApplications(items) {
         if (a.notes) {
             try { notesJson = encodeURIComponent(a.notes); } catch {}
         }
+        const notesCount = Array.isArray(a.notesHistory) ? a.notesHistory.length : 0;
                 const statusSelect = `
                     <select class="app-status-select"
                                     data-app-id="${a._id}"
@@ -8396,6 +8616,14 @@ function renderApplications(items) {
                 <td style="padding:10px 8px;">${unitNumber || '—'}</td>
                 <td style="padding:10px 8px;">${moveIn || '—'}</td>
                 <td style="padding:10px 8px;">${submitted || '—'}</td>
+                <td style="padding:10px 8px;">
+                    <button class="application-jump-link" data-app-id="${a._id}" style="background:none;border:none;color:inherit;padding:0;margin:0;font:inherit;text-align:left;cursor:pointer;">
+                        <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#4f46e5;font-size:0.8rem;">
+                            <i class="fas fa-sticky-note"></i>
+                            ${notesCount}
+                        </span>
+                    </button>
+                </td>
                 <td style="padding:10px 8px;">${statusSelect}</td>
                 <td style="padding:10px 8px;">
                     <a class="btn-secondary" href="${viewLink}" target="_blank" rel="noopener" style="text-decoration:none;padding:6px 10px;border-radius:8px;display:inline-block;">
@@ -8418,6 +8646,7 @@ function renderApplications(items) {
               <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Unit</th>
               <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Move-In</th>
               <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Submitted</th>
+              <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Notes</th>
               <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Status</th>
               <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Actions</th>
             </tr>
@@ -8545,6 +8774,16 @@ function renderApplications(items) {
             }
         };
     }
+
+    // Wire application name click to open notes drawer
+    list.querySelectorAll('.application-jump-link').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const id = btn.getAttribute('data-app-id');
+            if (!id) return;
+            openNotesDrawerForApplication(id);
+        });
+    });
 }
 
 // Hook up refresh button
@@ -9135,6 +9374,224 @@ async function downloadDocument(docId) {
     }
 }
 
+// ===== Notes Drawer Logic (Applications & Invites) =====
+
+function getNotesDrawerElements() {
+    return {
+        root: document.getElementById('notesDrawer'),
+        overlay: document.getElementById('notesDrawerOverlay'),
+        loaderEl: document.getElementById('notesDrawerLoader'),
+        closeBtn: document.getElementById('notesDrawerClose'),
+        titleEl: document.getElementById('notesDrawerTitle'),
+        subtitleEl: document.getElementById('notesDrawerSubtitle'),
+        bodyEl: document.getElementById('notesDrawerBody'),
+        formEl: document.getElementById('notesDrawerForm'),
+        inputEl: document.getElementById('notesDrawerInput')
+    };
+}
+
+function setNotesDrawerLoading(isLoading) {
+    const { loaderEl } = getNotesDrawerElements();
+    if (!loaderEl) return;
+    loaderEl.style.display = isLoading ? 'flex' : 'none';
+}
+
+function renderNotesDrawerMessages(notes) {
+    const { bodyEl } = getNotesDrawerElements();
+    if (!bodyEl) return;
+    const items = Array.isArray(notes) ? notes : [];
+    if (!items.length) {
+        bodyEl.innerHTML = '<div class="notes-drawer-empty">No notes yet. Start the conversation below.</div>';
+        return;
+    }
+    const rows = items
+        .slice()
+        .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
+        .map(n => {
+            const ts = n.createdAt ? new Date(n.createdAt).toLocaleString('en-US') : '';
+            const safeText = (n.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            const noteId = n._id || '';
+            return `
+                <div class="notes-drawer-message" data-note-id="${noteId}">
+                    <div class="notes-drawer-bubble">
+                        <button type="button" class="notes-drawer-delete" data-note-id="${noteId}" title="Delete note">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <div>${safeText}</div>
+                        <span class="notes-drawer-timestamp">${ts}</span>
+                    </div>
+                </div>`;
+        }).join('');
+    bodyEl.innerHTML = rows;
+
+    // Attach delete handlers for each note trash icon
+    bodyEl.querySelectorAll('.notes-drawer-delete').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const noteId = btn.getAttribute('data-note-id');
+            if (!noteId) return;
+            deleteNoteFromDrawer(noteId);
+        });
+    });
+
+    bodyEl.scrollTop = bodyEl.scrollHeight;
+}
+
+function openNotesDrawerForApplication(appId) {
+    const { root, overlay, closeBtn, titleEl, subtitleEl, inputEl } = getNotesDrawerElements();
+    if (!root) return;
+    const app = (state.applications || []).find(a => String(a._id) === String(appId));
+    if (!app) return;
+
+    state.notesDrawerContext = {
+        type: 'application',
+        id: appId
+    };
+
+    if (titleEl) titleEl.textContent = 'Application Notes';
+    if (subtitleEl) subtitleEl.textContent = `${app.name || ''} • ${app.email || ''}`.trim();
+
+    renderNotesDrawerMessages(app.notesHistory || []);
+
+    root.classList.add('open');
+    if (inputEl) {
+        inputEl.value = '';
+        setTimeout(() => inputEl.focus(), 50);
+    }
+
+    if (overlay) {
+        overlay.onclick = () => closeNotesDrawer();
+    }
+    if (closeBtn) {
+        closeBtn.onclick = () => closeNotesDrawer();
+    }
+}
+
+function openNotesDrawerForInvite(inviteId) {
+    const { root, overlay, closeBtn, titleEl, subtitleEl, inputEl } = getNotesDrawerElements();
+    if (!root) return;
+    const invite = (state.invites || []).find(x => String(x._id) === String(inviteId));
+    if (!invite) return;
+
+    state.notesDrawerContext = {
+        type: 'invite',
+        id: inviteId
+    };
+
+    if (titleEl) titleEl.textContent = 'Invite Notes';
+    if (subtitleEl) subtitleEl.textContent = `${invite.name || ''} • ${invite.email || ''}`.trim();
+
+    renderNotesDrawerMessages(invite.notesHistory || []);
+
+    root.classList.add('open');
+    if (inputEl) {
+        inputEl.value = '';
+        setTimeout(() => inputEl.focus(), 50);
+    }
+
+    if (overlay) {
+        overlay.onclick = () => closeNotesDrawer();
+    }
+    if (closeBtn) {
+        closeBtn.onclick = () => closeNotesDrawer();
+    }
+}
+
+function closeNotesDrawer() {
+    const { root } = getNotesDrawerElements();
+    if (!root) return;
+    root.classList.remove('open');
+    state.notesDrawerContext = null;
+}
+
+async function deleteNoteFromDrawer(noteId) {
+    const ctx = state.notesDrawerContext;
+    if (!ctx || !noteId) return;
+
+    if (!confirm('Delete this note? This cannot be undone.')) return;
+
+    let url = '';
+    if (ctx.type === 'application') {
+        url = `/api/rental-applications/${ctx.id}/notes/${noteId}`;
+    } else if (ctx.type === 'invite') {
+        url = `/api/application-invites/${ctx.id}/notes/${noteId}`;
+    } else {
+        return;
+    }
+
+    try {
+        setNotesDrawerLoading(true);
+        const res = await fetch(url, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete note');
+        const data = await res.json();
+        const notes = data.notes || [];
+
+        if (ctx.type === 'application') {
+            state.applications = (state.applications || []).map(a =>
+                String(a._id) === String(ctx.id) ? { ...a, notesHistory: notes } : a
+            );
+        } else if (ctx.type === 'invite') {
+            state.invites = (state.invites || []).map(x =>
+                String(x._id) === String(ctx.id) ? { ...x, notesHistory: notes } : x
+            );
+        }
+
+        renderNotesDrawerMessages(notes);
+    } catch (err) {
+        console.error('Delete note error:', err);
+        showNotification('Could not delete note', 'error');
+    } finally {
+        setNotesDrawerLoading(false);
+    }
+}
+
+document.getElementById('notesDrawerForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const ctx = state.notesDrawerContext;
+    const { inputEl } = getNotesDrawerElements();
+    if (!ctx || !inputEl) return;
+    const text = (inputEl.value || '').trim();
+    if (!text) return;
+
+    let url = '';
+    if (ctx.type === 'application') {
+        url = `/api/rental-applications/${ctx.id}/notes`;
+    } else if (ctx.type === 'invite') {
+        url = `/api/application-invites/${ctx.id}/notes`;
+    } else {
+        return;
+    }
+
+    try {
+        setNotesDrawerLoading(true);
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text })
+        });
+        if (!res.ok) throw new Error('Failed to add note');
+        const data = await res.json();
+        const notes = data.notes || [];
+
+        if (ctx.type === 'application') {
+            state.applications = (state.applications || []).map(a =>
+                String(a._id) === String(ctx.id) ? { ...a, notesHistory: notes } : a
+            );
+        } else if (ctx.type === 'invite') {
+            state.invites = (state.invites || []).map(x =>
+                String(x._id) === String(ctx.id) ? { ...x, notesHistory: notes } : x
+            );
+        }
+
+        inputEl.value = '';
+        renderNotesDrawerMessages(notes);
+    } catch (err) {
+        console.error('Add note error:', err);
+        showNotification('Could not add note', 'error');
+    } finally {
+        setNotesDrawerLoading(false);
+    }
+});
 // Handle Edit Invite modal submit
 document.getElementById('editInviteForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
