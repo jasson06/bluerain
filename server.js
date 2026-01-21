@@ -1181,7 +1181,15 @@ const applicationSchema = new mongoose.Schema({
   unit: String,
   moveIn: Date,
   status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  // Raw application payload or structured info (existing usage)
   notes: String,
+  // Chat-style internal notes timeline
+  notesHistory: [
+    {
+      text: { type: String, required: true },
+      createdAt: { type: Date, default: Date.now }
+    }
+  ],
   submitted: { type: Date, default: Date.now }
 });
 
@@ -1222,7 +1230,14 @@ const ApplicationInvite = mongoose.model('ApplicationInvite', new mongoose.Schem
   sentAt: { type: Date, default: Date.now },
   openedAt: { type: Date },
   openCount: { type: Number, default: 0 },
-  status: { type: String, enum: ['sent','opened','delivered','bounced'], default: 'sent' }
+  status: { type: String, enum: ['sent','opened','delivered','bounced'], default: 'sent' },
+  // Chat-style internal notes timeline for invites
+  notesHistory: [
+    {
+      text: { type: String, required: true },
+      createdAt: { type: Date, default: Date.now }
+    }
+  ]
 }));
 
 module.exports = {
@@ -1592,6 +1607,54 @@ app.delete('/api/application-invites/:id', async (req, res) => {
   }
 });
 
+// POST: append a note to an application invite
+app.post('/api/application-invites/:id/notes', async (req, res) => {
+  try {
+    const { id } = req.params;
+    let { text } = req.body || {};
+    text = (text || '').trim();
+    if (!text) {
+      return res.status(400).json({ message: 'Note text is required' });
+    }
+
+    const updated = await ApplicationInvite.findByIdAndUpdate(
+      id,
+      { $push: { notesHistory: { text, createdAt: new Date() } } },
+      { new: true }
+    ).select('notesHistory').lean();
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Invite not found' });
+    }
+
+    return res.json({ notes: updated.notesHistory || [] });
+  } catch (err) {
+    console.error('Append invite note error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// DELETE: remove a single note from an application invite
+app.delete('/api/application-invites/:id/notes/:noteId', async (req, res) => {
+  try {
+    const { id, noteId } = req.params;
+    const updated = await ApplicationInvite.findByIdAndUpdate(
+      id,
+      { $pull: { notesHistory: { _id: noteId } } },
+      { new: true }
+    ).select('notesHistory').lean();
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Invite not found' });
+    }
+
+    return res.json({ notes: updated.notesHistory || [] });
+  } catch (err) {
+    console.error('Delete invite note error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // GET: fetch a rental application by id
 app.get('/api/rental-applications/:id', async (req, res) => {
   try {
@@ -1632,6 +1695,53 @@ app.put('/api/rental-applications/:id', async (req, res) => {
   }
 });
 
+// POST: append a note to a rental application
+app.post('/api/rental-applications/:id/notes', async (req, res) => {
+  try {
+    const { id } = req.params;
+    let { text } = req.body || {};
+    text = (text || '').trim();
+    if (!text) {
+      return res.status(400).json({ message: 'Note text is required' });
+    }
+
+    const updated = await Application.findByIdAndUpdate(
+      id,
+      { $push: { notesHistory: { text, createdAt: new Date() } } },
+      { new: true }
+    ).select('notesHistory').lean();
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Application not found' });
+    }
+
+    return res.json({ notes: updated.notesHistory || [] });
+  } catch (err) {
+    console.error('Append application note error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// DELETE: remove a single note from a rental application
+app.delete('/api/rental-applications/:id/notes/:noteId', async (req, res) => {
+  try {
+    const { id, noteId } = req.params;
+    const updated = await Application.findByIdAndUpdate(
+      id,
+      { $pull: { notesHistory: { _id: noteId } } },
+      { new: true }
+    ).select('notesHistory').lean();
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Application not found' });
+    }
+
+    return res.json({ notes: updated.notesHistory || [] });
+  } catch (err) {
+    console.error('Delete application note error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 // DELETE: remove a rental application by id
 app.delete('/api/rental-applications/:id', async (req, res) => {
