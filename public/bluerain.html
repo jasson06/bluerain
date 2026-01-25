@@ -1865,7 +1865,7 @@ function mountPhotoCycler({wrapEl, imgEl, photos}){
     const dx = t.clientX - sx;
     const dy = t.clientY - sy;
     if(Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)){
-      e.preventDefault();
+      if(e.cancelable) e.preventDefault();
       e.stopPropagation();
       go(dx < 0 ? idx + 1 : idx - 1);
     }
@@ -2483,3 +2483,4 @@ if(document.readyState === "loading"){
   </script>
 </body>
 </html>
+
