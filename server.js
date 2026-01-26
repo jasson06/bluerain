@@ -383,6 +383,21 @@ const taskSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+// Portfolio-level lightweight tasks for property management overview
+const portfolioTaskSchema = new mongoose.Schema({
+  title: { type: String, required: true, trim: true },
+  description: { type: String, default: '' },
+  status: { type: String, enum: ['new', 'in-progress', 'completed'], default: 'new' },
+  dueDate: { type: Date },
+  pinned: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+});
+
+portfolioTaskSchema.pre('save', function(next) {
+  this.updatedAt = new Date();
+  next();
+});
 
 const commentSchema = new mongoose.Schema({
   taskId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Task' },
@@ -1190,10 +1205,22 @@ const applicationSchema = new mongoose.Schema({
       createdAt: { type: Date, default: Date.now }
     }
   ],
+  // IDs of completed move-in readiness checklist items for this application
+  moveInChecklistCompleted: {
+    type: [String],
+    default: []
+  },
+  // Optional notes per checklist item (keyed by item id)
+  moveInChecklistNotes: {
+    type: Map,
+    of: String,
+    default: {}
+  },
   submitted: { type: Date, default: Date.now }
 });
 
 const Task = mongoose.model('Task', taskSchema);
+const PortfolioTask = mongoose.model('PortfolioTask', portfolioTaskSchema);
 const Comment = mongoose.model("Comment", commentSchema);
 const Client = mongoose.model('Client', clientSchema);
 const Estimate = mongoose.model("Estimate", estimateSchema);
@@ -1691,6 +1718,48 @@ app.put('/api/rental-applications/:id', async (req, res) => {
     return res.json({ message: 'Application updated', application: updated });
   } catch (err) {
     console.error('Update rental application error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// PUT: update move-in readiness checklist for a rental application
+app.put('/api/rental-applications/:id/move-in-checklist', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { completedIds, notes } = req.body || {};
+
+    const update = {};
+    if (Array.isArray(completedIds)) {
+      update.moveInChecklistCompleted = completedIds.filter(v => typeof v === 'string' && v.trim().length > 0);
+    }
+    if (notes && typeof notes === 'object') {
+      const cleanNotes = {};
+      for (const [key, val] of Object.entries(notes)) {
+        if (typeof val === 'string') {
+          const trimmed = val.trim();
+          if (trimmed) cleanNotes[key] = trimmed;
+        }
+      }
+      update.moveInChecklistNotes = cleanNotes;
+    }
+
+    const updated = await Application.findByIdAndUpdate(
+      id,
+      { $set: update },
+      { new: true }
+    ).select('moveInChecklistCompleted moveInChecklistNotes');
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Application not found' });
+    }
+
+    return res.json({
+      message: 'Move-in checklist updated',
+      completedIds: updated.moveInChecklistCompleted || [],
+      notes: updated.moveInChecklistNotes || {}
+    });
+  } catch (err) {
+    console.error('Update move-in checklist error:', err);
     return res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -2707,6 +2776,88 @@ app.put('/api/task/:id/assign', async (req, res) => {
 });
 
 
+// ===== Portfolio Tasks (Dashboard-level) =====
+
+// GET /api/portfolio-tasks
+app.get('/api/portfolio-tasks', async (req, res) => {
+  try {
+    const tasks = await PortfolioTask.find({})
+      .sort({ pinned: -1, createdAt: -1 })
+      .lean();
+    return res.json({ tasks });
+  } catch (err) {
+    console.error('Error fetching portfolio tasks:', err.message || err);
+    return res.status(500).json({ error: 'Failed to fetch portfolio tasks' });
+  }
+});
+
+// POST /api/portfolio-tasks
+app.post('/api/portfolio-tasks', async (req, res) => {
+  try {
+    const { title, description, status, dueDate, pinned } = req.body || {};
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+    const task = new PortfolioTask({
+      title: title.trim(),
+      description: description || '',
+      status: status && ['new','in-progress','completed'].includes(status) ? status : 'new',
+      dueDate: dueDate ? new Date(dueDate) : undefined,
+      pinned: !!pinned
+    });
+    await task.save();
+    return res.status(201).json({ task });
+  } catch (err) {
+    console.error('Error creating portfolio task:', err.message || err);
+    return res.status(500).json({ error: 'Failed to create portfolio task' });
+  }
+});
+
+// PUT /api/portfolio-tasks/:id
+app.put('/api/portfolio-tasks/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid task id' });
+    }
+    const updates = {};
+    const { title, description, status, dueDate, pinned, completed } = req.body || {};
+    if (title !== undefined) updates.title = String(title).trim();
+    if (description !== undefined) updates.description = description;
+    if (status && ['new','in-progress','completed'].includes(status)) updates.status = status;
+    if (typeof pinned === 'boolean') updates.pinned = pinned;
+    if (typeof completed === 'boolean') updates.status = completed ? 'completed' : 'new';
+    if (dueDate !== undefined) updates.dueDate = dueDate ? new Date(dueDate) : null;
+    updates.updatedAt = new Date();
+
+    const task = await PortfolioTask.findByIdAndUpdate(id, updates, { new: true }).lean();
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    return res.json({ task });
+  } catch (err) {
+    console.error('Error updating portfolio task:', err.message || err);
+    return res.status(500).json({ error: 'Failed to update portfolio task' });
+  }
+});
+
+// DELETE /api/portfolio-tasks/:id
+app.delete('/api/portfolio-tasks/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid task id' });
+    }
+    const deleted = await PortfolioTask.findByIdAndDelete(id).lean();
+    if (!deleted) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Error deleting portfolio task:', err.message || err);
+    return res.status(500).json({ error: 'Failed to delete portfolio task' });
+  }
+});
 
 
 
