@@ -88,11 +88,12 @@ body {
 
 .modal form .form-group input,
 .modal form .form-group select,
-.modal form .form-group textarea {
+.modal form .form-group textarea,
+.portfolio-maint-status-select {
     padding: 10px 12px;
     border-radius: 8px;
     border: 1.5px solid #e1e8ed;
-    font-size: 1.05rem;
+    font-size: 0.8rem;
     background: #f9fafb;
     transition: border 0.2s;
     margin-bottom: 0px;
@@ -100,7 +101,8 @@ body {
 
 .modal form .form-group input:focus,
 .modal form .form-group select:focus,
-.modal form .form-group textarea:focus {
+.modal form .form-group textarea:focus,
+.portfolio-maint-status-select:focus {
     border-color: var(--accent-color, #3498db);
     outline: none;
 }
@@ -525,7 +527,7 @@ body {
     flex: 1;
     margin-left: 300px;
     padding: 20px;
-    height: 160vh;
+    height: 100vh;
     overflow-y: auto;
     background: var(--background-color);
 }
@@ -594,30 +596,32 @@ body {
 
 /* Top tools toolbar (maintenance + applications icons) */
 .top-tools-bar {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 4px 12px;
-    margin: 0 16px 0 24px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, #f7f7ff 0%, #eaf6ff 50%, #f7f7ff 100%);
-    border: 1px solid #d1e4ff;
-    box-shadow: 0 2px 8px rgba(44,62,80,0.06);
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 13px 24px 13px 24px;
+    margin: 0;
+    border-radius: 18px;
+   background: linear-gradient(90deg, #f7fbff 0%, #f7f7ff 100%);
+    border-bottom: 2.5px solid var(--accent-color);
+    box-shadow: 0 4px 24px rgba(61, 169, 252, 0.10);
+    backdrop-filter: blur(10px);
 }
 
 .top-tools-item {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 10px;
+    padding: 6px 12px;
     border-radius: 999px;
-    background: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.96);
     border: 1px solid #dbeafe;
-    color: #1f2937;
+    color: #0f172a;
     font-size: 0.9rem;
     cursor: pointer;
-    transition: background 0.18s, box-shadow 0.18s, transform 0.12s;
+    box-shadow: 0 2px 6px rgba(15,23,42,0.12);
+    transition: background 0.18s, box-shadow 0.18s, transform 0.12s, border-color 0.18s;
 }
 
 .top-tools-item i {
@@ -630,7 +634,8 @@ body {
 
 .top-tools-item:hover {
     background: #eaf6ff;
-    box-shadow: 0 2px 8px rgba(59,130,246,0.25);
+    border-color: #93c5fd;
+    box-shadow: 0 4px 14px rgba(59,130,246,0.35);
     transform: translateY(-1px);
 }
 
@@ -678,9 +683,9 @@ body {
     }
 
     .top-tools-bar {
+        justify-content: center;
         gap: 8px;
-        padding: 4px 10px;
-        margin: 0 8px 0 16px;
+        padding: 6px 12px;
     }
 
     .top-tools-item {
@@ -1008,51 +1013,7 @@ textarea {
 
 /* File Input Styling */
 input[type="file"] {
-    padding: 8px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    width: 100%;
-}
-
-/* Select Styling */
-select {
-    
-    padding: 8px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background-color: white;
-}
-
-/* List Styles */
-/* Add to your existing styles section */
-.maintenance-list {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    padding: 10px;
-}
-
-.maintenance-card {
-    background: white;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.maintenance-card:hover,
-.maintenance-card.active {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(6, 79, 206, 0.737);
-    background-color: #eaf6ff;
-}
-
-@media (hover: none) and (pointer: coarse) {
-  .maintenance-card:active {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(6, 79, 206, 0.737);
-    background-color: #eaf6ff;
-  }
+    font-size: 0.9rem;
 }
 
 .maintenance-header, .units-header, .tenants-header, .documents-header, .payments-header {
@@ -2169,72 +2130,380 @@ select {
     color: #217dbb;
 }
 
-/* Improved .main-summary-section style for a modern, vibrant look */
-.main-summary-section {
-    background: linear-gradient(90deg, #f7fbff 0%, #f7f7ff 100%);
-    border-bottom: 2.5px solid var(--accent-color);
-    box-shadow: 0 4px 24px rgba(61,169,252,0.10);
-    padding: 0 0 22px 0;
-    margin-bottom: 28px;
-    border-radius: 18px;
-    transition: box-shadow 0.2s, background 0.2s;
-    position: relative;
-    overflow: visible;
+/* Portfolio Overview Styles */
+.portfolio-overview-section {
+    margin-top: 16px;
 }
 
-.main-summary-header {
+.portfolio-overview-header {
     display: flex;
     align-items: center;
-    gap: 14px;
     justify-content: space-between;
-    font-size: 1.20rem;
-    font-weight: 800;
-    padding: 5px 15px 0 15px;
-    letter-spacing: 0.7px;
-    background: none;
-    color: var(--primary-color);
-    border-radius: 18px 18px 0 0;
-    cursor: pointer;
-    user-select: none;
-    position: relative;
+    padding: 8px 24px 12px 24px;
 }
 
-.main-summary-title {
+.portfolio-overview-header h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.portfolio-overview-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding-right: 20px;
+}
+
+.portfolio-overview-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.portfolio-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 8px 24px 4px 24px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,250,252,0.9));
+    border-radius: 16px;
+    
+}
+
+.portfolio-chip {
+    position: relative;
+    background: linear-gradient(135deg, #ffffff, #f9fafb);
+    border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(15,23,42,0.06);
+    border: 1px solid rgba(226,232,240,0.9);
+    padding: 10px 16px;
+    min-width: 220px;
+    flex: 1 1 100%;
+    cursor: pointer;
+    overflow: hidden;
+    transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.portfolio-chip:hover {
+    box-shadow: 0 4px 18px rgba(15,23,42,0.16);
+    transform: translateY(-1px);
+}
+
+.portfolio-chip::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.portfolio-chip:hover::before {
+    opacity: 1;
+}
+
+.portfolio-chip-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #6b7280;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
 }
 
-.main-summary-header i.fas.fa-chart-bar {
-    font-size: 1.7em;
-    color: var(--accent-color);
-    margin-right: 6px;
+.portfolio-chip-label i {
+    color: #2563eb;
 }
 
-.main-summary-header .summary-toggle-icon {
-    margin-left: 0;
-    font-size: 1.2em;
-    color: var(--accent-color);
-    transition: transform 0.2s;
+.portfolio-chip-value {
+    margin-top: 4px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #111827;
 }
 
-.main-summary-section.collapsed .main-summary {
-    display: none;
+.portfolio-chip-sub {
+    margin-top: 2px;
+    font-size: 0.8rem;
+    color: #6b7280;
 }
 
-.main-summary-section.collapsed .summary-toggle-icon {
-    transform: rotate(-180deg);
+.portfolio-chip.active {
+    border-color: rgba(37,99,235,0.75);
+    box-shadow: 0 2px 10px rgba(37,99,235,0.25);
+    transform: translateY(-2px);
 }
 
-.main-summary {
+.portfolio-chip.active::before {
+    opacity: 1;
+}
+
+.portfolio-progress {
+    margin-top: 6px;
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    overflow: hidden;
+}
+
+.portfolio-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg,#22c55e,#16a34a);
+    width: 0;
+    transition: width 0.25s ease-out;
+}
+
+.portfolio-badge-row {
+    margin-top: 4px;
     display: flex;
-    gap: 32px;
-    padding: 22px 44px 0 44px;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    font-size: 0.78rem;
+}
+
+.portfolio-badge {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #4f46e5;
+}
+
+.portfolio-badge.warn {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.portfolio-badge.danger {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+/* Responsive layout for portfolio strip: stack on mobile, 2–3 per row on tablets, 5 inline on desktop */
+@media (min-width: 768px) {
+    .portfolio-chip {
+        flex: 1 1 calc(50% - 12px);
+    }
+}
+
+@media (min-width: 1024px) {
+    .portfolio-strip {
+        justify-content: space-between;
+    }
+    .portfolio-chip {
+        min-width: 0;
+        flex: 1 1 calc(20% - 12px);
+    }
+}
+
+.portfolio-details {
+    padding: 0 24px 20px 24px;
+    height: 580px;
+    display: flex;
+    flex-direction: column;
+}
+
+.portfolio-details-header {
+    margin-bottom: 8px;
+}
+
+.portfolio-details-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.portfolio-details-body table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+}
+
+.portfolio-details-body th,
+.portfolio-details-body td {
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(226,232,240,0.8);
+    text-align: left;
+}
+
+.portfolio-details-body th {
+    font-weight: 600;
+    color: #4b5563;
+    background: rgba(248,250,252,0.8);
+}
+
+.portfolio-details-body tr:nth-child(even) td {
+    background: rgba(249,250,251,0.6);
+}
+
+/* Ensure hover wins over zebra striping for all rows */
+.portfolio-details-body tr:hover td {
+    background: #e5f0ff !important;
+}
+
+/* Hover state for portfolio overview detail rows */
+.portfolio-details-body tr:hover td {
+    background: #e5f0ff;
+}
+
+.portfolio-tasks-sidebar {
+    width: 280px;
+    max-width: 320px;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(15,23,42,0.08);
+    border: 1px solid rgba(226,232,240,0.9);
+    padding: 10px 12px 12px;
+    height: 650px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Stack portfolio overview and tasks panel on small screens */
+@media (max-width: 767px) {
+    .portfolio-overview-layout {
+        flex-direction: column;
+        padding-right: 0;
+    }
+    .portfolio-overview-main,
+    .portfolio-tasks-sidebar {
+        width: 100%;
+        max-width: 100%;
+    }
+    .portfolio-tasks-sidebar {
+        height: auto;
+        margin: 8px 16px 0 16px;
+    }
+    .portfolio-strip {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+}
+
+.portfolio-tasks-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.portfolio-tasks-header h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #111827;
+}
+
+.portfolio-tasks-new {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.portfolio-tasks-new input[type="text"] {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid #d1d5db;
+    font-size: 0.82rem;
+}
+
+.portfolio-tasks-new button {
+    border-radius: 10px;
+    border: none;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    background: var(--secondary-color);
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.portfolio-tasks-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.portfolio-task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 4px 2px;
+    border-bottom: 1px solid rgba(229,231,235,0.7);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color 0.12s ease;
+}
+
+.portfolio-task-item:hover {
+    background-color: #e5f0ff;
+}
+
+.portfolio-task-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.portfolio-task-title {
+    font-size: 0.82rem;
+    color: #111827;
+}
+
+.portfolio-task-meta {
+    font-size: 0.7rem;
+    color: #6b7280;
+}
+
+.portfolio-task-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.portfolio-task-delete {
     background: none;
     border: none;
-    margin-bottom: 0;
-    flex-wrap: wrap;
-    transition: padding 0.2s;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 0;
+}
+
+.portfolio-task-delete:hover {
+    color: #ef4444;
+}
+
+.portfolio-details {
+    padding: 0 24px 20px 24px;
+}
+
+.portfolio-details-header {
+    margin-bottom: 8px;
+}
+
+.portfolio-details-body table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+}
+
+.portfolio-details-body th,
+.portfolio-details-body td {
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(226,232,240,0.8);
+    text-align: left;
+}
+
+.portfolio-details-body th {
+    font-weight: 600;
+    color: #4b5563;
+    background: rgba(248,250,252,0.8);
+}
+
+.portfolio-details-body tr:nth-child(even) td {
+    background: rgba(249,250,251,0.6);
 }
 
 .summary-card {
@@ -2286,13 +2555,6 @@ select {
         
         gap: 14px;
         padding: 14px 8px 0 8px;
-    }
-    .summary-card {
-        padding: 16px 10px;
-    }
-    .main-summary-section {
-        border-radius: 12px;
-        margin-bottom: 16px;
     }
 }  
 
@@ -2746,6 +3008,48 @@ select {
     animation: maintenanceHighlightPulse 1.4s ease-out 1;
     box-shadow: 0 0 0 2px #10b981, 0 4px 12px rgba(16,185,129,0.35) !important;
 }
+
+
+
+        /* Checklist row hover */
+        #moveInChecklistModal ul li {
+            padding: 4px 4px;
+            border-radius: 6px;
+            transition: background-color 0.12s ease;
+        }
+        #moveInChecklistModal ul li:hover {
+            background-color: #eaeef7 !important;
+        }
+
+        /* "+ note" chip */
+        #moveInChecklistModal .movein-note-toggle {
+            opacity: 0;
+            border-radius: 999px;
+            padding: 2px 8px;
+            border: 1px solid #bfdbfe;
+            background-color: #eff6ff;
+            color: #2563eb !important;
+            font-size: 0.78rem;
+            font-weight: 500;
+            line-height: 1.2;
+            transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        #moveInChecklistModal li:hover .movein-note-toggle,
+        #moveInChecklistModal .movein-note-toggle:focus-visible {
+            opacity: 1;
+            background-color: #dbeafe !important;
+            border-color: #3b82f6;
+            color: #1d4ed8 !important;
+            box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.15);
+        }
+
+        /* Note input text color */
+        #moveInChecklistModal .movein-check-note {
+            color: #2563eb;
+        }
+        #moveInChecklistModal .movein-check-note::placeholder {
+            color: #60a5fa;
+        }
    </style>
 </head>
 <body>
@@ -2765,9 +3069,11 @@ select {
             
             <div class="sidebar-header">
                 <h2>🏢 Bluerain</h2>
-                <button class="btn-primary" onclick="window.location.href='/'">
-                <i class="fas fa-home"></i> Home
-                </button>
+                <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start;">
+                    <button class="btn-primary" onclick="window.location.href='/'">
+                        <i class="fas fa-home"></i> Home
+                    </button>
+                </div>
             </div>
             <div class="property-list" id="propertyList">
                 <!-- Properties will be listed here -->
@@ -2780,50 +3086,81 @@ select {
         <!-- Main Content -->
         <main class="main-content">
 
-            <section class="main-summary-section collapsed">
-                <div class="main-summary-header" id="mainSummaryToggle">
-                    <div class="main-summary-title">
-                        <i class="fas fa-chart-bar"></i>
-                        <span>Main Summary</span>
-                        <i class="fas fa-chevron-up summary-toggle-icon" id="mainSummaryChevron"></i>
+            <!-- Global quick tools bar (always visible) -->
+            <div class="top-tools-bar">
+                    <div class="top-tools-item" id="topToolMaintenance" title="View all maintenance requests">
+                        <i class="fas fa-tools"></i>
+                        <span>Maintenance</span>
+                        <span class="top-tools-count maintenance" id="topMaintenanceCount">0</span>
                     </div>
-
-                    <!-- Top Tools Toolbar: quick access icons -->
-                    <div class="top-tools-bar">
-                        <div class="top-tools-item" id="topToolMaintenance" title="View all maintenance requests">
-                            <i class="fas fa-tools"></i>
-                            <span>Maintenance</span>
-                            <span class="top-tools-count maintenance" id="topMaintenanceCount">0</span>
-                        </div>
-                        <div class="top-tools-item" id="topToolApplications" title="View rental applications">
-                            <i class="fas fa-file-alt"></i>
-                            <span>Applications</span>
-                            <span class="top-tools-count applications" id="topApplicationsCount">0</span>
-                        </div>
+                    <div class="top-tools-item" id="topToolApplications" title="View rental applications">
+                        <i class="fas fa-file-alt"></i>
+                        <span>Applications</span>
+                        <span class="top-tools-count applications" id="topApplicationsCount">0</span>
                     </div>
                 </div>
 
-                <div class="main-summary" id="mainSummary">
-                    <div class="summary-card">
-                        <h4>Total Properties</h4>
-                        <p id="summaryTotalProperties">--</p>
+
+            <!-- Portfolio Overview main section (hidden by default) -->
+            <section id="portfolioOverviewSection" class="portfolio-overview-section" style="display:none;">
+                <div class="portfolio-overview-header">
+                    <h2><i class="fas fa-chart-pie" style="margin-right:6px;"></i>Portfolio Overview</h2>
+                </div>
+                <div class="portfolio-overview-layout">
+                    <div class="portfolio-overview-main">
+                        <div class="portfolio-strip">
+                            <div class="portfolio-chip" id="portfolioCardRent">
+                                <div class="portfolio-chip-label"><i class="fas fa-money-check-alt"></i>Coming Rent (This Month)</div>
+                                <div class="portfolio-chip-value" id="portfolioOpenRentAmount">$--</div>
+                                <div class="portfolio-chip-sub" id="portfolioTotalRentSummary">Estimated monthly income: $--</div>
+                                <div class="portfolio-chip-sub" id="portfolioOpenRentCount">-- tenants with balance</div>
+                                <div class="portfolio-chip-sub" id="portfolioRentCollectedSummary">&nbsp;</div>
+                                <div class="portfolio-progress">
+                                    <div class="portfolio-progress-fill" id="portfolioRentCollectedBar"></div>
+                                </div>
+                            </div>
+                            <div class="portfolio-chip" id="portfolioCardTenants">
+                                <div class="portfolio-chip-label"><i class="fas fa-users"></i>Tenants</div>
+                                <div class="portfolio-chip-value" id="portfolioTenantsCount">--</div>
+                                <div class="portfolio-chip-sub" id="portfolioTenantsSummary">Portfolio-wide tenants overview</div>
+                            </div>
+                            <div class="portfolio-chip" id="portfolioCardMaintenance">
+                                <div class="portfolio-chip-label"><i class="fas fa-tools"></i>Open Maintenance</div>
+                                <div class="portfolio-chip-value" id="portfolioOpenMaintenanceCount">--</div>
+                                <div class="portfolio-chip-sub">Pending & in-progress across all properties</div>
+                                <div class="portfolio-badge-row" id="portfolioMaintenanceBreakdown"></div>
+                            </div>
+                            <div class="portfolio-chip" id="portfolioCardLeases">
+                                <div class="portfolio-chip-label"><i class="fas fa-hourglass-half"></i>Leases & Move-ins (60 Days)</div>
+                                <div class="portfolio-chip-value" id="portfolioExpiringLeasesCount">--</div>
+                                <div class="portfolio-chip-sub" id="portfolioExpiringLeasesBreakdown">Expiring leases & upcoming move-ins</div>
+                            </div>
+                            <div class="portfolio-chip" id="portfolioCardVacancy">
+                                <div class="portfolio-chip-label"><i class="fas fa-door-open"></i>Vacant Units</div>
+                                <div class="portfolio-chip-value" id="portfolioVacantUnitsCount">--</div>
+                                <div class="portfolio-chip-sub" id="portfolioVacancySummary">Across all properties</div>
+                                <div class="portfolio-progress">
+                                    <div class="portfolio-progress-fill" id="portfolioOccupancyBar"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="portfolio-details" id="portfolioDetails" style="margin-top:16px;">
+                            <div class="portfolio-details-header">
+                                <h3 id="portfolioDetailsTitle" style="margin:0;font-size:15px;color:#2c3e50;">Details</h3>
+                            </div>
+                            <div class="portfolio-details-body" id="portfolioDetailsBody"></div>
+                        </div>
                     </div>
-                    <div class="summary-card">
-                        <h4>Total Units</h4>
-                        <p id="summaryTotalUnits">--</p>
-                    </div>
-                    <div class="summary-card">
-                        <h4>Total Tenants</h4>
-                        <p id="summaryTotalTenants">--</p>
-                    </div>
-                    <div class="summary-card">
-                        <h4>Overall Occupancy</h4>
-                        <p id="summaryOccupancyRate">--%</p>
-                    </div>
-                    <div class="summary-card">
-                        <h4>Est. Monthly Income</h4>
-                        <p id="summaryMonthlyIncome">$--</p>
-                    </div>
+                    <aside class="portfolio-tasks-sidebar" id="portfolioTasksSidebar">
+                        <div class="portfolio-tasks-header">
+                            <h3>Tasks</h3>
+                        </div>
+                        <form class="portfolio-tasks-new" id="portfolioTaskForm">
+                            <input type="text" id="portfolioTaskTitleInput" placeholder="Add a task..." autocomplete="off" />
+                            <button type="submit">Add</button>
+                        </form>
+                        <div class="portfolio-tasks-list" id="portfolioTasksList"></div>
+                    </aside>
                 </div>
             </section>
 
@@ -3931,7 +4268,14 @@ const state = {
     maintenanceRequests: [],
     documents: [],
     allUnits: [],
-allTenants: [],
+    allTenants: [],
+    portfolioPayments: [],
+    portfolioMaintenance: [],
+    portfolioTenantsWithBalance: [],
+    portfolioExpiringLeases: [],
+    portfolioUpcomingMoveIns: [],
+    portfolioVacantUnits: [],
+    portfolioTasks: [],
     payments: [],
     applications: [],
     invites: [],
@@ -3976,19 +4320,30 @@ function invalidateCache(...keys) {
 }
 
 // Initialize application
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initializeEventListeners();
     initializeTabs();
     initializeApplicationsSubtabs();
     initializeApplicationsSearch();
     initializeInvitesSearch();
-    loadProperties();
+
+    // Ensure properties are loaded before opening the portfolio overview
+    try {
+        await loadProperties();
+    } catch (_) {
+        // Errors are already handled inside loadProperties
+    }
 
     // Preload global data so toolbar icons are ready on first click
     runWhenIdle(() => {
         loadApplications().catch(() => {});
         loadInvites().catch(() => {});
         preloadGlobalMaintenanceCount().catch(() => {});
+    });
+
+    // Default to portfolio overview on initial load
+    runWhenIdle(() => {
+        openPortfolioOverview().catch(() => {});
     });
 });
 
@@ -4004,6 +4359,42 @@ async function preloadGlobalMaintenanceCount() {
         }
     } catch (e) {
         console.error('Error preloading global maintenance count:', e);
+    }
+}
+
+// Helper: mark active portfolio overview chip
+function setActivePortfolioCard(type) {
+    const map = {
+        rent: 'portfolioCardRent',
+        tenants: 'portfolioCardTenants',
+        maintenance: 'portfolioCardMaintenance',
+        leases: 'portfolioCardLeases',
+        vacancy: 'portfolioCardVacancy'
+    };
+    const activeId = map[type];
+    if (!activeId) return;
+    document.querySelectorAll('.portfolio-chip').forEach(el => el.classList.remove('active'));
+    const target = document.getElementById(activeId);
+    if (target) target.classList.add('active');
+}
+
+// Open the cross-portfolio overview dashboard
+async function openPortfolioOverview() {
+    const dashboard = document.getElementById('propertyDashboard');
+    const section = document.getElementById('portfolioOverviewSection');
+    if (!section) return;
+    if (dashboard) dashboard.style.display = 'none';
+    section.style.display = 'block';
+    showLoader();
+    try {
+        await renderPortfolioOverview();
+        await loadPortfolioTasks(true);
+        // Default details view when opening overview
+        renderPortfolioDetails('rent');
+        // Mark the default portfolio card as active
+        setActivePortfolioCard('rent');
+    } finally {
+        hideLoader();
     }
 }
 
@@ -4074,6 +4465,114 @@ document.getElementById('addPaymentBtn')?.addEventListener('click', () => {
     openModal('addPaymentModal');
 });
 document.getElementById('addPaymentForm')?.addEventListener('submit', handleAddPayment);
+
+    // Portfolio overview toggle
+    document.getElementById('portfolioOverviewBtn')?.addEventListener('click', openPortfolioOverview);
+
+    // Portfolio card click handlers for details + active state
+    document.getElementById('portfolioCardRent')?.addEventListener('click', () => {
+        setActivePortfolioCard('rent');
+        renderPortfolioDetails('rent');
+    });
+    document.getElementById('portfolioCardTenants')?.addEventListener('click', () => {
+        setActivePortfolioCard('tenants');
+        renderPortfolioDetails('tenants');
+    });
+    document.getElementById('portfolioCardMaintenance')?.addEventListener('click', () => {
+        setActivePortfolioCard('maintenance');
+        renderPortfolioDetails('maintenance');
+    });
+    document.getElementById('portfolioCardLeases')?.addEventListener('click', () => {
+        setActivePortfolioCard('leases');
+        renderPortfolioDetails('leases');
+    });
+    document.getElementById('portfolioCardVacancy')?.addEventListener('click', () => {
+        setActivePortfolioCard('vacancy');
+        renderPortfolioDetails('vacancy');
+    });
+
+    // Portfolio tasks: add / toggle / delete
+    const taskForm = document.getElementById('portfolioTaskForm');
+    const taskTitleInput = document.getElementById('portfolioTaskTitleInput');
+    const tasksListEl = document.getElementById('portfolioTasksList');
+
+    if (taskForm && taskTitleInput) {
+        taskForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const raw = taskTitleInput.value || '';
+            const title = raw.trim();
+            if (!title) return;
+            try {
+                const res = await fetch(`${API_URL}/portfolio-tasks`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.task) {
+                        state.portfolioTasks.unshift(data.task);
+                        renderPortfolioTasksList();
+                    } else {
+                        await loadPortfolioTasks(true);
+                    }
+                    taskTitleInput.value = '';
+                }
+            } catch (err) {
+                console.error('Error adding portfolio task:', err);
+            }
+        });
+    }
+
+    if (tasksListEl) {
+        tasksListEl.addEventListener('click', async (e) => {
+            const deleteBtn = e.target.closest('.portfolio-task-delete');
+            if (deleteBtn) {
+                const item = deleteBtn.closest('.portfolio-task-item');
+                const id = item?.dataset.id;
+                if (!id) return;
+                try {
+                    const res = await fetch(`${API_URL}/portfolio-tasks/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        state.portfolioTasks = (state.portfolioTasks || []).filter(t => String(t._id) !== String(id));
+                        renderPortfolioTasksList();
+                    }
+                } catch (err) {
+                    console.error('Error deleting portfolio task:', err);
+                }
+            }
+        });
+
+        tasksListEl.addEventListener('change', async (e) => {
+            const checkbox = e.target;
+            if (!(checkbox instanceof HTMLInputElement) || !checkbox.classList.contains('portfolio-task-toggle')) return;
+            const item = checkbox.closest('.portfolio-task-item');
+            const id = item?.dataset.id;
+            if (!id) return;
+            const completed = checkbox.checked;
+            try {
+                const res = await fetch(`${API_URL}/portfolio-tasks/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ completed })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.task) {
+                        const idx = (state.portfolioTasks || []).findIndex(t => String(t._id) === String(id));
+                        if (idx !== -1) {
+                            state.portfolioTasks[idx] = data.task;
+                        }
+                        renderPortfolioTasksList();
+                    } else {
+                        await loadPortfolioTasks(true);
+                    }
+                }
+            } catch (err) {
+                console.error('Error updating portfolio task:', err);
+            }
+        });
+    }
 
     // Modal close handlers
     window.onclick = (event) => {
@@ -4540,6 +5039,572 @@ function renderFilteredInvites(){
     renderInvites(items);
 }
 
+// ===== Portfolio Tenants Search =====
+function initializePortfolioTenantsSearch() {
+    const search = document.getElementById('portfolioTenantsSearchBar');
+    if (!search) return;
+    search.addEventListener('input', () => {
+        positionPortfolioTenantsSearchSuggestions();
+        autoSuggestPortfolioTenants();
+        showPortfolioTenantsSearchSuggestions(true);
+        renderFilteredPortfolioTenants();
+    });
+    search.addEventListener('change', () => {
+        positionPortfolioTenantsSearchSuggestions();
+        renderFilteredPortfolioTenants();
+    });
+    search.addEventListener('focus', () => {
+        positionPortfolioTenantsSearchSuggestions();
+        showPortfolioTenantsSearchSuggestions(true);
+    });
+    search.addEventListener('blur', () => setTimeout(() => showPortfolioTenantsSearchSuggestions(false), 120));
+
+    const clr = document.getElementById('clearPortfolioTenantsFiltersBtn');
+    if (clr) clr.onclick = () => {
+        search.value = '';
+        window.__portfolioTenantsAccumulatedQuery = '';
+        renderFilteredPortfolioTenants();
+        showPortfolioTenantsSearchSuggestions(false);
+    };
+
+    const sug = document.getElementById('portfolioTenantsSearchSuggestions');
+    if (sug) {
+        renderPortfolioTenantsSuggestionTokens();
+        sug.addEventListener('mousedown', (e) => {
+            const tokenEl = e.target.closest('.suggest-item');
+            const valEl = e.target.closest('.suggest-value');
+            e.preventDefault();
+            if (tokenEl) {
+                const token = tokenEl.getAttribute('data-token') || '';
+                showPortfolioTenantsValueSuggestions(token);
+            } else if (valEl) {
+                const token = valEl.getAttribute('data-token') || '';
+                const value = valEl.getAttribute('data-value') || '';
+                const acc = (window.__portfolioTenantsAccumulatedQuery || '').trim();
+                const sep = acc ? ' ' : '';
+                window.__portfolioTenantsAccumulatedQuery = `${acc}${sep}${token}${value}`;
+                const input = document.getElementById('portfolioTenantsSearchBar');
+                if (input) input.value = '';
+                renderFilteredPortfolioTenants();
+                showPortfolioTenantsSearchSuggestions(false);
+            }
+        });
+        const backBtn = document.getElementById('portfolioTenantsSuggestBack');
+        if (backBtn) backBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            renderPortfolioTenantsSuggestionTokens();
+        });
+    }
+}
+
+function parsePortfolioTenantsSearch(queryStr) {
+    const tokens = { nameList: [], emailList: [], phoneList: [], propertyList: [], unitList: [], statusList: [], text: '' };
+    const parts = (queryStr || '').trim().split(/\s+/).filter(Boolean);
+    const rest = [];
+    for (const part of parts) {
+        const low = part.toLowerCase();
+        const take = (pfx) => part.slice(pfx.length);
+        if (low.startsWith('name:')) tokens.nameList.push(...take('name:').split(',').filter(Boolean));
+        else if (low.startsWith('email:')) tokens.emailList.push(...take('email:').split(',').filter(Boolean));
+        else if (low.startsWith('phone:')) tokens.phoneList.push(...take('phone:').split(',').filter(Boolean));
+        else if (low.startsWith('property:')) tokens.propertyList.push(...take('property:').split(',').filter(Boolean));
+        else if (low.startsWith('unit:')) tokens.unitList.push(...take('unit:').split(',').filter(Boolean));
+        else if (low.startsWith('status:')) tokens.statusList.push(...take('status:').split(',').filter(Boolean));
+        else rest.push(part);
+    }
+    const norm = (arr) => Array.from(new Set(arr.map(v => String(v).trim().toLowerCase()).filter(Boolean)));
+    tokens.nameList = norm(tokens.nameList);
+    tokens.emailList = norm(tokens.emailList);
+    tokens.phoneList = norm(tokens.phoneList);
+    tokens.propertyList = norm(tokens.propertyList);
+    tokens.unitList = norm(tokens.unitList);
+    tokens.statusList = norm(tokens.statusList);
+    tokens.text = rest.join(' ').toLowerCase();
+    return { tokens, text: tokens.text };
+}
+
+function getPortfolioTenantsSearch() {
+    const input = document.getElementById('portfolioTenantsSearchBar');
+    const current = input ? input.value : '';
+    const combined = `${(window.__portfolioTenantsAccumulatedQuery || '').trim()} ${current.trim()}`.trim();
+    const query = parsePortfolioTenantsSearch(combined);
+    renderPortfolioTenantsFilterChips(query.tokens);
+    return query;
+}
+
+function renderPortfolioTenantsFilterChips(tokens) {
+    const container = document.getElementById('portfolioTenantsActiveFilterChips');
+    if (!container) return;
+    const mkChip = (k, v, disp) =>
+        `<span class="filter-chip" data-key="${k}" data-value="${v}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#eef2f7;color:#374151;border:1px solid #e5e7eb;font-size:.85em;"><span style="color:#0b5cab;font-weight:600">${k}</span><span>${disp ?? v}</span><button class="chip-remove" style="background:transparent;border:none;color:#6b7280;cursor:pointer;font-weight:700;">×</button></span>`;
+    const chips = [];
+    tokens.nameList.forEach(v => chips.push(mkChip('name:', v)));
+    tokens.emailList.forEach(v => chips.push(mkChip('email:', v)));
+    tokens.phoneList.forEach(v => chips.push(mkChip('phone:', v)));
+    tokens.propertyList.forEach(v => chips.push(mkChip('property:', v)));
+    tokens.unitList.forEach(v => chips.push(mkChip('unit:', v)));
+    tokens.statusList.forEach(v => chips.push(mkChip('status:', v)));
+    container.innerHTML = chips.join('');
+    container.querySelectorAll('.chip-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const chip = e.target.closest('.filter-chip');
+            removePortfolioTenantsFilterToken(chip.getAttribute('data-key') || '', chip.getAttribute('data-value') || '');
+        });
+    });
+}
+
+function removePortfolioTenantsFilterToken(key, value) {
+    const input = document.getElementById('portfolioTenantsSearchBar');
+    const combined = `${(window.__portfolioTenantsAccumulatedQuery || '').trim()} ${(input?.value || '').trim()}`.trim();
+    const { tokens } = parsePortfolioTenantsSearch(combined);
+    const rem = (arr) => {
+        const i = arr.findIndex(v => v === value.toLowerCase());
+        if (i >= 0) arr.splice(i, 1);
+    };
+    switch (key) {
+        case 'name:': rem(tokens.nameList); break;
+        case 'email:': rem(tokens.emailList); break;
+        case 'phone:': rem(tokens.phoneList); break;
+        case 'property:': rem(tokens.propertyList); break;
+        case 'unit:': rem(tokens.unitList); break;
+        case 'status:': rem(tokens.statusList); break;
+    }
+    const parts = [];
+    if (tokens.nameList.length) parts.push(`name:${tokens.nameList.join(',')}`);
+    if (tokens.emailList.length) parts.push(`email:${tokens.emailList.join(',')}`);
+    if (tokens.phoneList.length) parts.push(`phone:${tokens.phoneList.join(',')}`);
+    if (tokens.propertyList.length) parts.push(`property:${tokens.propertyList.join(',')}`);
+    if (tokens.unitList.length) parts.push(`unit:${tokens.unitList.join(',')}`);
+    if (tokens.statusList.length) parts.push(`status:${tokens.statusList.join(',')}`);
+    window.__portfolioTenantsAccumulatedQuery = parts.join(' ');
+    if (input) input.value = '';
+    renderFilteredPortfolioTenants();
+}
+
+function showPortfolioTenantsSearchSuggestions(show) {
+    const box = document.getElementById('portfolioTenantsSearchSuggestions');
+    if (!box) return;
+    if (show) renderPortfolioTenantsSuggestionTokens();
+    box.style.display = show ? 'block' : 'none';
+}
+
+function positionPortfolioTenantsSearchSuggestions() {
+    const bar = document.getElementById('portfolioTenantsFilterBar');
+    const input = document.getElementById('portfolioTenantsSearchBar');
+    const box = document.getElementById('portfolioTenantsSearchSuggestions');
+    if (!bar || !input || !box) return;
+    const barRect = bar.getBoundingClientRect();
+    const inRect = input.getBoundingClientRect();
+    box.style.left = `${inRect.left - barRect.left}px`;
+    box.style.top = `${inRect.bottom - barRect.top + 6}px`;
+    box.style.minWidth = `${Math.max(inRect.width, 260)}px`;
+}
+
+function renderPortfolioTenantsSuggestionTokens() {
+    const list = document.getElementById('portfolioTenantsSuggestList');
+    const title = document.getElementById('portfolioTenantsSuggestTitle');
+    const values = document.getElementById('portfolioTenantsSuggestValues');
+    const backBtn = document.getElementById('portfolioTenantsSuggestBack');
+    if (!list) return;
+    const tokens = ['name:', 'email:', 'phone:', 'property:', 'unit:', 'status:'];
+    list.innerHTML = tokens.map(k =>
+        `<li class='suggest-item' data-token='${k}' style='padding:8px 12px;cursor:pointer;display:flex;gap:8px;align-items:center;'><span style='font-weight:600;color:#1f2937'>${k}</span><span style='font-size:.85em;color:#6b7280'>Add ${k} filter</span></li>`
+    ).join('');
+    if (title) title.textContent = 'Choose a filter';
+    if (backBtn) backBtn.style.display = 'none';
+    if (values) {
+        values.style.display = 'none';
+        values.innerHTML = '';
+    }
+    list.style.display = 'block';
+}
+
+function showPortfolioTenantsValueSuggestions(token) {
+    const list = document.getElementById('portfolioTenantsSuggestList');
+    const values = document.getElementById('portfolioTenantsSuggestValues');
+    const title = document.getElementById('portfolioTenantsSuggestTitle');
+    const backBtn = document.getElementById('portfolioTenantsSuggestBack');
+    if (!list || !values || !title) return;
+    let items = [];
+    if (token === 'property:') {
+        items = (state.properties || []).map(p => ({ label: p.name, value: (p.name || '').toLowerCase() }));
+    } else if (token === 'unit:') {
+        items = (state.allUnits || []).map(u => ({ label: `${u.number || u.unitNumber || ''}`, value: String(u.number || u.unitNumber || '').toLowerCase() }));
+    } else if (token === 'status:') {
+        items = ['active', 'pending', 'expired', 'terminated'].map(v => ({ label: v, value: v }));
+    } else if (token === 'name:' || token === 'email:' || token === 'phone:') {
+        items = (state.allTenants || []).slice(0, 12).map(t => {
+            const base = token === 'name:'
+                ? (t.fullName || t.name || `${t.firstName || ''} ${t.lastName || ''}`.trim())
+                : token === 'email:'
+                    ? (t.email || t.tenantEmail || '')
+                    : (t.phone || t.tenantPhone || '');
+            return { label: base, value: base.toLowerCase() };
+        }).filter(it => it.label);
+    }
+    title.textContent = `Choose a value for ${token}`;
+    if (backBtn) backBtn.style.display = 'inline';
+    list.style.display = 'none';
+    values.innerHTML = items.map(it =>
+        `<li class='suggest-value' data-token='${token}' data-value='${it.value}' style='padding:8px 12px;cursor:pointer;display:flex;gap:8px;align-items:center;'><span style='font-weight:600;color:#1f2937'>${it.label}</span></li>`
+    ).join('');
+    values.style.display = items.length ? 'block' : 'none';
+}
+
+function autoSuggestPortfolioTenants() {
+    const input = document.getElementById('portfolioTenantsSearchBar');
+    const val = (input?.value || '').trim();
+    const m = val.match(/(name:|email:|phone:|property:|unit:|status:)([^\s]*)$/i);
+    if (!m) {
+        renderPortfolioTenantsSuggestionTokens();
+        return;
+    }
+    const token = m[1].toLowerCase();
+    const partial = (m[2] || '').toLowerCase();
+    showPortfolioTenantsValueSuggestions(token);
+    const values = document.getElementById('portfolioTenantsSuggestValues');
+    if (values && partial) {
+        Array.from(values.querySelectorAll('.suggest-value')).forEach(li => {
+            const v = (li.getAttribute('data-value') || '').toLowerCase();
+            li.style.display = v.includes(partial) ? 'flex' : 'none';
+        });
+    }
+}
+
+function renderFilteredPortfolioTenants() {
+    const tbody = document.getElementById('portfolioTenantsTbody');
+    if (!tbody) return;
+    const { tokens, text } = getPortfolioTenantsSearch();
+    const propsById = (state.properties || []).reduce((map, p) => {
+        map[String(p._id)] = p;
+        return map;
+    }, {});
+    const unitsById = (state.allUnits || []).reduce((map, u) => {
+        if (u && u._id) map[String(u._id)] = u;
+        return map;
+    }, {});
+
+    const items = (state.allTenants || []).filter(t => {
+        const name = (t.fullName || t.name || `${t.firstName || ''} ${t.lastName || ''}`.trim()).toLowerCase();
+        const phone = (t.phone || t.tenantPhone || '').toLowerCase();
+        const email = (t.email || t.tenantEmail || '').toLowerCase();
+        const unitId = t.unitId?._id || t.unitId;
+        let unitLabel = t.unitNumber || t.unit || '';
+        if (unitId && unitsById[String(unitId)]) {
+            const u = unitsById[String(unitId)];
+            unitLabel = (u.number || u.unitNumber || u.name || u.label || '').toString();
+        }
+        const unit = (unitLabel || '').toLowerCase();
+        const pid = t.projectId || t.propertyId;
+        const propName = pid && propsById[String(pid)] ? (propsById[String(pid)].name || '') : '';
+        const prop = propName.toLowerCase();
+        const status = (t.leaseStatus || '').toLowerCase();
+
+        const hitText = !text || name.includes(text) || phone.includes(text) || email.includes(text) || unit.includes(text) || prop.includes(text) || status.includes(text);
+        const hitName = !tokens.nameList.length || tokens.nameList.some(v => name.includes(v));
+        const hitEmail = !tokens.emailList.length || tokens.emailList.some(v => email.includes(v));
+        const hitPhone = !tokens.phoneList.length || tokens.phoneList.some(v => phone.includes(v));
+        const hitProp = !tokens.propertyList.length || tokens.propertyList.some(v => prop.includes(v));
+        const hitUnit = !tokens.unitList.length || tokens.unitList.some(v => unit.includes(v));
+        const hitStatus = !tokens.statusList.length || tokens.statusList.includes(status);
+        return hitText && hitName && hitEmail && hitPhone && hitProp && hitUnit && hitStatus;
+    });
+
+    const rowsHtml = items.map(t => {
+        const name = t.fullName || t.name || `${t.firstName || ''} ${t.lastName || ''}`.trim() || 'Tenant';
+        const unitId = t.unitId?._id || t.unitId;
+        let unitLabel = '—';
+        if (unitId && unitsById[String(unitId)]) {
+            const u = unitsById[String(unitId)];
+            unitLabel = u.number || u.unitNumber || u.name || u.label || '—';
+        } else {
+            unitLabel = t.unitNumber || t.unit || '—';
+        }
+        const pid = t.projectId || t.propertyId;
+        const propName = pid && propsById[String(pid)] ? propsById[String(pid)].name : '—';
+        const phone = t.phone || t.tenantPhone || '—';
+        const email = t.email || t.tenantEmail || '—';
+        const leaseStart = t.leaseStart ? new Date(t.leaseStart).toLocaleDateString() : '—';
+        const leaseEnd = t.leaseEnd ? new Date(t.leaseEnd).toLocaleDateString() : '—';
+        const status = t.leaseStatus || 'unknown';
+        return `
+            <tr>
+                <td>${propName}</td>
+                <td>${unitLabel}</td>
+                <td>${name}</td>
+                <td>${phone}</td>
+                <td>${email}</td>
+                <td>${leaseStart} - ${leaseEnd}</td>
+                <td>${status}</td>
+            </tr>`;
+    }).join('');
+
+    tbody.innerHTML = rowsHtml || '<tr><td colspan="7" style="font-size:0.86rem;color:#6b7280;">No tenants match your filters.</td></tr>';
+}
+
+// ===== Shared Portfolio Details Search (rent, maintenance, leases, vacancy) =====
+function initializePortfolioDetailsSearch() {
+    const search = document.getElementById('portfolioDetailsSearchBar');
+    if (!search) return;
+
+    search.addEventListener('input', () => {
+        positionPortfolioDetailsSearchSuggestions();
+        autoSuggestPortfolioDetails();
+        showPortfolioDetailsSearchSuggestions(true);
+        renderFilteredPortfolioDetailsRows();
+    });
+    search.addEventListener('change', () => {
+        positionPortfolioDetailsSearchSuggestions();
+        renderFilteredPortfolioDetailsRows();
+    });
+    search.addEventListener('focus', () => {
+        positionPortfolioDetailsSearchSuggestions();
+        showPortfolioDetailsSearchSuggestions(true);
+    });
+    search.addEventListener('blur', () => setTimeout(() => showPortfolioDetailsSearchSuggestions(false), 120));
+
+    const clr = document.getElementById('clearPortfolioDetailsFiltersBtn');
+    if (clr) clr.onclick = () => {
+        search.value = '';
+        window.__portfolioDetailsAccumulatedQuery = '';
+        renderFilteredPortfolioDetailsRows();
+        showPortfolioDetailsSearchSuggestions(false);
+    };
+
+    const sug = document.getElementById('portfolioDetailsSearchSuggestions');
+    if (sug) {
+        renderPortfolioDetailsSuggestionTokens();
+        sug.addEventListener('mousedown', (e) => {
+            const tokenEl = e.target.closest('.suggest-item');
+            const valEl = e.target.closest('.suggest-value');
+            e.preventDefault();
+            if (tokenEl) {
+                const token = tokenEl.getAttribute('data-token') || '';
+                showPortfolioDetailsValueSuggestions(token);
+            } else if (valEl) {
+                const token = valEl.getAttribute('data-token') || '';
+                const value = valEl.getAttribute('data-value') || '';
+                const acc = (window.__portfolioDetailsAccumulatedQuery || '').trim();
+                const sep = acc ? ' ' : '';
+                window.__portfolioDetailsAccumulatedQuery = `${acc}${sep}${token}${value}`;
+                const input = document.getElementById('portfolioDetailsSearchBar');
+                if (input) input.value = '';
+                renderFilteredPortfolioDetailsRows();
+                showPortfolioDetailsSearchSuggestions(false);
+            }
+        });
+        const backBtn = document.getElementById('portfolioDetailsSuggestBack');
+        if (backBtn) backBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            renderPortfolioDetailsSuggestionTokens();
+        });
+    }
+}
+
+function parsePortfolioDetailsSearch(queryStr) {
+    const tokens = { nameList: [], propertyList: [], unitList: [], statusList: [], typeList: [], text: '' };
+    const parts = (queryStr || '').trim().split(/\s+/).filter(Boolean);
+    const rest = [];
+    for (const part of parts) {
+        const low = part.toLowerCase();
+        const take = (pfx) => part.slice(pfx.length);
+        if (low.startsWith('name:')) tokens.nameList.push(...take('name:').split(',').filter(Boolean));
+        else if (low.startsWith('property:')) tokens.propertyList.push(...take('property:').split(',').filter(Boolean));
+        else if (low.startsWith('unit:')) tokens.unitList.push(...take('unit:').split(',').filter(Boolean));
+        else if (low.startsWith('status:')) tokens.statusList.push(...take('status:').split(',').filter(Boolean));
+        else if (low.startsWith('type:')) tokens.typeList.push(...take('type:').split(',').filter(Boolean));
+        else rest.push(part);
+    }
+    const norm = (arr) => Array.from(new Set(arr.map(v => String(v).trim().toLowerCase()).filter(Boolean)));
+    tokens.nameList = norm(tokens.nameList);
+    tokens.propertyList = norm(tokens.propertyList);
+    tokens.unitList = norm(tokens.unitList);
+    tokens.statusList = norm(tokens.statusList);
+    tokens.typeList = norm(tokens.typeList);
+    tokens.text = rest.join(' ').toLowerCase();
+    return { tokens, text: tokens.text };
+}
+
+function getPortfolioDetailsSearch() {
+    const input = document.getElementById('portfolioDetailsSearchBar');
+    const current = input ? input.value : '';
+    const combined = `${(window.__portfolioDetailsAccumulatedQuery || '').trim()} ${current.trim()}`.trim();
+    const query = parsePortfolioDetailsSearch(combined);
+    renderPortfolioDetailsFilterChips(query.tokens);
+    return query;
+}
+
+function renderPortfolioDetailsFilterChips(tokens) {
+    const container = document.getElementById('portfolioDetailsActiveFilterChips');
+    if (!container) return;
+    const mkChip = (k, v, disp) =>
+        `<span class="filter-chip" data-key="${k}" data-value="${v}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#eef2f7;color:#374151;border:1px solid #e5e7eb;font-size:.85em;"><span style="color:#0b5cab;font-weight:600">${k}</span><span>${disp ?? v}</span><button class="chip-remove" style="background:transparent;border:none;color:#6b7280;cursor:pointer;font-weight:700;">×</button></span>`;
+    const chips = [];
+    tokens.nameList.forEach(v => chips.push(mkChip('name:', v)));
+    tokens.propertyList.forEach(v => chips.push(mkChip('property:', v)));
+    tokens.unitList.forEach(v => chips.push(mkChip('unit:', v)));
+    tokens.statusList.forEach(v => chips.push(mkChip('status:', v)));
+    tokens.typeList.forEach(v => chips.push(mkChip('type:', v)));
+    container.innerHTML = chips.join('');
+    container.querySelectorAll('.chip-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const chip = e.target.closest('.filter-chip');
+            removePortfolioDetailsFilterToken(chip.getAttribute('data-key') || '', chip.getAttribute('data-value') || '');
+        });
+    });
+}
+
+function removePortfolioDetailsFilterToken(key, value) {
+    const input = document.getElementById('portfolioDetailsSearchBar');
+    const combined = `${(window.__portfolioDetailsAccumulatedQuery || '').trim()} ${(input?.value || '').trim()}`.trim();
+    const { tokens } = parsePortfolioDetailsSearch(combined);
+    const rem = (arr) => {
+        const i = arr.findIndex(v => v === value.toLowerCase());
+        if (i >= 0) arr.splice(i, 1);
+    };
+    switch (key) {
+        case 'name:': rem(tokens.nameList); break;
+        case 'property:': rem(tokens.propertyList); break;
+        case 'unit:': rem(tokens.unitList); break;
+        case 'status:': rem(tokens.statusList); break;
+        case 'type:': rem(tokens.typeList); break;
+    }
+    const parts = [];
+    if (tokens.nameList.length) parts.push(`name:${tokens.nameList.join(',')}`);
+    if (tokens.propertyList.length) parts.push(`property:${tokens.propertyList.join(',')}`);
+    if (tokens.unitList.length) parts.push(`unit:${tokens.unitList.join(',')}`);
+    if (tokens.statusList.length) parts.push(`status:${tokens.statusList.join(',')}`);
+    if (tokens.typeList.length) parts.push(`type:${tokens.typeList.join(',')}`);
+    window.__portfolioDetailsAccumulatedQuery = parts.join(' ');
+    if (input) input.value = '';
+    renderFilteredPortfolioDetailsRows();
+}
+
+function showPortfolioDetailsSearchSuggestions(show) {
+    const box = document.getElementById('portfolioDetailsSearchSuggestions');
+    if (!box) return;
+    if (show) renderPortfolioDetailsSuggestionTokens();
+    box.style.display = show ? 'block' : 'none';
+}
+
+function positionPortfolioDetailsSearchSuggestions() {
+    const bar = document.getElementById('portfolioDetailsFilterBar');
+    const input = document.getElementById('portfolioDetailsSearchBar');
+    const box = document.getElementById('portfolioDetailsSearchSuggestions');
+    if (!bar || !input || !box) return;
+    const barRect = bar.getBoundingClientRect();
+    const inRect = input.getBoundingClientRect();
+    box.style.left = `${inRect.left - barRect.left}px`;
+    box.style.top = `${inRect.bottom - barRect.top + 6}px`;
+    box.style.minWidth = `${Math.max(inRect.width, 260)}px`;
+}
+
+function renderPortfolioDetailsSuggestionTokens() {
+    const list = document.getElementById('portfolioDetailsSuggestList');
+    const title = document.getElementById('portfolioDetailsSuggestTitle');
+    const values = document.getElementById('portfolioDetailsSuggestValues');
+    const backBtn = document.getElementById('portfolioDetailsSuggestBack');
+    if (!list) return;
+    const tokens = ['name:', 'property:', 'unit:', 'status:', 'type:'];
+    list.innerHTML = tokens.map(k =>
+        `<li class='suggest-item' data-token='${k}' style='padding:8px 12px;cursor:pointer;display:flex;gap:8px;align-items:center;'><span style='font-weight:600;color:#1f2937'>${k}</span><span style='font-size:.85em;color:#6b7280'>Add ${k} filter</span></li>`
+    ).join('');
+    if (title) title.textContent = 'Choose a filter';
+    if (backBtn) backBtn.style.display = 'none';
+    if (values) {
+        values.style.display = 'none';
+        values.innerHTML = '';
+    }
+    list.style.display = 'block';
+}
+
+function showPortfolioDetailsValueSuggestions(token) {
+    const list = document.getElementById('portfolioDetailsSuggestList');
+    const values = document.getElementById('portfolioDetailsSuggestValues');
+    const title = document.getElementById('portfolioDetailsSuggestTitle');
+    const backBtn = document.getElementById('portfolioDetailsSuggestBack');
+    if (!list || !values || !title) return;
+    let items = [];
+    if (token === 'property:') {
+        items = (state.properties || []).map(p => ({ label: p.name, value: (p.name || '').toLowerCase() }));
+    } else if (token === 'unit:') {
+        items = (state.allUnits || []).map(u => ({ label: `${u.number || u.unitNumber || ''}`, value: String(u.number || u.unitNumber || '').toLowerCase() }));
+    } else if (token === 'status:') {
+        // Gather statuses from current rows if possible, otherwise fall back to common set
+        const bodyRows = Array.from(document.querySelectorAll('#portfolioDetailsTbody tr'));
+        const set = new Set();
+        bodyRows.forEach(r => { if (r.dataset.status) set.add(r.dataset.status.toLowerCase()); });
+        if (!set.size) ['active','pending','expired','terminated','vacant','in-progress','completed'].forEach(v => set.add(v));
+        items = Array.from(set).map(v => ({ label: v, value: v }));
+    } else if (token === 'name:') {
+        items = (state.allTenants || []).slice(0, 12).map(t => {
+            const base = t.fullName || t.name || `${t.firstName || ''} ${t.lastName || ''}`.trim();
+            return { label: base, value: (base || '').toLowerCase() };
+        }).filter(it => it.label);
+    } else if (token === 'type:') {
+        const bodyRows = Array.from(document.querySelectorAll('#portfolioDetailsTbody tr'));
+        const set = new Set();
+        bodyRows.forEach(r => { if (r.dataset.type) set.add(r.dataset.type.toLowerCase()); });
+        if (!set.size) ['rent','maintenance','lease expiring','upcoming move-in','vacancy'].forEach(v => set.add(v));
+        items = Array.from(set).map(v => ({ label: v, value: v }));
+    }
+    title.textContent = `Choose a value for ${token}`;
+    if (backBtn) backBtn.style.display = 'inline';
+    list.style.display = 'none';
+    values.innerHTML = items.map(it =>
+        `<li class='suggest-value' data-token='${token}' data-value='${it.value}' style='padding:8px 12px;cursor:pointer;display:flex;gap:8px;align-items:center;'><span style='font-weight:600;color:#1f2937'>${it.label}</span></li>`
+    ).join('');
+    values.style.display = items.length ? 'block' : 'none';
+}
+
+function autoSuggestPortfolioDetails() {
+    const input = document.getElementById('portfolioDetailsSearchBar');
+    const val = (input?.value || '').trim();
+    const m = val.match(/(name:|property:|unit:|status:|type:)([^\s]*)$/i);
+    if (!m) {
+        renderPortfolioDetailsSuggestionTokens();
+        return;
+    }
+    const token = m[1].toLowerCase();
+    const partial = (m[2] || '').toLowerCase();
+    showPortfolioDetailsValueSuggestions(token);
+    const values = document.getElementById('portfolioDetailsSuggestValues');
+    if (values && partial) {
+        Array.from(values.querySelectorAll('.suggest-value')).forEach(li => {
+            const v = (li.getAttribute('data-value') || '').toLowerCase();
+            li.style.display = v.includes(partial) ? 'flex' : 'none';
+        });
+    }
+}
+
+function renderFilteredPortfolioDetailsRows() {
+    const tbody = document.getElementById('portfolioDetailsTbody');
+    if (!tbody) return;
+    const { tokens, text } = getPortfolioDetailsSearch();
+    let anyVisible = false;
+    Array.from(tbody.querySelectorAll('tr')).forEach(row => {
+        const prop = (row.dataset.property || '').toLowerCase();
+        const unit = (row.dataset.unit || '').toLowerCase();
+        const name = (row.dataset.name || '').toLowerCase();
+        const status = (row.dataset.status || '').toLowerCase();
+        const type = (row.dataset.type || '').toLowerCase();
+        const textContent = (row.textContent || '').toLowerCase();
+
+        const hitText = !text || textContent.includes(text) || prop.includes(text) || unit.includes(text) || name.includes(text) || status.includes(text) || type.includes(text);
+        const hitName = !tokens.nameList.length || tokens.nameList.some(v => name.includes(v));
+        const hitProp = !tokens.propertyList.length || tokens.propertyList.some(v => prop.includes(v));
+        const hitUnit = !tokens.unitList.length || tokens.unitList.some(v => unit.includes(v));
+        const hitStatus = !tokens.statusList.length || tokens.statusList.includes(status);
+        const hitType = !tokens.typeList.length || tokens.typeList.some(v => type.includes(v));
+
+        const show = hitText && hitName && hitProp && hitUnit && hitStatus && hitType;
+        row.style.display = show ? '' : 'none';
+        if (show) anyVisible = true;
+    });
+
+    // Optional: could display a "no results" message row if none visible.
+}
+
 // Tab Management
 function initializeTabs() {
     const tabs = document.querySelectorAll('.tab-btn');
@@ -4686,10 +5751,7 @@ async function loadProperties() {
             loadAllUnitsAndTenants().catch(() => {});
         });
 
-        // Auto-select the first property if available (don't block on non-critical loads)
-        if (state.properties.length > 0) {
-            selectProperty(state.properties[0]._id);
-        }
+        // Do not auto-select a property; default landing is portfolio overview
     } catch (error) {
         console.error('Error loading properties:', error);
         showNotification('Error loading properties', 'error');
@@ -4747,9 +5809,17 @@ function formatAddress(address) {
 // Update renderPropertyList to handle the address properly
 function renderPropertyList() {
     const propertyList = document.getElementById('propertyList');
-    
+    const overviewTile = `
+        <div class="property-item property-overview-item" onclick="openPortfolioOverview()">
+            <h3><i class="fas fa-chart-pie" style="margin-right:6px;"></i> Portfolio Overview</h3>
+            <div class="property-address">
+                <i class="fas fa-layer-group"></i>
+                <div class="address-text">All properties combined</div>
+            </div>
+        </div>`;
+
     if (!state.properties.length) {
-        propertyList.innerHTML = `
+        propertyList.innerHTML = overviewTile + `
             <div class="empty-state">
                 <i class="fas fa-building"></i>
                 <p>No multifamily properties found</p>
@@ -4757,7 +5827,7 @@ function renderPropertyList() {
         return;
     }
 
-    propertyList.innerHTML = state.properties.map(property => {
+    const propertiesHtml = state.properties.map(property => {
         const isActive = state.currentProperty && state.currentProperty._id === property._id;
         const unitsForProperty = (state.allUnits || []).filter(u => {
             const pid = u.projectId || u.propertyId || u.project; // projectId populated in loadAllUnitsAndTenants
@@ -4797,6 +5867,8 @@ function renderPropertyList() {
             </div>
         `;
     }).join('');
+
+    propertyList.innerHTML = overviewTile + propertiesHtml;
 }
 
 async function selectProperty(propertyId) {
@@ -4804,6 +5876,12 @@ async function selectProperty(propertyId) {
     try {
         state.currentProperty = state.properties.find(p => p._id === propertyId);
         if (!state.currentProperty) throw new Error('Property not found');
+
+        // Ensure property dashboard is visible when a property is selected
+        const dashboard = document.getElementById('propertyDashboard');
+        const portfolioSection = document.getElementById('portfolioOverviewSection');
+        if (dashboard) dashboard.style.display = '';
+        if (portfolioSection) portfolioSection.style.display = 'none';
 
         document.getElementById('propertyName').textContent = state.currentProperty.name;
         
@@ -7472,6 +8550,308 @@ const completeModalHtml = `
 `;
 if (!document.getElementById('completeScheduleModal')) {
   document.body.insertAdjacentHTML('beforeend', completeModalHtml);
+}
+
+// Move-in Readiness Checklist Modal (static markup injected once)
+const moveInChecklistHtml = `
+   
+    <div class="modal" id="moveInChecklistModal" style="display:none;">
+        <div class="modal-content" style="max-width:720px;">
+            <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <h2 style="margin:0;font-size:1.6rem;">Move-in Readiness Checklist</h2>
+                <button type="button" class="btn-secondary" onclick="closeModal('moveInChecklistModal')">Close</button>
+            </div>
+            <div class="modal-body" style="max-height:540px;overflow:auto;font-size:0.9rem;">
+                <p id="moveInChecklistContext" style="margin-bottom:12px;color:#4b5563;"></p>
+
+                <h3 style="margin-top:16px;font-size:1rem;color:#111827;">Leasing &amp; Admin</h3>
+                <ul style="list-style:none;padding-left:0;margin-top:8px;margin-bottom:12px;">
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="leasing_lease_signed"> Lease fully signed by all parties</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="leasing_lease_signed" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="leasing_lease_signed" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="leasing_funds_received"> Move-in funds received and cleared</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="leasing_funds_received" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="leasing_funds_received" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="leasing_deposit_received"> Deposit received</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="leasing_deposit_received" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="leasing_deposit_received" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="leasing_tenant_entered"> Tenant info entered into system</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="leasing_tenant_entered" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="leasing_tenant_entered" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="leasing_emergency_contacts"> Emergency contacts collected</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="leasing_emergency_contacts" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="leasing_emergency_contacts" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="leasing_renters_insurance"> Renter's insurance verified (if required)</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="leasing_renters_insurance" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="leasing_renters_insurance" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                </ul>
+
+                <h3 style="margin-top:16px;font-size:1rem;color:#111827;">Utilities &amp; Services</h3>
+                <ul style="list-style:none;padding-left:0;margin-top:8px;margin-bottom:12px;">
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="utilities_electricity"> Electricity on and Transferred to tenant</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="utilities_electricity" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="utilities_electricity" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="utilities_water"> Water on and Transferred to tenant</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="utilities_water" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="utilities_water" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="utilities_gas"> Gas on and Transferred to tenant (if applicable)</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="utilities_gas" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="utilities_gas" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                </ul>
+
+                <h3 style="margin-top:16px;font-size:1rem;color:#111827;">Maintenance &amp; Safety</h3>
+                <ul style="list-style:none;padding-left:0;margin-top:8px;margin-bottom:12px;">
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="safety_lights"> All lights working (fixtures + bulbs)</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="safety_lights" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="safety_lights" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="safety_outlets"> Outlets and switches tested</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="safety_outlets" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="safety_outlets" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="safety_gfci"> GFCI outlets reset and working</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="safety_gfci" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="safety_gfci" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="safety_smoke_detectors"> Smoke detectors tested</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="safety_smoke_detectors" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="safety_smoke_detectors" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="safety_co_detectors"> CO detectors tested (if applicable)</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="safety_co_detectors" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="safety_co_detectors" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="safety_locks"> Door and window locks working</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="safety_locks" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="safety_locks" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="safety_deadbolts"> Deadbolts installed and re-keyed</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="safety_deadbolts" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="safety_deadbolts" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="safety_screens"> Screens installed (if provided)</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="safety_screens" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="safety_screens" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="safety_leaks"> No active leaks (sinks, toilets, water heater)</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="safety_leaks" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="safety_leaks" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="safety_toilet"> Toilet secure and flushing properly</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="safety_toilet" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="safety_toilet" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="safety_hot_water"> Hot water working</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="safety_hot_water" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="safety_hot_water" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="safety_hvac"> HVAC working (cool + heat tested)</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="safety_hvac" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="safety_hvac" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="safety_filters"> Filters replaced</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="safety_filters" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="safety_filters" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                </ul>
+
+                <h3 style="margin-top:16px;font-size:1rem;color:#111827;">Cleaning &amp; Turnover</h3>
+                <ul style="list-style:none;padding-left:0;margin-top:8px;margin-bottom:12px;">
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="clean_deep_clean"> Full unit deep clean complete</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="clean_deep_clean" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="clean_deep_clean" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="clean_floors"> Floors cleaned (vacuum + mop)</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="clean_floors" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="clean_floors" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="clean_baseboards"> Baseboards wiped</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="clean_baseboards" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="clean_baseboards" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="clean_windows"> Windows cleaned (inside)</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="clean_windows" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="clean_windows" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="clean_blinds"> Blinds cleaned or replaced</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="clean_blinds" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="clean_blinds" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="clean_trash"> Trash removed from unit &amp; exterior</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="clean_trash" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="clean_trash" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                    <li>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <label style="flex:1 1 auto;"><input type="checkbox" class="movein-check-item" data-item-id="clean_odor"> Odor check (no smoke, pets, or mildew)</label>
+                            <button type="button" class="movein-note-toggle" data-item-id="clean_odor" title="Add note" style="cursor:pointer;">+ note</button>
+                        </div>
+                        <input type="text" class="movein-check-note" data-item-id="clean_odor" placeholder="Add note (optional)" style="display:none;margin-top:4px;width:100%;font-size:0.8rem;padding:4px 6px;border-radius:6px;border:1px solid #e5e7eb;" />
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+`;
+if (!document.getElementById('moveInChecklistModal')) {
+    document.body.insertAdjacentHTML('beforeend', moveInChecklistHtml);
+}
+
+// Persist move-in checklist changes
+const moveInChecklistModalEl = document.getElementById('moveInChecklistModal');
+if (moveInChecklistModalEl) {
+    // Toggle note field visibility when clicking the note icon
+    moveInChecklistModalEl.addEventListener('click', (e) => {
+        const btn = e.target.closest('.movein-note-toggle');
+        if (!btn) return;
+        const itemId = btn.getAttribute('data-item-id');
+        if (!itemId) return;
+        const input = moveInChecklistModalEl.querySelector(`.movein-check-note[data-item-id="${itemId}"]`);
+        if (!input) return;
+        const currentlyHidden = !input.style.display || input.style.display === 'none';
+        input.style.display = currentlyHidden ? 'block' : 'none';
+        if (!currentlyHidden) return;
+        try {
+            input.focus();
+        } catch (_) {}
+    });
+
+    moveInChecklistModalEl.addEventListener('change', async (e) => {
+        const target = e.target;
+        if (!(target instanceof HTMLInputElement) || !moveInChecklistModalEl.dataset.appId) return;
+
+        const appId = moveInChecklistModalEl.dataset.appId;
+
+        // Recompute completed ids and notes from current UI state
+        const completedIds = Array.from(moveInChecklistModalEl.querySelectorAll('.movein-check-item'))
+            .filter(cb => cb.checked && cb.getAttribute('data-item-id'))
+            .map(cb => cb.getAttribute('data-item-id'));
+
+        const notes = {};
+        Array.from(moveInChecklistModalEl.querySelectorAll('.movein-check-note')).forEach(input => {
+            const key = input.getAttribute('data-item-id');
+            const val = input.value.trim();
+            if (key && val) {
+                notes[key] = val;
+            }
+        });
+
+        try {
+            const res = await fetch(`${API_URL}/rental-applications/${appId}/move-in-checklist`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ completedIds, notes })
+            });
+            if (!res.ok) throw new Error('Failed to save checklist');
+            const data = await res.json();
+            const list = Array.isArray(data.completedIds) ? data.completedIds : completedIds;
+            const returnedNotes = data.notes && typeof data.notes === 'object' ? data.notes : notes;
+            // Update local applications state
+            if (Array.isArray(state.applications)) {
+                const idx = state.applications.findIndex(a => String(a._id) === String(appId));
+                if (idx !== -1) {
+                    state.applications[idx].moveInChecklistCompleted = list;
+                    state.applications[idx].moveInChecklistNotes = returnedNotes;
+                }
+            }
+        } catch (err) {
+            console.error('Error saving move-in checklist:', err);
+            showNotification('Error saving move-in checklist', 'error');
+        }
+    });
 }
 
 // 1. Mark as Completed Handler
@@ -11998,9 +13378,31 @@ async function loadAllUnitsAndTenants() {
     }
     state.allUnits = allUnits;
     state.allTenants = allTenants;
-    renderMainSummary();
     // Refresh property list so per-property stats (occupancy, vacancies) are shown once data is loaded
     renderPropertyList();
+}
+
+// Load all payments across all properties for portfolio-wide rent metrics
+async function loadPortfolioPayments(force = false) {
+    if (!force && Array.isArray(state.portfolioPayments) && state.portfolioPayments.length) {
+        return state.portfolioPayments;
+    }
+    let all = [];
+    for (const property of state.properties) {
+        try {
+            const res = await fetch(`${API_URL}/properties/${property._id}/payments`);
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                    all = all.concat(data);
+                }
+            }
+        } catch (e) {
+            console.error(`Error loading payments for property ${property._id}:`, e);
+        }
+    }
+    state.portfolioPayments = all;
+    return all;
 }
 
 
@@ -12039,68 +13441,309 @@ function updatePropertyStats() {
     }
 }
 
-function renderMainSummary() {
+// Compute and render portfolio-wide metrics into the overview strip
+async function renderPortfolioOverview() {
     try {
-        const elTotalProperties = document.getElementById('summaryTotalProperties');
-        const elTotalUnits = document.getElementById('summaryTotalUnits');
-        const elTotalTenants = document.getElementById('summaryTotalTenants');
-        const elOccupancyRate = document.getElementById('summaryOccupancyRate');
-        const elMonthlyIncome = document.getElementById('summaryMonthlyIncome');
-        if (!elTotalProperties || !elTotalUnits || !elTotalTenants || !elOccupancyRate || !elMonthlyIncome) {
-            return;
+        const section = document.getElementById('portfolioOverviewSection');
+        if (!section) return;
+
+        const elOpenRentAmount = document.getElementById('portfolioOpenRentAmount');
+        const elOpenRentCount = document.getElementById('portfolioOpenRentCount');
+        const elRentSummary = document.getElementById('portfolioRentCollectedSummary');
+        const elRentBar = document.getElementById('portfolioRentCollectedBar');
+        const elTotalRentSummary = document.getElementById('portfolioTotalRentSummary');
+        const elTenantsCount = document.getElementById('portfolioTenantsCount');
+        const elTenantsSummary = document.getElementById('portfolioTenantsSummary');
+        const elOpenMaint = document.getElementById('portfolioOpenMaintenanceCount');
+        const elMaintBreakdown = document.getElementById('portfolioMaintenanceBreakdown');
+        const elExpiringLeases = document.getElementById('portfolioExpiringLeasesCount');
+        const elExpiringLeasesBreakdown = document.getElementById('portfolioExpiringLeasesBreakdown');
+        const elVacantUnits = document.getElementById('portfolioVacantUnitsCount');
+        const elVacancySummary = document.getElementById('portfolioVacancySummary');
+        const elOccupancyBar = document.getElementById('portfolioOccupancyBar');
+        if (!elOpenRentAmount || !elOpenRentCount || !elOpenMaint || !elExpiringLeases || !elVacantUnits) return;
+
+        // Ensure portfolio units/tenants are loaded
+        if (!Array.isArray(state.allUnits) || !state.allUnits.length || !Array.isArray(state.allTenants) || !state.allTenants.length) {
+            try {
+                await loadAllUnitsAndTenants();
+            } catch (e) {
+                console.warn('Error loading units/tenants for portfolio overview:', e);
+            }
         }
 
-        const totalProperties = state.properties.length;
+        const allUnits = state.allUnits || [];
+        const allTenants = state.allTenants || [];
+        state.portfolioTenantsWithBalance = [];
+        state.portfolioExpiringLeases = [];
+        state.portfolioUpcomingMoveIns = [];
+        state.portfolioVacantUnits = [];
+        const activeTenants = allTenants.filter(t => t.leaseStatus !== 'terminated' && t.leaseStatus !== 'expired');
 
-        // Only count tenants that are not terminated or expired
-        const activeTenants = (state.allTenants || []).filter(
-            t => t.leaseStatus !== 'terminated' && t.leaseStatus !== 'expired'
-        );
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        const periodMonth = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
 
-        // Only count units as occupied if they are assigned to an active tenant
-        const activeTenantUnitIds = new Set(
-            activeTenants.map(t => t.unitId?._id || t.unitId).filter(Boolean)
-        );
+        // Load portfolio-wide payments for current month rent comparisons
+        const allPayments = await loadPortfolioPayments();
 
-        const totalUnits = state.allUnits ? state.allUnits.length : 0;
-        const totalTenants = activeTenants.length;
-        const totalOccupiedUnits = state.allUnits
-            ? state.allUnits.filter(u => activeTenantUnitIds.has(u._id)).length
-            : 0;
+        let totalUnpaidRent = 0;
+        let totalExpectedRent = 0;
+        let totalPaidThisMonthAll = 0;
+        let tenantsWithBalance = 0;
+        let expiringLeasesCount = 0;
+        let expiringWithin30 = 0;
+        let upcomingMoveInsCount = 0;
+        let upcomingMoveInsWithin30 = 0;
 
-        // Calculate total monthly income (active tenants only)
-        const totalMonthlyIncome = activeTenants.reduce((sum, t) =>
-            sum +
-            (Number(t.baseRent) || 0) +
-            (Number(t.waterFee) || 0) +
-            (Number(t.trashFee) || 0) +
-            (Number(t.adminFee) || 0) +
-            (t.additionalFee?.amount || 0) +
-            (t.pets?.hasPets ? (Number(t.pets.monthlyRent) || 0) : 0)
-        , 0);
-        const occupancyRate = totalUnits > 0 ? Math.round((totalOccupiedUnits / totalUnits) * 100) : 0;
+        activeTenants.forEach(tenant => {
+            // Lease expiry within 60 days
+            if (tenant.leaseEnd) {
+                const leaseEndDate = new Date(tenant.leaseEnd);
+                const diffMs = leaseEndDate - now;
+                const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                if (diffDays <= 60 && diffDays > 0 && (tenant.leaseStatus === 'active' || tenant.leaseStatus === 'pending')) {
+                    expiringLeasesCount++;
+                    if (diffDays <= 30) {
+                        expiringWithin30++;
+                    }
+                    state.portfolioExpiringLeases.push({ tenant, daysUntilEnd: diffDays });
+                }
+            }
 
-        elTotalProperties.textContent = totalProperties;
-        elTotalUnits.textContent = totalUnits;
-        elTotalTenants.textContent = totalTenants;
-        elOccupancyRate.textContent = `${occupancyRate}%`;
-        elMonthlyIncome.textContent = `$${totalMonthlyIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-    } catch (error) {
-        console.warn('Error rendering main summary:', error);
+            // Expected rent vs payments this month
+            const petFees = (tenant.pets?.hasPets ? (Number(tenant.pets.monthlyRent) || 0) : 0);
+            const additionalFees =
+                (Number(tenant.waterFee) || 0) +
+                (Number(tenant.trashFee) || 0) +
+                (Number(tenant.adminFee) || 0) +
+                (tenant.additionalFee?.amount || 0) +
+                petFees;
+
+            const expectedBase = computeExpectedBaseRentForMonth(tenant, now);
+
+            const overrideMap = tenant?.monthlyOverrides || null;
+            const monthOverride = overrideMap
+                ? (typeof overrideMap.get === 'function' ? overrideMap.get(periodMonth) : overrideMap[periodMonth])
+                : null;
+
+            let expectedMonthly = expectedBase + additionalFees;
+            if (monthOverride) {
+                const ovExpected = Number(monthOverride.expectedRent);
+                const ovLate = Number(monthOverride.lateFee);
+                const ovMode = (monthOverride.lateFeeMode === 'percent') ? 'percent' : 'amount';
+                const baseBeforeLate = Number.isFinite(ovExpected) ? ovExpected : (expectedBase + additionalFees);
+                if (ovMode === 'percent' && Number.isFinite(ovLate)) {
+                    expectedMonthly = baseBeforeLate + (baseBeforeLate * (ovLate / 100));
+                } else {
+                    expectedMonthly = baseBeforeLate + (Number.isFinite(ovLate) ? ovLate : 0);
+                }
+            }
+
+            const monthPayments = allPayments.filter(p => {
+                if (!p.date || p.applyTo !== 'rent') return false;
+                if (String(p.tenantId) !== String(tenant._id)) return false;
+                const d = new Date(p.date);
+                return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+            });
+
+            const totalPaidThisMonth = monthPayments.reduce((sum, p) => {
+                const amt = Number(p.amount) || 0;
+                return sum + (amt > 0 ? amt : 0);
+            }, 0);
+
+            const remainingRent = Math.max(0, expectedMonthly - totalPaidThisMonth);
+            totalExpectedRent += expectedMonthly;
+            totalPaidThisMonthAll += totalPaidThisMonth;
+            if (remainingRent > 0.01) {
+                tenantsWithBalance++;
+                totalUnpaidRent += remainingRent;
+                state.portfolioTenantsWithBalance.push({ tenant, remainingRent, expectedMonthly, paidThisMonth: totalPaidThisMonth });
+            }
+        });
+
+        // Upcoming move-ins from approved applications (next 60 days)
+        const apps = Array.isArray(state.applications) ? state.applications : [];
+        const msPerDay = 1000 * 60 * 60 * 24;
+        apps.forEach(app => {
+            if (!app.moveIn) return;
+            const status = (app.status || '').toLowerCase();
+            if (status !== 'approved') return;
+            const moveInDate = new Date(app.moveIn);
+            const diffMs = moveInDate - now;
+            const diffDays = Math.ceil(diffMs / msPerDay);
+            if (diffDays <= 60 && diffDays > 0) {
+                upcomingMoveInsCount++;
+                if (diffDays <= 30) {
+                    upcomingMoveInsWithin30++;
+                }
+                state.portfolioUpcomingMoveIns.push({ application: app, daysUntilMoveIn: diffDays });
+            }
+        });
+
+        const vacantUnitsList = allUnits.filter(u => u.status === 'vacant');
+        const vacantUnits = vacantUnitsList.length;
+        const totalUnits = allUnits.length || 0;
+        state.portfolioVacantUnits = vacantUnitsList;
+
+        let openMaintCount = 0;
+        let maintPending = 0;
+        let maintInProgress = 0;
+        try {
+            const res = await fetch('/api/properties/maintenance?status=pending,in-progress&_=' + Date.now());
+            if (res.ok) {
+                const items = await res.json();
+                if (Array.isArray(items)) {
+                    openMaintCount = items.length;
+                    state.portfolioMaintenance = items;
+                    items.forEach(m => {
+                        if (m.status === 'pending') maintPending++;
+                        if (m.status === 'in-progress') maintInProgress++;
+                    });
+                }
+            }
+        } catch (e) {
+            console.error('Error loading portfolio maintenance overview:', e);
+        }
+
+        const rentText = `$${totalUnpaidRent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const rentSub = tenantsWithBalance ? `${tenantsWithBalance} tenant${tenantsWithBalance !== 1 ? 's' : ''} with balance` : 'All current month rent paid';
+
+        elOpenRentAmount.textContent = rentText;
+        elOpenRentCount.textContent = rentSub;
+        if (elTotalRentSummary) {
+            const totalExpectedText = `$${totalExpectedRent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            elTotalRentSummary.textContent = `Estimated monthly income: ${totalExpectedText}`;
+        }
+
+        // Tenants chip: show active vs total tenants across the portfolio
+        if (elTenantsCount && elTenantsSummary) {
+            const totalTenantsCount = allTenants.length;
+            const activeTenantsCount = activeTenants.length;
+            const inactiveTenantsCount = Math.max(0, totalTenantsCount - activeTenantsCount);
+            elTenantsCount.textContent = activeTenantsCount;
+            if (!totalTenantsCount) {
+                elTenantsSummary.textContent = 'No tenants yet across the portfolio';
+            } else {
+                elTenantsSummary.textContent = `${activeTenantsCount} active • ${inactiveTenantsCount} inactive (of ${totalTenantsCount} total)`;
+            }
+        }
+        elOpenMaint.textContent = openMaintCount;
+        const totalLeaseAndMoveEvents = expiringLeasesCount + upcomingMoveInsCount;
+        elExpiringLeases.textContent = totalLeaseAndMoveEvents;
+        elVacantUnits.textContent = vacantUnits;
+
+        // Rent collection progress
+        if (elRentSummary && elRentBar) {
+            const collectedPercent = totalExpectedRent > 0
+                ? Math.max(0, Math.min(100, Math.round((totalPaidThisMonthAll / totalExpectedRent) * 100)))
+                : 100;
+            elRentSummary.textContent = `Collected ${collectedPercent}% of expected rent`;
+            elRentBar.style.width = collectedPercent + '%';
+        }
+
+        // Maintenance breakdown badges
+        if (elMaintBreakdown) {
+            elMaintBreakdown.innerHTML = '';
+            if (openMaintCount === 0) {
+                const badge = document.createElement('span');
+                badge.className = 'portfolio-badge';
+                badge.textContent = 'No open requests';
+                elMaintBreakdown.appendChild(badge);
+            } else {
+                if (maintPending > 0) {
+                    const badge = document.createElement('span');
+                    badge.className = 'portfolio-badge warn';
+                    badge.textContent = `${maintPending} pending`;
+                    elMaintBreakdown.appendChild(badge);
+                }
+                if (maintInProgress > 0) {
+                    const badge = document.createElement('span');
+                    badge.className = 'portfolio-badge';
+                    badge.textContent = `${maintInProgress} in-progress`;
+                    elMaintBreakdown.appendChild(badge);
+                }
+            }
+        }
+
+        // Lease expiry breakdown
+        if (elExpiringLeasesBreakdown) {
+            if (totalLeaseAndMoveEvents === 0) {
+                elExpiringLeasesBreakdown.textContent = 'No expiring leases or upcoming move-ins in the next 60 days';
+            } else {
+                const within30Total = expiringWithin30 + upcomingMoveInsWithin30;
+                const in31To60Total = (expiringLeasesCount - expiringWithin30) + (upcomingMoveInsCount - upcomingMoveInsWithin30);
+                elExpiringLeasesBreakdown.textContent = `${within30Total} within 30 days, ${in31To60Total} in 31-60 days`;
+            }
+        }
+
+        // Occupancy progress
+        if (elVacancySummary && elOccupancyBar) {
+            if (totalUnits === 0) {
+                elVacancySummary.textContent = 'No units configured yet';
+                elOccupancyBar.style.width = '0%';
+            } else {
+                const occupiedUnits = Math.max(0, totalUnits - vacantUnits);
+                const occupancyPercent = Math.round((occupiedUnits / totalUnits) * 100);
+                elVacancySummary.textContent = `${occupancyPercent}% occupied, ${vacantUnits} vacant of ${totalUnits} units`;
+                elOccupancyBar.style.width = occupancyPercent + '%';
+            }
+        }
+    } catch (e) {
+        console.warn('Error rendering portfolio overview:', e);
     }
 }
 
+async function loadPortfolioTasks(force = false) {
+    if (!force && Array.isArray(state.portfolioTasks) && state.portfolioTasks.length) {
+        return state.portfolioTasks;
+    }
+    try {
+        const res = await fetch(`${API_URL}/portfolio-tasks`);
+        if (!res.ok) throw new Error('Failed to load portfolio tasks');
+        const data = await res.json();
+        state.portfolioTasks = Array.isArray(data.tasks) ? data.tasks : [];
+    } catch (e) {
+        console.error('Error loading portfolio tasks:', e);
+        state.portfolioTasks = [];
+    }
+    renderPortfolioTasksList();
+    return state.portfolioTasks;
+}
 
-document.getElementById('mainSummaryToggle').addEventListener('click', function(event) {
-    // Ignore clicks coming from inside the top tools bar so those icons don't toggle the summary
-    if (event.target.closest('.top-tools-bar')) {
+function renderPortfolioTasksList() {
+    const listEl = document.getElementById('portfolioTasksList');
+    if (!listEl) return;
+    const tasks = state.portfolioTasks || [];
+    if (!tasks.length) {
+        listEl.innerHTML = '<p style="font-size:0.8rem;color:#9ca3af;margin:4px 2px;">No tasks yet. Add one above.</p>';
         return;
     }
-
-    const section = document.querySelector('.main-summary-section');
-    section.classList.toggle('collapsed');
-});
-
+    listEl.innerHTML = tasks.map(t => {
+        const completed = t.status === 'completed';
+        const due = t.dueDate ? new Date(t.dueDate).toLocaleDateString() : '';
+        const statusLabel = t.status ? t.status.replace(/-/g,' ') : '';
+        return `
+            <div class="portfolio-task-item" data-id="${t._id}">
+                <div class="portfolio-task-actions">
+                    <input type="checkbox" class="portfolio-task-toggle" ${completed ? 'checked' : ''} />
+                </div>
+                <div class="portfolio-task-main">
+                    <div class="portfolio-task-title" style="${completed ? 'text-decoration:line-through;color:#9ca3af;' : ''}">${(t.title || '').replace(/</g,'&lt;')}</div>
+                    <div class="portfolio-task-meta">
+                        ${due ? `<span><i class="far fa-calendar-alt"></i> ${due}</span>` : ''}
+                        ${statusLabel && !completed ? `<span style="margin-left:4px;">• ${statusLabel}</span>` : ''}
+                    </div>
+                </div>
+                <div class="portfolio-task-actions">
+                    <button type="button" class="portfolio-task-delete" title="Delete task">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>`;
+    }).join('');
+}
 document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.querySelector('.sidebar');
     const toggleBtn = document.getElementById('sidebarToggleBtn');
@@ -12149,6 +13792,546 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+function renderPortfolioDetails(type) {
+    const body = document.getElementById('portfolioDetailsBody');
+    const titleEl = document.getElementById('portfolioDetailsTitle');
+    if (!body || !titleEl) return;
+
+    const propsById = (state.properties || []).reduce((map, p) => {
+        map[String(p._id)] = p;
+        return map;
+    }, {});
+
+    const unitsById = (state.allUnits || []).reduce((map, u) => {
+        if (u && u._id) {
+            map[String(u._id)] = u;
+        }
+        return map;
+    }, {});
+
+    if (type === 'tenants') {
+        titleEl.textContent = 'All Tenants (Portfolio)';
+        const tenants = state.allTenants || [];
+        if (!tenants.length) {
+            body.innerHTML = '<p style="font-size:0.86rem;color:#6b7280;">No tenants found across the portfolio.</p>';
+            return;
+        }
+
+        const rowsHtml = tenants.map(t => {
+            const name = t.fullName || t.name || `${t.firstName || ''} ${t.lastName || ''}`.trim() || 'Tenant';
+            const unitId = t.unitId?._id || t.unitId;
+            let unitLabel = '—';
+            if (unitId && unitsById[String(unitId)]) {
+                const u = unitsById[String(unitId)];
+                unitLabel = u.number || u.unitNumber || u.name || u.label || '—';
+            } else {
+                unitLabel = t.unitNumber || t.unit || '—';
+            }
+            const pid = t.projectId || t.propertyId;
+            const propName = pid && propsById[String(pid)] ? propsById[String(pid)].name : '—';
+            const phone = t.phone || t.tenantPhone || '—';
+            const email = t.email || t.tenantEmail || '—';
+            const leaseStart = t.leaseStart ? new Date(t.leaseStart).toLocaleDateString() : '—';
+            const leaseEnd = t.leaseEnd ? new Date(t.leaseEnd).toLocaleDateString() : '—';
+            const status = t.leaseStatus || 'unknown';
+            return `
+                <tr>
+                    <td>${propName}</td>
+                    <td>${unitLabel}</td>
+                    <td>${name}</td>
+                    <td>${phone}</td>
+                    <td>${email}</td>
+                    <td>${leaseStart} - ${leaseEnd}</td>
+                    <td>${status}</td>
+                </tr>`;
+        }).join('');
+
+        body.innerHTML = `
+            <div id="portfolioTenantsFilterBar" style="margin-bottom:8px;border-radius:12px;padding:0;display:flex;flex-wrap:wrap;gap:0;align-items:flex-start;position:relative;">
+                <div style="position:relative;flex:1 1 100%;min-width:240px;display:flex;align-items:center;gap:6px;justify-content:flex-start;">
+                    <i class="fas fa-magnifying-glass" style="color:#6b7280;margin-left:4px;"></i>
+                    <input id="portfolioTenantsSearchBar" type="text" placeholder="Search tenants by" title="Try: name:, email:, phone:, property:, unit:, status:" style="flex:0 1 320px;max-width:280px;border:1px solid #e5e7eb;border-radius:10px;padding:6px 9px;background:#fff;font-size:0.9rem;" />
+                    <button class="btn-secondary" id="clearPortfolioTenantsFiltersBtn" title="Clear search" style="margin-right:4px;padding:5px 9px;font-size:0.85rem;">Clear</button>
+                </div>
+                <div id="portfolioTenantsActiveFilterChips" style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 8px 0 26px;flex:1 1 100%;"></div>
+                <div id="portfolioTenantsSearchSuggestions" style="position:absolute;top:40px;left:6px;right:auto;min-width:240px;max-width:520px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,0.15);padding:4px 0;display:none;z-index:1000;max-height:260px;overflow:auto;">
+                    <div id="portfolioTenantsSuggestHeader" style="padding:8px 12px;font-size:.85em;color:#374151;border-bottom:1px solid #eef2f7;display:flex;justify-content:space-between;align-items:center;">
+                        <span id="portfolioTenantsSuggestTitle">Choose a filter</span>
+                        <button id="portfolioTenantsSuggestBack" style="display:none;background:transparent;border:none;color:#217dbb;cursor:pointer;font-weight:600;">Back</button>
+                    </div>
+                    <ul id="portfolioTenantsSuggestList" style="list-style:none;margin:0;padding:4px 0;"></ul>
+                    <ul id="portfolioTenantsSuggestValues" style="list-style:none;margin:0;padding:4px 0;display:none;"></ul>
+                    <div style="border-top:1px solid #eef2f7;margin-top:4px;padding:6px 10px;font-size:.8em;color:#6b7280;">Use tokens like <strong>name:</strong> or <strong>status:</strong> for precise filters.</div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Property</th>
+                            <th>Unit</th>
+                            <th>Tenant</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Lease Dates</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolioTenantsTbody">
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+            </div>`;
+
+        // Initialize smart search for portfolio tenants with default status:active filter
+        initializePortfolioTenantsSearch();
+        window.__portfolioTenantsAccumulatedQuery = 'status:active';
+        renderFilteredPortfolioTenants();
+        return;
+    }
+
+    if (type === 'rent') {
+        titleEl.textContent = 'Tenants with Outstanding Balance';
+        const rows = state.portfolioTenantsWithBalance || [];
+        if (!rows.length) {
+            body.innerHTML = '<p style="font-size:0.86rem;color:#6b7280;">No tenants with outstanding balance for this month.</p>';
+            return;
+        }
+        const htmlRows = rows.map(({ tenant, remainingRent, expectedMonthly, paidThisMonth }) => {
+            const name = tenant.fullName || tenant.name || `${tenant.firstName || ''} ${tenant.lastName || ''}`.trim() || 'Tenant';
+            const unitId = tenant.unitId?._id || tenant.unitId;
+            let unitLabel = '—';
+            if (unitId && unitsById[String(unitId)]) {
+                const u = unitsById[String(unitId)];
+                unitLabel = u.number || u.unitNumber || u.name || u.label || '—';
+            } else {
+                unitLabel = tenant.unitNumber || tenant.unit || '—';
+            }
+            const pid = tenant.projectId || tenant.propertyId;
+            const propName = pid && propsById[String(pid)] ? propsById[String(pid)].name : '—';
+            const dataProp = (propName || '').toLowerCase().replace(/"/g,'&quot;');
+            const dataUnit = String(unitLabel || '').toLowerCase().replace(/"/g,'&quot;');
+            const dataName = (name || '').toLowerCase().replace(/"/g,'&quot;');
+            const dataStatus = (tenant.leaseStatus || '').toLowerCase().replace(/"/g,'&quot;');
+            return `
+                <tr data-property="${dataProp}" data-unit="${dataUnit}" data-name="${dataName}" data-status="${dataStatus}">
+                    <td>${propName}</td>
+                    <td>${unitLabel}</td>
+                    <td>${name}</td>
+                    <td>$${(expectedMonthly || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                    <td>$${(paidThisMonth || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                    <td>$${(remainingRent || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                </tr>`;
+        }).join('');
+        body.innerHTML = `
+            <div id="portfolioDetailsFilterBar" style="margin-bottom:8px;border-radius:12px;padding:0;display:flex;flex-wrap:wrap;gap:0;align-items:flex-start;position:relative;">
+                <div style="position:relative;flex:1 1 100%;min-width:240px;display:flex;align-items:center;gap:6px;justify-content:flex-start;">
+                    <i class="fas fa-magnifying-glass" style="color:#6b7280;margin-left:4px;"></i>
+                    <input id="portfolioDetailsSearchBar" type="text" placeholder="Search list by" title="Try: name:, property:, unit:, status:, type:" style="flex:0 1 320px;max-width:280px;border:1px solid #e5e7eb;border-radius:10px;padding:6px 9px;background:#fff;font-size:0.9rem;" />
+                    <button class="btn-secondary" id="clearPortfolioDetailsFiltersBtn" title="Clear search" style="margin-right:4px;padding:5px 9px;font-size:0.85rem;">Clear</button>
+                </div>
+                <div id="portfolioDetailsActiveFilterChips" style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 8px 0 26px;flex:1 1 100%;"></div>
+                <div id="portfolioDetailsSearchSuggestions" style="position:absolute;top:40px;left:6px;right:auto;min-width:240px;max-width:520px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,0.15);padding:4px 0;display:none;z-index:1000;max-height:260px;overflow:auto;">
+                    <div id="portfolioDetailsSuggestHeader" style="padding:8px 12px;font-size:.85em;color:#374151;border-bottom:1px solid #eef2f7;display:flex;justify-content:space-between;align-items:center;">
+                        <span id="portfolioDetailsSuggestTitle">Choose a filter</span>
+                        <button id="portfolioDetailsSuggestBack" style="display:none;background:transparent;border:none;color:#217dbb;cursor:pointer;font-weight:600;">Back</button>
+                    </div>
+                    <ul id="portfolioDetailsSuggestList" style="list-style:none;margin:0;padding:4px 0;"></ul>
+                    <ul id="portfolioDetailsSuggestValues" style="list-style:none;margin:0;padding:4px 0;display:none;"></ul>
+                    <div style="border-top:1px solid #eef2f7;margin-top:4px;padding:6px 10px;font-size:.8em;color:#6b7280;">Use tokens like <strong>name:</strong> or <strong>status:</strong> for precise filters.</div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Property</th>
+                            <th>Unit</th>
+                            <th>Tenant</th>
+                            <th>Expected</th>
+                            <th>Paid</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolioDetailsTbody">
+                        ${htmlRows}
+                    </tbody>
+                </table>
+            </div>`;
+
+        window.__portfolioDetailsAccumulatedQuery = '';
+        initializePortfolioDetailsSearch();
+        renderFilteredPortfolioDetailsRows();
+        return;
+    }
+
+    if (type === 'maintenance') {
+        titleEl.textContent = 'Open Maintenance Requests';
+        const items = state.portfolioMaintenance || [];
+        if (!items.length) {
+            body.innerHTML = '<p style="font-size:0.86rem;color:#6b7280;">No open maintenance requests.</p>';
+            return;
+        }
+        const htmlRows = items.map(m => {
+            const projectId = (m.projectId && m.projectId._id) ? m.projectId._id : (m.projectId || m.propertyId || m.property);
+            let propName = '—';
+            if (projectId && propsById[String(projectId)]) {
+                propName = propsById[String(projectId)].name;
+            } else if (m.projectId && m.projectId.name) {
+                // Fallback when projectId is a populated object not present in propsById map
+                propName = m.projectId.name;
+            }
+            const unitId = m.unitId?._id || m.unitId;
+            let unitLabel = '—';
+            if (unitId && unitsById[String(unitId)]) {
+                const u = unitsById[String(unitId)];
+                unitLabel = u.number || u.unitNumber || u.name || u.label || '—';
+            } else {
+                unitLabel = m.unitLabel || m.unitNumber || m.unit || '—';
+            }
+            const statusRaw = m.status || '';
+            const statusLabel = statusRaw.replace(/_/g,' ');
+            const dataProp = (propName || '').toLowerCase().replace(/"/g,'&quot;');
+            const dataUnit = String(unitLabel || '').toLowerCase().replace(/"/g,'&quot;');
+            const dataType = (m.category || 'Request').toLowerCase().replace(/"/g,'&quot;');
+            const dataStatus = statusRaw.toLowerCase().replace(/"/g,'&quot;');
+            return `
+                <tr data-maint-id="${m._id}" data-project-id="${projectId || ''}" data-property="${dataProp}" data-unit="${dataUnit}" data-type="${dataType}" data-status="${dataStatus}">
+                    <td>${propName}</td>
+                    <td>${unitLabel}</td>
+                    <td>${m.category || 'Request'}</td>
+                    <td>${m.summary || m.description || ''}</td>
+                    <td>
+                        <select class="portfolio-maint-status-select">
+                            <option value="pending" ${statusRaw==='pending' ? 'selected' : ''}>Pending</option>
+                            <option value="in-progress" ${statusRaw==='in-progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="completed" ${statusRaw==='completed' ? 'selected' : ''}>Completed</option>
+                        </select>
+                    </td>
+                </tr>`;
+        }).join('');
+        body.innerHTML = `
+            <div id="portfolioDetailsFilterBar" style="margin-bottom:8px;border-radius:12px;padding:0;display:flex;flex-wrap:wrap;gap:0;align-items:flex-start;position:relative;">
+                <div style="position:relative;flex:1 1 100%;min-width:240px;display:flex;align-items:center;gap:6px;justify-content:flex-start;">
+                    <i class="fas fa-magnifying-glass" style="color:#6b7280;margin-left:4px;"></i>
+                    <input id="portfolioDetailsSearchBar" type="text" placeholder="Search list by" title="Try: type:, property:, unit:, status:" style="flex:0 1 320px;max-width:280px;border:1px solid #e5e7eb;border-radius:10px;padding:6px 9px;background:#fff;font-size:0.9rem;" />
+                    <button class="btn-secondary" id="clearPortfolioDetailsFiltersBtn" title="Clear search" style="margin-right:4px;padding:5px 9px;font-size:0.85rem;">Clear</button>
+                </div>
+                <div id="portfolioDetailsActiveFilterChips" style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 8px 0 26px;flex:1 1 100%;"></div>
+                <div id="portfolioDetailsSearchSuggestions" style="position:absolute;top:40px;left:6px;right:auto;min-width:240px;max-width:520px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,0.15);padding:4px 0;display:none;z-index:1000;max-height:260px;overflow:auto;">
+                    <div id="portfolioDetailsSuggestHeader" style="padding:8px 12px;font-size:.85em;color:#374151;border-bottom:1px solid #eef2f7;display:flex;justify-content:space-between;align-items:center;">
+                        <span id="portfolioDetailsSuggestTitle">Choose a filter</span>
+                        <button id="portfolioDetailsSuggestBack" style="display:none;background:transparent;border:none;color:#217dbb;cursor:pointer;font-weight:600;">Back</button>
+                    </div>
+                    <ul id="portfolioDetailsSuggestList" style="list-style:none;margin:0;padding:4px 0;"></ul>
+                    <ul id="portfolioDetailsSuggestValues" style="list-style:none;margin:0;padding:4px 0;display:none;"></ul>
+                    <div style="border-top:1px solid #eef2f7;margin-top:4px;padding:6px 10px;font-size:.8em;color:#6b7280;">Use tokens like <strong>type:</strong> or <strong>status:</strong> for precise filters.</div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Property</th>
+                            <th>Unit</th>
+                            <th>Type</th>
+                            <th>Summary</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolioDetailsTbody">
+                        ${htmlRows}
+                    </tbody>
+                </table>
+            </div>`;
+
+        window.__portfolioDetailsAccumulatedQuery = '';
+        initializePortfolioDetailsSearch();
+        renderFilteredPortfolioDetailsRows();
+
+        // Wire change handlers for inline status dropdowns
+        const table = body.querySelector('table');
+        if (table) {
+            table.addEventListener('change', async (e) => {
+                const select = e.target;
+                if (!(select instanceof HTMLSelectElement) || !select.classList.contains('portfolio-maint-status-select')) return;
+                const row = select.closest('tr');
+                const requestId = row?.dataset.maintId;
+                let projectId = row?.dataset.projectId;
+                if (!requestId) return;
+                // Fallback to request.projectId if dataset missing
+                if (!projectId) {
+                    const req = (state.portfolioMaintenance || []).find(r => String(r._id) === String(requestId));
+                    if (req) {
+                        projectId = (req.projectId && req.projectId._id) ? req.projectId._id : req.projectId;
+                    }
+                }
+                const newStatus = select.value;
+                if (!projectId || !newStatus) return;
+                try {
+                    const res = await fetch(`${API_URL}/properties/${projectId}/maintenance/${requestId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: newStatus })
+                    });
+                    if (!res.ok) throw new Error('Failed to update maintenance status');
+                    // Refresh portfolio overview metrics and maintenance list
+                    try {
+                        await renderPortfolioOverview();
+                        renderPortfolioDetails('maintenance');
+                    } catch (refreshErr) {
+                        console.warn('Error refreshing portfolio overview after maintenance update:', refreshErr);
+                    }
+                    // Update local portfolio list
+                    const idx = (state.portfolioMaintenance || []).findIndex(r => String(r._id) === String(requestId));
+                    if (idx !== -1) {
+                        state.portfolioMaintenance[idx].status = newStatus;
+                    }
+                    showNotification('Maintenance status updated', 'success');
+                } catch (err) {
+                    console.error('Error updating portfolio maintenance status:', err);
+                    showNotification('Error updating maintenance status', 'error');
+                }
+            });
+        }
+        return;
+    }
+
+    if (type === 'leases') {
+        titleEl.textContent = 'Leases & Upcoming Move-ins (Next 60 Days)';
+        const leaseItems = state.portfolioExpiringLeases || [];
+        const moveInItems = state.portfolioUpcomingMoveIns || [];
+
+        const rows = [
+            ...leaseItems.map(({ tenant, daysUntilEnd }) => ({
+                type: 'Lease Expiring',
+                daysUntil: daysUntilEnd,
+                name: tenant.fullName || tenant.name || `${tenant.firstName || ''} ${tenant.lastName || ''}`.trim() || 'Tenant',
+                unitId: tenant.unitId?._id || tenant.unitId,
+                unitFallback: tenant.unitNumber || tenant.unit || '—',
+                propertyId: tenant.projectId || tenant.propertyId,
+                date: tenant.leaseEnd ? new Date(tenant.leaseEnd).toLocaleDateString() : '—'
+            })),
+            ...moveInItems.map(({ application, daysUntilMoveIn }) => {
+                let propertyAddress = '';
+                let unitNumber = application.unit || '';
+                if (application.notes) {
+                    try {
+                        const n = JSON.parse(application.notes);
+                        propertyAddress = n.propertyAddress || propertyAddress;
+                        unitNumber = n.unitNumber || unitNumber;
+                    } catch {}
+                }
+                return {
+                    type: 'Upcoming Move-in',
+                    daysUntil: daysUntilMoveIn,
+                    name: application.name || 'Applicant',
+                    unitId: null,
+                    unitFallback: unitNumber || '—',
+                    propertyId: null,
+                    propertyNameOverride: propertyAddress || '—',
+                    date: application.moveIn ? new Date(application.moveIn).toLocaleDateString() : '—',
+                    source: 'application',
+                    sourceId: application._id || ''
+                };
+            })
+        ];
+
+        if (!rows.length) {
+            body.innerHTML = '<p style="font-size:0.86rem;color:#6b7280;">No expiring leases or upcoming move-ins in the next 60 days.</p>';
+            return;
+        }
+
+        const htmlRows = rows
+            .slice()
+            .sort((a,b) => a.daysUntil - b.daysUntil)
+            .map(row => {
+                const unitId = row.unitId;
+                let unitLabel = '—';
+                if (unitId && unitsById[String(unitId)]) {
+                    const u = unitsById[String(unitId)];
+                    unitLabel = u.number || u.unitNumber || u.name || u.label || '—';
+                } else {
+                    unitLabel = row.unitFallback || '—';
+                }
+                let propName = row.propertyNameOverride || '—';
+                if (!row.propertyNameOverride && row.propertyId && propsById[String(row.propertyId)]) {
+                    propName = propsById[String(row.propertyId)].name;
+                }
+                const dataType = (row.type || '').toLowerCase().replace(/"/g,'&quot;');
+                const dataProp = (propName || '').toLowerCase().replace(/"/g,'&quot;');
+                const dataUnit = String(unitLabel || '').toLowerCase().replace(/"/g,'&quot;');
+                const dataName = (row.name || '').toLowerCase().replace(/"/g,'&quot;');
+                return `
+                    <tr data-type="${dataType}" data-property="${dataProp}" data-unit="${dataUnit}" data-name="${dataName}">
+                        <td>${row.type}</td>
+                        <td>${propName}</td>
+                        <td>${unitLabel}</td>
+                        <td>${row.name}</td>
+                        <td>${row.date}</td>
+                        <td>${row.daysUntil} days</td>
+                        <td>${row.type === 'Upcoming Move-in' ? `<button type="button" class="btn-secondary movein-checklist-btn" data-source="${row.source || ''}" data-source-id="${row.sourceId || ''}" data-name="${(row.name || '').replace(/"/g,'&quot;')}" data-property="${(propName || '').replace(/"/g,'&quot;')}" data-unit="${(unitLabel || '').toString().replace(/"/g,'&quot;')}" data-date="${(row.date || '').replace(/"/g,'&quot;')}">Checklist</button>` : ''}</td>
+                    </tr>`;
+            }).join('');
+
+        body.innerHTML = `
+            <div id="portfolioDetailsFilterBar" style="margin-bottom:8px;border-radius:12px;padding:0;display:flex;flex-wrap:wrap;gap:0;align-items:flex-start;position:relative;">
+                <div style="position:relative;flex:1 1 100%;min-width:240px;display:flex;align-items:center;gap:6px;justify-content:flex-start;">
+                    <i class="fas fa-magnifying-glass" style="color:#6b7280;margin-left:4px;"></i>
+                    <input id="portfolioDetailsSearchBar" type="text" placeholder="Search list by" title="Try: name:, type:, property:, unit:, status:" style="flex:0 1 320px;max-width:280px;border:1px solid #e5e7eb;border-radius:10px;padding:6px 9px;background:#fff;font-size:0.9rem;" />
+                    <button class="btn-secondary" id="clearPortfolioDetailsFiltersBtn" title="Clear search" style="margin-right:4px;padding:5px 9px;font-size:0.85rem;">Clear</button>
+                </div>
+                <div id="portfolioDetailsActiveFilterChips" style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 8px 0 26px;flex:1 1 100%;"></div>
+                <div id="portfolioDetailsSearchSuggestions" style="position:absolute;top:40px;left:6px;right:auto;min-width:240px;max-width:520px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,0.15);padding:4px 0;display:none;z-index:1000;max-height:260px;overflow:auto;">
+                    <div id="portfolioDetailsSuggestHeader" style="padding:8px 12px;font-size:.85em;color:#374151;border-bottom:1px solid #eef2f7;display:flex;justify-content:space-between;align-items:center;">
+                        <span id="portfolioDetailsSuggestTitle">Choose a filter</span>
+                        <button id="portfolioDetailsSuggestBack" style="display:none;background:transparent;border:none;color:#217dbb;cursor:pointer;font-weight:600;">Back</button>
+                    </div>
+                    <ul id="portfolioDetailsSuggestList" style="list-style:none;margin:0;padding:4px 0;"></ul>
+                    <ul id="portfolioDetailsSuggestValues" style="list-style:none;margin:0;padding:4px 0;display:none;"></ul>
+                    <div style="border-top:1px solid #eef2f7;margin-top:4px;padding:6px 10px;font-size:.8em;color:#6b7280;">Use tokens like <strong>name:</strong> or <strong>type:</strong> for precise filters.</div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Property</th>
+                            <th>Unit</th>
+                            <th>Name</th>
+                            <th>Date</th>
+                            <th>Days Left</th>
+                            <th>Checklist</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolioDetailsTbody">
+                        ${htmlRows}
+                    </tbody>
+                </table>
+            </div>`;
+
+        window.__portfolioDetailsAccumulatedQuery = '';
+        initializePortfolioDetailsSearch();
+        renderFilteredPortfolioDetailsRows();
+
+        // Wire checklist button clicks for upcoming move-ins
+        const table = body.querySelector('table');
+        if (table) {
+            table.addEventListener('click', (e) => {
+                const btn = e.target.closest('.movein-checklist-btn');
+                if (!btn) return;
+                const name = btn.getAttribute('data-name') || '';
+                const property = btn.getAttribute('data-property') || '';
+                const unit = btn.getAttribute('data-unit') || '';
+                const date = btn.getAttribute('data-date') || '';
+                const appId = btn.getAttribute('data-source-id') || '';
+                const parts = [
+                    `Move-in for ${name || 'applicant'}`,
+                    property ? `Property: ${property}` : '',
+                    unit ? `Unit: ${unit}` : '',
+                    date ? `Move-in date: ${date}` : ''
+                ].filter(Boolean);
+                const ctxText = parts.join(' • ');
+                const modal = document.getElementById('moveInChecklistModal');
+                const ctx = document.getElementById('moveInChecklistContext');
+                if (ctx) ctx.textContent = ctxText;
+                if (modal) {
+                    // store application id on modal for later saves
+                    modal.dataset.appId = appId;
+                    const app = (state.applications || []).find(a => String(a._id) === String(appId));
+                    const completed = Array.isArray(app && app.moveInChecklistCompleted)
+                        ? app.moveInChecklistCompleted
+                        : [];
+                    const notesMap = app && app.moveInChecklistNotes ? app.moveInChecklistNotes : {};
+                    // set checkboxes and notes according to saved state
+                    modal.querySelectorAll('.movein-check-item').forEach(cb => {
+                        const key = cb.getAttribute('data-item-id');
+                        cb.checked = !!(key && completed.includes(key));
+                    });
+                    modal.querySelectorAll('.movein-check-note').forEach(input => {
+                        const key = input.getAttribute('data-item-id');
+                        const val = (key && notesMap && typeof notesMap[key] === 'string') ? notesMap[key] : '';
+                        input.value = val || '';
+                        // Auto-show note fields that already have saved text, hide empty ones
+                        input.style.display = val ? 'block' : 'none';
+                    });
+                    modal.style.display = 'block';
+                }
+            });
+        }
+        return;
+    }
+
+    if (type === 'vacancy') {
+        titleEl.textContent = 'Vacant Units';
+        const units = state.portfolioVacantUnits || [];
+        if (!units.length) {
+            body.innerHTML = '<p style="font-size:0.86rem;color:#6b7280;">No vacant units across the portfolio.</p>';
+            return;
+        }
+        const htmlRows = units.map(u => {
+            const pid = u.projectId || u.propertyId || u.project;
+            const propName = pid && propsById[String(pid)] ? propsById[String(pid)].name : '—';
+            const unitLabel = u.number || u.unitNumber || u.name || u.label || '—';
+            const beds = u.bedrooms != null ? u.bedrooms : (u.beds != null ? u.beds : '—');
+            const baths = u.bathrooms != null ? u.bathrooms : (u.baths != null ? u.baths : '—');
+            const rent = u.rent || u.baseRent || 0;
+            const dataProp = (propName || '').toLowerCase().replace(/"/g,'&quot;');
+            const dataUnit = String(unitLabel || '').toLowerCase().replace(/"/g,'&quot;');
+            const dataStatus = 'vacant';
+            const dataType = 'vacancy';
+            return `
+                <tr data-property="${dataProp}" data-unit="${dataUnit}" data-status="${dataStatus}" data-type="${dataType}">
+                    <td>${propName}</td>
+                    <td>${unitLabel}</td>
+                    <td>${beds}</td>
+                    <td>${baths}</td>
+                    <td>$${Number(rent || 0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}</td>
+                </tr>`;
+        }).join('');
+        body.innerHTML = `
+            <div id="portfolioDetailsFilterBar" style="margin-bottom:8px;border-radius:12px;padding:0;display:flex;flex-wrap:wrap;gap:0;align-items:flex-start;position:relative;">
+                <div style="position:relative;flex:1 1 100%;min-width:240px;display:flex;align-items:center;gap:6px;justify-content:flex-start;">
+                    <i class="fas fa-magnifying-glass" style="color:#6b7280;margin-left:4px;"></i>
+                    <input id="portfolioDetailsSearchBar" type="text" placeholder="Search list by" title="Try: property:, unit:, status:, type:" style="flex:0 1 320px;max-width:280px;border:1px solid #e5e7eb;border-radius:10px;padding:6px 9px;background:#fff;font-size:0.9rem;" />
+                    <button class="btn-secondary" id="clearPortfolioDetailsFiltersBtn" title="Clear search" style="margin-right:4px;padding:5px 9px;font-size:0.85rem;">Clear</button>
+                </div>
+                <div id="portfolioDetailsActiveFilterChips" style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 8px 0 26px;flex:1 1 100%;"></div>
+                <div id="portfolioDetailsSearchSuggestions" style="position:absolute;top:40px;left:6px;right:auto;min-width:240px;max-width:520px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,0.15);padding:4px 0;display:none;z-index:1000;max-height:260px;overflow:auto;">
+                    <div id="portfolioDetailsSuggestHeader" style="padding:8px 12px;font-size:.85em;color:#374151;border-bottom:1px solid #eef2f7;display:flex;justify-content:space-between;align-items:center;">
+                        <span id="portfolioDetailsSuggestTitle">Choose a filter</span>
+                        <button id="portfolioDetailsSuggestBack" style="display:none;background:transparent;border:none;color:#217dbb;cursor:pointer;font-weight:600;">Back</button>
+                    </div>
+                    <ul id="portfolioDetailsSuggestList" style="list-style:none;margin:0;padding:4px 0;"></ul>
+                    <ul id="portfolioDetailsSuggestValues" style="list-style:none;margin:0;padding:4px 0;display:none;"></ul>
+                    <div style="border-top:1px solid #eef2f7;margin-top:4px;padding:6px 10px;font-size:.8em;color:#6b7280;">Use tokens like <strong>property:</strong> or <strong>status:</strong> for precise filters.</div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Property</th>
+                            <th>Unit</th>
+                            <th>Beds</th>
+                            <th>Baths</th>
+                            <th>Rent</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolioDetailsTbody">
+                        ${htmlRows}
+                    </tbody>
+                </table>
+            </div>`;
+
+        window.__portfolioDetailsAccumulatedQuery = '';
+        initializePortfolioDetailsSearch();
+        renderFilteredPortfolioDetailsRows();
+        return;
+    }
+}
+
 // Show/hide additional fee fields based on selection
 document.getElementById('additionalFeeType').addEventListener('change', function() {
     const type = this.value;
@@ -12161,6 +14344,7 @@ document.getElementById('additionalFeeType').addEventListener('change', function
 
 // Export functions for global access
 window.selectProperty = selectProperty;
+window.openPortfolioOverview = openPortfolioOverview;
 window.openModal = openModal;
 window.closeModal = closeModal;
 window.editUnit = editUnit;
