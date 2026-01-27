@@ -974,6 +974,7 @@ const unitSchema = new mongoose.Schema({
     bedrooms: { type: Number, default: 1 },
     bathrooms: { type: Number, default: 1 },
     sqft: { type: Number },
+    rent: { type: Number, default: 0 },
     status: { type: String, enum: ['vacant', 'occupied', 'maintenance'], default: 'vacant' },
     tenant: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant' },
 
@@ -6503,7 +6504,7 @@ app.get('/api/properties/:id/units', async (req, res) => {
 app.post('/api/properties/:id/units', async (req, res) => {
     try {
         const { id } = req.params;
-        const { number, floor, bedrooms, bathrooms, sqft, status } = req.body;
+        const { number, floor, bedrooms, bathrooms, sqft, status, rent } = req.body;
 
         // Validate required fields
         if (!number || !bedrooms || !bathrooms) {
@@ -6526,6 +6527,7 @@ app.post('/api/properties/:id/units', async (req, res) => {
             bedrooms: parseInt(bedrooms),
             bathrooms: parseInt(bathrooms),
             sqft: parseInt(sqft) || 0,
+            rent: typeof rent === 'number' ? rent : parseFloat(rent) || 0,
             status: status || 'vacant'
         });
 
