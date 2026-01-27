@@ -2991,6 +2991,35 @@ input[type="file"] {
   box-shadow: 0 2px 8px rgba(52,152,219,0.10);
 }
 
+/* Inline edit styles for applications/invites tables */
+tr[data-app-id][data-editing="true"],
+tr[data-invite-id][data-editing="true"] {
+    background: #f0f7ff !important;
+    box-shadow: 0 0 0 1px rgba(37,99,235,0.25);
+}
+
+.app-inline-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    font-size: 0.9rem;
+    background: #ffffff;
+}
+
+.app-inline-input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 1px rgba(37,99,235,0.25);
+}
+
+.app-inline-save,
+.app-inline-cancel {
+    font-size: 0.85rem;
+    padding: 6px 10px;
+}
+
 /* Highlighted maintenance row/card when jumping from global list */
 .maintenance-highlight {
     animation: maintenanceHighlightPulse 1.4s ease-out 1;
@@ -3110,7 +3139,10 @@ input[type="file"] {
                     <div class="portfolio-overview-main">
                         <div class="portfolio-strip">
                             <div class="portfolio-chip" id="portfolioCardRent">
-                                <div class="portfolio-chip-label"><i class="fas fa-money-check-alt"></i>Coming Rent (This Month)</div>
+                                <div class="portfolio-chip-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                                    <span><i class="fas fa-money-check-alt"></i>Coming Rent</span>
+                                    <input type="month" id="portfolioRentMonthPicker" style="font-size:0.78rem;border:1px solid #e5e7eb;border-radius:8px;padding:2px 6px;" title="Select month for rent metrics" />
+                                </div>
                                 <div class="portfolio-chip-value" id="portfolioOpenRentAmount">$--</div>
                                 <div class="portfolio-chip-sub" id="portfolioTotalRentSummary">Estimated monthly income: $--</div>
                                 <div class="portfolio-chip-sub" id="portfolioOpenRentCount">-- tenants with balance</div>
@@ -3495,6 +3527,10 @@ input[type="file"] {
                 <div class="form-group">
                     <label>Square Feet</label>
                     <input type="number" id="unitSqft" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Rent (Monthly)</label>
+                    <input type="number" id="unitRent" min="0" step="0.01">
                 </div>
             </div>
             <div class="form-row">
@@ -4275,12 +4311,14 @@ const state = {
     portfolioExpiringLeases: [],
     portfolioUpcomingMoveIns: [],
     portfolioVacantUnits: [],
+    portfolioOccupiedUnits: [],
     portfolioTasks: [],
     payments: [],
     applications: [],
     invites: [],
     highlightMaintenanceId: null,
-    highlightApplicationId: null
+    highlightApplicationId: null,
+    portfolioRentMonth: null
 };
 
 const API_URL = '/api';
@@ -4385,6 +4423,33 @@ async function openPortfolioOverview() {
     if (!section) return;
     if (dashboard) dashboard.style.display = 'none';
     section.style.display = 'block';
+    // Initialize month picker default value on first open
+    const monthInput = document.getElementById('portfolioRentMonthPicker');
+    if (monthInput) {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const currentVal = `${y}-${m}`;
+        if (!state.portfolioRentMonth) state.portfolioRentMonth = currentVal;
+        monthInput.value = state.portfolioRentMonth;
+        if (!monthInput.dataset.bound) {
+            monthInput.addEventListener('change', async () => {
+                const v = monthInput.value;
+                state.portfolioRentMonth = v || currentVal;
+                try {
+                    showLoader();
+                    await renderPortfolioOverview();
+                    // Keep current details tab but refresh its data based on new month when relevant
+                    if (state.currentPortfolioDetailsType) {
+                        renderPortfolioDetails(state.currentPortfolioDetailsType);
+                    }
+                } finally {
+                    hideLoader();
+                }
+            });
+            monthInput.dataset.bound = 'true';
+        }
+    }
     showLoader();
     try {
         await renderPortfolioOverview();
@@ -5402,7 +5467,7 @@ function initializePortfolioDetailsSearch() {
 }
 
 function parsePortfolioDetailsSearch(queryStr) {
-    const tokens = { nameList: [], propertyList: [], unitList: [], statusList: [], typeList: [], text: '' };
+    const tokens = { nameList: [], propertyList: [], unitList: [], statusList: [], typeList: [], balanceFlags: [], text: '' };
     const parts = (queryStr || '').trim().split(/\s+/).filter(Boolean);
     const rest = [];
     for (const part of parts) {
@@ -5413,6 +5478,7 @@ function parsePortfolioDetailsSearch(queryStr) {
         else if (low.startsWith('unit:')) tokens.unitList.push(...take('unit:').split(',').filter(Boolean));
         else if (low.startsWith('status:')) tokens.statusList.push(...take('status:').split(',').filter(Boolean));
         else if (low.startsWith('type:')) tokens.typeList.push(...take('type:').split(',').filter(Boolean));
+        else if (low.startsWith('balance:')) tokens.balanceFlags.push(...take('balance:').split(',').filter(Boolean));
         else rest.push(part);
     }
     const norm = (arr) => Array.from(new Set(arr.map(v => String(v).trim().toLowerCase()).filter(Boolean)));
@@ -5421,6 +5487,7 @@ function parsePortfolioDetailsSearch(queryStr) {
     tokens.unitList = norm(tokens.unitList);
     tokens.statusList = norm(tokens.statusList);
     tokens.typeList = norm(tokens.typeList);
+    tokens.balanceFlags = norm(tokens.balanceFlags);
     tokens.text = rest.join(' ').toLowerCase();
     return { tokens, text: tokens.text };
 }
@@ -5445,6 +5512,10 @@ function renderPortfolioDetailsFilterChips(tokens) {
     tokens.unitList.forEach(v => chips.push(mkChip('unit:', v)));
     tokens.statusList.forEach(v => chips.push(mkChip('status:', v)));
     tokens.typeList.forEach(v => chips.push(mkChip('type:', v)));
+    tokens.balanceFlags.forEach(v => {
+        const label = v === 'with-balance' ? 'with balance only' : v;
+        chips.push(mkChip('balance:', v, label));
+    });
     container.innerHTML = chips.join('');
     container.querySelectorAll('.chip-remove').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -5468,6 +5539,7 @@ function removePortfolioDetailsFilterToken(key, value) {
         case 'unit:': rem(tokens.unitList); break;
         case 'status:': rem(tokens.statusList); break;
         case 'type:': rem(tokens.typeList); break;
+        case 'balance:': rem(tokens.balanceFlags); break;
     }
     const parts = [];
     if (tokens.nameList.length) parts.push(`name:${tokens.nameList.join(',')}`);
@@ -5475,6 +5547,7 @@ function removePortfolioDetailsFilterToken(key, value) {
     if (tokens.unitList.length) parts.push(`unit:${tokens.unitList.join(',')}`);
     if (tokens.statusList.length) parts.push(`status:${tokens.statusList.join(',')}`);
     if (tokens.typeList.length) parts.push(`type:${tokens.typeList.join(',')}`);
+    if (tokens.balanceFlags.length) parts.push(`balance:${tokens.balanceFlags.join(',')}`);
     window.__portfolioDetailsAccumulatedQuery = parts.join(' ');
     if (input) input.value = '';
     renderFilteredPortfolioDetailsRows();
@@ -5505,7 +5578,7 @@ function renderPortfolioDetailsSuggestionTokens() {
     const values = document.getElementById('portfolioDetailsSuggestValues');
     const backBtn = document.getElementById('portfolioDetailsSuggestBack');
     if (!list) return;
-    const tokens = ['name:', 'property:', 'unit:', 'status:', 'type:'];
+    const tokens = ['name:', 'property:', 'unit:', 'status:', 'type:', 'balance:'];
     list.innerHTML = tokens.map(k =>
         `<li class='suggest-item' data-token='${k}' style='padding:8px 12px;cursor:pointer;display:flex;gap:8px;align-items:center;'><span style='font-weight:600;color:#1f2937'>${k}</span><span style='font-size:.85em;color:#6b7280'>Add ${k} filter</span></li>`
     ).join('');
@@ -5547,6 +5620,12 @@ function showPortfolioDetailsValueSuggestions(token) {
         bodyRows.forEach(r => { if (r.dataset.type) set.add(r.dataset.type.toLowerCase()); });
         if (!set.size) ['rent','maintenance','lease expiring','upcoming move-in','vacancy'].forEach(v => set.add(v));
         items = Array.from(set).map(v => ({ label: v, value: v }));
+    } else if (token === 'balance:') {
+        // Simple static options for rent view; rows without data-balance will just be filtered out
+        items = [
+            { label: 'With balance only', value: 'with-balance' },
+            { label: 'No balance', value: 'no-balance' }
+        ];
     }
     title.textContent = `Choose a value for ${token}`;
     if (backBtn) backBtn.style.display = 'inline';
@@ -5560,7 +5639,7 @@ function showPortfolioDetailsValueSuggestions(token) {
 function autoSuggestPortfolioDetails() {
     const input = document.getElementById('portfolioDetailsSearchBar');
     const val = (input?.value || '').trim();
-    const m = val.match(/(name:|property:|unit:|status:|type:)([^\s]*)$/i);
+    const m = val.match(/(name:|property:|unit:|status:|type:|balance:)([^\s]*)$/i);
     if (!m) {
         renderPortfolioDetailsSuggestionTokens();
         return;
@@ -5582,12 +5661,14 @@ function renderFilteredPortfolioDetailsRows() {
     if (!tbody) return;
     const { tokens, text } = getPortfolioDetailsSearch();
     let anyVisible = false;
-    Array.from(tbody.querySelectorAll('tr')).forEach(row => {
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    Array.from(rows).forEach(row => {
         const prop = (row.dataset.property || '').toLowerCase();
         const unit = (row.dataset.unit || '').toLowerCase();
         const name = (row.dataset.name || '').toLowerCase();
         const status = (row.dataset.status || '').toLowerCase();
         const type = (row.dataset.type || '').toLowerCase();
+        const balance = (row.dataset.balance || '').toLowerCase();
         const textContent = (row.textContent || '').toLowerCase();
 
         const hitText = !text || textContent.includes(text) || prop.includes(text) || unit.includes(text) || name.includes(text) || status.includes(text) || type.includes(text);
@@ -5596,11 +5677,28 @@ function renderFilteredPortfolioDetailsRows() {
         const hitUnit = !tokens.unitList.length || tokens.unitList.some(v => unit.includes(v));
         const hitStatus = !tokens.statusList.length || tokens.statusList.includes(status);
         const hitType = !tokens.typeList.length || tokens.typeList.some(v => type.includes(v));
+        const hitBalance = !tokens.balanceFlags.length || tokens.balanceFlags.includes(balance);
 
-        const show = hitText && hitName && hitProp && hitUnit && hitStatus && hitType;
+        const show = hitText && hitName && hitProp && hitUnit && hitStatus && hitType && hitBalance;
         row.style.display = show ? '' : 'none';
         if (show) anyVisible = true;
     });
+
+    // If this is the vacancy view, update the total rent footer based on visible rows
+    const tfoot = document.getElementById('portfolioDetailsTfoot');
+    const totalCell = document.getElementById('portfolioVacancyTotalRent');
+    if (tfoot && totalCell) {
+        let total = 0;
+        rows.forEach(row => {
+            if (row.style.display === 'none') return;
+            const rentCell = row.children[4];
+            if (!rentCell) return;
+            const text = rentCell.textContent.replace(/[^0-9.\-]/g,'');
+            const val = Number(text) || 0;
+            total += val;
+        });
+        totalCell.textContent = `$${total.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}`;
+    }
 
     // Optional: could display a "no results" message row if none visible.
 }
@@ -6162,6 +6260,8 @@ async function editUnit(unitId) {
         document.getElementById('unitBedrooms').value = unit.bedrooms || '';
         document.getElementById('unitBathrooms').value = unit.bathrooms || '';
         document.getElementById('unitSqft').value = unit.sqft || '';
+        const rentInput = document.getElementById('unitRent');
+        if (rentInput) rentInput.value = typeof unit.rent === 'number' ? unit.rent : '';
         document.getElementById('unitStatus').value = unit.status || 'vacant';
 
         // Populate amenities/features checklist
@@ -6228,6 +6328,7 @@ async function handleUpdateUnit(unitId) {
         number: document.getElementById('unitNumber').value,
         floor: Number(document.getElementById('unitFloor').value),
         sqft: Number(document.getElementById('unitSqft').value),
+        rent: Number(document.getElementById('unitRent')?.value) || 0,
         bedrooms: Number(document.getElementById('unitBedrooms').value),
         bathrooms: Number(document.getElementById('unitBathrooms').value),
         status: document.getElementById('unitStatus').value,
@@ -6457,6 +6558,7 @@ async function handleAddUnit(event) {
         number: document.getElementById('unitNumber').value,
         floor: Number(document.getElementById('unitFloor').value),
         sqft: Number(document.getElementById('unitSqft').value),
+        rent: Number(document.getElementById('unitRent')?.value) || 0,
         bedrooms: Number(document.getElementById('unitBedrooms').value),
         bathrooms: Number(document.getElementById('unitBathrooms').value),
         status: document.getElementById('unitStatus').value,
@@ -6521,6 +6623,9 @@ function resetUnitForm() {
         form.reset();
         // Uncheck all amenities checkboxes
         document.querySelectorAll('#unitAmenitiesChecklist input[type="checkbox"]').forEach(cb => cb.checked = false);
+        // Clear rent explicitly
+        const rentInput = document.getElementById('unitRent');
+        if (rentInput) rentInput.value = '';
         // Reset submit button text
         const submitButton = form.querySelector('button[type="submit"]');
         if (submitButton) submitButton.textContent = 'Add Unit';
@@ -9822,6 +9927,101 @@ function renderInvites(items) {
     const editInviteBtn = document.getElementById('editInviteBtn');
     const deleteInviteBtn = document.getElementById('deleteInviteBtn');
 
+    // Helper to enter inline edit mode for invites
+    function enterInviteEditMode(row, invite) {
+        if (!row || !invite) return;
+        const inviteIdStr = String(invite._id || '');
+        if (!inviteIdStr) return;
+        if (state.currentEditingInviteId && state.currentEditingInviteId !== inviteIdStr) return;
+        if (row.dataset.editing === 'true') return;
+        state.currentEditingInviteId = inviteIdStr;
+        row.dataset.editing = 'true';
+
+        const cells = row.querySelectorAll('td');
+        const nameCell = cells[1];
+        const emailCell = cells[2];
+        const propertyCell = cells[3];
+        const unitCell = cells[4];
+        const statusCell = cells[9];
+        const actionsCell = cells[10];
+
+        function makeInput(type, className, value) {
+            const input = document.createElement('input');
+            input.type = type;
+            input.className = className;
+            input.value = value || '';
+            return input;
+        }
+
+        const nameInput = makeInput('text', 'app-inline-input', invite.name || '');
+        const emailInput = makeInput('email', 'app-inline-input', invite.email || '');
+        const propertyInput = makeInput('text', 'app-inline-input', invite.propertyName || '');
+        const unitInput = makeInput('text', 'app-inline-input', invite.unitNumber || '');
+
+        const statusSelect = document.createElement('select');
+        statusSelect.className = 'app-inline-input';
+        ['sent', 'opened', 'completed', 'expired'].forEach(val => {
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = val.charAt(0).toUpperCase() + val.slice(1);
+            if ((invite.status || 'sent') === val) opt.selected = true;
+            statusSelect.appendChild(opt);
+        });
+
+        const urlInput = makeInput('url', 'app-inline-input', invite.applicationUrl || '');
+
+        if (nameCell) { nameCell.innerHTML = ''; nameCell.appendChild(nameInput); }
+        if (emailCell) { emailCell.innerHTML = ''; emailCell.appendChild(emailInput); }
+        if (propertyCell) { propertyCell.innerHTML = ''; propertyCell.appendChild(propertyInput); }
+        if (unitCell) { unitCell.innerHTML = ''; unitCell.appendChild(unitInput); }
+        if (statusCell) { statusCell.innerHTML = ''; statusCell.appendChild(statusSelect); }
+        if (actionsCell) { actionsCell.innerHTML = ''; actionsCell.appendChild(urlInput); }
+
+        const saveInviteChanges = async () => {
+            const payload = {
+                name: nameInput.value.trim(),
+                email: emailInput.value.trim(),
+                propertyName: propertyInput.value.trim(),
+                unitNumber: unitInput.value.trim(),
+                status: statusSelect.value || 'sent',
+                applicationUrl: urlInput.value.trim() || ''
+            };
+
+            try {
+                const res = await fetch(`/api/application-invites/${invite._id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error('Failed to update invite');
+                const updated = await res.json();
+                const invData = updated.invite || updated;
+                state.invites = (state.invites || []).map(x => String(x._id) === String(invite._id) ? invData : x);
+                state.currentEditingInviteId = null;
+                renderInvites();
+                showNotification('Invite updated', 'success');
+            } catch (err) {
+                console.error('Inline invite update error:', err);
+                state.currentEditingInviteId = null;
+                showNotification('Could not update invite', 'error');
+                renderInvites();
+            }
+        };
+
+        const handleDocClick = (ev) => {
+            const target = ev.target;
+            if (row.contains(target)) return;
+            if (!document.body.contains(row)) {
+                document.removeEventListener('click', handleDocClick, true);
+                return;
+            }
+            document.removeEventListener('click', handleDocClick, true);
+            saveInviteChanges();
+        };
+
+        document.addEventListener('click', handleDocClick, true);
+    }
+
     if (invitesWrapper) {
         invitesWrapper.style.display = state.selectedInviteId ? 'flex' : 'none';
     }
@@ -9864,24 +10064,8 @@ function renderInvites(items) {
             if (!id) return;
             const invite = (state.invites || []).find(x => String(x._id) === String(id));
             if (!invite) return;
-
-            const idEl = document.getElementById('editInviteId');
-            const nameEl = document.getElementById('editInviteName');
-            const emailEl = document.getElementById('editInviteEmail');
-            const propEl = document.getElementById('editInviteProperty');
-            const unitEl = document.getElementById('editInviteUnit');
-            const statusEl = document.getElementById('editInviteStatus');
-            const urlEl = document.getElementById('editInviteUrl');
-
-            if (idEl) idEl.value = invite._id || '';
-            if (nameEl) nameEl.value = invite.name || '';
-            if (emailEl) emailEl.value = invite.email || '';
-            if (propEl) propEl.value = invite.propertyName || '';
-            if (unitEl) unitEl.value = invite.unitNumber || '';
-            if (statusEl) statusEl.value = invite.status || 'sent';
-            if (urlEl) urlEl.value = invite.applicationUrl || '';
-
-            openModal('editInviteModal');
+            const row = list.querySelector(`tr[data-invite-id="${id}"]`);
+            enterInviteEditMode(row, invite);
             if (invitesMenu) invitesMenu.style.display = 'none';
         };
     }
@@ -9908,13 +10092,31 @@ function renderInvites(items) {
         };
     }
 
-    // Wire invite name click to open notes drawer
+    // Wire invite name/notes click to open notes drawer
     list.querySelectorAll('.invite-notes-link').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             const id = btn.getAttribute('data-invite-id');
             if (!id) return;
             openNotesDrawerForInvite(id);
+        });
+    });
+
+    // Wire row click (excluding controls) to open inline edit mode for invites
+    list.querySelectorAll('tr[data-invite-id]').forEach(row => {
+        row.addEventListener('click', (e) => {
+            const target = e.target;
+            if (target.closest('input[type="radio"]') ||
+                target.closest('.invite-notes-link') ||
+                target.closest('a')) {
+                return;
+            }
+            if (row.dataset.editing === 'true') return;
+            const inviteId = row.getAttribute('data-invite-id');
+            if (!inviteId) return;
+            const invite = (state.invites || []).find(x => String(x._id) === String(inviteId));
+            if (!invite) return;
+            enterInviteEditMode(row, invite);
         });
     });
 }
@@ -9956,7 +10158,18 @@ function renderApplications(items) {
                 unitNumber = n.unitNumber || unitNumber;
             } catch {}
         }
-        const moveIn = a.moveIn ? new Date(a.moveIn).toLocaleDateString('en-US') : '';
+        let moveIn = '';
+        if (a.moveIn) {
+            try {
+                const d = new Date(a.moveIn);
+                if (!isNaN(d.getTime())) {
+                    const y = d.getUTCFullYear();
+                    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+                    const day = String(d.getUTCDate()).padStart(2, '0');
+                    moveIn = `${m}/${day}/${y}`;
+                }
+            } catch {}
+        }
         const submitted = a.submitted ? new Date(a.submitted).toLocaleString('en-US') : '';
         const status = (a.status || 'pending');
         let notesJson = '';
@@ -10087,6 +10300,149 @@ function renderApplications(items) {
     const editAppBtn = document.getElementById('editApplicationBtn');
     const deleteAppBtn = document.getElementById('deleteApplicationBtn');
 
+    // Helper to enter inline edit mode for a given row/application
+    function enterApplicationEditMode(row, app) {
+        if (!row || !app) return;
+        const appIdStr = String(app._id || '');
+        if (!appIdStr) return;
+        // Prevent multiple rows from being edited at once
+        if (state.currentEditingApplicationId && state.currentEditingApplicationId !== appIdStr) return;
+        if (row.dataset.editing === 'true') return;
+        state.currentEditingApplicationId = appIdStr;
+        row.dataset.editing = 'true';
+
+        const cells = row.querySelectorAll('td');
+        const nameCell = cells[1];
+        const emailCell = cells[2];
+        const phoneCell = cells[3];
+        const propertyCell = cells[4];
+        const unitCell = cells[5];
+        const moveInCell = cells[6];
+
+        // Derive property address and unit number from notes JSON when available
+        let propertyAddress = '';
+        let unitNumber = app.unit || '';
+        if (app.notes) {
+            try {
+                const n = JSON.parse(app.notes);
+                propertyAddress = n.propertyAddress || '';
+                unitNumber = n.unitNumber || unitNumber;
+            } catch {}
+        }
+
+        function makeInput(type, className, value) {
+            const input = document.createElement('input');
+            input.type = type;
+            input.className = className;
+            input.value = value || '';
+            return input;
+        }
+
+        const nameInput = makeInput('text', 'app-inline-input app-inline-name', app.name || '');
+        const emailInput = makeInput('email', 'app-inline-input app-inline-email', app.email || '');
+        const phoneInput = makeInput('text', 'app-inline-input app-inline-phone', app.phone || '');
+        const propertyInput = makeInput('text', 'app-inline-input app-inline-property', propertyAddress || '');
+        const unitInput = makeInput('text', 'app-inline-input app-inline-unit', unitNumber || '');
+
+        const moveInInput = makeInput('date', 'app-inline-input app-inline-movein', '');
+        if (app.moveIn) {
+            try {
+                const d = new Date(app.moveIn);
+                if (!isNaN(d.getTime())) {
+                    moveInInput.value = d.toISOString().slice(0, 10);
+                }
+            } catch {}
+        }
+
+        if (nameCell) {
+            nameCell.innerHTML = '';
+            nameCell.appendChild(nameInput);
+        }
+        if (emailCell) {
+            emailCell.innerHTML = '';
+            emailCell.appendChild(emailInput);
+        }
+        if (phoneCell) {
+            phoneCell.innerHTML = '';
+            phoneCell.appendChild(phoneInput);
+        }
+        if (propertyCell) {
+            propertyCell.innerHTML = '';
+            propertyCell.appendChild(propertyInput);
+        }
+        if (unitCell) {
+            unitCell.innerHTML = '';
+            unitCell.appendChild(unitInput);
+        }
+        if (moveInCell) {
+            moveInCell.innerHTML = '';
+            moveInCell.appendChild(moveInInput);
+        }
+
+        // Auto-save when clicking away from the row
+        const saveChanges = async () => {
+            const statusSelect = row.querySelector('.app-status-select');
+            const newStatus = statusSelect ? statusSelect.value : (app.status || 'pending');
+
+            // Build notes JSON with updated property address and unit number, preserving other keys
+            let notesObj = {};
+            if (app.notes) {
+                try {
+                    const existing = JSON.parse(app.notes);
+                    if (existing && typeof existing === 'object') notesObj = existing;
+                } catch {}
+            }
+            notesObj.propertyAddress = propertyInput.value.trim();
+            notesObj.unitNumber = unitInput.value.trim();
+            const notesString = JSON.stringify(notesObj);
+
+            const payload = {
+                name: nameInput.value.trim(),
+                email: emailInput.value.trim(),
+                phone: phoneInput.value.trim(),
+                unit: unitInput.value.trim(),
+                status: newStatus,
+                moveIn: moveInInput.value || undefined,
+                notes: notesString
+            };
+
+            try {
+                
+                const res = await fetch(`/api/rental-applications/${app._id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error('Failed to update application');
+                const updated = await res.json();
+                const appData = updated.application || updated;
+                state.applications = (state.applications || []).map(a => String(a._id) === String(app._id) ? appData : a);
+                state.currentEditingApplicationId = null;
+                renderApplications();
+                showNotification('Application updated', 'success');
+            } catch (err) {
+                console.error('Inline application update error:', err);
+                showNotification('Could not update application', 'error');
+                state.currentEditingApplicationId = null;
+                renderApplications();
+
+            }
+        };
+
+        const handleDocClick = (ev) => {
+            const target = ev.target;
+            if (row.contains(target)) return;
+            if (!document.body.contains(row)) {
+                document.removeEventListener('click', handleDocClick, true);
+                return;
+            }
+            document.removeEventListener('click', handleDocClick, true);
+            saveChanges();
+        };
+
+        document.addEventListener('click', handleDocClick, true);
+    }
+
     if (appsWrapper) {
         appsWrapper.style.display = state.selectedApplicationId ? 'flex' : 'none';
     }
@@ -10126,9 +10482,11 @@ function renderApplications(items) {
         editAppBtn.onclick = () => {
             const id = state.selectedApplicationId;
             if (!id) return;
-            const url = `/applications/review/${id}`;
-            window.open(url, '_blank', 'noopener');
-            if (appsMenu) appsMenu.style.display = 'none';
+            const apps = state.applications || [];
+            const app = apps.find(a => String(a._id) === String(id));
+            if (!app) return;
+            const row = list.querySelector(`tr[data-app-id="${id}"]`);
+            enterApplicationEditMode(row, app);
         };
     }
 
@@ -10155,13 +10513,34 @@ function renderApplications(items) {
         };
     }
 
-    // Wire application name click to open notes drawer
+    // Wire application name and notes click to open notes drawer
     list.querySelectorAll('.application-jump-link').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             const id = btn.getAttribute('data-app-id');
             if (!id) return;
             openNotesDrawerForApplication(id);
+        });
+    });
+
+    // Wire row click (excluding controls) to open inline edit mode
+    list.querySelectorAll('tr[data-app-id]').forEach(row => {
+        row.addEventListener('click', (e) => {
+            const target = e.target;
+            // Ignore clicks on controls: radio, status select, links, notes/name buttons
+            if (target.closest('input[type="radio"]') ||
+                target.closest('.app-status-select') ||
+                target.closest('a') ||
+                target.closest('.application-jump-link')) {
+                return;
+            }
+            if (row.dataset.editing === 'true') return;
+            const appId = row.getAttribute('data-app-id');
+            if (!appId) return;
+            const apps = state.applications || [];
+            const app = apps.find(a => String(a._id) === String(appId));
+            if (!app) return;
+            enterApplicationEditMode(row, app);
         });
     });
 }
@@ -10311,7 +10690,18 @@ document.getElementById('topToolApplications')?.addEventListener('click', async 
                             unitNumber = n.unitNumber || unitNumber;
                         } catch {}
                     }
-                    const moveIn = a.moveIn ? new Date(a.moveIn).toLocaleDateString('en-US') : '';
+                    let moveIn = '';
+                    if (a.moveIn) {
+                        try {
+                            const d = new Date(a.moveIn);
+                            if (!isNaN(d.getTime())) {
+                                const y = d.getUTCFullYear();
+                                const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+                                const day = String(d.getUTCDate()).padStart(2, '0');
+                                moveIn = `${m}/${day}/${y}`;
+                            }
+                        } catch {}
+                    }
                     const submitted = a.submitted ? new Date(a.submitted).toLocaleString('en-US') : '';
                     const status = (a.status || 'pending');
                     const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
@@ -13478,18 +13868,33 @@ async function renderPortfolioOverview() {
         state.portfolioExpiringLeases = [];
         state.portfolioUpcomingMoveIns = [];
         state.portfolioVacantUnits = [];
+        state.portfolioOccupiedUnits = [];
         const activeTenants = allTenants.filter(t => t.leaseStatus !== 'terminated' && t.leaseStatus !== 'expired');
 
         const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
-        const periodMonth = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+        // Determine which month to use for rent metrics (default = current month)
+        let periodYear = now.getFullYear();
+        let periodMonthIndex = now.getMonth(); // 0-based
+        if (state.portfolioRentMonth) {
+            const parts = String(state.portfolioRentMonth).split('-');
+            if (parts.length === 2) {
+                const py = Number(parts[0]);
+                const pm = Number(parts[1]);
+                if (!isNaN(py) && !isNaN(pm) && pm >= 1 && pm <= 12) {
+                    periodYear = py;
+                    periodMonthIndex = pm - 1;
+                }
+            }
+        }
+        const periodMonth = `${periodYear}-${String(periodMonthIndex + 1).padStart(2, '0')}`;
+        const periodDate = new Date(periodYear, periodMonthIndex, 15);
 
         // Load portfolio-wide payments for current month rent comparisons
         const allPayments = await loadPortfolioPayments();
 
         let totalUnpaidRent = 0;
         let totalExpectedRent = 0;
+        let portfolioMonthlyIncome = 0; // contract monthly income (base rent + recurring fees, no proration)
         let totalPaidThisMonthAll = 0;
         let tenantsWithBalance = 0;
         let expiringLeasesCount = 0;
@@ -13498,7 +13903,7 @@ async function renderPortfolioOverview() {
         let upcomingMoveInsWithin30 = 0;
 
         activeTenants.forEach(tenant => {
-            // Lease expiry within 60 days
+            // Lease expiry within 60 days (always relative to "now", not the selected rent month)
             if (tenant.leaseEnd) {
                 const leaseEndDate = new Date(tenant.leaseEnd);
                 const diffMs = leaseEndDate - now;
@@ -13512,7 +13917,7 @@ async function renderPortfolioOverview() {
                 }
             }
 
-            // Expected rent vs payments this month
+            // Expected rent vs payments for the selected month
             const petFees = (tenant.pets?.hasPets ? (Number(tenant.pets.monthlyRent) || 0) : 0);
             const additionalFees =
                 (Number(tenant.waterFee) || 0) +
@@ -13521,7 +13926,12 @@ async function renderPortfolioOverview() {
                 (tenant.additionalFee?.amount || 0) +
                 petFees;
 
-            const expectedBase = computeExpectedBaseRentForMonth(tenant, now);
+            // For "Estimated monthly income", use contractual monthly amount (no proration/overrides)
+            const contractualMonthly = (Number(tenant.baseRent) || 0) + additionalFees;
+            portfolioMonthlyIncome += contractualMonthly;
+
+            // For current-month expected/remaining, still respect proration and overrides
+            const expectedBase = computeExpectedBaseRentForMonth(tenant, periodDate);
 
             const overrideMap = tenant?.monthlyOverrides || null;
             const monthOverride = overrideMap
@@ -13545,7 +13955,7 @@ async function renderPortfolioOverview() {
                 if (!p.date || p.applyTo !== 'rent') return false;
                 if (String(p.tenantId) !== String(tenant._id)) return false;
                 const d = new Date(p.date);
-                return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+                return d.getMonth() === periodMonthIndex && d.getFullYear() === periodYear;
             });
 
             const totalPaidThisMonth = monthPayments.reduce((sum, p) => {
@@ -13556,10 +13966,12 @@ async function renderPortfolioOverview() {
             const remainingRent = Math.max(0, expectedMonthly - totalPaidThisMonth);
             totalExpectedRent += expectedMonthly;
             totalPaidThisMonthAll += totalPaidThisMonth;
+            // Always store a row so the rent details view can show all tenants
+            state.portfolioTenantsWithBalance.push({ tenant, remainingRent, expectedMonthly, paidThisMonth: totalPaidThisMonth });
+            // But only count those with a positive remaining balance toward the "open rent" chip
             if (remainingRent > 0.01) {
                 tenantsWithBalance++;
                 totalUnpaidRent += remainingRent;
-                state.portfolioTenantsWithBalance.push({ tenant, remainingRent, expectedMonthly, paidThisMonth: totalPaidThisMonth });
             }
         });
 
@@ -13583,9 +13995,11 @@ async function renderPortfolioOverview() {
         });
 
         const vacantUnitsList = allUnits.filter(u => u.status === 'vacant');
+        const occupiedUnitsList = allUnits.filter(u => u.status === 'occupied' || u.status === 'leased' || u.status === 'rented');
         const vacantUnits = vacantUnitsList.length;
         const totalUnits = allUnits.length || 0;
         state.portfolioVacantUnits = vacantUnitsList;
+        state.portfolioOccupiedUnits = occupiedUnitsList;
 
         let openMaintCount = 0;
         let maintPending = 0;
@@ -13613,7 +14027,7 @@ async function renderPortfolioOverview() {
         elOpenRentAmount.textContent = rentText;
         elOpenRentCount.textContent = rentSub;
         if (elTotalRentSummary) {
-            const totalExpectedText = `$${totalExpectedRent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const totalExpectedText = `$${portfolioMonthlyIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             elTotalRentSummary.textContent = `Estimated monthly income: ${totalExpectedText}`;
         }
 
@@ -13797,6 +14211,9 @@ function renderPortfolioDetails(type) {
     const titleEl = document.getElementById('portfolioDetailsTitle');
     if (!body || !titleEl) return;
 
+    // Track which portfolio details view is currently active so month changes can refresh it
+    state.currentPortfolioDetailsType = type;
+
     const propsById = (state.properties || []).reduce((map, p) => {
         map[String(p._id)] = p;
         return map;
@@ -13913,8 +14330,9 @@ function renderPortfolioDetails(type) {
             const dataUnit = String(unitLabel || '').toLowerCase().replace(/"/g,'&quot;');
             const dataName = (name || '').toLowerCase().replace(/"/g,'&quot;');
             const dataStatus = (tenant.leaseStatus || '').toLowerCase().replace(/"/g,'&quot;');
+            const dataBalance = (Number(remainingRent) || 0) > 0.01 ? 'with-balance' : 'no-balance';
             return `
-                <tr data-property="${dataProp}" data-unit="${dataUnit}" data-name="${dataName}" data-status="${dataStatus}">
+                <tr data-property="${dataProp}" data-unit="${dataUnit}" data-name="${dataName}" data-status="${dataStatus}" data-balance="${dataBalance}">
                     <td>${propName}</td>
                     <td>${unitLabel}</td>
                     <td>${name}</td>
@@ -14103,15 +14521,29 @@ function renderPortfolioDetails(type) {
         const moveInItems = state.portfolioUpcomingMoveIns || [];
 
         const rows = [
-            ...leaseItems.map(({ tenant, daysUntilEnd }) => ({
-                type: 'Lease Expiring',
-                daysUntil: daysUntilEnd,
-                name: tenant.fullName || tenant.name || `${tenant.firstName || ''} ${tenant.lastName || ''}`.trim() || 'Tenant',
-                unitId: tenant.unitId?._id || tenant.unitId,
-                unitFallback: tenant.unitNumber || tenant.unit || '—',
-                propertyId: tenant.projectId || tenant.propertyId,
-                date: tenant.leaseEnd ? new Date(tenant.leaseEnd).toLocaleDateString() : '—'
-            })),
+            ...leaseItems.map(({ tenant, daysUntilEnd }) => {
+                let leaseEndDate = '—';
+                if (tenant.leaseEnd) {
+                    try {
+                        const d = new Date(tenant.leaseEnd);
+                        if (!isNaN(d.getTime())) {
+                            const y = d.getUTCFullYear();
+                            const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+                            const day = String(d.getUTCDate()).padStart(2, '0');
+                            leaseEndDate = `${m}/${day}/${y}`;
+                        }
+                    } catch {}
+                }
+                return {
+                    type: 'Lease Expiring',
+                    daysUntil: daysUntilEnd,
+                    name: tenant.fullName || tenant.name || `${tenant.firstName || ''} ${tenant.lastName || ''}`.trim() || 'Tenant',
+                    unitId: tenant.unitId?._id || tenant.unitId,
+                    unitFallback: tenant.unitNumber || tenant.unit || '—',
+                    propertyId: tenant.projectId || tenant.propertyId,
+                    date: leaseEndDate
+                };
+            }),
             ...moveInItems.map(({ application, daysUntilMoveIn }) => {
                 let propertyAddress = '';
                 let unitNumber = application.unit || '';
@@ -14122,6 +14554,18 @@ function renderPortfolioDetails(type) {
                         unitNumber = n.unitNumber || unitNumber;
                     } catch {}
                 }
+                let moveInDate = '—';
+                if (application.moveIn) {
+                    try {
+                        const d = new Date(application.moveIn);
+                        if (!isNaN(d.getTime())) {
+                            const y = d.getUTCFullYear();
+                            const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+                            const day = String(d.getUTCDate()).padStart(2, '0');
+                            moveInDate = `${m}/${day}/${y}`;
+                        }
+                    } catch {}
+                }
                 return {
                     type: 'Upcoming Move-in',
                     daysUntil: daysUntilMoveIn,
@@ -14130,7 +14574,7 @@ function renderPortfolioDetails(type) {
                     unitFallback: unitNumber || '—',
                     propertyId: null,
                     propertyNameOverride: propertyAddress || '—',
-                    date: application.moveIn ? new Date(application.moveIn).toLocaleDateString() : '—',
+                    date: moveInDate,
                     source: 'application',
                     sourceId: application._id || ''
                 };
@@ -14264,22 +14708,49 @@ function renderPortfolioDetails(type) {
     }
 
     if (type === 'vacancy') {
-        titleEl.textContent = 'Vacant Units';
-        const units = state.portfolioVacantUnits || [];
-        if (!units.length) {
-            body.innerHTML = '<p style="font-size:0.86rem;color:#6b7280;">No vacant units across the portfolio.</p>';
+        titleEl.textContent = 'Vacancy & Occupancy';
+        const vacantUnits = state.portfolioVacantUnits || [];
+        const occupiedUnits = state.portfolioOccupiedUnits || [];
+        const allUnitsForView = [...vacantUnits.map(u => ({ ...u, __status: 'vacant' })), ...occupiedUnits.map(u => ({ ...u, __status: 'occupied' }))];
+        if (!allUnitsForView.length) {
+            body.innerHTML = '<p style="font-size:0.86rem;color:#6b7280;">No units found across the portfolio.</p>';
             return;
         }
-        const htmlRows = units.map(u => {
+        // Map active/pending tenants by unitId so we can show the actual rent
+        const tenantsByUnitId = (state.allTenants || []).reduce((map, t) => {
+            const unitId = t.unitId?._id || t.unitId;
+            if (!unitId) return map;
+            const status = (t.leaseStatus || '').toLowerCase();
+            if (status === 'active' || status === 'pending') {
+                map[String(unitId)] = t;
+            }
+            return map;
+        }, {});
+        const htmlRows = allUnitsForView.map(u => {
             const pid = u.projectId || u.propertyId || u.project;
             const propName = pid && propsById[String(pid)] ? propsById[String(pid)].name : '—';
             const unitLabel = u.number || u.unitNumber || u.name || u.label || '—';
             const beds = u.bedrooms != null ? u.bedrooms : (u.beds != null ? u.beds : '—');
             const baths = u.bathrooms != null ? u.bathrooms : (u.baths != null ? u.baths : '—');
-            const rent = u.rent || u.baseRent || 0;
+            let rent = 0;
+            if (u.__status === 'occupied' && u._id && tenantsByUnitId[String(u._id)]) {
+                const tenant = tenantsByUnitId[String(u._id)];
+                const petFees = (tenant.pets?.hasPets ? (Number(tenant.pets.monthlyRent) || 0) : 0);
+                const additionalFees =
+                    (Number(tenant.waterFee) || 0) +
+                    (Number(tenant.trashFee) || 0) +
+                    (Number(tenant.adminFee) || 0) +
+                    (tenant.additionalFee?.amount || 0) +
+                    petFees;
+                rent = (Number(tenant.baseRent) || 0) + additionalFees;
+            } else if (u.__status === 'vacant') {
+                // For vacant units, show the market/unit rent value
+                rent = Number(u.rent) || 0;
+            }
+            const statusLabel = u.__status === 'occupied' ? 'Occupied' : 'Vacant';
             const dataProp = (propName || '').toLowerCase().replace(/"/g,'&quot;');
             const dataUnit = String(unitLabel || '').toLowerCase().replace(/"/g,'&quot;');
-            const dataStatus = 'vacant';
+            const dataStatus = u.__status;
             const dataType = 'vacancy';
             return `
                 <tr data-property="${dataProp}" data-unit="${dataUnit}" data-status="${dataStatus}" data-type="${dataType}">
@@ -14287,7 +14758,8 @@ function renderPortfolioDetails(type) {
                     <td>${unitLabel}</td>
                     <td>${beds}</td>
                     <td>${baths}</td>
-                    <td>$${Number(rent || 0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}</td>
+                    <td>$${rent.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}</td>
+                    <td>${statusLabel}</td>
                 </tr>`;
         }).join('');
         body.innerHTML = `
@@ -14317,15 +14789,24 @@ function renderPortfolioDetails(type) {
                             <th>Beds</th>
                             <th>Baths</th>
                             <th>Rent</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody id="portfolioDetailsTbody">
                         ${htmlRows}
                     </tbody>
+                    <tfoot id="portfolioDetailsTfoot" style="position:sticky;bottom:0;background:#f9fafb;font-weight:600;">
+                        <tr>
+                            <td colspan="4" style="text-align:right;">Total:</td>
+                            <td id="portfolioVacancyTotalRent">$0</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>`;
 
-        window.__portfolioDetailsAccumulatedQuery = '';
+        // Default vacancy view to status:vacant while still allowing status:occupied filter
+        window.__portfolioDetailsAccumulatedQuery = 'status:vacant';
         initializePortfolioDetailsSearch();
         renderFilteredPortfolioDetailsRows();
         return;
