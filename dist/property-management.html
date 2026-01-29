@@ -204,6 +204,11 @@ body {
     font-weight: 500;
 }
 
+/* Inline edit styling for Expected rent in portfolio rent details */
+.expected-rent-editing {
+    background: #f0f7ff !important;
+}
+
 .property-item p {
     margin: 0 0 12px 0;
     color: var(--text-color);
@@ -471,7 +476,7 @@ body {
 
 /* Sidebar Styles */
 .sidebar {
-    width: 310px;
+    width: 290px;
     background-color: white;
     border-right: 1px solid var(--border-color);
     box-shadow: 2px 0 16px 0 rgba(61,169,252,0.06);
@@ -525,8 +530,8 @@ body {
 /* Main Content Styles */
 .main-content {
     flex: 1;
-    margin-left: 300px;
-    padding: 20px;
+    margin-left: 270px;
+    padding: 10px;
     height: 100vh;
     overflow-y: auto;
     background: var(--background-color);
@@ -2151,8 +2156,8 @@ input[type="file"] {
 .portfolio-overview-layout {
     display: flex;
     align-items: flex-start;
-    gap: 16px;
-    padding-right: 20px;
+    gap: 0px;
+    padding-right: 0px;
 }
 
 .portfolio-overview-main {
@@ -2294,7 +2299,7 @@ input[type="file"] {
     }
     .portfolio-chip {
         min-width: 0;
-        flex: 1 1 calc(20% - 12px);
+        flex: 1 1 calc(10% - 12px);
     }
 }
 
@@ -2349,8 +2354,8 @@ input[type="file"] {
 }
 
 .portfolio-tasks-sidebar {
-    width: 280px;
-    max-width: 320px;
+    width: 240px;
+    max-width: 300px;
     background: #ffffff;
     border-radius: 14px;
     box-shadow: 0 2px 10px rgba(15,23,42,0.08);
@@ -2991,9 +2996,11 @@ input[type="file"] {
   box-shadow: 0 2px 8px rgba(52,152,219,0.10);
 }
 
-/* Inline edit styles for applications/invites tables */
+/* Inline edit styles for applications/invites/portfolio tables */
 tr[data-app-id][data-editing="true"],
-tr[data-invite-id][data-editing="true"] {
+tr[data-invite-id][data-editing="true"],
+tr[data-tenant-id][data-editing="true"],
+tr[data-maint-id][data-editing="true"] {
     background: #f0f7ff !important;
     box-shadow: 0 0 0 1px rgba(37,99,235,0.25);
 }
@@ -3138,18 +3145,10 @@ tr[data-invite-id][data-editing="true"] {
                 <div class="portfolio-overview-layout">
                     <div class="portfolio-overview-main">
                         <div class="portfolio-strip">
-                            <div class="portfolio-chip" id="portfolioCardRent">
-                                <div class="portfolio-chip-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                                    <span><i class="fas fa-money-check-alt"></i>Coming Rent</span>
-                                    <input type="month" id="portfolioRentMonthPicker" style="font-size:0.78rem;border:1px solid #e5e7eb;border-radius:8px;padding:2px 6px;" title="Select month for rent metrics" />
-                                </div>
-                                <div class="portfolio-chip-value" id="portfolioOpenRentAmount">$--</div>
-                                <div class="portfolio-chip-sub" id="portfolioTotalRentSummary">Estimated monthly income: $--</div>
-                                <div class="portfolio-chip-sub" id="portfolioOpenRentCount">-- tenants with balance</div>
-                                <div class="portfolio-chip-sub" id="portfolioRentCollectedSummary">&nbsp;</div>
-                                <div class="portfolio-progress">
-                                    <div class="portfolio-progress-fill" id="portfolioRentCollectedBar"></div>
-                                </div>
+                            <div class="portfolio-chip" id="portfolioCardLeases">
+                                <div class="portfolio-chip-label"><i class="fas fa-hourglass-half"></i>Leases & Move-ins (60 Days)</div>
+                                <div class="portfolio-chip-value" id="portfolioExpiringLeasesCount">--</div>
+                                <div class="portfolio-chip-sub" id="portfolioExpiringLeasesBreakdown">Expiring leases & upcoming move-ins</div>
                             </div>
                             <div class="portfolio-chip" id="portfolioCardTenants">
                                 <div class="portfolio-chip-label"><i class="fas fa-users"></i>Tenants</div>
@@ -3162,10 +3161,22 @@ tr[data-invite-id][data-editing="true"] {
                                 <div class="portfolio-chip-sub">Pending & in-progress across all properties</div>
                                 <div class="portfolio-badge-row" id="portfolioMaintenanceBreakdown"></div>
                             </div>
-                            <div class="portfolio-chip" id="portfolioCardLeases">
-                                <div class="portfolio-chip-label"><i class="fas fa-hourglass-half"></i>Leases & Move-ins (60 Days)</div>
-                                <div class="portfolio-chip-value" id="portfolioExpiringLeasesCount">--</div>
-                                <div class="portfolio-chip-sub" id="portfolioExpiringLeasesBreakdown">Expiring leases & upcoming move-ins</div>
+                            <div class="portfolio-chip" id="portfolioCardApplications">
+                                <div class="portfolio-chip-label"><i class="fas fa-file-signature"></i>Applications & Invites</div>
+                                <div class="portfolio-chip-value" id="portfolioApplicationsCount">--</div>
+                                <div class="portfolio-chip-sub" id="portfolioApplicationsSummary">Pending applications & recent invites</div>
+                            </div>
+                            <div class="portfolio-chip" id="portfolioCardRent">
+                                <div class="portfolio-chip-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                                    <span><i class="fas fa-money-check-alt"></i>Coming Rent</span>
+                                </div>
+                                <div class="portfolio-chip-value" id="portfolioOpenRentAmount">$--</div>
+                                <div class="portfolio-chip-sub" id="portfolioTotalRentSummary">Estimated monthly income: $--</div>
+                                <div class="portfolio-chip-sub" id="portfolioOpenRentCount">-- tenants with balance</div>
+                                <div class="portfolio-chip-sub" id="portfolioRentCollectedSummary">&nbsp;</div>
+                                <div class="portfolio-progress">
+                                    <div class="portfolio-progress-fill" id="portfolioRentCollectedBar"></div>
+                                </div>
                             </div>
                             <div class="portfolio-chip" id="portfolioCardVacancy">
                                 <div class="portfolio-chip-label"><i class="fas fa-door-open"></i>Vacant Units</div>
@@ -4406,6 +4417,7 @@ function setActivePortfolioCard(type) {
         rent: 'portfolioCardRent',
         tenants: 'portfolioCardTenants',
         maintenance: 'portfolioCardMaintenance',
+        applications: 'portfolioCardApplications',
         leases: 'portfolioCardLeases',
         vacancy: 'portfolioCardVacancy'
     };
@@ -4423,41 +4435,14 @@ async function openPortfolioOverview() {
     if (!section) return;
     if (dashboard) dashboard.style.display = 'none';
     section.style.display = 'block';
-    // Initialize month picker default value on first open
-    const monthInput = document.getElementById('portfolioRentMonthPicker');
-    if (monthInput) {
-        const now = new Date();
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        const currentVal = `${y}-${m}`;
-        if (!state.portfolioRentMonth) state.portfolioRentMonth = currentVal;
-        monthInput.value = state.portfolioRentMonth;
-        if (!monthInput.dataset.bound) {
-            monthInput.addEventListener('change', async () => {
-                const v = monthInput.value;
-                state.portfolioRentMonth = v || currentVal;
-                try {
-                    showLoader();
-                    await renderPortfolioOverview();
-                    // Keep current details tab but refresh its data based on new month when relevant
-                    if (state.currentPortfolioDetailsType) {
-                        renderPortfolioDetails(state.currentPortfolioDetailsType);
-                    }
-                } finally {
-                    hideLoader();
-                }
-            });
-            monthInput.dataset.bound = 'true';
-        }
-    }
     showLoader();
     try {
         await renderPortfolioOverview();
         await loadPortfolioTasks(true);
-        // Default details view when opening overview
-        renderPortfolioDetails('rent');
+        // Default details view when opening overview (Leases & Move-ins)
+        renderPortfolioDetails('leases');
         // Mark the default portfolio card as active
-        setActivePortfolioCard('rent');
+        setActivePortfolioCard('leases');
     } finally {
         hideLoader();
     }
@@ -4546,6 +4531,10 @@ document.getElementById('addPaymentForm')?.addEventListener('submit', handleAddP
     document.getElementById('portfolioCardMaintenance')?.addEventListener('click', () => {
         setActivePortfolioCard('maintenance');
         renderPortfolioDetails('maintenance');
+    });
+    document.getElementById('portfolioCardApplications')?.addEventListener('click', () => {
+        setActivePortfolioCard('applications');
+        renderPortfolioDetails('applications');
     });
     document.getElementById('portfolioCardLeases')?.addEventListener('click', () => {
         setActivePortfolioCard('leases');
@@ -5336,6 +5325,454 @@ function autoSuggestPortfolioTenants() {
     }
 }
 
+// Inline edit helper for portfolio tenants table
+function enterPortfolioTenantEditMode(row, tenant) {
+    if (!row || !tenant) return;
+    const tenantIdStr = String(tenant._id || '');
+    if (!tenantIdStr) return;
+    if (state.currentEditingPortfolioTenantId && state.currentEditingPortfolioTenantId !== tenantIdStr) return;
+    if (row.dataset.editing === 'true') return;
+    state.currentEditingPortfolioTenantId = tenantIdStr;
+    row.dataset.editing = 'true';
+
+    const cells = row.querySelectorAll('td');
+    const nameCell = cells[2];
+    const phoneCell = cells[3];
+    const emailCell = cells[4];
+    const datesCell = cells[5];
+    const statusCell = cells[6];
+
+    const makeInput = (type, value) => {
+        const input = document.createElement('input');
+        input.type = type;
+        input.className = 'app-inline-input';
+        input.value = value || '';
+        return input;
+    };
+
+    const name = tenant.fullName || tenant.name || `${tenant.firstName || ''} ${tenant.lastName || ''}`.trim();
+    const phoneVal = tenant.phone || tenant.tenantPhone || '';
+    const emailVal = tenant.email || tenant.tenantEmail || '';
+    const statusVal = tenant.leaseStatus || 'active';
+
+    const leaseStartRaw = tenant.leaseStart || '';
+    const leaseEndRaw = tenant.leaseEnd || '';
+    const toInputDate = (val) => {
+        if (!val) return '';
+        const s = String(val);
+        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return '';
+        const y = d.getFullYear();
+        const mo = String(d.getMonth() + 1).padStart(2, '0');
+        const da = String(d.getDate()).padStart(2, '0');
+        return `${y}-${mo}-${da}`;
+    };
+
+    const nameInput = makeInput('text', name || '');
+    const phoneInput = makeInput('text', phoneVal || '');
+    const emailInput = makeInput('email', emailVal || '');
+
+    const statusSelect = document.createElement('select');
+    statusSelect.className = 'app-inline-input';
+    ['active', 'pending', 'expired', 'terminated'].forEach(val => {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = val.charAt(0).toUpperCase() + val.slice(1);
+        if (String(statusVal || 'active').toLowerCase() === val) opt.selected = true;
+        statusSelect.appendChild(opt);
+    });
+
+    if (nameCell) { nameCell.innerHTML = ''; nameCell.appendChild(nameInput); }
+    if (phoneCell) { phoneCell.innerHTML = ''; phoneCell.appendChild(phoneInput); }
+    if (emailCell) { emailCell.innerHTML = ''; emailCell.appendChild(emailInput); }
+    if (datesCell) {
+        datesCell.innerHTML = '';
+        const startInput = makeInput('date', toInputDate(leaseStartRaw));
+        const endInput = makeInput('date', toInputDate(leaseEndRaw));
+        startInput.style.maxWidth = '140px';
+        endInput.style.maxWidth = '140px';
+        datesCell.appendChild(startInput);
+        const sep = document.createElement('span');
+        sep.textContent = ' – ';
+        sep.style.margin = '0 4px';
+        datesCell.appendChild(sep);
+        datesCell.appendChild(endInput);
+        row.__leaseStartInput = startInput;
+        row.__leaseEndInput = endInput;
+    }
+    if (statusCell) { statusCell.innerHTML = ''; statusCell.appendChild(statusSelect); }
+
+    const saveChanges = async () => {
+        const propertyId = tenant.projectId || tenant.propertyId;
+        if (!propertyId) {
+            state.currentEditingPortfolioTenantId = null;
+            showNotification('Cannot update tenant: missing property id', 'error');
+            renderPortfolioDetails('tenants');
+            return;
+        }
+
+        const leaseStartInput = row.__leaseStartInput;
+        const leaseEndInput = row.__leaseEndInput;
+        const leaseStartVal = leaseStartInput ? leaseStartInput.value : '';
+        const leaseEndVal = leaseEndInput ? leaseEndInput.value : '';
+
+        const payload = {
+            name: nameInput.value.trim() || name || '',
+            phone: phoneInput.value.trim(),
+            email: emailInput.value.trim(),
+            leaseStatus: statusSelect.value || statusVal || 'active',
+            leaseStart: leaseStartVal ? dateInputToISOAtNoon(leaseStartVal) : tenant.leaseStart,
+            leaseEnd: leaseEndVal ? dateInputToISOAtNoon(leaseEndVal) : tenant.leaseEnd
+        };
+
+        
+        try {
+            const resp = await fetch(`${API_URL}/properties/${propertyId}/tenants/${tenantIdStr}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!resp.ok) throw new Error('Failed to update tenant');
+
+            const updatedTenant = { ...tenant, ...payload };
+            if (Array.isArray(state.tenants)) {
+                state.tenants = state.tenants.map(t => String(t._id) === tenantIdStr ? updatedTenant : t);
+            }
+            if (Array.isArray(state.allTenants)) {
+                state.allTenants = state.allTenants.map(t => String(t._id) === tenantIdStr ? updatedTenant : t);
+            }
+            state.currentEditingPortfolioTenantId = null;
+            showNotification('Tenant updated', 'success');
+            renderPortfolioDetails('tenants');
+        } catch (err) {
+            console.error('Inline portfolio tenant update error:', err);
+            state.currentEditingPortfolioTenantId = null;
+            showNotification('Could not update tenant', 'error');
+            renderPortfolioDetails('tenants');
+       
+        }
+    };
+
+    const handleDocClick = (ev) => {
+        const target = ev.target;
+        if (row.contains(target)) return;
+        if (!document.body.contains(row)) {
+            document.removeEventListener('click', handleDocClick, true);
+            return;
+        }
+        document.removeEventListener('click', handleDocClick, true);
+        saveChanges();
+    };
+
+    document.addEventListener('click', handleDocClick, true);
+}
+
+// Inline edit helper for portfolio maintenance table
+function enterPortfolioMaintenanceEditMode(row, request) {
+    if (!row || !request) return;
+    const requestIdStr = String(request._id || '');
+    if (!requestIdStr) return;
+    if (state.currentEditingPortfolioMaintenanceId && state.currentEditingPortfolioMaintenanceId !== requestIdStr) return;
+    if (row.dataset.editing === 'true') return;
+    state.currentEditingPortfolioMaintenanceId = requestIdStr;
+    row.dataset.editing = 'true';
+
+    const cells = row.querySelectorAll('td');
+    const summaryCell = cells[3];
+    const statusCell = cells[4];
+
+    const summaryInput = document.createElement('textarea');
+    summaryInput.className = 'app-inline-input';
+    summaryInput.style.resize = 'vertical';
+    summaryInput.style.minHeight = '32px';
+    summaryInput.style.overflow = 'hidden';
+    summaryInput.value = request.summary || request.description || '';
+
+    const autoResize = () => {
+        summaryInput.style.height = 'auto';
+        summaryInput.style.height = summaryInput.scrollHeight + 'px';
+    };
+
+    summaryInput.addEventListener('input', autoResize);
+
+    if (summaryCell) {
+        summaryCell.innerHTML = '';
+        summaryCell.appendChild(summaryInput);
+        autoResize();
+        summaryInput.focus();
+        summaryInput.select && summaryInput.select();
+    }
+
+    const existingStatusSelect = statusCell ? statusCell.querySelector('select.portfolio-maint-status-select') : null;
+    if (existingStatusSelect) {
+        existingStatusSelect.classList.add('app-inline-input');
+    }
+
+    const saveChanges = async () => {
+        const requestId = requestIdStr;
+        let projectId = row.dataset.projectId;
+        if (!projectId) {
+            const req = (state.portfolioMaintenance || []).find(r => String(r._id) === String(requestId));
+            if (req) {
+                projectId = (req.projectId && req.projectId._id) ? req.projectId._id : req.projectId;
+            }
+        }
+
+        if (!projectId) {
+            state.currentEditingPortfolioMaintenanceId = null;
+            showNotification('Cannot update maintenance: missing property id', 'error');
+            renderPortfolioDetails('maintenance');
+            return;
+        }
+
+        const newSummary = summaryInput.value.trim();
+
+        try {
+            const payload = { summary: newSummary };
+            const res = await fetch(`${API_URL}/properties/${projectId}/maintenance/${requestId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) throw new Error('Failed to update maintenance request');
+
+            if (Array.isArray(state.portfolioMaintenance)) {
+                state.portfolioMaintenance = state.portfolioMaintenance.map(r =>
+                    String(r._id) === String(requestId) ? { ...r, ...payload } : r
+                );
+            }
+
+            state.currentEditingPortfolioMaintenanceId = null;
+            showNotification('Maintenance request updated', 'success');
+            renderPortfolioDetails('maintenance');
+        } catch (err) {
+            console.error('Inline portfolio maintenance update error:', err);
+            state.currentEditingPortfolioMaintenanceId = null;
+            showNotification('Could not update maintenance request', 'error');
+            renderPortfolioDetails('maintenance');
+        }
+    };
+
+    const handleDocClick = (ev) => {
+        const target = ev.target;
+        if (row.contains(target)) return;
+        if (!document.body.contains(row)) {
+            document.removeEventListener('click', handleDocClick, true);
+            return;
+        }
+        document.removeEventListener('click', handleDocClick, true);
+        saveChanges();
+    };
+
+    document.addEventListener('click', handleDocClick, true);
+}
+
+// Inline edit helper for portfolio applications in portfolio overview
+function enterPortfolioApplicationEditMode(row, app) {
+    if (!row || !app) return;
+    const appIdStr = String(app._id || '');
+    if (!appIdStr) return;
+    if (state.currentEditingPortfolioApplicationId && state.currentEditingPortfolioApplicationId !== appIdStr) return;
+    if (row.dataset.editing === 'true') return;
+    state.currentEditingPortfolioApplicationId = appIdStr;
+    row.dataset.editing = 'true';
+
+    const cells = row.querySelectorAll('td');
+    const nameCell = cells[1];
+    const emailCell = cells[2];
+    const propertyCell = cells[3];
+    const unitCell = cells[4];
+    const statusCell = cells[5];
+
+    let propertyAddress = '';
+    let unitNumber = app.unit || '';
+    if (app.notes) {
+        try {
+            const n = JSON.parse(app.notes);
+            propertyAddress = n.propertyAddress || '';
+            unitNumber = n.unitNumber || unitNumber;
+        } catch {}
+    }
+
+    const makeInput = (type, cls, value) => {
+        const input = document.createElement('input');
+        input.type = type;
+        input.className = cls;
+        input.value = value || '';
+        return input;
+    };
+
+    const nameInput = makeInput('text', 'app-inline-input app-inline-name', app.name || '');
+    const emailInput = makeInput('email', 'app-inline-input app-inline-email', app.email || '');
+    const propertyInput = makeInput('text', 'app-inline-input app-inline-property', propertyAddress || '');
+    const unitInput = makeInput('text', 'app-inline-input app-inline-unit', unitNumber || '');
+
+    const statusSelect = document.createElement('select');
+    statusSelect.className = 'app-inline-input app-inline-status';
+    ['pending','approved','rejected'].forEach(val => {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = val.charAt(0).toUpperCase() + val.slice(1);
+        if ((app.status || 'pending') === val) opt.selected = true;
+        statusSelect.appendChild(opt);
+    });
+
+    if (nameCell) { nameCell.innerHTML = ''; nameCell.appendChild(nameInput); }
+    if (emailCell) { emailCell.innerHTML = ''; emailCell.appendChild(emailInput); }
+    if (propertyCell) { propertyCell.innerHTML = ''; propertyCell.appendChild(propertyInput); }
+    if (unitCell) { unitCell.innerHTML = ''; unitCell.appendChild(unitInput); }
+    if (statusCell) { statusCell.innerHTML = ''; statusCell.appendChild(statusSelect); }
+
+    const saveChanges = async () => {
+        let notesObj = {};
+        if (app.notes) {
+            try {
+                const existing = JSON.parse(app.notes);
+                if (existing && typeof existing === 'object') notesObj = existing;
+            } catch {}
+        }
+        notesObj.propertyAddress = propertyInput.value.trim();
+        notesObj.unitNumber = unitInput.value.trim();
+        const notesString = JSON.stringify(notesObj);
+
+        const payload = {
+            name: nameInput.value.trim(),
+            email: emailInput.value.trim(),
+            phone: app.phone || '',
+            unit: unitInput.value.trim(),
+            status: statusSelect.value || app.status || 'pending',
+            moveIn: app.moveIn || undefined,
+            notes: notesString
+        };
+
+        try {
+            const res = await fetch(`/api/rental-applications/${app._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) throw new Error('Failed to update application');
+            const updated = await res.json();
+            const appData = updated.application || updated;
+            state.applications = (state.applications || []).map(a => String(a._id) === String(app._id) ? appData : a);
+            state.currentEditingPortfolioApplicationId = null;
+            showNotification('Application updated', 'success');
+            renderPortfolioDetails('applications');
+        } catch (err) {
+            console.error('Inline portfolio application update error:', err);
+            state.currentEditingPortfolioApplicationId = null;
+            showNotification('Could not update application', 'error');
+            renderPortfolioDetails('applications');
+        }
+    };
+
+    const handleDocClick = (ev) => {
+        const target = ev.target;
+        if (row.contains(target)) return;
+        if (!document.body.contains(row)) {
+            document.removeEventListener('click', handleDocClick, true);
+            return;
+        }
+        document.removeEventListener('click', handleDocClick, true);
+        saveChanges();
+    };
+
+    document.addEventListener('click', handleDocClick, true);
+}
+
+// Inline edit helper for portfolio invites in portfolio overview
+function enterPortfolioInviteEditMode(row, invite) {
+    if (!row || !invite) return;
+    const inviteIdStr = String(invite._id || '');
+    if (!inviteIdStr) return;
+    if (state.currentEditingPortfolioInviteId && state.currentEditingPortfolioInviteId !== inviteIdStr) return;
+    if (row.dataset.editing === 'true') return;
+    state.currentEditingPortfolioInviteId = inviteIdStr;
+    row.dataset.editing = 'true';
+
+    const cells = row.querySelectorAll('td');
+    const nameCell = cells[1];
+    const emailCell = cells[2];
+    const propertyCell = cells[3];
+    const unitCell = cells[4];
+    const statusCell = cells[5];
+
+    const makeInput = (type, cls, value) => {
+        const input = document.createElement('input');
+        input.type = type;
+        input.className = cls;
+        input.value = value || '';
+        return input;
+    };
+
+    const nameInput = makeInput('text', 'app-inline-input', invite.name || '');
+    const emailInput = makeInput('email', 'app-inline-input', invite.email || '');
+    const propertyInput = makeInput('text', 'app-inline-input', invite.propertyName || '');
+    const unitInput = makeInput('text', 'app-inline-input', invite.unitNumber || '');
+
+    const statusSelect = document.createElement('select');
+    statusSelect.className = 'app-inline-input';
+    ['sent', 'opened', 'completed', 'expired'].forEach(val => {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = val.charAt(0).toUpperCase() + val.slice(1);
+        if ((invite.status || 'sent') === val) opt.selected = true;
+        statusSelect.appendChild(opt);
+    });
+
+    if (nameCell) { nameCell.innerHTML = ''; nameCell.appendChild(nameInput); }
+    if (emailCell) { emailCell.innerHTML = ''; emailCell.appendChild(emailInput); }
+    if (propertyCell) { propertyCell.innerHTML = ''; propertyCell.appendChild(propertyInput); }
+    if (unitCell) { unitCell.innerHTML = ''; unitCell.appendChild(unitInput); }
+    if (statusCell) { statusCell.innerHTML = ''; statusCell.appendChild(statusSelect); }
+
+    const saveInviteChanges = async () => {
+        const payload = {
+            name: nameInput.value.trim(),
+            email: emailInput.value.trim(),
+            propertyName: propertyInput.value.trim(),
+            unitNumber: unitInput.value.trim(),
+            status: statusSelect.value || 'sent',
+            applicationUrl: invite.applicationUrl || ''
+        };
+
+        try {
+            const res = await fetch(`/api/application-invites/${invite._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) throw new Error('Failed to update invite');
+            const updated = await res.json();
+            const invData = updated.invite || updated;
+            state.invites = (state.invites || []).map(x => String(x._id) === String(invite._id) ? invData : x);
+            state.currentEditingPortfolioInviteId = null;
+            showNotification('Invite updated', 'success');
+            renderPortfolioDetails('applications');
+        } catch (err) {
+            console.error('Inline portfolio invite update error:', err);
+            state.currentEditingPortfolioInviteId = null;
+            showNotification('Could not update invite', 'error');
+            renderPortfolioDetails('applications');
+        }
+    };
+
+    const handleDocClick = (ev) => {
+        const target = ev.target;
+        if (row.contains(target)) return;
+        if (!document.body.contains(row)) {
+            document.removeEventListener('click', handleDocClick, true);
+            return;
+        }
+        document.removeEventListener('click', handleDocClick, true);
+        saveInviteChanges();
+    };
+
+    document.addEventListener('click', handleDocClick, true);
+}
+
 function renderFilteredPortfolioTenants() {
     const tbody = document.getElementById('portfolioTenantsTbody');
     if (!tbody) return;
@@ -5393,7 +5830,7 @@ function renderFilteredPortfolioTenants() {
         const leaseEnd = t.leaseEnd ? new Date(t.leaseEnd).toLocaleDateString() : '—';
         const status = t.leaseStatus || 'unknown';
         return `
-            <tr>
+            <tr data-tenant-id="${t._id}">
                 <td>${propName}</td>
                 <td>${unitLabel}</td>
                 <td>${name}</td>
@@ -5405,6 +5842,20 @@ function renderFilteredPortfolioTenants() {
     }).join('');
 
     tbody.innerHTML = rowsHtml || '<tr><td colspan="7" style="font-size:0.86rem;color:#6b7280;">No tenants match your filters.</td></tr>';
+
+    // Wire row click to open inline edit mode for portfolio tenants
+    Array.from(tbody.querySelectorAll('tr[data-tenant-id]')).forEach(row => {
+        row.addEventListener('click', (e) => {
+            const target = e.target;
+            if (target.closest('a') || target.closest('button') || target.closest('input') || target.closest('select')) return;
+            if (row.dataset.editing === 'true') return;
+            const id = row.getAttribute('data-tenant-id');
+            if (!id) return;
+            const tenant = (state.allTenants || []).find(t => String(t._id) === String(id));
+            if (!tenant) return;
+            enterPortfolioTenantEditMode(row, tenant);
+        });
+    });
 }
 
 // ===== Shared Portfolio Details Search (rent, maintenance, leases, vacancy) =====
@@ -5504,6 +5955,7 @@ function getPortfolioDetailsSearch() {
 function renderPortfolioDetailsFilterChips(tokens) {
     const container = document.getElementById('portfolioDetailsActiveFilterChips');
     if (!container) return;
+    const isRentDetails = state.currentPortfolioDetailsType === 'rent';
     const mkChip = (k, v, disp) =>
         `<span class="filter-chip" data-key="${k}" data-value="${v}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#eef2f7;color:#374151;border:1px solid #e5e7eb;font-size:.85em;"><span style="color:#0b5cab;font-weight:600">${k}</span><span>${disp ?? v}</span><button class="chip-remove" style="background:transparent;border:none;color:#6b7280;cursor:pointer;font-weight:700;">×</button></span>`;
     const chips = [];
@@ -5512,10 +5964,12 @@ function renderPortfolioDetailsFilterChips(tokens) {
     tokens.unitList.forEach(v => chips.push(mkChip('unit:', v)));
     tokens.statusList.forEach(v => chips.push(mkChip('status:', v)));
     tokens.typeList.forEach(v => chips.push(mkChip('type:', v)));
-    tokens.balanceFlags.forEach(v => {
-        const label = v === 'with-balance' ? 'with balance only' : v;
-        chips.push(mkChip('balance:', v, label));
-    });
+    if (isRentDetails) {
+        tokens.balanceFlags.forEach(v => {
+            const label = v === 'with-balance' ? 'with balance only' : v;
+            chips.push(mkChip('balance:', v, label));
+        });
+    }
     container.innerHTML = chips.join('');
     container.querySelectorAll('.chip-remove').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -5578,7 +6032,10 @@ function renderPortfolioDetailsSuggestionTokens() {
     const values = document.getElementById('portfolioDetailsSuggestValues');
     const backBtn = document.getElementById('portfolioDetailsSuggestBack');
     if (!list) return;
-    const tokens = ['name:', 'property:', 'unit:', 'status:', 'type:', 'balance:'];
+    const isRentDetails = state.currentPortfolioDetailsType === 'rent';
+    const tokens = isRentDetails
+        ? ['name:', 'property:', 'unit:', 'status:', 'type:', 'balance:']
+        : ['name:', 'property:', 'unit:', 'status:', 'type:'];
     list.innerHTML = tokens.map(k =>
         `<li class='suggest-item' data-token='${k}' style='padding:8px 12px;cursor:pointer;display:flex;gap:8px;align-items:center;'><span style='font-weight:600;color:#1f2937'>${k}</span><span style='font-size:.85em;color:#6b7280'>Add ${k} filter</span></li>`
     ).join('');
@@ -5621,11 +6078,15 @@ function showPortfolioDetailsValueSuggestions(token) {
         if (!set.size) ['rent','maintenance','lease expiring','upcoming move-in','vacancy'].forEach(v => set.add(v));
         items = Array.from(set).map(v => ({ label: v, value: v }));
     } else if (token === 'balance:') {
-        // Simple static options for rent view; rows without data-balance will just be filtered out
-        items = [
-            { label: 'With balance only', value: 'with-balance' },
-            { label: 'No balance', value: 'no-balance' }
-        ];
+        // Simple static options for rent view only
+        if (state.currentPortfolioDetailsType === 'rent') {
+            items = [
+                { label: 'With balance only', value: 'with-balance' },
+                { label: 'No balance', value: 'no-balance' }
+            ];
+        } else {
+            items = [];
+        }
     }
     title.textContent = `Choose a value for ${token}`;
     if (backBtn) backBtn.style.display = 'inline';
@@ -5660,6 +6121,7 @@ function renderFilteredPortfolioDetailsRows() {
     const tbody = document.getElementById('portfolioDetailsTbody');
     if (!tbody) return;
     const { tokens, text } = getPortfolioDetailsSearch();
+    const isRentDetails = state.currentPortfolioDetailsType === 'rent';
     let anyVisible = false;
     const rows = Array.from(tbody.querySelectorAll('tr'));
     Array.from(rows).forEach(row => {
@@ -5677,7 +6139,8 @@ function renderFilteredPortfolioDetailsRows() {
         const hitUnit = !tokens.unitList.length || tokens.unitList.some(v => unit.includes(v));
         const hitStatus = !tokens.statusList.length || tokens.statusList.includes(status);
         const hitType = !tokens.typeList.length || tokens.typeList.some(v => type.includes(v));
-        const hitBalance = !tokens.balanceFlags.length || tokens.balanceFlags.includes(balance);
+        // Only apply balance filters on the rent (Tenants with Outstanding Balance) view
+        const hitBalance = !isRentDetails || !tokens.balanceFlags.length || tokens.balanceFlags.includes(balance);
 
         const show = hitText && hitName && hitProp && hitUnit && hitStatus && hitType && hitBalance;
         row.style.display = show ? '' : 'none';
@@ -12256,6 +12719,25 @@ function upsertLocalTenantMonthlyOverride(tenantId, period, overrideObjOrNull) {
     }
 }
 
+// Mirror override changes into the cross-portfolio tenant list as well
+function upsertLocalAllTenantMonthlyOverride(tenantId, period, overrideObjOrNull) {
+    if (!Array.isArray(state.allTenants)) return;
+    const t = state.allTenants.find(tt => String(tt._id) === String(tenantId));
+    if (!t) return;
+    if (!t.monthlyOverrides) {
+        t.monthlyOverrides = {};
+    } else if (typeof t.monthlyOverrides.get === 'function') {
+        const obj = {};
+        t.monthlyOverrides.forEach((v, k) => { obj[k] = v; });
+        t.monthlyOverrides = obj;
+    }
+    if (overrideObjOrNull) {
+        t.monthlyOverrides[period] = { ...t.monthlyOverrides[period], ...overrideObjOrNull };
+    } else {
+        delete t.monthlyOverrides[period];
+    }
+}
+
 async function openEditMonthChargesModal() {
     const modal = document.getElementById('editMonthChargesModal');
     if (!modal) return;
@@ -13846,6 +14328,8 @@ async function renderPortfolioOverview() {
         const elTenantsSummary = document.getElementById('portfolioTenantsSummary');
         const elOpenMaint = document.getElementById('portfolioOpenMaintenanceCount');
         const elMaintBreakdown = document.getElementById('portfolioMaintenanceBreakdown');
+        const elApplicationsCount = document.getElementById('portfolioApplicationsCount');
+        const elApplicationsSummary = document.getElementById('portfolioApplicationsSummary');
         const elExpiringLeases = document.getElementById('portfolioExpiringLeasesCount');
         const elExpiringLeasesBreakdown = document.getElementById('portfolioExpiringLeasesBreakdown');
         const elVacantUnits = document.getElementById('portfolioVacantUnitsCount');
@@ -13864,12 +14348,17 @@ async function renderPortfolioOverview() {
 
         const allUnits = state.allUnits || [];
         const allTenants = state.allTenants || [];
+        const allApplications = state.applications || [];
+        const allInvites = state.invites || [];
         state.portfolioTenantsWithBalance = [];
         state.portfolioExpiringLeases = [];
         state.portfolioUpcomingMoveIns = [];
         state.portfolioVacantUnits = [];
         state.portfolioOccupiedUnits = [];
         const activeTenants = allTenants.filter(t => t.leaseStatus !== 'terminated' && t.leaseStatus !== 'expired');
+
+        const pendingApplications = allApplications.filter(a => (a.status || 'pending') === 'pending');
+        const recentInvites = allInvites.slice(0, 50);
 
         const now = new Date();
         // Determine which month to use for rent metrics (default = current month)
@@ -13888,6 +14377,19 @@ async function renderPortfolioOverview() {
         }
         const periodMonth = `${periodYear}-${String(periodMonthIndex + 1).padStart(2, '0')}`;
         const periodDate = new Date(periodYear, periodMonthIndex, 15);
+
+        // Update Applications & Invites chip if present
+        if (elApplicationsCount && elApplicationsSummary) {
+            const appsCount = pendingApplications.length;
+            const invitesCount = recentInvites.length;
+            elApplicationsCount.textContent = String(appsCount);
+            const parts = [];
+            parts.push(`${appsCount} pending application${appsCount === 1 ? '' : 's'}`);
+            if (invitesCount) {
+                parts.push(`${invitesCount} invite${invitesCount === 1 ? '' : 's'}`);
+            }
+            elApplicationsSummary.textContent = parts.join(' • ') || 'Applications & invites overview';
+        }
 
         // Load portfolio-wide payments for current month rent comparisons
         const allPayments = await loadPortfolioPayments();
@@ -13976,6 +14478,8 @@ async function renderPortfolioOverview() {
         });
 
         // Upcoming move-ins from approved applications (next 60 days)
+        // Keep displaying each upcoming move-in through 1 day after the move-in date,
+        // and track whether the move-in date has already passed for filtering.
         const apps = Array.isArray(state.applications) ? state.applications : [];
         const msPerDay = 1000 * 60 * 60 * 24;
         apps.forEach(app => {
@@ -13985,12 +14489,19 @@ async function renderPortfolioOverview() {
             const moveInDate = new Date(app.moveIn);
             const diffMs = moveInDate - now;
             const diffDays = Math.ceil(diffMs / msPerDay);
-            if (diffDays <= 60 && diffDays > 0) {
+            // Include move-ins up to 60 days out, plus the move-in day (0)
+            // and one extra day after (-2).
+            if (diffDays <= 60 && diffDays >= -2) {
                 upcomingMoveInsCount++;
                 if (diffDays <= 30) {
                     upcomingMoveInsWithin30++;
                 }
-                state.portfolioUpcomingMoveIns.push({ application: app, daysUntilMoveIn: diffDays });
+                const displayDays = diffDays < 0 ? 0 : diffDays;
+                state.portfolioUpcomingMoveIns.push({
+                    application: app,
+                    daysUntilMoveIn: displayDays,
+                    rawDaysUntilMoveIn: diffDays
+                });
             }
         });
 
@@ -14226,6 +14737,183 @@ function renderPortfolioDetails(type) {
         return map;
     }, {});
 
+    if (type === 'applications') {
+        titleEl.textContent = 'Applications & Invites (Portfolio)';
+        const allApps = state.applications || [];
+        const allInvites = state.invites || [];
+        if (!allApps.length && !allInvites.length) {
+            body.innerHTML = '<p style="font-size:0.86rem;color:#6b7280;">No applications or invites found.</p>';
+            return;
+        }
+
+        const combined = [];
+        allApps.forEach(a => {
+            // Try to derive property/unit from notes JSON when available
+            let propertyAddress = '';
+            let unitNumber = a.unit || '';
+            if (a.notes) {
+                try {
+                    const n = JSON.parse(a.notes);
+                    propertyAddress = n.propertyAddress || propertyAddress;
+                    unitNumber = n.unitNumber || unitNumber;
+                } catch {}
+            }
+            const notesCount = Array.isArray(a.notesHistory) ? a.notesHistory.length : 0;
+            combined.push({
+                kind: 'Application',
+                source: 'application',
+                id: a._id,
+                name: a.name || '',
+                email: a.email || '',
+                property: propertyAddress,
+                unit: unitNumber,
+                status: a.status || 'pending',
+                date: a.submitted ? new Date(a.submitted) : null,
+                notesCount
+            });
+        });
+        allInvites.forEach(inv => {
+            const notesCount = Array.isArray(inv.notesHistory) ? inv.notesHistory.length : 0;
+            combined.push({
+                kind: 'Invite',
+                source: 'invite',
+                id: inv._id,
+                name: inv.name || '',
+                email: inv.email || '',
+                property: inv.propertyName || '',
+                unit: inv.unitNumber || '',
+                status: inv.status || 'sent',
+                date: inv.sentAt ? new Date(inv.sentAt) : null,
+                notesCount
+            });
+        });
+
+        combined.sort((a, b) => {
+            const da = a.date ? a.date.getTime() : 0;
+            const db = b.date ? b.date.getTime() : 0;
+            return db - da;
+        });
+
+        const rowsHtml = combined.map(item => {
+            const dateStr = item.date ? item.date.toLocaleString('en-US') : '—';
+            const dataName = (item.name || '').toLowerCase().replace(/"/g,'&quot;');
+            const dataEmail = (item.email || '').toLowerCase().replace(/"/g,'&quot;');
+            const dataProp = (item.property || '').toLowerCase().replace(/"/g,'&quot;');
+            const dataUnit = String(item.unit || '').toLowerCase().replace(/"/g,'&quot;');
+            const dataStatus = (item.status || '').toLowerCase().replace(/"/g,'&quot;');
+            const dataType = item.kind.toLowerCase();
+            const notesBadge = `<button class="portfolio-notes-link" data-notes-source="${item.source}" data-notes-id="${item.id || ''}" style="background:none;border:none;padding:0;margin:0;font:inherit;cursor:pointer;">
+                    <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#4f46e5;font-size:0.8rem;">
+                        <i class="fas fa-sticky-note"></i>
+                        ${item.notesCount || 0}
+                    </span>
+                </button>`;
+            return `
+                <tr data-name="${dataName}" data-email="${dataEmail}" data-property="${dataProp}" data-unit="${dataUnit}" data-status="${dataStatus}" data-type="${dataType}" ${item.source === 'application' ? `data-app-id="${item.id || ''}"` : ''}${item.source === 'invite' ? ` data-invite-id="${item.id || ''}"` : ''}>
+                    <td>${item.kind}</td>
+                    <td>${item.name || '—'}</td>
+                    <td>${item.email || '—'}</td>
+                    <td>${item.property || '—'}</td>
+                    <td>${item.unit || '—'}</td>
+                    <td>${item.status}</td>
+                    <td>${dateStr}</td>
+                    <td>${notesBadge}</td>
+                </tr>`;
+        }).join('');
+
+        body.innerHTML = `
+            <div id="portfolioDetailsFilterBar" style="margin-bottom:8px;border-radius:12px;padding:0;display:flex;flex-wrap:wrap;gap:0;align-items:flex-start;position:relative;">
+                <div style="position:relative;flex:1 1 100%;min-width:240px;display:flex;align-items:center;gap:6px;justify-content:flex-start;">
+                    <i class="fas fa-magnifying-glass" style="color:#6b7280;margin-left:4px;"></i>
+                    <input id="portfolioDetailsSearchBar" type="text" placeholder="Search list by" title="Try: name:, email:, property:, unit:, status:, type:" style="flex:0 1 320px;max-width:280px;border:1px solid #e5e7eb;border-radius:10px;padding:6px 9px;background:#fff;font-size:0.9rem;" />
+                    <button class="btn-secondary" id="clearPortfolioDetailsFiltersBtn" title="Clear search" style="margin-right:4px;padding:5px 9px;font-size:0.85rem;">Clear</button>
+                </div>
+                <div id="portfolioDetailsActiveFilterChips" style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 8px 0 26px;flex:1 1 100%;"></div>
+                <div id="portfolioDetailsSearchSuggestions" style="position:absolute;top:40px;left:6px;right:auto;min-width:240px;max-width:520px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,0.15);padding:4px 0;display:none;z-index:1000;max-height:260px;overflow:auto;">
+                    <div id="portfolioDetailsSuggestHeader" style="padding:8px 12px;font-size:.85em;color:#374151;border-bottom:1px solid #eef2f7;display:flex;justify-content:space-between;align-items:center;">
+                        <span id="portfolioDetailsSuggestTitle">Choose a filter</span>
+                        <button id="portfolioDetailsSuggestBack" style="display:none;background:transparent;border:none;color:#217dbb;cursor:pointer;font-weight:600;">Back</button>
+                    </div>
+                    <ul id="portfolioDetailsSuggestList" style="list-style:none;margin:0;padding:4px 0;"></ul>
+                    <ul id="portfolioDetailsSuggestValues" style="list-style:none;margin:0;padding:4px 0;display:none;"></ul>
+                    <div style="border-top:1px solid #eef2f7;margin-top:4px;padding:6px 10px;font-size:.8em;color:#6b7280;">Use tokens like <strong>name:</strong> or <strong>status:</strong> for precise filters.</div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Property</th>
+                            <th>Unit</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolioDetailsTbody">
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+            </div>`;
+
+        window.__portfolioDetailsAccumulatedQuery = 'type:application';
+        initializePortfolioDetailsSearch();
+        renderFilteredPortfolioDetailsRows();
+
+        // Wire notes badge clicks and inline edit for applications in portfolio view
+        const detailsTbody = document.getElementById('portfolioDetailsTbody');
+        if (detailsTbody) {
+            detailsTbody.querySelectorAll('.portfolio-notes-link').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const src = btn.getAttribute('data-notes-source');
+                    const id = btn.getAttribute('data-notes-id');
+                    if (!id || !src) return;
+                    if (src === 'application') {
+                        openNotesDrawerForApplication(id);
+                    } else if (src === 'invite') {
+                        openNotesDrawerForInvite(id);
+                    }
+                });
+            });
+
+            detailsTbody.querySelectorAll('tr[data-app-id]').forEach(row => {
+                row.addEventListener('click', (e) => {
+                    const target = e.target;
+                    if (target.closest('.portfolio-notes-link') || target.closest('button') || target.closest('input') || target.closest('select') || target.closest('a')) {
+                        return;
+                    }
+                    if (row.dataset.editing === 'true') return;
+                    const id = row.getAttribute('data-app-id');
+                    if (!id) return;
+                    const app = (state.applications || []).find(a => String(a._id) === String(id));
+                    if (!app) return;
+                    enterPortfolioApplicationEditMode(row, app);
+                });
+            });
+
+            detailsTbody.querySelectorAll('tr[data-invite-id]').forEach(row => {
+                row.addEventListener('click', (e) => {
+                    const target = e.target;
+                    if (target.closest('.portfolio-notes-link') || target.closest('button') || target.closest('input') || target.closest('select') || target.closest('a')) {
+                        return;
+                    }
+                    if (row.dataset.editing === 'true') return;
+                    const id = row.getAttribute('data-invite-id');
+                    if (!id) return;
+                    const invite = (state.invites || []).find(x => String(x._id) === String(id));
+                    if (!invite) return;
+                    enterPortfolioInviteEditMode(row, invite);
+                });
+            });
+        }
+        return;
+    }
+
     if (type === 'tenants') {
         titleEl.textContent = 'All Tenants (Portfolio)';
         const tenants = state.allTenants || [];
@@ -14332,7 +15020,7 @@ function renderPortfolioDetails(type) {
             const dataStatus = (tenant.leaseStatus || '').toLowerCase().replace(/"/g,'&quot;');
             const dataBalance = (Number(remainingRent) || 0) > 0.01 ? 'with-balance' : 'no-balance';
             return `
-                <tr data-property="${dataProp}" data-unit="${dataUnit}" data-name="${dataName}" data-status="${dataStatus}" data-balance="${dataBalance}">
+                <tr data-property="${dataProp}" data-unit="${dataUnit}" data-name="${dataName}" data-status="${dataStatus}" data-balance="${dataBalance}" data-tenant-id="${tenant._id}">
                     <td>${propName}</td>
                     <td>${unitLabel}</td>
                     <td>${name}</td>
@@ -14343,9 +15031,10 @@ function renderPortfolioDetails(type) {
         }).join('');
         body.innerHTML = `
             <div id="portfolioDetailsFilterBar" style="margin-bottom:8px;border-radius:12px;padding:0;display:flex;flex-wrap:wrap;gap:0;align-items:flex-start;position:relative;">
-                <div style="position:relative;flex:1 1 100%;min-width:240px;display:flex;align-items:center;gap:6px;justify-content:flex-start;">
+                <div style="position:relative;flex:1 1 100%;min-width:240px;display:flex;align-items:center;gap:6px;justify-content:flex-start;flex-wrap:wrap;">
                     <i class="fas fa-magnifying-glass" style="color:#6b7280;margin-left:4px;"></i>
-                    <input id="portfolioDetailsSearchBar" type="text" placeholder="Search list by" title="Try: name:, property:, unit:, status:, type:" style="flex:0 1 320px;max-width:280px;border:1px solid #e5e7eb;border-radius:10px;padding:6px 9px;background:#fff;font-size:0.9rem;" />
+                    <input id="portfolioDetailsSearchBar" type="text" placeholder="Search list by" title="Try: name:, property:, unit:, status:, type:" style="flex:0 1 260px;max-width:260px;border:1px solid #e5e7eb;border-radius:10px;padding:6px 9px;background:#fff;font-size:0.9rem;" />
+                    <input type="month" id="portfolioRentMonthPicker" style="font-size:0.8rem;border:1px solid #e5e7eb;border-radius:8px;padding:4px 8px;margin-left:4px;" title="Select month for rent metrics" />
                     <button class="btn-secondary" id="clearPortfolioDetailsFiltersBtn" title="Clear search" style="margin-right:4px;padding:5px 9px;font-size:0.85rem;">Clear</button>
                 </div>
                 <div id="portfolioDetailsActiveFilterChips" style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 8px 0 26px;flex:1 1 100%;"></div>
@@ -14376,10 +15065,148 @@ function renderPortfolioDetails(type) {
                     </tbody>
                 </table>
             </div>`;
-
         window.__portfolioDetailsAccumulatedQuery = '';
         initializePortfolioDetailsSearch();
         renderFilteredPortfolioDetailsRows();
+
+        // Initialize and wire the portfolio rent month picker beside the search bar
+        (function setupPortfolioRentMonthPicker() {
+            const monthInput = document.getElementById('portfolioRentMonthPicker');
+            if (!monthInput) return;
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const currentVal = `${y}-${m}`;
+            if (!state.portfolioRentMonth) state.portfolioRentMonth = currentVal;
+            monthInput.value = state.portfolioRentMonth;
+            if (monthInput.dataset.bound === 'true') return;
+            monthInput.addEventListener('change', async () => {
+                const v = monthInput.value;
+                state.portfolioRentMonth = v || currentVal;
+                try {
+                    showLoader();
+                    await renderPortfolioOverview();
+                    // Refresh current details tab (rent or others) based on new month
+                    if (state.currentPortfolioDetailsType) {
+                        renderPortfolioDetails(state.currentPortfolioDetailsType);
+                    }
+                } finally {
+                    hideLoader();
+                }
+            });
+            monthInput.dataset.bound = 'true';
+        })();
+
+        // Inline edit for Expected rent: click the Expected column cell to edit, save on blur
+        (function setupInlineExpectedRentEditing() {
+            const tbody = body.querySelector('#portfolioDetailsTbody');
+            if (!tbody) return;
+            tbody.addEventListener('click', async (evt) => {
+            const cell = evt.target.closest('td');
+            if (!cell) return;
+            const row = cell.closest('tr');
+                if (!row) return;
+            const cellIndex = Array.prototype.indexOf.call(row.children, cell);
+            // Only activate edit mode when clicking the Expected column (4th column, index 3)
+            if (cellIndex !== 3) return;
+                const tenantId = row.getAttribute('data-tenant-id');
+                if (!tenantId) return;
+            const expectedCell = cell;
+                if (!expectedCell || expectedCell.querySelector('input')) return;
+
+                const currentText = (expectedCell.textContent || '').trim();
+                const numericMatch = currentText.replace(/[^0-9.\-]/g, '');
+                const originalValue = numericMatch || '';
+
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.step = '0.01';
+                input.min = '0';
+                input.value = originalValue;
+                input.className = 'app-inline-input';
+
+                expectedCell.textContent = '';
+                expectedCell.classList.add('expected-rent-editing');
+                row.dataset.editing = 'true';
+                expectedCell.appendChild(input);
+                input.focus();
+                input.select();
+
+                const period = (state.portfolioRentMonth && /^\d{4}-\d{2}$/.test(state.portfolioRentMonth))
+                    ? state.portfolioRentMonth
+                    : (() => {
+                        const now = new Date();
+                        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                    })();
+
+                const restoreCell = (valueStr) => {
+                    const num = Number(valueStr) || 0;
+                    expectedCell.textContent = `$${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    expectedCell.classList.remove('expected-rent-editing');
+                    delete row.dataset.editing;
+                };
+
+                const handleBlur = async () => {
+                    input.removeEventListener('blur', handleBlur);
+                    input.removeEventListener('keydown', handleKey);
+                    const newRaw = input.value.trim();
+                    if (newRaw === originalValue) {
+                        restoreCell(originalValue);
+                        return;
+                    }
+                    const expectedRent = newRaw === '' ? null : Number(newRaw);
+                    if (expectedRent !== null && !Number.isFinite(expectedRent)) {
+                        restoreCell(originalValue);
+                        showNotification('Invalid expected rent amount', 'error');
+                        return;
+                    }
+
+                    showLoader();
+                    try {
+                        // Preserve any existing late fee override while updating expected rent
+                        const existingOv = await fetchMonthOverride(tenantId, period);
+                        const payload = {
+                            expectedRent,
+                            lateFee: existingOv?.lateFee ?? null,
+                            lateFeeMode: existingOv?.lateFeeMode === 'percent' ? 'percent' : 'amount'
+                        };
+                        const resp = await fetch(`${API_URL}/tenants/${tenantId}/monthly-overrides/${period}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (!resp.ok) throw new Error('Failed to save expected rent override');
+
+                        upsertLocalTenantMonthlyOverride(tenantId, period, payload);
+                        upsertLocalAllTenantMonthlyOverride(tenantId, period, payload);
+
+                        showNotification('Expected rent updated', 'success');
+                        await renderPortfolioOverview();
+                        renderPortfolioDetails('rent');
+                    } catch (err) {
+                        console.error(err);
+                        restoreCell(originalValue);
+                        showNotification('Error saving expected rent', 'error');
+                    } finally {
+                        hideLoader();
+                    }
+                };
+
+                const handleKey = (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        input.blur();
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        input.value = originalValue;
+                        input.blur();
+                    }
+                };
+
+                input.addEventListener('blur', handleBlur);
+                input.addEventListener('keydown', handleKey);
+            });
+        })();
         return;
     }
 
@@ -14467,6 +15294,23 @@ function renderPortfolioDetails(type) {
         initializePortfolioDetailsSearch();
         renderFilteredPortfolioDetailsRows();
 
+        // Wire row click to open inline edit mode for portfolio maintenance
+        const maintTbody = document.getElementById('portfolioDetailsTbody');
+        if (maintTbody) {
+            Array.from(maintTbody.querySelectorAll('tr[data-maint-id]')).forEach(row => {
+                row.addEventListener('click', (e) => {
+                    const target = e.target;
+                    if (target.closest('a') || target.closest('button') || target.closest('input') || target.closest('select')) return;
+                    if (row.dataset.editing === 'true') return;
+                    const id = row.getAttribute('data-maint-id');
+                    if (!id) return;
+                    const req = (state.portfolioMaintenance || []).find(r => String(r._id) === String(id));
+                    if (!req) return;
+                    enterPortfolioMaintenanceEditMode(row, req);
+                });
+            });
+        }
+
         // Wire change handlers for inline status dropdowns
         const table = body.querySelector('table');
         if (table) {
@@ -14537,6 +15381,7 @@ function renderPortfolioDetails(type) {
                 return {
                     type: 'Lease Expiring',
                     daysUntil: daysUntilEnd,
+                    statusKey: 'lease-expiring',
                     name: tenant.fullName || tenant.name || `${tenant.firstName || ''} ${tenant.lastName || ''}`.trim() || 'Tenant',
                     unitId: tenant.unitId?._id || tenant.unitId,
                     unitFallback: tenant.unitNumber || tenant.unit || '—',
@@ -14544,7 +15389,7 @@ function renderPortfolioDetails(type) {
                     date: leaseEndDate
                 };
             }),
-            ...moveInItems.map(({ application, daysUntilMoveIn }) => {
+            ...moveInItems.map(({ application, daysUntilMoveIn, rawDaysUntilMoveIn }) => {
                 let propertyAddress = '';
                 let unitNumber = application.unit || '';
                 if (application.notes) {
@@ -14566,9 +15411,12 @@ function renderPortfolioDetails(type) {
                         }
                     } catch {}
                 }
+                const rawDays = typeof rawDaysUntilMoveIn === 'number' ? rawDaysUntilMoveIn : daysUntilMoveIn;
+                const statusKey = rawDays < 0 ? 'past-movein' : 'upcoming-movein';
                 return {
                     type: 'Upcoming Move-in',
                     daysUntil: daysUntilMoveIn,
+                    statusKey,
                     name: application.name || 'Applicant',
                     unitId: null,
                     unitFallback: unitNumber || '—',
@@ -14602,12 +15450,13 @@ function renderPortfolioDetails(type) {
                 if (!row.propertyNameOverride && row.propertyId && propsById[String(row.propertyId)]) {
                     propName = propsById[String(row.propertyId)].name;
                 }
+                const rowStatus = (row.statusKey || '').toLowerCase();
                 const dataType = (row.type || '').toLowerCase().replace(/"/g,'&quot;');
                 const dataProp = (propName || '').toLowerCase().replace(/"/g,'&quot;');
                 const dataUnit = String(unitLabel || '').toLowerCase().replace(/"/g,'&quot;');
                 const dataName = (row.name || '').toLowerCase().replace(/"/g,'&quot;');
                 return `
-                    <tr data-type="${dataType}" data-property="${dataProp}" data-unit="${dataUnit}" data-name="${dataName}">
+                    <tr data-type="${dataType}" data-property="${dataProp}" data-unit="${dataUnit}" data-name="${dataName}" data-status="${rowStatus}">
                         <td>${row.type}</td>
                         <td>${propName}</td>
                         <td>${unitLabel}</td>
@@ -14984,4 +15833,3 @@ document.addEventListener('DOMContentLoaded', () => {
     </script>
 </body>
 </html>
-
