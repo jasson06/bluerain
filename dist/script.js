@@ -3733,7 +3733,14 @@ async function renderMaintenanceNotifDropdown(requests) {
     console.warn('Could not fetch all projects for maintenance notifications.', err);
   }
   const propertyMap = {};
-  allProjects.forEach(p => propertyMap[p._id] = p.name);
+  allProjects.forEach(p => {
+    if (!p) return;
+    const id = p._id || p.id || p.projectId;
+    if (!id) return;
+    const name = p.name || p.projectName || '';
+    if (!name) return;
+    propertyMap[String(id)] = name;
+  });
 
   notifList.innerHTML = requests.map(r => {
     let photosHtml = '';
@@ -3752,10 +3759,24 @@ async function renderMaintenanceNotifDropdown(requests) {
   `;
 }
 
+    // Normalize projectId from request (can be string or populated object)
+    const rawProject = r.projectId || r.propertyId || r.project;
+    const projectId = rawProject && typeof rawProject === 'object'
+      ? (rawProject._id || rawProject.id || '')
+      : (rawProject || '');
+    const projectKey = projectId ? String(projectId) : '';
+
+    const propertyName =
+      (projectKey && propertyMap[projectKey]) ||
+      r.projectName ||
+      (rawProject && typeof rawProject === 'object' && (rawProject.name || rawProject.projectName)) ||
+      r.propertyAddress ||
+      'Unknown';
+
     return `
       <div class="notif-list-item modern-notif-item" 
            style="cursor:pointer;" 
-           onclick="handleMaintenanceRequestClick('${r._id}', '${r.projectId}', '${r.unitId?.number || ''}')">
+           onclick="handleMaintenanceRequestClick('${r._id}', '${projectKey}', '${r.unitId?.number || ''}')">
         <div class="notif-list-row">
           <div class="notif-title">
             <i class="fas fa-tools"></i> ${r.title}
@@ -3774,7 +3795,7 @@ async function renderMaintenanceNotifDropdown(requests) {
         <div class="notif-meta">
           <span class="notif-unit"><i class="fas fa-door-open"></i> Unit: ${r.unitId?.number || 'N/A'}</span>
           <span><i class="far fa-calendar-alt"></i> Requested: ${new Date(r.createdAt).toLocaleDateString()}</span>
-          <span class="notif-property"><i class="fas fa-building"></i> Property: ${propertyMap[r.projectId] || 'Unknown'}</span>
+          <span class="notif-property"><i class="fas fa-building"></i> Property: ${propertyName}</span>
         </div>
       </div>
     `;
