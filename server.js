@@ -1479,7 +1479,7 @@ app.post('/api/rental-applications/send-link', async (req, res) => {
     const subjBits = [];
     if (propertyName) subjBits.push(propertyName);
     if (unitNumber) subjBits.push(`Unit ${unitNumber}`);
-    const subject = `Rental Application Link${subjBits.length ? ' • ' + subjBits.join(' • ') : ''}`;
+    const subject = `Rental Application Link${subjBits.length ? '  ' + subjBits.join('  ') : ''}`;
 
     // Build a human-friendly property address if propertyId provided (outside of template)
     let propertyAddressText = '';
@@ -1493,7 +1493,7 @@ app.post('/api/rental-applications/send-link', async (req, res) => {
         const cityState = [addr.city, addr.state].filter(Boolean).join(', ');
         if (cityState) parts.push(cityState);
         if (addr.zip) parts.push(addr.zip);
-        propertyAddressText = parts.filter(Boolean).join(' • ');
+        propertyAddressText = parts.filter(Boolean).join('  ');
       }
     } catch (e) {
       // Non-fatal: leave propertyAddressText empty on failures
