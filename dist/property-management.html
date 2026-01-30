@@ -78,6 +78,7 @@ body {
     margin-bottom: 18px;
 }
 
+
 .modal form .form-group label {
     font-weight: 600;
     margin-bottom: 7px;
@@ -530,7 +531,7 @@ body {
 /* Main Content Styles */
 .main-content {
     flex: 1;
-    margin-left: 270px;
+    margin-left: 285px;
     padding: 10px;
     height: 100vh;
     overflow-y: auto;
@@ -3879,6 +3880,12 @@ tr[data-maint-id][data-editing="true"] {
                 <label>Description</label>
                 <textarea id="maintenanceDescription" required></textarea>
             </div>
+            <div class="form-group">
+                <label>Property</label>
+                <select id="maintenanceProperty">
+                    <option value="">Select a property</option>
+                </select>
+            </div>
             <div class="form-row">
                 <div class="form-group">
                     <label>Priority</label>
@@ -4486,10 +4493,21 @@ function initializeEventListeners() {
         showNotification('Please select a property first', 'error');
         return;
     }
+    const form = document.getElementById('addMaintenanceForm');
+    if (form) {
+        form.dataset.context = 'property';
+    }
+    populateMaintenancePropertySelect(state.currentProperty && state.currentProperty._id);
     populateMaintenanceUnitSelect();
     openModal('addMaintenanceModal');
 });
     document.getElementById('addMaintenanceForm')?.addEventListener('submit', handleAddMaintenance);
+
+    const maintenancePropertySelect = document.getElementById('maintenanceProperty');
+    if (maintenancePropertySelect && maintenancePropertySelect.dataset.bound !== 'true') {
+        maintenancePropertySelect.addEventListener('change', handleMaintenancePropertyChange);
+        maintenancePropertySelect.dataset.bound = 'true';
+    }
     
     // Document management
     document.getElementById('uploadDocumentBtn')?.addEventListener('click', () => {
@@ -8396,7 +8414,16 @@ let scheduleListView = false;
 async function handleAddMaintenance(event) {
     event.preventDefault();
 
-    if (!state.currentProperty) {
+    const formEl = event.target;
+    const propertySelect = document.getElementById('maintenanceProperty');
+    let projectId = '';
+    if (propertySelect && propertySelect.value) {
+        projectId = propertySelect.value;
+    } else if (state.currentProperty && state.currentProperty._id) {
+        projectId = state.currentProperty._id;
+    }
+
+    if (!projectId) {
         showNotification('Please select a property first', 'error');
         return;
     }
@@ -8417,7 +8444,7 @@ async function handleAddMaintenance(event) {
             formData.append('unitId', document.getElementById('maintenanceUnit').value);
             formData.append('status', 'pending');
             formData.append('tempPhotosPaths', JSON.stringify(tempPhotosPaths));
-            response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/maintenance`, {
+            response = await fetch(`${API_URL}/properties/${projectId}/maintenance`, {
                 method: 'POST',
                 body: formData
             });
@@ -8429,7 +8456,7 @@ async function handleAddMaintenance(event) {
                 unitId: document.getElementById('maintenanceUnit').value,
                 status: 'pending'
             };
-            response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/maintenance`, {
+            response = await fetch(`${API_URL}/properties/${projectId}/maintenance`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(maintenanceData)
@@ -8447,8 +8474,18 @@ async function handleAddMaintenance(event) {
         if (preview) preview.innerHTML = '';
         closeModal('addMaintenanceModal');
         
-    invalidateCache('maintenance');
-    await refreshContent('maintenance');
+        const ctx = formEl && formEl.dataset ? formEl.dataset.context || '' : '';
+        if (ctx === 'portfolio') {
+            try {
+                await renderPortfolioOverview();
+                renderPortfolioDetails('maintenance');
+            } catch (e) {
+                console.warn('Error refreshing portfolio maintenance after new request:', e);
+            }
+        } else {
+            invalidateCache('maintenance');
+            await refreshContent('maintenance');
+        }
         showNotification('Maintenance request created successfully', 'success');
         
 
@@ -8467,9 +8504,20 @@ document.getElementById('maintenancePhotos')?.addEventListener('change', async f
     const form = document.getElementById('addMaintenanceForm');
     if (!input.files || !input.files.length || !form) return;
     try {
+        const propertySelect = document.getElementById('maintenanceProperty');
+        let projectId = '';
+        if (propertySelect && propertySelect.value) {
+            projectId = propertySelect.value;
+        } else if (state.currentProperty && state.currentProperty._id) {
+            projectId = state.currentProperty._id;
+        }
+        if (!projectId) {
+            showNotification('Please select a property before uploading photos', 'error');
+            return;
+        }
         const fd = new FormData();
         Array.from(input.files).forEach(f => fd.append('photos', f));
-        const resp = await fetch(`${API_URL}/properties/${state.currentProperty._id}/maintenance/temp-photos`, { method: 'POST', body: fd });
+        const resp = await fetch(`${API_URL}/properties/${projectId}/maintenance/temp-photos`, { method: 'POST', body: fd });
         if (!resp.ok) throw new Error('Failed to upload photos');
         const data = await resp.json();
         const current = form.dataset.tempPhotosPaths ? JSON.parse(form.dataset.tempPhotosPaths) : [];
@@ -9911,11 +9959,53 @@ async function populateScheduleVendorSelect() {
 }
 
 
-        function populateMaintenanceUnitSelect() {
-  const select = document.getElementById('maintenanceUnit');
-  if (!select || !state.units) return;
-  select.innerHTML = `<option value="">Select a unit</option>` +
-    state.units.map(unit => `<option value="${unit._id}">Unit ${unit.number}</option>`).join('');
+                function populateMaintenanceUnitSelect() {
+    const select = document.getElementById('maintenanceUnit');
+    if (!select || !state.units) return;
+    select.innerHTML = `<option value="">Select a unit</option>` +
+        state.units.map(unit => `<option value="${unit._id}">Unit ${unit.number}</option>`).join('');
+}
+
+                function populateMaintenancePropertySelect(selectedId) {
+    const select = document.getElementById('maintenanceProperty');
+    if (!select) return;
+    const properties = state.properties || [];
+    if (!properties.length) {
+        select.innerHTML = '<option value="">No properties available</option>';
+        return;
+    }
+    const preferredId = selectedId || (state.currentProperty && state.currentProperty._id);
+    let options = '<option value="">Select a property</option>';
+    properties.forEach(p => {
+        if (!p || !p._id) return;
+        const pid = p._id;
+        const name = p.name || p.projectName || p.address || 'Property';
+        const selectedAttr = preferredId && String(preferredId) === String(pid) ? ' selected' : '';
+        options += `<option value="${pid}"${selectedAttr}>${name}</option>`;
+    });
+    select.innerHTML = options;
+}
+
+                async function handleMaintenancePropertyChange() {
+    const select = document.getElementById('maintenanceProperty');
+    if (!select) return;
+    const propertyId = select.value;
+    const unitSelect = document.getElementById('maintenanceUnit');
+    if (!unitSelect) return;
+    if (!propertyId) {
+        unitSelect.innerHTML = '<option value="">Select a unit</option>';
+        return;
+    }
+    try {
+        showLoader();
+        await loadUnits(propertyId, true);
+        populateMaintenanceUnitSelect();
+    } catch (err) {
+        console.error('Error loading units for maintenance property:', err);
+        showNotification('Error loading units for selected property', 'error');
+    } finally {
+        hideLoader();
+    }
 }
 
 
@@ -14900,6 +14990,8 @@ function renderPortfolioDetails(type) {
         });
         allInvites.forEach(inv => {
             const notesCount = Array.isArray(inv.notesHistory) ? inv.notesHistory.length : 0;
+            const openCount = typeof inv.openCount === 'number' ? inv.openCount : 0;
+            const lastOpened = inv.openedAt ? new Date(inv.openedAt) : null;
             combined.push({
                 kind: 'Invite',
                 source: 'invite',
@@ -14910,7 +15002,9 @@ function renderPortfolioDetails(type) {
                 unit: inv.unitNumber || '',
                 status: inv.status || 'sent',
                 date: inv.sentAt ? new Date(inv.sentAt) : null,
-                notesCount
+                notesCount,
+                openCount,
+                lastOpened
             });
         });
 
@@ -14922,6 +15016,7 @@ function renderPortfolioDetails(type) {
 
         const rowsHtml = combined.map(item => {
             const dateStr = item.date ? item.date.toLocaleString('en-US') : '—';
+            const lastOpenedStr = item.lastOpened ? item.lastOpened.toLocaleString('en-US') : '';
             const dataName = (item.name || '').toLowerCase().replace(/"/g,'&quot;');
             const dataEmail = (item.email || '').toLowerCase().replace(/"/g,'&quot;');
             const dataProp = (item.property || '').toLowerCase().replace(/"/g,'&quot;');
@@ -14934,15 +15029,21 @@ function renderPortfolioDetails(type) {
                         ${item.notesCount || 0}
                     </span>
                 </button>`;
+            const typeCell = item.source === 'application'
+                ? `<a href="/applications/review/${item.id}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline;cursor:pointer;">${item.kind}</a>`
+                : item.kind;
+            const dateCell = item.source === 'invite'
+                ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;"><span>${dateStr}</span>${lastOpenedStr ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#ecfdf3;color:#16a34a;font-size:0.75rem;">Opens: ${typeof item.openCount === 'number' ? item.openCount : 0} • Last opened: ${lastOpenedStr}</span>` : `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#ecfdf3;color:#16a34a;font-size:0.75rem;">Opens: ${typeof item.openCount === 'number' ? item.openCount : 0}</span>`}</div>`
+                : dateStr;
             return `
                 <tr data-name="${dataName}" data-email="${dataEmail}" data-property="${dataProp}" data-unit="${dataUnit}" data-status="${dataStatus}" data-type="${dataType}" ${item.source === 'application' ? `data-app-id="${item.id || ''}"` : ''}${item.source === 'invite' ? ` data-invite-id="${item.id || ''}"` : ''}>
-                    <td>${item.kind}</td>
+                    <td>${typeCell}</td>
                     <td>${item.name || '—'}</td>
                     <td>${item.email || '—'}</td>
                     <td>${item.property || '—'}</td>
                     <td>${item.unit || '—'}</td>
                     <td>${item.status}</td>
-                    <td>${dateStr}</td>
+                    <td>${dateCell}</td>
                     <td>${notesBadge}</td>
                 </tr>`;
         }).join('');
@@ -14963,6 +15064,12 @@ function renderPortfolioDetails(type) {
                     <ul id="portfolioDetailsSuggestList" style="list-style:none;margin:0;padding:4px 0;"></ul>
                     <ul id="portfolioDetailsSuggestValues" style="list-style:none;margin:0;padding:4px 0;display:none;"></ul>
                     <div style="border-top:1px solid #eef2f7;margin-top:4px;padding:6px 10px;font-size:.8em;color:#6b7280;">Use tokens like <strong>name:</strong> or <strong>status:</strong> for precise filters.</div>
+                </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;flex-wrap:wrap;">
+                <div style="font-size:0.9rem;color:#6b7280;">Applications & invites across all properties.</div>
+                <div>
+                    <button class="btn-secondary" id="portfolioSendApplicationBtn" type="button">Send Application</button>
                 </div>
             </div>
             <div class="table-responsive">
@@ -15035,6 +15142,16 @@ function renderPortfolioDetails(type) {
                     if (!invite) return;
                     enterPortfolioInviteEditMode(row, invite);
                 });
+            });
+        }
+
+        // Reuse the existing "Send Application" modal/flow from the main Applications tab
+        const portfolioSendBtn = document.getElementById('portfolioSendApplicationBtn');
+        const mainSendBtn = document.getElementById('sendApplicationBtn');
+        if (portfolioSendBtn && mainSendBtn) {
+            portfolioSendBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                mainSendBtn.click();
             });
         }
         return;
@@ -15401,6 +15518,12 @@ function renderPortfolioDetails(type) {
                     <div style="border-top:1px solid #eef2f7;margin-top:4px;padding:6px 10px;font-size:.8em;color:#6b7280;">Use tokens like <strong>type:</strong> or <strong>status:</strong> for precise filters.</div>
                 </div>
             </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;flex-wrap:wrap;">
+                <div style="font-size:0.9rem;color:#6b7280;">Open maintenance requests across all properties.</div>
+                <div>
+                    <button class="btn-secondary" id="portfolioNewMaintenanceBtn" type="button">New Request</button>
+                </div>
+            </div>
             <div class="table-responsive">
                 <table>
                     <thead>
@@ -15421,6 +15544,21 @@ function renderPortfolioDetails(type) {
         window.__portfolioDetailsAccumulatedQuery = '';
         initializePortfolioDetailsSearch();
         renderFilteredPortfolioDetailsRows();
+
+        const portfolioNewMaintBtn = document.getElementById('portfolioNewMaintenanceBtn');
+        if (portfolioNewMaintBtn) {
+            portfolioNewMaintBtn.addEventListener('click', () => {
+                const form = document.getElementById('addMaintenanceForm');
+                if (!form) return;
+                form.dataset.context = 'portfolio';
+                populateMaintenancePropertySelect();
+                const unitSelect = document.getElementById('maintenanceUnit');
+                if (unitSelect) {
+                    unitSelect.innerHTML = '<option value="">Select a unit</option>';
+                }
+                openModal('addMaintenanceModal');
+            });
+        }
 
         // Wire row click to open inline edit mode for portfolio maintenance
         const maintTbody = document.getElementById('portfolioDetailsTbody');
