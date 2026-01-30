@@ -4437,14 +4437,21 @@ async function openPortfolioOverview() {
     section.style.display = 'block';
     showLoader();
     try {
+        // Prioritize the main portfolio metrics so the overview appears quickly.
         await renderPortfolioOverview();
-        await loadPortfolioTasks(true);
+    } finally {
+        hideLoader();
+    }
+
+    // Load tasks and default details view without blocking the initial overview paint.
+    loadPortfolioTasks(true).catch(() => {});
+    try {
         // Default details view when opening overview (Leases & Move-ins)
         renderPortfolioDetails('leases');
         // Mark the default portfolio card as active
         setActivePortfolioCard('leases');
-    } finally {
-        hideLoader();
+    } catch (e) {
+        console.warn('Error rendering initial portfolio details:', e);
     }
 }
 
@@ -4636,12 +4643,23 @@ document.getElementById('addPaymentForm')?.addEventListener('submit', handleAddP
     };
 }
 
+// Small utility helpers
+function debounce(fn, delay) {
+    let timerId;
+    return function(...args) {
+        if (timerId) clearTimeout(timerId);
+        timerId = setTimeout(() => fn.apply(this, args), delay);
+    };
+}
+
 // Applications subtabs toggle (Applications vs Invites)
 function initializeApplicationsSubtabs() {
     const buttons = document.querySelectorAll('.applications-tab-btn');
     const paneApps = document.getElementById('applicationsPane-applications');
     const paneInvites = document.getElementById('applicationsPane-invites');
     if (!buttons.length || !paneApps || !paneInvites) return;
+    if (paneApps.dataset._subtabsInited === '1') return;
+    paneApps.dataset._subtabsInited = '1';
     buttons.forEach(btn => {
         btn.addEventListener('click', () => {
             buttons.forEach(b => b.classList.remove('active'));
@@ -4662,8 +4680,11 @@ function initializeApplicationsSubtabs() {
 function initializeApplicationsSearch() {
     const search = document.getElementById('applicationsSearchBar');
     if (!search) return;
-    search.addEventListener('input', ()=>{ positionApplicationsSearchSuggestions(); autoSuggestApplications(); showApplicationsSearchSuggestions(true); renderFilteredApplications(); });
-    search.addEventListener('change', ()=>{ positionApplicationsSearchSuggestions(); renderFilteredApplications(); });
+    if (search.dataset._inited === '1') return;
+    search.dataset._inited = '1';
+    const debouncedRender = debounce(renderFilteredApplications, 180);
+    search.addEventListener('input', ()=>{ positionApplicationsSearchSuggestions(); autoSuggestApplications(); showApplicationsSearchSuggestions(true); debouncedRender(); });
+    search.addEventListener('change', ()=>{ positionApplicationsSearchSuggestions(); debouncedRender(); });
     search.addEventListener('focus', ()=>{ positionApplicationsSearchSuggestions(); showApplicationsSearchSuggestions(true); });
     search.addEventListener('blur', ()=> setTimeout(()=>showApplicationsSearchSuggestions(false), 120));
     const clr = document.getElementById('clearApplicationsFiltersBtn');
@@ -4876,8 +4897,11 @@ function renderFilteredApplications(){
 function initializeInvitesSearch() {
     const search = document.getElementById('invitesSearchBar');
     if (!search) return;
-    search.addEventListener('input', ()=>{ positionInvitesSearchSuggestions(); autoSuggestInvites(); showInvitesSearchSuggestions(true); renderFilteredInvites(); });
-    search.addEventListener('change', ()=>{ positionInvitesSearchSuggestions(); renderFilteredInvites(); });
+    if (search.dataset._inited === '1') return;
+    search.dataset._inited = '1';
+    const debouncedRender = debounce(renderFilteredInvites, 180);
+    search.addEventListener('input', ()=>{ positionInvitesSearchSuggestions(); autoSuggestInvites(); showInvitesSearchSuggestions(true); debouncedRender(); });
+    search.addEventListener('change', ()=>{ positionInvitesSearchSuggestions(); debouncedRender(); });
     search.addEventListener('focus', ()=>{ positionInvitesSearchSuggestions(); showInvitesSearchSuggestions(true); });
     search.addEventListener('blur', ()=> setTimeout(()=>showInvitesSearchSuggestions(false), 120));
     const clr = document.getElementById('clearInvitesFiltersBtn');
@@ -5097,15 +5121,18 @@ function renderFilteredInvites(){
 function initializePortfolioTenantsSearch() {
     const search = document.getElementById('portfolioTenantsSearchBar');
     if (!search) return;
+    if (search.dataset._inited === '1') return;
+    search.dataset._inited = '1';
+    const debouncedRender = debounce(renderFilteredPortfolioTenants, 200);
     search.addEventListener('input', () => {
         positionPortfolioTenantsSearchSuggestions();
         autoSuggestPortfolioTenants();
         showPortfolioTenantsSearchSuggestions(true);
-        renderFilteredPortfolioTenants();
+        debouncedRender();
     });
     search.addEventListener('change', () => {
         positionPortfolioTenantsSearchSuggestions();
-        renderFilteredPortfolioTenants();
+        debouncedRender();
     });
     search.addEventListener('focus', () => {
         positionPortfolioTenantsSearchSuggestions();
@@ -5829,6 +5856,13 @@ function renderFilteredPortfolioTenants() {
         const leaseStart = t.leaseStart ? new Date(t.leaseStart).toLocaleDateString() : '—';
         const leaseEnd = t.leaseEnd ? new Date(t.leaseEnd).toLocaleDateString() : '—';
         const status = t.leaseStatus || 'unknown';
+        const notesCount = Array.isArray(t.notesHistory) ? t.notesHistory.length : 0;
+        const notesBadge = `<button class="portfolio-tenant-notes-link" data-tenant-id="${t._id}" style="background:none;border:none;padding:0;margin:0;font:inherit;cursor:pointer;">
+                <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#4f46e5;font-size:0.8rem;">
+                    <i class=\"fas fa-sticky-note\"></i>
+                    ${notesCount}
+                </span>
+            </button>`;
         return `
             <tr data-tenant-id="${t._id}">
                 <td>${propName}</td>
@@ -5838,16 +5872,17 @@ function renderFilteredPortfolioTenants() {
                 <td>${email}</td>
                 <td>${leaseStart} - ${leaseEnd}</td>
                 <td>${status}</td>
+                <td>${notesBadge}</td>
             </tr>`;
     }).join('');
 
-    tbody.innerHTML = rowsHtml || '<tr><td colspan="7" style="font-size:0.86rem;color:#6b7280;">No tenants match your filters.</td></tr>';
+    tbody.innerHTML = rowsHtml || '<tr><td colspan="8" style="font-size:0.86rem;color:#6b7280;">No tenants match your filters.</td></tr>';
 
     // Wire row click to open inline edit mode for portfolio tenants
     Array.from(tbody.querySelectorAll('tr[data-tenant-id]')).forEach(row => {
         row.addEventListener('click', (e) => {
             const target = e.target;
-            if (target.closest('a') || target.closest('button') || target.closest('input') || target.closest('select')) return;
+            if (target.closest('a') || target.closest('.portfolio-tenant-notes-link') || target.closest('input') || target.closest('select')) return;
             if (row.dataset.editing === 'true') return;
             const id = row.getAttribute('data-tenant-id');
             if (!id) return;
@@ -5856,22 +5891,56 @@ function renderFilteredPortfolioTenants() {
             enterPortfolioTenantEditMode(row, tenant);
         });
     });
+
+    // Wire tenant notes badge clicks to open shared notes drawer (if backend supports tenant notes)
+    tbody.querySelectorAll('.portfolio-tenant-notes-link').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const id = btn.getAttribute('data-tenant-id');
+            if (!id) return;
+            // Reuse application notes drawer context pattern if tenant notes endpoints exist in the API
+            if (typeof openNotesDrawerForTenant === 'function') {
+                openNotesDrawerForTenant(id);
+            } else {
+                const tenant = (state.allTenants || []).find(t => String(t._id) === String(id));
+                if (!tenant) return;
+                const { root, overlay, closeBtn, titleEl, subtitleEl, inputEl } = getNotesDrawerElements();
+                if (!root) return;
+                state.notesDrawerContext = { type: 'tenant', id };
+                if (titleEl) titleEl.textContent = 'Tenant Notes';
+                if (subtitleEl) subtitleEl.textContent = `${tenant.fullName || tenant.name || ''} • ${tenant.email || tenant.tenantEmail || ''}`.trim();
+                renderNotesDrawerMessages(tenant.notesHistory || []);
+                root.classList.add('open');
+                if (inputEl) {
+                    inputEl.value = '';
+                    setTimeout(() => inputEl.focus(), 50);
+                }
+                if (overlay) overlay.onclick = () => closeNotesDrawer();
+                if (closeBtn) closeBtn.onclick = () => closeNotesDrawer();
+            }
+        });
+    });
 }
 
 // ===== Shared Portfolio Details Search (rent, maintenance, leases, vacancy) =====
 function initializePortfolioDetailsSearch() {
     const search = document.getElementById('portfolioDetailsSearchBar');
     if (!search) return;
+    if (search.dataset._inited === '1') return;
+    search.dataset._inited = '1';
+
+    const debouncedRender = debounce(renderFilteredPortfolioDetailsRows, 200);
 
     search.addEventListener('input', () => {
         positionPortfolioDetailsSearchSuggestions();
         autoSuggestPortfolioDetails();
         showPortfolioDetailsSearchSuggestions(true);
-        renderFilteredPortfolioDetailsRows();
+        debouncedRender();
     });
     search.addEventListener('change', () => {
         positionPortfolioDetailsSearchSuggestions();
-        renderFilteredPortfolioDetailsRows();
+        debouncedRender();
     });
     search.addEventListener('focus', () => {
         positionPortfolioDetailsSearchSuggestions();
@@ -11748,6 +11817,8 @@ async function deleteNoteFromDrawer(noteId) {
         url = `/api/rental-applications/${ctx.id}/notes/${noteId}`;
     } else if (ctx.type === 'invite') {
         url = `/api/application-invites/${ctx.id}/notes/${noteId}`;
+    } else if (ctx.type === 'tenant') {
+        url = `/api/tenants/${ctx.id}/notes/${noteId}`;
     } else {
         return;
     }
@@ -11766,6 +11837,10 @@ async function deleteNoteFromDrawer(noteId) {
         } else if (ctx.type === 'invite') {
             state.invites = (state.invites || []).map(x =>
                 String(x._id) === String(ctx.id) ? { ...x, notesHistory: notes } : x
+            );
+        } else if (ctx.type === 'tenant') {
+            state.allTenants = (state.allTenants || []).map(t =>
+                String(t._id) === String(ctx.id) ? { ...t, notesHistory: notes } : t
             );
         }
 
@@ -11791,6 +11866,8 @@ document.getElementById('notesDrawerForm')?.addEventListener('submit', async (e)
         url = `/api/rental-applications/${ctx.id}/notes`;
     } else if (ctx.type === 'invite') {
         url = `/api/application-invites/${ctx.id}/notes`;
+    } else if (ctx.type === 'tenant') {
+        url = `/api/tenants/${ctx.id}/notes`;
     } else {
         return;
     }
@@ -11813,6 +11890,10 @@ document.getElementById('notesDrawerForm')?.addEventListener('submit', async (e)
         } else if (ctx.type === 'invite') {
             state.invites = (state.invites || []).map(x =>
                 String(x._id) === String(ctx.id) ? { ...x, notesHistory: notes } : x
+            );
+        } else if (ctx.type === 'tenant') {
+            state.allTenants = (state.allTenants || []).map(t =>
+                String(t._id) === String(ctx.id) ? { ...t, notesHistory: notes } : t
             );
         }
 
@@ -12143,8 +12224,11 @@ function renderPayments() {
 function initializeSimplePaymentSearchAndSort() {
     const search = document.getElementById('paymentSearchBar');
     if (search) {
-        search.addEventListener('input', ()=> { positionSearchSuggestions(); autoSuggestBasedOnInput(); showSearchSuggestions(true); renderPayments(); });
-        search.addEventListener('change', ()=> { positionSearchSuggestions(); renderPayments(); });
+        if (search.dataset._inited === '1') return;
+        search.dataset._inited = '1';
+        const debouncedRender = debounce(renderPayments, 200);
+        search.addEventListener('input', ()=> { positionSearchSuggestions(); autoSuggestBasedOnInput(); showSearchSuggestions(true); debouncedRender(); });
+        search.addEventListener('change', ()=> { positionSearchSuggestions(); debouncedRender(); });
         search.addEventListener('focus', ()=> { positionSearchSuggestions(); showSearchSuggestions(true); });
         search.addEventListener('blur', ()=> setTimeout(()=>showSearchSuggestions(false), 120));
         // basic keyboard navigation for the dropdown
@@ -14216,38 +14300,62 @@ function closeModal(modalId) {
 
 
 async function loadAllUnitsAndTenants() {
-    let allUnits = [];
-    let allTenants = [];
-    for (const property of state.properties) {
-        // Fetch units
-        try {
-            const unitsRes = await fetch(`${API_URL}/properties/${property._id}/units`);
-            if (unitsRes.ok) {
-                const unitsData = await unitsRes.json();
-                if (unitsData.property && Array.isArray(unitsData.property.units)) {
-                    const unitsWithProject = unitsData.property.units.map(u => {
-                        u.projectId = property._id;
-                        return u;
-                    });
-                    allUnits = allUnits.concat(unitsWithProject);
-                }
-            }
-        } catch (e) {
-            console.error(`Error loading units for property ${property._id}:`, e);
-        }
-        // Fetch tenants
-        try {
-            const tenantsRes = await fetch(`${API_URL}/properties/${property._id}/tenants`);
-            if (tenantsRes.ok) {
-                const tenantsData = await tenantsRes.json();
-                if (Array.isArray(tenantsData)) {
-                    allTenants = allTenants.concat(tenantsData);
-                }
-            }
-        } catch (e) {
-            console.error(`Error loading tenants for property ${property._id}:`, e);
-        }
+    if (!Array.isArray(state.properties) || !state.properties.length) {
+        state.allUnits = [];
+        state.allTenants = [];
+        renderPropertyList();
+        return;
     }
+
+    const results = await Promise.all(
+        state.properties.map(async (property) => {
+            let units = [];
+            let tenants = [];
+
+            // Fetch units and tenants for this property in parallel
+            const unitsPromise = (async () => {
+                try {
+                    const unitsRes = await fetch(`${API_URL}/properties/${property._id}/units`);
+                    if (unitsRes.ok) {
+                        const unitsData = await unitsRes.json();
+                        if (unitsData.property && Array.isArray(unitsData.property.units)) {
+                            units = unitsData.property.units.map(u => {
+                                u.projectId = property._id;
+                                return u;
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.error(`Error loading units for property ${property._id}:`, e);
+                }
+            })();
+
+            const tenantsPromise = (async () => {
+                try {
+                    const tenantsRes = await fetch(`${API_URL}/properties/${property._id}/tenants`);
+                    if (tenantsRes.ok) {
+                        const tenantsData = await tenantsRes.json();
+                        if (Array.isArray(tenantsData)) {
+                            tenants = tenantsData;
+                        }
+                    }
+                } catch (e) {
+                    console.error(`Error loading tenants for property ${property._id}:`, e);
+                }
+            })();
+
+            await Promise.all([unitsPromise, tenantsPromise]);
+            return { units, tenants };
+        })
+    );
+
+    const allUnits = [];
+    const allTenants = [];
+    results.forEach(r => {
+        if (r.units && r.units.length) allUnits.push(...r.units);
+        if (r.tenants && r.tenants.length) allTenants.push(...r.tenants);
+    });
+
     state.allUnits = allUnits;
     state.allTenants = allTenants;
     // Refresh property list so per-property stats (occupancy, vacancies) are shown once data is loaded
@@ -14259,20 +14367,26 @@ async function loadPortfolioPayments(force = false) {
     if (!force && Array.isArray(state.portfolioPayments) && state.portfolioPayments.length) {
         return state.portfolioPayments;
     }
-    let all = [];
-    for (const property of state.properties) {
-        try {
-            const res = await fetch(`${API_URL}/properties/${property._id}/payments`);
-            if (res.ok) {
-                const data = await res.json();
-                if (Array.isArray(data)) {
-                    all = all.concat(data);
-                }
-            }
-        } catch (e) {
-            console.error(`Error loading payments for property ${property._id}:`, e);
-        }
+    if (!Array.isArray(state.properties) || !state.properties.length) {
+        state.portfolioPayments = [];
+        return [];
     }
+
+    const perPropertyArrays = await Promise.all(
+        state.properties.map(async (property) => {
+            try {
+                const res = await fetch(`${API_URL}/properties/${property._id}/payments`);
+                if (!res.ok) return [];
+                const data = await res.json();
+                return Array.isArray(data) ? data : [];
+            } catch (e) {
+                console.error(`Error loading payments for property ${property._id}:`, e);
+                return [];
+            }
+        })
+    );
+
+    const all = perPropertyArrays.flat();
     state.portfolioPayments = all;
     return all;
 }
@@ -14337,6 +14451,36 @@ async function renderPortfolioOverview() {
         const elOccupancyBar = document.getElementById('portfolioOccupancyBar');
         if (!elOpenRentAmount || !elOpenRentCount || !elOpenMaint || !elExpiringLeases || !elVacantUnits) return;
 
+        // Start loading portfolio-wide payments and maintenance in parallel with any
+        // remaining unit/tenant loading work to reduce time-to-first overview paint.
+        const paymentsPromise = loadPortfolioPayments().catch((e) => {
+            console.error('Error loading portfolio payments:', e);
+            return [];
+        });
+
+        const maintenancePromise = (async () => {
+            let openMaintCount = 0;
+            let maintPending = 0;
+            let maintInProgress = 0;
+            try {
+                const res = await fetch('/api/properties/maintenance?status=pending,in-progress&_=' + Date.now());
+                if (res.ok) {
+                    const items = await res.json();
+                    if (Array.isArray(items)) {
+                        openMaintCount = items.length;
+                        state.portfolioMaintenance = items;
+                        items.forEach(m => {
+                            if (m.status === 'pending') maintPending++;
+                            if (m.status === 'in-progress') maintInProgress++;
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error('Error loading portfolio maintenance overview:', e);
+            }
+            return { openMaintCount, maintPending, maintInProgress };
+        })();
+
         // Ensure portfolio units/tenants are loaded
         if (!Array.isArray(state.allUnits) || !state.allUnits.length || !Array.isArray(state.allTenants) || !state.allTenants.length) {
             try {
@@ -14392,7 +14536,7 @@ async function renderPortfolioOverview() {
         }
 
         // Load portfolio-wide payments for current month rent comparisons
-        const allPayments = await loadPortfolioPayments();
+        const allPayments = await paymentsPromise;
 
         let totalUnpaidRent = 0;
         let totalExpectedRent = 0;
@@ -14512,25 +14656,7 @@ async function renderPortfolioOverview() {
         state.portfolioVacantUnits = vacantUnitsList;
         state.portfolioOccupiedUnits = occupiedUnitsList;
 
-        let openMaintCount = 0;
-        let maintPending = 0;
-        let maintInProgress = 0;
-        try {
-            const res = await fetch('/api/properties/maintenance?status=pending,in-progress&_=' + Date.now());
-            if (res.ok) {
-                const items = await res.json();
-                if (Array.isArray(items)) {
-                    openMaintCount = items.length;
-                    state.portfolioMaintenance = items;
-                    items.forEach(m => {
-                        if (m.status === 'pending') maintPending++;
-                        if (m.status === 'in-progress') maintInProgress++;
-                    });
-                }
-            }
-        } catch (e) {
-            console.error('Error loading portfolio maintenance overview:', e);
-        }
+        const { openMaintCount, maintPending, maintInProgress } = await maintenancePromise;
 
         const rentText = `$${totalUnpaidRent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         const rentSub = tenantsWithBalance ? `${tenantsWithBalance} tenant${tenantsWithBalance !== 1 ? 's' : ''} with balance` : 'All current month rent paid';
@@ -14939,6 +15065,7 @@ function renderPortfolioDetails(type) {
             const leaseStart = t.leaseStart ? new Date(t.leaseStart).toLocaleDateString() : '—';
             const leaseEnd = t.leaseEnd ? new Date(t.leaseEnd).toLocaleDateString() : '—';
             const status = t.leaseStatus || 'unknown';
+            const notesCount = Array.isArray(t.notesHistory) ? t.notesHistory.length : 0;
             return `
                 <tr>
                     <td>${propName}</td>
@@ -14980,6 +15107,7 @@ function renderPortfolioDetails(type) {
                             <th>Email</th>
                             <th>Lease Dates</th>
                             <th>Status</th>
+                            <th>Notes</th>
                         </tr>
                     </thead>
                     <tbody id="portfolioTenantsTbody">
