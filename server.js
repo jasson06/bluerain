@@ -1071,6 +1071,13 @@ leaseHolders: {
   type: [{ name: String, phone: String, email: String }],
   default: []
 },
+  // Chat-style internal notes timeline for tenants
+notesHistory: [
+  {
+    text: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+  }
+],
 // Per-month manual overrides for expected rent and late fee. Keyed by 'YYYY-MM'.
 monthlyOverrides: {
   type: Map,
@@ -6688,6 +6695,53 @@ app.delete('/api/properties/:propertyId/tenants/:tenantId', async (req, res) => 
         console.error('Error deleting tenant:', error);
         res.status(500).json({ message: 'Server error' });
     }
+});
+
+// Tenant Notes Routes (portfolio-level, not scoped by property)
+app.post('/api/tenants/:id/notes', async (req, res) => {
+  try {
+    const { id } = req.params;
+    let { text } = req.body || {};
+    text = (text || '').trim();
+    if (!text) {
+      return res.status(400).json({ message: 'Note text is required' });
+    }
+
+    const updated = await Tenant.findByIdAndUpdate(
+      id,
+      { $push: { notesHistory: { text, createdAt: new Date() } } },
+      { new: true }
+    ).select('notesHistory').lean();
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Tenant not found' });
+    }
+
+    return res.json({ notes: updated.notesHistory || [] });
+  } catch (err) {
+    console.error('Append tenant note error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+app.delete('/api/tenants/:id/notes/:noteId', async (req, res) => {
+  try {
+    const { id, noteId } = req.params;
+    const updated = await Tenant.findByIdAndUpdate(
+      id,
+      { $pull: { notesHistory: { _id: noteId } } },
+      { new: true }
+    ).select('notesHistory').lean();
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Tenant not found' });
+    }
+
+    return res.json({ notes: updated.notesHistory || [] });
+  } catch (err) {
+    console.error('Delete tenant note error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 // Maintenance Request Routes
