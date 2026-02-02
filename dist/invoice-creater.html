@@ -992,14 +992,31 @@ async function displayLineItems(items) {
     wrapper.style.alignItems = 'center';
     wrapper.style.opacity = isSelectable ? '1' : '0.5';
 
-    wrapper.innerHTML = `
-      <input type="checkbox" id="${id}" data-details='${JSON.stringify(item)}' style="margin-right: 8px;" ${isSelectable ? '' : 'disabled'}>
-      <label for="${id}" style="cursor:${isSelectable ? 'pointer' : 'not-allowed'}; flex:1; display:flex; align-items:center; gap:10px;">${label}</label>
-    `;
+    // Build checkbox and label via DOM APIs to safely attach JSON data
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = id;
+    checkbox.style.marginRight = '8px';
+    if (!isSelectable) {
+      checkbox.disabled = true;
+    }
+    // Store full JSON safely without HTML-escaping issues
+    checkbox.dataset.details = JSON.stringify(item);
+
+    const labelEl = document.createElement('label');
+    labelEl.htmlFor = id;
+    labelEl.style.cursor = isSelectable ? 'pointer' : 'not-allowed';
+    labelEl.style.flex = '1';
+    labelEl.style.display = 'flex';
+    labelEl.style.alignItems = 'center';
+    labelEl.style.gap = '10px';
+    labelEl.innerHTML = label;
+
+    wrapper.appendChild(checkbox);
+    wrapper.appendChild(labelEl);
     container.appendChild(wrapper);
   });
 }
-
 
 
 
@@ -1991,6 +2008,7 @@ function closeHelpVideo() {
   </script>
 </body>
 </html>
+
 
 
 
