@@ -946,18 +946,7 @@ card.innerHTML = `
         <span class="item-material-rate" style="font-variant-numeric:tabular-nums; color:#111827;">$0.00</span>
       </div>
     </div>
-    <div class="detail">
-      <label>Actual Cost to Date</label>
-      <input type="text" class="item-actual-cost" value="$0.00" readonly style="background:#f1f5f9;">
-    </div>
-    <div class="detail">
-      <label>Material Cost to Date</label>
-      <input type="text" class="item-material-cost-to-date" value="$0.00" readonly style="background:#f1f5f9;">
-    </div>
-    <div class="detail">
-      <label>Labor Cost to Date</label>
-      <input type="text" class="item-labor-cost-to-date" value="$0.00" readonly style="background:#f1f5f9;">
-    </div>
+
   </div>
   <!-- Collapsible Photo Section -->
   <div class="photo-toggle-section-modern">
@@ -1614,26 +1603,7 @@ if (!window.__staticAutoSaveBound) {
 }
 
 
-  setTimeout(async () => {
-    // You must have window.expenses and window.invoices loaded globally for this to work
-    if (item._id && window.expenses && window.invoices) {
-      // Material = sum of expenses for this item
-      const material = window.expenses.filter(e => e.item?.itemId === item._id).reduce((sum, e) => sum + (e.amount || 0), 0);
-      // Labor = sum of bills for this item (from invoices)
-      let labor = 0;
-      window.invoices.forEach(inv => {
-        (inv.lineItems || []).forEach(li => {
-          if (li.itemId === item._id || (li.itemId && li.itemId.toString() === item._id.toString())) {
-            labor += li.total || (li.quantity * li.unitPrice) || 0;
-          }
-        });
-      });
-      const actual = material + labor;
-      card.querySelector('.item-actual-cost').value = `$${actual.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-      card.querySelector('.item-material-cost-to-date').value = `$${material.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-      card.querySelector('.item-labor-cost-to-date').value = `$${labor.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-    }
-  }, 0);
+
 
   // Initial calculation
   updateCardValues();
@@ -2138,44 +2108,7 @@ async function saveEstimate() {
     });
 
     const title = document.getElementById("estimate-title").value.trim();
-
-    // Sanitize payload to ensure schema-compatible shapes (no object-valued description, numeric coercions)
-    function sanitizeLineItemsForSave(arr) {
-      if (!Array.isArray(arr)) return [];
-      return arr.map(cat => {
-        const cleanCat = {
-          type: 'category',
-          category: (cat?.category || '').toString(),
-          status: (cat?.status || 'in-progress').toString(),
-          items: []
-        };
-        const items = Array.isArray(cat?.items) ? cat.items : [];
-        cleanCat.items = items.map(it => {
-          const out = { ...it };
-          out.type = 'item';
-          out.name = (out.name || '').toString();
-          if (out.description && typeof out.description === 'object') {
-            const obj = out.description || {};
-            out.description = typeof obj.description === 'string' ? obj.description
-                            : (typeof obj.name === 'string' ? obj.name : '');
-          } else {
-            out.description = (out.description || '').toString();
-          }
-          if (out.costCode != null) out.costCode = out.costCode.toString();
-          const qty = isNaN(parseFloat(out.quantity)) ? 0 : parseFloat(out.quantity);
-          const price = isNaN(parseFloat(out.unitPrice)) ? 0 : parseFloat(out.unitPrice);
-          out.quantity = qty;
-          out.unitPrice = price;
-          out.total = qty * price;
-          out.status = (out.status || 'in-progress').toString();
-          return out;
-        });
-        return cleanCat;
-      });
-    }
-
-    const safeLineItems = sanitizeLineItemsForSave(mergedLineItems);
-    const updatedEstimate = { projectId, title, lineItems: safeLineItems, tax };
+  const updatedEstimate = { projectId, title, lineItems: mergedLineItems, tax };
 
     const method = estimateId ? "PUT" : "POST";
     const url = estimateId ? `/api/estimates/${estimateId}` : "/api/estimates";
@@ -4062,24 +3995,22 @@ function buildListViewFromCards() {
           const description = (getCardInput('.item-description')?.value || '').trim();
           const beforeList = getCardPhotos('before');
           const afterList = getCardPhotos('after');
-          // Start/End date and Cost Code current values from card
+          // Start/End date current values from card
           const startDateVal = getCardInput('.item-start-date')?.value || '';
           const endDateVal = getCardInput('.item-end-date')?.value || '';
-          const costCodeVal = getCardInput('.item-cost-code')?.value || '';
           td.innerHTML = `
             <div class="lv-detail-content">
               <div class="lv-detail-desc">
                 <h5>Description</h5>
                 <textarea class="lv-detail-desc-textarea" placeholder="No description provided."></textarea>
               </div>
-              <div class="lv-detail-dates" style="flex:0 0 190px; background:#ffffff; border:1px solid #e5e7eb; border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:10px;">
-                <div style="display:flow; flex-direction:column; gap:6px;">
+              <div class="lv-detail-dates" style="flex:0 0 150px; background:#ffffff; border:1px solid #e5e7eb; border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:10px;">
+                
+                <div style="display:flex; flex-direction:column; gap:6px;">
                   <label style="font-size:12px; color:#374151;">Start Date</label>
                   <input type="date" class="lv-detail-start-date" value="${startDateVal}" style="padding:6px 8px; border:1px solid #d1d5db; border-radius:6px;">
                   <label style="font-size:12px; color:#374151;">End Date</label>
                   <input type="date" class="lv-detail-end-date" value="${endDateVal}" style="padding:6px 8px; border:1px solid #d1d5db; border-radius:6px;">
-                  <label style="font-size:12px; color:#374151; margin-top:4px;">Cost Code</label>
-                  <input type="text" class="lv-detail-cost-code" value="${costCodeVal}" style="padding:6px 8px; border:1px solid #d1d5db; border-radius:6px;">
                 </div>
               </div>
               <div class="lv-detail-photos">
@@ -4120,10 +4051,9 @@ function buildListViewFromCards() {
               }
             });
           }
-          // Wire start/end dates and cost code to underlying card inputs
+          // Wire start/end dates to underlying card inputs
           const lvStart = td.querySelector('.lv-detail-start-date');
           const lvEnd = td.querySelector('.lv-detail-end-date');
-          const lvCost = td.querySelector('.lv-detail-cost-code');
           if (lvStart) {
             lvStart.addEventListener('focus', () => {
               const cardStart = getCardInput('.item-start-date');
@@ -4173,29 +4103,6 @@ function buildListViewFromCards() {
               }
             });
           }
-          if (lvCost) {
-            lvCost.addEventListener('focus', () => {
-              const cardCost = getCardInput('.item-cost-code');
-              lvCost.dataset.orig = cardCost ? (cardCost.value || '') : '';
-            });
-            lvCost.addEventListener('input', () => {
-              const cardCost = getCardInput('.item-cost-code');
-              if (cardCost) {
-                cardCost.value = lvCost.value;
-                cardCost.dispatchEvent(new Event('input', { bubbles:true }));
-              }
-            });
-            lvCost.addEventListener('blur', () => {
-              if ((lvCost.dataset.orig || '') === (lvCost.value || '')) return;
-              const cardCost = getCardInput('.item-cost-code');
-              if (cardCost) {
-                if (cardCost.value !== lvCost.value) {
-                  cardCost.value = lvCost.value;
-                  cardCost.dispatchEvent(new Event('blur', { bubbles:true }));
-                }
-              }
-            });
-          }
           // Click any thumbnail to open the full-screen viewer
           td.addEventListener('click', (ev) => {
             const img = ev.target && ev.target.tagName === 'IMG' ? ev.target : null;
@@ -4222,7 +4129,6 @@ function buildListViewFromCards() {
             toggleBtn.setAttribute('aria-expanded', 'false');
             toggleBtn.title = 'Show details';
             // icon rotates via CSS
-            try { card.removeAttribute('data-lv-expanded'); } catch (_) {}
           } else {
             // Expand
             const detailRow = createDetailRow();
@@ -4230,19 +4136,8 @@ function buildListViewFromCards() {
             toggleBtn.setAttribute('aria-expanded', 'true');
             toggleBtn.title = 'Hide details';
             // icon rotates via CSS
-            try { card.setAttribute('data-lv-expanded', 'true'); } catch (_) {}
           }
         });
-
-        // If this item was previously expanded, auto-expand its detail row
-        try {
-          if (card.getAttribute('data-lv-expanded') === 'true') {
-            const detailRow = createDetailRow();
-            frag.appendChild(detailRow);
-            toggleBtn.setAttribute('aria-expanded', 'true');
-            toggleBtn.title = 'Hide details';
-          }
-        } catch (_) {}
       }
       nextEl = nextEl.nextElementSibling;
     }
@@ -4316,7 +4211,7 @@ function buildListViewFromCards() {
       tdCat.appendChild(catWrap);
 
       tdItem.textContent = 'No items yet';
-      
+
       [td0, tdCat, tdItem, tdMode, tdQty, tdUnit, tdLabor, tdMaterial, tdAmount, tdStatus, tdAssigned, tdActions]
         .forEach(td => ptr.appendChild(td));
       frag.appendChild(ptr);
@@ -4701,12 +4596,11 @@ function updateTableFooterTotals(filteredOnly = false) {
       })();
 
       if (separatedHeaderVisible && cLen >= 12) {
-        // Current list-view (separate HTML header) without Cost Code column:
-        // [0]=Select, [1]=Category, [2]=Item, [3]=Mode, [4]=Qty, [5]=Unit Price,
-        // [6]=Labor, [7]=Material, [8]=Amount, [9]=Status, [10]=Assigned, [11]=Actions
+        // Current list-view (separate HTML header):
+        // [0]=Select, [1]=Category, [2]=Item, [3]=Mode, [4]=Qty, [5]=Unit Price, [6]=Labor, [7]=Material, [8]=Amount, [9]=Status, [10]=Assigned, [11]=Actions
         lIdx = 6; mIdx = 7; aIdx = 8; pIdx = -1;
       } else if (cLen >= 12) {
-        // 12-col body-internal header variant; fall back to common order if used
+        // 12-col legacy/body-internal header variant; fall back to common order if used
         // Adjust if your legacy order differs
         lIdx = 6; mIdx = 7; aIdx = 8; pIdx = -1;
       } else if (cLen >= 8) {
@@ -4943,6 +4837,3 @@ function addSmartBlurAutoSave(input) {
     }
   });
 }
-
-
-
