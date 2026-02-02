@@ -1764,6 +1764,7 @@ input, textarea {
   align-items: start;
   overflow: auto;
   max-width: 1150px;
+  min-height: 500px;
 }
 
 .vendor-table {
