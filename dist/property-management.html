@@ -2282,6 +2282,35 @@ input[type="file"] {
     color: #92400e;
 }
 
+/* Portfolio Applications & Invites type tags */
+.portfolio-apps-tag-btn {
+    border-radius: 999px;
+    padding: 4px 14px;
+    font-size: 0.8rem;
+    border: 1px solid #d1d5db;
+    background: #f3f4f6;
+    color: #374151;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+    transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.1s ease;
+}
+
+.portfolio-apps-tag-btn:hover {
+    background: #e5e7eb;
+    box-shadow: 0 2px 4px rgba(15,23,42,0.08);
+    transform: translateY(-1px);
+}
+
+.portfolio-apps-tag-btn.portfolio-apps-tag-active {
+    background:  #ffffff;
+    color: #3c3c3c;
+    border-color: rgba(37,99,235,0.75);
+    box-shadow: 0 4px 10px rgba(37,99,235,0.28);
+}
+
 .portfolio-badge.danger {
     background: #fee2e2;
     color: #b91c1c;
@@ -4021,6 +4050,14 @@ tr[data-maint-id][data-editing="true"] {
        <form id="addPaymentForm">
     <div class="form-row">
         <div class="form-group">
+            <label>Property</label>
+            <select id="paymentProperty" required>
+                <option value="">Select Property</option>
+            </select>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group">
             <label>Tenant</label>
             <select id="paymentTenant" required>
                 <option value="">Select Tenant</option>
@@ -4525,19 +4562,8 @@ document.getElementById('addPaymentBtn')?.addEventListener('click', () => {
         showNotification('Please select a property first', 'error');
         return;
     }
-    const form = document.getElementById('addPaymentForm');
-    form.reset();
-    form.dataset.editMode = 'false';
-    form.dataset.paymentId = '';
-    form.querySelector('button[type="submit"]').textContent = 'Save Payment';
-    populatePaymentTenantSelect();
-    populatePaymentUnitSelect();
-    // Ensure fee row visibility reflects current applyTo
-    document.getElementById('paymentApplyTo')?.dispatchEvent(new Event('change'));
-    // Reset custom and carry-forward groups
-    document.getElementById('paymentType')?.dispatchEvent(new Event('change'));
-    updateCarryForwardVisibility();
-    openModal('addPaymentModal');
+    const propId = state.currentProperty?._id;
+    openPaymentModalForTenantAndProperty(null, propId, true);
 });
 document.getElementById('addPaymentForm')?.addEventListener('submit', handleAddPayment);
 
@@ -4859,7 +4885,23 @@ function showApplicationsValueSuggestions(token){
     const backBtn = document.getElementById('applicationsSuggestBack');
     if (!list || !values || !title) return;
     let items=[];
-    if (token==='property:') items = (state.properties||[]).map(p=>({label:p.name,value:(p.name||'').toLowerCase()}));
+    if (token==='property:') {
+        // For application property filters, suggest values based on the
+        // actual address text shown in the Property column so users can
+        // search by what they see, not internal names.
+        const rows = Array.from(document.querySelectorAll('#applicationsTable tbody tr'));
+        const seen = new Set();
+        items = rows.map(r => {
+            const label = (r.children[3]?.textContent || '').trim();
+            const value = (r.dataset.property || '').toLowerCase();
+            return { label, value };
+        }).filter(it => {
+            if (!it.label || !it.value) return false;
+            if (seen.has(it.value)) return false;
+            seen.add(it.value);
+            return true;
+        });
+    }
     else if (token==='unit:') items = (state.units||[]).map(u=>({label:`${u.number}`, value:String(u.number).toLowerCase()}));
     else if (token==='status:') items = ['pending','approved','rejected'].map(v=>({label:v,value:v}));
     else if (token==='movein:' || token==='submitted:') {
@@ -5075,7 +5117,23 @@ function showInvitesValueSuggestions(token){
     const backBtn = document.getElementById('invitesSuggestBack');
     if (!list || !values || !title) return;
     let items=[];
-    if (token==='property:') items = (state.properties||[]).map(p=>({label:p.name,value:(p.name||'').toLowerCase()}));
+    if (token==='property:') {
+        // For invite property filters, base suggestions on the Property
+        // column text in the invites table (typically an address) so
+        // the search aligns with what users see there.
+        const rows = Array.from(document.querySelectorAll('#invitesTable tbody tr'));
+        const seen = new Set();
+        items = rows.map(r => {
+            const label = (r.children[3]?.textContent || '').trim();
+            const value = (r.dataset.property || '').toLowerCase();
+            return { label, value };
+        }).filter(it => {
+            if (!it.label || !it.value) return false;
+            if (seen.has(it.value)) return false;
+            seen.add(it.value);
+            return true;
+        });
+    }
     else if (token==='unit:') items = (state.units||[]).map(u=>({label:`${u.number}`, value:String(u.number).toLowerCase()}));
     else if (token==='status:') items = ['sent','opened','bounced','failed'].map(v=>({label:v,value:v}));
     else if (token==='sent:' || token==='opened:') {
@@ -6143,7 +6201,25 @@ function showPortfolioDetailsValueSuggestions(token) {
     if (!list || !values || !title) return;
     let items = [];
     if (token === 'property:') {
-        items = (state.properties || []).map(p => ({ label: p.name, value: (p.name || '').toLowerCase() }));
+        // For Applications & Invites (Portfolio), derive property values from the
+        // current table rows so filters use the actual address text that is shown
+        // in the "Property" column instead of the internal property name.
+        if (state.currentPortfolioDetailsType === 'applications') {
+            const bodyRows = Array.from(document.querySelectorAll('#portfolioDetailsTbody tr'));
+            const seen = new Set();
+            items = bodyRows.map(r => {
+                const label = (r.children[3]?.textContent || '').trim();
+                const value = (r.dataset.property || '').toLowerCase();
+                return { label, value };
+            }).filter(it => {
+                if (!it.label || !it.value) return false;
+                if (seen.has(it.value)) return false;
+                seen.add(it.value);
+                return true;
+            });
+        } else {
+            items = (state.properties || []).map(p => ({ label: p.name, value: (p.name || '').toLowerCase() }));
+        }
     } else if (token === 'unit:') {
         items = (state.allUnits || []).map(u => ({ label: `${u.number || u.unitNumber || ''}`, value: String(u.number || u.unitNumber || '').toLowerCase() }));
     } else if (token === 'status:') {
@@ -6152,7 +6228,19 @@ function showPortfolioDetailsValueSuggestions(token) {
         const set = new Set();
         bodyRows.forEach(r => { if (r.dataset.status) set.add(r.dataset.status.toLowerCase()); });
         if (!set.size) ['active','pending','expired','terminated','vacant','in-progress','completed'].forEach(v => set.add(v));
-        items = Array.from(set).map(v => ({ label: v, value: v }));
+        // Ensure lease/move-in specific statuses are always available in the
+        // Leases & Upcoming Move-ins (Next 60 Days) portfolio view, even if
+        // no current rows happen to have that status.
+        if (state.currentPortfolioDetailsType === 'leases') {
+            ['lease-expiring','upcoming-movein','past-movein'].forEach(v => set.add(v));
+        }
+        const mapStatusLabel = (v) => {
+            if (v === 'past-movein') return 'Moved-in (already)';
+            if (v === 'upcoming-movein') return 'Upcoming move-in';
+            if (v === 'lease-expiring') return 'Lease expiring';
+            return v;
+        };
+        items = Array.from(set).map(v => ({ label: mapStatusLabel(v), value: v }));
     } else if (token === 'name:') {
         items = (state.allTenants || []).slice(0, 12).map(t => {
             const base = t.fullName || t.name || `${t.firstName || ''} ${t.lastName || ''}`.trim();
@@ -12844,9 +12932,18 @@ function populatePaymentTenantSelect() {
     const select = document.getElementById('paymentTenant');
     if (!select) return;
     const isActive = (t) => !['terminated','expired','inactive'].includes(String(t.leaseStatus||'').toLowerCase());
-    const activeTenants = (state.tenants || []).filter(isActive);
+    const allTenants = (state.allTenants && state.allTenants.length ? state.allTenants : (state.tenants || []));
+    const propertySelect = document.getElementById('paymentProperty');
+    const selectedPropertyId = propertySelect?.value || state.currentProperty?._id || '';
+    let tenants = allTenants.filter(isActive);
+    if (selectedPropertyId) {
+        tenants = tenants.filter(t => {
+            const pid = t.projectId || t.propertyId;
+            return pid && String(pid) === String(selectedPropertyId);
+        });
+    }
     select.innerHTML = `<option value="">Select Tenant</option>` +
-        activeTenants.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
+        tenants.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
 }
 
 // --- Monthly Charges (Overrides) UI Logic ---
@@ -13040,14 +13137,25 @@ document.getElementById('clearMonthChargesBtn')?.addEventListener('click', async
 function populatePaymentUnitSelect() {
     const select = document.getElementById('paymentUnit');
     if (!select) return;
+    const allUnits = (state.allUnits && state.allUnits.length ? state.allUnits : (state.units || []));
+    const propertySelect = document.getElementById('paymentProperty');
+    const selectedPropertyId = propertySelect?.value || state.currentProperty?._id || '';
+    let units = allUnits;
+    if (selectedPropertyId) {
+        units = units.filter(u => {
+            const pid = u.projectId || u.propertyId || u.project;
+            return pid && String(pid) === String(selectedPropertyId);
+        });
+    }
     select.innerHTML = `<option value="">Select Unit</option>` +
-        state.units.map(u => `<option value="${u._id}">Unit ${u.number}</option>`).join('');
+        units.map(u => `<option value="${u._id}">Unit ${u.number}</option>`).join('');
 }
 
 // Auto-select assigned unit when tenant is selected in payment form
 document.getElementById('paymentTenant')?.addEventListener('change', function() {
     const tenantId = this.value;
-    const tenant = state.tenants.find(t => t._id === tenantId);
+    const tenantsSource = (state.allTenants && state.allTenants.length ? state.allTenants : (state.tenants || []));
+    const tenant = tenantsSource.find(t => String(t._id) === String(tenantId));
     if (!tenant) return;
     // Try to get the assigned unitId (could be object or string)
     const unitId = tenant.unitId?._id || tenant.unitId;
@@ -13063,9 +13171,10 @@ document.getElementById('paymentUnit')?.addEventListener('change', function() {
     const unitId = this.value;
     // Find the ACTIVE tenant assigned to this unit (skip terminated/expired/inactive)
     const isActive = (t) => !['terminated','expired','inactive'].includes(String(t.leaseStatus||'').toLowerCase());
-    const tenant = (state.tenants || []).find(t => {
+    const tenantsSource = (state.allTenants && state.allTenants.length ? state.allTenants : (state.tenants || []));
+    const tenant = tenantsSource.find(t => {
         const tUnitId = t.unitId?._id || t.unitId;
-        return isActive(t) && tUnitId === unitId;
+        return isActive(t) && String(tUnitId) === String(unitId);
     });
     const tenantSelect = document.getElementById('paymentTenant');
     if (tenant && tenantSelect) {
@@ -13076,6 +13185,66 @@ document.getElementById('paymentUnit')?.addEventListener('change', function() {
             tenantSelect.value = '';
         }
     }
+});
+
+function populatePaymentPropertySelect(selectedPropertyId, lockSelection) {
+    const sel = document.getElementById('paymentProperty');
+    if (!sel) return;
+    const props = state.properties || [];
+    sel.innerHTML = '<option value="">Select Property</option>' +
+        props.map(p => `<option value="${p._id}">${p.name}</option>`).join('');
+    if (selectedPropertyId) {
+        sel.value = selectedPropertyId;
+    } else if (state.currentProperty?._id) {
+        sel.value = state.currentProperty._id;
+    }
+    sel.disabled = !!lockSelection;
+}
+
+function openPaymentModalForTenantAndProperty(tenantId, propertyId, lockProperty) {
+    const form = document.getElementById('addPaymentForm');
+    if (!form) return;
+    form.reset();
+    form.dataset.editMode = 'false';
+    form.dataset.paymentId = '';
+    form.querySelector('button[type="submit"]').textContent = 'Save Payment';
+
+    const effectivePropertyId = propertyId || state.currentProperty?._id || '';
+    populatePaymentPropertySelect(effectivePropertyId, !!lockProperty);
+    populatePaymentTenantSelect();
+    populatePaymentUnitSelect();
+
+    // Default payment date to today (YYYY-MM-DD)
+    const dateInput = document.getElementById('paymentDate');
+    if (dateInput && !dateInput.value) {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        dateInput.value = `${y}-${m}-${d}`;
+    }
+
+    if (tenantId) {
+        const tenantSel = document.getElementById('paymentTenant');
+        if (tenantSel) {
+            tenantSel.value = tenantId;
+            tenantSel.dispatchEvent(new Event('change'));
+        }
+    }
+
+    document.getElementById('paymentApplyTo')?.dispatchEvent(new Event('change'));
+    document.getElementById('paymentType')?.dispatchEvent(new Event('change'));
+    updateCarryForwardVisibility();
+    openModal('addPaymentModal');
+}
+
+document.getElementById('paymentProperty')?.addEventListener('change', function() {
+    populatePaymentTenantSelect();
+    populatePaymentUnitSelect();
+    const tenantSel = document.getElementById('paymentTenant');
+    const unitSel = document.getElementById('paymentUnit');
+    if (tenantSel) tenantSel.value = '';
+    if (unitSel) unitSel.value = '';
 });
 
 // Normalize and validate payment type against server enum
@@ -13093,6 +13262,8 @@ function editPayment(paymentId) {
     if (!payment) return showNotification('Payment not found', 'error');
 
     // Populate selects before setting values
+    const propertyId = payment.projectId || payment.propertyId || state.currentProperty?._id || '';
+    populatePaymentPropertySelect(propertyId, true);
     populatePaymentTenantSelect();
     populatePaymentUnitSelect();
 
@@ -13170,7 +13341,9 @@ document.getElementById('paymentAmount')?.addEventListener('input', updateCarryF
 // Handle add payment
 async function handleAddPayment(event) {
     event.preventDefault();
-    if (!state.currentProperty) {
+    const propertySelect = document.getElementById('paymentProperty');
+    const selectedPropertyId = propertySelect?.value || state.currentProperty?._id || '';
+    if (!selectedPropertyId) {
         showNotification('Please select a property first', 'error');
         return;
     }
@@ -13207,13 +13380,13 @@ async function handleAddPayment(event) {
     try {
         let response;
         if (isEdit && paymentId) {
-            response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/payments/${paymentId}`, {
+            response = await fetch(`${API_URL}/properties/${selectedPropertyId}/payments/${paymentId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(paymentData)
             });
         } else {
-            response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/payments`, {
+            response = await fetch(`${API_URL}/properties/${selectedPropertyId}/payments`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(paymentData)
@@ -13221,7 +13394,25 @@ async function handleAddPayment(event) {
         }
         if (!response.ok) throw new Error('Failed to save payment');
     invalidateCache('payments');
-    await refreshContent('payments');
+    // Only refresh the payments tab list if we're currently on Payments
+    if (state.currentTab === 'payments') {
+        await refreshContent('payments');
+    }
+    // Also refresh portfolio rent metrics/table if portfolio is in use
+    try {
+        if (typeof renderPortfolioOverview === 'function') {
+            // Invalidate cached portfolio-wide payments so fresh data is used
+            if (Array.isArray(state.portfolioPayments)) {
+                state.portfolioPayments = [];
+            }
+            await renderPortfolioOverview();
+            if (state.currentPortfolioDetailsType === 'rent') {
+                renderPortfolioDetails('rent');
+            }
+        }
+    } catch (e) {
+        console.warn('Error refreshing portfolio after payment:', e);
+    }
         closeModal('addPaymentModal');
         showNotification(isEdit ? 'Payment updated successfully' : 'Payment recorded successfully', 'success');
         event.target.reset();
@@ -14553,15 +14744,22 @@ async function renderPortfolioOverview() {
             let maintPending = 0;
             let maintInProgress = 0;
             try {
-                const res = await fetch('/api/properties/maintenance?status=pending,in-progress&_=' + Date.now());
+                // Include completed requests in the portfolio maintenance dataset so
+                // the status filter can show and switch to them, but only count
+                // pending + in-progress toward the "Open Maintenance" chip.
+                const res = await fetch('/api/properties/maintenance?status=pending,in-progress,completed&_=' + Date.now());
                 if (res.ok) {
                     const items = await res.json();
                     if (Array.isArray(items)) {
-                        openMaintCount = items.length;
                         state.portfolioMaintenance = items;
                         items.forEach(m => {
-                            if (m.status === 'pending') maintPending++;
-                            if (m.status === 'in-progress') maintInProgress++;
+                            if (m.status === 'pending') {
+                                maintPending++;
+                                openMaintCount++;
+                            } else if (m.status === 'in-progress') {
+                                maintInProgress++;
+                                openMaintCount++;
+                            }
                         });
                     }
                 }
@@ -14711,28 +14909,26 @@ async function renderPortfolioOverview() {
             }
         });
 
-        // Upcoming move-ins from approved applications (next 60 days)
-        // Keep displaying each upcoming move-in through 1 day after the move-in date,
-        // and track whether the move-in date has already passed for filtering.
-        const apps = Array.isArray(state.applications) ? state.applications : [];
+        // Upcoming / recent move-ins based on actual tenant lease start dates
+        // (rather than applications). Track move-ins up to 60 days out and
+        // up to 60 days after the lease start date.
         const msPerDay = 1000 * 60 * 60 * 24;
-        apps.forEach(app => {
-            if (!app.moveIn) return;
-            const status = (app.status || '').toLowerCase();
-            if (status !== 'approved') return;
-            const moveInDate = new Date(app.moveIn);
+        activeTenants.forEach(tenant => {
+            if (!tenant.leaseStart) return;
+            const moveInDate = new Date(tenant.leaseStart);
+            if (isNaN(moveInDate.getTime())) return;
             const diffMs = moveInDate - now;
             const diffDays = Math.ceil(diffMs / msPerDay);
             // Include move-ins up to 60 days out, plus the move-in day (0)
-            // and one extra day after (-2).
-            if (diffDays <= 60 && diffDays >= -2) {
+            // and up to 60 days after move-in (negative diffDays).
+            if (diffDays <= 60 && diffDays >= -60) {
                 upcomingMoveInsCount++;
                 if (diffDays <= 30) {
                     upcomingMoveInsWithin30++;
                 }
                 const displayDays = diffDays < 0 ? 0 : diffDays;
                 state.portfolioUpcomingMoveIns.push({
-                    application: app,
+                    tenant,
                     daysUntilMoveIn: displayDays,
                     rawDaysUntilMoveIn: diffDays
                 });
@@ -15068,7 +15264,11 @@ function renderPortfolioDetails(type) {
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;flex-wrap:wrap;">
                 <div style="font-size:0.9rem;color:#6b7280;">Applications & invites across all properties.</div>
-                <div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <div id="portfolioAppsTypeTags" style="display:inline-flex;gap:6px;flex-wrap:wrap;">
+                        <button type="button" class="portfolio-apps-tag-btn portfolio-apps-tag-active" data-type="application">Applications</button>
+                        <button type="button" class="portfolio-apps-tag-btn" data-type="invite">Invites</button>
+                    </div>
                     <button class="btn-secondary" id="portfolioSendApplicationBtn" type="button">Send Application</button>
                 </div>
             </div>
@@ -15095,6 +15295,41 @@ function renderPortfolioDetails(type) {
         window.__portfolioDetailsAccumulatedQuery = 'type:application';
         initializePortfolioDetailsSearch();
         renderFilteredPortfolioDetailsRows();
+
+        // Wire Applications/Invites type tags inside the portfolio view
+        (function setupPortfolioAppsTypeTags() {
+            const container = document.getElementById('portfolioAppsTypeTags');
+            if (!container) return;
+            const buttons = Array.from(container.querySelectorAll('.portfolio-apps-tag-btn'));
+            if (!buttons.length) return;
+            const applyTypeFilter = (selectedType) => {
+                const input = document.getElementById('portfolioDetailsSearchBar');
+                const combined = `${(window.__portfolioDetailsAccumulatedQuery || '').trim()} ${(input?.value || '').trim()}`.trim();
+                const { tokens } = parsePortfolioDetailsSearch(combined);
+                // Replace type filter with the selected one
+                tokens.typeList = selectedType ? [selectedType] : [];
+                const parts = [];
+                if (tokens.nameList.length) parts.push(`name:${tokens.nameList.join(',')}`);
+                if (tokens.propertyList.length) parts.push(`property:${tokens.propertyList.join(',')}`);
+                if (tokens.unitList.length) parts.push(`unit:${tokens.unitList.join(',')}`);
+                if (tokens.statusList.length) parts.push(`status:${tokens.statusList.join(',')}`);
+                if (tokens.typeList.length) parts.push(`type:${tokens.typeList.join(',')}`);
+                if (tokens.balanceFlags && tokens.balanceFlags.length) parts.push(`balance:${tokens.balanceFlags.join(',')}`);
+                window.__portfolioDetailsAccumulatedQuery = parts.join(' ');
+                if (input) input.value = '';
+                renderFilteredPortfolioDetailsRows();
+            };
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const selected = btn.getAttribute('data-type') || '';
+                    buttons.forEach(b => {
+                        const isActive = b === btn;
+                        b.classList.toggle('portfolio-apps-tag-active', isActive);
+                    });
+                    applyTypeFilter(selected);
+                });
+            });
+        })();
 
         // Wire notes badge clicks and inline edit for applications in portfolio view
         const detailsTbody = document.getElementById('portfolioDetailsTbody');
@@ -15265,13 +15500,14 @@ function renderPortfolioDetails(type) {
             const dataStatus = (tenant.leaseStatus || '').toLowerCase().replace(/"/g,'&quot;');
             const dataBalance = (Number(remainingRent) || 0) > 0.01 ? 'with-balance' : 'no-balance';
             return `
-                <tr data-property="${dataProp}" data-unit="${dataUnit}" data-name="${dataName}" data-status="${dataStatus}" data-balance="${dataBalance}" data-tenant-id="${tenant._id}">
+                <tr data-property="${dataProp}" data-unit="${dataUnit}" data-name="${dataName}" data-status="${dataStatus}" data-balance="${dataBalance}" data-tenant-id="${tenant._id}" data-property-id="${pid || ''}">
                     <td>${propName}</td>
                     <td>${unitLabel}</td>
                     <td>${name}</td>
                     <td>$${(expectedMonthly || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
                     <td>$${(paidThisMonth || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
                     <td>$${(remainingRent || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                    <td class="portfolio-rent-actions-cell"><button type="button" class="btn-secondary portfolio-record-payment-btn" style="padding:4px 8px;font-size:0.8rem;display:none;">+Payment</button></td>
                 </tr>`;
         }).join('');
         body.innerHTML = `
@@ -15303,6 +15539,7 @@ function renderPortfolioDetails(type) {
                             <th>Expected</th>
                             <th>Paid</th>
                             <th>Balance</th>
+                            <th style="width:1%;"></th>
                         </tr>
                     </thead>
                     <tbody id="portfolioDetailsTbody">
@@ -15310,6 +15547,7 @@ function renderPortfolioDetails(type) {
                     </tbody>
                 </table>
             </div>`;
+        // Default rent details view (no preset filters)
         window.__portfolioDetailsAccumulatedQuery = '';
         initializePortfolioDetailsSearch();
         renderFilteredPortfolioDetailsRows();
@@ -15452,6 +15690,56 @@ function renderPortfolioDetails(type) {
                 input.addEventListener('keydown', handleKey);
             });
         })();
+
+        // Show Record Payment button only on row hover
+        (function setupPortfolioRentActionHover() {
+            const tbody = body.querySelector('#portfolioDetailsTbody');
+            if (!tbody) return;
+            tbody.addEventListener('mouseover', (evt) => {
+                const row = evt.target.closest('tr');
+                if (!row) return;
+                const btn = row.querySelector('.portfolio-record-payment-btn');
+                if (btn) btn.style.display = 'inline-flex';
+            });
+            tbody.addEventListener('mouseout', (evt) => {
+                const row = evt.target.closest('tr');
+                if (!row) return;
+                const btn = row.querySelector('.portfolio-record-payment-btn');
+                if (btn) btn.style.display = 'none';
+            });
+            // Mobile/touch fallback: tap row to reveal/hide button on small screens
+            tbody.addEventListener('click', (evt) => {
+                const isNarrow = window.innerWidth <= 768;
+                if (!isNarrow) return;
+                // If the actual button was clicked, let the other handler process it
+                if (evt.target.closest('.portfolio-record-payment-btn')) return;
+                const row = evt.target.closest('tr');
+                if (!row) return;
+                const btn = row.querySelector('.portfolio-record-payment-btn');
+                if (!btn) return;
+                const current = (btn.style.display || '').toLowerCase();
+                btn.style.display = (current === 'inline-flex') ? 'none' : 'inline-flex';
+            });
+        })();
+
+        // Per-row Record Payment button for tenants with outstanding balance
+        (function setupPortfolioRentRecordPayment() {
+            const tbody = body.querySelector('#portfolioDetailsTbody');
+            if (!tbody) return;
+            tbody.addEventListener('click', (evt) => {
+                const btn = evt.target.closest('.portfolio-record-payment-btn');
+                if (!btn) return;
+                const row = btn.closest('tr');
+                if (!row) return;
+                const tenantId = row.getAttribute('data-tenant-id');
+                const propertyId = row.getAttribute('data-property-id') || '';
+                if (!tenantId) {
+                    showNotification('Unable to determine tenant for payment', 'error');
+                    return;
+                }
+                openPaymentModalForTenantAndProperty(tenantId, propertyId || undefined, false);
+            });
+        })();
         return;
     }
 
@@ -15541,7 +15829,10 @@ function renderPortfolioDetails(type) {
                 </table>
             </div>`;
 
-        window.__portfolioDetailsAccumulatedQuery = '';
+        // Open Maintenance view defaults to showing only open items
+        // (pending + in-progress) while still allowing filters for
+        // completed via the status: token.
+        window.__portfolioDetailsAccumulatedQuery = 'status:pending,in-progress';
         initializePortfolioDetailsSearch();
         renderFilteredPortfolioDetailsRows();
 
@@ -15631,6 +15922,7 @@ function renderPortfolioDetails(type) {
         const moveInItems = state.portfolioUpcomingMoveIns || [];
 
         const rows = [
+            // Expiring leases based on tenant lease end dates
             ...leaseItems.map(({ tenant, daysUntilEnd }) => {
                 let leaseEndDate = '—';
                 if (tenant.leaseEnd) {
@@ -15655,42 +15947,85 @@ function renderPortfolioDetails(type) {
                     date: leaseEndDate
                 };
             }),
-            ...moveInItems.map(({ application, daysUntilMoveIn, rawDaysUntilMoveIn }) => {
-                let propertyAddress = '';
-                let unitNumber = application.unit || '';
-                if (application.notes) {
-                    try {
-                        const n = JSON.parse(application.notes);
-                        propertyAddress = n.propertyAddress || propertyAddress;
-                        unitNumber = n.unitNumber || unitNumber;
-                    } catch {}
-                }
+            // Upcoming / recent move-ins based on tenant lease start dates
+            ...moveInItems.map(item => {
+                const tenant = item.tenant || null;
+                const application = item.application || null; // backwards compatibility, if any
+                const daysUntilMoveIn = item.daysUntilMoveIn;
+                const rawDaysUntilMoveIn = item.rawDaysUntilMoveIn;
+
                 let moveInDate = '—';
-                if (application.moveIn) {
-                    try {
-                        const d = new Date(application.moveIn);
-                        if (!isNaN(d.getTime())) {
-                            const y = d.getUTCFullYear();
-                            const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-                            const day = String(d.getUTCDate()).padStart(2, '0');
-                            moveInDate = `${m}/${day}/${y}`;
-                        }
-                    } catch {}
+                let name = 'Tenant';
+                let unitId = null;
+                let unitFallback = '—';
+                let propertyId = null;
+                let propertyNameOverride = '';
+                let source = '';
+                let sourceId = '';
+
+                if (tenant) {
+                    name = tenant.fullName || tenant.name || `${tenant.firstName || ''} ${tenant.lastName || ''}`.trim() || 'Tenant';
+                    unitId = tenant.unitId?._id || tenant.unitId || null;
+                    unitFallback = tenant.unitNumber || tenant.unit || '—';
+                    propertyId = tenant.projectId || tenant.propertyId || null;
+                    if (tenant.leaseStart) {
+                        try {
+                            const d = new Date(tenant.leaseStart);
+                            if (!isNaN(d.getTime())) {
+                                const y = d.getUTCFullYear();
+                                const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+                                const day = String(d.getUTCDate()).padStart(2, '0');
+                                moveInDate = `${m}/${day}/${y}`;
+                            }
+                        } catch {}
+                    }
+                    source = 'tenant';
+                    sourceId = tenant._id || '';
+                } else if (application) {
+                    // Fallback path if any legacy application-based move-ins remain
+                    let propertyAddress = '';
+                    let unitNumber = application.unit || '';
+                    if (application.notes) {
+                        try {
+                            const n = JSON.parse(application.notes);
+                            propertyAddress = n.propertyAddress || propertyAddress;
+                            unitNumber = n.unitNumber || unitNumber;
+                        } catch {}
+                    }
+                    if (application.moveIn) {
+                        try {
+                            const d = new Date(application.moveIn);
+                            if (!isNaN(d.getTime())) {
+                                const y = d.getUTCFullYear();
+                                const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+                                const day = String(d.getUTCDate()).padStart(2, '0');
+                                moveInDate = `${m}/${day}/${y}`;
+                            }
+                        } catch {}
+                    }
+                    name = application.name || 'Applicant';
+                    unitId = null;
+                    unitFallback = unitNumber || '—';
+                    propertyId = null;
+                    propertyNameOverride = propertyAddress || '—';
+                    source = 'application';
+                    sourceId = application._id || '';
                 }
+
                 const rawDays = typeof rawDaysUntilMoveIn === 'number' ? rawDaysUntilMoveIn : daysUntilMoveIn;
                 const statusKey = rawDays < 0 ? 'past-movein' : 'upcoming-movein';
                 return {
                     type: 'Upcoming Move-in',
                     daysUntil: daysUntilMoveIn,
                     statusKey,
-                    name: application.name || 'Applicant',
-                    unitId: null,
-                    unitFallback: unitNumber || '—',
-                    propertyId: null,
-                    propertyNameOverride: propertyAddress || '—',
+                    name,
+                    unitId,
+                    unitFallback,
+                    propertyId,
+                    propertyNameOverride,
                     date: moveInDate,
-                    source: 'application',
-                    sourceId: application._id || ''
+                    source,
+                    sourceId
                 };
             })
         ];
@@ -15770,7 +16105,9 @@ function renderPortfolioDetails(type) {
                 </table>
             </div>`;
 
-        window.__portfolioDetailsAccumulatedQuery = '';
+        // Default Leases view to show upcoming move-ins while still
+        // allowing users to switch to other statuses (e.g. moved-in).
+        window.__portfolioDetailsAccumulatedQuery = 'status:upcoming-movein,lease-expiring';
         initializePortfolioDetailsSearch();
         renderFilteredPortfolioDetailsRows();
 
