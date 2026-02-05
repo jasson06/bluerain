@@ -7193,8 +7193,16 @@ app.post('/api/properties/:propertyId/payments/:paymentId/send-receipt', async (
       return res.status(400).json({ message: 'Tenant email not available for this payment' });
     }
 
-    // Prefer a Property document if it exists, otherwise fall back to Project
-    const propertyDoc = await Property.findById(propertyId).lean().catch(() => null);
+    // Prefer a Property document if it exists, otherwise fall back to Project.
+    // Use typeof guard so this route is safe even in environments where Property is not defined.
+    let propertyDoc = null;
+    try {
+      if (typeof Property !== 'undefined') {
+        propertyDoc = await Property.findById(propertyId).lean();
+      }
+    } catch (_) {
+      propertyDoc = null;
+    }
     const projectDoc = propertyDoc ? null : await Project.findById(propertyId).lean().catch(() => null);
 
     const name = tenant.name || 'Tenant';
