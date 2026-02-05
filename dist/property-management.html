@@ -12377,12 +12377,15 @@ function renderPayments() {
                                                                      `</button>`
                                                                 : (displayBalance !== undefined && displayBalance !== null ? `$${(Number(displayBalance).toFixed(2))}` : '')}
                                                         </td>
-                            <td class="note-cell">${payment.note ? payment.note.replace(/</g,'&lt;') : ''}</td>
-                            <td>
-                               <button class="btn-icon download-btn" title="Download Receipt" onclick="event.stopPropagation();exportReceipt('${payment._id}')">
-                               <i class="fas fa-file-arrow-down"></i>
-                                  </button>
-                            </td>
+                                                        <td class="note-cell">${payment.note ? payment.note.replace(/</g,'&lt;') : ''}</td>
+                                                        <td>
+                                                             <button class="btn-icon download-btn" title="Download Receipt" onclick="event.stopPropagation();exportReceipt('${payment._id}')">
+                                                                 <i class="fas fa-file-arrow-down"></i>
+                                                             </button>
+                                                             <button class="btn-icon email-btn" title="Email Receipt" onclick="event.stopPropagation();emailReceipt('${payment._id}')">
+                                                                 <i class="fas fa-paper-plane"></i>
+                                                             </button>
+                                                        </td>
                             <td>
                                 <button class="btn-icon delete-btn" onclick="event.stopPropagation();deletePayment('${payment._id}')"><i class="fas fa-trash"></i></button>
                             </td>
@@ -13646,7 +13649,7 @@ async function deletePayment(paymentId) {
 }
 
 
-// Export receipt (simple CSV for now)
+// Export receipt as a PDF file
 async function exportReceipt(paymentId) {
     const payment = state.payments.find(p => p._id === paymentId);
     if (!payment) {
@@ -13947,6 +13950,54 @@ async function exportReceipt(paymentId) {
     const filename = `receipt_${tenant ? tenant.name.replace(/\s+/g, '_') : paymentId}.pdf`;
     doc.save(filename);
 }
+
+// Email receipt to the tenant using backend mailer (server builds the email content)
+async function emailReceipt(paymentId) {
+    try {
+        const payment = (state.payments || []).find(p => p._id === paymentId);
+        if (!payment) {
+            showNotification('Payment not found', 'error');
+            return;
+        }
+
+        const tenant = (state.tenants || []).find(t => t._id === payment.tenantId);
+        if (!tenant || !tenant.email) {
+            showNotification('Tenant email not available for this payment', 'error');
+            return;
+        }
+
+        const property = (state.properties || []).find(p => p._id === payment.projectId) || state.currentProperty;
+        if (!property || !property._id) {
+            showNotification('Property context missing for this payment', 'error');
+            return;
+        }
+
+        showLoader();
+
+        // Call backend endpoint; server composes and sends the receipt email
+        const res = await fetch(`/api/properties/${property._id}/payments/${paymentId}/send-receipt`, {
+            method: 'POST'
+        });
+
+        if (!res.ok) {
+            let msg = 'Error sending receipt email';
+            try {
+                const data = await res.json();
+                if (data && data.message) msg = data.message;
+            } catch (_) {}
+            showNotification(msg, 'error');
+            return;
+        }
+
+        showNotification(`Receipt emailed to ${tenant.email}`, 'success');
+    } catch (err) {
+        console.error('Error emailing receipt:', err);
+        showNotification('Error sending receipt email', 'error');
+    } finally {
+        try { hideLoader(); } catch (_) {}
+    }
+}
+        
 
 // -------- Tenant Balance Sheet Helpers & Modal --------
 // Currency formatter with sign handling used in balance sheet cards
@@ -16436,3 +16487,4 @@ document.addEventListener('DOMContentLoaded', () => {
     </script>
 </body>
 </html>
+
