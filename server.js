@@ -7178,6 +7178,219 @@ app.get('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
   }
 });
 
+// Send a payment receipt via email to the tenant
+app.post('/api/properties/:propertyId/payments/:paymentId/send-receipt', async (req, res) => {
+  try {
+    const { propertyId, paymentId } = req.params;
+
+    const payment = await Payment.findOne({ _id: paymentId, projectId: propertyId });
+    if (!payment) {
+      return res.status(404).json({ message: 'Payment not found' });
+    }
+
+    const tenant = await Tenant.findById(payment.tenantId).lean();
+    if (!tenant || !tenant.email) {
+      return res.status(400).json({ message: 'Tenant email not available for this payment' });
+    }
+
+    // Prefer a Property document if it exists, otherwise fall back to Project
+    const propertyDoc = await Property.findById(propertyId).lean().catch(() => null);
+    const projectDoc = propertyDoc ? null : await Project.findById(propertyId).lean().catch(() => null);
+
+    const name = tenant.name || 'Tenant';
+
+    // Helpers mirroring exportReceipt in property-management.html
+    const formatCurrency = (n) => `$${(Number(n) || 0).toFixed(2)}`;
+    const toTitle = (s) => {
+      if (!s) return '';
+      const str = String(s);
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    };
+
+    const formatDateDisplayServer = (value) => {
+      if (!value) return '';
+      try {
+        const s = String(value);
+        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m) {
+          const y = Number(m[1]);
+          const mo = Number(m[2]);
+          const d = Number(m[3]);
+          return new Date(y, mo - 1, d).toLocaleDateString('en-US');
+        }
+        const d = new Date(value);
+        return d.toLocaleDateString('en-US');
+      } catch {
+        return String(value);
+      }
+    };
+
+    const formatAddressLines = (doc) => {
+      if (!doc) return [];
+      const a = doc.address || {};
+      const line1 = a.line1 || a.addressLine1 || a.street || doc.line1 || '';
+      const line2 = a.line2 || a.addressLine2 || a.suite || doc.line2 || '';
+      const city = a.city || doc.city || '';
+      const state = a.state || doc.state || '';
+      const zip = a.zip || a.postalCode || doc.zip || '';
+      const lines = [];
+      if (line1) lines.push(line1);
+      if (line2) lines.push(line2);
+      let last = '';
+      if (city) last += city;
+      if (state) last += (last ? ', ' : '') + state;
+      if (zip) last += (last ? ' ' : '') + zip;
+      if (last) lines.push(last);
+      return lines;
+    };
+
+    const amount = Number(payment.amount) || 0;
+    const late = Number(payment.lateFee) || 0;
+    const totalPaid = amount + late;
+    const balance = Number(payment.balance) || 0;
+    const totalPaidLabel = totalPaid < 0 ? 'Credit Applied' : 'Total Paid';
+
+    const receiptNo = (payment._id || '').toString().slice(-8).toUpperCase();
+    const paymentIdShort = (payment._id || '').toString().substring(0, 12);
+    const dateStr = formatDateDisplayServer(payment.date || new Date());
+
+    const propDoc = propertyDoc || projectDoc;
+    const propName = propDoc?.name || '';
+    const addrLines = formatAddressLines(propDoc);
+
+    const unit = await Unit.findById(payment.unitId).lean().catch(() => null);
+
+    const displayType = payment.type === 'custom'
+      ? (payment.customType || 'Custom')
+      : toTitle(payment.type || '');
+
+    const paymentLines = [];
+    // Omit explicit "Type" label row per UI request, keep only method/apply-to and reference
+    paymentLines.push(`<tr><td style="padding:4px 0;color:#6b7280;">Method:</td><td style="padding:4px 0;text-align:right;color:#111827;">${toTitle(payment.method || '')}</td></tr>`);
+    paymentLines.push(`<tr><td style="padding:4px 0;color:#6b7280;">Applied To:</td><td style="padding:4px 0;text-align:right;color:#111827;">${toTitle(payment.applyTo || 'rent')}</td></tr>`);
+    if (payment.applyTo && ['water','electric','trash','admin','late','other'].includes(payment.applyTo)) {
+      paymentLines.push(`<tr><td style="padding:4px 0;color:#6b7280;">Category</td><td style="padding:4px 0;text-align:right;color:#111827;">${toTitle(payment.applyTo)}</td></tr>`);
+    }
+    if (payment.applyTo === 'fee' && payment.feeType) {
+      paymentLines.push(`<tr><td style="padding:4px 0;color:#6b7280;">Fee Type</td><td style="padding:4px 0;text-align:right;color:#111827;">${toTitle(payment.feeType)}</td></tr>`);
+    }
+    if (payment.applyTo === 'fee' && payment.feeLabel) {
+      paymentLines.push(`<tr><td style="padding:4px 0;color:#6b7280;">Fee Label</td><td style="padding:4px 0;text-align:right;color:#111827;">${payment.feeLabel}</td></tr>`);
+    }
+    if (payment.periodMonth) {
+      paymentLines.push(`<tr><td style="padding:4px 0;color:#6b7280;">Period</td><td style="padding:4px 0;text-align:right;color:#111827;">${payment.periodMonth}</td></tr>`);
+    }
+    paymentLines.push(`<tr><td style="padding:4px 0;color:#6b7280;">Reference</td><td style="padding:4px 0;text-align:right;color:#111827;">${receiptNo}</td></tr>`);
+
+    const subject = `Payment Receipt - ${formatCurrency(amount)}`;
+    const html = `
+      <div style="margin:0;padding:24px;background:#f0f4f9;font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #0f172a;">
+        <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 20px 40px rgba(15,23,42,0.18);">
+          <!-- Header -->
+          <div style="padding:20px 24px 18px 24px;background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#f9fafb;position:relative;">
+            <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;opacity:0.9;">Payment Receipt</div>
+            <div style="margin-top:4px;font-size:20px;font-weight:700;">Blue Rain MF LLC</div>
+            <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;">
+              <div>
+                <div style="font-size:11px;opacity:0.9;text-transform:uppercase;letter-spacing:0.08em;">${totalPaidLabel}</div>
+                <div style="margin-top:2px;font-size:26px;font-weight:700;">${formatCurrency(totalPaid)}</div>
+              </div>
+              <div style="text-align:right;min-width:150px;">
+                <div style="font-size:11px;opacity:0.85;">Receipt #</div>
+                <div style="font-size:13px;font-weight:600;letter-spacing:0.08em;">${receiptNo}</div>
+                <div style="margin-top:4px;font-size:11px;opacity:0.9;">${dateStr}</div>
+              </div>
+            </div>
+            <div style="position:absolute;right:24px;top:20px;background:#22c55e;color:#022c22;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;letter-spacing:0.08em;text-transform:uppercase;box-shadow:0 4px 12px rgba(22,163,74,0.4);">Paid</div>
+          </div>
+
+          <!-- Meta + Property -->
+          <div style="padding:18px 24px 8px 24px;border-bottom:1px solid #e5e7eb;display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between;">
+            <div style="flex:1;min-width:340px;">
+              <div style="font-size:11px;font-weight:600;color:#6b7280;letter-spacing:0.12em;text-transform:uppercase;">Receipt Details</div>
+              <div style="margin-top:6px;font-size:13px;color:#111827;line-height:1.5;">
+                <div><span style="color:#6b7280;">Payment ID:</span> ${paymentIdShort}...</div>
+                <div><span style="color:#6b7280;">Payment Date:</span> ${dateStr}</div>
+                
+              </div>
+            </div>
+            <div style="flex:1;min-width:210px;">
+              <div style="font-size:11px;font-weight:600;color:#6b7280;letter-spacing:0.12em;text-transform:uppercase;">Property</div>
+              <div style="margin-top:6px;font-size:13px;color:#111827;line-height:1.5;">
+                ${propName ? `<div style=\"font-weight:600;\">${propName}</div>` : ''}
+                ${addrLines.map(l => `<div style=\"color:#4b5563;\">${l}</div>`).join('')}
+              </div>
+            </div>
+          </div>
+
+          <!-- Payor & Payment columns -->
+          <div style="padding:16px 24px 8px 24px;display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-start;">
+            <div style="flex:1;min-width:340px;max-width:360px;">
+              <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:6px;">Payor Details</div>
+              <table style="width:100%;max-width:260px;border-collapse:collapse;font-size:13px;">
+                <tr><td style="padding:3px 0;color:#6b7280;">Tenant:</td><td style="padding:3px 0 3px 16px;color:#111827;white-space:nowrap;">${tenant.name || 'N/A'}</td></tr>
+                <tr><td style="padding:3px 0;color:#6b7280;">Unit:</td><td style="padding:3px 0 3px 16px;color:#111827;white-space:nowrap;">${unit?.number || 'N/A'}</td></tr>
+                ${tenant.email ? `<tr><td style=\"padding:3px 0;color:#6b7280;\">Email:</td><td style=\"padding:3px 0 3px 16px;color:#111827;white-space:nowrap;\">${tenant.email}</td></tr>` : ''}
+                ${tenant.phone ? `<tr><td style=\"padding:3px 0;color:#6b7280;\">Phone:</td><td style=\"padding:3px 0 3px 16px;color:#111827;white-space:nowrap;\">${tenant.phone}</td></tr>` : ''}
+              </table>
+            </div>
+            <div style="flex:1;min-width:140px;max-width:160px;">
+              <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:6px;">Payment Details</div>
+              <table style="width:100%;max-width:260px;border-collapse:collapse;font-size:13px;">
+                ${paymentLines.join('').replace(/text-align:right/g,'padding:3px 0 3px 16px;color:#111827;white-space:nowrap;')}
+              </table>
+            </div>
+          </div>
+
+          <!-- Note -->
+          ${payment.note ? `
+          <div style="padding:6px 24px 4px 24px;">
+            <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">Note</div>
+            <div style="font-size:13px;color:#4b5563;line-height:1.6;white-space:pre-line;">${payment.note}</div>
+          </div>` : ''}
+
+          <!-- Summary card -->
+          <div style="padding:16px 24px 20px 24px;">
+            <div style="border-radius:12px;border:1px solid #dbeafe;background:linear-gradient(135deg,#eff6ff,#ffffff);padding:10px 16px;position:relative;overflow:hidden;">
+              <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#1d4ed8,#38bdf8);"></div>
+              <div style="margin-left:10px;">
+                <div style="font-size:13px;font-weight:600;color:#0f172a;margin-bottom:6px;">Payment Summary</div>
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                  <!-- Amount row removed per UI request; total and optional late fee remain -->
+                  ${late ? `<tr><td style=\"padding:4px 0;color:#6b7280;\">Late Fee</td><td style=\"padding:4px 0;text-align:right;color:#111827;\">${formatCurrency(late)}</td></tr>` : ''}
+                  <tr>
+                    <td style="padding:6px 0;color:#111827;font-weight:600;border-top:1px dashed #cbd5f5;">${totalPaidLabel}</td>
+                    <td style="padding:6px 0;text-align:right;color:#111827;font-weight:700;border-top:1px dashed #cbd5f5;">${formatCurrency(totalPaid)}</td>
+                  </tr>
+                  <!-- Remaining Balance row removed per UI request -->
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div style="padding:10px 24px 18px 24px;border-top:1px solid #e5e7eb;">
+            <div style="margin-top:8px;font-size:13px;font-weight:600;color:#1d4ed8;text-align:center;">Thank you for your payment!</div>
+            <div style="margin-top:4px;font-size:11px;color:#6b7280;text-align:center;">Generated by Bluerain MF LLC (210) 981-9251</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from: `BESF <${process.env.EMAIL_USER}>`,
+      to: tenant.email,
+      subject,
+      html
+    });
+
+    res.json({ success: true, message: 'Receipt emailed successfully' });
+  } catch (error) {
+    console.error('Error sending receipt email:', error);
+    res.status(500).json({ message: 'Failed to send receipt email' });
+  }
+});
+
 // DELETE a payment
 app.delete('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
   try {
