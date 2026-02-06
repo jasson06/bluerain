@@ -6815,7 +6815,9 @@ function formatDateDisplay(value, locale = 'en-US') {
 }
 
 // --- Rent proration helpers (frontend) ---
-// Mirrors server-side behavior: only first month gets prorated, and only base rent is prorated
+// Mirrors server-side behavior: only first month gets prorated, and only base rent is prorated.
+// Additionally, no base rent is expected for months that fall completely outside the lease range
+// (before leaseStart or after leaseEnd).
 function daysInMonth(year, monthIndex) {
     return new Date(year, monthIndex + 1, 0).getDate();
 }
@@ -6824,10 +6826,27 @@ function daysInMonth(year, monthIndex) {
 // applying proration in the first lease month only. Does NOT include additional monthly fees.
 function computeExpectedBaseRentForMonth(tenant, dateLike) {
     const baseRent = Number(tenant?.baseRent) || 0;
-    if (!tenant?.leaseStart) return baseRent;
-
     const ref = dateLike ? new Date(dateLike) : new Date();
-    const leaseStart = new Date(tenant.leaseStart);
+    const leaseStart = tenant?.leaseStart ? new Date(tenant.leaseStart) : null;
+    const leaseEnd = tenant?.leaseEnd ? new Date(tenant.leaseEnd) : null;
+
+    // If we have lease bounds, and this entire month falls outside of them,
+    // do not expect any base rent for this month.
+    if (leaseStart || leaseEnd) {
+        const monthStart = new Date(ref.getFullYear(), ref.getMonth(), 1);
+        const monthEnd = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
+
+        if (leaseStart && monthEnd < leaseStart) {
+            return 0;
+        }
+        if (leaseEnd && monthStart > leaseEnd) {
+            return 0;
+        }
+    }
+
+    // If there's no leaseStart, but we're within (or we don't know) the lease range,
+    // use the full base rent for the month (no proration info available).
+    if (!leaseStart) return baseRent;
 
     const sameMonth =
         ref.getFullYear() === leaseStart.getFullYear() &&
@@ -6842,6 +6861,7 @@ function computeExpectedBaseRentForMonth(tenant, dateLike) {
     const daysRemaining = Math.max(0, totalDays - startDay + 1);
     return +(baseRent * (daysRemaining / totalDays)).toFixed(2);
 }
+
 
 
 // Property Management Handlers
@@ -14692,7 +14712,6 @@ async function loadAllUnitsAndTenants() {
     // Refresh property list so per-property stats (occupancy, vacancies) are shown once data is loaded
     renderPropertyList();
 }
-
 // Load all payments across all properties for portfolio-wide rent metrics
 async function loadPortfolioPayments(force = false) {
     if (!force && Array.isArray(state.portfolioPayments) && state.portfolioPayments.length) {
@@ -14910,28 +14929,49 @@ async function renderPortfolioOverview() {
                 (tenant.additionalFee?.amount || 0) +
                 petFees;
 
-            // For "Estimated monthly income", use contractual monthly amount (no proration/overrides)
+            // Determine if the selected month falls completely outside this tenant's lease range
+            const leaseStart = tenant.leaseStart ? new Date(tenant.leaseStart) : null;
+            const leaseEnd = tenant.leaseEnd ? new Date(tenant.leaseEnd) : null;
+            let outOfLeaseMonth = false;
+            if (leaseStart || leaseEnd) {
+                const monthStart = new Date(periodYear, periodMonthIndex, 1);
+                const monthEnd = new Date(periodYear, periodMonthIndex + 1, 0);
+                if (leaseStart && monthEnd < leaseStart) {
+                    outOfLeaseMonth = true;
+                }
+                if (leaseEnd && monthStart > leaseEnd) {
+                    outOfLeaseMonth = true;
+                }
+            }
+
+            // For "Estimated monthly income", only count tenants whose lease covers the selected month
+            // (no proration/overrides applied in this high-level metric)
             const contractualMonthly = (Number(tenant.baseRent) || 0) + additionalFees;
-            portfolioMonthlyIncome += contractualMonthly;
+            if (!outOfLeaseMonth) {
+                portfolioMonthlyIncome += contractualMonthly;
+            }
 
-            // For current-month expected/remaining, still respect proration and overrides
-            const expectedBase = computeExpectedBaseRentForMonth(tenant, periodDate);
+            let expectedMonthly = 0;
+            let monthOverride = null;
+            if (!outOfLeaseMonth) {
+                // For in-range months, still respect proration and overrides
+                const expectedBase = computeExpectedBaseRentForMonth(tenant, periodDate);
+                const overrideMap = tenant?.monthlyOverrides || null;
+                monthOverride = overrideMap
+                    ? (typeof overrideMap.get === 'function' ? overrideMap.get(periodMonth) : overrideMap[periodMonth])
+                    : null;
 
-            const overrideMap = tenant?.monthlyOverrides || null;
-            const monthOverride = overrideMap
-                ? (typeof overrideMap.get === 'function' ? overrideMap.get(periodMonth) : overrideMap[periodMonth])
-                : null;
-
-            let expectedMonthly = expectedBase + additionalFees;
-            if (monthOverride) {
-                const ovExpected = Number(monthOverride.expectedRent);
-                const ovLate = Number(monthOverride.lateFee);
-                const ovMode = (monthOverride.lateFeeMode === 'percent') ? 'percent' : 'amount';
-                const baseBeforeLate = Number.isFinite(ovExpected) ? ovExpected : (expectedBase + additionalFees);
-                if (ovMode === 'percent' && Number.isFinite(ovLate)) {
-                    expectedMonthly = baseBeforeLate + (baseBeforeLate * (ovLate / 100));
-                } else {
-                    expectedMonthly = baseBeforeLate + (Number.isFinite(ovLate) ? ovLate : 0);
+                expectedMonthly = expectedBase + additionalFees;
+                if (monthOverride) {
+                    const ovExpected = Number(monthOverride.expectedRent);
+                    const ovLate = Number(monthOverride.lateFee);
+                    const ovMode = (monthOverride.lateFeeMode === 'percent') ? 'percent' : 'amount';
+                    const baseBeforeLate = Number.isFinite(ovExpected) ? ovExpected : (expectedBase + additionalFees);
+                    if (ovMode === 'percent' && Number.isFinite(ovLate)) {
+                        expectedMonthly = baseBeforeLate + (baseBeforeLate * (ovLate / 100));
+                    } else {
+                        expectedMonthly = baseBeforeLate + (Number.isFinite(ovLate) ? ovLate : 0);
+                    }
                 }
             }
 
@@ -14951,9 +14991,9 @@ async function renderPortfolioOverview() {
             totalExpectedRent += expectedMonthly;
             totalPaidThisMonthAll += totalPaidThisMonth;
             // Always store a row so the rent details view can show all tenants
-            state.portfolioTenantsWithBalance.push({ tenant, remainingRent, expectedMonthly, paidThisMonth: totalPaidThisMonth });
+            state.portfolioTenantsWithBalance.push({ tenant, remainingRent, expectedMonthly, paidThisMonth: totalPaidThisMonth, outOfLease: outOfLeaseMonth });
             // But only count those with a positive remaining balance toward the "open rent" chip
-            if (remainingRent > 0.01) {
+            if (!outOfLeaseMonth && remainingRent > 0.01) {
                 tenantsWithBalance++;
                 totalUnpaidRent += remainingRent;
             }
@@ -15532,7 +15572,7 @@ function renderPortfolioDetails(type) {
             body.innerHTML = '<p style="font-size:0.86rem;color:#6b7280;">No tenants with outstanding balance for this month.</p>';
             return;
         }
-        const htmlRows = rows.map(({ tenant, remainingRent, expectedMonthly, paidThisMonth }) => {
+        const htmlRows = rows.map(({ tenant, remainingRent, expectedMonthly, paidThisMonth, outOfLease }) => {
             const name = tenant.fullName || tenant.name || `${tenant.firstName || ''} ${tenant.lastName || ''}`.trim() || 'Tenant';
             const unitId = tenant.unitId?._id || tenant.unitId;
             let unitLabel = '—';
@@ -15548,15 +15588,31 @@ function renderPortfolioDetails(type) {
             const dataUnit = String(unitLabel || '').toLowerCase().replace(/"/g,'&quot;');
             const dataName = (name || '').toLowerCase().replace(/"/g,'&quot;');
             const dataStatus = (tenant.leaseStatus || '').toLowerCase().replace(/"/g,'&quot;');
-            const dataBalance = (Number(remainingRent) || 0) > 0.01 ? 'with-balance' : 'no-balance';
+            const isOutOfLease = !!outOfLease;
+            const numericRemaining = Number(remainingRent) || 0;
+            const dataBalance = numericRemaining > 0.01 ? 'with-balance' : 'no-balance';
+
+            const expectedCellHtml = isOutOfLease
+                ? '<span style="color:#9ca3af;">N/A</span>'
+                : `$${(expectedMonthly || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+
+            const balanceDisplay = `$${numericRemaining.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+            let balanceCellHtml;
+            if (isOutOfLease) {
+                balanceCellHtml = '<span style="color:#9ca3af;">N/A</span>';
+            } else if (Math.abs(numericRemaining) <= 0.01) {
+                balanceCellHtml = `<span style="color:#16a34a;font-weight:600;" title="Paid in full"><i class="fas fa-circle-check" aria-hidden="true" style="margin-right:4px;"></i>${balanceDisplay}</span>`;
+            } else {
+                balanceCellHtml = balanceDisplay;
+            }
             return `
                 <tr data-property="${dataProp}" data-unit="${dataUnit}" data-name="${dataName}" data-status="${dataStatus}" data-balance="${dataBalance}" data-tenant-id="${tenant._id}" data-property-id="${pid || ''}">
                     <td>${propName}</td>
                     <td>${unitLabel}</td>
                     <td>${name}</td>
-                    <td>$${(expectedMonthly || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                    <td>${expectedCellHtml}</td>
                     <td>$${(paidThisMonth || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
-                    <td>$${(remainingRent || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                    <td>${balanceCellHtml}</td>
                     <td class="portfolio-rent-actions-cell"><button type="button" class="btn-secondary portfolio-record-payment-btn" style="padding:4px 8px;font-size:0.8rem;display:none;">+Payment</button></td>
                 </tr>`;
         }).join('');
