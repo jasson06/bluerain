@@ -943,6 +943,34 @@ html {
     outline: none;
 }
 
+/* Compact icon button for copy-link actions */
+.icon-copy-btn {
+    background: #f9fafb;
+    color: #4b5563;
+    border: 1px solid #e5e7eb;
+    padding: 4px 7px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: background 0.18s, color 0.18s, border-color 0.18s, transform 0.1s, box-shadow 0.18s;
+}
+.icon-copy-btn i {
+    font-size: 0.8rem;
+}
+.icon-copy-btn:hover,
+.icon-copy-btn:focus {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+    box-shadow: 0 1px 4px rgba(37, 99, 235, 0.25);
+    transform: translateY(-1px);
+    outline: none;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .container {
@@ -4373,7 +4401,8 @@ const state = {
     invites: [],
     highlightMaintenanceId: null,
     highlightApplicationId: null,
-    portfolioRentMonth: null
+    portfolioRentMonth: null,
+    keepPortfolioTypeFilterOnNextRender: false
 };
 
 const API_URL = '/api';
@@ -5853,11 +5882,15 @@ function enterPortfolioInviteEditMode(row, invite) {
             state.invites = (state.invites || []).map(x => String(x._id) === String(invite._id) ? invData : x);
             state.currentEditingPortfolioInviteId = null;
             showNotification('Invite updated', 'success');
+            // Preserve current Applications vs Invites filter when re-rendering
+            state.keepPortfolioTypeFilterOnNextRender = true;
             renderPortfolioDetails('applications');
         } catch (err) {
             console.error('Inline portfolio invite update error:', err);
             state.currentEditingPortfolioInviteId = null;
             showNotification('Could not update invite', 'error');
+            // Also preserve filter on error-triggered re-render
+            state.keepPortfolioTypeFilterOnNextRender = true;
             renderPortfolioDetails('applications');
         }
     };
@@ -6861,7 +6894,6 @@ function computeExpectedBaseRentForMonth(tenant, dateLike) {
     const daysRemaining = Math.max(0, totalDays - startDay + 1);
     return +(baseRent * (daysRemaining / totalDays)).toFixed(2);
 }
-
 
 
 // Property Management Handlers
@@ -10595,6 +10627,7 @@ function renderInvites(items) {
         const status = inv.status || 'sent';
         const statusBadge = `<span class="status-badge ${status}" style="padding:4px 10px;border-radius:12px;font-size:.85em;">${status.charAt(0).toUpperCase() + status.slice(1)}</span>`;
         const link = inv.applicationUrl || '';
+        const safeLink = link.replace(/"/g, '&quot;');
         const notesCount = Array.isArray(inv.notesHistory) ? inv.notesHistory.length : 0;
         const isSelected = currentSelectedInviteId && String(currentSelectedInviteId) === String(inv._id);
         return `
@@ -10622,7 +10655,16 @@ function renderInvites(items) {
                     </button>
                 </td>
                 <td style="padding:10px 8px;">${statusBadge}</td>
-                <td style="padding:10px 8px;">${link ? `<a href="${link}" target="_blank" rel="noopener" class="btn-secondary" style="text-decoration:none;padding:6px 10px;border-radius:8px;display:inline-block;">Open Link</a>` : '—'}</td>
+                <td style="padding:10px 8px;">${link ? `
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <a href="${safeLink}" target="_blank" rel="noopener" class="icon-copy-btn" title="Open invite link" style="text-decoration:none;">
+                            <i class="fas fa-up-right-from-square"></i>
+                        </a>
+                        <button type="button" class="icon-copy-btn invite-copy-link" data-link="${safeLink}" title="Copy invite URL">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                ` : '—'}</td>
             </tr>`;
     }).join('');
     list.innerHTML = `
@@ -10829,6 +10871,36 @@ function renderInvites(items) {
             const id = btn.getAttribute('data-invite-id');
             if (!id) return;
             openNotesDrawerForInvite(id);
+        });
+    });
+
+    // Wire copy invite URL buttons
+    list.querySelectorAll('.invite-copy-link').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const url = btn.getAttribute('data-link');
+            if (!url) return;
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(url);
+                } else {
+                    const tempInput = document.createElement('input');
+                    tempInput.value = url;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+                }
+                if (typeof showNotification === 'function') {
+                    showNotification('Invite link copied', 'success');
+                }
+            } catch (err) {
+                console.error('Copy invite link failed', err);
+                if (typeof showNotification === 'function') {
+                    showNotification('Could not copy link', 'error');
+                }
+            }
         });
     });
 
@@ -14712,6 +14784,7 @@ async function loadAllUnitsAndTenants() {
     // Refresh property list so per-property stats (occupancy, vacancies) are shown once data is loaded
     renderPropertyList();
 }
+
 // Load all payments across all properties for portfolio-wide rent metrics
 async function loadPortfolioPayments(force = false) {
     if (!force && Array.isArray(state.portfolioPayments) && state.portfolioPayments.length) {
@@ -15290,7 +15363,8 @@ function renderPortfolioDetails(type) {
                 date: inv.sentAt ? new Date(inv.sentAt) : null,
                 notesCount,
                 openCount,
-                lastOpened
+                lastOpened,
+                applicationUrl: inv.applicationUrl || ''
             });
         });
 
@@ -15318,8 +15392,12 @@ function renderPortfolioDetails(type) {
             const typeCell = item.source === 'application'
                 ? `<a href="/applications/review/${item.id}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline;cursor:pointer;">${item.kind}</a>`
                 : item.kind;
+            const safeLink = (item.applicationUrl || '').replace(/"/g,'&quot;');
+            const copyBtn = (item.source === 'invite' && safeLink)
+                ? `<button type="button" class="icon-copy-btn portfolio-invite-copy-link" data-link="${safeLink}" title="Copy invite URL"><i class="fas fa-copy"></i></button>`
+                : '';
             const dateCell = item.source === 'invite'
-                ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;"><span>${dateStr}</span>${lastOpenedStr ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#ecfdf3;color:#16a34a;font-size:0.75rem;">Opens: ${typeof item.openCount === 'number' ? item.openCount : 0} • Last opened: ${lastOpenedStr}</span>` : `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#ecfdf3;color:#16a34a;font-size:0.75rem;">Opens: ${typeof item.openCount === 'number' ? item.openCount : 0}</span>`}</div>`
+                ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;"><span>${dateStr}</span>${lastOpenedStr ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#ecfdf3;color:#16a34a;font-size:0.75rem;">Opens: ${typeof item.openCount === 'number' ? item.openCount : 0} • Last opened: ${lastOpenedStr}</span>` : `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#ecfdf3;color:#16a34a;font-size:0.75rem;">Opens: ${typeof item.openCount === 'number' ? item.openCount : 0}</span>`}${copyBtn}</div>`
                 : dateStr;
             return `
                 <tr data-name="${dataName}" data-email="${dataEmail}" data-property="${dataProp}" data-unit="${dataUnit}" data-status="${dataStatus}" data-type="${dataType}" ${item.source === 'application' ? `data-app-id="${item.id || ''}"` : ''}${item.source === 'invite' ? ` data-invite-id="${item.id || ''}"` : ''}>
@@ -15356,7 +15434,7 @@ function renderPortfolioDetails(type) {
                 <div style="font-size:0.9rem;color:#6b7280;">Applications & invites across all properties.</div>
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                     <div id="portfolioAppsTypeTags" style="display:inline-flex;gap:6px;flex-wrap:wrap;">
-                        <button type="button" class="portfolio-apps-tag-btn portfolio-apps-tag-active" data-type="application">Applications</button>
+                        <button type="button" class="portfolio-apps-tag-btn" data-type="application">Applications</button>
                         <button type="button" class="portfolio-apps-tag-btn" data-type="invite">Invites</button>
                     </div>
                     <button class="btn-secondary" id="portfolioSendApplicationBtn" type="button">Send Application</button>
@@ -15382,7 +15460,15 @@ function renderPortfolioDetails(type) {
                 </table>
             </div>`;
 
-        window.__portfolioDetailsAccumulatedQuery = 'type:application';
+        // By default, start this view filtered to Applications.
+        // When an inline portfolio invite edit sets
+        // state.keepPortfolioTypeFilterOnNextRender, preserve whatever
+        // type filter (Applications or Invites) was active.
+        if (!state.keepPortfolioTypeFilterOnNextRender) {
+            window.__portfolioDetailsAccumulatedQuery = 'type:application';
+        } else {
+            state.keepPortfolioTypeFilterOnNextRender = false;
+        }
         initializePortfolioDetailsSearch();
         renderFilteredPortfolioDetailsRows();
 
@@ -15392,6 +15478,22 @@ function renderPortfolioDetails(type) {
             if (!container) return;
             const buttons = Array.from(container.querySelectorAll('.portfolio-apps-tag-btn'));
             if (!buttons.length) return;
+            const getCurrentTypeFromQuery = () => {
+                const combined = `${(window.__portfolioDetailsAccumulatedQuery || '').trim()}`.trim();
+                if (!combined) return 'application';
+                const { tokens } = parsePortfolioDetailsSearch(combined);
+                if (tokens.typeList && tokens.typeList.length) {
+                    return tokens.typeList[0];
+                }
+                return 'application';
+            };
+            const syncActiveFromFilter = () => {
+                const currentType = getCurrentTypeFromQuery();
+                buttons.forEach(b => {
+                    const t = b.getAttribute('data-type') || '';
+                    b.classList.toggle('portfolio-apps-tag-active', t === currentType);
+                });
+            };
             const applyTypeFilter = (selectedType) => {
                 const input = document.getElementById('portfolioDetailsSearchBar');
                 const combined = `${(window.__portfolioDetailsAccumulatedQuery || '').trim()} ${(input?.value || '').trim()}`.trim();
@@ -15409,6 +15511,8 @@ function renderPortfolioDetails(type) {
                 if (input) input.value = '';
                 renderFilteredPortfolioDetailsRows();
             };
+            // Set initial active tag based on current type filter
+            syncActiveFromFilter();
             buttons.forEach(btn => {
                 btn.addEventListener('click', () => {
                     const selected = btn.getAttribute('data-type') || '';
@@ -15466,6 +15570,36 @@ function renderPortfolioDetails(type) {
                     const invite = (state.invites || []).find(x => String(x._id) === String(id));
                     if (!invite) return;
                     enterPortfolioInviteEditMode(row, invite);
+                });
+            });
+
+            // Wire copy buttons for invite rows in Applications & Invites (Portfolio)
+            detailsTbody.querySelectorAll('.portfolio-invite-copy-link').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const url = btn.getAttribute('data-link');
+                    if (!url) return;
+                    try {
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            await navigator.clipboard.writeText(url);
+                        } else {
+                            const tempInput = document.createElement('input');
+                            tempInput.value = url;
+                            document.body.appendChild(tempInput);
+                            tempInput.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(tempInput);
+                        }
+                        if (typeof showNotification === 'function') {
+                            showNotification('Invite link copied', 'success');
+                        }
+                    } catch (err) {
+                        console.error('Copy portfolio invite link failed', err);
+                        if (typeof showNotification === 'function') {
+                            showNotification('Could not copy link', 'error');
+                        }
+                    }
                 });
             });
         }
