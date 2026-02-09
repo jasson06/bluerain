@@ -9636,9 +9636,10 @@ if (moveInChecklistModalEl) {
 
     moveInChecklistModalEl.addEventListener('change', async (e) => {
         const target = e.target;
-        if (!(target instanceof HTMLInputElement) || !moveInChecklistModalEl.dataset.appId) return;
-
-        const appId = moveInChecklistModalEl.dataset.appId;
+        // Determine which tenant this modal is currently bound to
+        const entityType = 'tenant';
+        const entityId = moveInChecklistModalEl.dataset.entityId || '';
+        if (!(target instanceof HTMLInputElement) || !entityId) return;
 
         // Recompute completed ids and notes from current UI state
         const completedIds = Array.from(moveInChecklistModalEl.querySelectorAll('.movein-check-item'))
@@ -9654,8 +9655,9 @@ if (moveInChecklistModalEl) {
             }
         });
 
+        const base = 'tenants';
         try {
-            const res = await fetch(`${API_URL}/rental-applications/${appId}/move-in-checklist`, {
+            const res = await fetch(`${API_URL}/${base}/${encodeURIComponent(entityId)}/move-in-checklist`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ completedIds, notes })
@@ -9664,12 +9666,23 @@ if (moveInChecklistModalEl) {
             const data = await res.json();
             const list = Array.isArray(data.completedIds) ? data.completedIds : completedIds;
             const returnedNotes = data.notes && typeof data.notes === 'object' ? data.notes : notes;
-            // Update local applications state
-            if (Array.isArray(state.applications)) {
-                const idx = state.applications.findIndex(a => String(a._id) === String(appId));
-                if (idx !== -1) {
-                    state.applications[idx].moveInChecklistCompleted = list;
-                    state.applications[idx].moveInChecklistNotes = returnedNotes;
+            if (entityType === 'tenant') {
+                // Update local tenants state
+                if (Array.isArray(state.allTenants)) {
+                    const tIdx = state.allTenants.findIndex(t => String(t._id) === String(entityId));
+                    if (tIdx !== -1) {
+                        state.allTenants[tIdx].moveInChecklistCompleted = list;
+                        state.allTenants[tIdx].moveInChecklistNotes = returnedNotes;
+                    }
+                }
+            } else {
+                // Fallback: update applications state
+                if (Array.isArray(state.applications)) {
+                    const aIdx = state.applications.findIndex(a => String(a._id) === String(entityId));
+                    if (aIdx !== -1) {
+                        state.applications[aIdx].moveInChecklistCompleted = list;
+                        state.applications[aIdx].moveInChecklistNotes = returnedNotes;
+                    }
                 }
             }
         } catch (err) {
@@ -16361,7 +16374,16 @@ function renderPortfolioDetails(type) {
                 const property = btn.getAttribute('data-property') || '';
                 const unit = btn.getAttribute('data-unit') || '';
                 const date = btn.getAttribute('data-date') || '';
-                const appId = btn.getAttribute('data-source-id') || '';
+                const source = btn.getAttribute('data-source') || '';
+                const sourceId = btn.getAttribute('data-source-id') || '';
+
+                // Checklist is now tenant-only; require a tenant-backed row
+                if (source !== 'tenant' || !sourceId) {
+                    if (typeof showNotification === 'function') {
+                        showNotification('Move-in checklist is only available for tenant-based move-ins.', 'info');
+                    }
+                    return;
+                }
                 const parts = [
                     `Move-in for ${name || 'applicant'}`,
                     property ? `Property: ${property}` : '',
@@ -16373,13 +16395,20 @@ function renderPortfolioDetails(type) {
                 const ctx = document.getElementById('moveInChecklistContext');
                 if (ctx) ctx.textContent = ctxText;
                 if (modal) {
-                    // store application id on modal for later saves
-                    modal.dataset.appId = appId;
-                    const app = (state.applications || []).find(a => String(a._id) === String(appId));
-                    const completed = Array.isArray(app && app.moveInChecklistCompleted)
-                        ? app.moveInChecklistCompleted
-                        : [];
-                    const notesMap = app && app.moveInChecklistNotes ? app.moveInChecklistNotes : {};
+                    const tenant = (state.allTenants || []).find(t => String(t._id) === String(sourceId));
+                    let completed = [];
+                    let notesMap = {};
+                    if (tenant) {
+                        completed = Array.isArray(tenant.moveInChecklistCompleted)
+                            ? tenant.moveInChecklistCompleted
+                            : [];
+                        notesMap = tenant.moveInChecklistNotes || {};
+                    }
+
+                    // store tenant metadata on modal for later saves
+                    modal.dataset.entityType = 'tenant';
+                    modal.dataset.entityId = sourceId;
+                    delete modal.dataset.appId;
                     // set checkboxes and notes according to saved state
                     modal.querySelectorAll('.movein-check-item').forEach(cb => {
                         const key = cb.getAttribute('data-item-id');
