@@ -1078,6 +1078,16 @@ notesHistory: [
     createdAt: { type: Date, default: Date.now }
   }
 ],
+    //  checklist (per-tenant)
+  moveInChecklistCompleted: {
+    type: [String],
+    default: []
+  },
+  moveInChecklistNotes: {
+    type: Map,
+    of: String,
+    default: {}
+  },
 // Per-month manual overrides for expected rent and late fee. Keyed by 'YYYY-MM'.
 monthlyOverrides: {
   type: Map,
@@ -1213,17 +1223,6 @@ const applicationSchema = new mongoose.Schema({
       createdAt: { type: Date, default: Date.now }
     }
   ],
-  // IDs of completed move-in readiness checklist items for this application
-  moveInChecklistCompleted: {
-    type: [String],
-    default: []
-  },
-  // Optional notes per checklist item (keyed by item id)
-  moveInChecklistNotes: {
-    type: Map,
-    of: String,
-    default: {}
-  },
   submitted: { type: Date, default: Date.now }
 });
 
@@ -1730,47 +1729,6 @@ app.put('/api/rental-applications/:id', async (req, res) => {
   }
 });
 
-// PUT: update move-in readiness checklist for a rental application
-app.put('/api/rental-applications/:id/move-in-checklist', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { completedIds, notes } = req.body || {};
-
-    const update = {};
-    if (Array.isArray(completedIds)) {
-      update.moveInChecklistCompleted = completedIds.filter(v => typeof v === 'string' && v.trim().length > 0);
-    }
-    if (notes && typeof notes === 'object') {
-      const cleanNotes = {};
-      for (const [key, val] of Object.entries(notes)) {
-        if (typeof val === 'string') {
-          const trimmed = val.trim();
-          if (trimmed) cleanNotes[key] = trimmed;
-        }
-      }
-      update.moveInChecklistNotes = cleanNotes;
-    }
-
-    const updated = await Application.findByIdAndUpdate(
-      id,
-      { $set: update },
-      { new: true }
-    ).select('moveInChecklistCompleted moveInChecklistNotes');
-
-    if (!updated) {
-      return res.status(404).json({ message: 'Application not found' });
-    }
-
-    return res.json({
-      message: 'Move-in checklist updated',
-      completedIds: updated.moveInChecklistCompleted || [],
-      notes: updated.moveInChecklistNotes || {}
-    });
-  } catch (err) {
-    console.error('Update move-in checklist error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
 
 // POST: append a note to a rental application
 app.post('/api/rental-applications/:id/notes', async (req, res) => {
@@ -6740,6 +6698,48 @@ app.delete('/api/tenants/:id/notes/:noteId', async (req, res) => {
     return res.json({ notes: updated.notesHistory || [] });
   } catch (err) {
     console.error('Delete tenant note error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// PUT: update move-in readiness checklist for a tenant
+app.put('/api/tenants/:id/move-in-checklist', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { completedIds, notes } = req.body || {};
+
+    const update = {};
+    if (Array.isArray(completedIds)) {
+      update.moveInChecklistCompleted = completedIds.filter(v => typeof v === 'string' && v.trim().length > 0);
+    }
+    if (notes && typeof notes === 'object') {
+      const cleanNotes = {};
+      for (const [key, val] of Object.entries(notes)) {
+        if (typeof val === 'string') {
+          const trimmed = val.trim();
+          if (trimmed) cleanNotes[key] = trimmed;
+        }
+      }
+      update.moveInChecklistNotes = cleanNotes;
+    }
+
+    const updated = await Tenant.findByIdAndUpdate(
+      id,
+      { $set: update },
+      { new: true }
+    ).select('moveInChecklistCompleted moveInChecklistNotes');
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Tenant not found' });
+    }
+
+    return res.json({
+      message: 'Move-in checklist updated',
+      completedIds: updated.moveInChecklistCompleted || [],
+      notes: updated.moveInChecklistNotes || {}
+    });
+  } catch (err) {
+    console.error('Update tenant move-in checklist error:', err);
     return res.status(500).json({ message: 'Internal server error' });
   }
 });
