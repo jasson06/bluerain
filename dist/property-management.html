@@ -15402,15 +15402,17 @@ function renderPortfolioDetails(type) {
                         ${item.notesCount || 0}
                     </span>
                 </button>`;
-            const typeCell = item.source === 'application'
-                ? `<a href="/applications/review/${item.id}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline;cursor:pointer;">${item.kind}</a>`
-                : item.kind;
             const safeLink = (item.applicationUrl || '').replace(/"/g,'&quot;');
             const copyBtn = (item.source === 'invite' && safeLink)
                 ? `<button type="button" class="icon-copy-btn portfolio-invite-copy-link" data-link="${safeLink}" title="Copy invite URL"><i class="fas fa-copy"></i></button>`
                 : '';
+            const typeCell = item.source === 'application'
+                ? `<a href="/applications/review/${item.id}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline;cursor:pointer;">${item.kind}</a>`
+                : (item.source === 'invite'
+                    ? `<span style="display:inline-flex;align-items:center;gap:6px;">${item.kind}${copyBtn}</span>`
+                    : item.kind);
             const dateCell = item.source === 'invite'
-                ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;"><span>${dateStr}</span>${lastOpenedStr ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#ecfdf3;color:#16a34a;font-size:0.75rem;">Opens: ${typeof item.openCount === 'number' ? item.openCount : 0} • Last opened: ${lastOpenedStr}</span>` : `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#ecfdf3;color:#16a34a;font-size:0.75rem;">Opens: ${typeof item.openCount === 'number' ? item.openCount : 0}</span>`}${copyBtn}</div>`
+                ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;"><span>${dateStr}</span>${lastOpenedStr ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#ecfdf3;color:#16a34a;font-size:0.75rem;">Opens: ${typeof item.openCount === 'number' ? item.openCount : 0} • Last opened: ${lastOpenedStr}</span>` : `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#ecfdf3;color:#16a34a;font-size:0.75rem;">Opens: ${typeof item.openCount === 'number' ? item.openCount : 0}</span>`}</div>`
                 : dateStr;
             return `
                 <tr data-name="${dataName}" data-email="${dataEmail}" data-property="${dataProp}" data-unit="${dataUnit}" data-status="${dataStatus}" data-type="${dataType}" ${item.source === 'application' ? `data-app-id="${item.id || ''}"` : ''}${item.source === 'invite' ? ` data-invite-id="${item.id || ''}"` : ''}>
@@ -16705,3 +16707,4 @@ document.addEventListener('DOMContentLoaded', () => {
     </script>
 </body>
 </html>
+
