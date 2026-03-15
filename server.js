@@ -777,6 +777,12 @@ const quoteSchema = new mongoose.Schema({
     email: String,
     phone: String
   },
+    signature: {
+    name: String,                    // Client name as signed
+    type: { type: String, enum: ['typed', 'drawn', ''], default: '' },
+    imageData: String,               // Data URL for drawn signatures
+    signedAt: Date                   // When the client signed
+  },
   quoteNumber: String,
   date: Date,
   validTill: Date,
@@ -5436,6 +5442,52 @@ app.get('/api/quotes/:id', async (req, res) => {
     res.json(quote);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch quote' });
+  }
+});
+
+// Save client signature for a quote (public link endpoint)
+app.post('/api/quotes/:id/signature', async (req, res) => {
+  try {
+    const { name, type, imageData } = req.body || {};
+
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'Signature name is required.' });
+    }
+
+    const normalizedType = (type === 'drawn' || type === 'typed') ? type : 'typed';
+
+    // Optional basic size guard for data URL payloads
+    if (normalizedType === 'drawn' && imageData && imageData.length > 2_000_000) {
+      return res.status(400).json({ error: 'Signature image is too large.' });
+    }
+
+    const quote = await Quote.findById(req.params.id);
+    if (!quote) {
+      return res.status(404).json({ error: 'Quote not found' });
+    }
+
+    quote.signature = {
+      name: name.trim(),
+      type: normalizedType,
+      imageData: imageData || null,
+      signedAt: new Date()
+    };
+
+    // Optionally mark quote as approved when signed
+    if (quote.status !== 'Approved') {
+      quote.status = 'Approved';
+    }
+
+    await quote.save();
+
+    res.json({
+      message: 'Signature saved successfully.',
+      quoteId: quote._id,
+      status: quote.status
+    });
+  } catch (err) {
+    console.error('Error saving quote signature:', err);
+    res.status(500).json({ error: 'Failed to save signature' });
   }
 });
 
