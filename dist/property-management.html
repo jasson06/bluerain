@@ -540,6 +540,26 @@ body.dark-theme .portfolio-maint-status-select:focus {
     font-size: 0.8rem;
 }
 
+/* Smooth +Payment button reveal in portfolio rent rows */
+.portfolio-rent-actions-cell {
+    position: relative;
+}
+
+.portfolio-record-payment-btn {
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.16s ease-out, transform 0.16s ease-out;
+    display: inline-flex !important;
+    visibility: hidden;
+}
+
+tr:hover .portfolio-record-payment-btn,
+tr.selected-portfolio-row .portfolio-record-payment-btn {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+}
+
 /* Sidebar Styles */
 .sidebar {
     width: 290px;
@@ -3391,6 +3411,141 @@ body.dark-theme #portfolioRentMonthPicker {
     overflow-y: auto;
 }
 
+/* Sidebar Notes section under Tasks */
+.portfolio-notes-sidebar {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgb(112 116 121 / 90%);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.portfolio-notes-header h3 {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #111827;
+}
+
+.portfolio-notes-meta {
+    font-size: 0.78rem;
+    color: #6b7280;
+}
+
+.portfolio-notes-list {
+    max-height: 150px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.portfolio-notes-item {
+    margin-bottom: 4px;
+}
+
+.portfolio-notes-bubble {
+    position: relative;
+    padding: 6px 8px 6px 26px;
+    border-radius: 10px;
+    background: #f3f4f6;
+    font-size: 0.78rem;
+    color: #374151;
+}
+
+.portfolio-notes-delete {
+    position: absolute;
+    left: 6px;
+    top: 6px;
+    border: none;
+    background: transparent;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.7rem;
+}
+
+.portfolio-notes-timestamp {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.7rem;
+    color: #9ca3af;
+}
+
+.portfolio-notes-new {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.portfolio-notes-new input[type="text"] {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 5px 9px;
+    border-radius: 999px;
+    border: 1px solid #d1d5db;
+    font-size: 0.78rem;
+    background: #ffffff;
+    color: #111827;
+}
+
+.portfolio-notes-new button {
+    background: #e5e7eb;
+    color: #111827;
+    border: 1px solid #d1d5db;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.portfolio-notes-new button:hover {
+    background: #dbeafe;
+    border-color: #60a5fa;
+}
+
+/* Dark theme for sidebar notes */
+body.dark-theme .portfolio-notes-sidebar {
+    border-top-color: #1f2937;
+}
+
+body.dark-theme .portfolio-notes-header h3 {
+    color: #e5e7eb;
+}
+
+body.dark-theme .portfolio-notes-meta {
+    color: #9ca3af;
+}
+
+body.dark-theme .portfolio-notes-bubble {
+    background: rgba(15,23,42,0.9);
+    color: #e5e7eb;
+}
+
+body.dark-theme .portfolio-notes-delete {
+    color: #6b7280;
+}
+
+body.dark-theme .portfolio-notes-timestamp {
+    color: #6b7280;
+}
+
+body.dark-theme .portfolio-notes-new input[type="text"] {
+    background: rgba(15,23,42,0.9);
+    border-color: rgba(148,163,184,0.6);
+    color: #e5e7eb;
+}
+
+body.dark-theme .portfolio-notes-new button {
+    background: #020617;
+    color: #e5e7eb;
+    border-color: #1f2937;
+}
+
+body.dark-theme .portfolio-notes-new button:hover {
+    background: #0f172a;
+    border-color: #38bdf8;
+}
+
 .portfolio-task-item {
     display: flex;
     align-items: flex-start;
@@ -4327,6 +4482,17 @@ tr[data-maint-id][data-editing="true"] {
                             <button type="submit">Add</button>
                         </form>
                         <div class="portfolio-tasks-list" id="portfolioTasksList"></div>
+                        <div class="portfolio-notes-sidebar" id="portfolioNotesSidebar">
+                            <div class="portfolio-notes-header">
+                                <h3>Notes</h3>
+                            </div>
+                            <div class="portfolio-notes-meta" id="portfolioNotesMeta">Select a row in the overview to see notes.</div>
+                            <div class="portfolio-notes-list" id="portfolioNotesList"></div>
+                            <form class="portfolio-notes-new" id="portfolioNotesForm">
+                                <input type="text" id="portfolioNotesInput" placeholder="Add a note about the selected item..." autocomplete="off" />
+                                <button type="submit">Add</button>
+                            </form>
+                        </div>
                     </aside>
                 </div>
             </section>
@@ -5490,7 +5656,8 @@ const state = {
     highlightMaintenanceId: null,
     highlightApplicationId: null,
     portfolioRentMonth: null,
-    keepPortfolioTypeFilterOnNextRender: false
+    keepPortfolioTypeFilterOnNextRender: false,
+    portfolioNotesContext: null
 };
 
 const API_URL = '/api';
@@ -5557,6 +5724,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeApplicationsSearch();
     initializeInvitesSearch();
     initializeGlobalSearch();
+    renderPortfolioNotesPanel();
     setPortfolioWelcomeText();
     setPortfolioWelcomeText();
 
@@ -5577,6 +5745,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Default to portfolio overview on initial load
     runWhenIdle(() => {
         openPortfolioOverview().catch(() => {});
+    });
+
+    // Click-away: deselect portfolio rent row and hide notes when clicking outside
+    document.addEventListener('click', (evt) => {
+        const details = document.getElementById('portfolioDetails');
+        const notesSidebar = document.getElementById('portfolioNotesSidebar');
+        const target = evt.target;
+        if (!details) return;
+        // If click is inside the rent details area or the notes sidebar, keep selection
+        if (details.contains(target) || (notesSidebar && notesSidebar.contains(target))) {
+            return;
+        }
+        clearPortfolioSelectionAndNotes();
     });
 });
 
@@ -5854,6 +6035,16 @@ document.getElementById('addPaymentForm')?.addEventListener('submit', handleAddP
         }
     };
 }
+
+// Bind portfolio sidebar notes form submit
+document.getElementById('portfolioNotesForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = document.getElementById('portfolioNotesInput');
+    if (!input) return;
+    const text = (input.value || '').trim();
+    if (!text) return;
+    await savePortfolioNote(text);
+});
 
 // Small utility helpers
 function debounce(fn, delay) {
@@ -13482,7 +13673,7 @@ async function downloadDocument(docId) {
     }
 }
 
-// ===== Notes Drawer Logic (Applications & Invites) =====
+// ===== Notes Drawer Logic (Applications, Invites & Tenants) =====
 
 function getNotesDrawerElements() {
     return {
@@ -13543,6 +13734,232 @@ function renderNotesDrawerMessages(notes) {
     });
 
     bodyEl.scrollTop = bodyEl.scrollHeight;
+}
+
+// ===== Portfolio Overview Inline Notes Panel (always visible in sidebar) =====
+
+function getPortfolioNotesSourceForContext(ctx) {
+    if (!ctx) return { notes: [], label: 'No item selected' };
+    if (ctx.type === 'tenant') {
+        const t = (state.allTenants || state.tenants || []).find(x => String(x._id) === String(ctx.id));
+        if (!t) return { notes: [], label: 'Tenant not found' };
+        const name = t.fullName || t.name || `${t.firstName || ''} ${t.lastName || ''}`.trim();
+        const unitNumber = t.unitNumber || t.unit || '';
+        const labelParts = [name, unitNumber && `Unit ${unitNumber}`].filter(Boolean);
+        return { notes: t.notesHistory || [], label: labelParts.join(' \\u2022 ') || 'Tenant' };
+    }
+    if (ctx.type === 'application') {
+        const a = (state.applications || []).find(x => String(x._id) === String(ctx.id));
+        if (!a) return { notes: [], label: 'Application not found' };
+        const labelParts = [a.name || '', a.email || ''].filter(Boolean);
+        return { notes: a.notesHistory || [], label: labelParts.join(' \\u2022 ') || 'Application' };
+    }
+    if (ctx.type === 'invite') {
+        const inv = (state.invites || []).find(x => String(x._id) === String(ctx.id));
+        if (!inv) return { notes: [], label: 'Invite not found' };
+        const labelParts = [inv.name || '', inv.email || ''].filter(Boolean);
+        return { notes: inv.notesHistory || [], label: labelParts.join(' \\u2022 ') || 'Invite' };
+    }
+    return { notes: [], label: 'Unsupported item' };
+}
+
+function renderPortfolioNotesPanel() {
+    const containerEl = document.getElementById('portfolioNotesSidebar');
+    const metaEl = document.getElementById('portfolioNotesMeta');
+    const listEl = document.getElementById('portfolioNotesList');
+    const formEl = document.getElementById('portfolioNotesForm');
+    const inputEl = document.getElementById('portfolioNotesInput');
+    if (!containerEl || !metaEl || !listEl) return;
+
+    const ctx = state.portfolioNotesContext;
+    if (!ctx) {
+        containerEl.style.display = 'none';
+        metaEl.textContent = 'Select a row in the overview to see notes.';
+        listEl.innerHTML = '<p style="font-size:0.8rem;color:#9ca3af;margin:4px 2px;">No item selected.</p>';
+        if (formEl) formEl.style.display = 'none';
+        return;
+    }
+
+    containerEl.style.display = 'flex';
+    const src = getPortfolioNotesSourceForContext(ctx);
+    metaEl.textContent = src.label || 'Selected item';
+    if (formEl) formEl.style.display = '';
+
+    const notes = Array.isArray(src.notes) ? src.notes : [];
+    if (!notes.length) {
+        listEl.innerHTML = '<p style="font-size:0.8rem;color:#9ca3af;margin:4px 2px;">No notes yet. Add one below.</p>';
+    } else {
+        const rows = notes
+            .slice()
+            .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
+            .map(n => {
+                const ts = n.createdAt ? new Date(n.createdAt).toLocaleString('en-US') : '';
+                const safeText = (n.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                const noteId = n._id || '';
+                return `
+                    <div class=\"portfolio-notes-item\" data-note-id=\"${noteId}\">\n                        <div class=\"portfolio-notes-bubble\">\n                            <button type=\"button\" class=\"portfolio-notes-delete\" data-note-id=\"${noteId}\" title=\"Delete note\">\n                                <i class=\"fas fa-trash\"></i>\n                            </button>\n                            <div>${safeText}</div>\n                            <span class=\"portfolio-notes-timestamp\">${ts}</span>\n                        </div>\n                    </div>`;
+            }).join('');
+        listEl.innerHTML = rows;
+        listEl.querySelectorAll('.portfolio-notes-delete').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const id = btn.getAttribute('data-note-id');
+                if (!id) return;
+                deletePortfolioNote(id);
+            });
+        });
+    }
+
+    if (inputEl) inputEl.value = '';
+}
+
+async function savePortfolioNote(text) {
+    const ctx = state.portfolioNotesContext;
+    if (!ctx) {
+        showNotification('Select an item in the overview first', 'error');
+        return;
+    }
+
+    let url = '';
+    if (ctx.type === 'tenant') {
+        url = `/api/tenants/${ctx.id}/notes`;
+    } else if (ctx.type === 'application') {
+        url = `/api/rental-applications/${ctx.id}/notes`;
+    } else if (ctx.type === 'invite') {
+        url = `/api/application-invites/${ctx.id}/notes`;
+    } else {
+        showNotification('Notes are not supported for this item', 'error');
+        return;
+    }
+
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text })
+        });
+        if (!res.ok) throw new Error('Failed to add note');
+        const data = await res.json();
+        const notes = data.notes || [];
+
+        if (ctx.type === 'tenant') {
+            state.allTenants = (state.allTenants || []).map(t =>
+                String(t._id) === String(ctx.id) ? { ...t, notesHistory: notes } : t
+            );
+            state.tenants = (state.tenants || []).map(t =>
+                String(t._id) === String(ctx.id) ? { ...t, notesHistory: notes } : t
+            );
+        } else if (ctx.type === 'application') {
+            state.applications = (state.applications || []).map(a =>
+                String(a._id) === String(ctx.id) ? { ...a, notesHistory: notes } : a
+            );
+        } else if (ctx.type === 'invite') {
+            state.invites = (state.invites || []).map(x =>
+                String(x._id) === String(ctx.id) ? { ...x, notesHistory: notes } : x
+            );
+        }
+
+        renderPortfolioNotesPanel();
+    } catch (err) {
+        console.error('Add portfolio note error:', err);
+        showNotification('Could not add note', 'error');
+    }
+}
+
+async function deletePortfolioNote(noteId) {
+    const ctx = state.portfolioNotesContext;
+    if (!ctx || !noteId) return;
+
+    if (!confirm('Delete this note? This cannot be undone.')) return;
+
+    let url = '';
+    if (ctx.type === 'tenant') {
+        url = `/api/tenants/${ctx.id}/notes/${noteId}`;
+    } else if (ctx.type === 'application') {
+        url = `/api/rental-applications/${ctx.id}/notes/${noteId}`;
+    } else if (ctx.type === 'invite') {
+        url = `/api/application-invites/${ctx.id}/notes/${noteId}`;
+    } else {
+        return;
+    }
+
+    try {
+        const res = await fetch(url, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete note');
+        const data = await res.json();
+        const notes = data.notes || [];
+
+        if (ctx.type === 'tenant') {
+            state.allTenants = (state.allTenants || []).map(t =>
+                String(t._id) === String(ctx.id) ? { ...t, notesHistory: notes } : t
+            );
+            state.tenants = (state.tenants || []).map(t =>
+                String(t._id) === String(ctx.id) ? { ...t, notesHistory: notes } : t
+            );
+        } else if (ctx.type === 'application') {
+            state.applications = (state.applications || []).map(a =>
+                String(a._id) === String(ctx.id) ? { ...a, notesHistory: notes } : a
+            );
+        } else if (ctx.type === 'invite') {
+            state.invites = (state.invites || []).map(x =>
+                String(x._id) === String(ctx.id) ? { ...x, notesHistory: notes } : x
+            );
+        }
+
+        renderPortfolioNotesPanel();
+    } catch (err) {
+        console.error('Delete portfolio note error:', err);
+        showNotification('Could not delete note', 'error');
+    }
+}
+
+function clearPortfolioSelectionAndNotes() {
+    const detailsBody = document.getElementById('portfolioDetailsBody');
+    if (detailsBody) {
+        detailsBody.querySelectorAll('tr.selected-portfolio-row').forEach(row => {
+            row.classList.remove('selected-portfolio-row');
+        });
+    }
+    if (state.portfolioNotesContext) {
+        state.portfolioNotesContext = null;
+        renderPortfolioNotesPanel();
+    }
+}
+
+function openNotesDrawerForTenant(tenantId) {
+    const { root, overlay, closeBtn, titleEl, subtitleEl, inputEl } = getNotesDrawerElements();
+    if (!root) return;
+    const tenant = (state.allTenants || state.tenants || []).find(t => String(t._id) === String(tenantId));
+    if (!tenant) return;
+
+    state.notesDrawerContext = {
+        type: 'tenant',
+        id: tenantId
+    };
+
+    if (titleEl) titleEl.textContent = 'Tenant Notes';
+    if (subtitleEl) {
+        const name = tenant.fullName || tenant.name || `${tenant.firstName || ''} ${tenant.lastName || ''}`.trim();
+        const email = tenant.email || tenant.tenantEmail || '';
+        const subtitle = [name, email].filter(Boolean).join(' \u2022 ');
+        subtitleEl.textContent = subtitle;
+    }
+
+    renderNotesDrawerMessages(tenant.notesHistory || []);
+
+    root.classList.add('open');
+    if (inputEl) {
+        inputEl.value = '';
+        setTimeout(() => inputEl.focus(), 50);
+    }
+
+    if (overlay) {
+        overlay.onclick = () => closeNotesDrawer();
+    }
+    if (closeBtn) {
+        closeBtn.onclick = () => closeNotesDrawer();
+    }
 }
 
 function openNotesDrawerForApplication(appId) {
@@ -17406,6 +17823,9 @@ function renderPortfolioDetails(type) {
             const numericRemaining = Number(remainingRent) || 0;
             const dataBalance = numericRemaining > 0.01 ? 'with-balance' : 'no-balance';
 
+            const notesCount = Array.isArray(tenant.notesHistory) ? tenant.notesHistory.length : 0;
+            const notesBadge = `<button class="portfolio-tenant-notes-link" data-tenant-id="${tenant._id}" style="background:none;border:none;padding:0;margin:0;font:inherit;cursor:pointer;">\n                <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#4f46e5;font-size:0.8rem;">\n                    <i class=\"fas fa-sticky-note\"></i>\n                    ${notesCount}\n                </span>\n            </button>`;
+
             const expectedCellHtml = isOutOfLease
                 ? '<span style="color:#9ca3af;">N/A</span>'
                 : `$${(expectedMonthly || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
@@ -17427,7 +17847,8 @@ function renderPortfolioDetails(type) {
                     <td>${expectedCellHtml}</td>
                     <td>$${(paidThisMonth || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
                     <td>${balanceCellHtml}</td>
-                    <td class="portfolio-rent-actions-cell"><button type="button" class="btn-secondary portfolio-record-payment-btn" style="padding:4px 8px;font-size:0.8rem;display:none;">+Payment</button></td>
+                    <td>${notesBadge}</td>
+                    <td class="portfolio-rent-actions-cell"><button type="button" class="btn-secondary portfolio-record-payment-btn" style="padding:4px 8px;font-size:0.8rem;">+Payment</button></td>
                 </tr>`;
         }).join('');
         body.innerHTML = `
@@ -17459,6 +17880,7 @@ function renderPortfolioDetails(type) {
                             <th>Expected</th>
                             <th>Paid</th>
                             <th>Balance</th>
+                            <th>Updates</th>
                             <th style="width:1%;"></th>
                         </tr>
                     </thead>
@@ -17611,36 +18033,7 @@ function renderPortfolioDetails(type) {
             });
         })();
 
-        // Show Record Payment button only on row hover
-        (function setupPortfolioRentActionHover() {
-            const tbody = body.querySelector('#portfolioDetailsTbody');
-            if (!tbody) return;
-            tbody.addEventListener('mouseover', (evt) => {
-                const row = evt.target.closest('tr');
-                if (!row) return;
-                const btn = row.querySelector('.portfolio-record-payment-btn');
-                if (btn) btn.style.display = 'inline-flex';
-            });
-            tbody.addEventListener('mouseout', (evt) => {
-                const row = evt.target.closest('tr');
-                if (!row) return;
-                const btn = row.querySelector('.portfolio-record-payment-btn');
-                if (btn) btn.style.display = 'none';
-            });
-            // Mobile/touch fallback: tap row to reveal/hide button on small screens
-            tbody.addEventListener('click', (evt) => {
-                const isNarrow = window.innerWidth <= 768;
-                if (!isNarrow) return;
-                // If the actual button was clicked, let the other handler process it
-                if (evt.target.closest('.portfolio-record-payment-btn')) return;
-                const row = evt.target.closest('tr');
-                if (!row) return;
-                const btn = row.querySelector('.portfolio-record-payment-btn');
-                if (!btn) return;
-                const current = (btn.style.display || '').toLowerCase();
-                btn.style.display = (current === 'inline-flex') ? 'none' : 'inline-flex';
-            });
-        })();
+        // +Payment button is now handled purely via CSS hover/selection transitions
 
         // Per-row Record Payment button for tenants with outstanding balance
         (function setupPortfolioRentRecordPayment() {
@@ -17658,6 +18051,47 @@ function renderPortfolioDetails(type) {
                     return;
                 }
                 openPaymentModalForTenantAndProperty(tenantId, propertyId || undefined, false);
+            });
+        })();
+
+        // Row selection & Tenant Notes -> update sidebar notes panel
+        (function setupPortfolioRentSelectionAndNotes() {
+            const tbody = body.querySelector('#portfolioDetailsTbody');
+            if (!tbody) return;
+
+            function selectRow(row) {
+                Array.from(tbody.querySelectorAll('tr.selected-portfolio-row')).forEach(r => r.classList.remove('selected-portfolio-row'));
+                row.classList.add('selected-portfolio-row');
+                const tenantId = row.getAttribute('data-tenant-id');
+                if (!tenantId) return;
+                state.portfolioNotesContext = { type: 'tenant', id: tenantId };
+                renderPortfolioNotesPanel();
+            }
+
+            // Clicking anywhere on the row (except interactive controls) selects it
+            tbody.addEventListener('click', (evt) => {
+                const target = evt.target;
+                if (target.closest('.portfolio-record-payment-btn') ||
+                    target.closest('button') ||
+                    target.closest('input') ||
+                    target.closest('select') ||
+                    target.closest('a')) {
+                    return;
+                }
+                const row = target.closest('tr[data-tenant-id]');
+                if (!row) return;
+                selectRow(row);
+            });
+
+            // Clicking the notes badge also selects the row and focuses notes panel
+            tbody.querySelectorAll('.portfolio-tenant-notes-link').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const row = btn.closest('tr[data-tenant-id]');
+                    if (!row) return;
+                    selectRow(row);
+                });
             });
         })();
         return;
