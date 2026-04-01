@@ -6612,6 +6612,53 @@ app.delete('/api/properties/:propertyId/units/:unitId', async (req, res) => {
 });
 
 
+// Public availability endpoint for marketing site (Blue Rain)
+// Returns multifamily and single-family projects with their units and backend statuses/rents
+app.get('/api/public/availability', async (req, res) => {
+  try {
+    // Include both multifamily and single-family rental projects
+    const projects = await Project.find({
+      type: { $regex: /family/i }
+    }).lean();
+
+    if (!projects.length) {
+      return res.json({ projects: [] });
+    }
+
+    const projectIds = projects.map(p => p._id);
+    const units = await Unit.find({ projectId: { $in: projectIds } }).lean();
+
+    const unitsByProject = {};
+    for (const unit of units) {
+      const pid = String(unit.projectId);
+      if (!unitsByProject[pid]) unitsByProject[pid] = [];
+      unitsByProject[pid].push({
+        _id: unit._id,
+        number: unit.number,
+        floor: unit.floor,
+        bedrooms: unit.bedrooms,
+        bathrooms: unit.bathrooms,
+        sqft: unit.sqft,
+        rent: unit.rent,
+        status: unit.status
+      });
+    }
+
+    const payload = projects.map(p => ({
+      id: p._id,
+      name: p.name,
+      type: p.type,
+      address: p.address,
+      units: unitsByProject[String(p._id)] || []
+    }));
+
+    res.json({ projects: payload });
+  } catch (error) {
+    console.error('Error fetching public availability:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Tenant Routes
 app.get('/api/properties/:propertyId/tenants', async (req, res) => {
   try {
