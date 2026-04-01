@@ -1517,6 +1517,192 @@ const APPLY_URL = "https://bluerainrealestate.com/blue-rain-rental-application.h
       }))
     ];
 
+// Hydrate unit availability from backend so marketing site reflects live statuses
+async function hydrateAvailabilityFromServer() {
+  try {
+    const res = await fetch('/api/public/availability');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data || !Array.isArray(data.projects)) return;
+
+    const byName = {};
+    data.projects.forEach(p => {
+      if (!p || !p.name) return;
+      byName[p.name.toLowerCase()] = p;
+    });
+
+    const mapStatus = (backendStatus) => {
+      const s = String(backendStatus || '').toLowerCase();
+      if (s === 'vacant') return 'Available';
+      if (s === 'maintenance') return 'Coming Soon';
+      if (s === 'occupied') return 'Waitlist';
+      return 'Waitlist';
+    };
+
+    // Explicit mappings from marketing property IDs to backend project names
+    const explicitProjectNameMap = {
+      // 408 & 410 Regina share backend project REG 40810
+      '410-regina': 'reg 40810',
+      '408-regina': 'reg 40810'
+    };
+
+    // ===== Multifamily: update in-place based on backend units =====
+    multifamily.forEach(p => {
+      const explicitName = explicitProjectNameMap[p.id];
+
+      let proj = null;
+      if (explicitName) {
+        proj = data.projects.find(q => String(q.name || '').toLowerCase() === explicitName);
+      }
+      if (!proj) {
+        proj = byName[(p.name || '').toLowerCase()];
+      }
+
+      // Fallback: try matching by address line1 if name doesn't match
+      if (!proj) {
+        const addrStr = String(p.address || '').toLowerCase();
+        proj = data.projects.find(q => {
+          const a = q && q.address ? (q.address.line1 || q.address.addressLine1 || '') : '';
+          return a && addrStr.includes(String(a).toLowerCase());
+        });
+      }
+
+      if (!proj || !Array.isArray(proj.units)) return;
+
+      const unitsByNumber = {};
+      proj.units.forEach(u => {
+        const num = String(u.number || '').trim();
+        if (!num) return;
+        unitsByNumber[num] = u;
+      });
+
+      // Fallback: if we can't find a unit by label, map by index order
+      const sortedUnits = [...proj.units].sort((a, b) => {
+        const na = String(a.number || '').trim();
+        const nb = String(b.number || '').trim();
+        return na.localeCompare(nb, undefined, { numeric: true, sensitivity: 'base' });
+      });
+
+      let hasAnyAvailable = false;
+      let hasAnyComingSoon = false;
+
+      p.units.forEach((label, idx) => {
+        let u = unitsByNumber[String(label)];
+        if (!u && idx < sortedUnits.length) {
+          u = sortedUnits[idx];
+        }
+        if (!u) return;
+        const newStatus = mapStatus(u.status);
+        if (!p.statusByUnit) p.statusByUnit = {};
+        p.statusByUnit[label] = newStatus;
+
+        if (!p.rentByUnit) p.rentByUnit = {};
+        if (typeof u.rent === 'number') {
+          p.rentByUnit[label] = u.rent;
+        }
+
+        if (newStatus === 'Available') hasAnyAvailable = true;
+        else if (newStatus === 'Coming Soon') hasAnyComingSoon = true;
+      });
+
+      if (hasAnyAvailable) p.status = 'Available';
+      else if (hasAnyComingSoon) p.status = 'Coming Soon';
+      else if (p.units.some(label => p.statusByUnit && p.statusByUnit[label])) {
+        p.status = 'Waitlist';
+      }
+    });
+
+    // Update multifamily records in allRecords
+    allRecords.forEach(rec => {
+      if (rec.type !== 'Multifamily') return;
+      const parts = String(rec.key || '').split('::');
+      if (parts.length !== 2) return;
+      const propId = parts[0];
+      const unitLabel = parts[1];
+      const prop = multifamily.find(p => p.id === propId);
+      if (!prop) return;
+
+      const unitStatus = (prop.statusByUnit && prop.statusByUnit[unitLabel]) ? prop.statusByUnit[unitLabel] : prop.status;
+      const unitRent = (prop.rentByUnit && typeof prop.rentByUnit[unitLabel] === 'number') ? prop.rentByUnit[unitLabel] : prop.rent;
+      rec.status = unitStatus;
+      rec.rent = unitRent;
+      rec.notes = notesForStatus(unitStatus);
+    });
+
+    // ===== Single-family: mirror flow using backend project/units =====
+    singlefamily.forEach(h => {
+      // Try name match first
+      let proj = data.projects.find(q => String(q.name || '').toLowerCase() === String(h.name || '').toLowerCase());
+
+      // Fallback: match by address line1
+      if (!proj) {
+        const addrStr = String(h.address || '').toLowerCase();
+        proj = data.projects.find(q => {
+          const a = q && q.address ? (q.address.line1 || q.address.addressLine1 || '') : '';
+          return a && addrStr.includes(String(a).toLowerCase());
+        });
+      }
+
+      if (!proj) return;
+
+      const units = Array.isArray(proj.units) ? proj.units : [];
+
+      let mappedStatus = null;
+      let mappedRent = h.rent;
+      let mappedBeds = h.beds;
+      let mappedBaths = h.baths;
+      let mappedSqft = h.sqft;
+
+      if (units.length) {
+        // For single-family, treat the first backend unit as the home
+        const u = units[0];
+        mappedStatus = mapStatus(u.status);
+        if (typeof u.rent === 'number') mappedRent = u.rent;
+        if (typeof u.bedrooms === 'number') mappedBeds = u.bedrooms;
+        if (typeof u.bathrooms === 'number') mappedBaths = u.bathrooms;
+        if (typeof u.sqft === 'number') mappedSqft = u.sqft;
+      } else if (proj.status) {
+        // Fallback: map from project-level status if no units are defined
+        mappedStatus = mapStatus(proj.status);
+      }
+
+      if (mappedStatus) {
+        h.status = mappedStatus;
+        h.rent = mappedRent;
+        h.beds = mappedBeds;
+        h.baths = mappedBaths;
+        h.sqft = mappedSqft;
+        h.notes = notesForStatus(mappedStatus);
+      }
+    });
+
+    // Update single-family records in allRecords
+    allRecords.forEach(rec => {
+      if (rec.type !== 'Single-family') return;
+      const parts = String(rec.key || '').split('::');
+      if (parts.length !== 2) return;
+      const homeId = parts[0];
+      const h = singlefamily.find(sf => sf.id === homeId);
+      if (!h) return;
+
+      rec.status = h.status;
+      rec.rent = h.rent;
+      rec.beds = h.beds;
+      rec.baths = h.baths;
+      rec.sqft = h.sqft;
+      rec.notes = notesForStatus(h.status);
+    });
+
+    // Re-render UI with fresh data
+    renderMF();
+    renderSFH();
+    updateStats();
+    applyFilters();
+  } catch (err) {
+    console.error('Error hydrating availability from server:', err);
+  }
+}
+
 
 // ========= Map helpers =========
 function buildPropertiesList(){
@@ -2498,6 +2684,9 @@ function boot(){
   renderSFH();
   updateStats();
   applyFilters();
+
+  // Asynchronously sync availability from backend so statuses stay in sync
+  hydrateAvailabilityFromServer();
 }
 
 if(document.readyState === "loading"){
@@ -2509,5 +2698,3 @@ if(document.readyState === "loading"){
   </script>
 </body>
 </html>
-
-
