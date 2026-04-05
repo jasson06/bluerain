@@ -1280,6 +1280,29 @@ const ApplicationInvite = mongoose.model('ApplicationInvite', new mongoose.Schem
   ]
 }));
 
+// ── Calorie Tracker User ──
+const calorieUserSchema = new mongoose.Schema({
+  email:    { type: String, required: true, unique: true, lowercase: true, trim: true },
+  password: { type: String, required: true },
+  name:     { type: String, trim: true, default: '' },
+  calorieGoal: { type: Number, default: 2000 },
+  proteinGoal: { type: Number, default: 150 },
+  quickFoods:  { type: [String], default: [
+    "chicken breast","rice","egg","banana","protein shake",
+    "oatmeal","salmon","greek yogurt","avocado","almonds",
+    "sweet potato","pasta","apple","peanut butter","broccoli"
+  ]},
+  trackerData: { type: mongoose.Schema.Types.Mixed, default: {} }
+}, { timestamps: true });
+
+calorieUserSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
+});
+
+const CalorieUser = mongoose.model('CalorieUser', calorieUserSchema);
+
 module.exports = {
   Task,
   Comment,
@@ -1291,6 +1314,7 @@ module.exports = {
   Invitation,
   Quote,
   Unit,
+  CalorieUser,
 };
 
 
@@ -9024,6 +9048,7 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
+
 // Debugging route to check server deployment status
 app.get('/api/debug', (req, res) => {
   res.json({
@@ -9032,6 +9057,85 @@ app.get('/api/debug', (req, res) => {
     environment: process.env.NODE_ENV,
     port: process.env.PORT,
   });
+});
+
+
+// ===================== CALORIE TRACKER API =====================
+
+// JWT auth middleware for calorie tracker
+function authCalorie(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) return res.status(401).json({ message: 'Not authenticated' });
+  try {
+    const decoded = jwt.verify(header.split(' ')[1], JWT_SECRET);
+    req.calorieUserId = decoded.calorieUserId;
+    next();
+  } catch (e) {
+    return res.status(401).json({ message: 'Invalid token' });
+  }
+}
+
+// Register
+app.post('/api/calorie/register', async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+    if (!email || !password) return res.status(400).json({ message: 'Email and password required' });
+    if (password.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    const exists = await CalorieUser.findOne({ email: email.toLowerCase().trim() });
+    if (exists) return res.status(409).json({ message: 'Email already registered' });
+    const user = await CalorieUser.create({ email: email.toLowerCase().trim(), password, name: name || '' });
+    const token = jwt.sign({ calorieUserId: user._id }, JWT_SECRET, { expiresIn: '30d' });
+    res.status(201).json({ token, user: { id: user._id, email: user.email, name: user.name } });
+  } catch (e) {
+    console.error('Calorie register error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Login
+app.post('/api/calorie/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ message: 'Email and password required' });
+    const user = await CalorieUser.findOne({ email: email.toLowerCase().trim() });
+    if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(401).json({ message: 'Invalid credentials' });
+    const token = jwt.sign({ calorieUserId: user._id }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ token, user: { id: user._id, email: user.email, name: user.name } });
+  } catch (e) {
+    console.error('Calorie login error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get profile (token check + load all user data)
+app.get('/api/calorie/me', authCalorie, async (req, res) => {
+  try {
+    const user = await CalorieUser.findById(req.calorieUserId).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (e) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Save tracker data (full sync)
+app.put('/api/calorie/data', authCalorie, async (req, res) => {
+  try {
+    const { trackerData, calorieGoal, proteinGoal, quickFoods } = req.body;
+    const update = {};
+    if (trackerData !== undefined) update.trackerData = trackerData;
+    if (calorieGoal !== undefined) update.calorieGoal = calorieGoal;
+    if (proteinGoal !== undefined) update.proteinGoal = proteinGoal;
+    if (quickFoods !== undefined) update.quickFoods = quickFoods;
+    const user = await CalorieUser.findByIdAndUpdate(req.calorieUserId, update, { new: true }).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Calorie data save error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 
