@@ -15,11 +15,9 @@ const crypto = require("crypto");
 const router = express.Router();
 const nodemailer = require('nodemailer');
 
-const visionClient = new vision.ImageAnnotatorClient({
-  keyFilename: "google-service-account.json"
-});
 const vision = require("@google-cloud/vision");
-require('dotenv').config();
+
+const visionClient = new vision.ImageAnnotatorClient();
 
 
 const app = express();
