@@ -659,7 +659,229 @@ button:active {
     overflow: hidden;
     margin-bottom: 16px;
     border: 2px solid #6366f1;
+    position: relative;
 }
+
+#scanner video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.scanner-controls {
+    position: absolute;
+    bottom: 10px;
+    left: 0; right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    z-index: 5;
+}
+
+.scanner-controls button {
+    padding: 8px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+}
+
+.btn-capture {
+    background: linear-gradient(135deg, #6366f1, #818cf8);
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(99,102,241,0.4);
+}
+
+.btn-cancel-scan {
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+}
+
+/* ---- SCAN PREVIEW MODAL ---- */
+.scan-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(6px);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.scan-overlay.show {
+    display: flex;
+}
+
+.scan-preview {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 24px;
+    width: 100%;
+    max-width: 440px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.5);
+    animation: slideUp 0.3s ease forwards;
+}
+
+.scan-preview h3 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 4px;
+}
+
+.scan-preview .scan-sub {
+    font-size: 13px;
+    color: #475569;
+    margin-bottom: 16px;
+}
+
+.scan-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.scan-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.5);
+    border-radius: 12px;
+}
+
+.scan-item .scan-item-check {
+    width: 20px;
+    height: 20px;
+    accent-color: #6366f1;
+    cursor: pointer;
+    flex: none;
+}
+
+.scan-item .scan-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.scan-item .scan-item-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    text-transform: capitalize;
+}
+
+.scan-item .scan-item-macros {
+    font-size: 11px;
+    color: #475569;
+    margin-top: 1px;
+}
+
+.scan-item .scan-item-qty {
+    width: 60px;
+    padding: 6px 8px;
+    font-size: 13px;
+    text-align: center;
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: #fff;
+    flex: none;
+}
+
+.scan-item .scan-item-unit {
+    font-size: 11px;
+    color: #1e293b;
+    flex: none;
+    width: 42px;
+    padding: 4px 0px 4px 2px;
+    border-radius: 6px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: #fff;
+    cursor: pointer;
+}
+
+.scan-item .scan-item-cal {
+    font-size: 14px;
+    font-weight: 700;
+    color: #6366f1;
+    flex: none;
+    min-width: 50px;
+    text-align: right;
+}
+
+.scan-totals {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-top: 1px solid rgba(0,0,0,0.08);
+    margin-bottom: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.scan-add-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.scan-add-row input {
+    flex: 1;
+    padding: 9px 12px;
+    font-size: 13px;
+    border-radius: 10px;
+}
+
+.scan-add-row button {
+    flex: none;
+    padding: 9px 14px;
+    font-size: 13px;
+}
+
+.scan-add-suggestions {
+    position: absolute;
+    left: 0; right: 56px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 10px;
+    max-height: 140px;
+    overflow-y: auto;
+    z-index: 10;
+    display: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.scan-add-suggestions .sug-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    transition: background 0.12s;
+}
+
+.scan-add-suggestions .sug-item:hover {
+    background: rgba(99,102,241,0.08);
+}
+
+.scan-preview .btn-group {
+    gap: 10px;
+}
+
+
 
 /* ---- QUICK ADD ---- */
 .quick-foods {
@@ -1491,6 +1713,32 @@ document.addEventListener('keydown', function(e) {
     </button>
 </nav>
 
+</div>
+
+<!-- SCAN PREVIEW MODAL (top-level so it's above all stacking contexts) -->
+<div class="scan-overlay" id="scanOverlay">
+    <div class="scan-preview">
+        <h3>&#x1F4CB; Scan Preview</h3>
+        <p class="scan-sub">Review items before adding to your log</p>
+
+        <div class="scan-items-list" id="scanItemsList"></div>
+
+        <div class="scan-add-row" style="position:relative">
+            <input id="scanAddInput" placeholder="Add a food..." autocomplete="off" oninput="scanAddSearch(this.value)">
+            <button class="btn-primary" onclick="scanAddFood()" style="flex:none;padding:9px 14px">+ Add</button>
+            <div class="scan-add-suggestions" id="scanAddSuggestions"></div>
+        </div>
+
+        <div class="scan-totals" id="scanTotals">
+            <span>Total: <strong>0 cal</strong></span>
+            <span>P: <strong>0g</strong> · C: <strong>0g</strong> · F: <strong>0g</strong></span>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-primary" onclick="submitScanItems()">&#x2705; Log Items</button>
+            <button class="btn-secondary" onclick="closeScanPreview()">Cancel</button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -2416,30 +2664,376 @@ function drawCharts(){
     });
 }
 
-// ------------------- BARCODE -------------------
-function startScanner(){
+// ------------------- SCANNER & SCAN PREVIEW -------------------
+let scanItems = [];
+let scanStream = null;
+let scanIdentifying = false;
+
+function startScanner() {
     const scannerEl = document.getElementById("scanner");
-    scannerEl.style.display="block";
 
-    Quagga.init({
-        inputStream:{
-            name:"Live",
-            type:"LiveStream",
-            target: scannerEl
-        },
-        decoder:{
-            readers:["ean_reader"]
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 960 } } })
+            .then(stream => {
+                scanStream = stream;
+                scannerEl.innerHTML = `
+                    <video autoplay playsinline muted></video>
+                    <div class="scanner-controls">
+                        <button class="btn-capture" id="captureBtn" onclick="captureAndScan()">&#x1F4F8; Snap & Identify</button>
+                        <button class="btn-cancel-scan" onclick="stopScanner()">Cancel</button>
+                    </div>
+                `;
+                scannerEl.style.display = "block";
+                const video = scannerEl.querySelector('video');
+                video.srcObject = stream;
+            })
+            .catch(() => {
+                openScanPreview([]);
+            });
+    } else {
+        openScanPreview([]);
+    }
+}
+
+function stopScanner() {
+    const scannerEl = document.getElementById("scanner");
+    if (scanStream) {
+        scanStream.getTracks().forEach(t => t.stop());
+        scanStream = null;
+    }
+    scannerEl.innerHTML = "";
+    scannerEl.style.display = "none";
+}
+
+async function captureAndScan() {
+    if (scanIdentifying) return;
+    const scannerEl = document.getElementById("scanner");
+    const video = scannerEl.querySelector('video');
+    const captureBtn = document.getElementById('captureBtn');
+    if (!video) { stopScanner(); openScanPreview([]); return; }
+
+    // Show loading state
+    scanIdentifying = true;
+    captureBtn.innerHTML = '&#x23F3; Identifying...';
+    captureBtn.disabled = true;
+
+    // Wait a moment for camera to focus
+    await new Promise(r => setTimeout(r, 300));
+
+    // Capture frame to canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const base64Image = canvas.toDataURL('image/jpeg', 0.8);
+
+    console.log('Captured image size:', Math.round(base64Image.length / 1024), 'KB');
+
+    // Stop camera
+    stopScanner();
+
+    // Send to server for identification
+    let identifiedItems = [];
+    try {
+        const resp = await fetch(API_BASE + '/api/calorie/identify-food', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64Image })
+        });
+        if (!resp.ok) {
+            const errText = await resp.text();
+            console.error('Server responded with', resp.status, errText);
+        } else {
+            const result = await resp.json();
+            console.log('Server returned:', result);
+            if (result.items && result.items.length > 0) {
+                identifiedItems = result.items;
+            }
         }
-    }, function(err){
-        if(!err) Quagga.start();
-    });
+    } catch (e) {
+        console.error('Food identification request failed:', e);
+    }
 
-    Quagga.onDetected(result=>{
-        alert("Barcode: " + result.codeResult.code);
-        Quagga.stop();
-        scannerEl.style.display="none";
+    scanIdentifying = false;
+    openScanPreview(identifiedItems);
+}
+
+function matchToFoodDb(name) {
+    const lower = name.toLowerCase().trim();
+    const keys = Object.keys(foods);
+
+    // 1. Exact match
+    if (foods[lower]) return lower;
+
+    // 2. Vision label is a substring of a DB key, or DB key is a substring of label
+    //    but only if the substring is at least 4 chars to avoid false positives
+    for (const k of keys) {
+        if (k.length >= 4 && lower === k) return k;
+        if (k.length >= 4 && lower.includes(k) && k.length >= lower.length * 0.5) return k;
+        if (lower.length >= 4 && k.includes(lower) && lower.length >= k.length * 0.5) return k;
+    }
+
+    // 3. Core word matching — split both label and DB keys, match significant words
+    const skipAdj = new Set(['the','and','with','fried','grilled','baked','roasted','steamed',
+        'raw','fresh','hot','cold','large','small','sliced','diced','chopped','boiled',
+        'sauteed','crispy','crunchy','sweet','sour','spicy','wild','organic','whole']);
+    const words = lower.split(/[\s,]+/).filter(w => w.length >= 4 && !skipAdj.has(w));
+
+    // Each significant label word must fully match a DB key or a word within a DB key
+    for (const word of words) {
+        const match = keys.find(k => {
+            if (k === word) return true;
+            const kWords = k.split(/\s+/);
+            return kWords.some(kw => kw === word);
+        });
+        if (match) return match;
+    }
+
+    return null;
+}
+
+function openScanPreview(identifiedItems) {
+    scanItems = [];
+
+    // Auto-populate from identified items
+    if (identifiedItems && identifiedItems.length > 0) {
+        // Filter out generic non-food labels (tableware, photography terms, etc.)
+        const skipWords = new Set(['tableware','plate','bowl','cup','fork','knife','spoon',
+            'serveware','dishware','drinkware','cutlery','platter','kitchen utensil',
+            'still life photography','close-up','macro photography','photography',
+            'ingredient','produce','recipe','cuisine','comfort food',
+            'food','dish','meal','natural foods','superfood','whole food','staple food',
+            'garnish','condiment','snack','appetizer','dessert','breakfast','lunch','dinner',
+            'animal source foods','plant','leaf','vegetarian food']);
+
+        console.log('Processing', identifiedItems.length, 'identified items');
+
+        for (const item of identifiedItems) {
+            if (skipWords.has(item.name.toLowerCase())) continue;
+
+            const dbMatch = matchToFoodDb(item.name);
+            if (dbMatch) {
+                // Prevent duplicates
+                if (scanItems.some(s => s.name.toLowerCase() === dbMatch)) continue;
+                addScanItemDirect(dbMatch, item.confidence);
+            }
+            // Only show non-DB items if they have very high confidence (likely real food)
+            else if (item.confidence >= 80) {
+                if (scanItems.some(s => s.name.toLowerCase() === item.name.toLowerCase())) continue;
+                scanItems.push({
+                    name: item.name,
+                    qty: 100,
+                    unit: 'g',
+                    cal: 0, protein: 0, carbs: 0, fat: 0,
+                    checked: false,
+                    inDb: false,
+                    confidence: item.confidence
+                });
+            }
+        }
+    }
+
+    renderScanItems();
+    document.getElementById('scanOverlay').classList.add('show');
+    document.getElementById('scanAddInput').value = '';
+
+    if (scanItems.length === 0) {
+        document.getElementById('scanAddInput').focus();
+    }
+}
+
+function addScanItemDirect(name, confidence) {
+    const f = foods[name.toLowerCase()];
+    const serving = f ? f.serving : 100;
+    const factor = serving / 100;
+
+    scanItems.push({
+        name: name,
+        qty: serving,
+        unit: 'g',
+        cal: f ? Math.round(f.cal * factor) : 0,
+        protein: f ? Math.round(f.protein * factor * 10) / 10 : 0,
+        carbs: f ? Math.round(f.carbs * factor * 10) / 10 : 0,
+        fat: f ? Math.round(f.fat * factor * 10) / 10 : 0,
+        checked: true,
+        inDb: !!f,
+        confidence: confidence || 0
     });
 }
+
+function closeScanPreview() {
+    document.getElementById('scanOverlay').classList.remove('show');
+    scanItems = [];
+    document.getElementById('scanAddInput').value = '';
+    hideScanAddSuggestions();
+}
+
+// --- Search within scan preview ---
+function scanAddSearch(val) {
+    const sugBox = document.getElementById('scanAddSuggestions');
+    val = val.toLowerCase().trim();
+    if (!val) { hideScanAddSuggestions(); return; }
+
+    const matches = Object.keys(foods).filter(k => k.includes(val)).slice(0, 8);
+    if (matches.length === 0) { hideScanAddSuggestions(); return; }
+
+    sugBox.innerHTML = '';
+    matches.forEach(name => {
+        const f = foods[name];
+        const item = document.createElement('div');
+        item.className = 'sug-item';
+        item.innerHTML = `<span style="text-transform:capitalize">${name}</span><span class="sug-cal">${f.cal} cal/100g</span>`;
+        item.onclick = () => {
+            addScanItem(name);
+            document.getElementById('scanAddInput').value = '';
+            hideScanAddSuggestions();
+            renderScanItems();
+        };
+        sugBox.appendChild(item);
+    });
+    sugBox.style.display = 'block';
+}
+
+function hideScanAddSuggestions() {
+    document.getElementById('scanAddSuggestions').style.display = 'none';
+}
+
+function scanAddFood() {
+    const input = document.getElementById('scanAddInput');
+    const val = input.value.trim().toLowerCase();
+    if (!val) return;
+
+    addScanItem(val);
+    input.value = '';
+    hideScanAddSuggestions();
+    renderScanItems();
+}
+
+function addScanItem(name) {
+    addScanItemDirect(name, 0);
+    renderScanItems();
+}
+
+function removeScanItem(idx) {
+    scanItems.splice(idx, 1);
+    renderScanItems();
+}
+
+function toggleScanItem(idx) {
+    scanItems[idx].checked = !scanItems[idx].checked;
+    renderScanItems();
+}
+
+function updateScanUnit(idx, newUnit) {
+    const item = scanItems[idx];
+    const f = foods[item.name.toLowerCase()];
+    item.unit = newUnit;
+    if (f) {
+        if (newUnit === 'g') item.qty = f.serving;
+        else if (newUnit === 'oz') item.qty = Math.round(f.serving / 28.3495 * 10) / 10;
+        else if (newUnit === 'serving') item.qty = 1;
+        else if (newUnit === 'unit') item.qty = 1;
+    }
+    recalcScanItem(item);
+    renderScanItems();
+}
+
+function updateScanQty(idx, val) {
+    const item = scanItems[idx];
+    item.qty = parseFloat(val) || 0;
+    recalcScanItem(item);
+    renderScanItems();
+}
+
+function recalcScanItem(item) {
+    const f = foods[item.name.toLowerCase()];
+    if (f) {
+        let grams = item.qty;
+        if (item.unit === 'oz') grams = item.qty * 28.3495;
+        else if (item.unit === 'serving') grams = f.serving * item.qty;
+        else if (item.unit === 'unit') grams = f.serving * item.qty;
+        const factor = grams / 100;
+        item.cal = Math.round(f.cal * factor);
+        item.protein = Math.round(f.protein * factor * 10) / 10;
+        item.carbs = Math.round(f.carbs * factor * 10) / 10;
+        item.fat = Math.round(f.fat * factor * 10) / 10;
+    }
+}
+
+function renderScanItems() {
+    const list = document.getElementById('scanItemsList');
+    list.innerHTML = '';
+
+    if (scanItems.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:16px;color:#475569;font-size:13px">No items detected. Search and add foods manually below.</div>';
+    }
+
+    scanItems.forEach((item, i) => {
+        const confBadge = item.confidence ? `<span style="display:inline-block;background:${item.confidence >= 70 ? 'rgba(16,185,129,0.15);color:#059669' : 'rgba(245,158,11,0.15);color:#d97706'};font-size:10px;padding:1px 6px;border-radius:99px;font-weight:600;margin-left:6px">${item.confidence}%</span>` : '';
+        const notInDb = !item.inDb ? '<span style="display:inline-block;background:rgba(239,68,68,0.1);color:#dc2626;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:600;margin-left:4px">not in DB</span>' : '';
+
+        list.innerHTML += `
+            <div class="scan-item" style="opacity:${item.checked ? 1 : 0.5}">
+                <input type="checkbox" class="scan-item-check" ${item.checked ? 'checked' : ''} onchange="toggleScanItem(${i})">
+                <div class="scan-item-info">
+                    <div class="scan-item-name">${escapeHtml(item.name)}${confBadge}${notInDb}</div>
+                    <div class="scan-item-macros">P: ${item.protein}g · C: ${item.carbs}g · F: ${item.fat}g</div>
+                </div>
+                <input type="number" class="scan-item-qty" value="${item.qty}" onchange="updateScanQty(${i}, this.value)" min="0">
+                <select class="scan-item-unit" onchange="updateScanUnit(${i}, this.value)">
+                    <option value="g"${item.unit==='g'?' selected':''}>g</option>
+                    <option value="oz"${item.unit==='oz'?' selected':''}>oz</option>
+                    <option value="serving"${item.unit==='serving'?' selected':''}>srv</option>
+                    <option value="unit"${item.unit==='unit'?' selected':''}>unit</option>
+                </select>
+                <span class="scan-item-cal">${item.cal}</span>
+                <button onclick="removeScanItem(${i})" style="flex:none;width:24px;height:24px;padding:0;border:none;background:rgba(239,68,68,0.12);color:#ef4444;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">&times;</button>
+            </div>
+        `;
+    });
+
+    // Totals
+    const checked = scanItems.filter(x => x.checked);
+    const totCal = checked.reduce((a, b) => a + b.cal, 0);
+    const totProt = checked.reduce((a, b) => a + b.protein, 0);
+    const totCarb = checked.reduce((a, b) => a + b.carbs, 0);
+    const totFat = checked.reduce((a, b) => a + b.fat, 0);
+
+    document.getElementById('scanTotals').innerHTML = `
+        <span>Total: <strong>${totCal} cal</strong></span>
+        <span>P: <strong>${Math.round(totProt * 10) / 10}g</strong> · C: <strong>${Math.round(totCarb * 10) / 10}g</strong> · F: <strong>${Math.round(totFat * 10) / 10}g</strong></span>
+    `;
+}
+
+function submitScanItems() {
+    const checked = scanItems.filter(x => x.checked);
+    if (checked.length === 0) return;
+
+    const date = viewDate;
+    if (!data[date]) data[date] = [];
+
+    checked.forEach(item => {
+        data[date].push({
+            food: item.name,
+            qty: item.qty,
+            unit: item.unit,
+            calories: item.cal,
+            protein: item.protein,
+            carbs: item.carbs,
+            fat: item.fat
+        });
+    });
+
+    save();
+    render();
+    closeScanPreview();
+}
+
+// Close scan suggestions on click outside
+document.addEventListener('click', e => {
+    if (!e.target.closest('.scan-add-row')) hideScanAddSuggestions();
+});
 
 // INIT — check for existing auth token
 (async function init(){
