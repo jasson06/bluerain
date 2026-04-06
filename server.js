@@ -19,7 +19,6 @@ const vision = require("@google-cloud/vision");
 
 const visionClient = new vision.ImageAnnotatorClient();
 
-
 const app = express();
 const PORT = process.env.PORT || 5500;
 const JWT_SECRET = process.env.JWT_SECRET;
