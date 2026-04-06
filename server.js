@@ -48,8 +48,8 @@ async function logDailyUpdate(projectId, text, author = "System") {
 
 // Middleware
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan('dev'));
 
 
@@ -9135,6 +9135,82 @@ app.put('/api/calorie/data', authCalorie, async (req, res) => {
   } catch (e) {
     console.error('Calorie data save error:', e);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+// ── Calorie Tracker: Identify food from photo via Google Vision ──
+app.post('/api/calorie/identify-food', async (req, res) => {
+  try {
+    const { image } = req.body;
+    if (!image) {
+      console.log('identify-food: No image in request body, body keys:', Object.keys(req.body));
+      return res.status(400).json({ message: 'No image provided' });
+    }
+
+    console.log('identify-food: Received image, length:', image.length);
+
+    // Strip data URI prefix if present
+    const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
+    const imageBuffer = Buffer.from(base64Data, 'base64');
+    console.log('identify-food: Image buffer size:', imageBuffer.length, 'bytes');
+
+    // Run label detection and object localization in parallel
+    const [[labelResult], [objectResult]] = await Promise.all([
+      visionClient.labelDetection({ image: { content: imageBuffer } }),
+      visionClient.objectLocalization({ image: { content: imageBuffer } })
+    ]);
+
+    const labels = (labelResult.labelAnnotations || []).map(l => ({
+      name: l.description.toLowerCase(),
+      score: l.score
+    }));
+    const objects = (objectResult.localizedObjectAnnotations || []).map(o => ({
+      name: o.name.toLowerCase(),
+      score: o.score
+    }));
+
+    console.log('identify-food: Labels:', labels.map(l => l.name + '(' + Math.round(l.score*100) + ')').join(', '));
+    console.log('identify-food: Objects:', objects.map(o => o.name + '(' + Math.round(o.score*100) + ')').join(', '));
+
+    // Non-food labels to skip
+    const skipWords = new Set([
+      'tableware','table','plate','bowl','cup','fork','knife','spoon','chopsticks',
+      'serveware','dishware','drinkware','cutlery','kitchen utensil','platter',
+      'wood','hand','finger','person','human','room','indoor','outdoor',
+      'furniture','photograph','font','rectangle','circle','pattern','textile',
+      'plastic','metal','material','still life photography','close-up','macro photography',
+      'food','dish','meal','cuisine','recipe','ingredient','produce','comfort food',
+      'natural foods','superfood','whole food','staple food','fast food','junk food',
+      'side dish','garnish','condiment','snack','appetizer','dessert','breakfast',
+      'lunch','dinner','cooking','baking','animal source foods',
+      'plant','leaf','flower','grass','landscape','sky','water','liquid','container'
+    ]);
+
+    const allItems = [...objects, ...labels];
+    const seen = new Set();
+    const identified = [];
+
+    for (const item of allItems) {
+      const name = item.name;
+      if (seen.has(name)) continue;
+      seen.add(name);
+      if (skipWords.has(name)) continue;
+
+      // Require 65% confidence minimum
+      if (item.score >= 0.65) {
+        identified.push({ name, confidence: Math.round(item.score * 100) });
+      }
+    }
+
+    // Sort by confidence
+    identified.sort((a, b) => b.confidence - a.confidence);
+
+    console.log('identify-food: Returning', identified.length, 'items:', identified.map(i => i.name).join(', '));
+    res.json({ items: identified.slice(0, 8) });
+  } catch (e) {
+    console.error('Food identification error:', e);
+    res.status(500).json({ message: 'Failed to identify food', error: e.message });
   }
 });
 
