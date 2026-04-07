@@ -1287,11 +1287,15 @@ const calorieUserSchema = new mongoose.Schema({
   name:     { type: String, trim: true, default: '' },
   calorieGoal: { type: Number, default: 2000 },
   proteinGoal: { type: Number, default: 150 },
+  carbGoal: { type: Number, default: 200 },
+  fatGoal: { type: Number, default: 65 },
   quickFoods:  { type: [String], default: [
     "chicken breast","rice","egg","banana","protein shake",
     "oatmeal","salmon","greek yogurt","avocado","almonds",
     "sweet potato","pasta","apple","peanut butter","broccoli"
   ]},
+  savedMeals: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  planData: { type: mongoose.Schema.Types.Mixed, default: null },
   trackerData: { type: mongoose.Schema.Types.Mixed, default: {} }
 }, { timestamps: true });
 
@@ -1302,6 +1306,7 @@ calorieUserSchema.pre('save', async function(next) {
 });
 
 const CalorieUser = mongoose.model('CalorieUser', calorieUserSchema);
+
 
 module.exports = {
   Task,
@@ -9123,12 +9128,16 @@ app.get('/api/calorie/me', authCalorie, async (req, res) => {
 // Save tracker data (full sync)
 app.put('/api/calorie/data', authCalorie, async (req, res) => {
   try {
-    const { trackerData, calorieGoal, proteinGoal, quickFoods } = req.body;
+    const { trackerData, calorieGoal, proteinGoal, carbGoal, fatGoal, quickFoods, planData } = req.body;
     const update = {};
     if (trackerData !== undefined) update.trackerData = trackerData;
     if (calorieGoal !== undefined) update.calorieGoal = calorieGoal;
     if (proteinGoal !== undefined) update.proteinGoal = proteinGoal;
+    if (carbGoal !== undefined) update.carbGoal = carbGoal;
+    if (fatGoal !== undefined) update.fatGoal = fatGoal;
     if (quickFoods !== undefined) update.quickFoods = quickFoods;
+    if (planData !== undefined) update.planData = planData;
+    if (req.body.savedMeals !== undefined) update.savedMeals = req.body.savedMeals;
     const user = await CalorieUser.findByIdAndUpdate(req.calorieUserId, update, { new: true }).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json({ success: true });
@@ -9137,7 +9146,6 @@ app.put('/api/calorie/data', authCalorie, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 
 // ── Calorie Tracker: Identify food from photo via Google Vision ──
 app.post('/api/calorie/identify-food', async (req, res) => {
