@@ -5215,7 +5215,7 @@ if (financialBtn && projectId) {
   if (homeLink) {
     homeLink.addEventListener('click', (e) => {
       e.preventDefault();
-      window.location.href = '/'; // Adjust the route for the BESF dashboard
+      window.location.href = '/home.html'; // Adjust the route for the BESF dashboard
     });
   }
 });

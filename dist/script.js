@@ -3450,7 +3450,7 @@ function openMobileMenu() {
       <div class="mobile-menu-content">
         <h3 class="mobile-menu-title">Menu</h3>
         <div class="mobile-menu-links">
-          <a href="index.html" class="toolbar-icon menu-link"><i class="fas fa-home"></i> <span>Home</span></a>
+          <a href="home.html" class="toolbar-icon menu-link"><i class="fas fa-home"></i> <span>Home</span></a>
           <a href="#projects-column" class="toolbar-icon menu-link"><i class="fas fa-tasks"></i> <span>Projects</span></a>
           <a href="files.html" class="toolbar-icon menu-link"><i class="fas fa-folder-open"></i> <span>Files</span></a>
           <a href="clients.html" class="toolbar-icon menu-link"><i class="fas fa-list-alt"></i> <span>Clients</span></a>
