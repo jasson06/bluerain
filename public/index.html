@@ -1397,6 +1397,24 @@ const APPLY_URL = "https://bluerainrealestate.com/blue-rain-rental-application.h
         status: "Available",
         heroPhotos: ["images/image57.jpg","images/image84.jpg","images/image86.jpg","images/image85.jpg","images/image87.jpg","images/image88.jpg","images/image89.jpg","images/image90.jpg","images/image91.jpg","images/image83.jpg","images/image92.jpg","images/image93.jpg"],
       },
+        {
+        id:"21214-Newson",
+        name:"212 Newson",
+        address:"212 Newson DR, San Antonio, TX 78201",
+        units: ["A","B","214","216"],
+        rent: 1500,
+        beds: 3, baths: 1,
+        sqftByUnit: { "A":836,"B":836,"214":836,"216":836 },
+        statusByUnit: { "A":"Coming Soon","B":"Coming Soon","214":"Coming Soon","216":"Coming Soon" },
+                photosByUnit: {
+          "A": ["images/image51.jpg","images/image52.jpg"],
+          "B": ["images/image52.jpg","images/image51.jpg"],
+          "214": ["images/image53.jpg","images/image52.jpg"],
+          "216": ["images/image54.jpg","images/image52.jpg"]
+        },
+        status: "Coming Soon",
+        hero: "images/image53.jpg",
+      },
     ].map((p,i)=>{
       const heroPhotos = Array.isArray(p.hero) ? p.hero
         : (Array.isArray(p.heroPhotos) && p.heroPhotos.length ? p.heroPhotos
