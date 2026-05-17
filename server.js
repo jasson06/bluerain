@@ -427,6 +427,7 @@ const estimateSchema = new mongoose.Schema({
         required: true
       },
       category: { type: String, required: true },
+      sortOrder: { type: Number, default: 0 },
 
       // ✅ Expanded to support QC statuses
       status: { 
@@ -439,6 +440,7 @@ const estimateSchema = new mongoose.Schema({
         {
           type: { type: String, enum: ['item'], default: 'item' },
           name: { type: String, required: true },
+          sortOrder: { type: Number, default: 0 },
           description: { type: String },
           costCode: { type: String, default: 'Uncategorized' }, // ✅ Added Cost Code
           quantity: { type: Number, required: true, min: 1 },
@@ -453,8 +455,8 @@ const estimateSchema = new mongoose.Schema({
           // ✅ Expanded here too
           status: { 
             type: String, 
-            enum: ['in-progress', 'completed', 'approved', 'rework'], 
-            default: 'in-progress' 
+            enum: ['new', 'in-progress', 'completed', 'approved', 'rework'], 
+            default: 'new' 
           },
           
           maintenanceRequestId: { type: mongoose.Schema.Types.ObjectId, ref: 'MaintenanceRequest', default: null },
@@ -1869,13 +1871,13 @@ app.post('/api/estimates', async (req, res) => {
     }
 
     // Organize Line Items into Categories and PRESERVE photos field
-    const structuredLineItems = lineItems.map(category => {
+    const structuredLineItems = lineItems.map((category, categoryIndex) => {
       if (category.type === 'category') {
         if (!category.category) {
           throw new Error("Category name is required.");
         }
 
-        const items = category.items.map(item => {
+        const items = category.items.map((item, itemIndex) => {
           if (!item.name || item.quantity === undefined || item.unitPrice === undefined) {
             throw new Error("Each line item must include a name, quantity, and unit price.");
           }
@@ -1883,6 +1885,7 @@ app.post('/api/estimates', async (req, res) => {
           return {
             type: 'item',
             name: item.name,
+            sortOrder: Number.isFinite(item.sortOrder) ? item.sortOrder : itemIndex,
             description: item.description || '',
             costCode: item.costCode || 'Uncategorized',
             quantity: item.quantity,
@@ -1903,6 +1906,7 @@ app.post('/api/estimates', async (req, res) => {
         return {
           type: 'category',
           category: category.category,
+          sortOrder: Number.isFinite(category.sortOrder) ? category.sortOrder : categoryIndex,
           status: 'in-progress',
           items: items
         };
@@ -1944,7 +1948,6 @@ app.post('/api/estimates', async (req, res) => {
 });
 
 
-
 // Route to Get a Single Estimate by ID
 app.get('/api/estimates/:id', async (req, res) => {
   const { id } = req.params;
@@ -1962,17 +1965,30 @@ app.get('/api/estimates/:id', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Estimate not found.' });
     }
 
- 
+    const sortedEstimate = estimate.toObject();
+    sortedEstimate.lineItems = (sortedEstimate.lineItems || [])
+      .map((category, categoryIndex) => ({
+        ...category,
+        items: (category.items || []).slice().sort((left, right) => {
+          const leftOrder = Number.isFinite(left?.sortOrder) ? left.sortOrder : Number.MAX_SAFE_INTEGER;
+          const rightOrder = Number.isFinite(right?.sortOrder) ? right.sortOrder : Number.MAX_SAFE_INTEGER;
+          if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+          return 0;
+        })
+      }))
+      .sort((left, right) => {
+        const leftOrder = Number.isFinite(left?.sortOrder) ? left.sortOrder : Number.MAX_SAFE_INTEGER;
+        const rightOrder = Number.isFinite(right?.sortOrder) ? right.sortOrder : Number.MAX_SAFE_INTEGER;
+        if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+        return 0;
+      });
 
-    res.status(200).json({ success: true, estimate });
+    res.status(200).json({ success: true, estimate: sortedEstimate });
   } catch (error) {
     console.error('❌ Error fetching estimate:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch estimate.' });
   }
 });
-
-
-
 
 
 // Route to Get All Estimates for a Specific Project
@@ -2082,8 +2098,10 @@ app.put("/api/estimates/:id", async (req, res) => {
       });
 
       // Merge new items with existing data
-      updatesPayload.lineItems.forEach((lineItem) => {
-        lineItem.items.forEach((item) => {
+      updatesPayload.lineItems.forEach((lineItem, categoryIndex) => {
+        lineItem.sortOrder = Number.isFinite(lineItem.sortOrder) ? lineItem.sortOrder : categoryIndex;
+        lineItem.items.forEach((item, itemIndex) => {
+          item.sortOrder = Number.isFinite(item.sortOrder) ? item.sortOrder : itemIndex;
           if (item.status && item.status.trim() !== "") {
             item.status = normalizeStatus(item.status);
           }
@@ -2146,7 +2164,6 @@ app.put("/api/estimates/:id", async (req, res) => {
     res.status(500).json({ message: "Server error", error });
   }
 });
-
 
 
 app.patch('/api/estimates/:id/update-photo', async (req, res) => {
