@@ -1,4 +1,92 @@
+function getDisclosureIconSvg() {
+  return '<svg aria-hidden="true" viewBox="0 0 20 20" width="14" height="14" fill="currentColor"><path d="M7.293 14.707a1 1 0 0 1 0-1.414L10.586 10 7.293 6.707a1 1 0 1 1 1.414-1.414l4 4a1 1 0 0 1 0 1.414l-4 4a1 1 0 0 1-1.414 0z"></path></svg>';
+}
+
+function ensureDisclosureStyles() {
+  if (typeof document === 'undefined' || document.getElementById('estimate-disclosure-styles')) return;
+
+  const style = document.createElement('style');
+  style.id = 'estimate-disclosure-styles';
+  style.textContent = `
+    .estimate-disclosure-btn,
+    .estimate-disclosure-icon {
+      --toggle-color: #1d4ed8;
+      --toggle-border: #bfdbfe;
+      --toggle-hover-bg: #dbeafe;
+      --toggle-shadow: rgba(59, 130, 246, 0.18);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      color: var(--toggle-color);
+      vertical-align: middle;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    }
+    .estimate-disclosure-btn {
+      border: 1px solid var(--toggle-border);
+      background: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.96) 100%);
+      cursor: pointer;
+      padding: 0;
+      transition: background 0.16s ease, box-shadow 0.16s ease, transform 0.08s ease, border-color 0.16s ease;
+    }
+    .estimate-disclosure-btn:hover {
+      background: var(--toggle-hover-bg);
+      box-shadow: 0 6px 14px var(--toggle-shadow);
+    }
+    .estimate-disclosure-btn:active {
+      transform: translateY(1px) scale(0.98);
+    }
+    .estimate-disclosure-btn:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--toggle-color) 24%, white);
+      outline-offset: 2px;
+    }
+    .estimate-disclosure-icon {
+      border: 1px solid var(--toggle-border);
+      background: rgba(255, 255, 255, 0.92);
+      pointer-events: none;
+    }
+    .estimate-disclosure-btn svg,
+    .estimate-disclosure-icon svg {
+      display: block;
+      transition: transform 0.18s ease;
+      transform: rotate(0deg);
+    }
+    .estimate-disclosure-btn[aria-expanded="true"] svg,
+    .estimate-disclosure-icon.is-expanded svg {
+      transform: rotate(90deg);
+    }
+    .estimate-disclosure-btn-amber,
+    .estimate-disclosure-icon-amber {
+      --toggle-color: #9a3412;
+      --toggle-border: #fed7aa;
+      --toggle-hover-bg: #ffedd5;
+      --toggle-shadow: rgba(245, 158, 11, 0.22);
+    }
+    .estimate-disclosure-btn-slate,
+    .estimate-disclosure-icon-slate {
+      --toggle-color: #111827;
+      --toggle-border: #e5e7eb;
+      --toggle-hover-bg: #f3f4f6;
+      --toggle-shadow: rgba(15, 23, 42, 0.12);
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function setDisclosureButtonState(button, expanded, expandedTitle, collapsedTitle) {
+  if (!button) return;
+  ensureDisclosureStyles();
+  button.innerHTML = getDisclosureIconSvg();
+  button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  if (expandedTitle || collapsedTitle) {
+    button.title = expanded ? (expandedTitle || '') : (collapsedTitle || '');
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
+  ensureDisclosureStyles();
   const projectId = new URLSearchParams(window.location.search).get("projectId");
   let estimateId = new URLSearchParams(window.location.search).get("estimateId");
 
@@ -49,6 +137,8 @@ function showToast(message) {
   setTimeout(() => { toast.style.display = 'none'; }, 3000);
 }
 
+try { window.__estimateEditShowToast = showToast; } catch (_) {}
+
 function showLoader() {
   document.getElementById('loader').style.display = 'flex';
 }
@@ -72,7 +162,9 @@ function hideLoader() {
                 ${photos.map((photo, index) => `
                     <div class="photo-slide">
                         <img src="${photo}" draggable="false" onclick="openPhotoViewer('${photo.replace(/'/g, "\\'")}', ${JSON.stringify(photos).replace(/"/g, '&quot;')})">
-                        <button class="delete-photo" onclick="deletePhoto('${itemId}', '${photo.replace(/'/g, "\\'")}', '${type}')">✖</button>
+                    <button class="delete-photo" onclick="deletePhoto('${itemId}', '${photo.replace(/'/g, "\\'")}', '${type}')" aria-label="Delete ${type} photo ${index + 1}" title="Delete photo">
+                      <svg aria-hidden="true" viewBox="0 0 20 20" width="12" height="12" fill="currentColor"><path d="M7.5 3.5A1.5 1.5 0 0 1 9 2h2a1.5 1.5 0 0 1 1.5 1.5V4H16a.75.75 0 0 1 0 1.5h-.72l-.64 9.03A2 2 0 0 1 12.65 16H7.35a2 2 0 0 1-1.99-1.47L4.72 5.5H4A.75.75 0 0 1 4 4h3.5v-.5ZM11 4v-.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5V4H11Zm-2 3.25a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0V8A.75.75 0 0 1 9 7.25Zm2.75.75a.75.75 0 0 0-1.5 0v4a.75.75 0 0 0 1.5 0V8Z"></path></svg>
+                    </button>
                     </div>
                 `).join("")}
             </div>
@@ -140,7 +232,7 @@ function updateActiveDot(dotsContainer, activeIndex) {
 function enableSwipe(itemId, type) {
   const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
   if (!wrapper) {
-      console.warn(`⚠️ Swipe not enabled: Wrapper element not found for ${type}-${itemId}`);
+      
       return;
   }
 
@@ -330,7 +422,14 @@ function uploadPhoto(event, itemId, type) {
           showToast(`✅ ${files.length} Photo(s) uploaded successfully!`);
 
           // ✅ Immediately refresh the photos
-          setTimeout(() => updatePhotoSection(itemId, type), 500);
+          setTimeout(() => {
+            updatePhotoSection(itemId, type);
+            try {
+              if (typeof isListViewActive === 'function' && isListViewActive() && typeof scheduleListViewRebuild === 'function') {
+                scheduleListViewRebuild(220);
+              }
+            } catch (_) {}
+          }, 500);
       })
       .catch(error => {
           console.error("❌ Photo Upload Error:", error);
@@ -581,6 +680,11 @@ async function deletePhoto(itemId, photoUrl, type) {
 
         // ✅ Force Refresh the UI after deletion
         updatePhotoSection(itemId, type);
+        try {
+          if (typeof isListViewActive === 'function' && isListViewActive() && typeof scheduleListViewRebuild === 'function') {
+            scheduleListViewRebuild(220);
+          }
+        } catch (_) {}
         showToast("🗑️ Photo deleted successfully!");
 
     } catch (error) {
@@ -693,16 +797,20 @@ async function loadEstimateDetails() {
 function refreshLineItems(categories) {
   const lineItemsContainer = document.getElementById("line-items-cards");
   lineItemsContainer.innerHTML = "";
+  const renderOptions = { autoFocus: false };
 
   const pendingPhotoItems = [];
   categories.forEach(category => {
-    const categoryHeader = addCategoryHeader(category);
+    const categoryHeader = addCategoryHeader(category, renderOptions);
     category.items.forEach(item => {
-      addLineItemCard(item, categoryHeader);
+      addLineItemCard(item, categoryHeader, null, renderOptions);
       // Defer photo setup to idle time to speed initial render
       pendingPhotoItems.push(item._id);
     });
   });
+
+  rebuildSplitGroupHeaders();
+  applyCategoryCollapseState();
 
   // Update filters after rendering
   populateFilterOptions();
@@ -736,18 +844,6 @@ function refreshLineItems(categories) {
     lineItemsContainer.querySelectorAll('.item-description').forEach(autoResizeTextarea);
   });
 
-  // Focus the first line item's name input (first in DOM, always first in first category)
-  const firstItemInput = lineItemsContainer.querySelector('.line-item-card .item-name');
-  if (firstItemInput) {
-    // Delay focus until idle so it doesn't block paint
-    onIdle(() => {
-      try {
-        firstItemInput.focus();
-        if (firstItemInput.select) firstItemInput.select();
-        firstItemInput.scrollIntoView({ behavior: "smooth", block: "center" });
-      } catch (_) {}
-    });
-  }
 }
 
 
@@ -755,54 +851,89 @@ function refreshLineItems(categories) {
 
 
   // Add Category Header
-  function addCategoryHeader(category = { category: "New Category", status: "in-progress", items: [] }) {
+  function addCategoryHeader(category = { category: "New Category", status: "in-progress", items: [] }, options = {}) {
     const lineItemsContainer = document.getElementById("line-items-cards");
+    const shouldAutoFocus = options.autoFocus !== false;
     const header = document.createElement("div");
     header.classList.add("category-header");
+    header.dataset.categoryId = category._id || "";
     header.innerHTML = `
       <div class="category-title">
-        <span contenteditable="true">${category.category}</span>
-        <button class="btn add-line-item">+</button>
-        <button class="btn remove-category">&times;</button>
+        <div class="category-title-main">
+          <button class="btn category-drag-handle" type="button" draggable="true" title="Drag category">::</button>
+          <button class="btn toggle-category-collapse estimate-disclosure-btn" type="button" aria-expanded="true" title="Collapse category">${getDisclosureIconSvg()}</button>
+          <div class="category-title-copy">
+            <span class="category-title-label"></span>
+            <span contenteditable="true">${category.category}</span>
+            <span class="category-total-amount">Total $0.00</span>
+          </div>
+        </div>
+        <div class="category-title-actions">
+          <button class="btn add-line-item" type="button" title="Add line item">+</button>
+          <button class="btn remove-category" type="button" title="Remove category">&times;</button>
+        </div>
       </div>
     `;
+    ensureCategoryCollapseKey(header, category.category);
+
+    const collapseButton = header.querySelector('.toggle-category-collapse');
+    collapseButton?.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setCategoryCollapsed(header, !isCategoryCollapsed(header));
+      applyCategoryCollapseState();
+      try {
+        if (typeof isListViewActive === 'function' && isListViewActive()) {
+          if (typeof buildListViewFromCards === 'function') buildListViewFromCards();
+          if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
+        }
+      } catch (_) {}
+    });
 
     header.querySelector(".add-line-item").addEventListener("click", () => {
       addLineItemCard({}, header);
     });
 
     header.querySelector(".remove-category").addEventListener("click", () => {
-  const categoryName = header.querySelector(".category-title span")?.textContent?.trim() || "this category";
+  const categoryName = header.querySelector('.category-title span[contenteditable]')?.textContent?.trim() || 'this category';
   if (!confirm(`Are you sure you want to remove "${categoryName}" and all its line items? This cannot be undone.`)) {
     return;
   }
       let nextSibling = header.nextSibling;
-      while (nextSibling && nextSibling.classList.contains("line-item-card")) {
+      while (nextSibling && !nextSibling.classList.contains("category-header")) {
         const temp = nextSibling.nextSibling;
-        nextSibling.remove();
+        if (nextSibling.classList.contains("line-item-card") || nextSibling.classList.contains("split-group-header")) {
+          nextSibling.remove();
+        }
         nextSibling = temp;
       }
       header.remove();
+      removeCategoryCollapsedState(header);
+      rebuildSplitGroupHeaders();
+      applyCategoryCollapseState();
       autoSaveEstimate(); // Auto-save when a category is removed
     });
 
     lineItemsContainer.appendChild(header);
+  try { if (typeof window.__estimateEditWireCategoryDrag === 'function') window.__estimateEditWireCategoryDrag(header); } catch (_) {}
+  try { syncCategoryHeaderTotal(header); } catch (_) {}
 
     
- // ✅ Scroll to and focus new category
- setTimeout(() => {
-  header.scrollIntoView({ behavior: "smooth", block: "center" });
-  const editableSpan = header.querySelector("span[contenteditable]");
-  if (editableSpan) {
-    editableSpan.focus();
-    const range = document.createRange();
-    range.selectNodeContents(editableSpan);
-    range.collapse(false);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-  }
-}, 100);
+    if (shouldAutoFocus) {
+      setTimeout(() => {
+        header.scrollIntoView({ behavior: "smooth", block: "center" });
+        const editableSpan = header.querySelector("span[contenteditable]");
+        if (editableSpan) {
+          editableSpan.focus();
+          const range = document.createRange();
+          range.selectNodeContents(editableSpan);
+          range.collapse(false);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      }, 100);
+    }
 
     // ✅ If list view is active, immediately rebuild so the new category appears
     try {
@@ -826,9 +957,9 @@ function refreshLineItems(categories) {
 
 // Add this near the top, after showToast/hideLoader etc.
 
-function autoSaveEstimate() {
-  saveEstimate();
-  showToast("Auto-saved!");
+async function autoSaveEstimate(silent = false) {
+  await saveEstimate();
+  if (!silent) showToast("Auto-saved!");
 }
 // Expose to global for blur handlers defined outside this scope
 try { window.autoSaveEstimate = autoSaveEstimate; } catch (_) {}
@@ -850,9 +981,840 @@ function autoResizeTextarea(textarea) {
 // Expose globally so list/card view utilities outside the initial closure can call it
 try { window.autoResizeTextarea = autoResizeTextarea; } catch (_) {}
 
+function getVendorFromCard(card) {
+  const assignedToId = card?.getAttribute?.("data-assigned-to") || "";
+  if (!assignedToId) return null;
+  if (window.vendorMap && window.vendorMap[assignedToId]) return window.vendorMap[assignedToId];
+  return assignedToId;
+}
+
+function syncSplitBadge(card, splitPercentage, splitGroupId) {
+  if (!card) return;
+
+  if (splitPercentage !== undefined && splitPercentage !== null && splitPercentage !== "") {
+    card.dataset.splitPercentage = String(splitPercentage);
+  } else {
+    delete card.dataset.splitPercentage;
+  }
+
+  if (splitGroupId) {
+    card.dataset.splitGroupId = splitGroupId;
+  } else {
+    delete card.dataset.splitGroupId;
+  }
+
+  syncSplitGroupVisuals(card, splitGroupId);
+}
+
+function getSplitGroupTheme(splitGroupId) {
+  const themes = [
+    { border: "#f59e0b", background: "#fffbeb", chipBackground: "#fef3c7", chipColor: "#92400e" },
+    { border: "#0ea5e9", background: "#f0f9ff", chipBackground: "#dbeafe", chipColor: "#0c4a6e" },
+    { border: "#10b981", background: "#ecfdf5", chipBackground: "#d1fae5", chipColor: "#065f46" },
+    { border: "#ec4899", background: "#fdf2f8", chipBackground: "#fbcfe8", chipColor: "#9d174d" },
+    { border: "#8b5cf6", background: "#f5f3ff", chipBackground: "#ede9fe", chipColor: "#5b21b6" }
+  ];
+
+  if (!splitGroupId) return null;
+
+  let hash = 0;
+  for (let index = 0; index < splitGroupId.length; index += 1) {
+    hash = ((hash << 5) - hash) + splitGroupId.charCodeAt(index);
+    hash |= 0;
+  }
+
+  return themes[Math.abs(hash) % themes.length];
+}
+
+try { window.__estimateEditGetSplitGroupTheme = getSplitGroupTheme; } catch (_) {}
+
+function getSplitGroupCards(splitGroupId) {
+  if (!splitGroupId) return [];
+  try {
+    return Array.from(document.querySelectorAll(`.line-item-card[data-split-group-id="${splitGroupId}"]`));
+  } catch (_) {
+    return [];
+  }
+}
+
+function getSplitGroupDisplayInfo(splitGroupId) {
+  const cards = getSplitGroupCards(splitGroupId);
+  const theme = getSplitGroupTheme(splitGroupId) || { border: "#f59e0b", background: "#fffbeb", chipBackground: "#fef3c7", chipColor: "#92400e" };
+  const percentages = cards
+    .map((card) => parseFloat(card.dataset.splitPercentage || ""))
+    .filter((value) => Number.isFinite(value));
+  const combinedLaborTotal = roundCurrency(cards.reduce((sum, card) => {
+    const laborInput = card.querySelector(".item-labor-cost");
+    return sum + (parseFloat(laborInput?.value || "") || 0);
+  }, 0));
+  const summary = percentages.length ? `${percentages.join(" / ")}%` : `${cards.length} payments`;
+  const collapsedState = window.__splitGroupCollapsedState || {};
+
+  return {
+    id: splitGroupId,
+    cards,
+    theme,
+    percentages,
+    combinedLaborTotal,
+    summary,
+    isCollapsed: !!collapsedState[splitGroupId]
+  };
+}
+
+try { window.__estimateEditGetSplitGroupDisplayInfo = getSplitGroupDisplayInfo; } catch (_) {}
+
+function syncCardSplitGroupIndicator(card) {
+  if (!card) return;
+
+  const header = card.querySelector('.card-header');
+  if (!header) return;
+
+  header.querySelector('.split-inline-cluster')?.remove();
+
+  const splitGroupId = card.dataset.splitGroupId;
+  if (!splitGroupId) return;
+
+  const info = getSplitGroupDisplayInfo(splitGroupId);
+  if (!info.cards.length || info.cards[0] !== card) return;
+
+  const nameInput = header.querySelector('.item-name');
+  if (!nameInput) return;
+
+  const cluster = document.createElement('div');
+  cluster.className = 'split-inline-cluster';
+  cluster.innerHTML = `
+    <button type="button" class="split-inline-toggle estimate-disclosure-btn estimate-disclosure-btn-amber" aria-expanded="${info.isCollapsed ? 'false' : 'true'}" title="${info.isCollapsed ? 'Expand split payments' : 'Collapse split payments'}" style="--toggle-color:${info.theme.chipColor}; --toggle-border:${info.theme.chipBackground};">${getDisclosureIconSvg()}</button>
+    <span class="split-inline-meta" title="${info.summary} • Labor $${info.combinedLaborTotal.toFixed(2)}">${info.summary} • Labor $${info.combinedLaborTotal.toFixed(2)}</span>
+  `;
+
+  const toggleButton = cluster.querySelector('.split-inline-toggle');
+  toggleButton?.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const collapsedState = window.__splitGroupCollapsedState || {};
+    collapsedState[splitGroupId] = !collapsedState[splitGroupId];
+    try { window.__splitGroupCollapsedState = collapsedState; } catch (_) {}
+    rebuildSplitGroupHeaders();
+    try {
+      if (typeof isListViewActive === 'function' && isListViewActive()) {
+        buildListViewFromCards();
+        if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
+      }
+    } catch (_) {}
+  });
+
+  header.insertBefore(cluster, nameInput);
+}
+
+function syncSplitGroupVisuals(card, splitGroupId) {
+  if (!card) return;
+
+  const theme = getSplitGroupTheme(splitGroupId);
+
+  if (!theme || !splitGroupId) {
+    card.style.borderLeft = "";
+    card.style.background = "";
+    card.style.boxShadow = "";
+    return;
+  }
+
+  card.style.borderLeft = `4px solid ${theme.border}`;
+  card.style.background = `linear-gradient(90deg, ${theme.background} 0, #ffffff 72px)`;
+  card.style.boxShadow = `inset 0 0 0 1px ${theme.chipBackground}`;
+}
+
+function clearSplitGroupHeaders(container) {
+  if (!container) return;
+  container.querySelectorAll(".split-group-header").forEach((header) => header.remove());
+}
+
+function rebuildSplitGroupHeaders() {
+  const container = document.getElementById("line-items-cards");
+  if (!container) return;
+
+  clearSplitGroupHeaders(container);
+
+  const collapsedState = window.__splitGroupCollapsedState || {};
+  try { window.__splitGroupCollapsedState = collapsedState; } catch (_) {}
+
+  container.querySelectorAll('.line-item-card').forEach((card) => {
+    card.querySelector('.split-inline-cluster')?.remove();
+  });
+
+  try { applyCategoryCollapseState(); } catch (_) {}
+
+  const categoryHeaders = Array.from(container.querySelectorAll(".category-header"));
+  categoryHeaders.forEach((categoryHeader) => {
+    let current = categoryHeader.nextElementSibling;
+    const groupMap = new Map();
+    const groups = [];
+
+    while (current && !current.classList.contains("category-header")) {
+      if (current.classList.contains("split-group-header")) {
+        current = current.nextElementSibling;
+        continue;
+      }
+
+      if (current.classList.contains("line-item-card")) {
+        const splitGroupId = current.dataset.splitGroupId;
+        if (splitGroupId) {
+          if (!groupMap.has(splitGroupId)) {
+            const group = { id: splitGroupId, cards: [] };
+            groupMap.set(splitGroupId, group);
+            groups.push(group);
+          }
+          groupMap.get(splitGroupId).cards.push(current);
+        }
+      }
+
+      current = current.nextElementSibling;
+    }
+
+    groups.forEach((group) => {
+      if (!group.cards.length) return;
+
+      group.cards.forEach((card, index) => {
+        syncCardSplitGroupIndicator(card);
+        const shouldHide = !!collapsedState[group.id] && index > 0;
+        if (shouldHide) {
+          card.style.display = 'none';
+        }
+      });
+    });
+  });
+}
+
+function scaleMoneyInput(input, ratio, qty) {
+  if (!input) return;
+
+  const currentTotal = parseFloat(input.value) || 0;
+  const currentRate = parseFloat(input.dataset.rate || "");
+  const nextTotal = currentTotal * ratio;
+  input.value = nextTotal.toFixed(2);
+  input.dataset.rate = String((Number.isFinite(currentRate) ? currentRate : (qty > 0 ? currentTotal / qty : currentTotal)) * ratio);
+  input.dataset.editMode = "";
+}
+
+function roundCurrency(value) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+function roundSplitPercentage(value) {
+  return Math.round(Number(value) || 0);
+}
+
+function buildSplitPercentages(count) {
+  const safeCount = Math.max(2, Math.min(12, Math.round(Number(count) || 2)));
+  const baseShare = Math.floor(100 / safeCount);
+  const remainder = 100 - (baseShare * safeCount);
+
+  return Array.from({ length: safeCount }, (_, index) => baseShare + (index < remainder ? 1 : 0));
+}
+
+function buildLaborShares(laborValue, percentages) {
+  const totalLabor = roundCurrency(laborValue);
+  const shares = [];
+  let allocated = 0;
+
+  percentages.forEach((percentage, index) => {
+    if (index === percentages.length - 1) {
+      shares.push(roundCurrency(totalLabor - allocated));
+      return;
+    }
+
+    const share = roundCurrency((totalLabor * percentage) / 100);
+    shares.push(share);
+    allocated = roundCurrency(allocated + share);
+  });
+
+  return shares;
+}
+
+function rebalanceSplitPercentages(values, editedIndex, rawValue) {
+  const nextValues = values.map((value) => roundSplitPercentage(value));
+  const minShare = 1;
+  const lastIndex = nextValues.length - 1;
+
+  if (lastIndex <= 0) {
+    return [100];
+  }
+
+  if (editedIndex !== lastIndex) {
+    const reservedTotal = nextValues.reduce((sum, value, index) => {
+      if (index === editedIndex || index === lastIndex) return sum;
+      return sum + Math.max(minShare, value || minShare);
+    }, 0);
+    const maxEditedValue = 100 - reservedTotal - minShare;
+    const clampedEditedValue = Math.min(maxEditedValue, Math.max(minShare, roundSplitPercentage(rawValue)));
+    nextValues[editedIndex] = clampedEditedValue;
+    nextValues[lastIndex] = 100 - reservedTotal - clampedEditedValue;
+    return nextValues;
+  }
+
+  const previousIndex = lastIndex - 1;
+  const reservedTotal = nextValues.reduce((sum, value, index) => {
+    if (index === previousIndex || index === lastIndex) return sum;
+    return sum + Math.max(minShare, value || minShare);
+  }, 0);
+  const maxLastValue = 100 - reservedTotal - minShare;
+  const clampedLastValue = Math.min(maxLastValue, Math.max(minShare, roundSplitPercentage(rawValue)));
+
+  nextValues[lastIndex] = clampedLastValue;
+  nextValues[previousIndex] = 100 - reservedTotal - clampedLastValue;
+
+  return nextValues;
+}
+
+function showSplitPreviewModal({ itemName, laborCost, paymentCount = 2, lockPaymentCount = false }) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed; inset:0; background:rgba(15,23,42,0.6); display:flex; align-items:center; justify-content:center; padding:24px; z-index:10000;";
+
+    const modal = document.createElement("div");
+    modal.style.cssText = "width:min(720px, 100%); max-height:90vh; overflow:auto; background:#ffffff; border-radius:20px; box-shadow:0 24px 60px rgba(15,23,42,0.25); padding:24px; font-family:inherit;";
+    modal.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:18px;">
+        <div>
+          <div style="font-size:22px; font-weight:700; color:#0f172a;">Split Line Item</div>
+          <div style="font-size:14px; color:#475569; margin-top:6px;">Review the labor split before creating payment rows for ${itemName || "this line item"}.</div>
+        </div>
+        <button type="button" class="split-preview-close" style="border:none; background:#e2e8f0; color:#0f172a; border-radius:999px; width:34px; height:34px; font-size:18px; cursor:pointer;">×</button>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:18px;">
+        <label style="display:flex; flex-direction:column; gap:8px; font-size:13px; color:#334155; font-weight:600;">
+          Number of payments
+          <select class="split-payment-count" style="padding:10px 12px; border:1px solid #cbd5e1; border-radius:12px; font:inherit;" ${lockPaymentCount ? 'disabled' : ''}>
+            ${Array.from({ length: 7 }, (_, index) => {
+              const value = index + 2;
+              return `<option value="${value}">${value} payments</option>`;
+            }).join("")}
+          </select>
+        </label>
+        <div style="display:flex; flex-direction:column; gap:8px; font-size:13px; color:#334155; font-weight:600;">
+          Labor amount to split
+          <div style="padding:10px 12px; border:1px solid #cbd5e1; border-radius:12px; background:#f8fafc; color:#0f172a; font-weight:700;">$${roundCurrency(laborCost).toFixed(2)}</div>
+        </div>
+      </div>
+      <div class="split-percentages-container" style="display:grid; gap:12px; margin-bottom:18px;"></div>
+      <div class="split-preview-error" style="display:none; margin-bottom:12px; padding:10px 12px; border-radius:12px; background:#fef2f2; color:#b91c1c; font-size:13px; font-weight:600;"></div>
+      <div class="split-preview-summary" style="display:grid; gap:10px; padding:16px; border-radius:16px; background:#f8fafc; border:1px solid #e2e8f0; margin-bottom:18px;"></div>
+      <div style="display:flex; justify-content:flex-end; gap:12px;">
+        <button type="button" class="split-preview-cancel" style="padding:10px 16px; border-radius:12px; border:1px solid #cbd5e1; background:#fff; color:#0f172a; font-weight:600; cursor:pointer;">Cancel</button>
+        <button type="button" class="split-preview-apply" style="padding:10px 16px; border-radius:12px; border:none; background:#0f766e; color:#fff; font-weight:700; cursor:pointer;">Apply Split</button>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const countSelect = modal.querySelector(".split-payment-count");
+    const rowsContainer = modal.querySelector(".split-percentages-container");
+    const summaryContainer = modal.querySelector(".split-preview-summary");
+    const errorBox = modal.querySelector(".split-preview-error");
+    const applyButton = modal.querySelector(".split-preview-apply");
+
+    const normalizedPaymentCount = Math.max(2, Math.min(8, parseInt(paymentCount, 10) || 2));
+    let percentages = buildSplitPercentages(normalizedPaymentCount);
+    countSelect.value = String(normalizedPaymentCount);
+
+    const cleanup = (result) => {
+      document.removeEventListener("keydown", handleKeydown);
+      overlay.remove();
+      resolve(result);
+    };
+
+    const readPercentages = () => Array.from(rowsContainer.querySelectorAll(".split-percentage-input")).map((input) => {
+      const rawValue = input.value.trim();
+      if (rawValue === "") return NaN;
+      return roundSplitPercentage(parseFloat(rawValue));
+    });
+
+    const syncPercentageInputs = (values) => {
+      Array.from(rowsContainer.querySelectorAll(".split-percentage-input")).forEach((input, index) => {
+        input.value = String(roundSplitPercentage(values[index] || 0));
+      });
+    };
+
+    const validatePercentages = (values) => {
+      const hasInvalid = values.some((value) => !Number.isFinite(value) || value <= 0);
+      const sum = values.reduce((total, value) => total + (Number(value) || 0), 0);
+      if (hasInvalid) {
+        return { valid: false, message: "Each payment percentage must be greater than 0.", sum };
+      }
+      if (sum !== 100) {
+        return { valid: false, message: `Percentages must total 100%. Current total: ${sum}%.`, sum };
+      }
+      return { valid: true, message: "", sum };
+    };
+
+    const renderSummary = () => {
+      const values = readPercentages();
+      const validation = validatePercentages(values);
+      const normalizedValues = values.map((value) => Number.isFinite(value) ? value : 0);
+      const laborShares = buildLaborShares(laborCost, normalizedValues);
+
+      errorBox.style.display = validation.valid ? "none" : "block";
+      errorBox.textContent = validation.message;
+      applyButton.disabled = !validation.valid;
+      applyButton.style.opacity = validation.valid ? "1" : "0.6";
+      applyButton.style.cursor = validation.valid ? "pointer" : "not-allowed";
+
+      summaryContainer.innerHTML = normalizedValues.map((percentage, index) => {
+        const estimateImpact = index === 0 ? "Keeps current estimate price and material." : "Creates a $0 duplicate so estimate total does not increase.";
+        return `
+          <div style="display:flex; justify-content:space-between; gap:16px; align-items:flex-start; padding:12px 14px; border-radius:14px; background:#fff; border:1px solid #e2e8f0;">
+            <div>
+              <div style="font-size:14px; font-weight:700; color:#0f172a;">Payment ${index + 1}</div>
+              <div style="font-size:12px; color:#64748b; margin-top:4px;">${estimateImpact}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:14px; font-weight:700; color:#0f172a;">${roundSplitPercentage(percentage)}%</div>
+              <div style="font-size:12px; color:#0f766e; margin-top:4px;">Labor $${roundCurrency(laborShares[index] || 0).toFixed(2)}</div>
+            </div>
+          </div>
+        `;
+      }).join("") + `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding-top:6px; font-size:12px; color:#475569; font-weight:700;">
+          <span>Total percentage</span>
+          <span>${validation.sum}%</span>
+        </div>
+      `;
+    };
+
+    const renderRows = (values) => {
+      rowsContainer.innerHTML = values.map((percentage, index) => `
+        <label style="display:grid; grid-template-columns:minmax(120px, 1fr) minmax(120px, 180px); gap:12px; align-items:center; font-size:13px; color:#334155; font-weight:600;">
+          <span>Payment ${index + 1} percentage</span>
+          <span style="display:flex; align-items:center; gap:8px; padding:0 12px; border:1px solid #cbd5e1; border-radius:12px; background:#fff;">
+            <input type="number" min="1" max="100" step="1" value="${roundSplitPercentage(percentage)}" class="split-percentage-input" style="flex:1; min-width:0; padding:10px 0; border:none; outline:none; font:inherit; background:transparent;">
+            <span style="font-size:13px; color:#64748b; font-weight:700;">%</span>
+          </span>
+        </label>
+      `).join("");
+
+      rowsContainer.querySelectorAll(".split-percentage-input").forEach((input, index) => {
+        input.addEventListener("input", () => {
+          const rawValue = input.value.trim();
+          if (rawValue === "") {
+            renderSummary();
+            return;
+          }
+          percentages = rebalanceSplitPercentages(
+            readPercentages().map((value, valueIndex) => {
+              if (Number.isFinite(value)) return value;
+              return valueIndex === index ? percentages[valueIndex] : value;
+            }),
+            index,
+            parseFloat(rawValue)
+          );
+          syncPercentageInputs(percentages);
+          renderSummary();
+        });
+      });
+
+      renderSummary();
+    };
+
+    const handleKeydown = (event) => {
+      if (event.key === "Escape") {
+        cleanup(null);
+      }
+    };
+
+    countSelect.addEventListener("change", () => {
+      if (lockPaymentCount) return;
+      percentages = buildSplitPercentages(parseInt(countSelect.value, 10));
+      renderRows(percentages);
+    });
+
+    modal.querySelector(".split-preview-close").addEventListener("click", () => cleanup(null));
+    modal.querySelector(".split-preview-cancel").addEventListener("click", () => cleanup(null));
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) cleanup(null);
+    });
+
+    applyButton.addEventListener("click", () => {
+      const values = readPercentages();
+      const validation = validatePercentages(values);
+      if (!validation.valid) {
+        renderSummary();
+        return;
+      }
+      cleanup(values.map((value) => roundSplitPercentage(value)));
+    });
+
+    document.addEventListener("keydown", handleKeydown);
+    renderRows(percentages);
+  });
+}
+
+try { window.__estimateEditShowSplitPreviewModal = showSplitPreviewModal; } catch (_) {}
+
+function showMultiSplitPreviewModal(items) {
+  return new Promise((resolve) => {
+    const splitItems = Array.isArray(items) ? items.filter(Boolean) : [];
+    if (splitItems.length < 2) {
+      resolve(null);
+      return;
+    }
+
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed; inset:0; background:rgba(15,23,42,0.6); display:flex; align-items:center; justify-content:center; padding:24px; z-index:10000;";
+
+    const modal = document.createElement("div");
+    modal.style.cssText = "width:min(860px, 100%); max-height:90vh; overflow:auto; background:#ffffff; border-radius:20px; box-shadow:0 24px 60px rgba(15,23,42,0.25); padding:24px; font-family:inherit;";
+    modal.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:18px;">
+        <div>
+          <div style="font-size:22px; font-weight:700; color:#0f172a;">Split Selected Line Items</div>
+          <div style="font-size:14px; color:#475569; margin-top:6px;">Choose a selected line item below and configure its split using the same preview flow as a single item.</div>
+        </div>
+        <button type="button" class="split-preview-close" style="border:none; background:#e2e8f0; color:#0f172a; border-radius:999px; width:34px; height:34px; font-size:18px; cursor:pointer;">×</button>
+      </div>
+      <div class="multi-split-item-selector" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px;"></div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:18px;">
+        <label style="display:flex; flex-direction:column; gap:8px; font-size:13px; color:#334155; font-weight:600;">
+          Number of payments
+          <select class="split-payment-count" style="padding:10px 12px; border:1px solid #cbd5e1; border-radius:12px; font:inherit;">
+            ${Array.from({ length: 7 }, (_, index) => {
+              const value = index + 2;
+              return `<option value="${value}">${value} payments</option>`;
+            }).join("")}
+          </select>
+        </label>
+        <div style="display:flex; flex-direction:column; gap:8px; font-size:13px; color:#334155; font-weight:600;">
+          Labor amount to split
+          <div class="multi-split-labor-amount" style="padding:10px 12px; border:1px solid #cbd5e1; border-radius:12px; background:#f8fafc; color:#0f172a; font-weight:700;"></div>
+        </div>
+      </div>
+      <div class="split-percentages-container" style="display:grid; gap:12px; margin-bottom:18px;"></div>
+      <div class="split-preview-error" style="display:none; margin-bottom:12px; padding:10px 12px; border-radius:12px; background:#fef2f2; color:#b91c1c; font-size:13px; font-weight:600;"></div>
+      <div class="split-preview-summary" style="display:grid; gap:10px; padding:16px; border-radius:16px; background:#f8fafc; border:1px solid #e2e8f0; margin-bottom:18px;"></div>
+      <div style="display:flex; justify-content:flex-end; gap:12px;">
+        <button type="button" class="split-preview-cancel" style="padding:10px 16px; border-radius:12px; border:1px solid #cbd5e1; background:#fff; color:#0f172a; font-weight:600; cursor:pointer;">Cancel</button>
+        <button type="button" class="split-preview-apply" style="padding:10px 16px; border-radius:12px; border:none; background:#0f766e; color:#fff; font-weight:700; cursor:pointer;">Apply Split</button>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const itemStates = splitItems.map((item, index) => {
+      const normalizedPaymentCount = Math.max(2, Math.min(8, parseInt(item.paymentCount, 10) || 2));
+      return {
+        id: item.id || `multi-split-${index}`,
+        itemName: item.itemName || `Line Item ${index + 1}`,
+        laborCost: roundCurrency(item.laborCost),
+        paymentCount: normalizedPaymentCount,
+        percentages: Array.isArray(item.percentages) && item.percentages.length >= 2
+          ? item.percentages.map((value) => roundSplitPercentage(value))
+          : buildSplitPercentages(normalizedPaymentCount)
+      };
+    });
+
+    let activeIndex = 0;
+    const selectorContainer = modal.querySelector('.multi-split-item-selector');
+    const countSelect = modal.querySelector('.split-payment-count');
+    const laborAmount = modal.querySelector('.multi-split-labor-amount');
+    const rowsContainer = modal.querySelector('.split-percentages-container');
+    const summaryContainer = modal.querySelector('.split-preview-summary');
+    const errorBox = modal.querySelector('.split-preview-error');
+    const applyButton = modal.querySelector('.split-preview-apply');
+
+    const cleanup = (result) => {
+      document.removeEventListener('keydown', handleKeydown);
+      overlay.remove();
+      resolve(result);
+    };
+
+    const getActiveState = () => itemStates[activeIndex];
+
+    const validatePercentages = (values) => {
+      const hasInvalid = values.some((value) => !Number.isFinite(value) || value <= 0);
+      const sum = values.reduce((total, value) => total + (Number(value) || 0), 0);
+      if (hasInvalid) return { valid: false, message: 'Each payment percentage must be greater than 0.', sum };
+      if (sum !== 100) return { valid: false, message: `Percentages must total 100%. Current total: ${sum}%.`, sum };
+      return { valid: true, message: '', sum };
+    };
+
+    const renderSelector = () => {
+      selectorContainer.innerHTML = itemStates.map((item, index) => {
+        const isActive = index === activeIndex;
+        return `
+          <button type="button" class="multi-split-item-chip" data-index="${index}" style="display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-width:180px; padding:10px 12px; border-radius:14px; border:1px solid ${isActive ? '#93c5fd' : '#dbeafe'}; background:${isActive ? '#eff6ff' : '#ffffff'}; color:#0f172a; cursor:pointer; box-shadow:${isActive ? '0 10px 24px rgba(37,99,235,0.12)' : '0 2px 6px rgba(15,23,42,0.05)'};">
+            <span style="font-size:13px; font-weight:700;">${item.itemName}</span>
+            <span style="font-size:12px; color:#475569;">Labor $${item.laborCost.toFixed(2)} • ${item.paymentCount} payments</span>
+          </button>
+        `;
+      }).join('');
+      selectorContainer.querySelectorAll('.multi-split-item-chip').forEach((button) => {
+        button.addEventListener('click', () => {
+          activeIndex = parseInt(button.dataset.index, 10) || 0;
+          syncActiveView();
+        });
+      });
+    };
+
+    const renderSummary = () => {
+      const activeState = getActiveState();
+      const values = activeState.percentages.map((value) => Number.isFinite(value) ? roundSplitPercentage(value) : 0);
+      const validation = validatePercentages(values);
+      const laborShares = buildLaborShares(activeState.laborCost, values);
+
+      errorBox.style.display = validation.valid ? 'none' : 'block';
+      errorBox.textContent = validation.message;
+      const hasInvalidItem = itemStates.some((item) => !validatePercentages(item.percentages).valid);
+      applyButton.disabled = hasInvalidItem;
+      applyButton.style.opacity = hasInvalidItem ? '0.6' : '1';
+      applyButton.style.cursor = hasInvalidItem ? 'not-allowed' : 'pointer';
+
+      summaryContainer.innerHTML = values.map((percentage, index) => {
+        const estimateImpact = index === 0 ? 'Keeps current estimate price and material.' : 'Creates a $0 duplicate so estimate total does not increase.';
+        return `
+          <div style="display:flex; justify-content:space-between; gap:16px; align-items:flex-start; padding:12px 14px; border-radius:14px; background:#fff; border:1px solid #e2e8f0;">
+            <div>
+              <div style="font-size:14px; font-weight:700; color:#0f172a;">Payment ${index + 1}</div>
+              <div style="font-size:12px; color:#64748b; margin-top:4px;">${estimateImpact}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:14px; font-weight:700; color:#0f172a;">${roundSplitPercentage(percentage)}%</div>
+              <div style="font-size:12px; color:#0f766e; margin-top:4px;">Labor $${roundCurrency(laborShares[index] || 0).toFixed(2)}</div>
+            </div>
+          </div>
+        `;
+      }).join('') + `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding-top:6px; font-size:12px; color:#475569; font-weight:700;">
+          <span>Total percentage</span>
+          <span>${validation.sum}%</span>
+        </div>
+      `;
+    };
+
+    const renderRows = () => {
+      const activeState = getActiveState();
+      rowsContainer.innerHTML = activeState.percentages.map((percentage, index) => `
+        <label style="display:grid; grid-template-columns:minmax(120px, 1fr) minmax(120px, 180px); gap:12px; align-items:center; font-size:13px; color:#334155; font-weight:600;">
+          <span>Payment ${index + 1} percentage</span>
+          <span style="display:flex; align-items:center; gap:8px; padding:0 12px; border:1px solid #cbd5e1; border-radius:12px; background:#fff;">
+            <input type="number" min="1" max="100" step="1" value="${roundSplitPercentage(percentage)}" class="split-percentage-input" data-index="${index}" style="flex:1; min-width:0; padding:10px 0; border:none; outline:none; font:inherit; background:transparent;">
+            <span style="font-size:13px; color:#64748b; font-weight:700;">%</span>
+          </span>
+        </label>
+      `).join('');
+
+      rowsContainer.querySelectorAll('.split-percentage-input').forEach((input) => {
+        input.addEventListener('input', () => {
+          const activeItem = getActiveState();
+          const index = parseInt(input.dataset.index, 10) || 0;
+          const rawValue = input.value.trim();
+          if (rawValue === '') {
+            renderSummary();
+            return;
+          }
+          activeItem.percentages = rebalanceSplitPercentages(
+            activeItem.percentages.map((value) => roundSplitPercentage(value)),
+            index,
+            parseFloat(rawValue)
+          );
+          renderSelector();
+          syncActiveView(false);
+        });
+      });
+    };
+
+    const syncActiveView = (refreshRows = true) => {
+      const activeState = getActiveState();
+      countSelect.value = String(activeState.paymentCount);
+      laborAmount.textContent = `$${activeState.laborCost.toFixed(2)}`;
+      renderSelector();
+      if (refreshRows) renderRows();
+      renderSummary();
+    };
+
+    const handleKeydown = (event) => {
+      if (event.key === 'Escape') cleanup(null);
+    };
+
+    countSelect.addEventListener('change', () => {
+      const activeState = getActiveState();
+      activeState.paymentCount = Math.max(2, Math.min(8, parseInt(countSelect.value, 10) || 2));
+      activeState.percentages = buildSplitPercentages(activeState.paymentCount);
+      syncActiveView();
+    });
+
+    modal.querySelector('.split-preview-close').addEventListener('click', () => cleanup(null));
+    modal.querySelector('.split-preview-cancel').addEventListener('click', () => cleanup(null));
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) cleanup(null);
+    });
+
+    applyButton.addEventListener('click', () => {
+      const invalidItem = itemStates.find((item) => !validatePercentages(item.percentages).valid);
+      if (invalidItem) {
+        activeIndex = Math.max(0, itemStates.indexOf(invalidItem));
+        syncActiveView();
+        return;
+      }
+      cleanup(itemStates.map((item) => ({
+        id: item.id,
+        paymentCount: item.paymentCount,
+        percentages: item.percentages.map((value) => roundSplitPercentage(value))
+      })));
+    });
+
+    document.addEventListener('keydown', handleKeydown);
+    syncActiveView();
+  });
+}
+
+try { window.__estimateEditShowMultiSplitPreviewModal = showMultiSplitPreviewModal; } catch (_) {}
+
+function applySplitToCard(card, splitPercentages, options = {}) {
+  if (!card || !Array.isArray(splitPercentages) || splitPercentages.length < 2) return false;
+
+  const {
+    skipPersist = false,
+    skipToast = false
+  } = options;
+
+  const nameInput = card.querySelector(".item-name");
+  const quantityInput = card.querySelector(".item-quantity");
+  const areaInput = card.querySelector(".item-area");
+  const lengthInput = card.querySelector(".item-length");
+  const laborCostInput = card.querySelector(".item-labor-cost");
+  const calcModeSelect = card.querySelector(".item-calc-mode");
+  const statusDropdown = card.querySelector(".item-status-dropdown");
+  const baseName = (nameInput?.value || "Line Item").trim();
+  const laborValue = parseFloat(laborCostInput?.value) || 0;
+  const splitGroupId = card.dataset.splitGroupId || `split-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  const currentAssignedTo = card.getAttribute("data-assigned-to") || "";
+  const quantityValue = parseFloat(quantityInput?.value) || 1;
+  const areaValue = parseFloat(areaInput?.value) || 0;
+  const lengthValue = parseFloat(lengthInput?.value) || 0;
+  const laborShares = buildLaborShares(laborValue, splitPercentages);
+
+  const categoryHeader = (() => {
+    let header = card.previousElementSibling;
+    while (header && !header.classList.contains("category-header")) {
+      header = header.previousElementSibling;
+    }
+    return header;
+  })();
+
+  if (nameInput) nameInput.value = `${baseName} (${splitPercentages[0]}%)`;
+  if (laborCostInput) {
+    laborCostInput.value = laborShares[0].toFixed(2);
+    laborCostInput.dataset.rate = String(quantityValue > 0 ? (laborShares[0] / quantityValue) : laborShares[0]);
+    laborCostInput.dataset.editMode = "";
+  }
+  syncSplitBadge(card, splitPercentages[0], splitGroupId);
+
+  let insertAfterCard = card;
+  for (let index = 1; index < splitPercentages.length; index += 1) {
+    const splitPercentage = splitPercentages[index];
+    const splitItem = {
+      _id: undefined,
+      type: "item",
+      name: baseName,
+      description: card.querySelector(".item-description")?.value?.trim() || "",
+      costCode: card.querySelector(".item-cost-code")?.value?.trim() || "Uncategorized",
+      quantity: quantityValue,
+      unitPrice: 0,
+      calcMode: calcModeSelect?.value || "each",
+      area: areaValue,
+      length: lengthValue,
+      laborCost: laborShares[index],
+      materialCost: 0,
+      total: 0,
+      assignedTo: getVendorFromCard(card),
+      status: statusDropdown?.value || "in-progress",
+      splitPercentage,
+      splitGroupId,
+      startDate: card.querySelector(".item-start-date")?.value || null,
+      endDate: card.querySelector(".item-end-date")?.value || null
+    };
+
+    addLineItemCard(splitItem, categoryHeader, insertAfterCard);
+    const splitCard = insertAfterCard.nextElementSibling;
+    if (!splitCard || !splitCard.classList.contains("line-item-card")) continue;
+
+    const splitNameInput = splitCard.querySelector(".item-name");
+    const splitPriceInput = splitCard.querySelector(".item-price");
+    const splitLaborInput = splitCard.querySelector(".item-labor-cost");
+    const splitMaterialInput = splitCard.querySelector(".item-material-cost");
+    if (splitNameInput) splitNameInput.value = `${baseName} (${splitPercentage}%)`;
+    if (splitPriceInput) splitPriceInput.value = 0;
+    if (splitMaterialInput) {
+      splitMaterialInput.value = "0.00";
+      splitMaterialInput.dataset.rate = "0";
+      splitMaterialInput.dataset.editMode = "";
+    }
+    if (splitLaborInput) {
+      splitLaborInput.value = laborShares[index].toFixed(2);
+      splitLaborInput.dataset.rate = String(quantityValue > 0 ? (laborShares[index] / quantityValue) : laborShares[index]);
+      splitLaborInput.dataset.editMode = "";
+    }
+    syncSplitBadge(splitCard, splitPercentage, splitGroupId);
+    if (currentAssignedTo) splitCard.setAttribute("data-assigned-to", currentAssignedTo);
+    insertAfterCard = splitCard;
+  }
+
+  if (currentAssignedTo) card.setAttribute("data-assigned-to", currentAssignedTo);
+  try {
+    if (typeof card.__updateCardValues === "function") card.__updateCardValues();
+  } catch (_) {}
+
+  if (!skipPersist) {
+    updateSummary();
+    updateSelectedLaborCost();
+    try { autoSaveEstimate(); } catch (_) {}
+    try {
+      if (typeof isListViewActive === "function" && isListViewActive()) {
+        if (typeof buildListViewFromCards === "function") buildListViewFromCards();
+        if (typeof updateTableFooterTotals === "function") updateTableFooterTotals(false);
+      }
+    } catch (_) {}
+    if (!skipToast && typeof window.__estimateEditShowToast === 'function') {
+      window.__estimateEditShowToast(`Split line item into ${splitPercentages.length} payments: ${splitPercentages.join("%, ")}%`);
+    }
+  }
+
+  return true;
+}
+
+async function runSplitFlowForCard(card) {
+  if (!card) return false;
+
+  const selectCheckbox = card.querySelector(".line-item-select");
+  if (selectCheckbox?.disabled) {
+    showToast("Unassign line item before splitting.");
+    return false;
+  }
+
+  const nameInput = card.querySelector(".item-name");
+  const quantityInput = card.querySelector(".item-quantity");
+  const areaInput = card.querySelector(".item-area");
+  const lengthInput = card.querySelector(".item-length");
+  const laborCostInput = card.querySelector(".item-labor-cost");
+  const calcModeSelect = card.querySelector(".item-calc-mode");
+  const statusDropdown = card.querySelector(".item-status-dropdown");
+  const baseName = (nameInput?.value || "Line Item").trim();
+  const laborValue = parseFloat(laborCostInput?.value) || 0;
+  const splitPercentages = await showSplitPreviewModal({ itemName: baseName, laborCost: laborValue });
+
+  if (!Array.isArray(splitPercentages) || splitPercentages.length < 2) {
+    return false;
+  }
+
+  return applySplitToCard(card, splitPercentages);
+}
+
+try { window.__estimateEditRunSplitFlowForCard = runSplitFlowForCard; } catch (_) {}
+
 
 // Add Line Item Card Function
-function addLineItemCard(item = {}, categoryHeader = null, insertAfter = null) {
+function addLineItemCard(item = {}, categoryHeader = null, insertAfter = null, options = {}) {
+  const shouldAutoFocus = options.autoFocus !== false;
   const card = document.createElement("div");
   card.classList.add("line-item-card");
   card.setAttribute("data-item-id", item._id || `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
@@ -865,6 +1827,7 @@ function addLineItemCard(item = {}, categoryHeader = null, insertAfter = null) {
 
   // Status dropdown options
   const statusOptions = [
+    { value: "new", label: "New" },
     { value: "in-progress", label: "In Progress" },
     { value: "completed", label: "Completed" },
     { value: "approved", label: "Approved" },
@@ -892,10 +1855,12 @@ function addLineItemCard(item = {}, categoryHeader = null, insertAfter = null) {
 card.innerHTML = `
   <div class="card-header">
     <input type="checkbox" class="line-item-select" ${item.assignedTo ? "disabled" : ""}>
+    <button class="btn card-drag-handle" type="button" draggable="true" title="Drag line item">::</button>
     <input type="text" class="item-name" value="${item.name || ""}" placeholder="Item Name">
     <div class="suggestion-box" style="display:none; position:absolute; background:#fff; border:1px solid #ccc; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1); max-height:350px; overflow-y:auto; z-index:1000;"></div>
     <button class="btn delete-line-item">Delete</button>
     ${item.assignedTo ? `<button class="btn unassign-item">Unassign</button>` : ""}
+    <button class="btn split-line-item" type="button" style="display:none;">Split</button>
   </div>
   <div class="card-details">
     <div class="detail">
@@ -1032,6 +1997,8 @@ card.innerHTML = `
     </span>
   </div>
 `;
+
+  syncSplitBadge(card, item.splitPercentage, item.splitGroupId || null);
 
   // Status dropdown handler
   const statusDropdown = card.querySelector(".item-status-dropdown");
@@ -1321,6 +2288,8 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
   if (focused) focused.blur();
 
   card.remove();
+  rebuildSplitGroupHeaders();
+  applyCategoryCollapseState();
   updateSummary();
   updateSelectedLaborCost();
   setTimeout(() => {
@@ -1343,7 +2312,24 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
   const materialCostInput = card.querySelector(".item-material-cost");
   const totalDisplay = card.querySelector(".item-total");
   const checkbox = card.querySelector(".line-item-select");
+  const splitButton = card.querySelector(".split-line-item");
+
+  const toggleSplitButton = () => {
+    if (!splitButton) return;
+    splitButton.style.display = checkbox && checkbox.checked ? "inline-flex" : "none";
+  };
+
   checkbox.addEventListener("change", updateSelectedLaborCost);
+  checkbox.addEventListener("change", toggleSplitButton);
+  toggleSplitButton();
+
+  if (splitButton) {
+    splitButton.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      await runSplitFlowForCard(card);
+    });
+  }
 
   // Enforce integer-only quantity for 'each' mode
   if (quantityInput) {
@@ -1479,6 +2465,8 @@ function updateCardValues() {
   updateSelectedLaborCost();
   updateSummary();
 }
+
+card.__updateCardValues = updateCardValues;
 
 // Expose so list-view (outside this closure) can call it
 try { window.addLineItemCard = addLineItemCard; } catch (_) {}
@@ -1642,20 +2630,30 @@ if (!window.__staticAutoSaveBound) {
   const lineItemsContainer = document.getElementById("line-items-cards");
   if (insertAfter && insertAfter.parentNode) {
     insertAfter.parentNode.insertBefore(card, insertAfter.nextSibling);
-  } else if (categoryHeader && categoryHeader.nextSibling) {
-    categoryHeader.parentNode.insertBefore(card, categoryHeader.nextSibling);
+  } else if (categoryHeader && categoryHeader.parentNode) {
+    let referenceNode = categoryHeader.nextSibling;
+    while (referenceNode && !referenceNode.classList.contains("category-header")) {
+      referenceNode = referenceNode.nextSibling;
+    }
+    categoryHeader.parentNode.insertBefore(card, referenceNode);
   } else {
     lineItemsContainer.appendChild(card);
   }
-      // ✅ Scroll to and focus new line item
-setTimeout(() => {
-  card.scrollIntoView({ behavior: "smooth", block: "center" });
-  const nameInput = card.querySelector(".item-name");
-  if (nameInput) {
-    nameInput.focus();
-    nameInput.select && nameInput.select();
+  rebuildSplitGroupHeaders();
+  applyCategoryCollapseState();
+  try { if (typeof window.__estimateEditWireCardDrag === 'function') window.__estimateEditWireCardDrag(card); } catch (_) {}
+  if (shouldAutoFocus) {
+    setTimeout(() => {
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+      const nameInput = card.querySelector(".item-name");
+      if (nameInput) {
+        nameInput.focus();
+        nameInput.select && nameInput.select();
+      }
+    }, 100);
   }
-}, 100);
+
+  return card;
 }
 
 
@@ -1689,14 +2687,25 @@ function updateSummary() {
   const total = subtotal + (subtotal * taxRate) / 100;
   const projectedProfit = total - totalLabor - totalMaterial;
 
-  document.getElementById("subtotal").textContent = `$${subtotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-  document.getElementById("total").textContent = `$${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-  document.getElementById("total-labor-cost").textContent = `$${totalLabor.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-  document.getElementById("total-material-cost").textContent = `$${totalMaterial.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-  document.getElementById("projected-profit").textContent = `$${projectedProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  const formattedSubtotal = `$${subtotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  const formattedTotal = `$${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  const formattedLabor = `$${totalLabor.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  const formattedMaterial = `$${totalMaterial.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  const formattedProfit = `$${projectedProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+  document.getElementById("subtotal").textContent = formattedSubtotal;
+  document.getElementById("total").textContent = formattedTotal;
+  document.getElementById("total-labor-cost").textContent = formattedLabor;
+  document.getElementById("total-material-cost").textContent = formattedMaterial;
+  document.getElementById("projected-profit").textContent = formattedProfit;
+  try { syncAllCategoryHeaderTotals(); } catch (_) {}
+  try {
+    if (typeof updateTableFooterTotals === 'function') {
+      updateTableFooterTotals(shouldUseFilteredTotalsForMobileFooter());
+    }
+  } catch (_) {}
   // Keep list view in sync if visible (debounced to avoid destroying focused input)
   if (isListViewActive && isListViewActive()) {
-    if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
     scheduleListViewRebuild(600);
   }
 }
@@ -1739,6 +2748,13 @@ function updateSelectedLaborCost() {
   } else {
     floatingLaborCost.style.display = "none";
   }
+
+  try {
+    if (typeof window.__estimateEditSyncBatchActionState === 'function') {
+      window.__estimateEditSyncBatchActionState(selectedItems.length, totalLaborCost);
+    }
+  } catch (_) {}
+  try { syncMobileBottomBarState(selectedItems.length); } catch (_) {}
 }
 
 // Expose for external callers (e.g., list view actions)
@@ -1821,7 +2837,7 @@ async function assignItemsToVendor() {
       const categoryHeader = card.previousElementSibling?.classList.contains("category-header")
         ? card.previousElementSibling
         : card.closest(".category-header");
-      costCode = categoryHeader?.querySelector(".category-title span")?.textContent?.trim() || "Uncategorized";
+      costCode = categoryHeader?.querySelector('.category-title span[contenteditable]')?.textContent?.trim() || 'Uncategorized';
     }
 
     const itemObj = {
@@ -1930,6 +2946,8 @@ async function assignItemsToVendor() {
 
   function getStatusClass(status) {
     switch (status.toLowerCase()) {
+      case "new":
+        return "status-in-progress";
         case "pending":
             return "status-pending"; // Gray
         case "in-progress":
@@ -1944,6 +2962,8 @@ async function assignItemsToVendor() {
             return "status-pending"; // Default to pending
     }
 }
+
+    try { window.__estimateEditGetStatusClass = getStatusClass; } catch (_) {}
 
 
 
@@ -2030,6 +3050,7 @@ function refreshLineItemCard(updatedItem) {
 async function saveEstimate() {
   const lineItems = [];
   let currentCategory = null;
+  let categorySortOrder = 0;
   let skippedDraftNewItems = false; // Track unnamed brand-new items we intentionally skip
 
   document.querySelectorAll("#line-items-cards > div").forEach((element) => {
@@ -2037,7 +3058,8 @@ async function saveEstimate() {
       currentCategory = {
         _id: element.getAttribute("data-category-id") || undefined,
         type: "category",
-        category: element.querySelector(".category-title span").textContent.trim(),
+        category: element.querySelector('.category-title span[contenteditable]').textContent.trim(),
+        sortOrder: categorySortOrder++,
         status: "in-progress",
         items: [],
       };
@@ -2059,6 +3081,7 @@ async function saveEstimate() {
         _id: tmpId,
         type: "item",
         name: nameVal,
+        sortOrder: currentCategory ? currentCategory.items.length : 0,
         description: element.querySelector(".item-description").value.trim() || "",
         quantity: parseInt(element.querySelector(".item-quantity").value, 10) || 1,
         unitPrice: parseFloat(element.querySelector(".item-price").value) || 0,
@@ -2071,8 +3094,13 @@ async function saveEstimate() {
           (parseInt(element.querySelector(".item-quantity").value, 10) || 1) *
           (parseFloat(element.querySelector(".item-price").value) || 0)
         ),
+        status: element.querySelector(".item-status-dropdown")?.value || "new",
+        startDate: element.querySelector(".item-start-date")?.value || undefined,
+        endDate: element.querySelector(".item-end-date")?.value || undefined,
         assignedTo,
-        costCode: element.querySelector(".item-cost-code")?.value.trim() || "Uncategorized"
+        costCode: element.querySelector(".item-cost-code")?.value.trim() || "Uncategorized",
+        splitPercentage: element.dataset.splitPercentage ? parseFloat(element.dataset.splitPercentage) : undefined,
+        splitGroupId: element.dataset.splitGroupId || undefined
       };
 
       // Remove temporary IDs so server can assign proper ObjectIds for new items
@@ -2257,6 +3285,8 @@ body: JSON.stringify({
               serverEstimate = dto?.estimate || null;
             }
           } catch (_) {}
+
+          applyCategoryCollapseState();
         }
 
         if (serverEstimate && Array.isArray(serverEstimate.lineItems)) {
@@ -2444,88 +3474,105 @@ function updatePage() {
   
 // --- Floating Vendor Select Menu ---
 (function() {
-  // Create the floating menu HTML and add to body
-  const floatingMenu = document.createElement("div");
-  floatingMenu.id = "floating-vendor-select";
-  floatingMenu.style.display = "none";
-  floatingMenu.style.position = "fixed";
-  floatingMenu.style.bottom = "80px";
-  floatingMenu.style.right = "20px";
-  floatingMenu.style.background = "#fff";
-  floatingMenu.style.border = "1px solid #ccc";
-  floatingMenu.style.borderRadius = "8px";
-  floatingMenu.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
-  floatingMenu.style.padding = "16px";
-  floatingMenu.style.zIndex = "10000";
-floatingMenu.innerHTML = `
-  <label for="floating-vendor-dropdown" style="font-weight:600; margin-bottom:8px; display:block;">Assign to Vendor:</label>
-  <select id="floating-vendor-dropdown" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc; margin-bottom:16px;"></select>
-  <div style="display:flex; gap:10px; justify-content:flex-end;">
-    <button id="assign-vendor-btn" class="btn" style="
-      background: linear-gradient(90deg, #007bff 60%, #0056b3 100%) !important;
-      color: #fff !important;
-      border: none !important;
-      border-radius: 5px !important;
-      padding: 8px 20px !important;
-      font-weight: 600 !important;
-      cursor: pointer !important;
-      transition: background 0.2s !important;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.07) !important;
-    ">Assign</button>
-    <button id="cancel-vendor-btn" class="btn" style="
-      background: #f3f3f3 !important;
-      color: #333 !important;
-      border: 1px solid #ccc !important;
-      border-radius: 5px !important;
-      padding: 8px 20px !important;
-      font-weight: 600 !important;
-      cursor: pointer !important;
-      transition: background 0.2s !important;
-    ">Cancel</button>
-  </div>
-`;
-  document.body.appendChild(floatingMenu);
+  const floatingMenu = document.getElementById("floating-vendor-select");
+  const dropdown = document.getElementById("floating-vendor-dropdown");
+  const searchInput = document.getElementById("floating-vendor-search");
+  const assignButton = document.getElementById("assign-vendor-btn");
+  const cancelButton = document.getElementById("cancel-vendor-btn");
+  if (!floatingMenu || !dropdown || !assignButton || !cancelButton) return;
 
   let selectedCardForVendor = null;
+  const FLOATING_VENDOR_EXPANDED_ROWS = 6;
 
-  // Show menu when a line-item-select is checked
-  document.body.addEventListener("change", function(e) {
-    if (e.target.classList.contains("line-item-select")) {
-      if (e.target.checked) {
-        selectedCardForVendor = e.target.closest(".line-item-card");
-        showFloatingVendorSelect();
-      }
+  function setFloatingVendorDropdownExpanded(expanded) {
+    if (expanded) {
+      dropdown.size = FLOATING_VENDOR_EXPANDED_ROWS;
+      dropdown.setAttribute("data-expanded", "true");
+    } else {
+      dropdown.size = 1;
+      dropdown.removeAttribute("data-expanded");
     }
-  });
+  }
 
-  function showFloatingVendorSelect() {
-    const menu = document.getElementById("floating-vendor-select");
-    const dropdown = document.getElementById("floating-vendor-dropdown");
+  function populateFloatingVendorOptions(searchTerm = "") {
+    const normalizedSearch = String(searchTerm || "").trim().toLowerCase();
     dropdown.innerHTML = '<option value="">Select a Vendor</option>';
-    if (window.vendorMap) {
-      Object.values(window.vendorMap).forEach(vendor => {
+    const vendors = window.vendorMap ? Object.values(window.vendorMap) : [];
+    vendors
+      .filter((vendor) => !normalizedSearch || String(vendor.name || "").toLowerCase().includes(normalizedSearch))
+      .forEach((vendor) => {
         const option = document.createElement("option");
         option.value = vendor._id;
         option.textContent = vendor.name;
         dropdown.appendChild(option);
       });
-    }
-    menu.style.display = "block";
+    setFloatingVendorDropdownExpanded(!!normalizedSearch);
   }
 
-  function hideFloatingVendorSelect() {
-    document.getElementById("floating-vendor-select").style.display = "none";
-    if (selectedCardForVendor) {
-      // Uncheck the checkbox if cancelled
+  function getSelectedVendorCards() {
+    return Array.from(document.querySelectorAll('.line-item-select:checked'))
+      .filter((checkbox) => !checkbox.disabled)
+      .map((checkbox) => checkbox.closest('.line-item-card'))
+      .filter(Boolean);
+  }
+
+  function hideFloatingVendorSelect(resetSelection = true) {
+    floatingMenu.style.display = "none";
+    if (searchInput) searchInput.value = "";
+    populateFloatingVendorOptions();
+    setFloatingVendorDropdownExpanded(false);
+    if (resetSelection && selectedCardForVendor) {
       const checkbox = selectedCardForVendor.querySelector(".line-item-select");
       if (checkbox) checkbox.checked = false;
-      selectedCardForVendor = null;
     }
+    selectedCardForVendor = null;
   }
 
+  // Show menu when a line-item-select is checked
+  document.body.addEventListener("change", function(e) {
+    if (e.target.classList.contains("line-item-select")) {
+      const selectedCards = getSelectedVendorCards();
+      if (!selectedCards.length) {
+        hideFloatingVendorSelect(false);
+        return;
+      }
+      if (e.target.checked) {
+        selectedCardForVendor = e.target.closest(".line-item-card");
+      } else if (!selectedCardForVendor || !selectedCards.includes(selectedCardForVendor)) {
+        selectedCardForVendor = selectedCards[0];
+      }
+      showFloatingVendorSelect();
+    }
+  });
+
+  function showFloatingVendorSelect() {
+    if (searchInput) searchInput.value = "";
+    populateFloatingVendorOptions();
+    setFloatingVendorDropdownExpanded(false);
+    floatingMenu.style.display = "block";
+    searchInput?.focus();
+  }
+
+  searchInput?.addEventListener("input", () => {
+    populateFloatingVendorOptions(searchInput.value);
+  });
+
+  searchInput?.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setFloatingVendorDropdownExpanded(true);
+      dropdown.focus();
+      dropdown.selectedIndex = Math.min(1, dropdown.options.length - 1);
+    }
+  });
+
+  dropdown.addEventListener("blur", () => {
+    if (!searchInput?.value.trim()) setFloatingVendorDropdownExpanded(false);
+  });
+
   // Assign vendor when button clicked
-document.getElementById("assign-vendor-btn").onclick = async function() {
-  const vendorId = document.getElementById("floating-vendor-dropdown").value;
+assignButton.onclick = async function() {
+  const vendorId = dropdown.value;
   if (!vendorId) {
     showToast("Please select a vendor.");
     return;
@@ -2548,8 +3595,65 @@ document.getElementById("assign-vendor-btn").onclick = async function() {
   hideFloatingVendorSelect();
 };
 
-  document.getElementById("cancel-vendor-btn").onclick = hideFloatingVendorSelect;
+  cancelButton.onclick = hideFloatingVendorSelect;
 })();
+
+function isMobileEstimateViewport() {
+  return !!(window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+}
+
+function getSelectedAssignableCards() {
+  return Array.from(document.querySelectorAll('.line-item-select:checked'))
+    .filter((checkbox) => !checkbox.disabled)
+    .map((checkbox) => checkbox.closest('.line-item-card'))
+    .filter(Boolean);
+}
+
+function getCardCategoryHeader(card) {
+  if (!card) return null;
+  let current = card.previousElementSibling;
+  while (current && !current.classList.contains('category-header')) {
+    current = current.previousElementSibling;
+  }
+  return current || null;
+}
+
+function getCardCategoryName(card) {
+  const header = getCardCategoryHeader(card);
+  return header?.querySelector('.category-title span[contenteditable]')?.textContent?.trim() || 'Line Item';
+}
+
+function syncMobileBottomBarState(selectedCount) {
+  const count = typeof selectedCount === 'number' ? selectedCount : getSelectedAssignableCards().length;
+  const countEl = document.getElementById('mobile-actions-count');
+  if (countEl) {
+    countEl.hidden = count <= 0;
+    countEl.textContent = String(count);
+  }
+}
+
+function wireMobileExperience() {
+  const mobileBackButton = document.getElementById('mobile-back-btn');
+  const mobileAddRoomButton = document.getElementById('mobile-add-room-btn');
+  const mobileAddItemButton = document.getElementById('mobile-add-item-btn');
+  const mobileActionsButton = document.getElementById('mobile-actions-btn');
+  const mobileSaveButton = document.getElementById('mobile-save-btn');
+
+  mobileBackButton?.addEventListener('click', () => document.getElementById('cancel-estimate')?.click());
+  mobileAddRoomButton?.addEventListener('click', () => document.getElementById('add-category-header')?.click());
+  mobileAddItemButton?.addEventListener('click', () => addLineItemCard());
+  mobileSaveButton?.addEventListener('click', () => document.getElementById('save-estimate')?.click());
+  mobileActionsButton?.addEventListener('click', () => {
+    const selectedCards = getSelectedAssignableCards();
+    if (!selectedCards.length) {
+      showToast('Select at least one line item first.');
+      return;
+    }
+    window.__estimateEditOpenBatchActionDrawer?.();
+  });
+
+  syncMobileBottomBarState();
+}
 
 
 
@@ -2562,9 +3666,183 @@ document.getElementById("assign-vendor-btn").onclick = async function() {
     if (categoryName) addCategoryHeader({ category: categoryName });
   });
   document.getElementById("assign-items-button").addEventListener("click", assignItemsToVendor);
+  document.getElementById("selected-items-action-btn")?.addEventListener("click", () => window.__estimateEditOpenBatchActionDrawer?.());
+  document.getElementById("batch-actions-close")?.addEventListener("click", () => window.__estimateEditCloseBatchActionDrawer?.());
+  document.getElementById("batch-status-apply")?.addEventListener("click", () => window.__estimateEditApplyBatchStatus?.());
+  document.getElementById("batch-move-category")?.addEventListener("click", () => window.__estimateEditMoveSelectedToCategory?.());
+  document.getElementById("batch-assign-dates")?.addEventListener("click", () => window.__estimateEditApplyBatchDates?.());
+  document.getElementById("batch-split-labor")?.addEventListener("click", () => window.__estimateEditSplitLaborAcrossSelected?.());
+  document.getElementById("batch-duplicate-items")?.addEventListener("click", () => window.__estimateEditDuplicateSelected?.());
+  document.getElementById("batch-delete-items")?.addEventListener("click", () => window.__estimateEditDeleteSelected?.());
   document.getElementById("tax-input").addEventListener("input", updateSummary);
   document.getElementById("save-estimate").addEventListener("click", saveEstimate);
+  wireMobileExperience();
+  try { window.__estimateEditRefreshBatchCategoryOptions?.(); } catch (_) {}
+  try { window.__estimateEditSyncBatchActionState?.(); } catch (_) {}
  });
+
+  function roundCurrency(value) {
+    return Math.round((Number(value) || 0) * 100) / 100;
+  }
+
+  function getCardLineItemAmount(card) {
+    if (!card) return 0;
+    const calcMode = card.querySelector('.item-calc-mode')?.value || 'each';
+    const unitPrice = parseFloat(card.querySelector('.item-price')?.value || '0') || 0;
+    let quantity = 0;
+
+    if (calcMode === 'sqft') {
+      quantity = parseFloat(card.querySelector('.item-area')?.value || '0') || 0;
+    } else if (calcMode === 'lnft') {
+      quantity = parseFloat(card.querySelector('.item-length')?.value || '0') || 0;
+    } else {
+      quantity = parseFloat(card.querySelector('.item-quantity')?.value || '0') || 0;
+    }
+
+    return roundCurrency(quantity * unitPrice);
+  }
+
+  function getCategoryTotalAmount(header) {
+    return roundCurrency(getCategoryCards(header).reduce((sum, card) => sum + getCardLineItemAmount(card), 0));
+  }
+
+  function syncCategoryHeaderTotal(header) {
+    if (!header) return;
+    const totalEl = header.querySelector('.category-total-amount');
+    if (!totalEl) return;
+    totalEl.textContent = `Total $${getCategoryTotalAmount(header).toFixed(2)}`;
+  }
+
+  function syncAllCategoryHeaderTotals() {
+    document.querySelectorAll('.category-header').forEach((header) => syncCategoryHeaderTotal(header));
+  }
+
+  function getSplitGroupTheme(splitGroupId) {
+    if (typeof window !== 'undefined' && typeof window.__estimateEditGetSplitGroupTheme === 'function') {
+      return window.__estimateEditGetSplitGroupTheme(splitGroupId);
+    }
+
+    const themes = [
+      { border: "#f59e0b", background: "#fffbeb", chipBackground: "#fef3c7", chipColor: "#92400e" },
+      { border: "#0ea5e9", background: "#f0f9ff", chipBackground: "#dbeafe", chipColor: "#0c4a6e" },
+      { border: "#10b981", background: "#ecfdf5", chipBackground: "#d1fae5", chipColor: "#065f46" },
+      { border: "#ec4899", background: "#fdf2f8", chipBackground: "#fbcfe8", chipColor: "#9d174d" },
+      { border: "#8b5cf6", background: "#f5f3ff", chipBackground: "#ede9fe", chipColor: "#5b21b6" }
+    ];
+
+    if (!splitGroupId) return null;
+
+    let hash = 0;
+    for (let index = 0; index < splitGroupId.length; index += 1) {
+      hash = ((hash << 5) - hash) + splitGroupId.charCodeAt(index);
+      hash |= 0;
+    }
+
+    return themes[Math.abs(hash) % themes.length];
+  }
+
+function getCategoryCollapseStorageKey() {
+  const projectId = new URLSearchParams(window.location.search).get('projectId') || 'default';
+  return `estimate-category-collapsed:${projectId}`;
+}
+
+function persistCategoryCollapsedState(state) {
+  try {
+    window.localStorage.setItem(getCategoryCollapseStorageKey(), JSON.stringify(state || {}));
+  } catch (_) {}
+}
+
+function getCategoryCollapsedState() {
+  let state = (typeof window !== 'undefined' && window.__categoryCollapsedState) || null;
+  if (!state) {
+    try {
+      const raw = window.localStorage.getItem(getCategoryCollapseStorageKey());
+      state = raw ? JSON.parse(raw) : {};
+    } catch (_) {
+      state = {};
+    }
+  }
+  try { if (typeof window !== 'undefined') window.__categoryCollapsedState = state; } catch (_) {}
+  return state;
+}
+
+function ensureCategoryCollapseKey(header, fallbackName = '') {
+  if (!header) return '';
+  if (header.dataset.categoryKey) return header.dataset.categoryKey;
+
+  const raw = header.dataset.categoryId || fallbackName || header.querySelector?.('.category-title span[contenteditable]')?.textContent?.trim() || 'category';
+  const normalized = String(raw).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'category';
+  const key = header.dataset.categoryId ? `id:${header.dataset.categoryId}` : `name:${normalized}`;
+  header.dataset.categoryKey = key;
+  return key;
+}
+
+function isCategoryCollapsed(headerOrKey) {
+  const key = typeof headerOrKey === 'string' ? headerOrKey : ensureCategoryCollapseKey(headerOrKey);
+  if (!key) return false;
+  return !!getCategoryCollapsedState()[key];
+}
+
+function setCategoryCollapsed(headerOrKey, collapsed) {
+  const key = typeof headerOrKey === 'string' ? headerOrKey : ensureCategoryCollapseKey(headerOrKey);
+  if (!key) return;
+  const state = getCategoryCollapsedState();
+  state[key] = !!collapsed;
+  persistCategoryCollapsedState(state);
+}
+
+function removeCategoryCollapsedState(headerOrKey) {
+  const key = typeof headerOrKey === 'string' ? headerOrKey : ensureCategoryCollapseKey(headerOrKey);
+  if (!key) return;
+  const state = getCategoryCollapsedState();
+  delete state[key];
+  persistCategoryCollapsedState(state);
+}
+
+function getCategoryCards(header) {
+  const cards = [];
+  let nextEl = header?.nextElementSibling;
+  while (nextEl && !nextEl.classList.contains('category-header')) {
+    if (nextEl.classList.contains('line-item-card')) cards.push(nextEl);
+    nextEl = nextEl.nextElementSibling;
+  }
+  return cards;
+}
+
+function applyCategoryCollapseState() {
+  ensureDisclosureStyles();
+  const headers = document.querySelectorAll('.category-header');
+  headers.forEach((header) => {
+    const toggle = header.querySelector('.toggle-category-collapse');
+    const collapsed = isCategoryCollapsed(header);
+    if (toggle) {
+      setDisclosureButtonState(toggle, !collapsed, 'Collapse category', 'Expand category');
+    }
+
+    let nextEl = header.nextElementSibling;
+    while (nextEl && !nextEl.classList.contains('category-header')) {
+      if (nextEl.classList.contains('line-item-card')) {
+        const filterVisible = nextEl.dataset.filterVisible !== 'false';
+        nextEl.style.display = (!collapsed && filterVisible) ? '' : 'none';
+      } else if (nextEl.classList.contains('split-group-header')) {
+        nextEl.style.display = collapsed ? 'none' : '';
+      }
+      nextEl = nextEl.nextElementSibling;
+    }
+  });
+
+  try {
+    if (typeof syncGlobalCategoryCollapseToggle === 'function') syncGlobalCategoryCollapseToggle();
+  } catch (_) {}
+}
+
+  async function runSplitFlowForCard(card) {
+    if (typeof window !== 'undefined' && typeof window.__estimateEditRunSplitFlowForCard === 'function') {
+      return window.__estimateEditRunSplitFlowForCard(card);
+    }
+    console.warn('Split flow is not available yet.');
+    return false;
+  }
 
 
 
@@ -2578,10 +3856,7 @@ function createFilterUI() {
   // Render compact when inline within topbar; class applied just before insert
   filterContainer.className = 'filters-container';
   filterContainer.innerHTML = `
-    <div class="filter-panel">
-      <div class="filter-header">
-        <h3 style="display:flex; align-items:center; gap:10px;">Filters</h3> 
-      </div>
+
 
       <div class="filter-options">
         <div class="filter-group">
@@ -2613,6 +3888,7 @@ function createFilterUI() {
           </select>
         </div>
         <button id="clear-filters" class="btn-secondary">Clear Filters</button>
+        <button id="toggle-all-categories-btn-card" class="topbar-category-collapse-toggle estimate-disclosure-btn" type="button" aria-pressed="false" title="Collapse all categories" style="display:inline-flex; align-items:center; justify-content:center; margin-top:11px;">${getDisclosureIconSvg()}</button>
          <button id="toggle-view-btn" title="Toggle list/card view" aria-pressed="false" style="display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid #e2e8f0; border-radius:8px; background:#ffffff; cursor:pointer; color:#0f172a; margin-top:11px; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.04); transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease; width:34px; height:34px; padding:0; justify-content:center;">
             <span id="toggle-view-icon" class="tvi-icon" aria-hidden="true" data-mode="card">
               <!-- List icon (shown when in card mode to switch to list) -->
@@ -2638,7 +3914,491 @@ function createFilterUI() {
     </div>
   `;
 
+  const selectedItemsActionButton = document.getElementById('selected-items-action-btn');
+  const filterOptions = filterContainer.querySelector('.filter-options');
+  if (selectedItemsActionButton && filterOptions) {
+    filterOptions.appendChild(selectedItemsActionButton);
+  }
+
   // Prefer placing inside the topbar host if present; fallback to original location
+
+  function getSelectedCards() {
+    return Array.from(document.querySelectorAll('.line-item-select:checked'))
+      .map((checkbox) => checkbox.closest('.line-item-card'))
+      .filter((card, index, cards) => card && cards.indexOf(card) === index);
+  }
+
+  function getCategoryHeaderForCard(card) {
+    let current = card?.previousElementSibling || null;
+    while (current && !current.classList.contains('category-header')) {
+      current = current.previousElementSibling;
+    }
+    return current || null;
+  }
+
+  function getCategoryBlockNodes(header) {
+    if (!header) return [];
+    const nodes = [header];
+    let nextEl = header.nextElementSibling;
+    while (nextEl && !nextEl.classList.contains('category-header')) {
+      nodes.push(nextEl);
+      nextEl = nextEl.nextElementSibling;
+    }
+    return nodes;
+  }
+
+  function getLastCardInCategory(header, excludedCard = null) {
+    const cards = getCategoryCards(header).filter((card) => card !== excludedCard);
+    return cards.length ? cards[cards.length - 1] : null;
+  }
+
+  function getEffectiveQuantityForCard(card) {
+    if (!card) return 0;
+    const mode = card.querySelector('.item-calc-mode')?.value || 'each';
+    if (mode === 'sqft') return parseFloat(card.querySelector('.item-area')?.value || '0') || 0;
+    if (mode === 'lnft') return parseFloat(card.querySelector('.item-length')?.value || '0') || 0;
+    return Math.max(1, parseFloat(card.querySelector('.item-quantity')?.value || '0') || 0);
+  }
+
+  function cloneItemDataFromCard(card) {
+    if (!card) return {};
+    return {
+      name: card.querySelector('.item-name')?.value || '',
+      description: card.querySelector('.item-description')?.value || '',
+      quantity: parseFloat(card.querySelector('.item-quantity')?.value || '1') || 1,
+      unitPrice: parseFloat(card.querySelector('.item-price')?.value || '0') || 0,
+      laborCost: parseFloat(card.querySelector('.item-labor-cost')?.value || '0') || 0,
+      materialCost: parseFloat(card.querySelector('.item-material-cost')?.value || '0') || 0,
+      calcMode: card.querySelector('.item-calc-mode')?.value || 'each',
+      area: parseFloat(card.querySelector('.item-area')?.value || '0') || 0,
+      length: parseFloat(card.querySelector('.item-length')?.value || '0') || 0,
+      costCode: card.querySelector('.item-cost-code')?.value || '',
+      status: card.querySelector('.item-status-dropdown')?.value || 'new',
+      startDate: card.querySelector('.item-start-date')?.value || '',
+      endDate: card.querySelector('.item-end-date')?.value || ''
+    };
+  }
+
+  function setCardLaborTotal(card, totalLabor) {
+    const laborInput = card?.querySelector('.item-labor-cost');
+    if (!laborInput) return;
+    const roundedTotal = roundCurrency(totalLabor);
+    const effQty = getEffectiveQuantityForCard(card);
+    laborInput.dataset.rate = String(effQty > 0 ? roundCurrency(roundedTotal / effQty) : roundedTotal);
+    laborInput.value = roundedTotal.toFixed(2);
+    if (typeof card.__updateCardValues === 'function') {
+      card.__updateCardValues();
+    } else {
+      laborInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+
+  function refreshBatchCategoryOptions() {
+    const select = document.getElementById('batch-category-select');
+    if (!select) return;
+    const previousValue = select.value;
+    select.innerHTML = '<option value="">Select category</option>';
+    document.querySelectorAll('.category-header').forEach((header) => {
+      const name = header.querySelector('.category-title span[contenteditable]')?.textContent?.trim() || 'Untitled Category';
+      const key = ensureCategoryCollapseKey(header, name);
+      const option = document.createElement('option');
+      option.value = key;
+      option.textContent = name;
+      select.appendChild(option);
+    });
+    if (previousValue && Array.from(select.options).some((option) => option.value === previousValue)) {
+      select.value = previousValue;
+    }
+  }
+
+  function openBatchActionDrawer() {
+    const drawer = document.getElementById('batch-actions-drawer');
+    if (!drawer) return;
+    drawer.hidden = false;
+    try { document.addEventListener('pointerdown', handleBatchActionOutsidePointerDown, true); } catch (_) {}
+    try { document.addEventListener('keydown', handleBatchActionDrawerKeydown, true); } catch (_) {}
+  }
+
+  function closeBatchActionDrawer() {
+    const drawer = document.getElementById('batch-actions-drawer');
+    if (!drawer) return;
+    drawer.hidden = true;
+    try { document.removeEventListener('pointerdown', handleBatchActionOutsidePointerDown, true); } catch (_) {}
+    try { document.removeEventListener('keydown', handleBatchActionDrawerKeydown, true); } catch (_) {}
+  }
+
+  function handleBatchActionOutsidePointerDown(event) {
+    const drawer = document.getElementById('batch-actions-drawer');
+    const button = document.getElementById('selected-items-action-btn');
+    const target = event.target;
+    if (!drawer || drawer.hidden) return;
+    if ((drawer && drawer.contains(target)) || (button && button.contains(target))) return;
+    closeBatchActionDrawer();
+  }
+
+  function handleBatchActionDrawerKeydown(event) {
+    if (event.key === 'Escape') {
+      closeBatchActionDrawer();
+    }
+  }
+
+  function syncBatchActionState(selectedCount, totalLabor) {
+    const cards = typeof selectedCount === 'number' ? null : getSelectedCards();
+    const count = typeof selectedCount === 'number' ? selectedCount : cards.length;
+    const labor = typeof totalLabor === 'number'
+      ? totalLabor
+      : (cards || []).reduce((sum, card) => sum + (parseFloat(card.querySelector('.item-labor-cost')?.value || '0') || 0), 0);
+    const summary = document.getElementById('batch-selection-summary');
+    const actionButton = document.getElementById('selected-items-action-btn');
+    const drawer = document.getElementById('batch-actions-drawer');
+    if (summary) {
+      summary.textContent = count > 0
+        ? `${count} item${count === 1 ? '' : 's'} selected • Labor $${labor.toFixed(2)}`
+        : '0 items selected';
+      summary.classList.toggle('is-empty', count === 0);
+    }
+    if (actionButton) {
+      actionButton.hidden = count === 0;
+      actionButton.textContent = count > 0
+        ? `Actions (${count})`
+        : 'Actions';
+    }
+    if (drawer && count === 0) {
+      drawer.hidden = true;
+    }
+    [
+      'batch-status-apply',
+      'batch-move-category',
+      'batch-assign-dates',
+      'batch-split-labor',
+      'batch-duplicate-items',
+      'batch-delete-items'
+    ].forEach((id) => {
+      const button = document.getElementById(id);
+      if (button) button.disabled = count === 0;
+    });
+  }
+
+  async function persistBatchDomChanges() {
+    try { rebuildSplitGroupHeaders(); } catch (_) {}
+    try { applyCategoryCollapseState(); } catch (_) {}
+    try { populateFilterOptions(); } catch (_) {}
+    refreshBatchCategoryOptions();
+    try { updateSummary(); } catch (_) {}
+    try { updateSelectedLaborCost(); } catch (_) {}
+    if (typeof isListViewActive === 'function' && isListViewActive()) {
+      try { buildListViewFromCards(); } catch (_) {}
+      try { if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false); } catch (_) {}
+    }
+    if (typeof window.autoSaveEstimate === 'function') {
+      await window.autoSaveEstimate(true);
+    }
+  }
+
+  function findCategoryHeaderByKey(key) {
+    return Array.from(document.querySelectorAll('.category-header')).find((header) => ensureCategoryCollapseKey(header) === key) || null;
+  }
+
+  function moveCardBeforeOrAfter(card, targetCard, placeAfter) {
+    if (!card || !targetCard || card === targetCard) return false;
+    const referenceNode = placeAfter ? targetCard.nextElementSibling : targetCard;
+    if (referenceNode === card) return false;
+    targetCard.parentNode.insertBefore(card, referenceNode);
+    return true;
+  }
+
+  function moveCardIntoCategory(card, targetHeader) {
+    if (!card || !targetHeader) return false;
+    const lastCard = getLastCardInCategory(targetHeader, card);
+    const referenceNode = lastCard ? lastCard.nextElementSibling : targetHeader.nextElementSibling;
+    if (referenceNode === card) return false;
+    targetHeader.parentNode.insertBefore(card, referenceNode);
+    return true;
+  }
+
+  function moveCategoryBlock(sourceHeader, targetHeader, placeAfter) {
+    if (!sourceHeader || !targetHeader || sourceHeader === targetHeader) return false;
+    const parentNode = sourceHeader.parentNode;
+    if (!parentNode || parentNode !== targetHeader.parentNode) return false;
+    const sourceNodes = getCategoryBlockNodes(sourceHeader);
+    const targetNodes = getCategoryBlockNodes(targetHeader);
+    const referenceNode = placeAfter
+      ? targetNodes[targetNodes.length - 1]?.nextElementSibling || null
+      : targetHeader;
+    if (sourceNodes.includes(referenceNode)) return false;
+    const fragment = document.createDocumentFragment();
+    sourceNodes.forEach((node) => fragment.appendChild(node));
+    parentNode.insertBefore(fragment, referenceNode);
+    return true;
+  }
+
+  function clearEstimateDragHighlights() {
+    document.querySelectorAll('.drag-over-top, .drag-over-bottom, .drag-over-target, .lv-item-drop-top, .lv-item-drop-bottom, .lv-category-drop-target')
+      .forEach((node) => node.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-target', 'lv-item-drop-top', 'lv-item-drop-bottom', 'lv-category-drop-target'));
+  }
+
+  function beginEstimateDrag(payload) {
+    window.__estimateEditDragPayload = payload;
+  }
+
+  function getEstimateDragPayload() {
+    return window.__estimateEditDragPayload || null;
+  }
+
+  function endEstimateDrag() {
+    window.__estimateEditDragPayload = null;
+    clearEstimateDragHighlights();
+  }
+
+  async function handleDroppedItemOnCard(targetCard, placeAfter) {
+    const payload = getEstimateDragPayload();
+    if (!payload || payload.type !== 'item') return;
+    const sourceCard = document.querySelector(`.line-item-card[data-item-id="${payload.itemId}"]`);
+    if (!sourceCard || !targetCard || sourceCard === targetCard) return;
+    if (moveCardBeforeOrAfter(sourceCard, targetCard, placeAfter)) {
+      await persistBatchDomChanges();
+    }
+  }
+
+  async function handleDroppedItemOnCategory(targetHeader) {
+    const payload = getEstimateDragPayload();
+    if (!payload) return;
+    if (payload.type === 'item') {
+      const sourceCard = document.querySelector(`.line-item-card[data-item-id="${payload.itemId}"]`);
+      if (moveCardIntoCategory(sourceCard, targetHeader)) {
+        await persistBatchDomChanges();
+      }
+      return;
+    }
+    if (payload.type === 'category') {
+      const sourceHeader = findCategoryHeaderByKey(payload.categoryKey);
+      if (moveCategoryBlock(sourceHeader, targetHeader, false)) {
+        await persistBatchDomChanges();
+      }
+    }
+  }
+
+  function wireCategoryDrag(header) {
+    if (!header || header.dataset.dragWired === 'true') return;
+    header.dataset.dragWired = 'true';
+    const handle = header.querySelector('.category-drag-handle');
+    if (!handle) return;
+    handle.addEventListener('dragstart', (event) => {
+      beginEstimateDrag({ type: 'category', categoryKey: ensureCategoryCollapseKey(header) });
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+    });
+    handle.addEventListener('dragend', () => endEstimateDrag());
+    header.addEventListener('dragover', (event) => {
+      const payload = getEstimateDragPayload();
+      if (!payload) return;
+      event.preventDefault();
+      clearEstimateDragHighlights();
+      header.classList.add('drag-over-target');
+    });
+    header.addEventListener('dragleave', () => header.classList.remove('drag-over-target'));
+    header.addEventListener('drop', async (event) => {
+      event.preventDefault();
+      header.classList.remove('drag-over-target');
+      await handleDroppedItemOnCategory(header);
+      endEstimateDrag();
+    });
+  }
+
+  function wireCardDrag(card) {
+    if (!card || card.dataset.dragWired === 'true') return;
+    card.dataset.dragWired = 'true';
+    const handle = card.querySelector('.card-drag-handle');
+    if (!handle) return;
+    handle.addEventListener('dragstart', (event) => {
+      beginEstimateDrag({ type: 'item', itemId: card.getAttribute('data-item-id') });
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+    });
+    handle.addEventListener('dragend', () => endEstimateDrag());
+    card.addEventListener('dragover', (event) => {
+      const payload = getEstimateDragPayload();
+      if (!payload || payload.type !== 'item') return;
+      event.preventDefault();
+      const rect = card.getBoundingClientRect();
+      const placeAfter = event.clientY > rect.top + (rect.height / 2);
+      clearEstimateDragHighlights();
+      card.classList.add(placeAfter ? 'drag-over-bottom' : 'drag-over-top');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over-top', 'drag-over-bottom'));
+    card.addEventListener('drop', async (event) => {
+      const payload = getEstimateDragPayload();
+      if (!payload || payload.type !== 'item') return;
+      event.preventDefault();
+      const rect = card.getBoundingClientRect();
+      const placeAfter = event.clientY > rect.top + (rect.height / 2);
+      card.classList.remove('drag-over-top', 'drag-over-bottom');
+      await handleDroppedItemOnCard(card, placeAfter);
+      endEstimateDrag();
+    });
+  }
+
+  async function applyBatchStatus() {
+    const cards = getSelectedCards();
+    const nextStatus = document.getElementById('batch-status-select')?.value || '';
+    if (!cards.length) {
+      showToast('Select at least one item.');
+      return;
+    }
+    if (!nextStatus) {
+      showToast('Select a status to apply.');
+      return;
+    }
+    cards.forEach((card) => {
+      const dropdown = card.querySelector('.item-status-dropdown');
+      if (!dropdown) return;
+      dropdown.value = nextStatus;
+      const statusClass = typeof window.__estimateEditGetStatusClass === 'function'
+        ? window.__estimateEditGetStatusClass(nextStatus)
+        : 'status-pending';
+      dropdown.className = `item-status-dropdown ${statusClass}`;
+    });
+    await persistBatchDomChanges();
+  }
+
+  async function moveSelectedToCategory() {
+    const cards = getSelectedCards();
+    const categoryKey = document.getElementById('batch-category-select')?.value || '';
+    const targetHeader = findCategoryHeaderByKey(categoryKey);
+    if (!cards.length) {
+      showToast('Select at least one item.');
+      return;
+    }
+    if (!targetHeader) {
+      showToast('Select a destination category.');
+      return;
+    }
+    cards.forEach((card) => moveCardIntoCategory(card, targetHeader));
+    await persistBatchDomChanges();
+  }
+
+  async function applyBatchDates() {
+    const cards = getSelectedCards();
+    const startDate = document.getElementById('batch-start-date')?.value || '';
+    const endDate = document.getElementById('batch-end-date')?.value || '';
+    if (!cards.length) {
+      showToast('Select at least one item.');
+      return;
+    }
+    if (!startDate && !endDate) {
+      showToast('Enter at least one date.');
+      return;
+    }
+    cards.forEach((card) => {
+      const startInput = card.querySelector('.item-start-date');
+      const endInput = card.querySelector('.item-end-date');
+      if (startInput && startDate) startInput.value = startDate;
+      if (endInput && endDate) endInput.value = endDate;
+    });
+    await persistBatchDomChanges();
+  }
+
+  async function splitLaborAcrossSelected() {
+    const cards = getSelectedCards();
+    if (cards.length < 2) {
+      if (typeof window.__estimateEditShowToast === 'function') {
+        window.__estimateEditShowToast('Select at least two items to split labor.');
+      }
+      return;
+    }
+    const previewItems = cards.map((card, index) => ({
+      id: card.getAttribute('data-item-id') || `selected-${index}`,
+      itemName: (card.querySelector('.item-name')?.value || `Line Item ${index + 1}`).trim(),
+      laborCost: parseFloat(card.querySelector('.item-labor-cost')?.value || '0') || 0,
+      paymentCount: 2
+    }));
+    const splitConfigs = typeof window.__estimateEditShowMultiSplitPreviewModal === 'function'
+      ? await window.__estimateEditShowMultiSplitPreviewModal(previewItems)
+      : null;
+    if (!Array.isArray(splitConfigs) || !splitConfigs.length) {
+      return;
+    }
+
+    const configMap = new Map(splitConfigs.map((config) => [String(config.id), config]));
+    cards.forEach((card, index) => {
+      const cardId = card.getAttribute('data-item-id') || `selected-${index}`;
+      const config = configMap.get(String(cardId));
+      if (!config || !Array.isArray(config.percentages) || config.percentages.length < 2) return;
+      applySplitToCard(card, config.percentages, { skipPersist: true, skipToast: true });
+    });
+
+    try { rebuildSplitGroupHeaders(); } catch (_) {}
+    try { applyCategoryCollapseState(); } catch (_) {}
+    try { updateSummary(); } catch (_) {}
+    try { updateSelectedLaborCost(); } catch (_) {}
+    try {
+      if (typeof isListViewActive === 'function' && isListViewActive()) {
+        if (typeof buildListViewFromCards === 'function') buildListViewFromCards();
+        if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
+      }
+    } catch (_) {}
+    await persistBatchDomChanges();
+    if (typeof window.__estimateEditShowToast === 'function') {
+      window.__estimateEditShowToast(`Applied split preview to ${cards.length} selected line items.`);
+    }
+  }
+
+  async function duplicateSelected() {
+    const cards = getSelectedCards();
+    if (!cards.length) {
+      showToast('Select at least one item.');
+      return;
+    }
+    cards.forEach((card) => {
+      const categoryHeader = getCategoryHeaderForCard(card);
+      const duplicatedCard = typeof window.addLineItemCard === 'function'
+        ? window.addLineItemCard(cloneItemDataFromCard(card), categoryHeader, card)
+        : null;
+      const duplicateCheckbox = duplicatedCard?.querySelector('.line-item-select');
+      if (duplicateCheckbox) {
+        duplicateCheckbox.checked = false;
+        duplicateCheckbox.disabled = false;
+      }
+      if (duplicatedCard) duplicatedCard.setAttribute('data-assigned-to', '');
+    });
+    await persistBatchDomChanges();
+  }
+
+  async function deleteSelected() {
+    const cards = getSelectedCards();
+    if (!cards.length) {
+      showToast('Select at least one item.');
+      return;
+    }
+    if (!window.confirm(`Delete ${cards.length} selected item${cards.length === 1 ? '' : 's'}?`)) {
+      return;
+    }
+    cards.forEach((card) => card.remove());
+    await persistBatchDomChanges();
+  }
+
+  try {
+    window.__estimateEditRefreshBatchCategoryOptions = refreshBatchCategoryOptions;
+    window.__estimateEditSyncBatchActionState = syncBatchActionState;
+    window.__estimateEditOpenBatchActionDrawer = openBatchActionDrawer;
+    window.__estimateEditCloseBatchActionDrawer = closeBatchActionDrawer;
+    window.__estimateEditApplyBatchStatus = applyBatchStatus;
+    window.__estimateEditMoveSelectedToCategory = moveSelectedToCategory;
+    window.__estimateEditApplyBatchDates = applyBatchDates;
+    window.__estimateEditSplitLaborAcrossSelected = splitLaborAcrossSelected;
+    window.__estimateEditDuplicateSelected = duplicateSelected;
+    window.__estimateEditDeleteSelected = deleteSelected;
+    window.__estimateEditClearEstimateDragHighlights = clearEstimateDragHighlights;
+    window.__estimateEditBeginEstimateDrag = beginEstimateDrag;
+    window.__estimateEditGetEstimateDragPayload = getEstimateDragPayload;
+    window.__estimateEditEndEstimateDrag = endEstimateDrag;
+    window.__estimateEditHandleDroppedItemOnCard = handleDroppedItemOnCard;
+    window.__estimateEditHandleDroppedItemOnCategory = handleDroppedItemOnCategory;
+    window.__estimateEditWireCategoryDrag = wireCategoryDrag;
+    window.__estimateEditWireCardDrag = wireCardDrag;
+  } catch (_) {}
+  try {
+    document.querySelectorAll('.category-header').forEach((header) => wireCategoryDrag(header));
+    document.querySelectorAll('.line-item-card').forEach((card) => wireCardDrag(card));
+  } catch (_) {}
   const topbarHost = document.getElementById('topbar-filters-host');
   if (topbarHost) {
     filterContainer.classList.add('topbar-inline');
@@ -2651,6 +4411,54 @@ function createFilterUI() {
       console.error("Line items container not found");
     }
   }
+
+  function getVisibleCategoryHeaders() {
+    return Array.from(document.querySelectorAll('.category-header')).filter((header) => header.style.display !== 'none');
+  }
+
+  function areAllVisibleCategoriesCollapsed() {
+    const headers = getVisibleCategoryHeaders();
+    if (!headers.length) return false;
+    return headers.every((header) => isCategoryCollapsed(header));
+  }
+
+  function syncGlobalCategoryCollapseToggle() {
+    const buttons = Array.from(document.querySelectorAll('#toggle-all-categories-btn, #toggle-all-categories-btn-card'));
+    if (!buttons.length) return;
+    const headers = getVisibleCategoryHeaders();
+    const allCollapsed = headers.length > 0 && headers.every((header) => isCategoryCollapsed(header));
+    buttons.forEach((button) => {
+      button.disabled = headers.length === 0;
+      button.setAttribute('aria-pressed', allCollapsed ? 'true' : 'false');
+      setDisclosureButtonState(button, !allCollapsed, 'Collapse all categories', 'Expand all categories');
+    });
+  }
+
+  function toggleAllCategoriesCollapsed() {
+    const headers = getVisibleCategoryHeaders();
+    if (!headers.length) return;
+    const nextCollapsed = !headers.every((header) => isCategoryCollapsed(header));
+    headers.forEach((header) => setCategoryCollapsed(header, nextCollapsed));
+    applyCategoryCollapseState();
+    try {
+      if (typeof isListViewActive === 'function' && isListViewActive()) {
+        buildListViewFromCards();
+        if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
+      }
+    } catch (_) {}
+  }
+
+  const toggleAllCategoriesButtons = document.querySelectorAll('#toggle-all-categories-btn, #toggle-all-categories-btn-card');
+  toggleAllCategoriesButtons.forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleAllCategoriesCollapsed();
+    });
+  });
+
+  try { window.syncGlobalCategoryCollapseToggle = syncGlobalCategoryCollapseToggle; } catch (_) {}
+  syncGlobalCategoryCollapseToggle();
 
   initializeFilterListeners();
   wireToggleViewButton();
@@ -2669,7 +4477,7 @@ function createFilterUI() {
 // Dynamically set CSS variable for sticky offsets based on actual topbar height
 function updateTopbarHeight() {
   // Fixed offset to match sticky top bar height
-  document.documentElement.style.setProperty('--topbar-height', `148px`);
+  document.documentElement.style.setProperty('--topbar-height', `122px`);
 }
 
 // Keep the value current on resize (debounced)
@@ -2702,8 +4510,47 @@ function ensureListViewContainer() {
       /* Sticky header handled separately in HTML */
       #line-items-table-container { position: relative; }
       #line-items-table-container > .table-scroll { overflow-x: auto; overflow-y: visible; width: 100%; }
-      #line-items-table-container .estimate-table { border-collapse: separate; border-spacing: 0; }
+      #line-items-table-container .estimate-table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1300px; table-layout: fixed; }
       #line-items-table-container .estimate-table thead { display: none; }
+      #line-items-table-container .estimate-table tfoot { display: none; }
+      #list-view-footer.lvf {
+        position: fixed;
+        bottom: 0px;
+        z-index: 70;
+        display: none;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(10px);
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        box-shadow: 0 16px 36px rgba(15, 23, 42, 0.16);
+        overflow: hidden;
+      }
+      #list-view-footer .lvf-inner {
+        position: relative;
+        will-change: transform;
+      }
+      #list-view-footer table {
+        width: 100%;
+        min-width: 1300px;
+        border-collapse: separate;
+        border-spacing: 0;
+        table-layout: fixed;
+      }
+      #list-view-footer tfoot td {
+        padding: 10px 8px;
+        font-size: 15px;
+        color: #0f172a;
+        background: transparent;
+        white-space: nowrap;
+      }
+      #list-view-footer .lvf-label-cell {
+        text-align: right;
+        font-weight: 700;
+      }
+      #list-view-footer tfoot [data-footer-field] {
+        text-align: right;
+        font-weight: 700;
+      }
 
       
 
@@ -2742,6 +4589,131 @@ function ensureListViewContainer() {
       }
       #line-items-table-container .lv-delete-btn:active {
         transform: translateY(1px);
+      }
+      #line-items-table-container .lv-split-btn {
+        background: #fff7ed;
+        color: #9a3412;
+        border: 1px solid #fdba74;
+        border-radius: 8px;
+        padding: 4px 8px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
+      }
+      #line-items-table-container .lv-split-btn:hover:not(:disabled) {
+        background: #fed7aa;
+        color: #7c2d12;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      }
+      #line-items-table-container .lv-split-btn:active:not(:disabled) {
+        transform: translateY(1px);
+      }
+      #line-items-table-container .lv-split-btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      #line-items-table-container .lv-split-group-row td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #e5e7eb;
+        background: #fffaf0;
+      }
+      #line-items-table-container .lv-category-group-row td {
+        padding: 8px 6px;
+        border-bottom: 1px solid #dbeafe;
+        background: #eff6ff;
+        box-shadow: inset 0 -1px 0 #dbeafe;
+      }
+      #line-items-table-container .lv-category-group-row td:first-child {
+        border-left: 4px solid #2563eb;
+      }
+      #line-items-table-container .lv-category-group-main {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      #line-items-table-container .lv-category-group-kicker {
+        font-size: 12px;
+        font-weight: 800;
+        color: #1d4ed8;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+      #line-items-table-container .lv-category-group-label {
+        min-width: 0;
+        color: #0f172a;
+        font-size: 14px;
+        font-weight: 700;
+        outline: none;
+      }
+      #line-items-table-container .lv-category-group-label:focus {
+        color: #1d4ed8;
+      }
+      #line-items-table-container .lv-category-group-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        justify-content: flex-end;
+      }
+      #line-items-table-container .lv-category-group-item .lv-category-group-meta {
+        justify-content: center;
+      }
+      #line-items-table-container .lv-category-group-count {
+        font-size: 14px;
+        color: #1d4ed8;
+        font-weight: 600;
+      }
+      #line-items-table-container .lv-category-group-total {
+        text-align: right;
+        width: 100%;
+        min-width: 0;
+        font-weight: 600;
+      }
+      #line-items-table-container .lv-split-group-toggle {
+        --toggle-color: #9a3412;
+        --toggle-border: #fed7aa;
+        --toggle-hover-bg: #ffedd5;
+        --toggle-shadow: rgba(245, 158, 11, 0.22);
+      }
+      #line-items-table-container .lv-split-group-toggle:hover {
+        border-color: #fdba74;
+      }
+      #line-items-table-container .lv-category-collapse-btn {
+        --toggle-color: #1d4ed8;
+        --toggle-border: #dbeafe;
+        --toggle-hover-bg: #dbeafe;
+        --toggle-shadow: rgba(59, 130, 246, 0.18);
+      }
+      #line-items-table-container .lv-category-collapse-btn:hover {
+        border-color: #93c5fd;
+      }
+      #line-items-table-container .lv-category-collapse-btn:active {
+        transform: translateY(1px) scale(0.98);
+      }
+      #line-items-table-container .lv-cat-inline-label {
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      #line-items-table-container .lv-inline-split-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+        min-width: 0;
+      }
+      #line-items-table-container .lv-inline-split-meta {
+        font-size: 12px;
+        font-weight: 700;
+        color: #9a3412;
+        background: #fff7ed;
+        border: 1px solid #fdba74;
+        border-radius: 999px;
+        padding: 4px 10px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 240px;
       }
       /* Unassign icon button (only shows when assigned) */
       #line-items-table-container .lv-unassign-btn {
@@ -2793,24 +4765,245 @@ function ensureListViewContainer() {
         color: #374151; /* slate-700 */
       }
       #line-items-table-container .lv-detail-photos {
-        flex: 2 1 640px;
+        flex: 1 1 560px;
+        max-width: 720px;
         display: flex;
         gap: 18px;
       }
-      #line-items-table-container .lv-thumb-row {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      #line-items-table-container .lv-thumb-row img {
-        width: 128px;
-        height: 96px;
-        object-fit: cover;
-        border-radius: 6px;
+      #line-items-table-container .lv-photo-panel {
+        flex: 1 1 320px;
+        max-width: 350px;
+        min-width: 0;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
         border: 1px solid #e5e7eb;
-        background: #fff;
+        border-radius: 14px;
+        padding: 12px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+      }
+      #line-items-table-container .lv-photo-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+      #line-items-table-container .lv-photo-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 28px;
+        height: 28px;
+        padding: 0 9px;
+        border-radius: 999px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      #line-items-table-container .lv-photo-panel-tools {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      #line-items-table-container .lv-photo-add-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        border: 1px solid #bfdbfe;
+        background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+        color: #1d4ed8;
+        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.14);
         cursor: pointer;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        transition: transform 0.12s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+      }
+      #line-items-table-container .lv-photo-add-btn:hover {
+        transform: translateY(-1px);
+        border-color: #60a5fa;
+        box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+      }
+      #line-items-table-container .lv-photo-add-btn:active {
+        transform: translateY(1px);
+      }
+      #line-items-table-container .lv-photo-add-btn svg {
+        display: block;
+      }
+      #line-items-table-container .lv-photo-upload-input {
+        display: none;
+      }
+      #line-items-table-container .lv-photo-slider {
+        position: relative;
+      }
+      #line-items-table-container .lv-photo-viewport {
+        overflow: hidden;
+        border-radius: 12px;
+      }
+      #line-items-table-container .lv-photo-track {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scroll-behavior: smooth;
+        scrollbar-width: none;
+        padding-bottom: 6px;
+      }
+      #line-items-table-container .lv-photo-track::-webkit-scrollbar {
+        display: none;
+      }
+      #line-items-table-container .lv-photo-card {
+        flex: 0 0 calc(50% - 6px);
+        min-width: 180px;
+        max-width: 240px;
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #e5e7eb;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+        scroll-snap-align: start;
+        cursor: pointer;
+      }
+      #line-items-table-container .lv-photo-card img {
+        display: block;
+        width: 100%;
+        height: 144px;
+        object-fit: cover;
+      }
+      #line-items-table-container .lv-photo-card::after {
+        content: '';
+        position: absolute;
+        inset: auto 0 0 0;
+        height: 48%;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.6) 100%);
+        pointer-events: none;
+      }
+      #line-items-table-container .lv-photo-card-index {
+        position: absolute;
+        left: 10px;
+        bottom: 10px;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.16);
+        backdrop-filter: blur(8px);
+        color: #ffffff;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      #line-items-table-container .lv-photo-delete-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 2;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.72);
+        color: #ffffff;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
+        cursor: pointer;
+        transition: transform 0.12s ease, background 0.16s ease, box-shadow 0.16s ease;
+      }
+      #line-items-table-container .lv-photo-delete-btn:hover {
+        transform: translateY(-1px);
+        background: rgba(220, 38, 38, 0.92);
+        box-shadow: 0 10px 22px rgba(127, 29, 29, 0.28);
+      }
+      #line-items-table-container .lv-photo-delete-btn:active {
+        transform: translateY(1px);
+      }
+      #line-items-table-container .lv-photo-delete-btn svg {
+        display: block;
+      }
+      #line-items-table-container .lv-photo-nav {
+        position: absolute;
+        top: calc(50% - 18px);
+        width: 36px;
+        height: 36px;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.92);
+        color: #0f172a;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+        transition: transform 0.12s ease, box-shadow 0.16s ease, background 0.16s ease;
+      }
+      #line-items-table-container .lv-photo-nav:hover {
+        transform: translateY(-1px);
+        background: #ffffff;
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.2);
+      }
+      #line-items-table-container .lv-photo-nav:active {
+        transform: translateY(1px);
+      }
+      #line-items-table-container .lv-photo-nav.prev {
+        left: 8px;
+      }
+      #line-items-table-container .lv-photo-nav.next {
+        right: 8px;
+      }
+      #line-items-table-container .lv-photo-dots {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        margin-top: 10px;
+      }
+      #line-items-table-container .lv-photo-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #cbd5e1;
+        transition: transform 0.16s ease, background 0.16s ease;
+      }
+      #line-items-table-container .lv-photo-dot.is-active {
+        background: #2563eb;
+        transform: scale(1.35);
+      }
+      #line-items-table-container .lv-photo-empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 144px;
+        border: 1px dashed #cbd5e1;
+        border-radius: 12px;
+        background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      @media (max-width: 1100px) {
+        #line-items-table-container .lv-detail-content {
+          flex-wrap: wrap;
+        }
+        #line-items-table-container .lv-detail-photos {
+          flex: 1 1 100%;
+          max-width: 100%;
+          min-width: 0;
+          flex-wrap: wrap;
+        }
+        #line-items-table-container .lv-photo-panel {
+          min-width: min(100%, 320px);
+          max-width: 100%;
+        }
+      }
+      @media (max-width: 760px) {
+        #line-items-table-container .lv-photo-card {
+          flex-basis: 100%;
+          max-width: none;
+        }
       }
       #line-items-table-container .lv-detail-desc textarea {
         width: 100%;
@@ -2936,7 +5129,7 @@ function ensureListViewContainer() {
       }
     </style>
     <div class="table-scroll" style="border:1px solid #e5e7eb; border-radius:8px;">
-      <table class="estimate-table" style="width:100%; min-width:1040px; border-collapse:separate; border-spacing:0; table-layout:auto;">
+      <table class="estimate-table" style="width:100%; min-width:1300px; border-collapse:separate; border-spacing:0; table-layout:fixed;">
         <!-- No header here; header lives in HTML -->
         <tbody></tbody>
         <tfoot>
@@ -2952,60 +5145,136 @@ function ensureListViewContainer() {
     </div>
   `;
   cards.parentNode.insertBefore(container, cards.nextSibling);
+
+  if (!document.getElementById('list-view-footer')) {
+    const footer = document.createElement('div');
+    footer.id = 'list-view-footer';
+    footer.className = 'lvf';
+    footer.innerHTML = `
+      <div class="lvf-inner">
+        <table class="estimate-table">
+          <tfoot>
+            <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td class="lvf-label-cell">TOTALS:</td>
+              <td data-footer-field="labor">$0.00</td>
+              <td data-footer-field="material">$0.00</td>
+              <td data-footer-field="amount">$0.00</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    `;
+    cards.parentNode.insertBefore(footer, container.nextSibling);
+  }
 }
 
 // Sync the separate HTML header with the body table (widths + horizontal scroll)
 function syncSeparatedListHeader() {
   const header = document.getElementById('list-view-header');
+  const footer = document.getElementById('list-view-footer');
   const scroller = document.querySelector('#line-items-table-container .table-scroll');
+  const tableContainer = document.getElementById('line-items-table-container');
   const bodyTable = document.querySelector('#line-items-table-container .estimate-table');
-  if (!header || !scroller || !bodyTable) return;
+  if (!header || !scroller || !bodyTable || !tableContainer) return;
   const headerTable = header.querySelector('table');
   if (!headerTable) return;
 
-  // Measure header column widths
+  // Lock columns to the declared header widths instead of rendered widths,
+  // otherwise the browser redistributes extra table space back into the first column.
   const ths = headerTable.querySelectorAll('thead th');
   if (!ths.length) return;
-  const widths = Array.from(ths).map(th => th.offsetWidth);
+  const readDeclaredWidth = (th) => {
+    const inlineWidth = Number.parseFloat(th.style.width || '');
+    if (Number.isFinite(inlineWidth) && inlineWidth > 0) return inlineWidth;
+
+    const inlineMinWidth = Number.parseFloat(th.style.minWidth || '');
+    if (Number.isFinite(inlineMinWidth) && inlineMinWidth > 0) return inlineMinWidth;
+
+    const computed = window.getComputedStyle(th);
+    const computedWidth = Number.parseFloat(computed.width || '');
+    if (Number.isFinite(computedWidth) && computedWidth > 0) return computedWidth;
+
+    const computedMinWidth = Number.parseFloat(computed.minWidth || '');
+    if (Number.isFinite(computedMinWidth) && computedMinWidth > 0) return computedMinWidth;
+
+    return th.offsetWidth;
+  };
+  const widths = Array.from(ths).map((th) => readDeclaredWidth(th));
+  const totalWidth = Math.ceil(widths.reduce((sum, width) => sum + width, 0));
 
   // Create/replace colgroups so columns lock to same widths
   const colgroupHTML = widths.map(w => `<col style="width:${w}px">`).join('');
   let hg = headerTable.querySelector('colgroup');
   if (!hg) { hg = document.createElement('colgroup'); headerTable.insertBefore(hg, headerTable.firstChild); }
   hg.innerHTML = colgroupHTML;
+  headerTable.style.width = '100%';
+  headerTable.style.minWidth = `${totalWidth}px`;
   let bg = bodyTable.querySelector('colgroup');
   if (!bg) { bg = document.createElement('colgroup'); bodyTable.insertBefore(bg, bodyTable.firstChild); }
   bg.innerHTML = colgroupHTML;
+  bodyTable.style.width = '100%';
+  bodyTable.style.minWidth = `${totalWidth}px`;
+  const footerTable = footer?.querySelector('table');
+  if (footerTable) {
+    let fg = footerTable.querySelector('colgroup');
+    if (!fg) { fg = document.createElement('colgroup'); footerTable.insertBefore(fg, footerTable.firstChild); }
+    fg.innerHTML = colgroupHTML;
+    footerTable.style.width = '100%';
+    footerTable.style.minWidth = `${totalWidth}px`;
+  }
+
+  if (footer) {
+    const rect = tableContainer.getBoundingClientRect();
+    footer.style.left = `${Math.max(0, rect.left)}px`;
+    footer.style.width = `${Math.max(0, rect.width)}px`;
+  }
 
   // Sync horizontal scroll position
   const inner = header.querySelector('.lvh-inner');
+  const footerInner = footer?.querySelector('.lvf-inner') || null;
   if (inner) {
     const isMobile = window.matchMedia && window.matchMedia('(max-width: 480px)').matches;
     if (isMobile) {
       // In mobile mode, let the header inner scroll natively and mirror scrollLeft
       inner.style.transform = '';
       try { inner.scrollLeft = scroller.scrollLeft; } catch(_) {}
+      if (footerInner) {
+        footerInner.style.transform = '';
+        try { footerInner.scrollLeft = scroller.scrollLeft; } catch(_) {}
+      }
     } else {
       inner.style.transform = `translateX(${-scroller.scrollLeft}px)`;
+      if (footerInner) footerInner.style.transform = `translateX(${-scroller.scrollLeft}px)`;
     }
   }
 }
 
 function initSeparatedListHeader() {
   const header = document.getElementById('list-view-header');
+  const footer = document.getElementById('list-view-footer');
   const scroller = document.querySelector('#line-items-table-container .table-scroll');
-  if (!header || !scroller) return;
+  if (!header || !scroller || !footer) return;
 
   syncSeparatedListHeader();
   const inner = header.querySelector('.lvh-inner');
+  const footerInner = footer.querySelector('.lvf-inner');
   const isMobile = window.matchMedia && window.matchMedia('(max-width: 480px)').matches;
-  if (isMobile && inner) {
+  if (isMobile && inner && footerInner) {
     // Two-way scroll sync for mobile: scrolling header scrolls body and vice-versa
     if (!scroller.__lvhMobileBound) {
       let syncing = false;
       const syncFromScroller = () => {
         if (syncing) return; syncing = true;
         try { inner.scrollLeft = scroller.scrollLeft; } catch(_) {}
+        try { footerInner.scrollLeft = scroller.scrollLeft; } catch(_) {}
         syncing = false;
       };
       const syncFromHeader = () => {
@@ -3013,11 +5282,19 @@ function initSeparatedListHeader() {
         try { scroller.scrollLeft = inner.scrollLeft; } catch(_) {}
         syncing = false;
       };
+      const syncFromFooter = () => {
+        if (syncing) return; syncing = true;
+        try { scroller.scrollLeft = footerInner.scrollLeft; } catch(_) {}
+        try { inner.scrollLeft = footerInner.scrollLeft; } catch(_) {}
+        syncing = false;
+      };
       scroller.addEventListener('scroll', syncFromScroller, { passive: true });
       inner.addEventListener('scroll', syncFromHeader, { passive: true });
+      footerInner.addEventListener('scroll', syncFromFooter, { passive: true });
       scroller.__lvhMobileBound = true;
       scroller.__lvhMobileSyncFrom = syncFromScroller;
       inner.__lvhMobileSyncFrom = syncFromHeader;
+      footerInner.__lvhMobileSyncFrom = syncFromFooter;
     }
   } else {
     // Desktop/tablet: translate header to mirror scroller X
@@ -3025,6 +5302,8 @@ function initSeparatedListHeader() {
       scroller.addEventListener('scroll', () => {
         const inner2 = header.querySelector('.lvh-inner');
         if (inner2) inner2.style.transform = `translateX(${-scroller.scrollLeft}px)`;
+        const footerInner2 = footer.querySelector('.lvf-inner');
+        if (footerInner2) footerInner2.style.transform = `translateX(${-scroller.scrollLeft}px)`;
       }, { passive: true });
       scroller.__lvhBound = true;
     }
@@ -3173,7 +5452,7 @@ function buildCardItemSignature(card) {
   while (header && !header.classList.contains('category-header')) {
     header = header.previousElementSibling;
   }
-  const categoryName = header ? (header.querySelector('.category-title span')?.textContent?.trim() || '') : '';
+  const categoryName = header ? (header.querySelector('.category-title span[contenteditable]')?.textContent?.trim() || '') : '';
   const name = card.querySelector('.item-name')?.value?.trim() || '';
   const description = card.querySelector('.item-description')?.value?.trim() || '';
   const unitPrice = Number.parseFloat(card.querySelector('.item-price')?.value || '0') || 0;
@@ -3237,13 +5516,20 @@ function isListViewActive() {
   return tableContainer && tableContainer.style.display !== 'none';
 }
 
+function shouldUseFilteredTotalsForMobileFooter() {
+  if (typeof isListViewActive === 'function' && isListViewActive()) return false;
+  return Array.from(document.querySelectorAll('.line-item-card')).some((card) => card.dataset.filterVisible === 'false');
+}
+
 function showCardView() {
   const cards = document.getElementById('line-items-cards');
   const tableContainer = document.getElementById('line-items-table-container');
   const header = document.getElementById('list-view-header');
+  const footer = document.getElementById('list-view-footer');
   if (cards) cards.style.display = '';
   if (tableContainer) tableContainer.style.display = 'none';
   if (header) header.style.display = 'none';
+  if (footer) footer.style.display = 'none';
   const icon = document.getElementById('toggle-view-icon');
   const label = document.getElementById('toggle-view-label');
   if (icon) icon.setAttribute('data-mode', 'card');
@@ -3261,6 +5547,12 @@ function showCardView() {
       areas.forEach((ta) => { try { (window.autoResizeTextarea || autoResizeTextarea)(ta); } catch (_) {} });
     });
   } catch (_) {}
+  try { if (typeof applyCategoryCollapseState === 'function') applyCategoryCollapseState(); } catch (_) {}
+  try {
+    if (typeof updateTableFooterTotals === 'function') {
+      updateTableFooterTotals(shouldUseFilteredTotalsForMobileFooter());
+    }
+  } catch (_) {}
 }
 
 function showListView() {
@@ -3269,9 +5561,11 @@ function showListView() {
   const cards = document.getElementById('line-items-cards');
   const tableContainer = document.getElementById('line-items-table-container');
   const header = document.getElementById('list-view-header');
+  const footer = document.getElementById('list-view-footer');
   if (cards) cards.style.display = 'none';
   if (tableContainer) tableContainer.style.display = '';
   if (header) header.style.display = '';
+  if (footer) footer.style.display = 'block';
   const icon = document.getElementById('toggle-view-icon');
   const label = document.getElementById('toggle-view-label');
   if (icon) icon.setAttribute('data-mode', 'list');
@@ -3327,12 +5621,189 @@ function buildListViewFromCards() {
   const tbody = document.querySelector('#line-items-table-container .estimate-table tbody');
   if (!tbody) return;
   tbody.innerHTML = '';
+  const tableColCount = document.querySelectorAll('#line-items-table-container thead th').length || 12;
   const formatter = (n) => `$${(Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}`;
   // Helpers for numeric formatting/parsing (inputs show commas; calculations use raw numbers)
   const fmtNum = (n) => (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const parseNum = (s) => {
     const v = parseFloat(String(s ?? '').replace(/[$,\s]/g, ''));
     return isNaN(v) ? 0 : v;
+  };
+  const createCategoryCollapseButton = (header, collapsed) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'lv-category-collapse-btn estimate-disclosure-btn';
+    setDisclosureButtonState(button, !collapsed, 'Collapse category', 'Expand category');
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setCategoryCollapsed(header, !isCategoryCollapsed(header));
+      try { if (typeof applyCategoryCollapseState === 'function') applyCategoryCollapseState(); } catch (_) {}
+      buildListViewFromCards();
+      if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
+    });
+    return button;
+  };
+  const createCategoryAddButton = (header) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'lv-add-btn';
+    button.title = 'Add line item to this category';
+    button.textContent = '+';
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      try {
+        if (window.addLineItemCard) {
+          window.addLineItemCard({}, header);
+        } else if (typeof addLineItemCard === 'function') {
+          addLineItemCard({}, header);
+        }
+        scheduleListViewRebuild(300);
+      } catch (err) {
+        console.warn('Failed to add line item from category row', err);
+      }
+    });
+    return button;
+  };
+  const createEditableCategoryLabel = (header, categoryName) => {
+    const label = document.createElement('span');
+    label.className = 'lv-category-group-label';
+    label.textContent = categoryName;
+    label.setAttribute('contenteditable', 'true');
+    label.addEventListener('focus', () => {
+      label.dataset.orig = label.textContent || '';
+      try {
+        const range = document.createRange();
+        range.selectNodeContents(label);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } catch (_) {}
+    });
+    label.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') { event.preventDefault(); label.blur(); }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        label.textContent = label.dataset.orig || categoryName;
+        label.blur();
+      }
+    });
+    label.addEventListener('blur', () => {
+      const newName = (label.textContent || '').trim();
+      const oldName = label.dataset.orig || '';
+      if (!newName) {
+        label.textContent = oldName || categoryName;
+        return;
+      }
+      if (newName === oldName) return;
+      try {
+        const titleSpan = header?.querySelector('.category-title span[contenteditable]');
+        if (titleSpan) {
+          titleSpan.textContent = newName;
+          titleSpan.dispatchEvent(new Event('input', { bubbles: true }));
+          if (typeof autoSaveEstimate === 'function') autoSaveEstimate();
+        }
+        try { if (typeof populateFilterOptions === 'function') populateFilterOptions(); } catch (_) {}
+        scheduleListViewRebuild(200);
+      } catch (error) {
+        console.warn('Failed to update category name from list view header', error);
+      }
+    });
+    return label;
+  };
+  const createCategoryHeaderRow = (header, categoryName, visibleCount, collapsed, totalAmount) => {
+    const row = document.createElement('tr');
+    row.className = 'lv-category-group-row';
+    row.setAttribute('data-category-key', ensureCategoryCollapseKey(header, categoryName));
+    const emptyCell = () => {
+      const td = document.createElement('td');
+      td.innerHTML = '&nbsp;';
+      return td;
+    };
+
+    const leadCell = document.createElement('td');
+    const categoryHandle = document.createElement('button');
+    categoryHandle.type = 'button';
+    categoryHandle.className = 'lv-drag-handle';
+    categoryHandle.textContent = '::';
+    categoryHandle.title = 'Drag category';
+    categoryHandle.draggable = true;
+    categoryHandle.addEventListener('dragstart', (event) => {
+      if (typeof window.__estimateEditBeginEstimateDrag === 'function') {
+        window.__estimateEditBeginEstimateDrag({ type: 'category', categoryKey: ensureCategoryCollapseKey(header, categoryName) });
+      }
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+    });
+    categoryHandle.addEventListener('dragend', () => {
+      if (typeof window.__estimateEditEndEstimateDrag === 'function') {
+        window.__estimateEditEndEstimateDrag();
+      }
+    });
+    leadCell.appendChild(categoryHandle);
+    row.appendChild(leadCell);
+
+    const mainCell = document.createElement('td');
+    const main = document.createElement('div');
+    main.className = 'lv-category-group-main';
+    const collapseBtn = createCategoryCollapseButton(header, collapsed);
+    const label = createEditableCategoryLabel(header, categoryName);
+    main.prepend(collapseBtn);
+    main.appendChild(label);
+    mainCell.appendChild(main);
+    row.appendChild(mainCell);
+
+    const itemCell = document.createElement('td');
+    itemCell.className = 'lv-category-group-item';
+    const itemMeta = document.createElement('div');
+    itemMeta.className = 'lv-category-group-meta';
+    itemMeta.innerHTML = `<span class="lv-category-group-count">${visibleCount} line item${visibleCount === 1 ? '' : 's'}</span>`;
+    itemCell.appendChild(itemMeta);
+    row.appendChild(itemCell);
+
+    row.appendChild(emptyCell());
+    row.appendChild(emptyCell());
+    row.appendChild(emptyCell());
+    row.appendChild(emptyCell());
+    row.appendChild(emptyCell());
+
+    const totalCell = document.createElement('td');
+    totalCell.className = 'lv-category-group-total';
+    totalCell.textContent = formatter(totalAmount);
+    row.appendChild(totalCell);
+
+    const statusSpacer = emptyCell();
+    row.appendChild(statusSpacer);
+
+    row.appendChild(emptyCell());
+
+    const actionCell = document.createElement('td');
+    actionCell.style.textAlign = 'right';
+    actionCell.appendChild(createCategoryAddButton(header));
+    row.appendChild(actionCell);
+    row.addEventListener('dragover', (event) => {
+      const payload = typeof window.__estimateEditGetEstimateDragPayload === 'function'
+        ? window.__estimateEditGetEstimateDragPayload()
+        : null;
+      if (!payload) return;
+      event.preventDefault();
+      if (typeof window.__estimateEditClearEstimateDragHighlights === 'function') {
+        window.__estimateEditClearEstimateDragHighlights();
+      }
+      row.classList.add('lv-category-drop-target');
+    });
+    row.addEventListener('dragleave', () => row.classList.remove('lv-category-drop-target'));
+    row.addEventListener('drop', async (event) => {
+      event.preventDefault();
+      row.classList.remove('lv-category-drop-target');
+      if (typeof window.__estimateEditHandleDroppedItemOnCategory === 'function') {
+        await window.__estimateEditHandleDroppedItemOnCategory(header);
+      }
+      if (typeof window.__estimateEditEndEstimateDrag === 'function') {
+        window.__estimateEditEndEstimateDrag();
+      }
+    });
+    return row;
   };
 
   const headers = document.querySelectorAll('.category-header');
@@ -3342,12 +5813,20 @@ function buildListViewFromCards() {
   headers.forEach(header => {
     // Skip hidden categories
     if (header.style.display === 'none') return;
-    const categoryName = header.querySelector('.category-title span')?.textContent?.trim() || '';
+    const categoryName = header.querySelector('.category-title span[contenteditable]')?.textContent?.trim() || '';
+    const visibleCategoryCards = getCategoryCards(header).filter((card) => card.dataset.filterVisible !== 'false');
+    const categoryCollapsed = isCategoryCollapsed(header);
+    const categoryTotalAmount = getCategoryTotalAmount(header);
+    frag.appendChild(createCategoryHeaderRow(header, categoryName, visibleCategoryCards.length, categoryCollapsed, categoryTotalAmount));
+    if (categoryCollapsed) {
+      return;
+    }
     let nextEl = header.nextElementSibling;
     let rowsForThisCategory = 0;
     while (nextEl && !nextEl.classList.contains('category-header')) {
       if (nextEl.classList.contains('line-item-card') && nextEl.style.display !== 'none') {
         const card = nextEl;
+        const splitGroupId = card.dataset.splitGroupId || '';
         const name = card.querySelector('.item-name')?.value || '';
         const mode = card.querySelector('.item-calc-mode')?.value || 'each';
         const qty = parseFloat(card.querySelector('.item-quantity')?.value) || 0;
@@ -3367,6 +5846,23 @@ function buildListViewFromCards() {
         const tr = document.createElement('tr');
         tr.setAttribute('data-card-id', card.getAttribute('data-item-id'));
 
+        const splitGroupInfo = splitGroupId && typeof window.__estimateEditGetSplitGroupDisplayInfo === 'function'
+          ? window.__estimateEditGetSplitGroupDisplayInfo(splitGroupId)
+          : null;
+        const isFirstSplitGroupCard = !!(splitGroupInfo && splitGroupInfo.cards[0] === card);
+
+        const listCollapsedState = window.__splitGroupCollapsedState || {};
+        if (splitGroupId && listCollapsedState[splitGroupId] && !isFirstSplitGroupCard) {
+          nextEl = nextEl.nextElementSibling;
+          continue;
+        }
+
+        if (splitGroupId) {
+          const theme = getSplitGroupTheme(splitGroupId) || { border: '#f59e0b', background: '#fffbeb', chipBackground: '#fef3c7', chipColor: '#92400e' };
+          tr.style.background = `linear-gradient(90deg, ${theme.background} 0, #ffffff 56px)`;
+          tr.style.boxShadow = `inset 4px 0 0 ${theme.border}`;
+        }
+
         // Helpers to find the matching card elements
         const getCardInput = (selector) => card.querySelector(selector);
         const syncAndRebuild = () => {
@@ -3382,13 +5878,41 @@ function buildListViewFromCards() {
         };
 
         // Select checkbox
-  const tdSelect = document.createElement('td');
-  tdSelect.style.cssText = 'padding:4px 2px; font-size:15px; border-bottom:1px solid #f1f5f9; width:26px; min-width:26px;';
+    const tdSelect = document.createElement('td');
+    tdSelect.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; width:56px; min-width:56px;';
+        const selectStack = document.createElement('div');
+        selectStack.className = 'lv-drag-select-stack';
+        selectStack.style.display = 'flex';
+        selectStack.style.flexDirection = 'column';
+        selectStack.style.alignItems = 'center';
+        selectStack.style.justifyContent = 'center';
+        selectStack.style.gap = '6px';
+        selectStack.style.minWidth = '100%';
+        const itemHandle = document.createElement('button');
+        itemHandle.type = 'button';
+        itemHandle.className = 'lv-drag-handle';
+        itemHandle.textContent = '::';
+        itemHandle.title = 'Drag line item';
+        itemHandle.draggable = true;
+        itemHandle.style.margin = '0';
+        itemHandle.addEventListener('dragstart', (event) => {
+          if (typeof window.__estimateEditBeginEstimateDrag === 'function') {
+            window.__estimateEditBeginEstimateDrag({ type: 'item', itemId: card.getAttribute('data-item-id') });
+          }
+          if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+        });
+        itemHandle.addEventListener('dragend', () => {
+          if (typeof window.__estimateEditEndEstimateDrag === 'function') {
+            window.__estimateEditEndEstimateDrag();
+          }
+        });
         const selectCb = document.createElement('input');
         selectCb.type = 'checkbox';
   // Remove default checkbox margins and center compactly
   selectCb.style.display = 'block';
   selectCb.style.margin = '0 auto';
+    selectCb.style.width = '15px';
+    selectCb.style.height = '15px';
         const cardCb = getCardInput('.line-item-select');
         if (cardCb) {
           selectCb.checked = cardCb.checked;
@@ -3400,7 +5924,9 @@ function buildListViewFromCards() {
             cardCb.dispatchEvent(new Event('change', { bubbles: true }));
           }
         });
-        tdSelect.appendChild(selectCb);
+        selectStack.appendChild(itemHandle);
+        selectStack.appendChild(selectCb);
+        tdSelect.appendChild(selectStack);
         tr.appendChild(tdSelect);
 
   // Category with toggle arrow
@@ -3409,77 +5935,18 @@ function buildListViewFromCards() {
   const catWrap = document.createElement('div');
   catWrap.className = 'lv-cat-wrap';
   const toggleBtn = document.createElement('button');
-  toggleBtn.className = 'lv-toggle-btn';
+  toggleBtn.className = 'lv-toggle-btn estimate-disclosure-btn estimate-disclosure-btn-slate';
   toggleBtn.type = 'button';
   toggleBtn.setAttribute('aria-expanded', 'false');
   toggleBtn.title = 'Show details';
-  toggleBtn.innerHTML = '<svg aria-hidden="true" viewBox="0 0 20 20" width="14" height="14" fill="currentColor"><path d="M7.293 14.707a1 1 0 0 1 0-1.414L10.586 10 7.293 6.707a1 1 0 1 1 1.414-1.414l4 4a1 1 0 0 1 0 1.414l-4 4a1 1 0 0 1-1.414 0z"></path></svg>';
+  toggleBtn.innerHTML = getDisclosureIconSvg();
   const catLabel = document.createElement('span');
-  catLabel.className = 'lv-cat-label';
+  catLabel.className = 'lv-cat-inline-label';
   catLabel.textContent = categoryName;
-  catLabel.setAttribute('contenteditable', 'true');
-  // Category inline edit behavior
-  catLabel.addEventListener('focus', () => {
-    catLabel.dataset.orig = catLabel.textContent || '';
-    // Select all text for quick overwrite
-    try {
-      const range = document.createRange();
-      range.selectNodeContents(catLabel);
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-    } catch (_) {}
-  });
-  catLabel.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); catLabel.blur(); }
-    if (e.key === 'Escape') { e.preventDefault(); catLabel.textContent = catLabel.dataset.orig || categoryName; catLabel.blur(); }
-  });
-  catLabel.addEventListener('blur', () => {
-    const newName = (catLabel.textContent || '').trim();
-    const oldName = catLabel.dataset.orig || '';
-    if (!newName) { catLabel.textContent = oldName || categoryName; return; }
-    if (newName === oldName) return;
-    // Push change to the underlying category header title span
-    try {
-      const titleSpan = header && header.querySelector('.category-title span');
-      if (titleSpan) {
-        titleSpan.textContent = newName;
-        // Dispatch input so any dependent UI updates run
-        titleSpan.dispatchEvent(new Event('input', { bubbles: true }));
-        // Trigger autosave explicitly only when modified
-        try { if (typeof autoSaveEstimate === 'function') autoSaveEstimate(); } catch (_) {}
-      }
-      // Refresh filters and list view to reflect updated category name
-      try { if (typeof populateFilterOptions === 'function') populateFilterOptions(); } catch (_) {}
-      scheduleListViewRebuild(200);
-    } catch (e) { console.warn('Failed to update category name from list view', e); }
-  });
-  // "+" Add line item button for this category
-  const addBtn = document.createElement('button');
-  addBtn.className = 'lv-add-btn';
-  addBtn.type = 'button';
-  addBtn.title = 'Add line item to this category';
-  addBtn.textContent = '+';
-  addBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    try {
-      // Insert directly below this item's underlying card
-      if (window.addLineItemCard) {
-        window.addLineItemCard({}, null, card);
-      } else if (typeof addLineItemCard === 'function') {
-        addLineItemCard({}, null, card);
-      }
-      // Rebuild list shortly to show the new row; card view handles focus/scroll
-      scheduleListViewRebuild(300);
-    } catch (err) {
-      console.warn('Failed to add line item from list view', err);
-    }
-  });
   // Group left-side icons together before the label
   const iconGroup = document.createElement('div');
   iconGroup.className = 'lv-icon-group';
   iconGroup.appendChild(toggleBtn);
-  iconGroup.appendChild(addBtn);
   catWrap.appendChild(iconGroup);
   catWrap.appendChild(catLabel);
   tdCat.appendChild(catWrap);
@@ -3613,9 +6080,58 @@ function buildListViewFromCards() {
           syncAndRebuild();
           // autosave comes from underlying card blur handler
         });
+        if (splitGroupInfo && isFirstSplitGroupCard) {
+          const splitWrap = document.createElement('div');
+          splitWrap.className = 'lv-inline-split-wrap';
+          splitWrap.innerHTML = `
+            <button type="button" class="lv-inline-split-toggle estimate-disclosure-btn estimate-disclosure-btn-amber" aria-expanded="${splitGroupInfo.isCollapsed ? 'false' : 'true'}" style="--toggle-color:${splitGroupInfo.theme.chipColor}; --toggle-border:${splitGroupInfo.theme.chipBackground};" title="${splitGroupInfo.isCollapsed ? 'Expand split payments' : 'Collapse split payments'}">${getDisclosureIconSvg()}</button>
+            <span class="lv-inline-split-meta" title="${splitGroupInfo.summary} • Labor ${formatter(splitGroupInfo.combinedLaborTotal)}">${splitGroupInfo.summary} • Labor ${formatter(splitGroupInfo.combinedLaborTotal)}</span>
+          `;
+          splitWrap.querySelector('.lv-inline-split-toggle')?.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const collapsedState = window.__splitGroupCollapsedState || {};
+            collapsedState[splitGroupId] = !collapsedState[splitGroupId];
+            try { window.__splitGroupCollapsedState = collapsedState; } catch (_) {}
+            try { rebuildSplitGroupHeaders(); } catch (_) {}
+            buildListViewFromCards();
+            if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
+          });
+          tdName.appendChild(splitWrap);
+        }
         tdName.appendChild(nameInput);
         tdName.appendChild(nameSuggest);
         tr.appendChild(tdName);
+        tr.addEventListener('dragover', (event) => {
+          const payload = typeof window.__estimateEditGetEstimateDragPayload === 'function'
+            ? window.__estimateEditGetEstimateDragPayload()
+            : null;
+          if (!payload || payload.type !== 'item') return;
+          event.preventDefault();
+          const rect = tr.getBoundingClientRect();
+          const placeAfter = event.clientY > rect.top + (rect.height / 2);
+          if (typeof window.__estimateEditClearEstimateDragHighlights === 'function') {
+            window.__estimateEditClearEstimateDragHighlights();
+          }
+          tr.classList.add(placeAfter ? 'lv-item-drop-bottom' : 'lv-item-drop-top');
+        });
+        tr.addEventListener('dragleave', () => tr.classList.remove('lv-item-drop-top', 'lv-item-drop-bottom'));
+        tr.addEventListener('drop', async (event) => {
+          const payload = typeof window.__estimateEditGetEstimateDragPayload === 'function'
+            ? window.__estimateEditGetEstimateDragPayload()
+            : null;
+          if (!payload || payload.type !== 'item') return;
+          event.preventDefault();
+          const rect = tr.getBoundingClientRect();
+          const placeAfter = event.clientY > rect.top + (rect.height / 2);
+          tr.classList.remove('lv-item-drop-top', 'lv-item-drop-bottom');
+          if (typeof window.__estimateEditHandleDroppedItemOnCard === 'function') {
+            await window.__estimateEditHandleDroppedItemOnCard(card, placeAfter);
+          }
+          if (typeof window.__estimateEditEndEstimateDrag === 'function') {
+            window.__estimateEditEndEstimateDrag();
+          }
+        });
 
         // Mode select
   const tdMode = document.createElement('td');
@@ -3902,6 +6418,7 @@ function buildListViewFromCards() {
         statusSelect.className = 'item-status-dropdown';
         const statusToClass = (s) => {
           switch ((s || '').toLowerCase()) {
+            case 'new': return 'status-in-progress';
             case 'in-progress': return 'status-in-progress';
             case 'completed': return 'status-completed';
             case 'approved': return 'status-completed'; // match card style
@@ -3972,9 +6489,22 @@ function buildListViewFromCards() {
         }
         tr.appendChild(tdAssigned);
 
-        // Actions (Delete)
+          // Actions (Split/Delete)
   const tdActions = document.createElement('td');
-  tdActions.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:64px;';
+        tdActions.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:132px;';
+          const actionsWrap = document.createElement('div');
+          actionsWrap.style.display = 'flex';
+          actionsWrap.style.alignItems = 'center';
+          actionsWrap.style.gap = '6px';
+          const splitBtn = document.createElement('button');
+          splitBtn.textContent = 'Split';
+          splitBtn.className = 'lv-split-btn';
+          splitBtn.disabled = !!getCardInput('.line-item-select')?.disabled;
+          splitBtn.title = splitBtn.disabled ? 'Unassign line item before splitting' : 'Split this line item';
+          splitBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await runSplitFlowForCard(card);
+          });
         const delBtn = document.createElement('button');
         delBtn.textContent = '🗑️';
         delBtn.className = 'lv-delete-btn';
@@ -3984,7 +6514,9 @@ function buildListViewFromCards() {
           // Rebuild after deletion
           setTimeout(() => { buildListViewFromCards(); updateTableFooterTotals(false); }, 80);
         });
-        tdActions.appendChild(delBtn);
+          actionsWrap.appendChild(splitBtn);
+          actionsWrap.appendChild(delBtn);
+          tdActions.appendChild(actionsWrap);
   tr.appendChild(tdActions);
 
   frag.appendChild(tr);
@@ -3992,7 +6524,7 @@ function buildListViewFromCards() {
 
         // Row-level collapse toggle: show description and photos horizontally beneath
         const itemId = card.getAttribute('data-item-id');
-        const thCount = document.querySelectorAll('#line-items-table-container thead th').length || 12;
+        const thCount = tableColCount;
         function removeExistingDetailRow() {
           const next = tr.nextElementSibling;
           if (next && next.classList && next.classList.contains('lv-detail-row') && next.getAttribute('data-for-id') === itemId) {
@@ -4001,13 +6533,30 @@ function buildListViewFromCards() {
           }
           return false;
         }
-        function renderThumbs(imgUrls) {
+        function renderPhotoSlider(imgUrls, type) {
           if (!Array.isArray(imgUrls) || imgUrls.length === 0) {
-            return '<div class="placeholder" style="color:#6b7280; font-size:12px;">No photos</div>';
+            return '<div class="lv-photo-empty">No photos yet</div>';
           }
-          const list = imgUrls.map(src => `<img src="${src}" alt="photo">`).join('');
-          // Provide an onclick handler via event delegation later
-          return `<div class="lv-thumb-row">${list}</div>`;
+          const cards = imgUrls.map((src, index) => `
+            <div class="lv-photo-card" data-photo-index="${index}">
+              <button type="button" class="lv-photo-delete-btn" data-photo-delete="${index}" aria-label="Delete ${type} photo ${index + 1}" title="Delete photo">
+                <svg aria-hidden="true" viewBox="0 0 20 20" width="12" height="12" fill="currentColor"><path d="M7.5 3.5A1.5 1.5 0 0 1 9 2h2a1.5 1.5 0 0 1 1.5 1.5V4H16a.75.75 0 0 1 0 1.5h-.72l-.64 9.03A2 2 0 0 1 12.65 16H7.35a2 2 0 0 1-1.99-1.47L4.72 5.5H4A.75.75 0 0 1 4 4h3.5v-.5ZM11 4v-.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5V4H11Zm-2 3.25a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0V8A.75.75 0 0 1 9 7.25Zm2.75.75a.75.75 0 0 0-1.5 0v4a.75.75 0 0 0 1.5 0V8Z"></path></svg>
+              </button>
+              <img src="${src}" alt="${type} photo ${index + 1}">
+              <span class="lv-photo-card-index">${index + 1} / ${imgUrls.length}</span>
+            </div>
+          `).join('');
+          const dots = imgUrls.map((_, index) => `<span class="lv-photo-dot${index === 0 ? ' is-active' : ''}" data-dot-index="${index}"></span>`).join('');
+          return `
+            <div class="lv-photo-slider" data-photo-slider="${type}">
+              <button type="button" class="lv-photo-nav prev" aria-label="Previous ${type} photo">&#10094;</button>
+              <div class="lv-photo-viewport">
+                <div class="lv-photo-track">${cards}</div>
+              </div>
+              <button type="button" class="lv-photo-nav next" aria-label="Next ${type} photo">&#10095;</button>
+              <div class="lv-photo-dots">${dots}</div>
+            </div>
+          `;
         }
         function getCardPhotos(type) {
           try {
@@ -4015,6 +6564,14 @@ function buildListViewFromCards() {
             const imgs = Array.from(card.querySelectorAll(sel));
             return imgs.map(img => img.getAttribute('src')).filter(Boolean);
           } catch (_) { return []; }
+        }
+        async function loadDetailPhotosIntoCard() {
+          try {
+            await Promise.all([
+              updatePhotoSection(itemId, 'before'),
+              updatePhotoSection(itemId, 'after')
+            ]);
+          } catch (_) {}
         }
         function createDetailRow() {
           const dtr = document.createElement('tr');
@@ -4047,17 +6604,107 @@ function buildListViewFromCards() {
                 </div>
               </div>
               <div class="lv-detail-photos">
-                <div style="flex:1 1 0;">
-                  <h5>Before Photos</h5>
-                  <div class="lv-before" data-type="before">${renderThumbs(beforeList)}</div>
+                <div class="lv-photo-panel">
+                  <div class="lv-photo-panel-header">
+                    <h5>Before Photos</h5>
+                    <div class="lv-photo-panel-tools">
+                      <span class="lv-photo-count">${beforeList.length}</span>
+                      <button type="button" class="lv-photo-add-btn" data-photo-upload-trigger="before" aria-label="Add before photos" title="Add before photos">
+                        <svg aria-hidden="true" viewBox="0 0 20 20" width="14" height="14" fill="currentColor"><path d="M10 4a1 1 0 0 1 1 1v4h4a1 1 0 1 1 0 2h-4v4a1 1 0 1 1-2 0v-4H5a1 1 0 1 1 0-2h4V5a1 1 0 0 1 1-1z"></path></svg>
+                      </button>
+                      <input type="file" class="lv-photo-upload-input" data-photo-upload-input="before" accept="image/*" multiple>
+                    </div>
+                  </div>
+                  <div class="lv-before" data-type="before">${renderPhotoSlider(beforeList, 'before')}</div>
                 </div>
-                <div style="flex:1 1 0;">
-                  <h5>After Photos</h5>
-                  <div class="lv-after" data-type="after">${renderThumbs(afterList)}</div>
+                <div class="lv-photo-panel">
+                  <div class="lv-photo-panel-header">
+                    <h5>After Photos</h5>
+                    <div class="lv-photo-panel-tools">
+                      <span class="lv-photo-count">${afterList.length}</span>
+                      <button type="button" class="lv-photo-add-btn" data-photo-upload-trigger="after" aria-label="Add after photos" title="Add after photos">
+                        <svg aria-hidden="true" viewBox="0 0 20 20" width="14" height="14" fill="currentColor"><path d="M10 4a1 1 0 0 1 1 1v4h4a1 1 0 1 1 0 2h-4v4a1 1 0 1 1-2 0v-4H5a1 1 0 1 1 0-2h4V5a1 1 0 0 1 1-1z"></path></svg>
+                      </button>
+                      <input type="file" class="lv-photo-upload-input" data-photo-upload-input="after" accept="image/*" multiple>
+                    </div>
+                  </div>
+                  <div class="lv-after" data-type="after">${renderPhotoSlider(afterList, 'after')}</div>
                 </div>
               </div>
             </div>
           `;
+          const wirePhotoSlider = (root, imageList) => {
+            if (!root || !Array.isArray(imageList) || imageList.length === 0) return;
+            const track = root.querySelector('.lv-photo-track');
+            const cards = Array.from(root.querySelectorAll('.lv-photo-card'));
+            const dots = Array.from(root.querySelectorAll('.lv-photo-dot'));
+            const updateActiveDot = () => {
+              if (!track || !cards.length || !dots.length) return;
+              const trackLeft = track.scrollLeft;
+              let activeIndex = 0;
+              let bestDistance = Number.POSITIVE_INFINITY;
+              cards.forEach((photoCard, index) => {
+                const distance = Math.abs(photoCard.offsetLeft - trackLeft);
+                if (distance < bestDistance) {
+                  bestDistance = distance;
+                  activeIndex = index;
+                }
+              });
+              dots.forEach((dot, index) => dot.classList.toggle('is-active', index === activeIndex));
+            };
+            const scrollToIndex = (index) => {
+              const target = cards[index];
+              if (!target || !track) return;
+              track.scrollTo({ left: target.offsetLeft, behavior: 'smooth' });
+            };
+            root.querySelector('.lv-photo-nav.prev')?.addEventListener('click', (event) => {
+              event.preventDefault();
+              const currentIndex = dots.findIndex((dot) => dot.classList.contains('is-active'));
+              scrollToIndex(Math.max(0, currentIndex - 1));
+            });
+            root.querySelector('.lv-photo-nav.next')?.addEventListener('click', (event) => {
+              event.preventDefault();
+              const currentIndex = dots.findIndex((dot) => dot.classList.contains('is-active'));
+              scrollToIndex(Math.min(cards.length - 1, currentIndex + 1));
+            });
+            dots.forEach((dot, index) => {
+              dot.addEventListener('click', () => scrollToIndex(index));
+            });
+            cards.forEach((photoCard, index) => {
+              photoCard.addEventListener('click', () => {
+                try { openPhotoViewer(imageList[index], imageList); } catch (_) {}
+              });
+            });
+            root.querySelectorAll('.lv-photo-delete-btn').forEach((button) => {
+              button.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const photoIndex = Number(button.getAttribute('data-photo-delete'));
+                const targetUrl = imageList[photoIndex];
+                if (!targetUrl) return;
+                deletePhoto(itemId, targetUrl, root.getAttribute('data-photo-slider') || 'before');
+              });
+            });
+            track.addEventListener('scroll', updateActiveDot, { passive: true });
+            updateActiveDot();
+          };
+          wirePhotoSlider(td.querySelector('.lv-before [data-photo-slider="before"]'), beforeList);
+          wirePhotoSlider(td.querySelector('.lv-after [data-photo-slider="after"]'), afterList);
+          ['before', 'after'].forEach((photoType) => {
+            const trigger = td.querySelector(`[data-photo-upload-trigger="${photoType}"]`);
+            const input = td.querySelector(`[data-photo-upload-input="${photoType}"]`);
+            if (!trigger || !input) return;
+            trigger.addEventListener('click', (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              input.value = '';
+              input.click();
+            });
+            input.addEventListener('change', (event) => {
+              event.stopPropagation();
+              uploadPhoto(event, itemId, photoType);
+            });
+          });
           // Wire editable description to underlying card
           const descTa = td.querySelector('.lv-detail-desc-textarea');
           if (descTa) {
@@ -4176,8 +6823,17 @@ function buildListViewFromCards() {
           dtr.appendChild(td);
           return dtr;
         }
+        async function refreshExpandedDetailRowPhotos() {
+          await loadDetailPhotosIntoCard();
+          const current = tr.nextElementSibling;
+          if (!current || !current.classList || !current.classList.contains('lv-detail-row') || current.getAttribute('data-for-id') !== itemId) {
+            return;
+          }
+          const replacement = createDetailRow();
+          current.replaceWith(replacement);
+        }
         // Toggle detail using arrow button only
-        toggleBtn.addEventListener('click', (e) => {
+        toggleBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
           const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
           if (expanded) {
@@ -4195,6 +6851,7 @@ function buildListViewFromCards() {
             toggleBtn.title = 'Hide details';
             // icon rotates via CSS
             try { card.setAttribute('data-lv-expanded', 'true'); } catch (_) {}
+            await refreshExpandedDetailRowPhotos();
           }
         });
 
@@ -4205,6 +6862,9 @@ function buildListViewFromCards() {
             frag.appendChild(detailRow);
             toggleBtn.setAttribute('aria-expanded', 'true');
             toggleBtn.title = 'Hide details';
+            setTimeout(() => {
+              refreshExpandedDetailRowPhotos();
+            }, 0);
           }
         } catch (_) {}
       }
@@ -4212,7 +6872,7 @@ function buildListViewFromCards() {
     }
 
     // If no visible items for this category, render a placeholder row so the category appears
-    if (rowsForThisCategory === 0) {
+    if (rowsForThisCategory === 0 && !categoryCollapsed) {
       const ptr = document.createElement('tr');
       ptr.className = 'lv-empty-category';
 
@@ -4231,7 +6891,7 @@ function buildListViewFromCards() {
       const tdActions = document.createElement('td');
 
       const base = 'padding:4px 6px; border-bottom:1px solid #f1f5f9; font-size:14px;';
-      td0.style.cssText = 'padding:3px 2px; border-bottom:1px solid #f1f5f9; width:26px; min-width:26px;';
+      td0.style.cssText = 'padding:2px 0; border-bottom:1px solid #f1f5f9; width:40px; min-width:40px;';
       tdCat.style.cssText = base + ' min-width:130px; font-weight:600; color:#0f172a;';
       tdItem.style.cssText = base + ' min-width:200px; color:#6b7280; font-style:italic;';
       tdMode.style.cssText = base + ' min-width:70px;';
@@ -4331,7 +6991,7 @@ function populateFilterOptions() {
   
   // Get unique categories from DOM
   const categories = new Set();
-  document.querySelectorAll('.category-header .category-title span').forEach(el => {
+  document.querySelectorAll('.category-header .category-title span[contenteditable]').forEach(el => {
     if (el && el.textContent) {
       categories.add(el.textContent.trim());
     }
@@ -4367,6 +7027,8 @@ function populateFilterOptions() {
       }
     });
   }
+
+  try { refreshBatchCategoryOptions(); } catch (_) {}
 }
 
 // ✅ Apply filters to line items - Card View Only
@@ -4398,7 +7060,7 @@ function applyCardViewFilters(categoryValue, statusValue, vendorValue) {
 
     // Get category name
     const cardCategory = categoryHeader ?
-      categoryHeader.querySelector('.category-title span')?.textContent?.trim() || '' : '';
+      categoryHeader.querySelector('.category-title span[contenteditable]')?.textContent?.trim() || '' : '';
 
 // Get item status from the dropdown value
 const statusDropdown = card.querySelector('.item-status-dropdown');
@@ -4421,9 +7083,11 @@ const cardStatus = statusDropdown ? statusDropdown.value.toLowerCase() : 'new';
 
     // Show or hide based on filter matches
     if (matchesItemName && matchesCategory && matchesStatus && matchesVendor) {
+      card.dataset.filterVisible = 'true';
       card.style.display = '';
       visibleCount++;
     } else {
+      card.dataset.filterVisible = 'false';
       card.style.display = 'none';
       hiddenCount++;
     }
@@ -4437,7 +7101,7 @@ const cardStatus = statusDropdown ? statusDropdown.value.toLowerCase() : 'new';
     // Check next siblings until next category or end
     let nextEl = header.nextElementSibling;
     while (nextEl && !nextEl.classList.contains('category-header')) {
-      if (nextEl.classList.contains('line-item-card') && nextEl.style.display !== 'none') {
+      if (nextEl.classList.contains('line-item-card') && nextEl.dataset.filterVisible !== 'false') {
         hasVisibleCards = true;
         break;
       }
@@ -4447,11 +7111,15 @@ const cardStatus = statusDropdown ? statusDropdown.value.toLowerCase() : 'new';
     header.style.display = hasVisibleCards ? '' : 'none';
   });
 
+  applyCategoryCollapseState();
+
   
   // If list view is active, rebuild the table to reflect current visible cards
   if (isListViewActive && isListViewActive()) {
     buildListViewFromCards();
-    if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false);
+  }
+  if (typeof updateTableFooterTotals === 'function') {
+    updateTableFooterTotals(shouldUseFilteredTotalsForMobileFooter());
   }
 }
 
@@ -4470,8 +7138,18 @@ function clearFilters() {
   
   // Show all cards and category headers
   document.querySelectorAll('.line-item-card, .category-header').forEach(el => {
+    if (el.classList.contains('line-item-card')) el.dataset.filterVisible = 'true';
     el.style.display = '';
   });
+  applyCategoryCollapseState();
+
+  if (typeof isListViewActive === 'function' && isListViewActive()) {
+    if (typeof buildListViewFromCards === 'function') buildListViewFromCards();
+  }
+
+  if (typeof updateTableFooterTotals === 'function') {
+    updateTableFooterTotals(shouldUseFilteredTotalsForMobileFooter());
+  }
   
   // Reset filter counts
   updateFilterCounts();
@@ -4586,8 +7264,10 @@ function clearFilters() {
   
   // Show all cards and category headers
   document.querySelectorAll('.line-item-card, .category-header').forEach(el => {
+    if (el.classList.contains('line-item-card')) el.dataset.filterVisible = 'true';
     el.style.display = '';
   });
+  applyCategoryCollapseState();
   
   // If list view is active, rebuild the table and refresh totals
   try {
@@ -4616,6 +7296,45 @@ function clearFilters() {
 
 // Update table footer totals, optionally only counting visible rows
 function updateTableFooterTotals(filteredOnly = false) {
+  const cardNodes = Array.from(document.querySelectorAll('.line-item-card'));
+  let totalLabor = 0;
+  let totalMaterial = 0;
+  let totalAmount = 0;
+  let totalProfit = 0;
+
+  if (cardNodes.length) {
+    const cardsToSum = filteredOnly
+      ? cardNodes.filter((card) => card.dataset.filterVisible !== 'false')
+      : cardNodes;
+
+    cardsToSum.forEach((card) => {
+      const laborValue = parseFloat(card.querySelector('.item-labor-cost')?.value || '0') || 0;
+      const materialValue = parseFloat(card.querySelector('.item-material-cost')?.value || '0') || 0;
+      const amountValue = typeof getCardLineItemAmount === 'function'
+        ? getCardLineItemAmount(card)
+        : roundCurrency((parseFloat(card.querySelector('.item-quantity')?.value || '0') || 0) * (parseFloat(card.querySelector('.item-price')?.value || '0') || 0));
+
+      totalLabor += laborValue;
+      totalMaterial += materialValue;
+      totalAmount += amountValue;
+    });
+  }
+
+  // Currency formatter with thousands separators
+  const fmt = (n) => {
+    const num = Number(n) || 0;
+    return '$' + num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const mobileFooterLabel = document.getElementById('mobile-footer-label');
+  const mobileFooterLabor = document.getElementById('mobile-footer-labor');
+  const mobileFooterMaterial = document.getElementById('mobile-footer-material');
+  const mobileFooterAmount = document.getElementById('mobile-footer-amount');
+  if (mobileFooterLabel) mobileFooterLabel.textContent = filteredOnly ? 'FILTERED TOTALS:' : 'TOTALS:';
+  if (mobileFooterLabor) mobileFooterLabor.textContent = fmt(totalLabor);
+  if (mobileFooterMaterial) mobileFooterMaterial.textContent = fmt(totalMaterial);
+  if (mobileFooterAmount) mobileFooterAmount.textContent = fmt(totalAmount);
+
   // Prefer the list-view table if visible; otherwise fallback to the first .estimate-table
   const tableContainer = document.getElementById('line-items-table-container');
   const table = (tableContainer && tableContainer.style.display !== 'none')
@@ -4623,11 +7342,7 @@ function updateTableFooterTotals(filteredOnly = false) {
     : document.querySelector('.estimate-table');
   if (!table) return;
 
-  const rows = table.querySelectorAll('tbody tr');
-  let totalLabor = 0;
-  let totalMaterial = 0;
-  let totalAmount = 0;
-  let totalProfit = 0;
+  const rows = cardNodes.length ? [] : table.querySelectorAll('tbody tr');
 
   // Determine column indexes by header labels when possible
   let laborIdx = -1, materialIdx = -1, amountIdx = -1, profitIdx = -1;
@@ -4653,6 +7368,7 @@ function updateTableFooterTotals(filteredOnly = false) {
 
   rows.forEach(row => {
     if (filteredOnly && row.style.display === 'none') return;
+    if (!row.hasAttribute('data-card-id')) return;
     const cells = row.children;
     const cLen = cells.length;
 
@@ -4692,13 +7408,10 @@ function updateTableFooterTotals(filteredOnly = false) {
   });
 
   const footer = table.querySelector('tfoot tr');
-  if (!footer) return;
-
-  // Currency formatter with thousands separators
-  const fmt = (n) => {
-    const num = Number(n) || 0;
-    return '$' + num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
+  const floatingFooter = tableContainer && tableContainer.style.display !== 'none'
+    ? document.querySelector('#list-view-footer tfoot tr')
+    : null;
+  if (!footer && !floatingFooter) return;
 
   // Map footer positions based on structure
   const fLen = footer.children.length;
@@ -4721,6 +7434,19 @@ function updateTableFooterTotals(filteredOnly = false) {
     footer.children[10].textContent = fmt(totalAmount);
     footer.children[11].textContent = fmt(isNaN(totalProfit) ? 0 : totalProfit);
     if (filteredOnly) footer.setAttribute('data-filtered', 'true'); else footer.removeAttribute('data-filtered');
+  }
+
+  if (floatingFooter) {
+    if (floatingFooter.children[6]) floatingFooter.children[6].textContent = fmt(totalLabor);
+    if (floatingFooter.children[7]) floatingFooter.children[7].textContent = fmt(totalMaterial);
+    if (floatingFooter.children[8]) floatingFooter.children[8].textContent = fmt(totalAmount);
+    if (filteredOnly) {
+      floatingFooter.setAttribute('data-filtered', 'true');
+      if (floatingFooter.children[5]) floatingFooter.children[5].textContent = 'FILTERED TOTALS:';
+    } else {
+      floatingFooter.removeAttribute('data-filtered');
+      if (floatingFooter.children[5]) floatingFooter.children[5].textContent = 'TOTALS:';
+    }
   }
 }
 
