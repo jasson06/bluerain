@@ -21,7 +21,7 @@
     }
 
     .container {
-      max-width: 1420px;
+      max-width: 1500px;
       margin: 20px auto;
       padding: 20px;
       background: #ffffff;
@@ -282,22 +282,33 @@
     position: absolute;
     top: 10px;
     right: 10px;
-    background-color: rgba(255, 0, 0, 0.8);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
     cursor: pointer;
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.3s;
+  transition: transform 0.12s ease, background 0.16s ease, box-shadow 0.16s ease;
 }
 
 .delete-photo:hover {
-    background-color: rgba(255, 0, 0, 1);
+  transform: translateY(-1px);
+  background: rgba(220, 38, 38, 0.92);
+  box-shadow: 0 10px 22px rgba(127, 29, 29, 0.28);
+}
+
+.delete-photo:active {
+  transform: translateY(1px);
+}
+
+.delete-photo svg {
+  display: block;
 }
 
 /* ✅ Navigation Dots */
@@ -418,7 +429,7 @@
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 0px;
+  gap: 5px;
   transition: box-shadow 0.2s ease;
 }
 
@@ -433,6 +444,36 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
+}
+
+.line-item-card .card-header .split-inline-cluster {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.line-item-card .card-header .split-inline-toggle {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  margin-left: 0;
+  border-radius: 999px;
+}
+
+.line-item-card .card-header .split-inline-meta {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .line-item-card .card-header .item-name  {
@@ -572,6 +613,311 @@
   background: #0056b3;
 }
 
+.selection-action-fab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  min-width: 86px;
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.18);
+  margin-top: 11px;
+}
+
+.selection-action-fab[hidden] {
+  display: none !important;
+}
+
+.mobile-bottom-bar,
+.mobile-total-footer {
+  display: none;
+}
+
+.mobile-total-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  z-index: 10020;
+  padding: 0 12px 10px;
+  pointer-events: none;
+}
+
+.mobile-total-footer-inner {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: minmax(88px, 1fr) repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.22);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.mobile-total-footer-stat {
+  min-width: 0;
+  text-align: right;
+}
+
+.mobile-total-footer-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.mobile-total-footer-value {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-total-footer-stat.is-label {
+  text-align: left;
+}
+
+.mobile-total-footer-stat.is-label .mobile-total-footer-value {
+  color: #0f172a;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+
+.mobile-total-footer-stat.is-total .mobile-total-footer-value {
+  color: #1d4ed8;
+}
+
+.mobile-bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10030;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(18px);
+  border-top: 1px solid rgba(148, 163, 184, 0.28);
+  box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.12);
+}
+
+.mobile-bottom-bar-inner {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 36px;
+}
+
+.mobile-bottom-action {
+  min-height: 58px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+  color: #1e3a8a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px #dbeafe;
+  padding: 8px 6px;
+}
+
+.mobile-bottom-action.primary {
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: #ffffff;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.24);
+}
+
+.mobile-bottom-action[hidden] {
+  display: none !important;
+}
+
+.mobile-bottom-action svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.mobile-bottom-action-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.12);
+  color: inherit;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.mobile-bottom-action.primary .mobile-bottom-action-count {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.selection-action-fab:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 9px 18px rgba(37, 99, 235, 0.22);
+}
+
+.batch-actions-drawer {
+  position: fixed;
+  right: 24px;
+  bottom: 84px;
+  z-index: 10019;
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(72vh, 680px);
+  overflow: auto;
+  padding: 16px;
+  background: linear-gradient(145deg, #f8fbff, #eef6ff);
+  border: 1px solid #dbeafe;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+}
+
+.batch-actions-drawer[hidden] {
+  display: none !important;
+}
+
+.batch-actions-drawer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.batch-actions-drawer h3 {
+  font-size: 1.05rem;
+  color: #1d4ed8;
+  margin: 0;
+}
+
+.batch-actions-drawer-close {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid #bfdbfe;
+  background: #ffffff;
+  color: #1d4ed8;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.batch-actions-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.batch-action-card {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: minmax(130px, 170px) minmax(0, 1fr);
+  gap: 10px 14px;
+  align-items: center;
+}
+
+.batch-action-card label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #1e3a8a;
+  margin: 0;
+}
+
+.batch-action-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.batch-action-row > * {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.batch-action-row button {
+  flex: 0 0 auto;
+}
+
+.batch-action-row input,
+.batch-action-row select {
+  min-width: 0;
+}
+
+.batch-action-row.batch-action-row-dual > * {
+  flex: 0 0 auto;
+}
+
+.batch-action-row.batch-action-row-dual button {
+  min-width: 108px;
+}
+
+.batch-selection-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.batch-selection-summary.is-empty {
+  background: #e5e7eb;
+  color: #475569;
+}
+
+@media (max-width: 768px) {
+  .selection-action-fab {
+    min-width: 100%;
+  }
+
+  .batch-actions-drawer {
+    right: 16px;
+    left: 16px;
+    bottom: 72px;
+    width: auto;
+  }
+
+  .batch-action-card {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .batch-action-row {
+    flex-wrap: wrap;
+  }
+}
+
 /* Summary Section */
 #estimate-summary {
   padding: 20px;
@@ -678,7 +1024,7 @@ button:disabled {
     }
 
     .btn-primary {
-      padding: 12px 20px;
+      padding: 4px 10px;
       background: #007bff;
       color: white;
       font-size: 1rem;
@@ -720,45 +1066,81 @@ button:disabled {
 .category-header .category-title {
   font-size: 1.1rem;
   font-weight: 600;
-  background: linear-gradient(to right, #ffffff, #f9f9f9);
-  
+  background: #eff6ff;
   border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   margin-bottom: 16px;
-  border: 1px solid #283efd;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 10px 14px;
+  border: 1px solid #dbeafe;
+  border-left: 4px solid #2563eb;
+  box-shadow: inset 0 0 0 1px #dbeafe;
   transition: box-shadow 0.3s ease, transform 0.2s ease;
 }
 
 .category-header .category-title:hover {
-  box-shadow: 0 8px 20px rgba(0, 21, 255, 0.138);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
   transform: translateY(-1px);
 }
 
-/* EDITABLE CATEGORY TITLE */
-.category-header .category-title span {
-  flex-grow: 1;
-  font-size: 1.05rem;
-  color: #212529;
-  outline: none;
-  cursor: text;
-  padding-left: 8px;
-  transition: color 0.3s ease;
+.category-header .category-title-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
-.category-header .category-title span:focus {
+.category-header .category-title-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.category-header .category-title-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1d4ed8;
+}
+
+.category-header .category-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* EDITABLE CATEGORY TITLE */
+.category-header .category-title span[contenteditable] {
+  flex-grow: 1;
+  font-size: 1rem;
+  color: #0f172a;
+  outline: none;
+  cursor: text;
+  transition: color 0.3s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.category-header .category-total-amount {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.category-header .category-title span[contenteditable]:focus {
   color: #1d4ed8;
 }
 
 /* SHARED BUTTON STYLE (ADD + REMOVE) */
 .category-header .add-line-item,
 .category-header .remove-category {
-  margin: 1%;
   width: 26px;
   height: 26px;
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   border: none;
   border-radius: 50%;
   color: white;
@@ -796,10 +1178,10 @@ button:disabled {
 
 
 #button-action {
-  position: sticky; /* no longer sticky */
+  position: sticky; 
   background: #ffffff;
   padding: 10px 12px;
-  border-radius: 14px;
+  
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
   z-index: 50;
   top: -65px;
@@ -863,7 +1245,7 @@ button:disabled {
 
 .topbar-compact .title-input-wrap {
   position: relative;
-  flex: 0 1 260px;
+  flex: 0.5 1 300px;
   min-width: 220px;
 }
 
@@ -996,7 +1378,24 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
     /* Mobile Responsiveness */
     @media (max-width: 768px) {
       .container {
-        padding: 15px;
+        padding: 12px 12px calc(176px + env(safe-area-inset-bottom, 0px));
+        margin: 0;
+        min-height: 100vh;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      body {
+        background: linear-gradient(180deg, #edf4ff 0%, #f8fafc 24%, #f8fafc 100%);
+      }
+
+      .mobile-bottom-bar,
+      .mobile-total-footer {
+        display: flex;
+      }
+
+      .form-actions {
+        display: none;
       }
 
       .estimate-header {
@@ -1011,6 +1410,167 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
       .form-actions {
         flex-direction: column;
         gap: 15px;
+      }
+
+      #button-action {
+        top: 0;
+        padding: 12px 10px;
+        border-radius: 0 0 18px 18px;
+      }
+
+      .topbar-compact .controls-row {
+        gap: 10px;
+      }
+
+      .topbar-compact .title-input-wrap {
+        flex: 1 1 100%;
+        min-width: 0;
+        order: 1;
+      }
+
+      #estimate-nav-buttons {
+        order: 2;
+      }
+
+      .topbar-compact .actions-group {
+        width: 100%;
+        margin-left: 0;
+        order: 3;
+        justify-content: space-between;
+      }
+
+      .topbar-compact .actions-group .add-line-item-button,
+      .topbar-compact .actions-group .add-category-header-button,
+      .topbar-compact .actions-group .export-estimate-excel-button {
+        display: none;
+      }
+
+      #estimate-section h2 {
+        display: none;
+      }
+
+      #line-items-cards {
+        gap: 14px;
+      }
+
+      .category-header {
+        padding: 0;
+      }
+
+      .category-header .category-title {
+        padding: 10px 12px;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+      }
+
+      .category-header .category-title-main,
+      .category-header .category-title-actions {
+        width: 100%;
+      }
+
+      .category-header .category-title-actions {
+        justify-content: flex-end;
+      }
+
+      .line-item-card {
+        padding: 12px;
+        border-radius: 18px;
+        gap: 12px;
+      }
+
+      .line-item-card:hover {
+        transform: none;
+        border-width: 1px;
+      }
+
+      .line-item-card .card-header {
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .line-item-card .card-header .line-item-select {
+        width: 20px;
+        height: 20px;
+        flex: 0 0 auto;
+      }
+
+      .line-item-card .card-header .card-drag-handle {
+        flex: 0 0 auto;
+        margin-left: 0;
+      }
+
+      .line-item-card .card-header .item-name {
+        margin-right: 0;
+      }
+
+      .photo-toggle-section-modern {
+        margin: 0;
+        padding: 14px;
+      }
+
+      .photo-section-modern {
+        gap: 12px;
+      }
+
+      .photo-preview-modern {
+        flex-basis: 100%;
+        padding: 12px;
+        margin-bottom: 0;
+      }
+
+      .line-item-card .card-footer {
+        gap: 10px;
+        padding: 10px 0 0;
+        align-items: flex-start;
+      }
+
+      .line-item-card .card-footer .footer-dates {
+        width: 100%;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .line-item-card .card-footer .status-assigned-container {
+        width: 100%;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .line-item-card .card-footer .item-total {
+        width: 100%;
+        margin-left: 0 !important;
+        text-align: right;
+      }
+
+      #estimate-summary {
+        border-radius: 18px;
+        margin-top: 14px;
+      }
+
+      .summary-breakdown {
+        margin-bottom: 0;
+      }
+
+      #floating-vendor-select,
+      #batch-actions-drawer {
+        bottom: 170px !important;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .mobile-total-footer-inner {
+        gap: 10px;
+        padding: 11px 12px;
+        grid-template-columns: minmax(72px, 0.9fr) repeat(3, minmax(0, 1fr));
+      }
+
+      .mobile-total-footer-value {
+        font-size: 13px;
+      }
+
+      .mobile-total-footer-stat.is-label .mobile-total-footer-value {
+        font-size: 11px;
       }
     }
 
@@ -1153,10 +1713,53 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 
 
 
-.drag-handle {
+.drag-handle,
+.card-drag-handle,
+.category-drag-handle,
+.lv-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid #dbeafe;
+  background: #ffffff;
+  color: #1d4ed8;
   cursor: grab;
-  font-size: 18px;
-  margin-left: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.card-drag-handle:active,
+.category-drag-handle:active,
+.lv-drag-handle:active {
+  cursor: grabbing;
+}
+
+.lv-drag-select-stack {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.line-item-card.drag-over-top,
+.lv-item-drop-top {
+  box-shadow: inset 0 3px 0 #2563eb;
+}
+
+.line-item-card.drag-over-bottom,
+.lv-item-drop-bottom {
+  box-shadow: inset 0 -3px 0 #2563eb;
+}
+
+.category-header.drag-over-target .category-title,
+.lv-category-drop-target td {
+  background: #dbeafe !important;
 }
 
 .sortable-ghost {
@@ -1216,6 +1819,47 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   background: #f3f3f3;
   color: #333;
   border: 1px solid #ccc;
+}
+
+#floating-vendor-select label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+#floating-vendor-select {
+  width: min(360px, calc(100vw - 32px));
+}
+
+#floating-vendor-select .floating-vendor-search {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-size: 0.95rem;
+  background: #ffffff;
+}
+
+#floating-vendor-select .floating-vendor-search:focus,
+#floating-vendor-select select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
+}
+
+#floating-vendor-select select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+#floating-vendor-select select[data-expanded="true"] {
+  min-height: 188px;
 }
 
 /* Modern Photo Section Styles */
@@ -1759,8 +2403,31 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
         #button-action.topbar-compact .filters-container.topbar-inline #clear-filters { 
           padding: 6px 10px; font-size: 12px; border-radius: 8px;
         }
+        #button-action.topbar-compact .topbar-category-collapse-toggle {
+          width: 34px;
+          height: 34px;
+          margin-top: 11px;
+          padding: 0;
+          --toggle-color: #1d4ed8;
+          --toggle-border: #dbeafe;
+          --toggle-hover-bg: #dbeafe;
+          --toggle-shadow: rgba(59, 130, 246, 0.18);
+        }
+        #button-action.topbar-compact .topbar-category-collapse-toggle:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+          box-shadow: none;
+        }
         #button-action.topbar-compact .filters-container.topbar-inline .filter-options { 
           gap: 10px; margin-top: 0;
+        }
+        #button-action.topbar-compact .filters-container.topbar-inline .selection-action-fab {
+          min-width: auto;
+          height: 30px;
+          margin-top: 11px;
+          padding: 0 10px;
+          border-radius: 8px;
+          box-shadow: 0 3px 10px rgba(37,99,235,0.16);
         }
         #button-action.topbar-compact .filters-container.topbar-inline .filter-group { 
           min-width: 160px; flex: 1 1 160px;
@@ -1867,6 +2534,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
           <span class="sr-only">Estimate Title</span>
         </label>
         <div class="title-input-wrap">
+          <button id="cancel-estimate" class="btn-secondary" onclick="(function(){ const projectId = new URLSearchParams(window.location.search).get('projectId'); window.location.href = projectId ? ('/details/projects/' + encodeURIComponent(projectId)) : document.referrer; })()">Back</button>
           <input type="text" id="estimate-title" placeholder="e.g., Kitchen Remodel Estimate" autocomplete="off" />
           <div id="estimate-title-suggestions" class="suggestion-box" style="display:none; position:absolute; left:0; top:100%; width:100%; background:#fff; border:1px solid #ccc; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.08); z-index:1000; max-height:220px; overflow-y:auto;"></div>
         </div>
@@ -1922,11 +2590,16 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   <!-- List View Sticky Header (visible in List View only) -->
   <div id="list-view-header" class="lvh" style="display:none;">
     <div class="lvh-inner">
-      <table class="estimate-table" style="width:100%; min-width:1040px; border-collapse:separate; border-spacing:0; table-layout:auto;">
+      <table class="estimate-table" style="width:100%; min-width:1300px; border-collapse:separate; border-spacing:0; table-layout:fixed;">
         <thead>
           <tr>
-            <th style="padding:3px 2px; border-bottom:1px solid #e5e7eb; width:26px; min-width:26px;"></th>
-            <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:130px;">Category</th>
+            <th style="padding:2px 0; border-bottom:1px solid #e5e7eb; width:40px; min-width:40px;"></th>
+            <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:130px;">
+              <span style="display:inline-flex; align-items:center; gap:8px; justify-content:flex-start; width:100%;">
+                <button id="toggle-all-categories-btn" class="topbar-category-collapse-toggle estimate-disclosure-btn" type="button" aria-pressed="false" title="Collapse all categories" style="display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto;"></button>
+                <span>Category</span>
+              </span>
+            </th>
             <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:200px;">Item</th>
             <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:70px;">Mode</th>
             <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:72px;">Qty</th>
@@ -1936,7 +2609,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
             <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:90px;">Amount</th>
             <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:160px; width:160px;">Status</th>
             <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:140px;">Assigned</th>
-            <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:64px;">Actions</th>
+            <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:132px; width:132px;">Actions</th>
           </tr>
         </thead>
       </table>
@@ -1973,7 +2646,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 
       
     
-      <div class="vendor-assign-section">
+      <div class="vendor-assign-section" style="display:none;">
         <h3>Assign Selected Items to a Vendor</h3>
         <select id="vendor-select">
           <option value="">Select a Vendor</option>
@@ -1981,10 +2654,68 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
         </select>
         <button id="assign-items-button" class="btn-primary">Assign Items</button>
       </div>
+
+      <button id="selected-items-action-btn" class="selection-action-fab" type="button" hidden>Actions</button>
+
+      <div id="batch-actions-drawer" class="batch-actions-drawer" hidden>
+        <div class="batch-actions-drawer-header">
+          <div>
+            <h3>Actions for Selected Items</h3>
+            
+          </div>
+          <button id="batch-actions-close" class="batch-actions-drawer-close" type="button" aria-label="Close actions">&times;</button>
+        </div>
+        <div class="batch-actions-grid">
+          <div class="batch-action-card">
+            <label for="batch-status-select">Change Status</label>
+            <div class="batch-action-row">
+              <select id="batch-status-select">
+                <option value="">Select status</option>
+                <option value="new">New</option>
+                <option value="in-progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="approved">Approved</option>
+                <option value="rework">Rework</option>
+              </select>
+              <button id="batch-status-apply" class="btn-primary" type="button">Apply</button>
+            </div>
+          </div>
+          <div class="batch-action-card">
+            <label for="batch-category-select">Move to Category</label>
+            <div class="batch-action-row">
+              <select id="batch-category-select">
+                <option value="">Select category</option>
+              </select>
+              <button id="batch-move-category" class="btn-primary" type="button">Move</button>
+            </div>
+          </div>
+          <div class="batch-action-card">
+            <label>Assign Dates</label>
+            <div class="batch-action-row">
+              <input id="batch-start-date" type="date">
+              <input id="batch-end-date" type="date">
+              <button id="batch-assign-dates" class="btn-primary" type="button">Set Dates</button>
+            </div>
+          </div>
+          <div class="batch-action-card">
+            <label for="batch-split-labor">Split Labor Across Selected</label>
+            <div class="batch-action-row">
+              <button id="batch-split-labor" class="btn-primary" type="button">Split Labor</button>
+            </div>
+          </div>
+          <div class="batch-action-card">
+            <label>Duplicate or Delete</label>
+            <div class="batch-action-row batch-action-row-dual">
+              <button id="batch-duplicate-items" class="btn-secondary" type="button">Duplicate</button>
+              <button id="batch-delete-items" class="btn-secondary" type="button">Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
     
-      <div class="form-actions">
+      <div class="form-actions"style="display:none;">
         <button id="save-estimate" class="btn-primary">Save Estimate</button>
-        <button id="cancel-estimate" class="btn-secondary" onclick="window.location.href = document.referrer">Back</button>
+        <button id="cancel-estimate" class="btn-secondary" onclick="(function(){ const projectId = new URLSearchParams(window.location.search).get('projectId'); window.location.href = projectId ? ('/details/projects/' + encodeURIComponent(projectId)) : document.referrer; })()">Back</button>
       </div>
     </section>
     
@@ -1992,9 +2723,57 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 
 <div id="floating-vendor-select" style="display:none; position:fixed; bottom:80px; right:20px; background:#fff; border:1px solid #ccc; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15); padding:16px; z-index:10000;">
   <label for="floating-vendor-dropdown">Assign to Vendor:</label>
+  <input id="floating-vendor-search" class="floating-vendor-search" type="text" placeholder="Search vendor..." autocomplete="off">
   <select id="floating-vendor-dropdown"></select>
   <button id="assign-vendor-btn" class="btn">Assign</button>
   <button id="cancel-vendor-btn" class="btn" style="margin-left:8px;">Cancel</button>
+</div>
+
+<div id="mobile-total-footer" class="mobile-total-footer" aria-label="Estimate totals">
+  <div class="mobile-total-footer-inner">
+    <div class="mobile-total-footer-stat is-label">
+      <span class="mobile-total-footer-label">Footer</span>
+      <strong id="mobile-footer-label" class="mobile-total-footer-value">TOTALS:</strong>
+    </div>
+    <div class="mobile-total-footer-stat">
+      <span class="mobile-total-footer-label">Labor</span>
+      <strong id="mobile-footer-labor" class="mobile-total-footer-value">$0.00</strong>
+    </div>
+    <div class="mobile-total-footer-stat">
+      <span class="mobile-total-footer-label">Material</span>
+      <strong id="mobile-footer-material" class="mobile-total-footer-value">$0.00</strong>
+    </div>
+    <div class="mobile-total-footer-stat is-total">
+      <span class="mobile-total-footer-label">Amount</span>
+      <strong id="mobile-footer-amount" class="mobile-total-footer-value">$0.00</strong>
+    </div>
+  </div>
+</div>
+
+<div id="mobile-bottom-bar" class="mobile-bottom-bar" aria-label="Mobile actions">
+  <div class="mobile-bottom-bar-inner">
+    <button id="mobile-back-btn" class="mobile-bottom-action" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+      <span>Back</span>
+    </button>
+    <button id="mobile-add-room-btn" class="mobile-bottom-action" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+      <span>Room</span>
+    </button>
+    <button id="mobile-add-item-btn" class="mobile-bottom-action primary" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      <span>Item</span>
+    </button>
+    <button id="mobile-actions-btn" class="mobile-bottom-action" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+      <span>Actions</span>
+      <span id="mobile-actions-count" class="mobile-bottom-action-count" hidden>0</span>
+    </button>
+    <button id="mobile-save-btn" class="mobile-bottom-action" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+      <span>Save</span>
+    </button>
+  </div>
 </div>
 
 <!-- Toast Notification -->
