@@ -2385,6 +2385,8 @@ if (estimates && estimates.length) {
               <span class="progress-percent">${estPercent}%</span>
             </td>
             <td class="est-actions">
+              <button class="smart-btn" onclick="openClientEstimateView('${estimate._id}');event.stopPropagation();" title="Open client progress view"><i class="fas fa-external-link-alt"></i></button>
+              <button class="smart-btn" onclick="copyClientEstimateViewLink('${estimate._id}');event.stopPropagation();" title="Copy client progress link"><i class="fas fa-link"></i></button>
               <button class="smart-btn danger" onclick="deleteEstimate('${estimate._id}');event.stopPropagation();"><i class="fas fa-trash"></i></button>
             </td>
           </tr>
@@ -4521,7 +4523,53 @@ function viewEstimate(estimateId) {
     alert("Estimate ID is missing!");
     return;
   }
-  window.location.href = `/estimate-view.html?estimateId=${estimateId}`;
+  window.location.href = buildClientEstimateViewUrl(estimateId);
+}
+
+function buildClientEstimateViewUrl(estimateId) {
+  return `/estimate-view.html?estimateId=${encodeURIComponent(estimateId)}`;
+}
+
+function openClientEstimateView(estimateId) {
+  if (!estimateId) {
+    alert("Estimate ID is missing!");
+    return;
+  }
+  window.open(buildClientEstimateViewUrl(estimateId), '_blank', 'noopener');
+}
+
+async function copyClientEstimateViewLink(estimateId) {
+  if (!estimateId) {
+    alert("Estimate ID is missing!");
+    return;
+  }
+
+  const link = `${window.location.origin}${buildClientEstimateViewUrl(estimateId)}`;
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(link);
+    } else {
+      const tempInput = document.createElement('input');
+      tempInput.value = link;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      tempInput.remove();
+    }
+    if (typeof showToast === 'function') {
+      showToast('Client progress link copied.');
+    } else {
+      alert('Client progress link copied.');
+    }
+  } catch (error) {
+    console.error('Failed to copy client estimate view link:', error);
+    if (typeof showToast === 'function') {
+      showToast('Unable to copy the client progress link.');
+    } else {
+      alert('Unable to copy the client progress link.');
+    }
+  }
 }
 
 // Function to delete an estimate
