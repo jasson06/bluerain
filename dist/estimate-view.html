@@ -1,294 +1,1969 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>View Estimate</title>
- 
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Client Overview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-/* General Styles */
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f4f7fa;
-  margin: 0;
-  padding: 0;
-  color: #333;
-}
+    :root {
+      --bg: #eef2f3;
+      --surface: #ffffff;
+      --surface-soft: #f7f9fa;
+      --ink: #172026;
+      --muted: #64727d;
+      --line: #dfe6ea;
+      --accent: #15616d;
+      --accent-2: #0f8b8d;
+      --accent-soft: #e4f4f3;
+      --amber: #b7791f;
+      --amber-soft: #fff4df;
+      --red: #b42318;
+      --red-soft: #fde9e7;
+      --blue: #155eef;
+      --blue-soft: #e9f1ff;
+      --radius-xl: 30px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --shadow: 0 24px 70px rgba(23, 32, 38, 0.12);
+      --shadow-soft: 0 12px 34px rgba(23, 32, 38, 0.08);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
 
+    * { box-sizing: border-box; }
 
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(21, 97, 109, 0.16), transparent 36%),
+        linear-gradient(180deg, #f8fafb 0%, var(--bg) 64%, #e6ebed 100%);
+      min-height: 100vh;
+    }
 
-.container {
-  max-width: 1000px;
-  margin: 40px auto;
-  background: #fff;
-  padding: 30px 40px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
-  border: 1px solid #e0e6ed;
-}
+    button, input, select { font: inherit; }
 
-/* Header Section */
-.estimate-header {
-  border-bottom: 2px solid #e0e6ed;
-  padding-bottom: 20px;
-  margin-bottom: 20px;
-}
+    .app-shell {
+      max-width: 1550px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      gap: 20px;
+    }
 
-.estimate-header h2 {
-  font-size: 28px;
-  margin-bottom: 5px;
-  color: #2a2a2a;
-}
+    .topbar {
+      display: block;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,0.82);
+      border-radius: 30px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(244,248,249,0.86) 100%);
+      backdrop-filter: blur(22px) saturate(135%);
+      box-shadow: 0 18px 44px rgba(30, 52, 61, 0.12);
+      position: sticky;
+      top: 16px;
+      z-index: 10;
+      overflow: hidden;
+    }
 
-.estimate-header p {
-  margin: 4px 0;
-  font-size: 16px;
-  color: #555;
-}
+    .topbar::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, rgba(21, 97, 109, 0.08), transparent 35%, rgba(15,139,141,0.08));
+      pointer-events: none;
+    }
 
-/* Table Styles */
-.line-items-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-  border-radius: 12px;
-  overflow: hidden;
-}
+    .topbar-main {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 12px;
+      flex-wrap: nowrap;
+      position: relative;
+      z-index: 1;
+      min-width: 0;
+    }
 
-.line-items-table th, 
-.line-items-table td {
-  border: 1px solid #e0e6ed;
-  padding: 12px 15px;
-  text-align: left;
-}
+    .topbar-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1 1 auto;
+      min-width: 0;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 2px 4px;
+      scrollbar-width: none;
+      position: relative;
+      z-index: 1;
+    }
 
-.line-items-table th {
-  background-color: #f0f4f8;
-  font-size: 16px;
-  color: #2a2a2a;
-  text-transform: uppercase;
-}
+    .topbar-nav::-webkit-scrollbar {
+      display: none;
+    }
 
-.line-items-table tr:nth-child(even) {
-  background-color: #f9fbfd;
-}
+    .topbar-nav-label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-right: 2px;
+      padding-left: 2px;
+      flex: 0 0 auto;
+    }
 
-.line-items-table td {
-  font-size: 15px;
-  color: #333;
-}
+    .topbar-nav-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(123, 145, 153, 0.2);
+      background: rgba(255,255,255,0.74);
+      color: color-mix(in srgb, var(--ink) 88%, white 12%);
+      text-decoration: none;
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+      transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+      flex: 0 0 auto;
+    }
 
-/* Summary Section */
-.estimate-summary {
-  margin-top: 30px;
-  padding: 20px;
-  background: #f9fbfd;
-  border-radius: 10px;
-  border: 1px solid #e0e6ed;
-}
+    .topbar-nav-link:hover {
+      transform: translateY(-1px);
+      background: rgba(232, 243, 244, 0.96);
+      border-color: rgba(21, 97, 109, 0.24);
+      color: var(--accent);
+      box-shadow: 0 10px 18px rgba(35, 78, 88, 0.08);
+    }
 
-.estimate-summary h2 {
-  font-size: 24px;
-  color: #2a2a2a;
-  margin-bottom: 15px;
-}
+    .topbar-nav-link.active,
+    .mobile-nav-link.active {
+      background: linear-gradient(135deg, rgba(21, 97, 109, 0.16), rgba(15,139,141,0.2));
+      border-color: rgba(21, 97, 109, 0.3);
+      color: var(--accent);
+      box-shadow: 0 10px 20px rgba(21, 97, 109, 0.12);
+    }
 
-.estimate-summary p {
-  font-size: 18px;
-  margin: 8px 0;
-  color: #444;
-}
+    html {
+      scroll-behavior: smooth;
+    }
 
-.estimate-summary strong {
-  color: #2a2a2a;
-}
+    .hero,
+    .layout > aside.card,
+    .layout > main.card,
+    .rail-card,
+    #work-areas {
+      scroll-margin-top: 140px;
+    }
 
-/* Footer Buttons */
-.estimate-actions {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 30px;
-}
+    .mobile-footer-nav {
+      display: none;
+    }
 
-.btn-primary, .btn-secondary {
-  padding: 12px 25px;
-  font-size: 16px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
-}
+    .mobile-footer-shell {
+      display: none;
+    }
 
-.btn-primary {
-  background-color: #007bff;
-  color: #fff;
-  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
-}
+    .mobile-actions-toggle,
+    .mobile-action-sheet,
+    .mobile-action-sheet-backdrop {
+      display: none;
+    }
 
-.btn-primary:hover {
-  background-color: #0056b3;
-  box-shadow: 0 6px 12px rgba(0, 123, 255, 0.4);
-}
+    .mobile-nav-link {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      min-width: 72px;
+      padding: 10px 12px;
+      border-radius: 18px;
+      color: var(--muted);
+      text-decoration: none;
+      background: transparent;
+      border: 1px solid transparent;
+      transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+      scroll-snap-align: center;
+    }
 
-.btn-secondary {
-  background-color: #6c757d;
-  color: #fff;
-  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
-}
+    .mobile-nav-link:hover {
+      transform: translateY(-1px);
+      color: var(--accent);
+      background: rgba(228, 244, 243, 0.72);
+      border-color: rgba(21, 97, 109, 0.18);
+    }
 
-.btn-secondary:hover {
-  background-color: #495057;
-  box-shadow: 0 6px 12px rgba(108, 117, 125, 0.4);
-}
+    .mobile-nav-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      color: var(--accent);
+      background: rgba(21, 97, 109, 0.1);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+    }
 
+    .mobile-nav-icon svg {
+      width: 17px;
+      height: 17px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
 
+    .mobile-nav-text {
+      font-size: 0.7rem;
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
 
-/* Print Styles */
-@media print {
-  body {
-    background: none;
-    color: #000;
-  }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex: 0 0 auto;
+    }
 
-  .container {
-    box-shadow: none;
-    border: none;
-  }
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      box-shadow: 0 12px 26px rgba(21, 97, 109, 0.24);
+    }
 
-  .estimate-actions {
-    display: none;
-  }
+    .brand small {
+      display: block;
+      color: var(--muted);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 800;
+    }
 
-  .line-items-table th, .line-items-table td {
-    border: 1px solid #000;
-  }
-} 
+    .brand strong {
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+      font-size: 0.96rem;
+      letter-spacing: -0.03em;
+    }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .container {
-    padding: 20px;
-  }
+    .top-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: nowrap;
+      justify-content: flex-end;
+      padding: 3px;
+      border: 1px solid rgba(121, 143, 150, 0.18);
+      border-radius: 999px;
+      background: rgba(246, 249, 250, 0.82);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+      flex: 0 0 auto;
+    }
 
-  .estimate-actions {
-    flex-direction: column;
-    gap: 15px;
-  }
+    .mobile-actions-toggle {
+      display: none;
+      align-items: center;
+      margin-left: auto;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      min-height: 38px;
+      padding: 0;
+      border: 1px solid rgba(121, 143, 150, 0.2);
+      border-radius: 14px;
+      background: rgba(246, 249, 250, 0.88);
+      color: var(--ink);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+      cursor: pointer;
+      transition: transform 0.16s ease, background 0.16s ease, color 0.16s ease;
+    }
 
-  .btn-primary, .btn-secondary {
-    width: 100%;
-  }
-} 
+    .mobile-actions-toggle:hover {
+      transform: translateY(-1px);
+      background: rgba(232, 243, 244, 0.96);
+      color: var(--accent);
+    }
 
-/* Enhancements */
-.line-items-table td input[type="text"],
-.line-items-table td input[type="number"] {
-  border: none;
-  background: transparent;
-  width: 100%;
-  color: #333;
-  font-size: 15px;
-}
+    .mobile-actions-toggle svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
 
-.line-items-table td input[disabled] {
-  color: #555;
-}
+    .mobile-action-sheet-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(18, 28, 33, 0.18);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease;
+      z-index: 31;
+    }
 
-.line-items-table td input:focus {
-  outline: none;
-  border-bottom: 1px solid #007bff;
-}
+    .mobile-action-sheet {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: calc(94px + var(--safe-bottom));
+      padding: 10px;
+      border: 1px solid rgba(255,255,255,0.86);
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(242, 247, 248, 0.94) 100%);
+      backdrop-filter: blur(22px) saturate(150%);
+      box-shadow: 0 18px 40px rgba(30, 52, 61, 0.16);
+      opacity: 0;
+      transform: translateY(18px) scale(0.98);
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      z-index: 32;
+    }
 
-/* Add subtle hover effect */
-.line-items-table tr:hover {
-  background-color: #eef4fc;
-}
+    .mobile-action-sheet.is-open,
+    .mobile-action-sheet-backdrop.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
 
-/* Header Logo Placeholder */
-.estimate-header::before {
-  content: 'BESF';
-  font-size: 24px;
-  font-weight: bold;
-  color: #007bff;
-  display: block;
-  margin-bottom: 10px;
-} 
+    .mobile-action-sheet.is-open {
+      transform: translateY(0) scale(1);
+    }
 
-/* Highlight Total */
-#total {
-  color: #007bff;
-  font-weight: bold;
-  font-size: 20px;
-} 
+    .mobile-action-sheet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 4px 4px 10px;
+    }
 
-/* Icons Styling */
-.fas {
-  margin-right: 8px;
-}
+    .mobile-action-sheet-header strong {
+      font-size: 0.95rem;
+      letter-spacing: -0.02em;
+    }
 
-/* Loading Text Styling */
-.loading {
-  text-align: center;
-  font-style: italic;
-  color: #888;
-} 
+    .mobile-action-sheet-header span {
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
 
+    .mobile-action-close {
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(121, 143, 150, 0.2);
+      border-radius: 12px;
+      background: rgba(245, 248, 249, 0.9);
+      color: var(--ink);
+      cursor: pointer;
+    }
 
+    .mobile-action-grid {
+      display: grid;
+      gap: 8px;
+    }
+
+    .mobile-action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
+      min-height: 52px;
+      padding: 12px 14px;
+      border: 1px solid rgba(121, 143, 150, 0.18);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.82);
+      color: var(--ink);
+      text-align: left;
+      cursor: pointer;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.86);
+    }
+
+    .mobile-action-btn.primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .mobile-action-copy {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .mobile-action-copy svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex: 0 0 auto;
+    }
+
+    .mobile-action-copy strong,
+    .mobile-action-copy span {
+      display: block;
+    }
+
+    .mobile-action-copy span {
+      color: inherit;
+      opacity: 0.72;
+      font-size: 0.78rem;
+    }
+
+    .mobile-action-chevron {
+      flex: 0 0 auto;
+      font-size: 1rem;
+      opacity: 0.5;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 999px;
+      min-height: 34px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 0.82rem;
+      color: color-mix(in srgb, var(--ink) 88%, white 12%);
+      background: transparent;
+      transition: transform 0.16s ease, background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      background: rgba(222, 234, 237, 0.9);
+      color: var(--accent);
+    }
+
+    .btn.primary {
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 10px 22px rgba(21, 97, 109, 0.22);
+    }
+
+    .btn.primary:hover {
+      background: linear-gradient(135deg, #145f6b, #0f7f81);
+      color: #fff;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .hero-card,
+    .card,
+    .rail-card {
+      border: 1px solid rgba(255,255,255,0.78);
+      background: rgba(255,255,255,0.82);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      border-radius: var(--radius-xl);
+      padding: clamp(24px, 4vw, 48px);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      width: 430px;
+      height: 430px;
+      right: -160px;
+      top: -180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(15,139,141,0.17), transparent 66%);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-weight: 900;
+      font-size: 0.75rem;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      margin-bottom: 14px;
+      max-width: 12ch;
+      font-size: clamp(2.4rem, 6vw, 5.2rem);
+      line-height: 0.91;
+      letter-spacing: -0.08em;
+    }
+
+    .client-summary {
+      max-width: 72ch;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.65;
+      margin-bottom: 24px;
+    }
+
+    .status-board {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 26px;
+    }
+
+    .status-tile {
+      background: rgba(247,249,250,0.86);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 16px;
+      min-height: 112px;
+    }
+
+    .status-tile small {
+      display: block;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-size: 0.7rem;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+
+    .status-tile strong {
+      display: block;
+      font-size: clamp(1.25rem, 1vw, 1.8rem);
+      letter-spacing: -0.05em;
+    }
+
+    .progress-orb-card {
+      border-radius: var(--radius-xl);
+      padding: 28px;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      text-align: center;
+      min-height: 100%;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.92), rgba(247,249,250,0.82)),
+        radial-gradient(circle at center, rgba(21,97,109,0.18), transparent 62%);
+    }
+
+    .orb {
+      --progress: 0deg;
+      width: min(280px, 68vw);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: conic-gradient(var(--accent-2) var(--progress), rgba(23,32,38,0.08) 0deg);
+      box-shadow: inset 0 0 0 18px rgba(255,255,255,0.7), var(--shadow-soft);
+      margin-bottom: 22px;
+    }
+
+    .orb-inner {
+      width: 72%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: #fff;
+      display: grid;
+      place-items: center;
+      box-shadow: inset 0 0 0 1px var(--line);
+    }
+
+    .orb-inner strong {
+      display: block;
+      font-size: clamp(2.6rem, 6vw, 4.3rem);
+      letter-spacing: -0.08em;
+    }
+
+    .orb-inner span {
+      display: block;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 0.74rem;
+      font-weight: 900;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.2fr) minmax(300px, 0.72fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .card, .rail-card {
+      border-radius: var(--radius-lg);
+      padding: 22px;
+    }
+
+    .card h2, .rail-card h2 {
+      font-size: 1.12rem;
+      margin-bottom: 6px;
+      letter-spacing: -0.03em;
+    }
+
+    .card-subtitle {
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 18px;
+      font-size: 0.94rem;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 14px;
+    }
+
+    .phase {
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr);
+      gap: 12px;
+      position: relative;
+    }
+
+    .phase:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      left: 18px;
+      top: 38px;
+      bottom: -14px;
+      width: 2px;
+      background: var(--line);
+    }
+
+    .phase-dot {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid var(--line);
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      z-index: 1;
+    }
+
+    .phase.complete .phase-dot { border-color: var(--accent-2); background: var(--accent-soft); color: var(--accent); }
+    .phase.active .phase-dot { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); }
+    .phase.alert .phase-dot { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+
+    .phase-card {
+      padding: 14px 14px 16px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.68);
+    }
+
+    .phase-card header {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: start;
+      margin-bottom: 8px;
+    }
+
+    .phase-card-headline {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .phase-card h3 { font-size: 0.98rem; margin: 0; }
+    .phase-card p { color: var(--muted); margin-bottom: 0; line-height: 1.45; font-size: 0.92rem; }
+
+    .phase-progress-orb {
+      --phase-progress: 0deg;
+      --phase-orb-color: var(--accent-2);
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      background: conic-gradient(var(--phase-orb-color) var(--phase-progress), rgba(23,32,38,0.08) 0deg);
+      box-shadow: inset 0 0 0 4px rgba(255,255,255,0.65);
+    }
+
+    .phase-progress-orb.active {
+      --phase-orb-color: var(--blue);
+    }
+
+    .phase-progress-orb.alert {
+      --phase-orb-color: var(--amber);
+    }
+
+    .phase-progress-orb.complete {
+      --phase-orb-color: var(--accent-2);
+    }
+
+    .phase-progress-inner {
+      width: 72%;
+      height: 72%;
+      border-radius: 50%;
+      background: #fff;
+      display: grid;
+      place-items: center;
+      box-shadow: inset 0 0 0 1px var(--line);
+      font-size: 0.68rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      color: var(--ink);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.75rem;
+      font-weight: 900;
+      white-space: nowrap;
+      background: rgba(23,32,38,0.08);
+    }
+
+    .pill.done { background: var(--accent-soft); color: var(--accent); }
+    .pill.active { background: var(--blue-soft); color: var(--blue); }
+    .pill.warn { background: var(--amber-soft); color: var(--amber); }
+    .pill.danger { background: var(--red-soft); color: var(--red); }
+
+    .now-next {
+      display: grid;
+      gap: 18px;
+    }
+
+    .flow-group {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 22px;
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+    }
+
+    .flow-group header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .flow-group h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .flow-group p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 0.9rem;
+    }
+
+    .flow-count {
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: rgba(23,32,38,0.08);
+      font-size: 0.75rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .flow-items {
+      display: grid;
+      gap: 12px;
+      max-height: 520px;
+      overflow-y: auto;
+      padding-right: 6px;
+      scrollbar-gutter: stable;
+    }
+
+    .flow-items::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .flow-items::-webkit-scrollbar-thumb {
+      background: rgba(23,32,38,0.18);
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+
+    .flow-items::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .focus-card {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 22px;
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .focus-card.featured {
+      border-color: rgba(21,97,109,0.22);
+      background: linear-gradient(135deg, #fff, var(--accent-soft));
+    }
+
+    .focus-card header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .focus-card h3 { margin: 0; font-size: 1rem; }
+    .focus-card p { margin: 0; color: var(--muted); line-height: 1.5; }
+
+    .focus-meta {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .mini-stat {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.72);
+      border-radius: 14px;
+      padding: 10px;
+    }
+
+    .mini-stat small {
+      display: block;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.68rem;
+      font-weight: 900;
+      margin-bottom: 5px;
+    }
+
+    .mini-stat strong { font-size: 0.9rem; }
+
+    .section-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .tab {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.84rem;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .tab.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+    .category-stack { display: grid; gap: 12px; }
+
+    details.category-detail {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(255,255,255,0.76);
+      overflow: hidden;
+    }
+
+    details.category-detail summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    details.category-detail summary::-webkit-details-marker { display: none; }
+
+    .category-title h3 { margin: 0 0 5px; font-size: 1rem; }
+    .category-title p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+
+    .category-progress {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 170px;
+      justify-content: flex-end;
+    }
+
+    .bar {
+      height: 8px;
+      width: 110px;
+      background: rgba(23,32,38,0.08);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar span { display:block; height:100%; width:0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: inherit; }
+
+    .line-items {
+      padding: 0 16px 16px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .line-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: start;
+      padding: 14px;
+      border-radius: 16px;
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+    }
+
+    .line-row h4 { margin: 0 0 4px; font-size: 0.95rem; }
+    .line-row p { margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.45; }
+
+    .rail { display: grid; gap: 20px; }
+
+    .money-stack, .info-stack { display: grid; gap: 11px; }
+
+    .money-row, .info-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      padding-bottom: 11px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .money-row:last-child, .info-row:last-child { border-bottom: 0; padding-bottom: 0; }
+    .money-row span, .info-row span { color: var(--muted); }
+    .money-row strong.total { color: var(--accent); font-size: 1.18rem; }
+
+    .alerts { display: grid; gap: 10px; }
+
+    .alert-card {
+      border-radius: 16px;
+      padding: 13px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .alert-card h3 { margin: 0 0 5px; font-size: 0.94rem; }
+    .alert-card p { margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.45; }
+
+    .loading, .empty, .error {
+      padding: 28px;
+      text-align: center;
+      border-radius: 20px;
+      border: 1px dashed rgba(23,32,38,0.18);
+      color: var(--muted);
+      background: rgba(255,255,255,0.58);
+    }
+
+    .loading strong, .empty strong, .error strong { display: block; color: var(--ink); margin-bottom: 6px; }
+
+    @media (max-width: 1180px) {
+      .hero, .layout { grid-template-columns: 1fr; }
+      .status-board { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .rail { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+
+    @media (max-width: 720px) {
+      body {
+        background:
+          radial-gradient(circle at top center, rgba(21, 97, 109, 0.14), transparent 34%),
+          linear-gradient(180deg, #f7fafb 0%, #edf2f4 100%);
+      }
+      .app-shell {
+        padding: 12px 12px calc(104px + var(--safe-bottom));
+        gap: 14px;
+      }
+      .topbar {
+        border-radius: 24px;
+        position: static;
+        padding: 12px;
+      }
+      .topbar-main {
+        align-items: center;
+        flex-direction: row;
+        flex-wrap: nowrap;
+      }
+      .topbar-nav {
+        display: none;
+      }
+      .top-actions {
+        display: none;
+      }
+      .mobile-actions-toggle {
+        display: inline-flex;
+        flex: 0 0 auto;
+      }
+      .brand {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      .brand strong {
+        max-width: 100%;
+      }
+      .btn { flex: 1; }
+      .hero { gap: 14px; }
+      .hero-card,
+      .card,
+      .rail-card,
+      .progress-orb-card {
+        border-radius: 22px;
+      }
+      .hero-card {
+        padding: 22px 18px;
+      }
+      .status-board {
+        gap: 10px;
+      }
+      .status-tile {
+        min-height: 92px;
+      }
+      .layout {
+        gap: 14px;
+      }
+      .card,
+      .rail-card,
+      .progress-orb-card {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+      .status-board, .focus-meta, .rail { grid-template-columns: 1fr; }
+      details.category-detail summary, .line-row { grid-template-columns: 1fr; }
+      .category-progress { justify-content: flex-start; }
+      h1 { max-width: 100%; }
+      .mobile-footer-shell {
+        display: block;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 30;
+        padding: 10px 10px calc(10px + var(--safe-bottom));
+        pointer-events: none;
+        transition: transform 0.22s ease, opacity 0.22s ease;
+      }
+      .mobile-footer-shell.is-hidden {
+        transform: translateY(calc(22px + var(--safe-bottom)));
+        opacity: 0.72;
+      }
+      .mobile-footer-nav {
+        display: flex;
+        align-items: stretch;
+        gap: 8px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-snap-type: x proximity;
+        padding: 8px;
+        border: 1px solid rgba(255,255,255,0.84);
+        border-radius: 24px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(243,247,248,0.92) 100%);
+        backdrop-filter: blur(24px) saturate(150%);
+        box-shadow: 0 -6px 24px rgba(30, 52, 61, 0.08), 0 12px 32px rgba(30, 52, 61, 0.14);
+        scrollbar-width: none;
+        pointer-events: auto;
+      }
+      .mobile-footer-nav::-webkit-scrollbar {
+        display: none;
+      }
+      .mobile-action-sheet,
+      .mobile-action-sheet-backdrop {
+        display: block;
+      }
+    }
+
+    @media print {
+      body { background: #fff; }
+      .topbar, .btn { box-shadow: none; }
+      .top-actions, .topbar-nav, .mobile-footer-shell, .mobile-actions-toggle, .mobile-action-sheet, .mobile-action-sheet-backdrop { display: none; }
+      .hero-card, .card, .rail-card, .progress-orb-card { box-shadow: none; background: #fff; border: 1px solid #d9e0e4; }
+      details.category-detail { break-inside: avoid; }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- Header Section -->
-    <header class="estimate-header">
-      <div id="estimate-header">
-        <h2 id="project-name">Project: Loading...</h2>
-        <p id="project-address">Address: Loading...</p>
-        <p id="invoice-number">Invoice #: Loading...</p>
-        <p id="total-amount">Total: Loading...</p> 
+  <div class="app-shell">
+    <nav class="topbar" aria-label="Client overview actions">
+      <div class="topbar-main">
+        <div class="brand">
+          <div class="brand-icon">B</div>
+          <div>
+            <strong>Bluerain.co</strong>
+            <small id="nav-title">Project Dashboard</small>
+          </div>
+        </div>
+        <div class="topbar-nav" aria-label="Page navigation">
+          <a class="topbar-nav-link" href="#overview">Overview</a>
+          <a class="topbar-nav-link" href="#project-path">Project Path</a>
+          <a class="topbar-nav-link" href="#project-flow">Project Flow</a>
+          <a class="topbar-nav-link" href="#work-areas">Work Areas</a>
+          <a class="topbar-nav-link" href="#project-details">Project Details</a>
+          <a class="topbar-nav-link" href="#budget-summary">Budget</a>
+          <a class="topbar-nav-link" href="#needs-attention">Needs Attention</a>
+        </div>
+        <button class="mobile-actions-toggle" id="mobile-actions-toggle" type="button" aria-expanded="false" aria-controls="mobile-action-sheet" aria-label="Open actions" title="Open actions">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16"></path>
+            <path d="M7 12h10"></path>
+            <path d="M10 17h4"></path>
+          </svg>
+        </button>
+        <div class="top-actions">
+          <button class="btn" id="copy-link" type="button">Copy Link</button>
+          <button class="btn" id="print-page" type="button">Print</button>
+          <button class="btn primary" id="back-to-project" type="button">Back to Project</button>
+        </div>
       </div>
-    </header>
+    </nav>
 
-    <!-- Estimate Details -->
-    <section class="estimate-details">
-      <h2>Line Items</h2>
-      <table class="line-items-table">
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Description</th>
-            <th>Quantity</th>
-            <th>Unit Price</th>
-            <th>Total</th>
-            <th>Status</th>
-            <th>Assigned</th>
-          </tr>
-        </thead>
-        <tbody id="line-items-body">
-          <!-- Line items will be dynamically loaded here -->
-          <tr>
-            <td colspan="5" class="loading">Loading items...</td>
-          </tr>
-        </tbody>
-      </table>
+    <section class="hero" id="overview">
+      <article class="hero-card">
+        <p class="eyebrow">Project Overview</p>
+        <h1 id="project-name">Loading project...</h1>
+        <p class="client-summary" id="client-summary">Preparing a clean overview of current progress, upcoming work, schedule risks, and project investment.</p>
+        <div class="status-board" aria-label="Project highlights">
+          <div class="status-tile"><small>Status</small><strong id="hero-status">Loading</strong></div>
+          <div class="status-tile"><small>Estimated Completion</small><strong id="hero-estimated-completion-date">Loading...</strong></div>
+          <div class="status-tile"><small>Active Work</small><strong id="hero-active">0 items</strong></div>
+          <div class="status-tile"><small>Attention</small><strong id="hero-alerts">0 items</strong></div>
+        </div>
+      </article>
+
+      <aside class="progress-orb-card">
+        <div class="orb" id="progress-orb" aria-label="Overall progress indicator">
+          <div class="orb-inner">
+            <div><strong id="overall-progress">0%</strong><span>Complete</span></div>
+          </div>
+        </div>
+        <h2 id="progress-title">Overall Progress</h2>
+        <p class="card-subtitle" id="progress-caption">Calculating progress from completed project line items.</p>
+      </aside>
     </section>
 
-    <!-- Summary Section -->
-    <section class="estimate-summary">
-      <h2>Summary</h2>
-      <p><strong>Subtotal:</strong> $<span id="subtotal">0.00</span></p>
-      <p><strong>Tax:</strong> $<span id="tax">0.00</span></p>
-      <p><strong>Total:</strong> $<span id="total">0.00</span></p>
-    </section>
+    <section class="layout">
+      <aside class="card" id="project-path">
+        <h2>Project Path</h2>
+        <p class="card-subtitle">A simplified phase view so the client can understand where the project stands without reading every line item.</p>
+        <div class="timeline" id="project-timeline">
+          <div class="loading"><strong>Loading timeline</strong>Building phase summary.</div>
+        </div>
+      </aside>
 
-    <!-- Footer Actions -->
-    <footer class="estimate-actions">
-      <button id="print-estimate" class="btn-primary"><i class="fas fa-print"></i> Print</button>
-      <button id="delete-estimate" class="btn-secondary"><i class="fas fa-trash"></i> Delete</button>
-      <button id="back-to-project" class="btn-secondary"><i class="fas fa-arrow-left"></i> Back to Project</button>
-    </footer>
+      <main class="card" id="project-flow">
+        <h2>Project Flow</h2>
+        <p class="card-subtitle">A simple client view of what is happening now, what is coming up next, and what has already been completed.</p>
+        <div class="now-next" id="now-next-feed">
+          <div class="loading"><strong>Loading work feed</strong>Sorting active, upcoming, and completed work.</div>
+        </div>
+
+        <div style="height:22px"></div>
+
+        <h2 id="work-areas">Work Areas</h2>
+        <p class="card-subtitle">Expandable category cards.</p>
+        <div class="section-tabs" id="category-tabs" aria-label="Category filters">
+          <button class="tab active" type="button" data-filter="all">All</button>
+          <button class="tab" type="button" data-filter="active">Active</button>
+          <button class="tab" type="button" data-filter="attention">Attention</button>
+          <button class="tab" type="button" data-filter="complete">Complete</button>
+        </div>
+        <div class="category-stack" id="category-stack">
+          <div class="loading"><strong>Loading work areas</strong>Preparing grouped project details.</div>
+        </div>
+      </main>
+
+      <aside class="rail">
+        <section class="rail-card" id="project-details">
+          <h2>Project Details</h2>
+          <p class="card-subtitle">Key project facts and progress details for the client.</p>
+          <div class="info-stack">
+            <div class="info-row"><span>Address</span><strong id="project-address">Loading...</strong></div>
+            <div class="info-row"><span>Estimated Completion</span><strong id="details-estimated-completion-date">Loading...</strong></div>
+            <div class="info-row"><span>Completed Items</span><strong id="details-completed-items">0</strong></div>
+            <div class="info-row"><span>Active Items</span><strong id="details-active-items">0</strong></div>
+            <div class="info-row"><span>Attention Items</span><strong id="details-attention-items">0</strong></div>
+            <div class="info-row"><span>Categories</span><strong id="category-count">0</strong></div>
+          </div>
+        </section>
+
+        <section class="rail-card" id="budget-summary">
+          <h2>Budget Summary</h2>
+          <p class="card-subtitle">Clear client-facing financial summary.</p>
+          <div class="money-stack">
+            <div class="money-row"><span>Subtotal</span><strong id="subtotal">$0.00</strong></div>
+            <div class="money-row"><span>Tax Rate</span><strong id="tax-rate">0%</strong></div>
+            <div class="money-row"><span>Tax</span><strong id="tax">$0.00</strong></div>
+            <div class="money-row"><span>Total</span><strong id="total" class="total">$0.00</strong></div>
+          </div>
+        </section>
+
+        <section class="rail-card" id="needs-attention">
+          <h2>Needs Attention</h2>
+          <p class="card-subtitle">Items that need review, dates, or schedule attention.</p>
+          <div class="alerts" id="alert-stack">
+            <div class="loading"><strong>Checking alerts</strong>Reviewing schedule and item status.</div>
+          </div>
+        </section>
+      </aside>
+    </section>
   </div>
 
-  <script src="./estimate-view.js"></script>
+  <div class="mobile-action-sheet-backdrop" id="mobile-action-sheet-backdrop"></div>
+  <section class="mobile-action-sheet" id="mobile-action-sheet" aria-hidden="true" aria-label="Mobile actions">
+    <div class="mobile-action-sheet-header">
+      <div>
+        <strong>Quick Actions</strong>
+        <span>Tools for this project view</span>
+      </div>
+      <button class="mobile-action-close" id="mobile-action-close" type="button" aria-label="Close actions">&times;</button>
+    </div>
+    <div class="mobile-action-grid">
+      <button class="mobile-action-btn" id="mobile-copy-link" type="button">
+        <span class="mobile-action-copy">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="9" y="9" width="10" height="10" rx="2"></rect>
+            <path d="M15 9V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path>
+          </svg>
+          <span><strong>Copy Link</strong><span>Share this project view</span></span>
+        </span>
+        <span class="mobile-action-chevron">&rsaquo;</span>
+      </button>
+      <button class="mobile-action-btn" id="mobile-print-page" type="button">
+        <span class="mobile-action-copy">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 9V4h10v5"></path>
+            <rect x="5" y="10" width="14" height="8" rx="2"></rect>
+            <path d="M7 14h10v6H7z"></path>
+          </svg>
+          <span><strong>Print</strong><span>Open the print layout</span></span>
+        </span>
+        <span class="mobile-action-chevron">&rsaquo;</span>
+      </button>
+      <button class="mobile-action-btn primary" id="mobile-back-to-project" type="button">
+        <span class="mobile-action-copy">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M14 6l-6 6 6 6"></path>
+            <path d="M9 12h10"></path>
+          </svg>
+          <span><strong>Back to Project</strong><span>Return to the manager view</span></span>
+        </span>
+        <span class="mobile-action-chevron">&rsaquo;</span>
+      </button>
+    </div>
+  </section>
+
+  <div class="mobile-footer-shell" aria-hidden="false">
+    <nav class="mobile-footer-nav" aria-label="Mobile navigation">
+      <a class="mobile-nav-link active" href="#overview" data-section="overview">
+        <span class="mobile-nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M3 11.5L12 4l9 7.5"></path><path d="M6 10.5V20h12v-9.5"></path></svg>
+        </span>
+        <span class="mobile-nav-text">Overview</span>
+      </a>
+      <a class="mobile-nav-link" href="#project-path" data-section="project-path">
+        <span class="mobile-nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M5 18h3l3-12h3l3 12h2"></path><path d="M4 18h16"></path></svg>
+        </span>
+        <span class="mobile-nav-text">Path</span>
+      </a>
+      <a class="mobile-nav-link" href="#project-flow" data-section="project-flow">
+        <span class="mobile-nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 7h6"></path><path d="M14 7h6"></path><path d="M10 7l4 0"></path><path d="M7 7v10"></path><path d="M7 17h10"></path><path d="M17 17v-4"></path></svg>
+        </span>
+        <span class="mobile-nav-text">Flow</span>
+      </a>
+      <a class="mobile-nav-link" href="#work-areas" data-section="work-areas">
+        <span class="mobile-nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><rect x="4" y="5" width="7" height="6" rx="1.5"></rect><rect x="13" y="5" width="7" height="6" rx="1.5"></rect><rect x="4" y="13" width="7" height="6" rx="1.5"></rect><rect x="13" y="13" width="7" height="6" rx="1.5"></rect></svg>
+        </span>
+        <span class="mobile-nav-text">Areas</span>
+      </a>
+      <a class="mobile-nav-link" href="#project-details" data-section="project-details">
+        <span class="mobile-nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2"></rect><path d="M9 9h6"></path><path d="M9 13h6"></path><path d="M9 17h4"></path></svg>
+        </span>
+        <span class="mobile-nav-text">Details</span>
+      </a>
+      <a class="mobile-nav-link" href="#budget-summary" data-section="budget-summary">
+        <span class="mobile-nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 4v16"></path><path d="M16 8.5c0-1.7-1.8-3-4-3s-4 1.3-4 3 1.8 3 4 3 4 1.3 4 3-1.8 3-4 3-4-1.3-4-3"></path></svg>
+        </span>
+        <span class="mobile-nav-text">Budget</span>
+      </a>
+      <a class="mobile-nav-link" href="#needs-attention" data-section="needs-attention">
+        <span class="mobile-nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 4l9 16H3L12 4z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+        </span>
+        <span class="mobile-nav-text">Alerts</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const estimateId = new URLSearchParams(window.location.search).get("estimateId");
+      let currentEstimate = null;
+      let currentCategories = [];
+      let currentFilter = "all";
+
+      const statusMeta = {
+        approved: { label: "Approved", className: "done" },
+        completed: { label: "Completed", className: "done" },
+        "in-progress": { label: "In Progress", className: "active" },
+        rework: { label: "Rework", className: "warn" },
+        new: { label: "Not Started", className: "" }
+      };
+
+      const $ = (id) => document.getElementById(id);
+      const setText = (id, value) => { const el = $(id); if (el) el.textContent = value; };
+      const sectionIds = ["overview", "project-path", "project-flow", "work-areas", "project-details", "budget-summary", "needs-attention"];
+      const mobileMedia = window.matchMedia("(max-width: 720px)");
+
+      function setActiveNav(sectionId) {
+        document.querySelectorAll(".topbar-nav-link, .mobile-nav-link").forEach((link) => {
+          const target = (link.getAttribute("href") || "").replace("#", "");
+          link.classList.toggle("active", target === sectionId);
+        });
+      }
+
+      function initSectionNavigation() {
+        const sections = sectionIds
+          .map((id) => document.getElementById(id))
+          .filter(Boolean);
+
+        if (!sections.length) return;
+
+        const observer = new IntersectionObserver((entries) => {
+          const visible = entries
+            .filter((entry) => entry.isIntersecting)
+            .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+          if (visible?.target?.id) {
+            setActiveNav(visible.target.id);
+          }
+        }, {
+          rootMargin: "-18% 0px -55% 0px",
+          threshold: [0.2, 0.45, 0.7]
+        });
+
+        sections.forEach((section) => observer.observe(section));
+
+        document.querySelectorAll(".topbar-nav-link, .mobile-nav-link").forEach((link) => {
+          link.addEventListener("click", () => {
+            const target = (link.getAttribute("href") || "").replace("#", "");
+            if (target) setActiveNav(target);
+          });
+        });
+
+        setActiveNav(sectionIds[0]);
+      }
+
+      function setSheetOpen(isOpen) {
+        const sheet = $("mobile-action-sheet");
+        const backdrop = $("mobile-action-sheet-backdrop");
+        const toggle = $("mobile-actions-toggle");
+        if (!sheet || !backdrop || !toggle) return;
+        sheet.classList.toggle("is-open", isOpen);
+        backdrop.classList.toggle("is-open", isOpen);
+        sheet.setAttribute("aria-hidden", isOpen ? "false" : "true");
+        toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      }
+
+      function initMobileActions() {
+        const toggle = $("mobile-actions-toggle");
+        const close = $("mobile-action-close");
+        const backdrop = $("mobile-action-sheet-backdrop");
+        const backButtons = [$("back-to-project"), $("mobile-back-to-project")].filter(Boolean);
+
+        if (!hasManagerIdentifier()) {
+          backButtons.forEach((button) => { button.style.display = "none"; });
+        }
+
+        toggle?.addEventListener("click", () => {
+          const expanded = toggle.getAttribute("aria-expanded") === "true";
+          setSheetOpen(!expanded);
+        });
+
+        close?.addEventListener("click", () => setSheetOpen(false));
+        backdrop?.addEventListener("click", () => setSheetOpen(false));
+
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") setSheetOpen(false);
+        });
+
+        mobileMedia.addEventListener("change", (event) => {
+          if (!event.matches) setSheetOpen(false);
+        });
+      }
+
+      function initMobileFooterBehavior() {
+        const footerShell = document.querySelector(".mobile-footer-shell");
+        if (!footerShell) return;
+
+        let lastScrollY = window.scrollY;
+        let ticking = false;
+
+        const updateFooterState = () => {
+          const currentScrollY = window.scrollY;
+          const scrollingDown = currentScrollY > lastScrollY;
+          const pastTop = currentScrollY > 80;
+          const shouldHide = mobileMedia.matches && pastTop && scrollingDown;
+          footerShell.classList.toggle("is-hidden", shouldHide);
+          lastScrollY = currentScrollY;
+          ticking = false;
+        };
+
+        window.addEventListener("scroll", () => {
+          if (!mobileMedia.matches) {
+            footerShell.classList.remove("is-hidden");
+            lastScrollY = window.scrollY;
+            return;
+          }
+          if (ticking) return;
+          ticking = true;
+          window.requestAnimationFrame(updateFooterState);
+        }, { passive: true });
+      }
+      const escapeHtml = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
+
+      function formatCurrency(value) {
+        return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value) || 0);
+      }
+
+      function parseDateOnly(value) {
+        if (!value) return null;
+        if (value instanceof Date) return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+        const raw = String(value);
+        const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+        const parsed = new Date(raw);
+        if (Number.isNaN(parsed.getTime())) return null;
+        return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+      }
+
+      function formatDate(value) {
+        const parsed = parseDateOnly(value);
+        if (!parsed) return "Not set";
+        return parsed.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+      }
+
+      function startOfToday() {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      }
+
+      function diffInDays(fromDate, toDate) {
+        return Math.round((toDate.getTime() - fromDate.getTime()) / 86400000);
+      }
+
+      function getStatusMeta(status) {
+        return statusMeta[status] || { label: status || "Unknown", className: "" };
+      }
+
+      function hasManagerIdentifier() {
+        try {
+          if (!window.localStorage) return false;
+          const managerId = localStorage.getItem("managerId");
+          const managerName = localStorage.getItem("managerName") || localStorage.getItem("userName");
+          return Boolean(managerId || managerName);
+        } catch (_) {
+          return false;
+        }
+      }
+
+      function getQuantityForItem(item) {
+        const mode = item.calcMode || "each";
+        if (mode === "sqft") return Number(item.area) || 0;
+        if (mode === "lnft") return Number(item.length) || 0;
+        return Number(item.quantity) || 0;
+      }
+
+      function getItemAmount(item) {
+        const total = Number(item.total);
+        if (Number.isFinite(total) && total > 0) return total;
+        return getQuantityForItem(item) * (Number(item.unitPrice) || 0);
+      }
+
+      function getVendorName(assignedTo) {
+        if (!assignedTo) return "Unassigned";
+        if (typeof assignedTo === "object") return assignedTo.name || "Assigned";
+        return String(assignedTo);
+      }
+
+      function buildAddress(project) {
+        const address = project?.address;
+        if (!address) return "Address not available";
+        if (typeof address === "string") return address;
+        return [address.addressLine1, address.addressLine2, [address.city, address.state].filter(Boolean).join(", "), address.zip].filter(Boolean).join(", ");
+      }
+
+      function flattenEstimateItems(estimate) {
+        return (estimate.lineItems || []).flatMap((category) =>
+          (category.items || []).map((item) => ({
+            ...item,
+            categoryName: category.category || "Uncategorized",
+            amount: getItemAmount(item),
+            quantityValue: getQuantityForItem(item)
+          }))
+        );
+      }
+
+      function getProjectEstimatedCompletion(items) {
+        if (!items.length) return "Not set";
+
+        const remainingItems = items.filter((item) => !["completed", "approved"].includes(item.status));
+        if (!remainingItems.length) return "Completed";
+
+        const remainingEndDates = remainingItems
+          .map((item) => parseDateOnly(item.endDate))
+          .filter(Boolean)
+          .sort((left, right) => left - right);
+
+        if (!remainingEndDates.length) return "Not set";
+
+        return formatDate(remainingEndDates[remainingEndDates.length - 1]);
+      }
+
+      function normalizeCategories(estimate) {
+        return (estimate.lineItems || []).map((category) => ({
+          ...category,
+          category: category.category || "Uncategorized",
+          items: (category.items || []).map((item) => ({
+            ...item,
+            categoryName: category.category || "Uncategorized",
+            amount: getItemAmount(item),
+            quantityValue: getQuantityForItem(item)
+          }))
+        }));
+      }
+
+      function computeProgress(items) {
+        if (!items.length) return 0;
+        const completedCount = items.filter((item) => ["completed", "approved"].includes(item.status)).length;
+        return Math.max(0, Math.min(100, (completedCount / items.length) * 100));
+      }
+
+      function getScheduleState(item, today = startOfToday()) {
+        const done = ["completed", "approved"].includes(item.status);
+        const startDate = parseDateOnly(item.startDate);
+        const endDate = parseDateOnly(item.endDate);
+        if (done) return { type: "done", label: "Complete", detail: "This item is complete.", rank: 4 };
+        if (!startDate && !endDate) return { type: "warn", label: "Needs Dates", detail: "Start and target completion dates have not been set.", rank: 1 };
+        if (endDate) {
+          const days = diffInDays(today, endDate);
+          if (days < 0) return { type: "danger", label: `${Math.abs(days)}d Overdue`, detail: `Target completion was ${formatDate(endDate)}.`, rank: 0 };
+          if (days <= 7) return { type: "warn", label: days === 0 ? "Due Today" : `Due in ${days}d`, detail: `Target completion is ${formatDate(endDate)}.`, rank: 1 };
+        }
+        if (startDate && diffInDays(today, startDate) >= 0) return { type: "active", label: "Underway", detail: endDate ? `Target completion ${formatDate(endDate)}.` : "Work is scheduled and underway.", rank: 2 };
+        return { type: "", label: startDate ? `Starts ${formatDate(startDate)}` : "Scheduled", detail: endDate ? `Target completion ${formatDate(endDate)}.` : "No schedule issue detected.", rank: 3 };
+      }
+
+      function isAttentionItem(item) {
+        const state = getScheduleState(item);
+        return state.type === "danger" || state.type === "warn" || item.status === "rework";
+      }
+
+      function getComingUpDate(item, today = startOfToday()) {
+        if (["completed", "approved", "rework"].includes(item.status)) return null;
+        const startDate = parseDateOnly(item.startDate);
+        if (startDate) {
+          const daysUntilStart = diffInDays(today, startDate);
+          if (daysUntilStart < 0) return null;
+          if (item.status === "in-progress") {
+            return daysUntilStart > 7 ? { date: startDate, source: "start" } : null;
+          }
+          return { date: startDate, source: "start" };
+        }
+
+        const endDate = parseDateOnly(item.endDate);
+        if (!endDate) return null;
+        const daysUntilEnd = diffInDays(today, endDate);
+        if (daysUntilEnd < 0) return null;
+        if (item.status === "in-progress") {
+          return daysUntilEnd > 7 ? { date: endDate, source: "end" } : null;
+        }
+        return { date: endDate, source: "end" };
+      }
+
+      function renderTimeline(categories) {
+        const container = $("project-timeline");
+        if (!container) return;
+        if (!categories.length) {
+          container.innerHTML = '<div class="empty"><strong>No phases yet</strong>Project categories will appear here once the estimate is populated.</div>';
+          return;
+        }
+
+        container.innerHTML = categories.map((category, index) => {
+          const progress = computeProgress(category.items || []);
+          const active = category.items.some((item) => ["in-progress", "rework"].includes(item.status));
+          const attention = category.items.some(isAttentionItem);
+          const complete = progress >= 98;
+          const cls = attention ? "alert" : active ? "active" : complete ? "complete" : "";
+          return `
+            <div class="phase ${cls}">
+              <div class="phase-dot">${index + 1}</div>
+              <div class="phase-card">
+                <header>
+                  <div class="phase-card-headline">
+                    <h3>${escapeHtml(category.category)}</h3>
+                    <div class="phase-progress-orb ${cls}" style="--phase-progress:${(progress * 3.6).toFixed(1)}deg;" aria-label="${Math.round(progress)} percent complete">
+                      <div class="phase-progress-inner">${Math.round(progress)}%</div>
+                    </div>
+                  </div>
+                </header>
+                <p>${Math.round(progress)}% complete · ${(category.items || []).length} item${(category.items || []).length === 1 ? "" : "s"}</p>
+              </div>
+            </div>`;
+        }).join("");
+      }
+
+      function renderFlowGroup(title, subtitle, items, emptyTitle, emptyText) {
+        const content = items.length
+          ? `<div class="flow-items">${items.join("")}</div>`
+          : `<div class="empty"><strong>${escapeHtml(emptyTitle)}</strong>${escapeHtml(emptyText)}</div>`;
+
+        return `
+          <section class="flow-group">
+            <header>
+              <div>
+                <h3>${escapeHtml(title)}</h3>
+                <p>${escapeHtml(subtitle)}</p>
+              </div>
+              <span class="flow-count">${items.length} item${items.length === 1 ? "" : "s"}</span>
+            </header>
+            ${content}
+          </section>`;
+      }
+
+      function renderNowNext(items) {
+        const container = $("now-next-feed");
+        if (!container) return;
+        if (!items.length) {
+          container.innerHTML = '<div class="empty"><strong>No work items yet</strong>The client feed will populate when line items are added.</div>';
+          return;
+        }
+
+        const today = startOfToday();
+
+        const nowItems = items
+          .filter((item) => {
+            const isActiveOrAttention = ["in-progress", "rework"].includes(item.status) || isAttentionItem(item);
+            if (!isActiveOrAttention) return false;
+            return !(item.status === "in-progress" && getComingUpDate(item, today));
+          })
+          .map((item) => ({
+            item,
+            label: ["in-progress", "rework"].includes(item.status) ? "In Progress" : "Needs Dates",
+            featured: isAttentionItem(item)
+          }));
+
+        const nextItems = items
+          .map((item) => ({ item, comingUpDate: getComingUpDate(item, today) }))
+          .filter(({ comingUpDate }) => Boolean(comingUpDate))
+          .sort((left, right) => left.comingUpDate.date - right.comingUpDate.date)
+              .map(({ item, comingUpDate }) => ({
+            item,
+            label: `${comingUpDate.source === "start" ? "Starts" : "Target by"} ${formatDate(comingUpDate.date)}`,
+              featured: false,
+            statusMetaValue: "Upcoming",
+              scheduleMetaLabel: comingUpDate.source === "start" ? "Estimated Start" : "Estimated Target",
+              scheduleMetaValue: formatDate(comingUpDate.date)
+          }));
+
+        const completedItems = items
+          .filter((item) => ["completed", "approved"].includes(item.status))
+          .map((item) => ({ item, label: "Completed", featured: false }));
+
+        const renderCard = ({ item, label, featured, statusMetaValue, scheduleMetaLabel, scheduleMetaValue }) => {
+          const status = getStatusMeta(item.status);
+          const schedule = getScheduleState(item);
+          const isOverdue = schedule.type === "danger";
+          const badgeClass = isOverdue ? "danger" : (featured ? "warn" : status.className);
+          const badgeLabel = isOverdue ? schedule.label : label;
+          const displayedStatus = isOverdue ? "Needs Attention" : (statusMetaValue || status.label);
+          return `
+            <article class="focus-card ${featured ? "featured" : ""}">
+              <header>
+                <div><span class="pill ${badgeClass}">${escapeHtml(badgeLabel)}</span><h3 style="margin-top:10px">${escapeHtml(item.name || "Unnamed item")}</h3></div>
+                <strong>${formatCurrency(item.amount)}</strong>
+              </header>
+              <p>${escapeHtml(item.description || `${item.categoryName} work item.`)}</p>
+              <div class="focus-meta">
+                <div class="mini-stat"><small>Status</small><strong>${escapeHtml(displayedStatus)}</strong></div>
+                <div class="mini-stat"><small>${escapeHtml(scheduleMetaLabel || "Schedule")}</small><strong>${escapeHtml(scheduleMetaValue || schedule.label)}</strong></div>
+                <div class="mini-stat"><small>Assigned</small><strong>${escapeHtml(getVendorName(item.assignedTo))}</strong></div>
+              </div>
+            </article>`;
+        };
+
+        container.innerHTML = [
+          renderFlowGroup(
+            "Happening Now",
+            "Active work.",
+            nowItems.map(renderCard),
+            "Nothing active right now",
+            "There are no current work items in progress."
+          ),
+          renderFlowGroup(
+            "Coming Up Next",
+            "Items scheduled for later.",
+            nextItems.map(renderCard),
+            "No upcoming items",
+            "There are no future-scheduled work items ready to start next."
+          ),
+          renderFlowGroup(
+            "Recently Completed",
+            "Items that are already finished or approved.",
+            completedItems.map(renderCard),
+            "Nothing completed yet",
+            "Completed items."
+          )
+        ].join("");
+      }
+
+      function categoryMatchesFilter(category, filter) {
+        const items = category.items || [];
+        if (filter === "active") return items.some((item) => ["in-progress", "rework"].includes(item.status));
+        if (filter === "attention") return items.some(isAttentionItem);
+        if (filter === "complete") return items.length > 0 && items.every((item) => ["completed", "approved"].includes(item.status));
+        return true;
+      }
+
+      function renderCategories() {
+        const container = $("category-stack");
+        if (!container) return;
+        const categories = currentCategories.filter((category) => categoryMatchesFilter(category, currentFilter));
+        if (!categories.length) {
+          container.innerHTML = '<div class="empty"><strong>No matching work areas</strong>Change the filter to view other project categories.</div>';
+          return;
+        }
+
+        container.innerHTML = categories.map((category, index) => {
+          const items = category.items || [];
+          const progress = computeProgress(items);
+          const completed = items.filter((item) => ["completed", "approved"].includes(item.status)).length;
+          const active = items.filter((item) => ["in-progress", "rework"].includes(item.status)).length;
+          const attention = items.filter(isAttentionItem).length;
+          return `
+            <details class="category-detail" ${index === 0 ? "open" : ""}>
+              <summary>
+                <div class="category-title">
+                  <h3>${escapeHtml(category.category)}</h3>
+                  <p>${completed} complete · ${active} active · ${attention} needing review</p>
+                </div>
+                <div class="category-progress"><div class="bar"><span style="width:${progress.toFixed(1)}%"></span></div><strong>${Math.round(progress)}%</strong></div>
+              </summary>
+              <div class="line-items">
+                ${items.map((item) => {
+                  const status = getStatusMeta(item.status);
+                  const schedule = getScheduleState(item);
+                  return `
+                    <article class="line-row">
+                      <div>
+                        <h4>${escapeHtml(item.name || "Unnamed item")}</h4>
+                        <p>${escapeHtml(item.description || "No additional description provided.")}</p>
+                        <p style="margin-top:7px"><span class="pill ${status.className}">${escapeHtml(status.label)}</span> <span class="pill ${schedule.type}">${escapeHtml(schedule.label)}</span></p>
+                      </div>
+                      <strong>${formatCurrency(item.amount)}</strong>
+                    </article>`;
+                }).join("")}
+              </div>
+            </details>`;
+        }).join("");
+      }
+
+      function renderAlerts(items) {
+        const container = $("alert-stack");
+        if (!container) return;
+        const alerts = items
+          .map((item) => ({ item, schedule: getScheduleState(item) }))
+          .filter(({ item, schedule }) => schedule.type === "danger" || schedule.type === "warn" || item.status === "rework")
+          .sort((a, b) => a.schedule.rank - b.schedule.rank)
+          .slice(0, 6);
+
+        if (!alerts.length) {
+          container.innerHTML = '<div class="empty"><strong>No client attention items</strong>Nothing is currently overdue or missing schedule dates.</div>';
+          return;
+        }
+
+        container.innerHTML = alerts.map(({ item, schedule }) => `
+          <article class="alert-card">
+            <span class="pill ${schedule.type}">${escapeHtml(schedule.label)}</span>
+            <h3 style="margin-top:9px">${escapeHtml(item.name || "Unnamed item")}</h3>
+            <p>${escapeHtml(schedule.detail)}</p>
+          </article>`).join("");
+      }
+
+      function renderEstimate(estimate) {
+        currentEstimate = estimate;
+        currentCategories = normalizeCategories(estimate);
+        const items = flattenEstimateItems(estimate);
+        const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
+        const taxRate = Number(estimate.tax) || 0;
+        const taxAmount = subtotal * (taxRate / 100);
+        const total = subtotal + taxAmount;
+        const completeCount = items.filter((item) => ["completed", "approved"].includes(item.status)).length;
+        const activeCount = items.filter((item) => ["in-progress", "rework"].includes(item.status)).length;
+        const attentionCount = items.filter(isAttentionItem).length;
+        const progress = computeProgress(items);
+        const projectName = estimate.projectId?.name || estimate.title || "Client Project";
+        const statusLabel = attentionCount ? "In Progress" : progress >= 98 ? "Near Complete" : activeCount ? "In Progress" : "Project Overview";
+
+        document.title = `${projectName} | Client Overview`;
+        setText("nav-title", projectName);
+        setText("project-name", projectName);
+        setText("hero-status", statusLabel);
+        setText("hero-total", formatCurrency(total));
+        setText("hero-active", `${activeCount} item${activeCount === 1 ? "" : "s"}`);
+        setText("hero-alerts", `${attentionCount} item${attentionCount === 1 ? "" : "s"}`);
+        setText("client-summary", `${completeCount} of ${items.length || 0} project items have been completed or approved. This overview highlights current progress, upcoming work, schedule timing, and the overall project.`);
+
+        setText("overall-progress", `${Math.round(progress)}%`);
+        const orb = $("progress-orb");
+        if (orb) orb.style.setProperty("--progress", `${progress * 3.6}deg`);
+        setText("progress-title", statusLabel);
+        setText("progress-caption", `${activeCount} active item${activeCount === 1 ? "" : "s"}, ${attentionCount} item${attentionCount === 1 ? "" : "s"} needing attention, and ${formatCurrency(total)} in tracked scope.`);
+
+        setText("project-address", buildAddress(estimate.projectId));
+        setText("details-project-status", statusLabel);
+        setText("details-overall-progress", `${Math.round(progress)}%`);
+        const estimatedCompletion = getProjectEstimatedCompletion(items);
+        setText("hero-estimated-completion-date", estimatedCompletion);
+        setText("details-estimated-completion-date", estimatedCompletion);
+        setText("details-completed-items", String(completeCount));
+        setText("details-active-items", String(activeCount));
+        setText("details-attention-items", String(attentionCount));
+        setText("category-count", String(currentCategories.length));
+        setText("subtotal", formatCurrency(subtotal));
+        setText("tax-rate", `${taxRate.toFixed(2)}%`);
+        setText("tax", formatCurrency(taxAmount));
+        setText("total", formatCurrency(total));
+
+        renderTimeline(currentCategories);
+        renderNowNext(items);
+        renderCategories();
+        renderAlerts(items);
+      }
+
+      function renderError(message) {
+        ["project-timeline", "now-next-feed", "category-stack", "alert-stack"].forEach((id) => {
+          const el = $(id);
+          if (el) el.innerHTML = `<div class="error"><strong>Unable to load overview</strong>${escapeHtml(message)}</div>`;
+        });
+      }
+
+      async function loadEstimateDetails() {
+        if (!estimateId) {
+          renderError("Estimate ID is missing from the link.");
+          return;
+        }
+        try {
+          const response = await fetch(`/api/estimates/${estimateId}`);
+          if (!response.ok) throw new Error("Failed to fetch estimate details.");
+          const { estimate } = await response.json();
+          if (!estimate) return renderError("Estimate not found.");
+          renderEstimate(estimate);
+        } catch (error) {
+          console.error("Error loading client overview:", error);
+          renderError("The client overview could not be loaded right now.");
+        }
+      }
+
+      document.querySelectorAll(".tab").forEach((button) => {
+        button.addEventListener("click", () => {
+          currentFilter = button.dataset.filter || "all";
+          document.querySelectorAll(".tab").forEach((tab) => tab.classList.toggle("active", tab === button));
+          renderCategories();
+        });
+      });
+
+      function handlePrint() {
+        setSheetOpen(false);
+        window.print();
+      }
+
+      function handleBackToProject() {
+        if (!hasManagerIdentifier()) return;
+        setSheetOpen(false);
+        const projectId = currentEstimate?.projectId?._id;
+        window.location.href = projectId ? `/details/projects/${projectId}` : document.referrer || "/";
+      }
+
+      async function handleCopyLink(buttonId) {
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          setSheetOpen(false);
+          const btn = $(buttonId);
+          if (btn) {
+            if (btn.classList.contains("mobile-action-btn")) {
+              const originalMarkup = btn.dataset.originalMarkup || btn.innerHTML;
+              btn.dataset.originalMarkup = originalMarkup;
+              btn.innerHTML = '<span class="mobile-action-copy"><strong>Copied</strong><span>Link is ready to share</span></span>';
+              setTimeout(() => { btn.innerHTML = btn.dataset.originalMarkup || originalMarkup; }, 1600);
+            } else {
+              const old = btn.textContent;
+              btn.textContent = "Copied";
+              setTimeout(() => { btn.textContent = old; }, 1600);
+            }
+          }
+        } catch (_) {
+          alert("Unable to copy automatically. Please copy the page URL manually.");
+        }
+      }
+
+      $("print-page")?.addEventListener("click", handlePrint);
+      $("mobile-print-page")?.addEventListener("click", handlePrint);
+      $("back-to-project")?.addEventListener("click", handleBackToProject);
+      $("mobile-back-to-project")?.addEventListener("click", handleBackToProject);
+      $("copy-link")?.addEventListener("click", async () => { await handleCopyLink("copy-link"); });
+      $("mobile-copy-link")?.addEventListener("click", async () => { await handleCopyLink("mobile-copy-link"); });
+
+      initSectionNavigation();
+      initMobileActions();
+      initMobileFooterBehavior();
+      await loadEstimateDetails();
+    });
+  </script>
 </body>
 </html>
