@@ -860,6 +860,7 @@ function refreshLineItems(categories) {
     header.innerHTML = `
       <div class="category-title">
         <div class="category-title-main">
+          <input type="checkbox" class="category-select-toggle" aria-label="Select category line items" title="Select category line items">
           <button class="btn category-drag-handle" type="button" draggable="true" title="Drag category">::</button>
           <button class="btn toggle-category-collapse estimate-disclosure-btn" type="button" aria-expanded="true" title="Collapse category">${getDisclosureIconSvg()}</button>
           <div class="category-title-copy">
@@ -894,6 +895,10 @@ function refreshLineItems(categories) {
       addLineItemCard({}, header);
     });
 
+    header.querySelector('.category-select-toggle')?.addEventListener('change', (event) => {
+      toggleCategoryLineItemSelection(header, !!event.target?.checked);
+    });
+
     header.querySelector(".remove-category").addEventListener("click", () => {
   const categoryName = header.querySelector('.category-title span[contenteditable]')?.textContent?.trim() || 'this category';
   if (!confirm(`Are you sure you want to remove "${categoryName}" and all its line items? This cannot be undone.`)) {
@@ -917,6 +922,7 @@ function refreshLineItems(categories) {
     lineItemsContainer.appendChild(header);
   try { if (typeof window.__estimateEditWireCategoryDrag === 'function') window.__estimateEditWireCategoryDrag(header); } catch (_) {}
   try { syncCategoryHeaderTotal(header); } catch (_) {}
+  try { syncCategorySelectionCheckboxes(); } catch (_) {}
 
     
     if (shouldAutoFocus) {
@@ -2047,6 +2053,7 @@ card.innerHTML = `
     // Update dropdown color
     const newClass = getStatusClass(newStatus);
     statusDropdown.className = "item-status-dropdown " + newClass;
+    clearSelectedLineItems();
     showToast("Status updated!");
   });
 
@@ -2062,6 +2069,7 @@ card.innerHTML = `
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ startDate: startDateInput.value })
       });
+      clearSelectedLineItems();
       showToast("Start date updated!");
     });
   }
@@ -2072,6 +2080,7 @@ card.innerHTML = `
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ endDate: endDateInput.value })
       });
+      clearSelectedLineItems();
       showToast("End date updated!");
     });
   }
@@ -2362,6 +2371,7 @@ card.querySelector(".delete-line-item").addEventListener("click", () => {
   }
 
 function updateCardValues() {
+  clearSelectedLineItems();
   let total = 0;
   const unitPrice = parseFloat(priceInput.value) || 0;
   if (calcModeSelect.value === "sqft") {
@@ -2712,6 +2722,105 @@ function updateSummary() {
   
 
 // ✅ Function to Calculate and Display Selected Labor Cost
+  function clearSelectedLineItems() {
+    const selectedCardCheckboxes = Array.from(document.querySelectorAll('.line-item-card .line-item-select:checked'));
+    if (!selectedCardCheckboxes.length) {
+      try { syncCategorySelectionCheckboxes(); } catch (_) {}
+      try { syncListViewSelectAllCheckboxState(); } catch (_) {}
+      return false;
+    }
+
+    selectedCardCheckboxes.forEach((checkbox) => {
+      checkbox.checked = false;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    document.querySelectorAll('#line-items-table-container tbody .lv-drag-select-stack input[type="checkbox"]:checked')
+      .forEach((checkbox) => {
+        checkbox.checked = false;
+      });
+
+    try { syncCategorySelectionCheckboxes(); } catch (_) {}
+    try { syncListViewSelectAllCheckboxState(); } catch (_) {}
+    return true;
+  }
+
+function getSelectableCategoryLineItemCheckboxes(header) {
+  return getCategoryCards(header)
+    .map((card) => card.querySelector('.line-item-select'))
+    .filter((checkbox) => checkbox && !checkbox.disabled);
+}
+
+function toggleCategoryLineItemSelection(header, shouldSelect) {
+  const checkboxes = getSelectableCategoryLineItemCheckboxes(header);
+  checkboxes.forEach((checkbox) => {
+    if (checkbox.checked === shouldSelect) return;
+    checkbox.checked = shouldSelect;
+    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  try { syncCategorySelectionCheckboxes(); } catch (_) {}
+}
+
+function syncCategorySelectionCheckboxes() {
+  document.querySelectorAll('.category-header').forEach((header) => {
+    const selectableCheckboxes = getSelectableCategoryLineItemCheckboxes(header);
+    const selectedCount = selectableCheckboxes.filter((checkbox) => checkbox.checked).length;
+    const totalCount = selectableCheckboxes.length;
+    const allSelected = totalCount > 0 && selectedCount === totalCount;
+    const partiallySelected = selectedCount > 0 && selectedCount < totalCount;
+    const key = ensureCategoryCollapseKey(header);
+
+    const syncCheckbox = (checkbox) => {
+      if (!checkbox) return;
+      checkbox.disabled = totalCount === 0;
+      checkbox.checked = allSelected;
+      checkbox.indeterminate = partiallySelected;
+      checkbox.title = allSelected ? 'Unselect category line items' : 'Select category line items';
+      checkbox.setAttribute('aria-label', checkbox.title);
+    };
+
+    syncCheckbox(header.querySelector('.category-select-toggle'));
+    document.querySelectorAll(`.lv-category-group-row[data-category-key="${key}"] .lv-category-select-toggle`).forEach(syncCheckbox);
+  });
+}
+
+try { window.__estimateEditGetSelectableCategoryLineItemCheckboxes = getSelectableCategoryLineItemCheckboxes; } catch (_) {}
+try { window.__estimateEditToggleCategoryLineItemSelection = toggleCategoryLineItemSelection; } catch (_) {}
+try { window.__estimateEditSyncCategorySelectionCheckboxes = syncCategorySelectionCheckboxes; } catch (_) {}
+
+function getSelectableLineItemCheckboxes() {
+  return Array.from(document.querySelectorAll('.line-item-card .line-item-select'))
+    .filter((checkbox) => checkbox && !checkbox.disabled);
+}
+
+function syncListViewSelectAllCheckboxState() {
+  const selectAllCheckbox = document.getElementById('list-view-select-all');
+  if (!selectAllCheckbox) return;
+
+  const selectableCheckboxes = getSelectableLineItemCheckboxes();
+  const selectedCount = selectableCheckboxes.filter((checkbox) => checkbox.checked).length;
+  const totalCount = selectableCheckboxes.length;
+  const isAllSelected = totalCount > 0 && selectedCount === totalCount;
+
+  selectAllCheckbox.disabled = totalCount === 0;
+  selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalCount;
+  selectAllCheckbox.checked = isAllSelected;
+  selectAllCheckbox.title = isAllSelected ? 'Unselect all line items' : 'Select all line items';
+  selectAllCheckbox.setAttribute('aria-label', selectAllCheckbox.title);
+}
+
+function syncListViewRowSelectionCheckboxes() {
+  document.querySelectorAll('#line-items-table-container tr[data-card-id]').forEach((row) => {
+    const itemId = row.getAttribute('data-card-id');
+    if (!itemId) return;
+    const cardCheckbox = document.querySelector(`.line-item-card[data-item-id="${itemId}"] .line-item-select`);
+    const rowCheckbox = row.querySelector('.lv-drag-select-stack input[type="checkbox"]');
+    if (!cardCheckbox || !rowCheckbox) return;
+    rowCheckbox.checked = cardCheckbox.checked;
+    rowCheckbox.disabled = cardCheckbox.disabled;
+  });
+}
+
 function updateSelectedLaborCost() {
   // Only count checkboxes that are enabled (not assigned)
   const selectedItems = Array.from(document.querySelectorAll(".line-item-select:checked"))
@@ -2755,6 +2864,9 @@ function updateSelectedLaborCost() {
     }
   } catch (_) {}
   try { syncMobileBottomBarState(selectedItems.length); } catch (_) {}
+  try { syncListViewRowSelectionCheckboxes(); } catch (_) {}
+  try { syncCategorySelectionCheckboxes(); } catch (_) {}
+  try { syncListViewSelectAllCheckboxState(); } catch (_) {}
 }
 
 // Expose for external callers (e.g., list view actions)
@@ -3676,9 +3788,26 @@ function wireMobileExperience() {
   document.getElementById("batch-delete-items")?.addEventListener("click", () => window.__estimateEditDeleteSelected?.());
   document.getElementById("tax-input").addEventListener("input", updateSummary);
   document.getElementById("save-estimate").addEventListener("click", saveEstimate);
+  document.getElementById('list-view-select-all')?.addEventListener('change', (event) => {
+    const shouldSelectAll = !!event.target?.checked;
+    const selectableCheckboxes = getSelectableLineItemCheckboxes();
+
+    selectableCheckboxes.forEach((checkbox) => {
+      if (checkbox.checked === shouldSelectAll) return;
+      checkbox.checked = shouldSelectAll;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    try { updateSelectedLaborCost(); } catch (_) {}
+    if (typeof isListViewActive === 'function' && isListViewActive()) {
+      try { buildListViewFromCards(); } catch (_) {}
+      try { if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false); } catch (_) {}
+    }
+  });
   wireMobileExperience();
   try { window.__estimateEditRefreshBatchCategoryOptions?.(); } catch (_) {}
   try { window.__estimateEditSyncBatchActionState?.(); } catch (_) {}
+  try { syncListViewSelectAllCheckboxState(); } catch (_) {}
  });
 
   function roundCurrency(value) {
@@ -4080,6 +4209,7 @@ function createFilterUI() {
   }
 
   async function persistBatchDomChanges() {
+    try { clearSelectedLineItems(); } catch (_) {}
     try { rebuildSplitGroupHeaders(); } catch (_) {}
     try { applyCategoryCollapseState(); } catch (_) {}
     try { populateFilterOptions(); } catch (_) {}
@@ -4694,6 +4824,19 @@ function ensureListViewContainer() {
         color: #64748b;
         font-size: 12px;
         font-weight: 600;
+        cursor: pointer;
+        text-decoration: underline;
+        text-decoration-color: rgba(100, 116, 139, 0.35);
+        text-underline-offset: 2px;
+      }
+      #line-items-table-container .lv-cat-inline-label:hover {
+        color: #1d4ed8;
+        text-decoration-color: rgba(29, 78, 216, 0.45);
+      }
+      #line-items-table-container .lv-cat-inline-label:focus-visible {
+        outline: 2px solid rgba(59, 130, 246, 0.35);
+        outline-offset: 2px;
+        border-radius: 4px;
       }
       #line-items-table-container .lv-inline-split-wrap {
         display: flex;
@@ -5045,6 +5188,18 @@ function ensureListViewContainer() {
         display: inline-flex;
         align-items: center;
         gap: 6px;
+      }
+      #line-items-table-container .lv-drag-select-stack {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-width: 100%;
+        white-space: nowrap;
+      }
+      #line-items-table-container .lv-drag-select-stack input[type="checkbox"] {
+        margin: 0;
+        flex: 0 0 auto;
       }
       #line-items-table-container .lv-icon-group {
         display: inline-flex;
@@ -5723,6 +5878,16 @@ function buildListViewFromCards() {
     };
 
     const leadCell = document.createElement('td');
+    const leadStack = document.createElement('div');
+    leadStack.className = 'lv-drag-select-stack';
+    const categorySelect = document.createElement('input');
+    categorySelect.type = 'checkbox';
+    categorySelect.className = 'lv-category-select-toggle';
+    categorySelect.setAttribute('aria-label', 'Select category line items');
+    categorySelect.title = 'Select category line items';
+    categorySelect.addEventListener('change', (event) => {
+      window.__estimateEditToggleCategoryLineItemSelection?.(header, !!event.target?.checked);
+    });
     const categoryHandle = document.createElement('button');
     categoryHandle.type = 'button';
     categoryHandle.className = 'lv-drag-handle';
@@ -5740,7 +5905,14 @@ function buildListViewFromCards() {
         window.__estimateEditEndEstimateDrag();
       }
     });
-    leadCell.appendChild(categoryHandle);
+    const selectableCheckboxes = window.__estimateEditGetSelectableCategoryLineItemCheckboxes?.(header) || [];
+    const selectedCount = selectableCheckboxes.filter((checkbox) => checkbox.checked).length;
+    categorySelect.disabled = selectableCheckboxes.length === 0;
+    categorySelect.checked = selectableCheckboxes.length > 0 && selectedCount === selectableCheckboxes.length;
+    categorySelect.indeterminate = selectedCount > 0 && selectedCount < selectableCheckboxes.length;
+    leadStack.appendChild(categoryHandle);
+    leadStack.appendChild(categorySelect);
+    leadCell.appendChild(leadStack);
     row.appendChild(leadCell);
 
     const mainCell = document.createElement('td');
@@ -5879,15 +6051,9 @@ function buildListViewFromCards() {
 
         // Select checkbox
     const tdSelect = document.createElement('td');
-    tdSelect.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; width:56px; min-width:56px;';
+    tdSelect.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; width:76px; min-width:76px;';
         const selectStack = document.createElement('div');
         selectStack.className = 'lv-drag-select-stack';
-        selectStack.style.display = 'flex';
-        selectStack.style.flexDirection = 'column';
-        selectStack.style.alignItems = 'center';
-        selectStack.style.justifyContent = 'center';
-        selectStack.style.gap = '6px';
-        selectStack.style.minWidth = '100%';
         const itemHandle = document.createElement('button');
         itemHandle.type = 'button';
         itemHandle.className = 'lv-drag-handle';
@@ -5929,25 +6095,18 @@ function buildListViewFromCards() {
         tdSelect.appendChild(selectStack);
         tr.appendChild(tdSelect);
 
-  // Category with toggle arrow
+  // Category label toggles details
   const tdCat = document.createElement('td');
   tdCat.style.cssText = 'padding:4px 0px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:130px;';
   const catWrap = document.createElement('div');
   catWrap.className = 'lv-cat-wrap';
-  const toggleBtn = document.createElement('button');
-  toggleBtn.className = 'lv-toggle-btn estimate-disclosure-btn estimate-disclosure-btn-slate';
-  toggleBtn.type = 'button';
-  toggleBtn.setAttribute('aria-expanded', 'false');
-  toggleBtn.title = 'Show details';
-  toggleBtn.innerHTML = getDisclosureIconSvg();
   const catLabel = document.createElement('span');
   catLabel.className = 'lv-cat-inline-label';
   catLabel.textContent = categoryName;
-  // Group left-side icons together before the label
-  const iconGroup = document.createElement('div');
-  iconGroup.className = 'lv-icon-group';
-  iconGroup.appendChild(toggleBtn);
-  catWrap.appendChild(iconGroup);
+  catLabel.setAttribute('role', 'button');
+  catLabel.setAttribute('tabindex', '0');
+  catLabel.setAttribute('aria-expanded', 'false');
+  catLabel.title = 'Show details';
   catWrap.appendChild(catLabel);
   tdCat.appendChild(catWrap);
   tr.appendChild(tdCat);
@@ -6832,26 +6991,29 @@ function buildListViewFromCards() {
           const replacement = createDetailRow();
           current.replaceWith(replacement);
         }
-        // Toggle detail using arrow button only
-        toggleBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+        async function toggleDetailRow(event) {
+          event?.stopPropagation?.();
+          const expanded = catLabel.getAttribute('aria-expanded') === 'true';
           if (expanded) {
-            // Collapse
             removeExistingDetailRow();
-            toggleBtn.setAttribute('aria-expanded', 'false');
-            toggleBtn.title = 'Show details';
-            // icon rotates via CSS
+            catLabel.setAttribute('aria-expanded', 'false');
+            catLabel.title = 'Show details';
             try { card.removeAttribute('data-lv-expanded'); } catch (_) {}
           } else {
-            // Expand
             const detailRow = createDetailRow();
             tr.parentNode.insertBefore(detailRow, tr.nextSibling);
-            toggleBtn.setAttribute('aria-expanded', 'true');
-            toggleBtn.title = 'Hide details';
-            // icon rotates via CSS
+            catLabel.setAttribute('aria-expanded', 'true');
+            catLabel.title = 'Hide details';
             try { card.setAttribute('data-lv-expanded', 'true'); } catch (_) {}
             await refreshExpandedDetailRowPhotos();
+          }
+        }
+
+        catLabel.addEventListener('click', toggleDetailRow);
+        catLabel.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            toggleDetailRow(event);
           }
         });
 
@@ -6860,8 +7022,8 @@ function buildListViewFromCards() {
           if (card.getAttribute('data-lv-expanded') === 'true') {
             const detailRow = createDetailRow();
             frag.appendChild(detailRow);
-            toggleBtn.setAttribute('aria-expanded', 'true');
-            toggleBtn.title = 'Hide details';
+            catLabel.setAttribute('aria-expanded', 'true');
+            catLabel.title = 'Hide details';
             setTimeout(() => {
               refreshExpandedDetailRowPhotos();
             }, 0);
@@ -6891,7 +7053,7 @@ function buildListViewFromCards() {
       const tdActions = document.createElement('td');
 
       const base = 'padding:4px 6px; border-bottom:1px solid #f1f5f9; font-size:14px;';
-      td0.style.cssText = 'padding:2px 0; border-bottom:1px solid #f1f5f9; width:40px; min-width:40px;';
+      td0.style.cssText = 'padding:2px 0; border-bottom:1px solid #f1f5f9; width:76px; min-width:76px;';
       tdCat.style.cssText = base + ' min-width:130px; font-weight:600; color:#0f172a;';
       tdItem.style.cssText = base + ' min-width:200px; color:#6b7280; font-style:italic;';
       tdMode.style.cssText = base + ' min-width:70px;';
@@ -7629,6 +7791,9 @@ function addSmartBlurAutoSave(input) {
     // Clear smartOrig flag
     try { delete input.dataset.smartOrig; } catch (_) {}
     if (changed) {
+      if (input.closest('.line-item-card')) {
+        try { clearSelectedLineItems(); } catch (_) {}
+      }
       try { autoSaveEstimate(); } catch (e) { console.warn('Autosave (blur) failed', e); }
     }
   });
