@@ -965,6 +965,109 @@
 
     .money-stack, .info-stack { display: grid; gap: 11px; }
 
+      .budget-panel {
+        display: grid;
+        gap: 16px;
+      }
+
+      .section-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .section-head h2 {
+        margin: 0 0 6px;
+      }
+
+      .section-head p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.45;
+      }
+
+      .budget-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+      }
+
+      .budget-bars {
+        display: grid;
+        gap: 12px;
+      }
+
+      .budget-bar-card {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255,255,255,0.78);
+      }
+
+      .budget-bar-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .budget-bar-top span,
+      .total-card span {
+        display: block;
+        color: var(--muted);
+        font-size: 0.84rem;
+        margin-bottom: 4px;
+      }
+
+      .budget-bar-top strong,
+      .total-card strong {
+        font-size: 1.05rem;
+        letter-spacing: -0.02em;
+      }
+
+      .budget-bar-top small {
+        display: block;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+
+      .budget-bar-track {
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(23,32,38,0.08);
+        overflow: hidden;
+      }
+
+      .budget-bar-fill {
+        display: block;
+        height: 100%;
+        width: 0%;
+        border-radius: inherit;
+        transition: width 0.28s ease;
+      }
+
+      .budget-bar-fill.completed { background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+      .budget-bar-fill.remaining { background: linear-gradient(90deg, #d6a84c, var(--amber)); }
+
+      .total-card {
+        padding: 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(21, 97, 109, 0.18);
+        background: linear-gradient(180deg, rgba(228, 244, 243, 0.9) 0%, rgba(255,255,255,0.95) 100%);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+      }
+
+      .total-card p {
+        margin: 12px 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
     .money-row, .info-row {
       display: flex;
       justify-content: space-between;
@@ -1185,7 +1288,7 @@
     <section class="layout">
       <aside class="card" id="project-path">
         <h2>Project Path</h2>
-        <p class="card-subtitle">A simplified phase view so the client can understand where the project stands without reading every line item.</p>
+        <p class="card-subtitle">A simplified phase view.</p>
         <div class="timeline" id="project-timeline">
           <div class="loading"><strong>Loading timeline</strong>Building phase summary.</div>
         </div>
@@ -1193,7 +1296,7 @@
 
       <main class="card" id="project-flow">
         <h2>Project Flow</h2>
-        <p class="card-subtitle">A simple client view of what is happening now, what is coming up next, and what has already been completed.</p>
+        <p class="card-subtitle">Active work, next scheduled work, and recently completed items.</p>
         <div class="now-next" id="now-next-feed">
           <div class="loading"><strong>Loading work feed</strong>Sorting active, upcoming, and completed work.</div>
         </div>
@@ -1216,7 +1319,7 @@
       <aside class="rail">
         <section class="rail-card" id="project-details">
           <h2>Project Details</h2>
-          <p class="card-subtitle">Key project facts and progress details for the client.</p>
+          <p class="card-subtitle">Key project details and stats.</p>
           <div class="info-stack">
             <div class="info-row"><span>Address</span><strong id="project-address">Loading...</strong></div>
             <div class="info-row"><span>Estimated Completion</span><strong id="details-estimated-completion-date">Loading...</strong></div>
@@ -1227,14 +1330,24 @@
           </div>
         </section>
 
-        <section class="rail-card" id="budget-summary">
-          <h2>Budget Summary</h2>
-          <p class="card-subtitle">Clear client-facing financial summary.</p>
-          <div class="money-stack">
-            <div class="money-row"><span>Subtotal</span><strong id="subtotal">$0.00</strong></div>
-            <div class="money-row"><span>Tax Rate</span><strong id="tax-rate">0%</strong></div>
-            <div class="money-row"><span>Tax</span><strong id="tax">$0.00</strong></div>
-            <div class="money-row"><span>Total</span><strong id="total" class="total">$0.00</strong></div>
+        <section class="rail-card budget-panel" id="budget-summary">
+          <div class="section-head">
+            <div>
+              <h2>Budget Snapshot</h2>
+              <p>A simplified financial view for the project overview.</p>
+            </div>
+          </div>
+          <div class="budget-grid">
+            <div class="budget-bars" id="budget-bars">
+              <div class="loading"><strong>Loading budget</strong>Preparing financial summary.</div>
+            </div>
+            <aside class="total-card">
+              <div>
+                <span>Estimated Project Total</span>
+                <strong id="budget-total">$0.00</strong>
+              </div>
+              <p id="budget-caption">This total shows the completed value, the remaining value, and the full estimated project amount.</p>
+            </aside>
           </div>
         </section>
 
@@ -1754,7 +1867,7 @@
           ),
           renderFlowGroup(
             "Recently Completed",
-            "Items that are already finished or approved.",
+            "Items that are already completed.",
             completedItems.map(renderCard),
             "Nothing completed yet",
             "Completed items."
@@ -1835,6 +1948,47 @@
           </article>`).join("");
       }
 
+      function renderBudgetSnapshot(completedValue, remainingValue, total, itemCount, completeCount) {
+        const container = $("budget-bars");
+        if (!container) return;
+
+        const totalBase = total > 0 ? total : 1;
+        const completedWidth = Math.max((completedValue / totalBase) * 100, completedValue > 0 ? 8 : 0);
+        const remainingWidth = Math.max((remainingValue / totalBase) * 100, remainingValue > 0 ? 8 : 0);
+
+        container.innerHTML = [
+          {
+            label: "Completed Value",
+            amount: formatCurrency(completedValue),
+            detail: `${completeCount} completed line item${completeCount === 1 ? "" : "s"} already delivered or approved.`,
+            width: completedWidth,
+            className: "completed"
+          },
+          {
+            label: "Remaining Value",
+            amount: formatCurrency(remainingValue),
+            detail: `${Math.max(itemCount - completeCount, 0)} line item${itemCount - completeCount === 1 ? "" : "s"} still left in the estimated scope.`,
+            width: remainingWidth,
+            className: "remaining"
+          }
+        ].map((row) => `
+          <article class="budget-bar-card">
+            <div class="budget-bar-top">
+              <div>
+                <span>${escapeHtml(row.label)}</span>
+                <strong>${escapeHtml(row.amount)}</strong>
+              </div>
+              <small>${escapeHtml(row.detail)}</small>
+            </div>
+            <div class="budget-bar-track" aria-hidden="true">
+              <span class="budget-bar-fill ${row.className}" style="width:${Math.min(row.width, 100).toFixed(1)}%"></span>
+            </div>
+          </article>`).join("");
+
+        setText("budget-total", formatCurrency(total));
+        setText("budget-caption", `${formatCurrency(completedValue)} is complete, ${formatCurrency(remainingValue)} remains, and ${formatCurrency(total)} is the current estimated project total.`);
+      }
+
       function renderEstimate(estimate) {
         currentEstimate = estimate;
         currentCategories = normalizeCategories(estimate);
@@ -1844,6 +1998,12 @@
         const taxAmount = subtotal * (taxRate / 100);
         const total = subtotal + taxAmount;
         const completeCount = items.filter((item) => ["completed", "approved"].includes(item.status)).length;
+        const completedSubtotal = items
+          .filter((item) => ["completed", "approved"].includes(item.status))
+          .reduce((sum, item) => sum + item.amount, 0);
+        const remainingSubtotal = Math.max(subtotal - completedSubtotal, 0);
+        const completedValue = completedSubtotal + (completedSubtotal * (taxRate / 100));
+        const remainingValue = remainingSubtotal + (remainingSubtotal * (taxRate / 100));
         const activeCount = items.filter((item) => ["in-progress", "rework"].includes(item.status)).length;
         const attentionCount = items.filter(isAttentionItem).length;
         const progress = computeProgress(items);
@@ -1857,7 +2017,7 @@
         setText("hero-total", formatCurrency(total));
         setText("hero-active", `${activeCount} item${activeCount === 1 ? "" : "s"}`);
         setText("hero-alerts", `${attentionCount} item${attentionCount === 1 ? "" : "s"}`);
-        setText("client-summary", `${completeCount} of ${items.length || 0} project items have been completed or approved. This overview highlights current progress, upcoming work, schedule timing, and the overall project.`);
+        setText("client-summary", `${completeCount} of ${items.length || 0} project items have been completed. This overview highlights current progress, upcoming work, schedule timing, and the overall project.`);
 
         setText("overall-progress", `${Math.round(progress)}%`);
         const orb = $("progress-orb");
@@ -1875,10 +2035,7 @@
         setText("details-active-items", String(activeCount));
         setText("details-attention-items", String(attentionCount));
         setText("category-count", String(currentCategories.length));
-        setText("subtotal", formatCurrency(subtotal));
-        setText("tax-rate", `${taxRate.toFixed(2)}%`);
-        setText("tax", formatCurrency(taxAmount));
-        setText("total", formatCurrency(total));
+        renderBudgetSnapshot(completedValue, remainingValue, total, items.length, completeCount);
 
         renderTimeline(currentCategories);
         renderNowNext(items);
@@ -1887,7 +2044,7 @@
       }
 
       function renderError(message) {
-        ["project-timeline", "now-next-feed", "category-stack", "alert-stack"].forEach((id) => {
+        ["project-timeline", "now-next-feed", "category-stack", "alert-stack", "budget-bars"].forEach((id) => {
           const el = $(id);
           if (el) el.innerHTML = `<div class="error"><strong>Unable to load overview</strong>${escapeHtml(message)}</div>`;
         });
