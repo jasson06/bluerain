@@ -458,7 +458,12 @@ const estimateSchema = new mongoose.Schema({
             enum: ['new', 'in-progress', 'completed', 'approved', 'rework'], 
             default: 'new' 
           },
-          
+             phase: {
+            type: String,
+            enum: ['pre-construction', 'permits', 'demo', 'structure', 'rough-in', 'inspections', 'finishes', 'exterior', 'punch'],
+            default: 'pre-construction'
+          },
+          percentComplete: { type: Number, min: 0, max: 100, default: 0 },
           maintenanceRequestId: { type: mongoose.Schema.Types.ObjectId, ref: 'MaintenanceRequest', default: null },
           qualityControl: {
             status: {
@@ -1861,6 +1866,35 @@ app.post('/api/estimates', async (req, res) => {
 
     const { projectId, lineItems, tax, title } = req.body;
 
+    const normalizeStatus = (status) => {
+      if (typeof status !== 'string' || !status.trim()) return 'new';
+      if (status.trim().toLowerCase() === 'not started') return 'in-progress';
+      return status.trim().toLowerCase().replace(/\s+/g, '-');
+    };
+
+    const normalizePhase = (phase) => {
+      const phaseAliases = new Map([
+        ['planning', 'pre-construction'],
+        ['permits-approvals', 'permits'],
+        ['site-preparation', 'demo'],
+        ['rough-construction', 'structure'],
+        ['finish-work', 'finishes'],
+        ['final-completion', 'punch'],
+        ['completed', 'punch']
+      ]);
+      const allowedPhases = new Set(['pre-construction', 'permits', 'demo', 'structure', 'rough-in', 'inspections', 'finishes', 'exterior', 'punch']);
+      const normalizedPhase = phaseAliases.get(phase) || phase;
+      return allowedPhases.has(normalizedPhase) ? normalizedPhase : 'pre-construction';
+    };
+
+    const normalizePercentComplete = (value, status = 'new') => {
+      const numericValue = Number.parseFloat(value);
+      if (Number.isFinite(numericValue)) {
+        return Math.min(100, Math.max(0, Math.round(numericValue)));
+      }
+      return normalizeStatus(status) === 'completed' ? 100 : 0;
+    };
+
     // Validate Input
     if (!projectId || !lineItems || lineItems.length === 0) {
       return res.status(400).json({ success: false, message: 'Invalid input: Missing required fields.' });
@@ -1891,7 +1925,9 @@ app.post('/api/estimates', async (req, res) => {
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             total: item.total || item.quantity * item.unitPrice,
-            status: item.status || 'in-progress',
+            status: normalizeStatus(item.status),
+            phase: normalizePhase(item.phase),
+            percentComplete: normalizePercentComplete(item.percentComplete, item.status),
             assignedTo: item.assignedTo || null,
             maintenanceRequestId: item.maintenanceRequestId,
             photos: item.photos && typeof item.photos === 'object'
@@ -2081,6 +2117,29 @@ app.put("/api/estimates/:id", async (req, res) => {
       return status.toLowerCase().replace(/\s+/g, "-");
     }
 
+    function normalizePhase(phase) {
+      const phaseAliases = new Map([
+        ["planning", "pre-construction"],
+        ["permits-approvals", "permits"],
+        ["site-preparation", "demo"],
+        ["rough-construction", "structure"],
+        ["finish-work", "finishes"],
+        ["final-completion", "punch"],
+        ["completed", "punch"]
+      ]);
+      const allowedPhases = new Set(["pre-construction", "permits", "demo", "structure", "rough-in", "inspections", "finishes", "exterior", "punch"]);
+      const normalizedPhase = phaseAliases.get(phase) || phase;
+      return allowedPhases.has(normalizedPhase) ? normalizedPhase : "pre-construction";
+    }
+
+    function normalizePercentComplete(value, status = "new") {
+      const numericValue = Number.parseFloat(value);
+      if (Number.isFinite(numericValue)) {
+        return Math.min(100, Math.max(0, Math.round(numericValue)));
+      }
+      return normalizeStatus(status) === "completed" ? 100 : 0;
+    }
+
     // Fetch the existing document
     const existingEstimate = await Estimate.findById(estimateId);
     if (!existingEstimate) {
@@ -2105,6 +2164,8 @@ app.put("/api/estimates/:id", async (req, res) => {
           if (item.status && item.status.trim() !== "") {
             item.status = normalizeStatus(item.status);
           }
+          item.phase = normalizePhase(item.phase);
+          item.percentComplete = normalizePercentComplete(item.percentComplete, item.status);
 
           if (item._id && existingItemsMap.has(item._id.toString())) {
             const existingItem = existingItemsMap.get(item._id.toString());
@@ -2115,6 +2176,8 @@ app.put("/api/estimates/:id", async (req, res) => {
             item.startDate = item.startDate ?? existingItem.startDate;
             item.endDate = item.endDate ?? existingItem.endDate;
             item.status = item.status || normalizeStatus(existingItem.status);
+            item.phase = item.phase || existingItem.phase || "pre-construction";
+            item.percentComplete = item.percentComplete ?? existingItem.percentComplete ?? normalizePercentComplete(undefined, item.status);
             item.costCode = item.costCode || existingItem.costCode || "Uncategorized";
             item.maintenanceRequestId = item.maintenanceRequestId || existingItem.maintenanceRequestId || null;
           } else {
@@ -2122,6 +2185,8 @@ app.put("/api/estimates/:id", async (req, res) => {
             if (!item.status || item.status.trim() === "") {
               item.status = "in-progress";
             }
+            item.phase = normalizePhase(item.phase);
+            item.percentComplete = normalizePercentComplete(item.percentComplete, item.status);
             item.costCode = item.costCode || "Uncategorized";
             item.maintenanceRequestId = item.maintenanceRequestId || null;
           }
@@ -8348,16 +8413,35 @@ app.put('/api/projects/:projectId/utilities', async (req, res) => {
 app.patch('/api/estimates/line-items/:lineItemId/status', async (req, res) => {
   try {
     const { lineItemId } = req.params;
-    const { status } = req.body;
+    const { status, percentComplete } = req.body;
     const allowedStatuses = ['in-progress', 'completed', 'approved', 'rework'];
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ message: 'Invalid status value.' });
     }
 
+    const normalizePercentComplete = (value, itemStatus = 'new') => {
+      const normalizedStatus = String(itemStatus || '').toLowerCase();
+      if (normalizedStatus === 'in-progress') {
+        return 0;
+      }
+      const numericValue = Number.parseFloat(value);
+      if (Number.isFinite(numericValue)) {
+        return Math.min(100, Math.max(0, Math.round(numericValue)));
+      }
+      return ['completed', 'approved'].includes(normalizedStatus) ? 100 : 0;
+    };
+
+    const normalizedPercentComplete = normalizePercentComplete(percentComplete, status);
+
     // Update line item status in Estimate
     const estimate = await Estimate.findOneAndUpdate(
       { 'lineItems.items._id': lineItemId },
-      { $set: { 'lineItems.$[].items.$[item].status': status } },
+      {
+        $set: {
+          'lineItems.$[].items.$[item].status': status,
+          'lineItems.$[].items.$[item].percentComplete': normalizedPercentComplete
+        }
+      },
       { arrayFilters: [{ 'item._id': lineItemId }], new: true }
     );
 
