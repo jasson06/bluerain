@@ -85,6 +85,261 @@ function setDisclosureButtonState(button, expanded, expandedTitle, collapsedTitl
   }
 }
 
+const PROJECT_PHASES = [
+  { value: "pre-construction", label: "Pre-Construction", shortLabel: "Pre-Con", purpose: "establish scope and remove surprises", examples: ["Site walk", "Measurements", "Contractor bids", "Scope creation", "Material selections", "Budget approval", "Existing conditions photos"] },
+  { value: "permits", label: "Permits", shortLabel: "Permits", purpose: "clear administrative blockers", examples: ["Building permits", "Historic approval", "Utility coordination", "CPS / SAWS work", "Meter setup", "Engineering revisions"] },
+  { value: "demo", label: "Demo", shortLabel: "Demo", purpose: "strip project down and prepare for work", examples: ["Interior demo", "Debris removal", "Tree removal", "Site cleanup", "Temporary protection", "Material staging"] },
+  { value: "structure", label: "Structure", shortLabel: "Structure", purpose: "make the building sound and weather tight", examples: ["Foundation", "Framing", "Exterior siding", "Roofing", "Windows", "Exterior stairs", "Balcony work"] },
+  { value: "rough-in", label: "Rough-In", shortLabel: "Rough-In", purpose: "infrastructure hidden behind walls", examples: ["Plumbing rough", "Electrical rough", "HVAC rough", "Sewer replacement", "Underground utilities", "Fire blocking", "Insulation"] },
+  { value: "inspections", label: "Inspections", shortLabel: "Inspect", purpose: "avoid hidden failures later", examples: ["Rough inspections", "Corrections", "Re-inspections", "Sign-offs"] },
+  { value: "finishes", label: "Finishes", shortLabel: "Finishes", purpose: "visible product creation", examples: ["Drywall", "Texture", "Paint", "Flooring", "Cabinets", "Countertops", "Tile", "Trim", "Fixtures", "Appliances"] },
+  { value: "exterior", label: "Exterior", shortLabel: "Exterior", purpose: "curb appeal and supporting features", examples: ["Landscaping", "Parking areas", "Fencing", "Mailboxes", "Lighting", "Exterior paint", "Signage"] },
+  { value: "punch", label: "Punch", shortLabel: "Punch", purpose: "finish outstanding issues", examples: ["Deficiency corrections", "Cleaning", "Touch-ups", "Final photos", "Final inspections"] }
+];
+const PROJECT_PHASE_ALIASES = new Map([
+  ["planning", "pre-construction"],
+  ["permits-approvals", "permits"],
+  ["site-preparation", "demo"],
+  ["rough-construction", "structure"],
+  ["finish-work", "finishes"],
+  ["final-completion", "punch"],
+  ["completed", "punch"]
+]);
+const PROJECT_PHASE_MAP = new Map(PROJECT_PHASES.map((phase) => [phase.value, phase]));
+const DEFAULT_PROJECT_PHASE = PROJECT_PHASES[0].value;
+let __projectPhaseTooltip = null;
+let __projectPhaseTooltipActiveTarget = null;
+
+function clampProjectPhaseProgress(value, fallbackStatus = "new") {
+  const numericValue = parseFloat(value);
+  if (Number.isFinite(numericValue)) {
+    return Math.min(100, Math.max(0, Math.round(numericValue)));
+  }
+  return String(fallbackStatus || "").toLowerCase() === "completed" ? 100 : 0;
+}
+
+function normalizeProjectPhase(value) {
+  const normalizedValue = PROJECT_PHASE_ALIASES.get(value) || value;
+  return PROJECT_PHASE_MAP.has(normalizedValue) ? normalizedValue : DEFAULT_PROJECT_PHASE;
+}
+
+function getProjectPhaseLabel(value, useShortLabel = false) {
+  const phase = PROJECT_PHASE_MAP.get(normalizeProjectPhase(value)) || PROJECT_PHASES[0];
+  return useShortLabel ? phase.shortLabel : phase.label;
+}
+
+function getProjectPhaseGuidanceText(value) {
+  const phase = PROJECT_PHASE_MAP.get(normalizeProjectPhase(value)) || PROJECT_PHASES[0];
+  const examples = Array.isArray(phase.examples) ? phase.examples.join(', ') : '';
+  return `${phase.label}\nPurpose: ${phase.purpose || 'Track this stage of work.'}${examples ? `\nExamples: ${examples}` : ''}`;
+}
+
+function ensureProjectPhaseTooltip() {
+  if (__projectPhaseTooltip && document.body?.contains(__projectPhaseTooltip)) {
+    return __projectPhaseTooltip;
+  }
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'project-phase-guidance-tooltip';
+  tooltip.setAttribute('role', 'tooltip');
+  tooltip.setAttribute('aria-hidden', 'true');
+  tooltip.innerHTML = `
+    <div class="project-phase-guidance-tooltip-title"></div>
+    <div class="project-phase-guidance-tooltip-purpose"></div>
+    <div class="project-phase-guidance-tooltip-examples"></div>
+  `;
+  document.body.appendChild(tooltip);
+  __projectPhaseTooltip = tooltip;
+
+  if (!window.__projectPhaseTooltipEventsBound) {
+    window.addEventListener('scroll', () => hideProjectPhaseTooltip(), true);
+    window.addEventListener('resize', () => hideProjectPhaseTooltip());
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') hideProjectPhaseTooltip();
+    });
+    window.__projectPhaseTooltipEventsBound = true;
+  }
+
+  return tooltip;
+}
+
+function positionProjectPhaseTooltip(target) {
+  const tooltip = ensureProjectPhaseTooltip();
+  if (!tooltip || !target) return;
+
+  const rect = target.getBoundingClientRect();
+  const tooltipRect = tooltip.getBoundingClientRect();
+  const gutter = 12;
+  let top = rect.top - tooltipRect.height - gutter;
+  let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+
+  if (top < 12) {
+    top = rect.bottom + gutter;
+    tooltip.dataset.placement = 'bottom';
+  } else {
+    tooltip.dataset.placement = 'top';
+  }
+
+  left = Math.max(12, Math.min(left, window.innerWidth - tooltipRect.width - 12));
+  tooltip.style.top = `${Math.round(top + window.scrollY)}px`;
+  tooltip.style.left = `${Math.round(left + window.scrollX)}px`;
+}
+
+function showProjectPhaseTooltip(target, value) {
+  const tooltip = ensureProjectPhaseTooltip();
+  const phase = PROJECT_PHASE_MAP.get(normalizeProjectPhase(value)) || PROJECT_PHASES[0];
+  if (!tooltip || !phase || !target) return;
+
+  const titleEl = tooltip.querySelector('.project-phase-guidance-tooltip-title');
+  const purposeEl = tooltip.querySelector('.project-phase-guidance-tooltip-purpose');
+  const examplesEl = tooltip.querySelector('.project-phase-guidance-tooltip-examples');
+  if (!titleEl || !purposeEl || !examplesEl) return;
+
+  titleEl.textContent = phase.label;
+  purposeEl.textContent = `Purpose: ${phase.purpose || 'Track this stage of work.'}`;
+  examplesEl.innerHTML = Array.isArray(phase.examples)
+    ? phase.examples.map((example) => `<span>${example}</span>`).join('')
+    : '';
+
+  __projectPhaseTooltipActiveTarget = target;
+  tooltip.classList.add('is-visible');
+  tooltip.setAttribute('aria-hidden', 'false');
+  positionProjectPhaseTooltip(target);
+}
+
+function hideProjectPhaseTooltip() {
+  const tooltip = __projectPhaseTooltip;
+  __projectPhaseTooltipActiveTarget = null;
+  if (!tooltip) return;
+  tooltip.classList.remove('is-visible');
+  tooltip.setAttribute('aria-hidden', 'true');
+}
+
+function bindProjectPhaseTooltip(target, value) {
+  if (!target) return;
+  const normalizedPhase = normalizeProjectPhase(value);
+  target.dataset.phaseGuidanceValue = normalizedPhase;
+  target.removeAttribute('title');
+  target.setAttribute('aria-label', getProjectPhaseGuidanceText(normalizedPhase));
+
+  if (target.dataset.phaseTooltipBound === 'true') return;
+  target.dataset.phaseTooltipBound = 'true';
+
+  target.addEventListener('mouseenter', () => {
+    showProjectPhaseTooltip(target, target.dataset.phaseGuidanceValue || DEFAULT_PROJECT_PHASE);
+  });
+  target.addEventListener('mouseleave', () => {
+    if (__projectPhaseTooltipActiveTarget === target) hideProjectPhaseTooltip();
+  });
+  target.addEventListener('focus', () => {
+    showProjectPhaseTooltip(target, target.dataset.phaseGuidanceValue || DEFAULT_PROJECT_PHASE);
+  });
+  target.addEventListener('blur', () => {
+    if (__projectPhaseTooltipActiveTarget === target) hideProjectPhaseTooltip();
+  });
+}
+
+function getEstimateLineItemCards() {
+  return Array.from(document.querySelectorAll('.line-item-card'));
+}
+
+function isCardAssigned(card) {
+  return !!String(card?.getAttribute?.('data-assigned-to') || '').trim();
+}
+
+function getLineItemPhaseFromCard(card) {
+  return normalizeProjectPhase(card?.querySelector('.item-phase-dropdown')?.value || card?.dataset?.phase || DEFAULT_PROJECT_PHASE);
+}
+
+function getLineItemCompletionFromCard(card) {
+  const statusValue = card?.querySelector('.item-status-dropdown')?.value || 'new';
+  return clampProjectPhaseProgress(card?.querySelector('.item-percent-complete')?.value, statusValue);
+}
+
+function isLineItemOverdue(card, todayString = new Date().toISOString().slice(0, 10)) {
+  if (!card) return false;
+  const targetFinish = card.querySelector('.item-end-date')?.value || '';
+  if (!targetFinish) return false;
+  const statusValue = String(card.querySelector('.item-status-dropdown')?.value || '').toLowerCase();
+  if (statusValue === 'completed') return false;
+  return getLineItemCompletionFromCard(card) < 100 && targetFinish < todayString;
+}
+
+function getCurrentProjectPhase(cards = getEstimateLineItemCards()) {
+  for (const phase of PROJECT_PHASES) {
+    const phaseCards = cards.filter((card) => getLineItemPhaseFromCard(card) === phase.value);
+    if (!phaseCards.length) continue;
+    const hasOpenWork = phaseCards.some((card) => getLineItemCompletionFromCard(card) < 100 && String(card.querySelector('.item-status-dropdown')?.value || '').toLowerCase() !== 'completed');
+    if (hasOpenWork) return phase.value;
+  }
+  const lastPhaseWithItems = [...PROJECT_PHASES].reverse().find((phase) => cards.some((card) => getLineItemPhaseFromCard(card) === phase.value));
+  return lastPhaseWithItems?.value || DEFAULT_PROJECT_PHASE;
+}
+
+function renderProjectPhaseBar() {
+  const phaseBar = document.getElementById('project-phase-bar');
+  const phaseSummary = document.getElementById('project-phase-summary');
+  if (!phaseBar || !phaseSummary) return;
+
+  const cards = getEstimateLineItemCards();
+  const phaseFilter = document.getElementById('filter-phase');
+  const currentPhaseOnly = document.getElementById('filter-current-phase');
+  const activePhase = phaseFilter?.value || '';
+  const currentPhase = getCurrentProjectPhase(cards);
+  const overdueCount = cards.filter((card) => isLineItemOverdue(card)).length;
+  const overallProgress = cards.length
+    ? Math.round(cards.reduce((sum, card) => sum + getLineItemCompletionFromCard(card), 0) / cards.length)
+    : 0;
+
+  phaseBar.innerHTML = PROJECT_PHASES.map((phase, index) => {
+    const phaseCards = cards.filter((card) => getLineItemPhaseFromCard(card) === phase.value);
+    const averageProgress = phaseCards.length
+      ? Math.round(phaseCards.reduce((sum, card) => sum + getLineItemCompletionFromCard(card), 0) / phaseCards.length)
+      : 0;
+    const stateClass = activePhase === phase.value
+      ? 'is-active'
+      : currentPhase === phase.value
+        ? 'is-current'
+        : '';
+    return `
+      <button type="button" class="project-phase-step ${stateClass}" data-phase-value="${phase.value}" aria-pressed="${activePhase === phase.value ? 'true' : 'false'}">
+        <span class="project-phase-step-label">${phase.shortLabel}</span>
+        <span class="project-phase-step-meta">
+          <span>${phaseCards.length} item${phaseCards.length === 1 ? '' : 's'}</span>
+          <span>${averageProgress}%</span>
+        </span>
+      </button>
+      ${index < PROJECT_PHASES.length - 1 ? '<span class="project-phase-chevron" aria-hidden="true">→</span>' : ''}
+    `;
+  }).join('');
+
+  phaseBar.querySelectorAll('[data-phase-value]').forEach((button) => {
+    const phaseValue = button.getAttribute('data-phase-value') || DEFAULT_PROJECT_PHASE;
+    bindProjectPhaseTooltip(button, phaseValue);
+    button.addEventListener('click', () => {
+      const nextValue = button.getAttribute('data-phase-value') || '';
+      if (currentPhaseOnly) currentPhaseOnly.checked = false;
+      if (phaseFilter) {
+        phaseFilter.value = phaseFilter.value === nextValue ? '' : nextValue;
+      }
+      applyFilters();
+    });
+  });
+
+  const viewingPhaseLabel = currentPhaseOnly?.checked
+    ? `${getProjectPhaseLabel(currentPhase)} (current)`
+    : activePhase
+      ? getProjectPhaseLabel(activePhase)
+      : 'All phases';
+
+  phaseSummary.innerHTML = `
+    <span><strong>Viewing:</strong> ${viewingPhaseLabel}</span>
+    <span><strong>Current:</strong> ${getProjectPhaseLabel(currentPhase)}</span>
+    <span><strong>Completion:</strong> ${overallProgress}%</span>
+    <span><strong>Overdue:</strong> ${overdueCount}</span>
+  `;
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   ensureDisclosureStyles();
   const projectId = new URLSearchParams(window.location.search).get("projectId");
@@ -106,7 +361,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     assignButton.disabled = false;
     assignButton.title = "";
   }
-  updatePage();
 
   let fullScreenPhotos = [];
   let fullScreenIndex = 0;
@@ -114,6 +368,8 @@ document.addEventListener("DOMContentLoaded", async () => {
  let laborCostList = [];
 
  let isDeletingLineItem = false;
+
+ updatePage();
 
 async function fetchLaborCostList() {
   
@@ -129,12 +385,129 @@ async function fetchLaborCostList() {
   }
 }
   
+let __toastHideTimer = null;
+let __estimateSaveInFlightCount = 0;
+let __estimateSnapshot = null;
+let __estimateSavePromise = null;
+let __estimateQueuedSaveOptions = null;
 
-function showToast(message) {
+function ensureToastStructure() {
   const toast = document.getElementById('toast');
-  toast.textContent = message;
-  toast.style.display = 'block';
-  setTimeout(() => { toast.style.display = 'none'; }, 3000);
+  if (!toast) return null;
+  if (!toast.querySelector('.toast-indicator')) {
+    toast.innerHTML = '<span class="toast-indicator" aria-hidden="true"></span><span class="toast-message"></span>';
+  }
+  toast.setAttribute('role', 'status');
+  toast.setAttribute('aria-live', 'polite');
+  toast.style.display = toast.style.display || 'none';
+  toast.style.alignItems = 'center';
+  toast.style.gap = '10px';
+  toast.style.maxWidth = 'min(90vw, 520px)';
+  toast.style.lineHeight = '1.35';
+  return toast;
+}
+
+function hideToast() {
+  const toast = document.getElementById('toast');
+  try { clearTimeout(__toastHideTimer); } catch (_) {}
+  __toastHideTimer = null;
+  if (!toast) return;
+  toast.style.display = 'none';
+  toast.style.opacity = '0';
+  toast.style.transform = 'translateX(-50%) translateY(-6px)';
+}
+
+function showToast(message, options = {}) {
+  const toast = ensureToastStructure();
+  if (!toast) return;
+
+  const normalizedOptions = typeof options === 'string'
+    ? { variant: options }
+    : (options || {});
+
+  const {
+    variant = 'info',
+    persist = false,
+    duration = 3000
+  } = normalizedOptions;
+
+  const indicator = toast.querySelector('.toast-indicator');
+  const messageEl = toast.querySelector('.toast-message');
+  if (!indicator || !messageEl) return;
+
+  try { clearTimeout(__toastHideTimer); } catch (_) {}
+  __toastHideTimer = null;
+
+  toast.dataset.state = variant;
+  toast.style.display = 'inline-flex';
+  toast.style.opacity = '1';
+  toast.style.transform = 'translateX(-50%) translateY(0)';
+
+  if (variant === 'loading') {
+    try { ensureAssignSpinnerStyles(); } catch (_) {}
+    toast.style.background = 'linear-gradient(135deg, #0f172a 0%, #1d4fd8 100%)';
+    indicator.innerHTML = '';
+    indicator.style.display = 'inline-block';
+    indicator.style.width = '14px';
+    indicator.style.height = '14px';
+    indicator.style.border = '2px solid rgba(255,255,255,0.35)';
+    indicator.style.borderTopColor = '#ffffff';
+    indicator.style.borderRadius = '999px';
+    indicator.style.animation = 'assignSpin .8s linear infinite';
+    indicator.style.flex = '0 0 auto';
+  } else {
+    indicator.style.animation = 'none';
+    indicator.style.width = '18px';
+    indicator.style.height = '18px';
+    indicator.style.border = 'none';
+    indicator.style.borderRadius = '0';
+    indicator.style.display = 'inline-flex';
+    indicator.style.alignItems = 'center';
+    indicator.style.justifyContent = 'center';
+    indicator.style.fontWeight = '800';
+    indicator.style.flex = '0 0 auto';
+
+    if (variant === 'success') {
+      toast.style.background = 'linear-gradient(135deg, #047857 0%, #10b981 100%)';
+      indicator.textContent = '✓';
+    } else if (variant === 'error') {
+      toast.style.background = 'linear-gradient(135deg, #991b1b 0%, #ef4444 100%)';
+      indicator.textContent = '!';
+    } else {
+      toast.style.background = 'linear-gradient(to right, #0ea5e9, #3b82f6)';
+      indicator.textContent = 'i';
+    }
+  }
+
+  messageEl.textContent = message;
+
+  if (!persist) {
+    __toastHideTimer = setTimeout(() => {
+      hideToast();
+    }, duration);
+  }
+}
+
+function normalizeSaveEstimateOptions(options = {}) {
+  if (typeof options === 'boolean') {
+    return { silentSuccess: options };
+  }
+  return {
+    silentSuccess: false,
+    loadingMessage: 'Saving estimate...',
+    ...options
+  };
+}
+
+function mergeSaveEstimateOptions(currentOptions = {}, nextOptions = {}) {
+  const current = normalizeSaveEstimateOptions(currentOptions);
+  const next = normalizeSaveEstimateOptions(nextOptions);
+  return {
+    ...current,
+    ...next,
+    silentSuccess: current.silentSuccess && next.silentSuccess,
+    loadingMessage: next.loadingMessage || current.loadingMessage || 'Saving estimate...'
+  };
 }
 
 try { window.__estimateEditShowToast = showToast; } catch (_) {}
@@ -181,7 +554,6 @@ function hideLoader() {
         </div>
     `;
 }
-
 /* ✅ Change Photo Function */
 function changePhoto(itemId, type, direction) {
     const wrapper = document.getElementById(`photo-wrapper-${type}-${itemId}`);
@@ -748,6 +1120,7 @@ async function loadEstimateDetails() {
       const response = await fetch(`/api/estimates/${estimateId}`);
       if (!response.ok) throw new Error("Failed to fetch estimate details.");
       const { estimate } = await response.json();
+  __estimateSnapshot = estimate || null;
 
       
 
@@ -815,6 +1188,7 @@ function refreshLineItems(categories) {
   // Update filters after rendering
   populateFilterOptions();
   applyFilters();
+  renderProjectPhaseBar();
 
   // Utility: schedule work during idle periods
   const onIdle = window.requestIdleCallback || function(cb){ return setTimeout(() => cb({ timeRemaining: () => 0 }), 50); };
@@ -964,8 +1338,8 @@ function refreshLineItems(categories) {
 // Add this near the top, after showToast/hideLoader etc.
 
 async function autoSaveEstimate(silent = false) {
-  await saveEstimate();
-  if (!silent) showToast("Auto-saved!");
+  await saveEstimate({ silentSuccess: true, loadingMessage: 'Auto-saving changes...' });
+  if (!silent) showToast("Auto-saved!", { variant: 'success' });
 }
 // Expose to global for blur handlers defined outside this scope
 try { window.autoSaveEstimate = autoSaveEstimate; } catch (_) {}
@@ -992,6 +1366,274 @@ function getVendorFromCard(card) {
   if (!assignedToId) return null;
   if (window.vendorMap && window.vendorMap[assignedToId]) return window.vendorMap[assignedToId];
   return assignedToId;
+}
+
+function formatEstimateCurrency(value) {
+  return `$${(Number(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function escapeVendorModalHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatVendorModalStatus(status) {
+  const normalizedStatus = String(status || 'new').trim().toLowerCase();
+  return normalizedStatus
+    .split('-')
+    .map((part) => part ? part.charAt(0).toUpperCase() + part.slice(1) : '')
+    .join(' ');
+}
+
+function isVendorModalDescriptionExpandable(description) {
+  const normalizedDescription = String(description || '').trim();
+  return normalizedDescription.length > 180 || normalizedDescription.includes('\n');
+}
+
+function syncVendorTriggerState(card) {
+  const vendorEl = card?.querySelector?.('.vendor-name');
+  if (!vendorEl) return;
+  const isAssigned = !!String(card.getAttribute('data-assigned-to') || '').trim();
+  vendorEl.removeAttribute('title');
+  vendorEl.setAttribute('aria-haspopup', 'dialog');
+  if (isAssigned) {
+    vendorEl.setAttribute('role', 'button');
+    vendorEl.setAttribute('tabindex', '0');
+  } else {
+    vendorEl.removeAttribute('role');
+    vendorEl.removeAttribute('tabindex');
+  }
+}
+
+function getCardEffectiveQuantity(card) {
+  if (!card) return 0;
+  const calcMode = card.querySelector(".item-calc-mode")?.value || "each";
+  if (calcMode === "sqft") return parseFloat(card.querySelector(".item-area")?.value) || 0;
+  if (calcMode === "lnft") return parseFloat(card.querySelector(".item-length")?.value) || 0;
+  return parseFloat(card.querySelector(".item-quantity")?.value) || 0;
+}
+
+function getCardDisplayAmount(card) {
+  if (!card) return 0;
+  const totalText = card.querySelector(".item-total")?.textContent || "";
+  const parsedDisplayAmount = parseFloat(totalText.replace(/[^0-9.-]/g, ""));
+  if (Number.isFinite(parsedDisplayAmount)) return parsedDisplayAmount;
+  return getCardEffectiveQuantity(card) * (parseFloat(card.querySelector(".item-price")?.value) || 0);
+}
+
+function getAssignedAmountFromCard(card) {
+  if (!card) return 0;
+  const laborCost = parseFloat(card.querySelector(".item-labor-cost")?.value);
+  if (Number.isFinite(laborCost) && laborCost > 0) return laborCost;
+  return getCardDisplayAmount(card);
+}
+
+function getVendorNameFromCard(card) {
+  const vendorName = card?.querySelector(".vendor-name")?.getAttribute("data-fullname")?.trim();
+  if (vendorName && vendorName !== "Unassigned") return vendorName;
+  const vendor = getVendorFromCard(card);
+  if (!vendor) return null;
+  if (typeof vendor === "object") return vendor.name || vendor.displayName || null;
+  const normalizedVendor = String(vendor).trim();
+  return normalizedVendor || null;
+}
+
+function collectVendorAssignmentSummaries(cards = getEstimateLineItemCards()) {
+  const assignedCards = cards.filter((card) => {
+    const assignedToId = card.getAttribute("data-assigned-to") || "";
+    return assignedToId.trim() !== "";
+  });
+
+  const vendorTotals = new Map();
+  assignedCards.forEach((card) => {
+    const vendorId = (card.getAttribute("data-assigned-to") || "").trim() || `vendor-${vendorTotals.size}`;
+    const vendorName = getVendorNameFromCard(card) || "Assigned Vendor";
+    const current = vendorTotals.get(vendorId) || {
+      name: vendorName,
+      itemCount: 0,
+      amount: 0,
+      items: []
+    };
+    const itemAmount = getAssignedAmountFromCard(card);
+    const itemName = card.querySelector('.item-name')?.value?.trim() || 'Unnamed line item';
+    const itemCategory = card.querySelector('.item-cost-code')?.value?.trim() || 'Uncategorized';
+    const itemDescription = card.querySelector('.item-description')?.value?.trim() || 'No description provided';
+    const itemStatus = card.querySelector('.item-status-dropdown')?.value?.trim() || 'new';
+    current.name = vendorName;
+    current.itemCount += 1;
+    current.amount += itemAmount;
+    current.items.push({
+      id: card.getAttribute('data-item-id') || '',
+      name: itemName,
+      category: itemCategory,
+      description: itemDescription,
+      status: itemStatus,
+      amount: itemAmount
+    });
+    vendorTotals.set(vendorId, current);
+  });
+
+  return vendorTotals;
+}
+
+function getVendorAssignmentSummary(vendorId, vendorName, cards = getEstimateLineItemCards()) {
+  const vendorTotals = collectVendorAssignmentSummaries(cards);
+  if (vendorId && vendorTotals.has(vendorId)) {
+    return vendorTotals.get(vendorId);
+  }
+
+  const normalizedName = String(vendorName || '').trim().toLowerCase();
+  if (!normalizedName) return null;
+  return Array.from(vendorTotals.values()).find((vendor) => String(vendor.name || '').trim().toLowerCase() === normalizedName) || null;
+}
+
+function closeVendorStatsModal() {
+  const modal = document.getElementById('vendor-stats-modal');
+  if (!modal) return;
+  modal.hidden = true;
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+function openVendorStatsModal(vendorId, vendorName) {
+  const modal = document.getElementById('vendor-stats-modal');
+  if (!modal) return;
+  const summary = getVendorAssignmentSummary(vendorId, vendorName);
+  if (!summary) return;
+
+  const titleEl = document.getElementById('vendor-stats-title');
+  const subtitleEl = document.getElementById('vendor-stats-subtitle');
+  const countEl = document.getElementById('vendor-stats-count');
+  const amountEl = document.getElementById('vendor-stats-amount');
+  const listCountEl = document.getElementById('vendor-stats-list-count');
+  const itemsEl = document.getElementById('vendor-stats-items');
+  const footnoteEl = document.getElementById('vendor-stats-footnote');
+
+  if (titleEl) titleEl.textContent = summary.name || vendorName || 'Assigned Vendor';
+  if (subtitleEl) subtitleEl.textContent = 'Current assignment snapshot for this estimate.';
+  if (countEl) countEl.textContent = String(summary.itemCount || 0);
+  if (amountEl) amountEl.textContent = formatEstimateCurrency(summary.amount || 0);
+  if (listCountEl) {
+    listCountEl.textContent = `${summary.itemCount || 0} item${summary.itemCount === 1 ? '' : 's'}`;
+  }
+  if (itemsEl) {
+    const sortedItems = Array.isArray(summary.items)
+      ? [...summary.items].sort((left, right) => {
+          if (right.amount !== left.amount) return right.amount - left.amount;
+          return String(left.name || '').localeCompare(String(right.name || ''));
+        })
+      : [];
+
+    itemsEl.innerHTML = sortedItems.length
+      ? `
+          <table class="vendor-stats-modal-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${sortedItems.map((item) => `
+                <tr class="vendor-stats-modal-row" ${isVendorModalDescriptionExpandable(item.description) ? 'data-expandable="true" aria-expanded="false" tabindex="0"' : ''}>
+                  <td data-label="Item">
+                    <div class="vendor-stats-modal-table-item">${escapeVendorModalHtml(item.name)}</div>
+                    <div class="vendor-stats-modal-table-description">${escapeVendorModalHtml(item.category)}</div>
+                  </td>
+                  <td data-label="Description">
+                    <div class="vendor-stats-modal-table-description ${isVendorModalDescriptionExpandable(item.description) ? 'is-collapsed' : ''}" data-role="description">${escapeVendorModalHtml(item.description)}</div>
+                    ${isVendorModalDescriptionExpandable(item.description) ? '<span class="vendor-stats-modal-table-description-hint" data-role="description-hint">Tap item to show more</span>' : ''}
+                  </td>
+                  <td data-label="Status">
+                    <span class="vendor-stats-modal-status ${getStatusClass(item.status)}">${escapeVendorModalHtml(formatVendorModalStatus(item.status))}</span>
+                  </td>
+                  <td data-label="Amount" class="vendor-stats-modal-table-amount">${formatEstimateCurrency(item.amount || 0)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3">Total Assigned</td>
+                <td class="vendor-stats-modal-table-amount">${formatEstimateCurrency(summary.amount || 0)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        `
+      : '<div class="vendor-stats-modal-empty">No assigned line items found for this vendor.</div>';
+  }
+  if (footnoteEl) {
+    footnoteEl.textContent = `${summary.itemCount || 0} assigned line item${summary.itemCount === 1 ? '' : 's'} currently tied to this vendor in the estimate.`;
+  }
+
+  modal.hidden = false;
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function initializeVendorStatsModal() {
+  if (document.body?.dataset?.vendorStatsModalBound === 'true') return;
+  if (document.body) document.body.dataset.vendorStatsModalBound = 'true';
+
+  document.addEventListener('click', (event) => {
+    const closeTrigger = event.target.closest('[data-vendor-modal-close]');
+    if (closeTrigger) {
+      event.preventDefault();
+      closeVendorStatsModal();
+      return;
+    }
+
+    const trigger = event.target.closest('.vendor-name, .vendor-assignment-trigger');
+    if (!trigger) return;
+
+    let vendorId = '';
+    let vendorName = '';
+
+    if (trigger.classList.contains('vendor-name')) {
+      const card = trigger.closest('.line-item-card');
+      vendorId = card?.getAttribute('data-assigned-to') || trigger.getAttribute('data-vendor-id') || '';
+      vendorName = trigger.getAttribute('data-fullname') || getVendorNameFromCard(card) || '';
+    } else {
+      vendorId = trigger.getAttribute('data-vendor-id') || '';
+      vendorName = trigger.getAttribute('data-fullname') || trigger.textContent || '';
+    }
+
+    if (!String(vendorId).trim()) return;
+    event.preventDefault();
+    event.stopPropagation();
+    openVendorStatsModal(vendorId, vendorName);
+    return;
+  });
+
+  document.addEventListener('click', (event) => {
+    const row = event.target.closest('.vendor-stats-modal-row[data-expandable="true"]');
+    if (!row) return;
+    const description = row.querySelector('[data-role="description"]');
+    const hint = row.querySelector('[data-role="description-hint"]');
+    if (!description) return;
+
+    const isExpanded = row.getAttribute('aria-expanded') === 'true';
+    row.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
+    description.classList.toggle('is-collapsed', isExpanded);
+    if (hint) {
+      hint.textContent = isExpanded ? 'Tap item to show more' : 'Tap item to collapse';
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeVendorStatsModal();
+    if ((event.key === 'Enter' || event.key === ' ') && event.target?.matches?.('.vendor-name')) {
+      event.preventDefault();
+      event.target.click();
+    }
+    if ((event.key === 'Enter' || event.key === ' ') && event.target?.matches?.('.vendor-stats-modal-row[data-expandable="true"]')) {
+      event.preventDefault();
+      event.target.click();
+    }
+  });
 }
 
 function syncSplitBadge(card, splitPercentage, splitGroupId) {
@@ -1791,8 +2433,7 @@ function applySplitToCard(card, splitPercentages, options = {}) {
 async function runSplitFlowForCard(card) {
   if (!card) return false;
 
-  const selectCheckbox = card.querySelector(".line-item-select");
-  if (selectCheckbox?.disabled) {
+  if (isCardAssigned(card)) {
     showToast("Unassign line item before splitting.");
     return false;
   }
@@ -1841,6 +2482,8 @@ function addLineItemCard(item = {}, categoryHeader = null, insertAfter = null, o
   ];
   const status = item.status || "new";
   const statusClass = getStatusClass(status);
+  const phase = normalizeProjectPhase(item.phase);
+  const percentComplete = clampProjectPhaseProgress(item.percentComplete, status);
 
   // Ensure photos object exists
   if (!item.photos) {
@@ -1860,7 +2503,7 @@ function addLineItemCard(item = {}, categoryHeader = null, insertAfter = null, o
 
 card.innerHTML = `
   <div class="card-header">
-    <input type="checkbox" class="line-item-select" ${item.assignedTo ? "disabled" : ""}>
+    <input type="checkbox" class="line-item-select">
     <button class="btn card-drag-handle" type="button" draggable="true" title="Drag line item">::</button>
     <input type="text" class="item-name" value="${item.name || ""}" placeholder="Item Name">
     <div class="suggestion-box" style="display:none; position:absolute; background:#fff; border:1px solid #ccc; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1); max-height:350px; overflow-y:auto; z-index:1000;"></div>
@@ -1876,6 +2519,12 @@ card.innerHTML = `
     <div class="detail">
       <label>Description</label>
       <textarea class="item-description" placeholder="Description" style="min-width:350px; overflow:hidden;">${item.description || ""}</textarea>
+    </div>
+    <div class="detail">
+      <label>Project Phase</label>
+      <select class="item-phase-dropdown">
+        ${PROJECT_PHASES.map((option) => `<option value="${option.value}" ${phase === option.value ? "selected" : ""}>${option.label}</option>`).join("")}
+      </select>
     </div>
     <div class="detail">
       <label>Calculation Mode</label>
@@ -1974,29 +2623,36 @@ card.innerHTML = `
     align-items: center;
     justify-content: space-between;
   ">
-    <div class="footer-dates" style="display:flex; gap:18px; align-items:center;">
-      <div style="display:flex; flex-direction:column;">
-        <label for="start-date-${card.getAttribute("data-item-id")}" style="font-weight:500; color:#2563eb; margin-bottom:2px;">Start Date</label>
-        <input type="date" class="item-start-date" id="start-date-${card.getAttribute("data-item-id")}" value="${startDateValue}" style="padding:7px 12px; border-radius:6px; border:1px solid #d1d5db; background:#fff;">
+    <div class="card-phase-grid">
+      <div class="card-phase-field">
+        <label for="start-date-${card.getAttribute("data-item-id")}">Target Start</label>
+        <input type="date" class="item-start-date" id="start-date-${card.getAttribute("data-item-id")}" value="${startDateValue}">
       </div>
-      <div style="display:flex; flex-direction:column;">
-        <label for="end-date-${card.getAttribute("data-item-id")}" style="font-weight:500; color:#2563eb; margin-bottom:2px;">End Date</label>
-        <input type="date" class="item-end-date" id="end-date-${card.getAttribute("data-item-id")}" value="${endDateValue}" style="padding:7px 12px; border-radius:6px; border:1px solid #d1d5db; background:#fff;">
+      <div class="card-phase-field">
+        <label for="end-date-${card.getAttribute("data-item-id")}">Target Finish</label>
+        <input type="date" class="item-end-date" id="end-date-${card.getAttribute("data-item-id")}" value="${endDateValue}">
       </div>
-    </div>
-    <div class="status-assigned-container" style="display:flex; align-items:center; gap:24px;">
-      <span>
-        Status:
+      <div class="card-phase-field">
+        <label for="progress-${card.getAttribute("data-item-id")}">% Complete</label>
+        <div class="phase-percent-input-wrap">
+          <input type="number" class="item-percent-complete" id="progress-${card.getAttribute("data-item-id")}" value="${percentComplete}" min="0" max="100" step="1">
+          <span>%</span>
+        </div>
+      </div>
+      <div class="phase-status-cluster">
+        <span class="phase-status-chip">
+          <span>Status</span>
         <select class="item-status-dropdown ${statusClass}" style="margin-left:8px; padding:4px 10px; border-radius:6px; border:1px solid #ccc; font-weight:600;">
           ${statusOptions.map(opt => `<option value="${opt.value}" ${status === opt.value ? "selected" : ""}>${opt.label}</option>`).join("")}
         </select>
-      </span>
-      <span>
-        Assigned to:
-        <span class="vendor-name tooltip-click" data-fullname="${assignedToName}">
-          ${assignedToInitials}
         </span>
-      </span>
+        <span class="phase-vendor-pill">
+          <span>Assigned</span>
+          <span class="vendor-name tooltip-click" data-fullname="${assignedToName}">
+            ${assignedToInitials}
+          </span>
+        </span>
+      </div>
     </div>
     <span class="item-total" style="font-size:1.15em; font-weight:600; color:#2563eb; margin-left:auto;">
       $0.00
@@ -2008,20 +2664,59 @@ card.innerHTML = `
 
   // Status dropdown handler
   const statusDropdown = card.querySelector(".item-status-dropdown");
+  const phaseDropdown = card.querySelector('.item-phase-dropdown');
+  const percentCompleteInput = card.querySelector('.item-percent-complete');
   statusDropdown.className = "item-status-dropdown " + getStatusClass(status);
+
+  const syncPhaseTrackingUi = () => {
+    if (phaseDropdown) {
+      const normalizedPhase = normalizeProjectPhase(phaseDropdown.value);
+      phaseDropdown.value = normalizedPhase;
+      card.dataset.phase = normalizedPhase;
+    }
+    if (percentCompleteInput) {
+      const normalizedProgress = clampProjectPhaseProgress(percentCompleteInput.value, statusDropdown.value);
+      percentCompleteInput.value = String(normalizedProgress);
+      card.dataset.percentComplete = String(normalizedProgress);
+    }
+    renderProjectPhaseBar();
+  };
+
+  syncPhaseTrackingUi();
+
+  phaseDropdown?.addEventListener('change', () => {
+    syncPhaseTrackingUi();
+    applyFilters();
+  });
+
+  percentCompleteInput?.addEventListener('input', () => {
+    card.dataset.percentComplete = String(clampProjectPhaseProgress(percentCompleteInput.value, statusDropdown.value));
+    renderProjectPhaseBar();
+  });
+
+  percentCompleteInput?.addEventListener('change', () => {
+    syncPhaseTrackingUi();
+    applyFilters();
+    try { queueCardAutoSave(300); } catch (_) {}
+  });
 
   statusDropdown.addEventListener("change", async function () {
     const newStatus = statusDropdown.value;
     const lineItemId = card.getAttribute("data-item-id");
     const vendorId = card.getAttribute("data-assigned-to");
     const estimateId = new URLSearchParams(window.location.search).get("estimateId");
+    const nextPercentComplete = newStatus === 'completed'
+      ? 100
+      : newStatus === 'in-progress'
+        ? 0
+      : clampProjectPhaseProgress(percentCompleteInput?.value, newStatus);
 
     // 1. Update estimate line item status
     try {
       const response = await fetch(`/api/estimates/line-items/${lineItemId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ status: newStatus, percentComplete: nextPercentComplete })
       });
       if (!response.ok) {
         showToast("Failed to update estimate status");
@@ -2033,26 +2728,30 @@ card.innerHTML = `
     }
     // 2. Update vendor assigned item status (if assigned)
     if (vendorId && /^[a-f\d]{24}$/i.test(vendorId)) {
-      try {
-        const vendorRes = await fetch(`/api/vendors/${vendorId}/update-item-status`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            itemId: lineItemId,
-            status: newStatus,
-            estimateId: estimateId
-          })
-        });
+      fetch(`/api/vendors/${vendorId}/update-item-status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemId: lineItemId,
+          status: newStatus,
+          estimateId: estimateId
+        })
+      }).then((vendorRes) => {
         if (!vendorRes.ok) {
           showToast("Vendor status update failed");
         }
-      } catch (err) {
+      }).catch(() => {
         showToast("Error updating vendor status");
-      }
+      });
     }
     // Update dropdown color
     const newClass = getStatusClass(newStatus);
     statusDropdown.className = "item-status-dropdown " + newClass;
+    if (percentCompleteInput) {
+      percentCompleteInput.value = String(nextPercentComplete);
+    }
+    syncPhaseTrackingUi();
+    applyFilters();
     clearSelectedLineItems();
     showToast("Status updated!");
   });
@@ -2063,25 +2762,41 @@ card.innerHTML = `
   const lineItemId = card.getAttribute("data-item-id");
 
   if (startDateInput) {
-    startDateInput.addEventListener("change", async () => {
-      await fetch(`/api/estimates/line-items/${lineItemId}`, {
+    startDateInput.addEventListener("change", () => {
+      renderProjectPhaseBar();
+      applyFilters();
+      clearSelectedLineItems();
+      fetch(`/api/estimates/line-items/${lineItemId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ startDate: startDateInput.value })
+      }).then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to update start date");
+        }
+        showToast("Start date updated!");
+      }).catch(() => {
+        showToast("Failed to update start date");
       });
-      clearSelectedLineItems();
-      showToast("Start date updated!");
     });
   }
   if (endDateInput) {
-    endDateInput.addEventListener("change", async () => {
-      await fetch(`/api/estimates/line-items/${lineItemId}`, {
+    endDateInput.addEventListener("change", () => {
+      renderProjectPhaseBar();
+      applyFilters();
+      clearSelectedLineItems();
+      fetch(`/api/estimates/line-items/${lineItemId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ endDate: endDateInput.value })
+      }).then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to update end date");
+        }
+        showToast("End date updated!");
+      }).catch(() => {
+        showToast("Failed to update end date");
       });
-      clearSelectedLineItems();
-      showToast("End date updated!");
     });
   }
   
@@ -2236,39 +2951,7 @@ const photoSection = card.querySelector('.photo-section-modern');
 
  
 
-// ✅ Enable vendor name 
-  document.querySelectorAll(".vendor-name").forEach((el) => {
-    el.removeAttribute("title"); // ❌ Remove default tooltip behavior
-  
-    el.addEventListener("click", function (e) {
-      const fullName = el.getAttribute("data-fullname");
-  
-      // Remove any existing tooltips
-      document.querySelectorAll(".custom-tooltip").forEach((tooltip) => tooltip.remove());
-  
-      // Create new tooltip
-      const tooltip = document.createElement("div");
-      tooltip.className = "custom-tooltip";
-      tooltip.textContent = fullName;
-  
-      document.body.appendChild(tooltip);
-  
-      // Position the tooltip near the element
-      const rect = el.getBoundingClientRect();
-      tooltip.style.left = `${rect.left + window.scrollX + rect.width / 2}px`;
-      tooltip.style.top = `${rect.bottom + window.scrollY + 8}px`;
-  
-      // Remove tooltip when tapping elsewhere
-      setTimeout(() => tooltip.remove(), 2500); // Auto-hide after 2.5s
-  
-      e.stopPropagation(); // Prevent event bubbling
-    });
-  
-    // Hide tooltip if tapping outside
-    document.addEventListener("click", function () {
-      document.querySelectorAll(".custom-tooltip").forEach((tooltip) => tooltip.remove());
-    });
-  });
+  syncVendorTriggerState(card);
    
 
     // ✅ Enable swipe gestures for newly added items
@@ -2596,7 +3279,11 @@ try { window.addLineItemCard = addLineItemCard; } catch (_) {}
     materialCostInput,
     areaInput,
     lengthInput,
-    calcModeSelect
+    calcModeSelect,
+    phaseDropdown,
+    percentCompleteInput,
+    startDateInput,
+    endDateInput
 
   ].forEach(input => addSmartBlurAutoSave(input));
 
@@ -2697,17 +3384,18 @@ function updateSummary() {
   const total = subtotal + (subtotal * taxRate) / 100;
   const projectedProfit = total - totalLabor - totalMaterial;
 
-  const formattedSubtotal = `$${subtotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-  const formattedTotal = `$${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-  const formattedLabor = `$${totalLabor.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-  const formattedMaterial = `$${totalMaterial.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-  const formattedProfit = `$${projectedProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  const formattedSubtotal = formatEstimateCurrency(subtotal);
+  const formattedTotal = formatEstimateCurrency(total);
+  const formattedLabor = formatEstimateCurrency(totalLabor);
+  const formattedMaterial = formatEstimateCurrency(totalMaterial);
+  const formattedProfit = formatEstimateCurrency(projectedProfit);
 
   document.getElementById("subtotal").textContent = formattedSubtotal;
   document.getElementById("total").textContent = formattedTotal;
   document.getElementById("total-labor-cost").textContent = formattedLabor;
   document.getElementById("total-material-cost").textContent = formattedMaterial;
   document.getElementById("projected-profit").textContent = formattedProfit;
+  renderProjectPhaseBar();
   try { syncAllCategoryHeaderTotals(); } catch (_) {}
   try {
     if (typeof updateTableFooterTotals === 'function') {
@@ -2748,7 +3436,7 @@ function updateSummary() {
 function getSelectableCategoryLineItemCheckboxes(header) {
   return getCategoryCards(header)
     .map((card) => card.querySelector('.line-item-select'))
-    .filter((checkbox) => checkbox && !checkbox.disabled);
+    .filter(Boolean);
 }
 
 function toggleCategoryLineItemSelection(header, shouldSelect) {
@@ -2790,7 +3478,7 @@ try { window.__estimateEditSyncCategorySelectionCheckboxes = syncCategorySelecti
 
 function getSelectableLineItemCheckboxes() {
   return Array.from(document.querySelectorAll('.line-item-card .line-item-select'))
-    .filter((checkbox) => checkbox && !checkbox.disabled);
+    .filter(Boolean);
 }
 
 function syncListViewSelectAllCheckboxState() {
@@ -2822,9 +3510,8 @@ function syncListViewRowSelectionCheckboxes() {
 }
 
 function updateSelectedLaborCost() {
-  // Only count checkboxes that are enabled (not assigned)
   const selectedItems = Array.from(document.querySelectorAll(".line-item-select:checked"))
-    .filter(cb => !cb.disabled);
+    .filter(Boolean);
 
   let totalLaborCost = 0;
 
@@ -2929,8 +3616,13 @@ async function assignItemsToVendor() {
     }
   }
 
-  const selectedItems = Array.from(document.querySelectorAll(".line-item-select:checked")).map((checkbox) => {
-    const card = checkbox.closest(".line-item-card");
+  const selectedCards = Array.from(document.querySelectorAll(".line-item-select:checked"))
+    .map((checkbox) => checkbox.closest(".line-item-card"))
+    .filter(Boolean);
+  const assignableCards = selectedCards.filter((card) => !isCardAssigned(card));
+  const skippedAssignedCount = selectedCards.length - assignableCards.length;
+
+  const selectedItems = assignableCards.map((card) => {
     const itemId = card.getAttribute("data-item-id");
 
     const name = card.querySelector(".item-name").value.trim();
@@ -2972,7 +3664,9 @@ async function assignItemsToVendor() {
   });
 
   if (selectedItems.length === 0) {
-    showToast("No items selected for assignment.");
+    showToast(skippedAssignedCount
+      ? "Line item already assigned. Remove current vendor first before reassigning."
+      : "No items selected for assignment.");
     return;
   }
 
@@ -3007,12 +3701,12 @@ async function assignItemsToVendor() {
           vendorEl.textContent = vendorInitials;
           vendorEl.setAttribute('data-fullname', vendorFullName);
         }
+        syncVendorTriggerState(card);
 
-        // Disable and uncheck the checkbox
+        // Keep assigned items selectable for batch actions, but clear the current selection.
         const checkbox = card.querySelector(".line-item-select");
         if (checkbox) {
           checkbox.checked = false;
-          checkbox.disabled = true;
         }
 
         // If Unassign button doesn't exist, add it
@@ -3038,7 +3732,9 @@ async function assignItemsToVendor() {
       }
     } catch (_) {}
 
-    showToast("✅ Items assigned successfully!");
+    showToast(skippedAssignedCount
+      ? `✅ ${selectedItems.length} item${selectedItems.length === 1 ? '' : 's'} assigned. ${skippedAssignedCount} already assigned item${skippedAssignedCount === 1 ? '' : 's'} skipped. Remove current vendor first before reassigning.`
+      : "✅ Items assigned successfully!");
     updatePage(); // Refresh totals and page
   } catch (error) {
     console.error("❌ Error assigning items:", error);
@@ -3086,10 +3782,11 @@ function unassignItem(card) {
   // Clear the "Assigned to" field in the UI
   card.setAttribute("data-assigned-to", "");
   card.querySelector(".vendor-name").textContent = "Unassigned";
+  card.querySelector(".vendor-name").setAttribute('data-fullname', 'Unassigned');
+  syncVendorTriggerState(card);
 
   // Re-enable the checkbox for the item
   const checkbox = card.querySelector(".line-item-select");
-  checkbox.disabled = false;
   checkbox.checked = false;
 
   // Remove the Unassign button
@@ -3159,7 +3856,16 @@ function refreshLineItemCard(updatedItem) {
 
 // Save Estimate
 // Save Estimate
-async function saveEstimate() {
+async function performSaveEstimate(options = {}) {
+  const {
+    silentSuccess = false,
+    loadingMessage = 'Saving estimate...'
+  } = normalizeSaveEstimateOptions(options);
+
+  __estimateSaveInFlightCount += 1;
+  showToast(loadingMessage, { variant: 'loading', persist: true });
+
+  let completedWithError = false;
   const lineItems = [];
   let currentCategory = null;
   let categorySortOrder = 0;
@@ -3207,6 +3913,8 @@ async function saveEstimate() {
           (parseFloat(element.querySelector(".item-price").value) || 0)
         ),
         status: element.querySelector(".item-status-dropdown")?.value || "new",
+        phase: normalizeProjectPhase(element.querySelector('.item-phase-dropdown')?.value || DEFAULT_PROJECT_PHASE),
+        percentComplete: clampProjectPhaseProgress(element.querySelector('.item-percent-complete')?.value, element.querySelector('.item-status-dropdown')?.value || 'new'),
         startDate: element.querySelector(".item-start-date")?.value || undefined,
         endDate: element.querySelector(".item-end-date")?.value || undefined,
         assignedTo,
@@ -3249,12 +3957,13 @@ async function saveEstimate() {
   const cleanedLineItems = lineItems.filter(cat => cat && cat.type === 'category' && Array.isArray(cat.items) && cat.items.length > 0);
 
   try {
-    let existingEstimate = null;
-    if (estimateId) {
+    let existingEstimate = __estimateSnapshot;
+    if (estimateId && !existingEstimate) {
       const response = await fetch(`/api/estimates/${estimateId}`);
       if (!response.ok) throw new Error("Failed to fetch existing estimate.");
       const dto = await response.json();
       existingEstimate = dto?.estimate || null; // API returns { success, estimate }
+      __estimateSnapshot = existingEstimate;
     }
 
     const mergedLineItems = cleanedLineItems.map((category) => {
@@ -3299,11 +4008,14 @@ async function saveEstimate() {
     
 
   const result = await saveResponse.json();
+    __estimateSnapshot = result?.estimate || updatedEstimate;
     // Inform about skipped drafts if any
     if (skippedDraftNewItems) {
-      showToast("Note: Unnamed new line items were not saved. Add a name to include them.");
+      showToast("Note: Unnamed new line items were not saved. Add a name to include them.", { variant: 'info' });
     }
-    showToast(`Estimate ${method === "POST" ? "created" : "updated"} successfully!`, result);
+    if (!silentSuccess) {
+      showToast(`Estimate ${method === "POST" ? "created" : "updated"} successfully!`, { variant: 'success' });
+    }
 
     if (!estimateId && result.estimate && result.estimate._id) {
       estimateId = result.estimate._id;
@@ -3367,7 +4079,9 @@ body: JSON.stringify({
         );
       }
     });
-    await Promise.all(patchPromises);
+    if (patchPromises.length) {
+      Promise.allSettled(patchPromises).catch(() => {});
+    }
 
     // Reconcile only newly added items to avoid refreshing the entire page
     try {
@@ -3439,8 +4153,42 @@ body: JSON.stringify({
       // Non-fatal: if reconcile fails silently, leave the page as-is
     }
   } catch (error) {
+    completedWithError = true;
     console.error("Error saving estimate:", error);
-    showToast(`Error saving the estimate${error?.message ? ": " + error.message : ". Please try again."}`);
+    showToast(`Error saving the estimate${error?.message ? ": " + error.message : ". Please try again."}`, { variant: 'error' });
+  } finally {
+    __estimateSaveInFlightCount = Math.max(0, __estimateSaveInFlightCount - 1);
+    if (__estimateSaveInFlightCount > 0 && !completedWithError) {
+      showToast(loadingMessage, { variant: 'loading', persist: true });
+    } else if (__estimateSaveInFlightCount === 0 && !completedWithError && silentSuccess) {
+      hideToast();
+    }
+  }
+}
+
+async function saveEstimate(options = {}) {
+  const normalizedOptions = normalizeSaveEstimateOptions(options);
+
+  if (__estimateSavePromise) {
+    __estimateQueuedSaveOptions = __estimateQueuedSaveOptions
+      ? mergeSaveEstimateOptions(__estimateQueuedSaveOptions, normalizedOptions)
+      : normalizedOptions;
+    showToast(normalizedOptions.loadingMessage, { variant: 'loading', persist: true });
+    return __estimateSavePromise;
+  }
+
+  __estimateSavePromise = performSaveEstimate(normalizedOptions);
+
+  try {
+    await __estimateSavePromise;
+  } finally {
+    __estimateSavePromise = null;
+  }
+
+  if (__estimateQueuedSaveOptions) {
+    const queuedOptions = __estimateQueuedSaveOptions;
+    __estimateQueuedSaveOptions = null;
+    return saveEstimate(queuedOptions);
   }
 }
 
@@ -3508,12 +4256,16 @@ function updatePage() {
         category.items.forEach(item => {
           rows.push({
             Category: category.category,
+            Phase: getProjectPhaseLabel(item.phase || DEFAULT_PROJECT_PHASE),
             costCode: item.costCode,
             Name: item.name,
             Description: item.description,
             Quantity: item.quantity,
             UnitPrice: item.unitPrice,
             Total: item.quantity * item.unitPrice,
+            PercentComplete: `${clampProjectPhaseProgress(item.percentComplete, item.status || 'new')}%`,
+            TargetStart: item.startDate ? String(item.startDate).substring(0, 10) : '',
+            TargetFinish: item.endDate ? String(item.endDate).substring(0, 10) : '',
             Status: item.status || "N/A",
             AssignedTo: item.assignedTo?.name || "Unassigned"
           });
@@ -3623,8 +4375,8 @@ function updatePage() {
 
   function getSelectedVendorCards() {
     return Array.from(document.querySelectorAll('.line-item-select:checked'))
-      .filter((checkbox) => !checkbox.disabled)
       .map((checkbox) => checkbox.closest('.line-item-card'))
+      .filter((card) => card && !isCardAssigned(card))
       .filter(Boolean);
   }
 
@@ -3716,7 +4468,6 @@ function isMobileEstimateViewport() {
 
 function getSelectedAssignableCards() {
   return Array.from(document.querySelectorAll('.line-item-select:checked'))
-    .filter((checkbox) => !checkbox.disabled)
     .map((checkbox) => checkbox.closest('.line-item-card'))
     .filter(Boolean);
 }
@@ -3781,6 +4532,7 @@ function wireMobileExperience() {
   document.getElementById("selected-items-action-btn")?.addEventListener("click", () => window.__estimateEditOpenBatchActionDrawer?.());
   document.getElementById("batch-actions-close")?.addEventListener("click", () => window.__estimateEditCloseBatchActionDrawer?.());
   document.getElementById("batch-status-apply")?.addEventListener("click", () => window.__estimateEditApplyBatchStatus?.());
+  document.getElementById("batch-phase-apply")?.addEventListener("click", () => window.__estimateEditApplyBatchPhase?.());
   document.getElementById("batch-move-category")?.addEventListener("click", () => window.__estimateEditMoveSelectedToCategory?.());
   document.getElementById("batch-assign-dates")?.addEventListener("click", () => window.__estimateEditApplyBatchDates?.());
   document.getElementById("batch-split-labor")?.addEventListener("click", () => window.__estimateEditSplitLaborAcrossSelected?.());
@@ -3788,6 +4540,7 @@ function wireMobileExperience() {
   document.getElementById("batch-delete-items")?.addEventListener("click", () => window.__estimateEditDeleteSelected?.());
   document.getElementById("tax-input").addEventListener("input", updateSummary);
   document.getElementById("save-estimate").addEventListener("click", saveEstimate);
+  initializeVendorStatsModal();
   document.getElementById('list-view-select-all')?.addEventListener('change', (event) => {
     const shouldSelectAll = !!event.target?.checked;
     const selectableCheckboxes = getSelectableLineItemCheckboxes();
@@ -3805,6 +4558,7 @@ function wireMobileExperience() {
     }
   });
   wireMobileExperience();
+  try { window.__estimateEditRefreshBatchPhaseOptions?.(); } catch (_) {}
   try { window.__estimateEditRefreshBatchCategoryOptions?.(); } catch (_) {}
   try { window.__estimateEditSyncBatchActionState?.(); } catch (_) {}
   try { syncListViewSelectAllCheckboxState(); } catch (_) {}
@@ -3985,12 +4739,19 @@ function createFilterUI() {
   // Render compact when inline within topbar; class applied just before insert
   filterContainer.className = 'filters-container';
   filterContainer.innerHTML = `
-
-
+      <div class="filter-header">
+        <h3>Filters</h3>
+      </div>
       <div class="filter-options">
         <div class="filter-group">
           <label for="filter-item-name">Item Name</label>
           <input type="text" id="filter-item-name" class="filter-input" placeholder="Search by item name">
+        </div>
+        <div class="filter-group">
+          <label for="filter-phase">Phase</label>
+          <select id="filter-phase" class="filter-select">
+            <option value="">All Phases</option>
+          </select>
         </div>
         <div class="filter-group">
           <label for="filter-category">Category</label>
@@ -4016,6 +4777,14 @@ function createFilterUI() {
             <option value="unassigned">Unassigned</option>
           </select>
         </div>
+        <label class="filter-group" style="justify-content:flex-end; gap:8px; min-width:145px;">
+          <span>Overdue only</span>
+          <input type="checkbox" id="filter-overdue">
+        </label>
+        <label class="filter-group" style="justify-content:flex-end; gap:8px; min-width:165px;">
+          <span>Current phase only</span>
+          <input type="checkbox" id="filter-current-phase">
+        </label>
         <button id="clear-filters" class="btn-secondary">Clear Filters</button>
         <button id="toggle-all-categories-btn-card" class="topbar-category-collapse-toggle estimate-disclosure-btn" type="button" aria-pressed="false" title="Collapse all categories" style="display:inline-flex; align-items:center; justify-content:center; margin-top:11px;">${getDisclosureIconSvg()}</button>
          <button id="toggle-view-btn" title="Toggle list/card view" aria-pressed="false" style="display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid #e2e8f0; border-radius:8px; background:#ffffff; cursor:pointer; color:#0f172a; margin-top:11px; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.04); transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease; width:34px; height:34px; padding:0; justify-content:center;">
@@ -4103,6 +4872,8 @@ function createFilterUI() {
       length: parseFloat(card.querySelector('.item-length')?.value || '0') || 0,
       costCode: card.querySelector('.item-cost-code')?.value || '',
       status: card.querySelector('.item-status-dropdown')?.value || 'new',
+      phase: card.querySelector('.item-phase-dropdown')?.value || DEFAULT_PROJECT_PHASE,
+      percentComplete: clampProjectPhaseProgress(card.querySelector('.item-percent-complete')?.value, card.querySelector('.item-status-dropdown')?.value || 'new'),
       startDate: card.querySelector('.item-start-date')?.value || '',
       endDate: card.querySelector('.item-end-date')?.value || ''
     };
@@ -4140,9 +4911,27 @@ function createFilterUI() {
     }
   }
 
+  function refreshBatchPhaseOptions() {
+    const select = document.getElementById('batch-phase-select');
+    if (!select) return;
+    const previousValue = select.value;
+    select.innerHTML = '<option value="">Select phase</option>';
+    PROJECT_PHASES.forEach((phase) => {
+      const option = document.createElement('option');
+      option.value = phase.value;
+      option.textContent = phase.label;
+      select.appendChild(option);
+    });
+    if (previousValue && Array.from(select.options).some((option) => option.value === previousValue)) {
+      select.value = previousValue;
+    }
+  }
+
   function openBatchActionDrawer() {
     const drawer = document.getElementById('batch-actions-drawer');
     if (!drawer) return;
+    refreshBatchCategoryOptions();
+    refreshBatchPhaseOptions();
     drawer.hidden = false;
     try { document.addEventListener('pointerdown', handleBatchActionOutsidePointerDown, true); } catch (_) {}
     try { document.addEventListener('keydown', handleBatchActionDrawerKeydown, true); } catch (_) {}
@@ -4197,6 +4986,7 @@ function createFilterUI() {
     }
     [
       'batch-status-apply',
+      'batch-phase-apply',
       'batch-move-category',
       'batch-assign-dates',
       'batch-split-labor',
@@ -4214,6 +5004,7 @@ function createFilterUI() {
     try { applyCategoryCollapseState(); } catch (_) {}
     try { populateFilterOptions(); } catch (_) {}
     refreshBatchCategoryOptions();
+    refreshBatchPhaseOptions();
     try { updateSummary(); } catch (_) {}
     try { updateSelectedLaborCost(); } catch (_) {}
     if (typeof isListViewActive === 'function' && isListViewActive()) {
@@ -4223,6 +5014,7 @@ function createFilterUI() {
     if (typeof window.autoSaveEstimate === 'function') {
       await window.autoSaveEstimate(true);
     }
+    try { clearSelectedLineItems(); } catch (_) {}
   }
 
   function findCategoryHeaderByKey(key) {
@@ -4389,6 +5181,26 @@ function createFilterUI() {
     await persistBatchDomChanges();
   }
 
+  async function applyBatchPhase() {
+    const cards = getSelectedCards();
+    const nextPhase = document.getElementById('batch-phase-select')?.value || '';
+    if (!cards.length) {
+      showToast('Select at least one item.');
+      return;
+    }
+    if (!nextPhase) {
+      showToast('Select a phase to apply.');
+      return;
+    }
+    cards.forEach((card) => {
+      const dropdown = card.querySelector('.item-phase-dropdown');
+      if (!dropdown) return;
+      dropdown.value = nextPhase;
+      dropdown.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await persistBatchDomChanges();
+  }
+
   async function moveSelectedToCategory() {
     const cards = getSelectedCards();
     const categoryKey = document.getElementById('batch-category-select')?.value || '';
@@ -4428,13 +5240,17 @@ function createFilterUI() {
 
   async function splitLaborAcrossSelected() {
     const cards = getSelectedCards();
-    if (cards.length < 2) {
+    const splittableCards = cards.filter((card) => !isCardAssigned(card));
+    const skippedAssignedCount = cards.length - splittableCards.length;
+    if (splittableCards.length < 2) {
       if (typeof window.__estimateEditShowToast === 'function') {
-        window.__estimateEditShowToast('Select at least two items to split labor.');
+        window.__estimateEditShowToast(skippedAssignedCount
+          ? 'Assigned line items were skipped. Unassign at least two items before splitting labor.'
+          : 'Select at least two items to split labor.');
       }
       return;
     }
-    const previewItems = cards.map((card, index) => ({
+    const previewItems = splittableCards.map((card, index) => ({
       id: card.getAttribute('data-item-id') || `selected-${index}`,
       itemName: (card.querySelector('.item-name')?.value || `Line Item ${index + 1}`).trim(),
       laborCost: parseFloat(card.querySelector('.item-labor-cost')?.value || '0') || 0,
@@ -4448,7 +5264,7 @@ function createFilterUI() {
     }
 
     const configMap = new Map(splitConfigs.map((config) => [String(config.id), config]));
-    cards.forEach((card, index) => {
+    splittableCards.forEach((card, index) => {
       const cardId = card.getAttribute('data-item-id') || `selected-${index}`;
       const config = configMap.get(String(cardId));
       if (!config || !Array.isArray(config.percentages) || config.percentages.length < 2) return;
@@ -4467,7 +5283,9 @@ function createFilterUI() {
     } catch (_) {}
     await persistBatchDomChanges();
     if (typeof window.__estimateEditShowToast === 'function') {
-      window.__estimateEditShowToast(`Applied split preview to ${cards.length} selected line items.`);
+      window.__estimateEditShowToast(skippedAssignedCount
+        ? `Applied split preview to ${splittableCards.length} line items. ${skippedAssignedCount} assigned item${skippedAssignedCount === 1 ? '' : 's'} skipped.`
+        : `Applied split preview to ${splittableCards.length} selected line items.`);
     }
   }
 
@@ -4498,19 +5316,30 @@ function createFilterUI() {
       showToast('Select at least one item.');
       return;
     }
-    if (!window.confirm(`Delete ${cards.length} selected item${cards.length === 1 ? '' : 's'}?`)) {
+    const deletableCards = cards.filter((card) => !isCardAssigned(card));
+    const skippedAssignedCount = cards.length - deletableCards.length;
+    if (!deletableCards.length) {
+      showToast('Assigned line items cannot be deleted. Remove the vendor assignment first.');
       return;
     }
-    cards.forEach((card) => card.remove());
+    if (!window.confirm(`Delete ${deletableCards.length} selected item${deletableCards.length === 1 ? '' : 's'}?`)) {
+      return;
+    }
+    deletableCards.forEach((card) => card.remove());
     await persistBatchDomChanges();
+    if (skippedAssignedCount) {
+      showToast(`${skippedAssignedCount} assigned item${skippedAssignedCount === 1 ? '' : 's'} skipped. Remove the vendor assignment first to delete them.`);
+    }
   }
 
   try {
     window.__estimateEditRefreshBatchCategoryOptions = refreshBatchCategoryOptions;
+    window.__estimateEditRefreshBatchPhaseOptions = refreshBatchPhaseOptions;
     window.__estimateEditSyncBatchActionState = syncBatchActionState;
     window.__estimateEditOpenBatchActionDrawer = openBatchActionDrawer;
     window.__estimateEditCloseBatchActionDrawer = closeBatchActionDrawer;
     window.__estimateEditApplyBatchStatus = applyBatchStatus;
+    window.__estimateEditApplyBatchPhase = applyBatchPhase;
     window.__estimateEditMoveSelectedToCategory = moveSelectedToCategory;
     window.__estimateEditApplyBatchDates = applyBatchDates;
     window.__estimateEditSplitLaborAcrossSelected = splitLaborAcrossSelected;
@@ -4640,7 +5469,7 @@ function ensureListViewContainer() {
       /* Sticky header handled separately in HTML */
       #line-items-table-container { position: relative; }
       #line-items-table-container > .table-scroll { overflow-x: auto; overflow-y: visible; width: 100%; }
-      #line-items-table-container .estimate-table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1300px; table-layout: fixed; }
+      #line-items-table-container .estimate-table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1560px; table-layout: fixed; }
       #line-items-table-container .estimate-table thead { display: none; }
       #line-items-table-container .estimate-table tfoot { display: none; }
       #list-view-footer.lvf {
@@ -5944,6 +6773,9 @@ function buildListViewFromCards() {
     totalCell.textContent = formatter(totalAmount);
     row.appendChild(totalCell);
 
+    row.appendChild(emptyCell());
+    row.appendChild(emptyCell());
+
     const statusSpacer = emptyCell();
     row.appendChild(statusSpacer);
 
@@ -6012,6 +6844,8 @@ function buildListViewFromCards() {
         else if (mode === 'lnft') { effQty = length; qtyLabel = `${effQty} lnft`; }
         else { effQty = qty; qtyLabel = `${effQty}`; }
         const amount = (effQty * unitPrice) || 0;
+        const phaseValue = getLineItemPhaseFromCard(card);
+        const percentComplete = getLineItemCompletionFromCard(card);
         const status = card.querySelector('.item-status-dropdown')?.value || '';
         const assigned = card.getAttribute('data-assigned-to') ? (card.querySelector('.vendor-name')?.getAttribute('data-fullname') || 'Assigned') : 'Unassigned';
 
@@ -6566,6 +7400,81 @@ function buildListViewFromCards() {
         tdAmount.textContent = formatter(amount);
         tr.appendChild(tdAmount);
 
+        // Phase select
+  const tdPhase = document.createElement('td');
+  tdPhase.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:120px;';
+  const phaseSelect = document.createElement('select');
+        phaseSelect.style.width = '100%';
+        phaseSelect.style.boxSizing = 'border-box';
+  phaseSelect.style.padding = '4px 6px';
+  phaseSelect.style.fontSize = '13px';
+        PROJECT_PHASES.forEach((phaseOption) => {
+          const option = document.createElement('option');
+          option.value = phaseOption.value;
+          option.textContent = phaseOption.shortLabel;
+          if (phaseValue === phaseOption.value) option.selected = true;
+          phaseSelect.appendChild(option);
+        });
+        phaseSelect.addEventListener('focus', () => {
+          const cardEl = getCardInput('.item-phase-dropdown');
+          phaseSelect.dataset.orig = cardEl ? (cardEl.value || '') : '';
+        });
+        phaseSelect.addEventListener('change', () => {
+          setAndDispatch(getCardInput('.item-phase-dropdown'), phaseSelect.value, 'change');
+          syncAndRebuild();
+        });
+        phaseSelect.addEventListener('blur', () => {
+          if ((phaseSelect.dataset.orig || '') !== (phaseSelect.value || '')) {
+            setAndDispatch(getCardInput('.item-phase-dropdown'), phaseSelect.value, 'blur');
+          }
+        });
+        tdPhase.appendChild(phaseSelect);
+        tr.appendChild(tdPhase);
+
+        // Percent complete input
+  const tdProgress = document.createElement('td');
+  tdProgress.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:76px;';
+  const progressWrap = document.createElement('div');
+        progressWrap.style.display = 'flex';
+        progressWrap.style.alignItems = 'center';
+        progressWrap.style.gap = '6px';
+  const progressInput = document.createElement('input');
+        progressInput.type = 'number';
+        progressInput.min = '0';
+        progressInput.max = '100';
+        progressInput.step = '1';
+        progressInput.value = String(percentComplete);
+  progressInput.style.width = '100%';
+  progressInput.style.textAlign = 'right';
+  progressInput.style.fontSize = '13px';
+  progressInput.style.padding = '4px 6px';
+        const progressSuffix = document.createElement('span');
+        progressSuffix.textContent = '%';
+        progressSuffix.style.color = '#64748b';
+        progressSuffix.style.fontWeight = '700';
+        progressInput.addEventListener('focus', () => {
+          const cardEl = getCardInput('.item-percent-complete');
+          progressInput.dataset.orig = cardEl ? (cardEl.value || '') : '';
+        });
+        progressInput.addEventListener('input', () => {
+          const normalized = String(clampProjectPhaseProgress(progressInput.value, statusSelect.value || status));
+          if (normalized !== progressInput.value) progressInput.value = normalized;
+          setAndDispatch(getCardInput('.item-percent-complete'), normalized, 'input');
+        });
+        progressInput.addEventListener('blur', () => {
+          const normalized = String(clampProjectPhaseProgress(progressInput.value, statusSelect.value || status));
+          progressInput.value = normalized;
+          if ((progressInput.dataset.orig || '') !== normalized) {
+            setAndDispatch(getCardInput('.item-percent-complete'), normalized, 'blur');
+            try { if (typeof queueListAutoSave === 'function') queueListAutoSave(300); } catch (_) {}
+          }
+          syncAndRebuild();
+        });
+        progressWrap.appendChild(progressInput);
+        progressWrap.appendChild(progressSuffix);
+        tdProgress.appendChild(progressWrap);
+        tr.appendChild(tdProgress);
+
         // Status select
   const tdStatus = document.createElement('td');
   tdStatus.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:160px; width:160px;';
@@ -6603,6 +7512,13 @@ function buildListViewFromCards() {
         statusSelect.addEventListener('change', () => {
           statusSelect.className = 'item-status-dropdown ' + statusToClass(statusSelect.value);
           setAndDispatch(getCardInput('.item-status-dropdown'), statusSelect.value, 'change');
+          if ((statusSelect.value || '').toLowerCase() === 'completed' && parseFloat(progressInput.value || '0') < 100) {
+            progressInput.value = '100';
+            setAndDispatch(getCardInput('.item-percent-complete'), progressInput.value, 'input');
+          } else if ((statusSelect.value || '').toLowerCase() === 'in-progress' && parseFloat(progressInput.value || '0') !== 0) {
+            progressInput.value = '0';
+            setAndDispatch(getCardInput('.item-percent-complete'), progressInput.value, 'input');
+          }
           syncAndRebuild();
         });
         tdStatus.appendChild(statusSelect);
@@ -6617,8 +7533,12 @@ function buildListViewFromCards() {
           wrap.style.display = 'flex';
           wrap.style.alignItems = 'center';
           wrap.style.gap = '6px';
-          const nameSpan = document.createElement('span');
+          const nameSpan = document.createElement('button');
+          nameSpan.type = 'button';
+          nameSpan.className = 'vendor-assignment-trigger';
           nameSpan.textContent = assigned;
+          nameSpan.setAttribute('data-vendor-id', card.getAttribute('data-assigned-to') || '');
+          nameSpan.setAttribute('data-fullname', assigned);
           const unassignBtn = document.createElement('button');
           unassignBtn.className = 'lv-unassign-btn';
           unassignBtn.title = 'Unassign';
@@ -6658,7 +7578,7 @@ function buildListViewFromCards() {
           const splitBtn = document.createElement('button');
           splitBtn.textContent = 'Split';
           splitBtn.className = 'lv-split-btn';
-          splitBtn.disabled = !!getCardInput('.line-item-select')?.disabled;
+          splitBtn.disabled = isCardAssigned(card);
           splitBtn.title = splitBtn.disabled ? 'Unassign line item before splitting' : 'Split this line item';
           splitBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
@@ -7038,7 +7958,7 @@ function buildListViewFromCards() {
       const ptr = document.createElement('tr');
       ptr.className = 'lv-empty-category';
 
-      // Build 12 columns to match header
+      // Build columns to match header
       const td0 = document.createElement('td'); // Select
       const tdCat = document.createElement('td'); // Category
       const tdItem = document.createElement('td'); // Item
@@ -7048,6 +7968,8 @@ function buildListViewFromCards() {
       const tdLabor = document.createElement('td');
       const tdMaterial = document.createElement('td');
       const tdAmount = document.createElement('td');
+      const tdPhase = document.createElement('td');
+      const tdProgress = document.createElement('td');
       const tdStatus = document.createElement('td');
       const tdAssigned = document.createElement('td');
       const tdActions = document.createElement('td');
@@ -7062,6 +7984,8 @@ function buildListViewFromCards() {
       tdLabor.style.cssText = base + ' min-width:100px; text-align:right;';
       tdMaterial.style.cssText = base + ' min-width:92px; text-align:right;';
       tdAmount.style.cssText = base + ' min-width:90px; text-align:center;';
+      tdPhase.style.cssText = base + ' min-width:120px; text-align:center; color:#9ca3af;';
+      tdProgress.style.cssText = base + ' min-width:76px; text-align:center; color:#9ca3af;';
       tdStatus.style.cssText = base + ' min-width:160px; width:160px; text-align:center; color:#9ca3af;';
       tdAssigned.style.cssText = base + ' min-width:140px; color:#9ca3af;';
       tdActions.style.cssText = base + ' min-width:64px; text-align:right;';
@@ -7103,7 +8027,7 @@ function buildListViewFromCards() {
 
       tdItem.textContent = 'No items yet';
       
-      [td0, tdCat, tdItem, tdMode, tdQty, tdUnit, tdLabor, tdMaterial, tdAmount, tdStatus, tdAssigned, tdActions]
+      [td0, tdCat, tdItem, tdMode, tdQty, tdUnit, tdLabor, tdMaterial, tdAmount, tdPhase, tdProgress, tdStatus, tdAssigned, tdActions]
         .forEach(td => ptr.appendChild(td));
       frag.appendChild(ptr);
     }
@@ -7117,12 +8041,15 @@ function buildListViewFromCards() {
 // ✅ Initialize filter event listeners
 function initializeFilterListeners() {
   const itemNameFilter = document.getElementById('filter-item-name');
+  const phaseFilter = document.getElementById('filter-phase');
   const categoryFilter = document.getElementById('filter-category');
   const statusFilter = document.getElementById('filter-status');
   const vendorFilter = document.getElementById('filter-vendor');
+  const overdueFilter = document.getElementById('filter-overdue');
+  const currentPhaseFilter = document.getElementById('filter-current-phase');
   const clearFiltersButton = document.getElementById('clear-filters');
 
-  if (!itemNameFilter || !categoryFilter || !statusFilter || !vendorFilter || !clearFiltersButton) {
+  if (!itemNameFilter || !phaseFilter || !categoryFilter || !statusFilter || !vendorFilter || !overdueFilter || !currentPhaseFilter || !clearFiltersButton) {
     console.error("Filter elements not found");
     return;
   }
@@ -7131,7 +8058,7 @@ function initializeFilterListeners() {
   populateFilterOptions();
 
   // Add event listeners to filter controls
-  [itemNameFilter, categoryFilter, statusFilter, vendorFilter].forEach(filter => {
+  [itemNameFilter, phaseFilter, categoryFilter, statusFilter, vendorFilter, overdueFilter, currentPhaseFilter].forEach(filter => {
     filter.addEventListener('input', applyFilters);
     filter.addEventListener('change', applyFilters);
   });
@@ -7142,6 +8069,21 @@ function initializeFilterListeners() {
 
 // ✅ Populate filter options dynamically
 function populateFilterOptions() {
+  const phaseSelect = document.getElementById('filter-phase');
+  if (phaseSelect) {
+    const previousPhase = phaseSelect.value;
+    phaseSelect.innerHTML = '<option value="">All Phases</option>';
+    PROJECT_PHASES.forEach((phase) => {
+      const option = document.createElement('option');
+      option.value = phase.value;
+      option.textContent = phase.label;
+      phaseSelect.appendChild(option);
+    });
+    if (previousPhase && Array.from(phaseSelect.options).some((option) => option.value === previousPhase)) {
+      phaseSelect.value = previousPhase;
+    }
+  }
+
   // Get category filter dropdown
   const categorySelect = document.getElementById('filter-category');
   if (!categorySelect) return;
@@ -7191,28 +8133,34 @@ function populateFilterOptions() {
   }
 
   try { refreshBatchCategoryOptions(); } catch (_) {}
+  renderProjectPhaseBar();
 }
 
 // ✅ Apply filters to line items - Card View Only
 function applyFilters() {
+  const phaseValue = document.getElementById('filter-phase')?.value || '';
   const categoryValue = document.getElementById('filter-category')?.value || '';
   const statusValue = document.getElementById('filter-status')?.value || '';
   const vendorValue = document.getElementById('filter-vendor')?.value || '';
+  const overdueOnly = !!document.getElementById('filter-overdue')?.checked;
+  const currentPhaseOnly = !!document.getElementById('filter-current-phase')?.checked;
   
   // Apply filters to cards
-  applyCardViewFilters(categoryValue, statusValue, vendorValue);
+  applyCardViewFilters(categoryValue, statusValue, vendorValue, phaseValue, overdueOnly, currentPhaseOnly);
   
   // Update counts
   updateFilterCounts();
+  renderProjectPhaseBar();
 }
 
 // ✅ Apply filters to card view
-function applyCardViewFilters(categoryValue, statusValue, vendorValue) {
+function applyCardViewFilters(categoryValue, statusValue, vendorValue, phaseValue, overdueOnly, currentPhaseOnly) {
   const itemNameValue = document.getElementById('filter-item-name')?.value.trim().toLowerCase() || '';
   let visibleCount = 0;
   let hiddenCount = 0;
 
-  const cards = document.querySelectorAll('.line-item-card');
+  const cards = Array.from(document.querySelectorAll('.line-item-card'));
+  const effectivePhase = currentPhaseOnly ? getCurrentProjectPhase(cards) : phaseValue;
   cards.forEach(card => {
     // Get the category for this card
     let categoryHeader = card.previousElementSibling;
@@ -7227,6 +8175,7 @@ function applyCardViewFilters(categoryValue, statusValue, vendorValue) {
 // Get item status from the dropdown value
 const statusDropdown = card.querySelector('.item-status-dropdown');
 const cardStatus = statusDropdown ? statusDropdown.value.toLowerCase() : 'new';
+  const cardPhase = getLineItemPhaseFromCard(card);
 
     // Get assigned vendor
     const assignedTo = card.getAttribute('data-assigned-to') || '';
@@ -7237,14 +8186,16 @@ const cardStatus = statusDropdown ? statusDropdown.value.toLowerCase() : 'new';
 
     // Check if card matches all active filters
     const matchesItemName = !itemNameValue || itemName.includes(itemNameValue);
+    const matchesPhase = !effectivePhase || cardPhase === effectivePhase;
     const matchesCategory = !categoryValue || cardCategory === categoryValue;
     const matchesStatus = !statusValue || cardStatus.includes(statusValue.toLowerCase());
     const matchesVendor = !vendorValue ||
       (vendorValue === 'unassigned' && !isAssigned) ||
       (isAssigned && assignedTo === vendorValue);
+    const matchesOverdue = !overdueOnly || isLineItemOverdue(card);
 
     // Show or hide based on filter matches
-    if (matchesItemName && matchesCategory && matchesStatus && matchesVendor) {
+    if (matchesItemName && matchesPhase && matchesCategory && matchesStatus && matchesVendor && matchesOverdue) {
       card.dataset.filterVisible = 'true';
       card.style.display = '';
       visibleCount++;
@@ -7332,6 +8283,12 @@ function updateFilterCounts() {
   // Get active filters
   const activeFilters = [
     { 
+      id: 'filter-phase', 
+      name: 'Phase', 
+      value: document.getElementById('filter-phase')?.value || '',
+      label: document.getElementById('filter-phase')?.selectedOptions[0]?.textContent || ''
+    },
+    { 
       id: 'filter-category', 
       name: 'Category', 
       value: document.getElementById('filter-category')?.value || '',
@@ -7348,6 +8305,18 @@ function updateFilterCounts() {
       name: 'Vendor', 
       value: document.getElementById('filter-vendor')?.value || '',
       label: document.getElementById('filter-vendor')?.selectedOptions[0]?.textContent || ''
+    },
+    {
+      id: 'filter-overdue',
+      name: 'Schedule',
+      value: document.getElementById('filter-overdue')?.checked ? 'overdue' : '',
+      label: 'Overdue'
+    },
+    {
+      id: 'filter-current-phase',
+      name: 'Path',
+      value: document.getElementById('filter-current-phase')?.checked ? 'current' : '',
+      label: 'Current Phase'
     }
   ].filter(f => f.value);
   
@@ -7369,6 +8338,10 @@ function updateFilterCounts() {
   
   // Update or create the filter badges container inline next to the header title
   const headerContainer = document.querySelector('.filter-header');
+  if (!headerContainer) {
+    renderProjectPhaseBar();
+    return;
+  }
   let badgesContainer = headerContainer ? headerContainer.querySelector('.filter-badges') : null;
   if (!badgesContainer) {
     badgesContainer = document.createElement('div');
@@ -7402,7 +8375,13 @@ function updateFilterCounts() {
     
     // Add click event to remove button
     badge.querySelector('.filter-badge-remove').addEventListener('click', function() {
-      document.getElementById(filter.id).value = '';
+      const filterElement = document.getElementById(filter.id);
+      if (!filterElement) return;
+      if (filterElement.type === 'checkbox') {
+        filterElement.checked = false;
+      } else {
+        filterElement.value = '';
+      }
       applyFilters();
     });
   });
@@ -7412,6 +8391,7 @@ function updateFilterCounts() {
 function clearFilters() {
   // Reset all filter dropdowns
   const filterElements = [
+    document.getElementById('filter-phase'),
     document.getElementById('filter-category'),
     document.getElementById('filter-status'),
     document.getElementById('filter-vendor')
@@ -7419,6 +8399,10 @@ function clearFilters() {
   // Also reset the item name text filter
   const itemNameInput = document.getElementById('filter-item-name');
   if (itemNameInput) itemNameInput.value = '';
+  const overdueInput = document.getElementById('filter-overdue');
+  const currentPhaseInput = document.getElementById('filter-current-phase');
+  if (overdueInput) overdueInput.checked = false;
+  if (currentPhaseInput) currentPhaseInput.checked = false;
   
   filterElements.forEach(el => {
     if (el) el.value = '';
@@ -7449,6 +8433,7 @@ function clearFilters() {
   
   // Reset filter counts
   updateFilterCounts();
+  renderProjectPhaseBar();
   
   
 }
