@@ -21,7 +21,7 @@
     }
 
     .container {
-      max-width: 1500px;
+      max-width: 1580px;
       margin: 20px auto;
       padding: 20px;
       background: #ffffff;
@@ -1632,69 +1632,30 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   color: #0a66c2;
 }
 
-
-/* ✨ Custom Tooltip for Mobile & Desktop */
-.custom-tooltip {
-  position: absolute;
-  background: rgba(34, 34, 34, 0.95); /* Slight transparency for a sleek look */
-  color: #fff;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 14px;
+.vendor-assignment-trigger {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #0a66c2;
+  font: inherit;
   font-weight: 500;
-  white-space: nowrap;
-  z-index: 999;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  opacity: 1;
-  transform: translateY(-10px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  cursor: pointer;
+  text-align: left;
 }
 
-
-
-
-
-
-/* ✅ Hide default hover tooltip on iPhones */
-@media (min-width: 480px) {
-  .custom-tooltip {
-    display: none !important;
-  }
-  
+.vendor-assignment-trigger:hover {
+  color: #2563eb;
 }
-/* ✅ Hide default hover tooltip on iPhones */
-@media (max-width: 480px) {
-  .vendor-name::after {
-    display: none !important;
-  } 
+
+.vendor-assignment-trigger:focus-visible,
+.vendor-name:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.35);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
 @media (max-width: 480px) {
   :root { --topbar-height: 0px !important; }
-}
-/* Tooltip Styling */
-.vendor-name::after {
- content: attr(data-fullname);
-  position: absolute;
-  bottom: -125%; /* Position below the text */
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: #222;
-  color: #fff;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 14px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease-in-out;
-  z-index: 999;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-/* Show tooltip on hover */
-.vendor-name:hover::after {
-  opacity: 1;
 }
 
 .estimate-title-wrapper {
@@ -1974,6 +1935,378 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 
 .profit-row .breakdown-value {
   color: #1a7f37;
+}
+
+.vendor-stats-modal[hidden] {
+  display: none !important;
+}
+
+.vendor-stats-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.vendor-stats-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(4px);
+}
+
+.vendor-stats-modal-dialog {
+  position: relative;
+  width: min(1000px, calc(100vw - 32px));
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  border: 1px solid #dbe7f5;
+  border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.18);
+  padding: 24px;
+}
+
+.vendor-stats-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid #dbe7f5;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+.vendor-stats-modal-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #0f172a;
+}
+
+.vendor-stats-modal-header p {
+  margin: 8px 0 0;
+  color: #475569;
+  font-size: 0.96rem;
+}
+
+.vendor-stats-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.vendor-stats-modal-card {
+  padding: 18px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #dbe7f5;
+}
+
+.vendor-stats-modal-card span {
+  display: block;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.vendor-stats-modal-card strong {
+  display: block;
+  margin-top: 10px;
+  color: #0f172a;
+  font-size: 1.5rem;
+  letter-spacing: -0.03em;
+}
+
+.vendor-stats-modal-footnote {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.vendor-stats-modal-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.vendor-stats-modal-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.vendor-stats-modal-list-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.vendor-stats-modal-list-header span {
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.vendor-stats-modal-table-wrap {
+  max-height: 600px;
+  overflow-y: auto;
+  border: 1px solid #dbe7f5;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.vendor-stats-modal-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+.vendor-stats-modal-row {
+  cursor: pointer;
+}
+
+.vendor-stats-modal-row:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.28);
+  outline-offset: -2px;
+}
+
+.vendor-stats-modal-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #eff6ff;
+  color: #334155;
+  text-align: left;
+  padding: 12px 14px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid #dbe7f5;
+}
+
+.vendor-stats-modal-table tbody td,
+.vendor-stats-modal-table tfoot td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+  font-size: 0.92rem;
+  color: #0f172a;
+}
+
+.vendor-stats-modal-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.vendor-stats-modal-table tfoot td {
+  position: sticky;
+  bottom: 0;
+  background: #f8fafc;
+  font-weight: 800;
+  border-top: 1px solid #dbe7f5;
+  border-bottom: none;
+}
+
+.vendor-stats-modal-table th:last-child,
+.vendor-stats-modal-table td:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.vendor-stats-modal-table-item {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.vendor-stats-modal-table-description {
+  color: #475569;
+  line-height: 1.45;
+}
+
+.vendor-stats-modal-table-description.is-collapsed {
+  display: -webkit-box;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+.vendor-stats-modal-table-description-hint {
+  display: inline-flex;
+  margin-top: 6px;
+  color: #2563eb;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.vendor-stats-modal-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.vendor-stats-modal-status.status-new,
+.vendor-stats-modal-status.status-pending {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.vendor-stats-modal-status.status-in-progress {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.vendor-stats-modal-status.status-completed,
+.vendor-stats-modal-status.status-approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.vendor-stats-modal-status.status-rework,
+.vendor-stats-modal-status.status-on-hold {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.vendor-stats-modal-status.status-cancelled {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.vendor-stats-modal-table-amount {
+  color: #0f766e;
+  font-weight: 700;
+}
+
+.vendor-stats-modal-empty {
+  padding: 12px 14px;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+@media (max-width: 640px) {
+  .vendor-stats-modal {
+    padding: 10px;
+    align-items: end;
+  }
+
+  .vendor-stats-modal-dialog {
+    width: min(92%, 100vw - 20px);
+    max-height: calc(100vh - 20px);
+    padding: 18px;
+    border-radius: 20px 20px 14px 14px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .vendor-stats-modal-grid {
+    grid-template-columns: 1fr;
+    margin-top: 16px;
+  }
+
+  .vendor-stats-modal-table-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .vendor-stats-modal-table {
+    min-width: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .vendor-stats-modal-table thead {
+    display: none;
+  }
+
+  .vendor-stats-modal-table,
+  .vendor-stats-modal-table tbody,
+  .vendor-stats-modal-table tr,
+  .vendor-stats-modal-table td,
+  .vendor-stats-modal-table tfoot {
+    display: block;
+    width: 98%;
+  }
+
+  .vendor-stats-modal-table tbody {
+    padding: 0;
+  }
+
+  .vendor-stats-modal-table tbody tr {
+    padding: 12px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #ffffff;
+  }
+
+  .vendor-stats-modal-table tbody td {
+    padding: 0;
+    border: none;
+    text-align: left !important;
+  }
+
+  .vendor-stats-modal-table tbody td + td {
+    margin-top: 10px;
+  }
+
+  .vendor-stats-modal-table tbody td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 4px;
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .vendor-stats-modal-table tbody td:last-child {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed #dbe7f5;
+  }
+
+  .vendor-stats-modal-table tfoot {
+    position: sticky;
+    bottom: 0;
+    background: #f8fafc;
+    border-top: 1px solid #dbe7f5;
+  }
+
+  .vendor-stats-modal-table tfoot tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .vendor-stats-modal-table tfoot td {
+    display: block;
+    padding: 12px 14px;
+    border: none;
+  }
+
+  .vendor-stats-modal-footnote {
+    margin-top: 14px;
+    padding-top: 12px;
+  }
 }
 
 
@@ -2492,6 +2825,255 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
     /* Let the header inner be directly scrollable horizontally on mobile */
     #list-view-header .lvh-inner { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   }
+  .project-phase-path {
+    margin: 0 0 24px;
+    padding: 20px 22px;
+    border: 1px solid #dbe4ee;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 58%, #ffffff 100%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  }
+  .project-phase-path-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .project-phase-path-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    color: #0f172a;
+  }
+  .project-phase-path-header p {
+    margin: 6px 0 0;
+    color: #475569;
+    font-size: 0.94rem;
+  }
+  .project-phase-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+    align-items: center;
+    color: #334155;
+    font-size: 0.9rem;
+  }
+  .project-phase-summary span {
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    white-space: nowrap;
+  }
+  .project-phase-bar {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+  .project-phase-chevron {
+    align-self: center;
+    color: #94a3b8;
+    font-size: 1rem;
+    flex: 0 0 auto;
+  }
+  .project-phase-step {
+    flex: 0 0 auto;
+    min-width: 132px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 1px solid #d7e2f0;
+    background: rgba(255, 255, 255, 0.82);
+    color: #0f172a;
+    cursor: pointer;
+    text-align: left;
+    transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+  }
+  .project-phase-step:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.10);
+    border-color: #93c5fd;
+  }
+  .project-phase-guidance-tooltip {
+    position: absolute;
+    z-index: 12000;
+    width: min(360px, calc(100vw - 24px));
+    padding: 16px 18px;
+    border-radius: 18px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background:
+      radial-gradient(circle at top right, rgba(96, 165, 250, 0.2), transparent 40%),
+      linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96));
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+    color: #e2e8f0;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+    transform-origin: center bottom;
+    transition: opacity 0.18s ease, transform 0.22s cubic-bezier(.2,.8,.2,1);
+    backdrop-filter: blur(14px);
+  }
+  .project-phase-guidance-tooltip.is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  .project-phase-guidance-tooltip::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    background: rgba(30, 41, 59, 0.96);
+    border-right: 1px solid rgba(148, 163, 184, 0.25);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+    transform: translateX(-50%) rotate(45deg);
+  }
+  .project-phase-guidance-tooltip[data-placement="top"]::after {
+    bottom: -8px;
+  }
+  .project-phase-guidance-tooltip[data-placement="bottom"] {
+    transform-origin: center top;
+  }
+  .project-phase-guidance-tooltip[data-placement="bottom"]::after {
+    top: -8px;
+    transform: translateX(-50%) rotate(225deg);
+  }
+  .project-phase-guidance-tooltip-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #f8fafc;
+    letter-spacing: 0.01em;
+    margin-bottom: 8px;
+  }
+  .project-phase-guidance-tooltip-purpose {
+    font-size: 0.88rem;
+    line-height: 1.45;
+    color: #cbd5e1;
+    margin-bottom: 12px;
+  }
+  .project-phase-guidance-tooltip-examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .project-phase-guidance-tooltip-examples span {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.16);
+    border: 1px solid rgba(147, 197, 253, 0.2);
+    color: #dbeafe;
+    font-size: 0.77rem;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .project-phase-step.is-current {
+    border-color: #60a5fa;
+    background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+  }
+  .project-phase-step.is-active {
+    border-color: #1d4ed8;
+    background: linear-gradient(180deg, #dbeafe 0%, #eff6ff 100%);
+    box-shadow: 0 12px 26px rgba(29, 78, 216, 0.16);
+  }
+  .project-phase-step-label {
+    font-size: 0.96rem;
+    font-weight: 700;
+  }
+  .project-phase-step-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.78rem;
+    color: #475569;
+  }
+  .card-phase-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    width: 100%;
+  }
+  .card-phase-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .card-phase-field label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #2563eb;
+  }
+  .card-phase-field select,
+  .card-phase-field input {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    box-sizing: border-box;
+    font: inherit;
+  }
+  .phase-percent-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 10px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+  }
+  .phase-percent-input-wrap input {
+    border: 0;
+    padding-right: 0;
+  }
+  .phase-percent-input-wrap span {
+    color: #64748b;
+    font-weight: 700;
+  }
+  .phase-status-cluster {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 20px;
+  }
+  .phase-status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+  .phase-vendor-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 700;
+  }
+  @media (max-width: 768px) {
+    .project-phase-path {
+      padding: 16px;
+      border-radius: 14px;
+    }
+    .project-phase-summary {
+      justify-content: flex-start;
+    }
+    .project-phase-step {
+      min-width: 120px;
+    }
+  }
   /* Ensure title suggestions overlay the sticky table header */
   .suggestion-box { position: absolute; z-index: 1000; }
 
@@ -2584,13 +3166,23 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 
     
     <section id="estimate-section">
+      <div id="project-phase-path" class="project-phase-path">
+        <div class="project-phase-path-header">
+          <div>
+            <h3>Project Path</h3>
+          </div>
+          <div id="project-phase-summary" class="project-phase-summary"></div>
+        </div>
+        <div id="project-phase-bar" class="project-phase-bar" aria-label="Project phase path"></div>
+      </div>
+
       <h2>Line Items</h2>
 
     
   <!-- List View Sticky Header (visible in List View only) -->
   <div id="list-view-header" class="lvh" style="display:none;">
     <div class="lvh-inner">
-      <table class="estimate-table" style="width:100%; min-width:1300px; border-collapse:separate; border-spacing:0; table-layout:fixed;">
+      <table class="estimate-table" style="width:100%; min-width:1560px; border-collapse:separate; border-spacing:0; table-layout:fixed;">
         <thead>
           <tr>
             <th style="padding:2px 0; border-bottom:1px solid #e5e7eb; width:76px; min-width:76px; text-align:center;">
@@ -2603,15 +3195,17 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
               </span>
             </th>
             <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:200px;">Item</th>
-            <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:70px;">Mode</th>
+            <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:75px;">Mode</th>
             <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:72px;">Qty</th>
             <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:88px;">Unit Price</th>
-            <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:100px;">Labor</th>
-            <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:92px;">Material</th>
+            <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:90px;">Labor</th>
+            <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:90px;">Material</th>
             <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:90px;">Amount</th>
-            <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:160px; width:160px;">Status</th>
+            <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:100px;">Phase</th>
+            <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:85px;">% Complete</th>
+            <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:150px; width:160px;">Status</th>
             <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:140px;">Assigned</th>
-            <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:132px; width:132px;">Actions</th>
+            <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:85px; width:85px;">Actions</th>
           </tr>
         </thead>
       </table>
@@ -2644,6 +3238,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
       <span id="projected-profit" class="breakdown-value">0.00</span>
     </div>
   </div>
+
 </div>
 
       
@@ -2680,6 +3275,15 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
                 <option value="rework">Rework</option>
               </select>
               <button id="batch-status-apply" class="btn-primary" type="button">Apply</button>
+            </div>
+          </div>
+          <div class="batch-action-card">
+            <label for="batch-phase-select">Assign Phase</label>
+            <div class="batch-action-row">
+              <select id="batch-phase-select">
+                <option value="">Select phase</option>
+              </select>
+              <button id="batch-phase-apply" class="btn-primary" type="button">Apply</button>
             </div>
           </div>
           <div class="batch-action-card">
@@ -2775,6 +3379,23 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
       <span>Save</span>
     </button>
+  </div>
+</div>
+
+<div id="vendor-stats-modal" class="vendor-stats-modal" hidden aria-hidden="true">
+  <div class="vendor-stats-modal-backdrop" data-vendor-modal-close></div>
+  <div class="vendor-stats-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="vendor-stats-title">
+    <button type="button" class="vendor-stats-modal-close" data-vendor-modal-close aria-label="Close vendor stats">&times;</button>
+    <div class="vendor-stats-modal-header">
+      <h3 id="vendor-stats-title">Assigned Vendor</h3>
+      
+    </div>
+    
+      <div id="vendor-stats-items" class="vendor-stats-modal-table-wrap">
+        <div class="vendor-stats-modal-empty">No assigned line items found for this vendor.</div>
+      </div>
+    </div>
+    <div id="vendor-stats-footnote" class="vendor-stats-modal-footnote">This reflects assigned line items in the current estimate.</div>
   </div>
 </div>
 
