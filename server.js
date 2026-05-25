@@ -6539,6 +6539,36 @@ app.get('/api/properties/maintenance', async (req, res) => {
   }
 });
 
+app.get('/api/properties/maintenance-schedules', async (req, res) => {
+  try {
+    const { status } = req.query;
+    const filter = {};
+
+    if (status) {
+      const statuses = String(status)
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+      if (statuses.length) {
+        filter.status = { $in: statuses };
+      }
+    } else {
+      filter.status = { $ne: 'completed' };
+    }
+
+    const schedules = await MaintenanceSchedule.find(filter)
+      .populate('assignedVendor', 'name email')
+      .populate('unitId')
+      .populate('projectId')
+      .sort({ nextScheduledDate: 1, createdAt: -1 });
+
+    res.json(schedules);
+  } catch (error) {
+    console.error('Error fetching all maintenance schedules:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Property Management API Routes
 
 
