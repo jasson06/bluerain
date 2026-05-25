@@ -2871,7 +2871,7 @@ body.dark-theme .portfolio-strip {
 
 .portfolio-chip-value {
     margin-top: 4px;
-    font-size: 1.25rem;
+    font-size: 1rem;
     font-weight: 700;
     color: #111827;
 }
@@ -2952,7 +2952,7 @@ body.dark-theme .portfolio-progress {
     display: flex;
     flex-wrap: wrap;
     gap: 4px 8px;
-    font-size: 0.78rem;
+    font-size: 0.65rem;
 }
 
 .portfolio-badge {
@@ -4435,9 +4435,9 @@ tr[data-maint-id][data-editing="true"] {
                                 <div class="portfolio-chip-sub" id="portfolioTenantsSummary">Portfolio-wide tenants overview</div>
                             </div>
                             <div class="portfolio-chip" id="portfolioCardMaintenance">
-                                <div class="portfolio-chip-label"><i class="fas fa-tools"></i>Open Maintenance</div>
+                                <div class="portfolio-chip-label"><i class="fas fa-tools"></i>Maintenance</div>
                                 <div class="portfolio-chip-value" id="portfolioOpenMaintenanceCount">--</div>
-                                <div class="portfolio-chip-sub">Pending & in-progress across all properties</div>
+                                <div class="portfolio-chip-sub">Requests and recurring schedules</div>
                                 <div class="portfolio-badge-row" id="portfolioMaintenanceBreakdown"></div>
                             </div>
                             <div class="portfolio-chip" id="portfolioCardApplications">
@@ -4458,7 +4458,7 @@ tr[data-maint-id][data-editing="true"] {
                                 </div>
                             </div>
                             <div class="portfolio-chip" id="portfolioCardVacancy">
-                                <div class="portfolio-chip-label"><i class="fas fa-door-open"></i>Vacant Units</div>
+                                <div class="portfolio-chip-label"><i class="fas fa-door-open"></i>Vacancy</div>
                                 <div class="portfolio-chip-value" id="portfolioVacantUnitsCount">--</div>
                                 <div class="portfolio-chip-sub" id="portfolioVacancySummary">Across all properties</div>
                                 <div class="portfolio-progress">
@@ -5260,7 +5260,7 @@ tr[data-maint-id][data-editing="true"] {
       <div class="form-group">
         <label>Status</label>
         <select id="scheduleStatus">
-          <option value="pending">Pending</option>
+                    <option value="pending">Up-coming</option>
           <option value="in-progress">In Progress</option>
           <option value="completed">Completed</option>
         </select>
@@ -5644,6 +5644,7 @@ const state = {
     allTenants: [],
     portfolioPayments: [],
     portfolioMaintenance: [],
+    portfolioRecurringMaintenance: [],
     portfolioTenantsWithBalance: [],
     portfolioExpiringLeases: [],
     portfolioUpcomingMoveIns: [],
@@ -5654,6 +5655,7 @@ const state = {
     applications: [],
     invites: [],
     highlightMaintenanceId: null,
+    highlightMaintenanceScheduleId: null,
     highlightApplicationId: null,
     portfolioRentMonth: null,
     keepPortfolioTypeFilterOnNextRender: false,
@@ -5661,6 +5663,15 @@ const state = {
 };
 
 const API_URL = '/api';
+const globalMaintenanceOverviewState = {
+    requests: [],
+    schedules: [],
+    activeTab: 'requests',
+    filters: {
+        requests: { property: '', status: '', date: '' },
+        recurring: { property: '', status: 'in-progress', date: '' }
+    }
+};
 
 
         // Small utility: schedule non-critical work after first paint/idle
@@ -5763,12 +5774,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function preloadGlobalMaintenanceCount() {
     try {
-        const res = await fetch('/api/properties/maintenance?status=pending,in-progress&_=' + Date.now());
-        if (!res.ok) return;
-        const items = await res.json();
+        const cacheBust = Date.now();
+        const [requestsRes, schedulesRes] = await Promise.all([
+            fetch('/api/properties/maintenance?status=pending,in-progress&_=' + cacheBust),
+            fetch('/api/properties/maintenance-schedules?status=pending,in-progress&_=' + cacheBust)
+        ]);
+        if (!requestsRes.ok || !schedulesRes.ok) return;
+        const [items, schedules] = await Promise.all([requestsRes.json(), schedulesRes.json()]);
         const topMaint = document.getElementById('topMaintenanceCount');
-        if (topMaint && Array.isArray(items)) {
-            const count = items.length || 0;
+        if (topMaint && Array.isArray(items) && Array.isArray(schedules)) {
+            const count = (items.length || 0) + (schedules.length || 0);
             topMaint.textContent = count > 99 ? '99+' : count;
         }
     } catch (e) {
@@ -10601,6 +10616,26 @@ function focusMaintenanceRequest() {
     }
 }
 
+function focusMaintenanceSchedule() {
+    try {
+        const targetId = state.highlightMaintenanceScheduleId;
+        if (!targetId) return;
+        const el = document.querySelector(`[data-maint-schedule-id="${targetId}"]`);
+        if (!el) {
+            state.highlightMaintenanceScheduleId = null;
+            return;
+        }
+        el.classList.add('maintenance-highlight');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => {
+            el.classList.remove('maintenance-highlight');
+        }, 2200);
+        state.highlightMaintenanceScheduleId = null;
+    } catch (_) {
+        state.highlightMaintenanceScheduleId = null;
+    }
+}
+
 
 // Add before the window exports
 
@@ -11510,9 +11545,14 @@ function renderMaintenanceSchedules(schedules) {
       : schedule.status === 'in-progress'
         ? '<i class="fas fa-spinner"></i>'
         : '<i class="fas fa-clock"></i>';
+        const scheduleStatusText = !schedule.status || schedule.status === 'pending'
+            ? 'Up-coming'
+            : schedule.status === 'in-progress'
+                ? 'In-progress'
+                : schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1);
     const statusLabel = schedule.status
-      ? `<span class="status-badge ${schedule.status}" style="padding:4px 12px;border-radius:15px;font-size:0.82em;font-weight:600;">${statusIcon} ${schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}</span>`
-      : '<span class="status-badge pending" style="padding:4px 12px;border-radius:15px;font-size:0.82em;font-weight:600;"><i class="fas fa-clock"></i> Pending</span>';
+            ? `<span class="status-badge ${schedule.status}" style="padding:4px 12px;border-radius:15px;font-size:0.82em;font-weight:600;">${statusIcon} ${scheduleStatusText}</span>`
+            : '<span class="status-badge pending" style="padding:4px 12px;border-radius:15px;font-size:0.82em;font-weight:600;"><i class="fas fa-clock"></i> Up-coming</span>';
     const costLabel = typeof schedule.cost === 'number'
       ? `<span style="color:#217dbb;font-weight:600;font-size:0.97em;"><i class="fas fa-dollar-sign"></i> $${schedule.cost.toFixed(2)}</span>`
       : '<span style="color:#888;font-size:0.97em;"><i class="fas fa-dollar-sign"></i> $0.00</span>';
@@ -11542,7 +11582,7 @@ function renderMaintenanceSchedules(schedules) {
     `;
 
     return `
-      <div class="maintenance-card" style="border:1.5px solid #e1e8ed;box-shadow:0 2px 8px rgba(44,62,80,0.07);margin-bottom:18px;font-size:0.97em;">
+            <div class="maintenance-card" data-maint-schedule-id="${schedule._id}" style="border:1.5px solid #e1e8ed;box-shadow:0 2px 8px rgba(44,62,80,0.07);margin-bottom:18px;font-size:0.97em;">
         <div class="maintenance-header" style="background:#f6fafd;padding:12px 18px;border-bottom:1px solid #e1e8ed;display:flex;justify-content:space-between;align-items:center;">
           <div>
             <strong style="font-size:1.08em;color:#2c3e50;"><i class="fas fa-sync-alt" style="color:#217dbb;margin-right:8px;"></i>${schedule.title}</strong>
@@ -11582,6 +11622,8 @@ function renderMaintenanceSchedules(schedules) {
       </div>
     `;
   }).join('');
+
+    focusMaintenanceSchedule();
 }
 
 // LIST VIEW
@@ -11642,8 +11684,8 @@ function renderMaintenanceSchedulesList(schedules) {
               }
             }
             const statusLabel = schedule.status
-              ? `<span class="status-badge ${schedule.status}">${schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}</span>`
-              : '<span class="status-badge pending">Pending</span>';
+                            ? `<span class="status-badge ${schedule.status}">${!schedule.status || schedule.status === 'pending' ? 'Up-coming' : (schedule.status === 'in-progress' ? 'In-progress' : schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1))}</span>`
+                            : '<span class="status-badge pending">Up-coming</span>';
             const costLabel = typeof schedule.cost === 'number'
               ? `$${schedule.cost.toFixed(2)}`
               : '$0.00';
@@ -11659,7 +11701,7 @@ function renderMaintenanceSchedulesList(schedules) {
             const historyHtml = renderScheduleHistory(schedule.history);
 
             return `
-              <tr id="${rowId}" class="schedule-row" style="border-bottom:1px solid #e1e8ed;cursor:pointer;">
+                            <tr id="${rowId}" class="schedule-row" data-maint-schedule-id="${schedule._id}" style="border-bottom:1px solid #e1e8ed;cursor:pointer;">
                 <td style="padding:10px 8px;font-weight:600;color:#2c3e50;">${schedule.title}</td>
                 <td style="padding:10px 8px;color:#555;">${schedule.description || ''}</td>
                 <td style="padding:10px 8px;">${freqLabel}</td>
@@ -11703,6 +11745,7 @@ function renderMaintenanceSchedulesList(schedules) {
         }
       });
     });
+        focusMaintenanceSchedule();
   }, 0);
 }
 
@@ -12087,7 +12130,7 @@ function showRecurringDetailsModal(selectedDate, schedules) {
             <span>Frequency: ${sch.frequency}${sch.frequency === 'custom' && sch.intervalDays ? `, every ${sch.intervalDays} days` : ''}</span><br>
             <span>Vendor: ${sch.assignedVendor?.name || 'None'}</span><br>
             <span>Unit: ${sch.unitId?.number ? `Unit ${sch.unitId.number}` : (sch.unitId ? sch.unitId : 'None')}</span><br>
-            <span>Status: <span class="status-badge ${sch.status}">${sch.status ? sch.status.charAt(0).toUpperCase() + sch.status.slice(1) : 'Pending'}</span></span><br>
+            <span>Status: <span class="status-badge ${sch.status}">${!sch.status || sch.status === 'pending' ? 'Up-coming' : (sch.status === 'in-progress' ? 'In-progress' : sch.status.charAt(0).toUpperCase() + sch.status.slice(1))}</span></span><br>
             <span>Cost: ${typeof sch.cost === 'number' ? `$${sch.cost.toFixed(2)}` : '$0.00'}</span><br>
             ${sch.completedAt ? `<span style="color:#27ae60;">Completed: ${new Date(sch.completedAt).toLocaleDateString()}</span><br>` : ''}
             <div style="margin-top:8px;">
@@ -13068,102 +13111,344 @@ document.getElementById('refreshApplicationsBtn')?.addEventListener('click', asy
 });
 
 // Helper to render the global maintenance overview table into the modal body
-async function renderGlobalMaintenanceOverview() {
-    // Load all maintenance across properties (pending + in-progress only) directly into the overview modal
-    const res = await fetch('/api/properties/maintenance?status=pending,in-progress&_=' + Date.now());
-    if (!res.ok) throw new Error('Failed to fetch maintenance requests');
-    const items = await res.json();
+function setGlobalMaintenanceOverviewTab(tabName) {
+    globalMaintenanceOverviewState.activeTab = tabName;
+    if (tabName === 'recurring') {
+        globalMaintenanceOverviewState.filters.recurring = {
+            property: '',
+            status: 'in-progress',
+            date: ''
+        };
+    }
+    renderGlobalMaintenanceOverviewBody();
+}
 
+function getRecurringMaintenanceStatusLabel(status) {
+    if (!status || status === 'pending') return 'Up-coming';
+    if (status === 'in-progress') return 'In-progress';
+    return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function getMaintenanceOverviewStatusLabel(status, tabName) {
+    const rawStatus = status || 'pending';
+    if (tabName === 'recurring') return getRecurringMaintenanceStatusLabel(rawStatus);
+    return rawStatus
+        .split('-')
+        .map(part => part ? part.charAt(0).toUpperCase() + part.slice(1) : part)
+        .join('-');
+}
+
+function getMaintenanceOverviewPropertyLabel(item) {
+    const projectName = item.projectName || (item.projectId && item.projectId.name) || '';
+    let propertyAddress = item.propertyAddress || '';
+
+    if (!propertyAddress && item.projectId) {
+        const a = item.projectId.address || {};
+        const line1 = a.line1 || a.addressLine1 || a.street || item.projectId.line1 || '';
+        const line2 = a.line2 || a.addressLine2 || a.suite || item.projectId.line2 || '';
+        const city = a.city || item.projectId.city || '';
+        const state = a.state || item.projectId.state || '';
+        const zip = a.zip || a.postalCode || item.projectId.zip || '';
+        const parts = [];
+        if (line1) parts.push(line1);
+        if (line2) parts.push(line2);
+        let last = '';
+        if (city) last += city;
+        if (state) last += (last ? ', ' : '') + state;
+        if (zip) last += (last ? ' ' : '') + zip;
+        if (last) parts.push(last);
+        if (parts.length) propertyAddress = parts.join(', ');
+    }
+
+    if (!propertyAddress && item.notes) {
+        try {
+            const n = JSON.parse(item.notes);
+            propertyAddress = n.propertyAddress || '';
+        } catch {}
+    }
+
+    return propertyAddress || projectName || '—';
+}
+
+function getMaintenanceOverviewPropertyKey(item) {
+    return String((item.projectId && item.projectId._id) || item.projectId || getMaintenanceOverviewPropertyLabel(item) || '').trim();
+}
+
+function getMaintenanceOverviewDateValue(value) {
+    if (!value) return '';
+    const s = String(value);
+    const match = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+        return `${match[1]}-${match[2]}-${match[3]}`;
+    }
+
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    const year = d.getUTCFullYear();
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function getMaintenanceOverviewDataset(tabName) {
+    return tabName === 'recurring'
+        ? globalMaintenanceOverviewState.schedules
+        : globalMaintenanceOverviewState.requests;
+}
+
+function getMaintenanceOverviewDateField(tabName) {
+    return tabName === 'recurring' ? 'nextScheduledDate' : 'createdAt';
+}
+
+function resetGlobalMaintenanceOverviewFilters(tabName = null) {
+    const defaults = {
+        requests: { property: '', status: '', date: '' },
+        recurring: { property: '', status: 'in-progress', date: '' }
+    };
+
+    if (tabName) {
+        globalMaintenanceOverviewState.filters[tabName] = { ...defaults[tabName] };
+        return;
+    }
+
+    globalMaintenanceOverviewState.filters.requests = { ...defaults.requests };
+    globalMaintenanceOverviewState.filters.recurring = { ...defaults.recurring };
+}
+
+function getFilteredGlobalMaintenanceOverviewItems(tabName, excludedFilter = '') {
+    const filters = globalMaintenanceOverviewState.filters[tabName];
+    const dateField = getMaintenanceOverviewDateField(tabName);
+    return getMaintenanceOverviewDataset(tabName).filter(item => {
+        if (excludedFilter !== 'property' && filters.property && getMaintenanceOverviewPropertyKey(item) !== filters.property) {
+            return false;
+        }
+        if (excludedFilter !== 'status' && filters.status && (item.status || 'pending') !== filters.status) {
+            return false;
+        }
+        if (excludedFilter !== 'date' && filters.date && getMaintenanceOverviewDateValue(item[dateField]) !== filters.date) {
+            return false;
+        }
+        return true;
+    });
+}
+
+function getGlobalMaintenanceOverviewPropertyOptions(tabName) {
+    const options = new Map();
+    getFilteredGlobalMaintenanceOverviewItems(tabName, 'property').forEach(item => {
+        const key = getMaintenanceOverviewPropertyKey(item);
+        const label = getMaintenanceOverviewPropertyLabel(item);
+        if (key && !options.has(key)) {
+            options.set(key, label);
+        }
+    });
+    return Array.from(options.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+}
+
+function getGlobalMaintenanceOverviewStatusOptions(tabName) {
+    const options = Array.from(new Set(
+        getFilteredGlobalMaintenanceOverviewItems(tabName, 'status').map(item => item.status || 'pending')
+    ));
+    const preferredOrder = tabName === 'recurring'
+        ? ['in-progress', 'pending', 'completed']
+        : ['pending', 'in-progress', 'completed'];
+    const ordered = [
+        ...preferredOrder.filter(status => options.includes(status)),
+        ...options.filter(status => !preferredOrder.includes(status)).sort()
+    ];
+    return ordered.length ? ordered : preferredOrder.slice(0, 2);
+}
+
+function renderGlobalMaintenanceRequestsOverview(items, hasFilters) {
+    if (!items.length) {
+        return `<div class="empty-state" style="text-align:center;padding:24px;"><i class="fas fa-tools" style="font-size:2em;color:#3498db;margin-bottom:8px;"></i><p>${hasFilters ? 'No maintenance requests match the current filters.' : 'No open maintenance requests found.'}</p></div>`;
+    }
+
+    return `
+        <div style="overflow-x:auto;">
+            <table class="maintenance-table" style="width:100%;border-collapse:collapse;background:#99a0a500;border-radius:12px;box-shadow:0 2px 8px rgba(44,62,80,0.07);">
+                <thead>
+                    <tr style="background:#99a0a500;">
+                        <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Title</th>
+                        <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Description</th>
+                        <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Property Address</th>
+                        <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Unit</th>
+                        <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Priority</th>
+                        <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Status</th>
+                        <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${items.map(r => {
+                        const created = r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+                        const unitLabel = r.unitId ? `Unit ${r.unitId.number || ''}` : '—';
+                        const priority = (r.priority || '').charAt(0).toUpperCase() + (r.priority || '').slice(1);
+                        const rawStatus = r.status || 'pending';
+                        return `
+                            <tr style="border-bottom:1px solid #e1e8ed;">
+                                <td style="padding:10px 8px;font-weight:600;color:#2563eb;">
+                                    <button class="maintenance-jump-link" data-project-id="${(r.projectId && r.projectId._id) || r.projectId || ''}" data-request-id="${r._id || ''}" style="background:none;border:none;color:#2563eb;padding:0;margin:0;font:inherit;text-align:left;cursor:pointer;">
+                                        ${r.title || ''}
+                                    </button>
+                                </td>
+                                <td class="maintenance-description-cell" style="padding:10px 8px;cursor:pointer;" title="${(r.description || '').replace(/\"/g, '&quot;')}">
+                                    <div class="maintenance-description-inner">
+                                        ${r.description || '<span style="color:#888;">No description provided.</span>'}
+                                    </div>
+                                </td>
+                                <td style="padding:10px 8px;">${getMaintenanceOverviewPropertyLabel(r)}</td>
+                                <td style="padding:10px 8px;">${unitLabel}</td>
+                                <td style="padding:10px 8px;">${priority || '—'}</td>
+                                <td style="padding:10px 8px;">
+                                    <select class="maintenance-status-select" data-project-id="${(r.projectId && r.projectId._id) || r.projectId || ''}" data-request-id="${r._id || ''}" style="padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;background:#ffffff24;">
+                                        <option value="pending" ${rawStatus === 'pending' ? 'selected' : ''}>Pending</option>
+                                        <option value="in-progress" ${rawStatus === 'in-progress' ? 'selected' : ''}>In-Progress</option>
+                                        <option value="completed" ${rawStatus === 'completed' ? 'selected' : ''}>Completed</option>
+                                    </select>
+                                </td>
+                                <td style="padding:10px 8px;">${created || '—'}</td>
+                            </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>`;
+}
+
+function renderGlobalRecurringMaintenanceOverview(items, hasFilters) {
+    if (!items.length) {
+        return `<div class="empty-state" style="text-align:center;padding:24px;"><i class="fas fa-calendar-alt" style="font-size:2em;color:#3498db;margin-bottom:8px;"></i><p>${hasFilters ? 'No recurring maintenance matches the current filters.' : 'No recurring maintenance found.'}</p></div>`;
+    }
+
+    return `
+        <div style="overflow-x:auto;">
+            <table class="maintenance-table" style="width:100%;border-collapse:collapse;background:#99a0a500;border-radius:12px;box-shadow:0 2px 8px rgba(44,62,80,0.07);">
+                <thead>
+                    <tr style="background:#99a0a500;">
+                        <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Title</th>
+                        <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Description</th>
+                        <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Property Address</th>
+                        <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Frequency</th>
+                        <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Next Scheduled</th>
+                        <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Vendor</th>
+                        <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${items.map(schedule => {
+                        const frequency = schedule.frequency === 'custom' && schedule.intervalDays
+                            ? `Every ${schedule.intervalDays} days`
+                            : ((schedule.frequency || '').charAt(0).toUpperCase() + (schedule.frequency || '').slice(1));
+                        const nextScheduled = schedule.nextScheduledDate
+                            ? formatDateDisplay(schedule.nextScheduledDate, 'en-US')
+                            : '—';
+                        const vendorName = schedule.assignedVendor?.name || '—';
+                        const rawStatus = schedule.status || 'pending';
+                        const status = getRecurringMaintenanceStatusLabel(rawStatus);
+                        return `
+                            <tr style="border-bottom:1px solid #e1e8ed;">
+                                <td style="padding:10px 8px;font-weight:600;color:#2563eb;">
+                                    <button class="maintenance-schedule-jump-link" data-project-id="${(schedule.projectId && schedule.projectId._id) || schedule.projectId || ''}" data-schedule-id="${schedule._id || ''}" style="background:none;border:none;color:#2563eb;padding:0;margin:0;font:inherit;text-align:left;cursor:pointer;">
+                                        ${schedule.title || ''}
+                                    </button>
+                                </td>
+                                <td style="padding:10px 8px;">${schedule.description || '<span style="color:#888;">No description provided.</span>'}</td>
+                                <td style="padding:10px 8px;">${getMaintenanceOverviewPropertyLabel(schedule)}</td>
+                                <td style="padding:10px 8px;">${frequency || '—'}</td>
+                                <td style="padding:10px 8px;">${nextScheduled}</td>
+                                <td style="padding:10px 8px;">${vendorName}</td>
+                                <td style="padding:10px 8px;"><span class="status-badge ${rawStatus}">${status}</span></td>
+                            </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>`;
+}
+
+function renderGlobalMaintenanceOverviewBody() {
     const body = document.getElementById('globalOverviewBody');
     const title = document.getElementById('globalOverviewTitle');
-    if (body && title) {
-        title.textContent = 'Maintenance Requests';
-        if (!items.length) {
-            body.innerHTML = '<div class="empty-state" style="text-align:center;padding:24px;"><i class="fas fa-tools" style="font-size:2em;color:#3498db;margin-bottom:8px;"></i><p>No maintenance requests found.</p></div>';
-        } else {
-            body.innerHTML = `
-                                    <div style="overflow-x:auto;">
-                                        <table class="maintenance-table" style="width:100%;border-collapse:collapse;background:#99a0a500;border-radius:12px;box-shadow:0 2px 8px rgba(44,62,80,0.07);">
-                                            <thead>
-                                                <tr style="background:#99a0a500;">
-                                                    <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Title</th>
-                                                    <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Description</th>
-                                                    <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Property Address</th>
-                                                    <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Unit</th>
-                                                    <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Priority</th>
-                                                    <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Status</th>
-                                                    <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Created</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                ${items.map(r => {
-                                                        const created = r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-                                                        const unitLabel = r.unitId ? `Unit ${r.unitId.number || ''}` : '—';
-                                                        const priority = (r.priority || '').charAt(0).toUpperCase() + (r.priority || '').slice(1);
-                                                        const rawStatus = (r.status || 'pending');
-                                                        const status = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
-                                                        const projectName = r.projectName || (r.projectId && r.projectId.name) || '';
+    if (!body || !title) return;
 
-                                                        // Build a best-effort property address string
-                                                        let propertyAddress = r.propertyAddress || '';
+    title.textContent = 'Maintenance Overview';
 
-                                                        // If embedded project has address fields, derive from those
-                                                        if (!propertyAddress && r.projectId) {
-                                                            const a = (r.projectId.address) || {};
-                                                            const line1 = a.line1 || a.addressLine1 || a.street || r.projectId.line1 || '';
-                                                            const line2 = a.line2 || a.addressLine2 || a.suite || r.projectId.line2 || '';
-                                                            const city = a.city || r.projectId.city || '';
-                                                            const state = a.state || r.projectId.state || '';
-                                                            const zip = a.zip || a.postalCode || r.projectId.zip || '';
-                                                            const parts = [];
-                                                            if (line1) parts.push(line1);
-                                                            if (line2) parts.push(line2);
-                                                            let last = '';
-                                                            if (city) last += city;
-                                                            if (state) last += (last ? ', ' : '') + state;
-                                                            if (zip) last += (last ? ' ' : '') + zip;
-                                                            if (last) parts.push(last);
-                                                            if (parts.length) propertyAddress = parts.join(', ');
-                                                        }
-
-                                                        // As a fallback, try propertyAddress stored in notes JSON (if present)
-                                                        if (!propertyAddress && r.notes) {
-                                                            try {
-                                                                const n = JSON.parse(r.notes);
-                                                                propertyAddress = n.propertyAddress || '';
-                                                            } catch {}
-                                                        }
-
-                                                        return `
-                                                            <tr style="border-bottom:1px solid #e1e8ed;">
-                                                                <td style="padding:10px 8px;font-weight:600;color:#2563eb;">
-                                                                    <button class="maintenance-jump-link" data-project-id="${(r.projectId && r.projectId._id) || r.projectId || ''}" data-request-id="${r._id || ''}" style="background:none;border:none;color:#2563eb;padding:0;margin:0;font:inherit;text-align:left;cursor:pointer;">
-                                                                        ${r.title || ''}
-                                                                    </button>
-                                                                </td>
-                                                                <td class="maintenance-description-cell" style="padding:10px 8px;cursor:pointer;" title="${(r.description || '').replace(/\"/g, '&quot;')}">
-                                                                    <div class="maintenance-description-inner">
-                                                                        ${r.description || '<span style="color:#888;">No description provided.</span>'}
-                                                                    </div>
-                                                                </td>
-                                                                <td style="padding:10px 8px;">${propertyAddress || projectName || '—'}</td>
-                                                                <td style="padding:10px 8px;">${unitLabel}</td>
-                                                                <td style="padding:10px 8px;">${priority || '—'}</td>
-                                                                <td style="padding:10px 8px;">
-                                                                    <select class="maintenance-status-select" data-project-id="${(r.projectId && r.projectId._id) || r.projectId || ''}" data-request-id="${r._id || ''}" style="padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;background:#fff;">
-                                                                        <option value="pending" ${rawStatus==='pending' ? 'selected' : ''}>Pending</option>
-                                                                        <option value="in-progress" ${rawStatus==='in-progress' ? 'selected' : ''}>In-Progress</option>
-                                                                        <option value="completed" ${rawStatus==='completed' ? 'selected' : ''}>Completed</option>
-                                                                    </select>
-                                                                </td>
-                                                                <td style="padding:10px 8px;">${created || '—'}</td>
-                                                            </tr>`;
-                                                }).join('')}
-                                            </tbody>
-                                        </table>
-                                    </div>`;
-        }
+    if (!globalMaintenanceOverviewState.requests.length && !globalMaintenanceOverviewState.schedules.length) {
+        body.innerHTML = '<div class="empty-state" style="text-align:center;padding:24px;"><i class="fas fa-tools" style="font-size:2em;color:#3498db;margin-bottom:8px;"></i><p>No open maintenance items found.</p></div>';
+        return;
     }
+
+    const activeTab = globalMaintenanceOverviewState.activeTab;
+    const activeFilters = globalMaintenanceOverviewState.filters[activeTab];
+    const filteredItems = getFilteredGlobalMaintenanceOverviewItems(activeTab);
+    const propertyOptions = getGlobalMaintenanceOverviewPropertyOptions(activeTab);
+    const statusOptions = getGlobalMaintenanceOverviewStatusOptions(activeTab);
+    const totalItems = getMaintenanceOverviewDataset(activeTab).length;
+    const hasFilters = Boolean(activeFilters.property || activeFilters.status || activeFilters.date);
+    const dateLabel = activeTab === 'recurring' ? 'Scheduled Date' : 'Created Date';
+    const activeTitle = activeTab === 'recurring' ? 'Recurring Maintenance' : 'Maintenance Requests';
+    const activeSummary = `Showing ${filteredItems.length} of ${totalItems}`;
+    const activeSection = activeTab === 'recurring'
+        ? renderGlobalRecurringMaintenanceOverview(filteredItems, hasFilters)
+        : renderGlobalMaintenanceRequestsOverview(filteredItems, hasFilters);
+
+    body.innerHTML = `
+        <div style="display:grid;gap:18px;">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <button type="button" data-maintenance-overview-tab="requests" class="${activeTab === 'requests' ? 'active' : ''}" style="border:none;border-radius:7px;padding:10px 16px;font-weight:600;font-size:0.90rem;cursor:pointer;background:${activeTab === 'requests' ? '#217dbb' : '#ffffff3b'};color:${activeTab === 'requests' ? '#fff' : '#217dbb'};transition:background 0.18s ease,color 0.18s ease,box-shadow 0.18s ease;box-shadow:${activeTab === 'requests' ? '0 10px 22px rgba(33,125,187,0.22)' : 'none'};">
+                    <i class="fas fa-tools" style="margin-right:8px;"></i>Maintenance
+                    <span style="margin-left:8px;opacity:0.85;">${globalMaintenanceOverviewState.requests.length}</span>
+                </button>
+                <button type="button" data-maintenance-overview-tab="recurring" class="${activeTab === 'recurring' ? 'active' : ''}" style="border:none;border-radius:7px;padding:10px 16px;font-weight:600;font-size:0.90rem;cursor:pointer;background:${activeTab === 'recurring' ? '#217dbb' : '#ffffff3b'};color:${activeTab === 'recurring' ? '#fff' : '#217dbb'};transition:background 0.18s ease,color 0.18s ease,box-shadow 0.18s ease;box-shadow:${activeTab === 'recurring' ? '0 10px 22px rgba(33,125,187,0.22)' : 'none'};">
+                    <i class="fas fa-sync-alt" style="margin-right:8px;"></i>Recurring Maintenance
+                    <span style="margin-left:8px;opacity:0.85;">${globalMaintenanceOverviewState.schedules.length}</span>
+                </button>
+            </div>
+            <div style="display:flex;gap:12px;align-items:end;padding:0px;">
+                <div style="display:grid;gap:6px;">
+                    
+                    <select data-maintenance-overview-filter="property" style="padding:8px 8px;border-radius:10px;border:1px solid #d1d5db;background:#ffffff24;">
+                        <option value="">All properties</option>
+                        ${propertyOptions.map(([key, label]) => `<option value="${key}" ${activeFilters.property === key ? 'selected' : ''}>${label}</option>`).join('')}
+                    </select>
+                </div>
+                <div style="display:grid;gap:6px;">
+                    
+                    <select data-maintenance-overview-filter="status" style="padding:8px 8px;border-radius:10px;border:1px solid #d1d5db;background:#ffffff24;">
+                        <option value="">All statuses</option>
+                        ${statusOptions.map(status => `<option value="${status}" ${activeFilters.status === status ? 'selected' : ''}>${getMaintenanceOverviewStatusLabel(status, activeTab)}</option>`).join('')}
+                    </select>
+                </div>
+                <div style="display:grid;gap:6px;">
+                    
+                    <input type="date" data-maintenance-overview-filter="date" value="${activeFilters.date || ''}" style="padding:8px 8px;border-radius:10px;border:1px solid #d1d5db;background:#ffffff24;" />
+                </div>
+                <div style="display:flex;justify-content:flex-end;align-items:end;">
+                    <button type="button" data-maintenance-overview-clear-filters style="padding:8px 8px;border-radius:10px;border:1px solid #cbd5e1;background:#ffffff82;color:#1f2937;font-weight:600;cursor:pointer;">Clear</button>
+                </div>
+            </div>
+            <section>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">
+                    <h3 style="margin:0;color:#217dbb;"><i class="${activeTab === 'recurring' ? 'fas fa-sync-alt' : 'fas fa-tools'}"></i> ${activeTitle}</h3>
+                    <span style="font-size:0.95rem;color:#6b7280;">${activeSummary}</span>
+                </div>
+                ${activeSection}
+            </section>
+        </div>`;
+}
+
+async function renderGlobalMaintenanceOverview(resetFilters = true) {
+    const cacheBust = Date.now();
+    const [requestsRes, schedulesRes] = await Promise.all([
+        fetch('/api/properties/maintenance?status=pending,in-progress&_=' + cacheBust),
+        fetch('/api/properties/maintenance-schedules?status=pending,in-progress&_=' + cacheBust)
+    ]);
+    if (!requestsRes.ok || !schedulesRes.ok) throw new Error('Failed to fetch maintenance overview');
+    const [items, schedules] = await Promise.all([requestsRes.json(), schedulesRes.json()]);
+    globalMaintenanceOverviewState.requests = Array.isArray(items) ? items : [];
+    globalMaintenanceOverviewState.schedules = Array.isArray(schedules) ? schedules : [];
+    if (resetFilters) {
+        resetGlobalMaintenanceOverviewFilters();
+        globalMaintenanceOverviewState.activeTab = 'requests';
+    }
+    renderGlobalMaintenanceOverviewBody();
 }
 
 // Top toolbar icon clicks: jump to respective tabs
@@ -13277,6 +13562,19 @@ document.getElementById('topToolApplications')?.addEventListener('click', async 
 
 // When clicking a maintenance item in the global overview, jump to that property's Maintenance tab
 document.getElementById('globalOverviewBody')?.addEventListener('click', async (e) => {
+    const tabBtn = e.target.closest('[data-maintenance-overview-tab]');
+    if (tabBtn) {
+        setGlobalMaintenanceOverviewTab(tabBtn.getAttribute('data-maintenance-overview-tab'));
+        return;
+    }
+
+    const clearFiltersBtn = e.target.closest('[data-maintenance-overview-clear-filters]');
+    if (clearFiltersBtn) {
+        resetGlobalMaintenanceOverviewFilters(globalMaintenanceOverviewState.activeTab);
+        renderGlobalMaintenanceOverviewBody();
+        return;
+    }
+
     const descCell = e.target.closest('.maintenance-description-cell');
     if (descCell) {
         const inner = descCell.querySelector('.maintenance-description-inner');
@@ -13313,6 +13611,30 @@ document.getElementById('globalOverviewBody')?.addEventListener('click', async (
         return;
     }
 
+    const scheduleBtn = e.target.closest('.maintenance-schedule-jump-link');
+    if (scheduleBtn) {
+        const projectId = scheduleBtn.getAttribute('data-project-id');
+        const scheduleId = scheduleBtn.getAttribute('data-schedule-id');
+        if (!projectId) return;
+        if (scheduleId) {
+            state.highlightMaintenanceScheduleId = scheduleId;
+        }
+        try {
+            showLoader();
+            await selectProperty(projectId);
+            const maintenanceTabBtn = document.querySelector('.tab-btn[data-tab="maintenance"]');
+            maintenanceTabBtn?.click();
+            document.getElementById('recurringMaintenanceTab')?.click();
+            closeModal('globalOverviewModal');
+        } catch (err) {
+            console.error('Error navigating to recurring maintenance from global overview:', err);
+            showNotification('Could not open recurring maintenance view', 'error');
+        } finally {
+            hideLoader();
+        }
+        return;
+    }
+
     const appBtn = e.target.closest('.application-jump-link');
     if (appBtn) {
         const appId = appBtn.getAttribute('data-app-id');
@@ -13331,6 +13653,16 @@ document.getElementById('globalOverviewBody')?.addEventListener('click', async (
 
 // Handle inline status changes for maintenance rows in the Global Overview modal
 document.getElementById('globalOverviewBody')?.addEventListener('change', async (e) => {
+    const overviewFilter = e.target.closest('[data-maintenance-overview-filter]');
+    if (overviewFilter) {
+        const filterKey = overviewFilter.getAttribute('data-maintenance-overview-filter');
+        if (filterKey) {
+            globalMaintenanceOverviewState.filters[globalMaintenanceOverviewState.activeTab][filterKey] = overviewFilter.value || '';
+            renderGlobalMaintenanceOverviewBody();
+        }
+        return;
+    }
+
     const select = e.target.closest('.maintenance-status-select');
     if (!select) return;
 
@@ -13347,7 +13679,7 @@ document.getElementById('globalOverviewBody')?.addEventListener('change', async 
             body: JSON.stringify({ status: newStatus })
         });
         if (!res.ok) throw new Error('Failed to update maintenance status');
-        await renderGlobalMaintenanceOverview();
+        await renderGlobalMaintenanceOverview(false);
         // Also refresh the top maintenance icon count so it reflects the new status distribution
         if (typeof preloadGlobalMaintenanceCount === 'function') {
             try { await preloadGlobalMaintenanceCount(); } catch {}
@@ -16838,13 +17170,18 @@ async function renderPortfolioOverview() {
             let openMaintCount = 0;
             let maintPending = 0;
             let maintInProgress = 0;
+            let recurringUpcoming = 0;
+            let recurringInProgress = 0;
             try {
                 // Include completed requests in the portfolio maintenance dataset so
-                // the status filter can show and switch to them, but only count
-                // pending + in-progress toward the "Open Maintenance" chip.
-                const res = await fetch('/api/properties/maintenance?status=pending,in-progress,completed&_=' + Date.now());
-                if (res.ok) {
-                    const items = await res.json();
+                // completed via filters, but only count pending + in-progress in the chip.
+                const cacheBust = Date.now();
+                const [requestsRes, schedulesRes] = await Promise.all([
+                    fetch('/api/properties/maintenance?status=pending,in-progress,completed&_=' + cacheBust),
+                    fetch('/api/properties/maintenance-schedules?status=pending,in-progress,completed&_=' + cacheBust)
+                ]);
+                if (requestsRes.ok) {
+                    const items = await requestsRes.json();
                     if (Array.isArray(items)) {
                         state.portfolioMaintenance = items;
                         items.forEach(m => {
@@ -16858,10 +17195,26 @@ async function renderPortfolioOverview() {
                         });
                     }
                 }
+                if (schedulesRes.ok) {
+                    const schedules = await schedulesRes.json();
+                    if (Array.isArray(schedules)) {
+                        state.portfolioRecurringMaintenance = schedules;
+                        schedules.forEach(schedule => {
+                            const status = schedule.status || 'pending';
+                            if (status === 'pending') {
+                                recurringUpcoming++;
+                                openMaintCount++;
+                            } else if (status === 'in-progress') {
+                                recurringInProgress++;
+                                openMaintCount++;
+                            }
+                        });
+                    }
+                }
             } catch (e) {
                 console.error('Error loading portfolio maintenance overview:', e);
             }
-            return { openMaintCount, maintPending, maintInProgress };
+            return { openMaintCount, maintPending, maintInProgress, recurringUpcoming, recurringInProgress };
         })();
 
         // Ensure portfolio units/tenants are loaded
@@ -17058,7 +17411,7 @@ async function renderPortfolioOverview() {
         state.portfolioVacantUnits = vacantUnitsList;
         state.portfolioOccupiedUnits = occupiedUnitsList;
 
-        const { openMaintCount, maintPending, maintInProgress } = await maintenancePromise;
+        const { openMaintCount, maintPending, maintInProgress, recurringUpcoming, recurringInProgress } = await maintenancePromise;
 
         const rentText = `$${totalUnpaidRent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         const rentSub = tenantsWithBalance ? `${tenantsWithBalance} tenant${tenantsWithBalance !== 1 ? 's' : ''} with balance` : 'All current month rent paid';
@@ -17102,19 +17455,31 @@ async function renderPortfolioOverview() {
             if (openMaintCount === 0) {
                 const badge = document.createElement('span');
                 badge.className = 'portfolio-badge';
-                badge.textContent = 'No open requests';
+                badge.textContent = 'No open items';
                 elMaintBreakdown.appendChild(badge);
             } else {
                 if (maintPending > 0) {
                     const badge = document.createElement('span');
                     badge.className = 'portfolio-badge warn';
-                    badge.textContent = `${maintPending} pending`;
+                    badge.textContent = `${maintPending} request pending`;
                     elMaintBreakdown.appendChild(badge);
                 }
                 if (maintInProgress > 0) {
                     const badge = document.createElement('span');
                     badge.className = 'portfolio-badge';
-                    badge.textContent = `${maintInProgress} in-progress`;
+                    badge.textContent = `${maintInProgress} request in-progress`;
+                    elMaintBreakdown.appendChild(badge);
+                }
+                if (recurringUpcoming > 0) {
+                    const badge = document.createElement('span');
+                    badge.className = 'portfolio-badge warn';
+                    badge.textContent = `${recurringUpcoming} recurring up-coming`;
+                    elMaintBreakdown.appendChild(badge);
+                }
+                if (recurringInProgress > 0) {
+                    const badge = document.createElement('span');
+                    badge.className = 'portfolio-badge';
+                    badge.textContent = `${recurringInProgress} recurring in-progress`;
                     elMaintBreakdown.appendChild(badge);
                 }
             }
@@ -18098,10 +18463,15 @@ function renderPortfolioDetails(type) {
     }
 
     if (type === 'maintenance') {
-        titleEl.textContent = 'Open Maintenance Requests';
-        const items = state.portfolioMaintenance || [];
+        titleEl.textContent = 'Portfolio Maintenance';
+        const requestItems = state.portfolioMaintenance || [];
+        const recurringItems = state.portfolioRecurringMaintenance || [];
+        const items = [
+            ...requestItems.map(item => ({ ...item, portfolioSource: 'request' })),
+            ...recurringItems.map(item => ({ ...item, portfolioSource: 'recurring' }))
+        ];
         if (!items.length) {
-            body.innerHTML = '<p style="font-size:0.86rem;color:#6b7280;">No open maintenance requests.</p>';
+            body.innerHTML = '<p style="font-size:0.86rem;color:#6b7280;">No maintenance requests or recurring schedules found.</p>';
             return;
         }
         const htmlRows = items.map(m => {
@@ -18110,7 +18480,6 @@ function renderPortfolioDetails(type) {
             if (projectId && propsById[String(projectId)]) {
                 propName = propsById[String(projectId)].name;
             } else if (m.projectId && m.projectId.name) {
-                // Fallback when projectId is a populated object not present in propsById map
                 propName = m.projectId.name;
             }
             const unitId = m.unitId?._id || m.unitId;
@@ -18121,25 +18490,34 @@ function renderPortfolioDetails(type) {
             } else {
                 unitLabel = m.unitLabel || m.unitNumber || m.unit || '—';
             }
-            const statusRaw = m.status || '';
-            const statusLabel = statusRaw.replace(/_/g,' ');
+            const isRecurring = m.portfolioSource === 'recurring';
+            const statusRaw = (m.status || 'pending').toLowerCase();
             const dataProp = (propName || '').toLowerCase().replace(/"/g,'&quot;');
             const dataUnit = String(unitLabel || '').toLowerCase().replace(/"/g,'&quot;');
-            const dataType = (m.category || 'Request').toLowerCase().replace(/"/g,'&quot;');
-            const dataStatus = statusRaw.toLowerCase().replace(/"/g,'&quot;');
+            const typeLabel = isRecurring ? 'Recurring' : (m.category || 'Request');
+            const dataType = typeLabel.toLowerCase().replace(/"/g,'&quot;');
+            const dataStatus = statusRaw.replace(/"/g,'&quot;');
+            const summary = isRecurring
+                ? [m.title || 'Recurring Maintenance', m.description || ''].filter(Boolean).join(' • ')
+                : (m.summary || m.description || '');
+            const dateLabel = isRecurring
+                ? (m.nextScheduledDate ? formatDateDisplay(m.nextScheduledDate, 'en-US') : '—')
+                : (m.createdAt ? formatDateDisplay(m.createdAt, 'en-US') : '—');
+            const statusControl = isRecurring
+                ? `<span class="status-badge ${statusRaw}">${getRecurringMaintenanceStatusLabel(statusRaw)}</span>`
+                : `<select class="portfolio-maint-status-select">
+                        <option value="pending" ${statusRaw==='pending' ? 'selected' : ''}>Pending</option>
+                        <option value="in-progress" ${statusRaw==='in-progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="completed" ${statusRaw==='completed' ? 'selected' : ''}>Completed</option>
+                    </select>`;
             return `
-                <tr data-maint-id="${m._id}" data-project-id="${projectId || ''}" data-property="${dataProp}" data-unit="${dataUnit}" data-type="${dataType}" data-status="${dataStatus}">
+                <tr data-maint-id="${m._id}" data-maint-source="${m.portfolioSource}" data-project-id="${projectId || ''}" data-property="${dataProp}" data-unit="${dataUnit}" data-type="${dataType}" data-status="${dataStatus}">
                     <td>${propName}</td>
                     <td>${unitLabel}</td>
-                    <td>${m.category || 'Request'}</td>
-                    <td>${m.summary || m.description || ''}</td>
-                    <td>
-                        <select class="portfolio-maint-status-select">
-                            <option value="pending" ${statusRaw==='pending' ? 'selected' : ''}>Pending</option>
-                            <option value="in-progress" ${statusRaw==='in-progress' ? 'selected' : ''}>In Progress</option>
-                            <option value="completed" ${statusRaw==='completed' ? 'selected' : ''}>Completed</option>
-                        </select>
-                    </td>
+                    <td>${typeLabel}</td>
+                    <td>${summary || '—'}</td>
+                    <td>${dateLabel}</td>
+                    <td>${statusControl}</td>
                 </tr>`;
         }).join('');
         body.innerHTML = `
@@ -18161,7 +18539,7 @@ function renderPortfolioDetails(type) {
                 </div>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;flex-wrap:wrap;">
-                <div style="font-size:0.9rem;color:#6b7280;">Open maintenance requests across all properties.</div>
+                <div style="font-size:0.9rem;color:#6b7280;">Open maintenance requests and recurring schedules across all properties.</div>
                 <div>
                     <button class="btn-secondary" id="portfolioNewMaintenanceBtn" type="button">New Request</button>
                 </div>
@@ -18174,6 +18552,7 @@ function renderPortfolioDetails(type) {
                             <th>Unit</th>
                             <th>Type</th>
                             <th>Summary</th>
+                            <th>Date</th>
                             <th>Status</th>
                         </tr>
                     </thead>
@@ -18214,7 +18593,23 @@ function renderPortfolioDetails(type) {
                     if (target.closest('a') || target.closest('button') || target.closest('input') || target.closest('select')) return;
                     if (row.dataset.editing === 'true') return;
                     const id = row.getAttribute('data-maint-id');
+                    const source = row.getAttribute('data-maint-source');
+                    const projectId = row.getAttribute('data-project-id');
                     if (!id) return;
+                    if (source === 'recurring') {
+                        if (!projectId) return;
+                        state.highlightMaintenanceScheduleId = id;
+                        selectProperty(projectId)
+                            .then(() => {
+                                document.querySelector('.tab-btn[data-tab="maintenance"]')?.click();
+                                document.getElementById('recurringMaintenanceTab')?.click();
+                            })
+                            .catch(err => {
+                                console.error('Error navigating to recurring maintenance schedule:', err);
+                                showNotification('Could not open recurring maintenance view', 'error');
+                            });
+                        return;
+                    }
                     const req = (state.portfolioMaintenance || []).find(r => String(r._id) === String(id));
                     if (!req) return;
                     enterPortfolioMaintenanceEditMode(row, req);
@@ -18229,6 +18624,7 @@ function renderPortfolioDetails(type) {
                 const select = e.target;
                 if (!(select instanceof HTMLSelectElement) || !select.classList.contains('portfolio-maint-status-select')) return;
                 const row = select.closest('tr');
+                if (row?.dataset.maintSource === 'recurring') return;
                 const requestId = row?.dataset.maintId;
                 let projectId = row?.dataset.projectId;
                 if (!requestId) return;
