@@ -780,14 +780,14 @@
 
 .batch-actions-drawer {
   position: fixed;
-  right: 24px;
-  bottom: 84px;
+  right: 7px;
+  bottom: 210px;
   z-index: 10019;
-  width: min(560px, calc(100vw - 32px));
-  max-height: min(72vh, 680px);
+  width: min(355px, calc(100vw - 32px));
+  max-height: min(75vh, 680px);
   overflow: auto;
   padding: 16px;
-  background: linear-gradient(145deg, #f8fbff, #eef6ff);
+  background: linear-gradient(145deg, #ffffff, #f6f6f6);
   border: 1px solid #dbeafe;
   border-radius: 16px;
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
@@ -826,16 +826,15 @@
 .batch-actions-grid {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 5px;
 }
 
 .batch-action-card {
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid #dbeafe;
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 6px 10px;
   display: grid;
-  grid-template-columns: minmax(130px, 170px) minmax(0, 1fr);
   gap: 10px 14px;
   align-items: center;
 }
@@ -1023,11 +1022,11 @@ button:disabled {
       margin-top: 20px;
     }
 
-    .btn-primary {
+    .btn-primary,.btn-secondary {
       padding: 4px 10px;
-      background: #007bff;
+      background: linear-gradient(135deg, #1d4ed8, #2563eb);
       color: white;
-      font-size: 1rem;
+      font-size: 0.85rem;
       border: none;
       border-radius: 5px;
       font-weight: bold;
@@ -1035,25 +1034,11 @@ button:disabled {
       transition: background-color 0.3s ease;
     }
 
-    .btn-primary:hover {
-      background: #0056b3;
+    .btn-primary:hover, .btn-secondary:hover {
+      background: linear-gradient(135deg, #1d4fd8d3, #2564ebd5);
     }
 
-    .btn-secondary {
-      padding: 12px 20px;
-      background: #f4f4f4;
-      color: #333;
-      font-size: 1rem;
-      border: none;
-      border-radius: 5px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
 
-    .btn-secondary:hover {
-      background: #d6d6d6;
-    }
 
 
 
@@ -2984,9 +2969,41 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
     background: linear-gradient(180deg, #dbeafe 0%, #eff6ff 100%);
     box-shadow: 0 12px 26px rgba(29, 78, 216, 0.16);
   }
+  .project-phase-step-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
   .project-phase-step-label {
     font-size: 0.96rem;
     font-weight: 700;
+  }
+  .project-phase-step-info {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(37, 99, 235, 0.22);
+    background: rgba(255, 255, 255, 0.9);
+    color: #1d4ed8;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+    cursor: help;
+  }
+  .project-phase-step-info:hover {
+    background: #ffffff;
+    border-color: rgba(37, 99, 235, 0.4);
+    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.14);
+  }
+  .project-phase-step-info:focus-visible {
+    outline: 2px solid rgba(37, 99, 235, 0.28);
+    outline-offset: 2px;
   }
   .project-phase-step-meta {
     display: flex;
@@ -3264,7 +3281,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
         </div>
         <div class="batch-actions-grid">
           <div class="batch-action-card">
-            <label for="batch-status-select">Change Status</label>
+            
             <div class="batch-action-row">
               <select id="batch-status-select">
                 <option value="">Select status</option>
@@ -3278,7 +3295,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
             </div>
           </div>
           <div class="batch-action-card">
-            <label for="batch-phase-select">Assign Phase</label>
+            
             <div class="batch-action-row">
               <select id="batch-phase-select">
                 <option value="">Select phase</option>
@@ -3287,7 +3304,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
             </div>
           </div>
           <div class="batch-action-card">
-            <label for="batch-category-select">Move to Category</label>
+            
             <div class="batch-action-row">
               <select id="batch-category-select">
                 <option value="">Select category</option>
@@ -3296,24 +3313,20 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
             </div>
           </div>
           <div class="batch-action-card">
-            <label>Assign Dates</label>
+            
             <div class="batch-action-row">
               <input id="batch-start-date" type="date">
               <input id="batch-end-date" type="date">
               <button id="batch-assign-dates" class="btn-primary" type="button">Set Dates</button>
             </div>
           </div>
+
           <div class="batch-action-card">
-            <label for="batch-split-labor">Split Labor Across Selected</label>
-            <div class="batch-action-row">
-              <button id="batch-split-labor" class="btn-primary" type="button">Split Labor</button>
-            </div>
-          </div>
-          <div class="batch-action-card">
-            <label>Duplicate or Delete</label>
+           
             <div class="batch-action-row batch-action-row-dual">
               <button id="batch-duplicate-items" class="btn-secondary" type="button">Duplicate</button>
               <button id="batch-delete-items" class="btn-secondary" type="button">Delete</button>
+              <button id="batch-split-labor" class="btn-primary" type="button">Split Labor</button>
             </div>
           </div>
         </div>
@@ -3327,7 +3340,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
     
   </div>
 
-<div id="floating-vendor-select" style="display:none; position:fixed; bottom:80px; right:20px; background:#fff; border:1px solid #ccc; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15); padding:16px; z-index:10000;">
+<div id="floating-vendor-select" style="display:none; position:fixed; bottom:5px; right:5px; background:#fff; border:1px solid #ccc; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15); padding:16px; z-index:10000;">
   <label for="floating-vendor-dropdown">Assign to Vendor:</label>
   <input id="floating-vendor-search" class="floating-vendor-search" type="text" placeholder="Search vendor..." autocomplete="off">
   <select id="floating-vendor-dropdown"></select>
