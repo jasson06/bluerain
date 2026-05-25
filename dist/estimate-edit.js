@@ -303,7 +303,10 @@ function renderProjectPhaseBar() {
         : '';
     return `
       <button type="button" class="project-phase-step ${stateClass}" data-phase-value="${phase.value}" aria-pressed="${activePhase === phase.value ? 'true' : 'false'}">
-        <span class="project-phase-step-label">${phase.shortLabel}</span>
+        <span class="project-phase-step-head">
+          <span class="project-phase-step-label">${phase.shortLabel}</span>
+          <span class="project-phase-step-info" data-phase-guidance-trigger="${phase.value}" tabindex="0" role="button" aria-label="Show ${phase.label} guidance">i</span>
+        </span>
         <span class="project-phase-step-meta">
           <span>${phaseCards.length} item${phaseCards.length === 1 ? '' : 's'}</span>
           <span>${averageProgress}%</span>
@@ -313,9 +316,17 @@ function renderProjectPhaseBar() {
     `;
   }).join('');
 
+  phaseBar.querySelectorAll('[data-phase-guidance-trigger]').forEach((icon) => {
+    const phaseValue = icon.getAttribute('data-phase-guidance-trigger') || DEFAULT_PROJECT_PHASE;
+    bindProjectPhaseTooltip(icon, phaseValue);
+    icon.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+  });
+
   phaseBar.querySelectorAll('[data-phase-value]').forEach((button) => {
     const phaseValue = button.getAttribute('data-phase-value') || DEFAULT_PROJECT_PHASE;
-    bindProjectPhaseTooltip(button, phaseValue);
     button.addEventListener('click', () => {
       const nextValue = button.getAttribute('data-phase-value') || '';
       if (currentPhaseOnly) currentPhaseOnly.checked = false;
