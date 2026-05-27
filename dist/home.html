@@ -341,6 +341,37 @@
       </table>
     </div>
   </div>
+    <div id="vendorDetailsModal" class="vendor-side-modal" aria-hidden="true">
+    <div id="vendorDetailsBackdrop" class="vendor-side-modal-backdrop"></div>
+    <aside class="vendor-side-modal-panel" role="dialog" aria-modal="true" aria-labelledby="vendorDetailsTitle">
+      <div class="vendor-side-modal-header">
+        <div>
+          <p class="vendor-side-modal-eyebrow">Subcontractor details</p>
+          <h3 id="vendorDetailsTitle">Vendor details</h3>
+          <p id="vendorDetailsSubtitle" class="vendor-side-modal-subtitle">Select a subcontractor to review details.</p>
+        </div>
+        <button type="button" id="closeVendorDetailsModal" class="vendor-side-modal-close" aria-label="Close vendor details">&times;</button>
+      </div>
+
+      <div class="vendor-side-modal-tabs" role="tablist" aria-label="Vendor details sections">
+        <button type="button" class="vendor-details-tab is-active" data-vendor-tab="basic" role="tab" aria-selected="true">Basic Information</button>
+        <button type="button" class="vendor-details-tab" data-vendor-tab="assignments" role="tab" aria-selected="false">Assignments</button>
+        <button type="button" class="vendor-details-tab" data-vendor-tab="documents" role="tab" aria-selected="false">Documents</button>
+      </div>
+
+      <div class="vendor-side-modal-body">
+        <section class="vendor-details-panel is-active" data-vendor-panel="basic" role="tabpanel">
+          <div id="vendorBasicInfoContent"></div>
+        </section>
+        <section class="vendor-details-panel" data-vendor-panel="assignments" role="tabpanel" hidden>
+          <div id="vendorAssignmentsContent"></div>
+        </section>
+        <section class="vendor-details-panel" data-vendor-panel="documents" role="tabpanel" hidden>
+          <div id="vendorDocumentsContent"></div>
+        </section>
+      </div>
+    </aside>
+  </div>
 </section>
 
 <!-- Custom Report Modal -->
