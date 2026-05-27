@@ -2319,8 +2319,35 @@ app.post('/api/add-vendor', async (req, res) => {
 // API Endpoint to Get All Vendors
 app.get('/api/vendors', async (req, res) => {
   try {
-    const vendors = await Vendor.find(); // Fetch all vendors from the database
-    res.status(200).json(vendors); // Send vendors as a response
+    const vendors = await Vendor.find();
+    const estimates = await Estimate.find({}, { lineItems: 1 });
+
+    const laborCostMap = new Map();
+    estimates.forEach(estimate => {
+      (estimate.lineItems || []).forEach(category => {
+        (category.items || []).forEach(item => {
+          if (item && item._id && typeof item.laborCost !== 'undefined') {
+            laborCostMap.set(item._id.toString(), item.laborCost);
+          }
+        });
+      });
+    });
+
+    const syncedVendors = vendors.map(vendor => {
+      const vendorObj = vendor.toObject();
+      vendorObj.assignedItems = (vendorObj.assignedItems || []).map(item => {
+        const itemId = item && item.itemId ? item.itemId.toString() : '';
+        const syncedLaborCost = laborCostMap.get(itemId);
+        return {
+          ...item,
+          laborCost: typeof syncedLaborCost !== 'undefined' ? syncedLaborCost : (item.laborCost || 0),
+          photos: item.photos || { before: [], after: [] }
+        };
+      });
+      return vendorObj;
+    });
+
+    res.status(200).json(syncedVendors);
   } catch (error) {
     console.error('Error fetching vendors:', error.message);
     res.status(500).json({ success: false, error: 'Failed to fetch vendors' });
@@ -3771,6 +3798,13 @@ app.patch("/api/vendors/:vendorId/assigned-items/update", async (req, res) => {
     assignedItem.materialCost = typeof item.materialCost === "number" ? item.materialCost : assignedItem.materialCost || 0;
     assignedItem.total = typeof item.total === "number" ? item.total : assignedItem.laborCost || 0; // Use laborCost as total if not provided
     assignedItem.costCode = item.costCode || assignedItem.costCode || "Uncategorized";
+        assignedItem.status = item.status || assignedItem.status || "new";
+    if (Object.prototype.hasOwnProperty.call(item, 'startDate')) {
+      assignedItem.startDate = item.startDate ? new Date(item.startDate) : null;
+    }
+    if (Object.prototype.hasOwnProperty.call(item, 'endDate')) {
+      assignedItem.endDate = item.endDate ? new Date(item.endDate) : null;
+    }
     
     assignedItem.photos = item.photos || assignedItem.photos || { before: [], after: [] };
     assignedItem.qualityControl = item.qualityControl || assignedItem.qualityControl || { status: "pending" };
