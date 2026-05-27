@@ -1,4 +1,5 @@
 
+
     function showLoader() {
       document.getElementById('loader').style.display = 'flex';
     }
@@ -1470,13 +1471,566 @@ const addVendorPanel = document.getElementById("addVendorPanel");
 const toggleAddVendor = document.getElementById("toggleAddVendor");
 const vendorFormSubmit = document.getElementById('vendorFormSubmit');
 const vendorFormCancel = document.getElementById('vendorFormCancel');
+const vendorDetailsModal = document.getElementById('vendorDetailsModal');
+const vendorDetailsBackdrop = document.getElementById('vendorDetailsBackdrop');
+const vendorDetailsCloseBtn = document.getElementById('closeVendorDetailsModal');
+const vendorDetailsTitle = document.getElementById('vendorDetailsTitle');
+const vendorDetailsSubtitle = document.getElementById('vendorDetailsSubtitle');
+const vendorBasicInfoContent = document.getElementById('vendorBasicInfoContent');
+const vendorAssignmentsContent = document.getElementById('vendorAssignmentsContent');
+const vendorDocumentsContent = document.getElementById('vendorDocumentsContent');
+const vendorDetailTabs = Array.from(document.querySelectorAll('.vendor-details-tab'));
+const vendorDetailPanels = Array.from(document.querySelectorAll('.vendor-details-panel'));
 
 // Editing state
 let vendorEditId = null;
 let vendorsCache = [];
+let activeVendorDetailsId = null;
+let activeVendorDetailsTab = 'basic';
+const vendorProjectLookupCache = new Map();
 
 function isMobileView() {
   return window.matchMedia('(max-width: 768px)').matches;
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatVendorDate(dateLike) {
+  if (!dateLike) return '—';
+  const date = new Date(dateLike);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+}
+
+function formatVendorCurrency(amount) {
+  const value = Number(amount || 0);
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(Number.isFinite(value) ? value : 0);
+}
+
+function formatVendorDateInput(dateLike) {
+  if (!dateLike) return '';
+  const date = new Date(dateLike);
+  if (Number.isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getVendorById(vendorId) {
+  return vendorsCache.find(vendor => String(vendor._id) === String(vendorId)) || null;
+}
+
+function upsertVendorCache(updatedVendor) {
+  if (!updatedVendor || !updatedVendor._id) return;
+  const vendorId = String(updatedVendor._id);
+  const index = vendorsCache.findIndex(vendor => String(vendor._id) === vendorId);
+  if (index >= 0) {
+    vendorsCache[index] = updatedVendor;
+  } else {
+    vendorsCache.push(updatedVendor);
+  }
+}
+
+function rerenderActiveVendorDetails() {
+  if (!activeVendorDetailsId || !vendorDetailsModal || !vendorDetailsModal.classList.contains('is-open')) return;
+  const vendor = getVendorById(activeVendorDetailsId);
+  if (!vendor) return;
+  renderVendorDetailsModal(vendor, vendorProjectLookupCache.get(activeVendorDetailsId) || new Map(), false);
+}
+
+async function getVendorProjectLookup(vendorId) {
+  if (!vendorId) return new Map();
+  if (vendorProjectLookupCache.has(vendorId)) return vendorProjectLookupCache.get(vendorId);
+
+  try {
+    const response = await fetch(`/api/vendors/${vendorId}/assigned-projects`);
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.message || 'Failed to fetch vendor projects');
+
+    const lookup = new Map();
+    ['newJobs', 'inProgress', 'rework', 'completed'].forEach(key => {
+      (payload[key] || []).forEach(entry => {
+        if (entry && entry.projectId && entry.projectId._id) {
+          lookup.set(String(entry.projectId._id), entry.projectId);
+        }
+      });
+    });
+
+    vendorProjectLookupCache.set(vendorId, lookup);
+    return lookup;
+  } catch (error) {
+    console.error('Error fetching vendor project lookup:', error);
+    return new Map();
+  }
+}
+
+function setVendorModalTab(tabName) {
+  activeVendorDetailsTab = tabName;
+  vendorDetailTabs.forEach(tab => {
+    const isActive = tab.dataset.vendorTab === tabName;
+    tab.classList.toggle('is-active', isActive);
+    tab.setAttribute('aria-selected', String(isActive));
+  });
+  vendorDetailPanels.forEach(panel => {
+    const isActive = panel.dataset.vendorPanel === tabName;
+    panel.classList.toggle('is-active', isActive);
+    panel.hidden = !isActive;
+  });
+}
+
+function renderVendorBasicInfo(vendor) {
+  if (!vendorBasicInfoContent) return;
+
+  vendorBasicInfoContent.innerHTML = `
+    <form class="vendor-basic-form" id="vendorBasicInfoForm">
+      <div class="vendor-info-grid vendor-info-grid-editable">
+        <label class="vendor-field vendor-info-card">
+          <span>Vendor Name</span>
+          <input type="text" name="name" value="${escapeHtml(vendor.name || '')}" placeholder="Vendor name">
+        </label>
+        <label class="vendor-field vendor-info-card">
+          <span>Email</span>
+          <input type="email" name="email" value="${escapeHtml(vendor.email || '')}" placeholder="Email address">
+        </label>
+        <label class="vendor-field vendor-info-card">
+          <span>Phone</span>
+          <input type="tel" name="phone" value="${escapeHtml(vendor.phone || '')}" placeholder="Phone number">
+        </label>
+        <label class="vendor-field vendor-info-card">
+          <span>Trade</span>
+          <input type="text" name="title" value="${escapeHtml(vendor.title || '')}" placeholder="Trade or title">
+        </label>
+        <label class="vendor-field vendor-info-card vendor-field-full">
+          <span>Status</span>
+          <select name="status">
+            <option value="inactive" ${String(vendor.status || 'inactive').toLowerCase() === 'inactive' ? 'selected' : ''}>Inactive</option>
+            <option value="active" ${String(vendor.status || '').toLowerCase() === 'active' ? 'selected' : ''}>Active</option>
+          </select>
+        </label>
+      </div>
+      <div class="vendor-form-actions">
+        <button type="submit" class="vendor-inline-save">Save Basic Information</button>
+      </div>
+    </form>
+  `;
+
+  const form = document.getElementById('vendorBasicInfoForm');
+  if (!form) return;
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const formData = new FormData(form);
+    const payload = {
+      name: String(formData.get('name') || '').trim(),
+      email: String(formData.get('email') || '').trim(),
+      phone: String(formData.get('phone') || '').trim(),
+      title: String(formData.get('title') || '').trim(),
+      status: String(formData.get('status') || 'inactive').trim().toLowerCase()
+    };
+
+    showLoader();
+    try {
+      const response = await fetch(`/api/vendors/${vendor._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const json = await response.json();
+      if (!response.ok) {
+        showToast(json.message || 'Failed to update vendor details');
+        return;
+      }
+
+      upsertVendorCache(json.vendor || { ...vendor, ...payload });
+      showToast('Vendor details updated');
+      await fetchVendors();
+    } catch (error) {
+      console.error('Error updating vendor details:', error);
+      showToast('Error updating vendor details');
+    } finally {
+      hideLoader();
+    }
+  });
+}
+
+function createPhotoThumb(url, photoUrls, startIndex) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'vendor-photo-thumb';
+  button.title = 'Open photo';
+
+  const img = document.createElement('img');
+  img.src = url;
+  img.alt = 'Assignment photo';
+  button.appendChild(img);
+
+  button.addEventListener('click', () => {
+    if (typeof openPhotoFullView === 'function') {
+      openPhotoFullView(photoUrls, startIndex);
+    } else {
+      window.open(url, '_blank', 'noopener');
+    }
+  });
+
+  return button;
+}
+
+async function persistVendorAssignmentUpdate(vendor, item, updates) {
+  showLoader();
+  try {
+    const response = await fetch(`/api/vendors/${vendor._id}/assigned-items/update`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId: item.projectId,
+        estimateId: item.estimateId,
+        item: {
+          itemId: item.itemId,
+          name: updates.name,
+          description: updates.description,
+          status: updates.status,
+          photos: item.photos || { before: [], after: [] }
+        }
+      })
+    });
+    const json = await response.json();
+    if (!response.ok) {
+      showToast(json.message || 'Failed to update assignment');
+      return false;
+    }
+
+    showToast('Assignment updated');
+    await fetchVendors();
+    return true;
+  } catch (error) {
+    console.error('Error updating assignment:', error);
+    showToast('Error updating assignment');
+    return false;
+  } finally {
+    hideLoader();
+  }
+}
+
+function renderVendorAssignments(vendor, projectLookup, isLoading) {
+  if (!vendorAssignmentsContent) return;
+
+  if (isLoading) {
+    vendorAssignmentsContent.innerHTML = '<div class="vendor-empty-state">Loading assignments...</div>';
+    return;
+  }
+
+  const assignments = Array.isArray(vendor.assignedItems) ? vendor.assignedItems : [];
+  if (!assignments.length) {
+    vendorAssignmentsContent.innerHTML = '<div class="vendor-empty-state">No line items are currently assigned to this subcontractor.</div>';
+    return;
+  }
+
+  const uniqueProjects = Array.from(new Set(assignments.map(item => {
+    const projectId = item && item.projectId ? String(item.projectId) : '';
+    return projectLookup.get(projectId)?.name || 'Unassigned project';
+  }))).sort((left, right) => left.localeCompare(right));
+
+  vendorAssignmentsContent.innerHTML = `
+    <div class="vendor-assignment-filters">
+      <input type="text" class="vendor-assignment-filter-search" placeholder="Search line items, description, or project">
+      <select class="vendor-assignment-filter-project">
+        <option value="">All Projects</option>
+        ${uniqueProjects.map(projectName => `<option value="${escapeHtml(projectName)}">${escapeHtml(projectName)}</option>`).join('')}
+      </select>
+      <select class="vendor-assignment-filter-status">
+        <option value="">All Statuses</option>
+        <option value="new">New</option>
+        <option value="in-progress">In Progress</option>
+        <option value="completed">Completed</option>
+        <option value="approved">Approved</option>
+        <option value="rework">Rework</option>
+      </select>
+    </div>
+    <div class="vendor-assignment-table-wrap">
+      <table class="vendor-assignment-table">
+        <thead>
+          <tr>
+            <th>Project</th>
+            <th>Line Item</th>
+            <th>Status</th>
+            <th>Labor $</th>
+            <th>Photos</th>
+            <th>Completed</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  `;
+
+  const assignmentFilterSearch = vendorAssignmentsContent.querySelector('.vendor-assignment-filter-search');
+  const assignmentFilterProject = vendorAssignmentsContent.querySelector('.vendor-assignment-filter-project');
+  const assignmentFilterStatus = vendorAssignmentsContent.querySelector('.vendor-assignment-filter-status');
+  const tbody = vendorAssignmentsContent.querySelector('tbody');
+
+  function applyAssignmentFilters() {
+    const searchValue = String(assignmentFilterSearch?.value || '').trim().toLowerCase();
+    const projectValue = String(assignmentFilterProject?.value || '').trim().toLowerCase();
+    const statusValue = String(assignmentFilterStatus?.value || '').trim().toLowerCase();
+
+    Array.from(tbody.querySelectorAll('tr')).forEach(row => {
+      const rowProject = String(row.dataset.project || '').toLowerCase();
+      const rowStatus = String(row.dataset.status || '').toLowerCase();
+      const rowSearch = String(row.dataset.search || '').toLowerCase();
+
+      const projectMatch = !projectValue || rowProject === projectValue;
+      const statusMatch = !statusValue || rowStatus === statusValue;
+      const searchMatch = !searchValue || rowSearch.includes(searchValue);
+
+      row.style.display = (projectMatch && statusMatch && searchMatch) ? '' : 'none';
+    });
+  }
+
+  function refreshRowSearchIndex(row, projectName, nameInput, descriptionInput) {
+    row.dataset.search = `${projectName} ${String(nameInput.value || '')} ${String(descriptionInput.value || '')}`.toLowerCase();
+  }
+
+  assignments.forEach(item => {
+    const row = document.createElement('tr');
+    const projectId = item && item.projectId ? String(item.projectId) : '';
+    const projectName = projectLookup.get(projectId)?.name || 'Unassigned project';
+    const status = String(item.status || 'new').toLowerCase();
+    const completedText = status === 'completed' ? formatVendorDate(item.endDate) : '—';
+    const photoUrls = [
+      ...((item.photos && Array.isArray(item.photos.before)) ? item.photos.before : []),
+      ...((item.photos && Array.isArray(item.photos.after)) ? item.photos.after : [])
+    ].filter(Boolean);
+
+    const projectCell = document.createElement('td');
+    projectCell.textContent = projectName;
+
+    const itemCell = document.createElement('td');
+    itemCell.innerHTML = `
+      <label class="vendor-field vendor-assignment-field">
+        <span>Line Item</span>
+        <input type="text" class="vendor-assignment-input" value="${escapeHtml(item.name || '')}" placeholder="Line item name">
+      </label>
+      <label class="vendor-field vendor-assignment-field">
+        <span>Description</span>
+        <textarea class="vendor-assignment-textarea" rows="3" placeholder="Description">${escapeHtml(item.description || '')}</textarea>
+      </label>
+    `;
+
+    const nameInput = itemCell.querySelector('.vendor-assignment-input');
+    const descriptionInput = itemCell.querySelector('.vendor-assignment-textarea');
+
+  row.dataset.project = projectName;
+  row.dataset.status = status;
+  refreshRowSearchIndex(row, projectName, nameInput, descriptionInput);
+
+    const statusCell = document.createElement('td');
+    statusCell.innerHTML = `
+      <label class="vendor-field vendor-assignment-field vendor-assignment-status-field">
+        <span>Status</span>
+        <select class="vendor-assignment-select">
+          <option value="new" ${status === 'new' ? 'selected' : ''}>New</option>
+          <option value="in-progress" ${status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+          <option value="completed" ${status === 'completed' ? 'selected' : ''}>Completed</option>
+          <option value="approved" ${status === 'approved' ? 'selected' : ''}>Approved</option>
+          <option value="rework" ${status === 'rework' ? 'selected' : ''}>Rework</option>
+        </select>
+      </label>
+     
+    `;
+
+    const statusSelect = statusCell.querySelector('.vendor-assignment-select');
+
+    const laborCell = document.createElement('td');
+    laborCell.innerHTML = `
+      <div class="vendor-field vendor-assignment-field vendor-assignment-labor-field">
+        <span>Labor Amount</span>
+        <div class="vendor-assignment-current-date">${escapeHtml(formatVendorCurrency(item.laborCost))}</div>
+      </div>
+    `;
+
+    const photosCell = document.createElement('td');
+    if (photoUrls.length) {
+      const photoWrap = document.createElement('div');
+      photoWrap.className = 'vendor-assignment-photos';
+      photoUrls.forEach((url, index) => {
+        photoWrap.appendChild(createPhotoThumb(url, photoUrls, index));
+      });
+      photosCell.appendChild(photoWrap);
+    } else {
+      photosCell.textContent = 'No photos';
+    }
+
+    const completedCell = document.createElement('td');
+    completedCell.innerHTML = `
+      <div class="vendor-field vendor-assignment-field vendor-assignment-date-field">
+        <span>Completion Date</span>
+        <div class="vendor-assignment-current-date">${escapeHtml(completedText)}</div>
+      </div>
+    `;
+
+    let lastSavedState = JSON.stringify({
+      name: String(item.name || '').trim(),
+      description: String(item.description || '').trim(),
+      status
+    });
+
+    async function saveAssignmentIfChanged() {
+      const nextState = {
+        name: String(nameInput.value || '').trim(),
+        description: String(descriptionInput.value || '').trim(),
+        status: statusSelect.value
+      };
+      const serializedState = JSON.stringify(nextState);
+      if (serializedState === lastSavedState) return;
+      const saved = await persistVendorAssignmentUpdate(vendor, item, nextState);
+      if (saved) lastSavedState = serializedState;
+    }
+
+    statusSelect.addEventListener('change', () => {
+      const nextStatus = statusSelect.value;
+      row.dataset.status = nextStatus;
+      saveAssignmentIfChanged();
+      applyAssignmentFilters();
+    });
+
+    nameInput.addEventListener('input', () => {
+      refreshRowSearchIndex(row, projectName, nameInput, descriptionInput);
+      applyAssignmentFilters();
+    });
+    descriptionInput.addEventListener('input', () => {
+      refreshRowSearchIndex(row, projectName, nameInput, descriptionInput);
+      applyAssignmentFilters();
+    });
+    nameInput.addEventListener('blur', saveAssignmentIfChanged);
+    descriptionInput.addEventListener('blur', saveAssignmentIfChanged);
+
+    row.appendChild(projectCell);
+    row.appendChild(itemCell);
+    row.appendChild(statusCell);
+    row.appendChild(laborCell);
+    row.appendChild(photosCell);
+    row.appendChild(completedCell);
+    tbody.appendChild(row);
+  });
+
+  if (assignmentFilterSearch) {
+    assignmentFilterSearch.addEventListener('input', applyAssignmentFilters);
+  }
+  if (assignmentFilterProject) {
+    assignmentFilterProject.addEventListener('change', applyAssignmentFilters);
+  }
+  if (assignmentFilterStatus) {
+    assignmentFilterStatus.addEventListener('change', applyAssignmentFilters);
+  }
+
+  applyAssignmentFilters();
+}
+
+function renderVendorDocuments(vendor) {
+  if (!vendorDocumentsContent) return;
+
+  const w9Path = vendor.documents && vendor.documents.w9Path ? vendor.documents.w9Path : '';
+  const uploadedAt = vendor.documents && vendor.documents.w9UploadedAt ? vendor.documents.w9UploadedAt : null;
+
+  if (!w9Path) {
+    vendorDocumentsContent.innerHTML = `
+      <div class="vendor-document-card">
+        <div>
+          <span class="vendor-document-meta-label">W9</span>
+          <strong class="vendor-document-title">No W9 on file</strong>
+          <p class="vendor-side-modal-subtitle">Upload a W9 here to keep compliance records complete.</p>
+        </div>
+        <div class="vendor-document-actions">
+          <div class="vendor-document-status is-missing">Missing</div>
+          <button type="button" class="vendor-document-btn" id="vendorDrawerUploadW9">Upload W9</button>
+        </div>
+      </div>
+    `;
+    const uploadButton = document.getElementById('vendorDrawerUploadW9');
+    if (uploadButton) {
+      uploadButton.addEventListener('click', () => uploadVendorW9(vendor._id));
+    }
+    return;
+  }
+
+  vendorDocumentsContent.innerHTML = `
+    <div class="vendor-document-card">
+      <div>
+        <span class="vendor-document-meta-label">W9</span>
+        <strong class="vendor-document-title">Form available</strong>
+        <p class="vendor-side-modal-subtitle">Uploaded ${escapeHtml(formatVendorDate(uploadedAt))}</p>
+      </div>
+      <div class="vendor-document-actions">
+        <div class="vendor-document-status">On file</div>
+        <a class="vendor-document-link" href="${escapeHtml(w9Path)}" target="_blank" rel="noopener">Open W9</a>
+        <button type="button" class="vendor-document-btn" id="vendorDrawerReplaceW9">Replace</button>
+        <button type="button" class="vendor-document-btn vendor-document-btn-secondary" id="vendorDrawerDeleteW9">Remove</button>
+      </div>
+    </div>
+  `;
+
+  const replaceButton = document.getElementById('vendorDrawerReplaceW9');
+  const deleteButton = document.getElementById('vendorDrawerDeleteW9');
+  if (replaceButton) {
+    replaceButton.addEventListener('click', () => uploadVendorW9(vendor._id));
+  }
+  if (deleteButton) {
+    deleteButton.addEventListener('click', () => deleteVendorW9(vendor._id));
+  }
+}
+
+function renderVendorDetailsModal(vendor, projectLookup, isLoadingAssignments = false) {
+  if (!vendor || !vendorDetailsModal) return;
+
+  if (vendorDetailsTitle) vendorDetailsTitle.textContent = vendor.name || 'Vendor details';
+  if (vendorDetailsSubtitle) {
+    const subtitleParts = [vendor.email, vendor.phone].filter(Boolean);
+    vendorDetailsSubtitle.textContent = subtitleParts.length ? subtitleParts.join(' • ') : 'No email or phone on file.';
+  }
+
+  renderVendorBasicInfo(vendor);
+  renderVendorAssignments(vendor, projectLookup || new Map(), isLoadingAssignments);
+  renderVendorDocuments(vendor);
+  setVendorModalTab(activeVendorDetailsTab || 'basic');
+}
+
+async function openVendorDetailsModal(vendorId) {
+  const vendor = getVendorById(vendorId);
+  if (!vendor || !vendorDetailsModal) return;
+
+  activeVendorDetailsId = vendorId;
+  renderVendorDetailsModal(vendor, new Map(), true);
+  vendorDetailsModal.classList.add('is-open');
+  vendorDetailsModal.setAttribute('aria-hidden', 'false');
+
+  const projectLookup = await getVendorProjectLookup(vendorId);
+  if (activeVendorDetailsId !== vendorId) return;
+
+  const currentVendor = getVendorById(vendorId);
+  if (currentVendor) renderVendorDetailsModal(currentVendor, projectLookup, false);
+}
+
+function closeVendorDetailsModal() {
+  if (!vendorDetailsModal) return;
+  vendorDetailsModal.classList.remove('is-open');
+  vendorDetailsModal.setAttribute('aria-hidden', 'true');
+  activeVendorDetailsId = null;
 }
 
 // Open inline section and load vendors
@@ -1538,6 +2092,7 @@ function openSubcontractorsModal() {
     backBtn.style.cssText = 'margin-bottom:18px;margin-top:8px;padding:7px 18px;font-size:1rem;border-radius:7px;background:#3282b8;color:#fff;border:none;cursor:pointer;font-weight:600;box-shadow:0 2px 8px rgba(37,99,235,0.08);';
     subcontractorsSection.insertBefore(backBtn, subcontractorsSection.firstChild);
     backBtn.addEventListener('click', () => {
+        closeVendorDetailsModal();
       const mainContent = document.querySelector('.main-content');
       if (mainContent) {
         mainContent.classList.remove('only-subcontractors');
@@ -1574,6 +2129,8 @@ async function fetchVendors() {
 
     vendors.forEach(vendor => {
       const tr = document.createElement('tr');
+              tr.className = 'vendor-row-clickable';
+      tr.tabIndex = 0;
       tr.dataset.name = (vendor.name || '').toLowerCase();
       tr.dataset.email = (vendor.email || '').toLowerCase();
       tr.dataset.phone = (vendor.phone || '').toLowerCase();
@@ -1599,6 +2156,7 @@ async function fetchVendors() {
       });
       // apply initial styling class based on value
       applyStatusSelectStyle(statusSelect);
+      statusSelect.onclick = (event) => event.stopPropagation();
       statusSelect.onchange = (e) => {
         applyStatusSelectStyle(statusSelect);
         updateVendorStatus(vendor._id, e.target.value, tr, statusSelect);
@@ -1649,6 +2207,7 @@ async function fetchVendors() {
         a.style.color = '#2563eb';
         a.style.textDecoration = 'underline';
         a.style.marginLeft = '6px';
+        a.onclick = (e) => e.stopPropagation();
         pill.appendChild(a);
         w9Td.appendChild(pill);
         // Delete icon (optional, keep as before)
@@ -1674,6 +2233,7 @@ async function fetchVendors() {
 
       const actionsTd = document.createElement('td');
       actionsTd.className = 'vendor-actions-cell';
+      actionsTd.addEventListener('click', (event) => event.stopPropagation());
       actionsTd.innerHTML = `
         <span class="vendor-menu-toggle" onclick="toggleVendorMenu(event, '${vendor._id}')">⋮</span>
         <div class="vendor-dropdown-menu" id="vendor-menu-${vendor._id}">
@@ -1692,8 +2252,28 @@ async function fetchVendors() {
       tr.appendChild(w9Td);
       tr.appendChild(actionsTd);
 
+        tr.addEventListener('click', () => {
+        activeVendorDetailsTab = 'basic';
+        openVendorDetailsModal(vendor._id);
+      });
+      tr.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          activeVendorDetailsTab = 'basic';
+          openVendorDetailsModal(vendor._id);
+        }
+      });
+
       if (vendorTableBody) vendorTableBody.appendChild(tr);
     });
+      
+    if (activeVendorDetailsId && vendorDetailsModal && vendorDetailsModal.classList.contains('is-open')) {
+      const activeVendor = getVendorById(activeVendorDetailsId);
+      if (activeVendor) {
+        renderVendorDetailsModal(activeVendor, vendorProjectLookupCache.get(activeVendorDetailsId) || new Map(), false);
+      }
+    }
+      
   } catch (err) {
     console.error("Error fetching vendors:", err);
   }
@@ -1718,7 +2298,10 @@ async function updateVendorStatus(id, newStatus, rowEl, selectEl) {
     }
     // Success: update dataset + toast
     rowEl.dataset.status = newStatus.toLowerCase();
+        const vendor = getVendorById(id);
+    if (vendor) vendor.status = newStatus.toLowerCase();
     applyStatusSelectStyle(selectEl);
+    rerenderActiveVendorDetails();
     showToast('Status updated');
   } catch (e) {
     console.error('Status update error', e);
@@ -1871,6 +2454,26 @@ if (vendorSearch && vendorTableBody) {
     });
   });
 }
+
+vendorDetailTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    setVendorModalTab(tab.dataset.vendorTab || 'basic');
+  });
+});
+
+if (vendorDetailsBackdrop) {
+  vendorDetailsBackdrop.addEventListener('click', closeVendorDetailsModal);
+}
+
+if (vendorDetailsCloseBtn) {
+  vendorDetailsCloseBtn.addEventListener('click', closeVendorDetailsModal);
+}
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && vendorDetailsModal && vendorDetailsModal.classList.contains('is-open')) {
+    closeVendorDetailsModal();
+  }
+});
 
 function toggleVendorMenu(event, id) {
   event.stopPropagation();
