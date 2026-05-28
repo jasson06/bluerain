@@ -2314,6 +2314,7 @@ input, textarea {
   border: 1px solid #dbe7f5;
   border-radius: 12px;
   padding: 0;
+   position: relative;
   overflow: hidden;
   cursor: pointer;
   background: #fff;
@@ -2325,6 +2326,40 @@ input, textarea {
   height: 100%;
   object-fit: cover;
   display: block;
+   opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.vendor-photo-thumb.is-loaded img {
+  opacity: 1;
+}
+
+.vendor-photo-thumb-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(248, 251, 255, 0.9);
+}
+
+.vendor-photo-thumb-loader::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border: 2px solid #d1d9e6;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: vendorPhotoSpin 0.75s linear infinite;
+}
+
+.vendor-photo-thumb-loader.is-hidden {
+  display: none;
+}
+
+@keyframes vendorPhotoSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .vendor-document-card {
