@@ -1675,9 +1675,26 @@ function createPhotoThumb(url, photoUrls, startIndex) {
   button.className = 'vendor-photo-thumb';
   button.title = 'Open photo';
 
+
+  const loader = document.createElement('span');
+  loader.className = 'vendor-photo-thumb-loader';
+  button.appendChild(loader);
+    
   const img = document.createElement('img');
-  img.src = url;
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  img.fetchPriority = 'low';
   img.alt = 'Assignment photo';
+    let settled = false;
+  const onDone = () => {
+    if (settled) return;
+    settled = true;
+    loader.classList.add('is-hidden');
+    button.classList.add('is-loaded');
+  };
+  img.addEventListener('load', onDone, { once: true });
+  img.addEventListener('error', onDone, { once: true });
+  img.src = url;
   button.appendChild(img);
 
   button.addEventListener('click', () => {
@@ -1689,6 +1706,38 @@ function createPhotoThumb(url, photoUrls, startIndex) {
   });
 
   return button;
+}
+
+function createPhotoStrip(photoUrls) {
+  const wrap = document.createElement('div');
+  wrap.className = 'vendor-assignment-photos';
+
+  const BATCH_SIZE = 8;
+  let cursor = 0;
+
+  function appendBatch() {
+    const end = Math.min(cursor + BATCH_SIZE, photoUrls.length);
+    for (let idx = cursor; idx < end; idx += 1) {
+      wrap.appendChild(createPhotoThumb(photoUrls[idx], photoUrls, idx));
+    }
+    cursor = end;
+  }
+
+  function onScrollLoadMore() {
+    if (cursor >= photoUrls.length) {
+      wrap.removeEventListener('scroll', onScrollLoadMore);
+      return;
+    }
+    const nearEnd = (wrap.scrollWidth - wrap.clientWidth - wrap.scrollLeft) < 120;
+    if (nearEnd) appendBatch();
+  }
+
+  appendBatch();
+  if (cursor < photoUrls.length) {
+    wrap.addEventListener('scroll', onScrollLoadMore, { passive: true });
+  }
+
+  return wrap;
 }
 
 async function persistVendorAssignmentUpdate(vendor, item, updates) {
@@ -1866,11 +1915,7 @@ function renderVendorAssignments(vendor, projectLookup, isLoading) {
 
     const photosCell = document.createElement('td');
     if (photoUrls.length) {
-      const photoWrap = document.createElement('div');
-      photoWrap.className = 'vendor-assignment-photos';
-      photoUrls.forEach((url, index) => {
-        photoWrap.appendChild(createPhotoThumb(url, photoUrls, index));
-      });
+      const photoWrap = createPhotoStrip(photoUrls);
       photosCell.appendChild(photoWrap);
     } else {
       photosCell.textContent = 'No photos';
