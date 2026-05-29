@@ -1439,7 +1439,7 @@ function getCardDisplayAmount(card) {
 function getAssignedAmountFromCard(card) {
   if (!card) return 0;
   const laborCost = parseFloat(card.querySelector(".item-labor-cost")?.value);
-  if (Number.isFinite(laborCost) && laborCost > 0) return laborCost;
+  if (Number.isFinite(laborCost)) return laborCost;
   return getCardDisplayAmount(card);
 }
 
@@ -3525,35 +3525,52 @@ function updateSelectedLaborCost() {
     .filter(Boolean);
 
   let totalLaborCost = 0;
+  let totalSelectedAmount = 0;
 
   selectedItems.forEach(item => {
     const card = item.closest(".line-item-card");
+    totalSelectedAmount += getCardDisplayAmount(card);
     const laborCost = parseFloat(card.querySelector(".item-labor-cost").value.replace("$", ""));
     totalLaborCost += isNaN(laborCost) ? 0 : laborCost;
   });
 
+  const listViewFooter = document.getElementById('list-view-footer');
+  const selectionSummary = listViewFooter?.querySelector('[data-role="selection-summary"]');
+  const selectionSummaryText = listViewFooter?.querySelector('[data-role="selection-summary-text"]');
+  const listViewActive = !!listViewFooter && listViewFooter.style.display !== 'none';
+  const cardViewActive = !listViewActive;
   let floatingLaborCost = document.getElementById("floating-labor-cost");
 
   if (!floatingLaborCost) {
     floatingLaborCost = document.createElement("div");
     floatingLaborCost.id = "floating-labor-cost";
     floatingLaborCost.style.position = "fixed";
-    floatingLaborCost.style.bottom = "20px";
+    floatingLaborCost.style.bottom = "3px";
     floatingLaborCost.style.right = "20px";
     floatingLaborCost.style.backgroundColor = "#007bff";
     floatingLaborCost.style.color = "#fff";
-    floatingLaborCost.style.padding = "10px 20px";
+    floatingLaborCost.style.padding = "8px 20px";
     floatingLaborCost.style.borderRadius = "6px";
     floatingLaborCost.style.zIndex = "9999";
+    floatingLaborCost.style.display = "none";
     document.body.appendChild(floatingLaborCost);
   }
 
-  // Hide if no assignable items are selected
-  if (totalLaborCost > 0 && selectedItems.length > 0) {
+  if (cardViewActive && selectedItems.length > 0) {
     floatingLaborCost.style.display = "block";
-    floatingLaborCost.textContent = `Selected Labor Cost: $${totalLaborCost.toFixed(2)}`;
+    floatingLaborCost.textContent = `Selected Amount: ${formatEstimateCurrency(totalSelectedAmount)} | Labor: ${formatEstimateCurrency(totalLaborCost)}`;
   } else {
     floatingLaborCost.style.display = "none";
+  }
+
+  if (selectionSummary && selectionSummaryText) {
+    if (listViewActive && selectedItems.length > 0) {
+      selectionSummary.classList.add('is-visible');
+      selectionSummaryText.textContent = `Selected Amount: ${formatEstimateCurrency(totalSelectedAmount)} | Labor: ${formatEstimateCurrency(totalLaborCost)}`;
+    } else {
+      selectionSummary.classList.remove('is-visible');
+      selectionSummaryText.textContent = '';
+    }
   }
 
   try {
@@ -5009,6 +5026,20 @@ function createFilterUI() {
     });
   }
 
+  function resetBatchActionInputs() {
+    const statusSelect = document.getElementById('batch-status-select');
+    const phaseSelect = document.getElementById('batch-phase-select');
+    const categorySelect = document.getElementById('batch-category-select');
+    const startDateInput = document.getElementById('batch-start-date');
+    const endDateInput = document.getElementById('batch-end-date');
+
+    if (statusSelect) statusSelect.value = '';
+    if (phaseSelect) phaseSelect.value = '';
+    if (categorySelect) categorySelect.value = '';
+    if (startDateInput) startDateInput.value = '';
+    if (endDateInput) endDateInput.value = '';
+  }
+
   async function persistBatchDomChanges() {
     try { clearSelectedLineItems(); } catch (_) {}
     try { rebuildSplitGroupHeaders(); } catch (_) {}
@@ -5025,6 +5056,7 @@ function createFilterUI() {
     if (typeof window.autoSaveEstimate === 'function') {
       await window.autoSaveEstimate(true);
     }
+    resetBatchActionInputs();
     try { clearSelectedLineItems(); } catch (_) {}
   }
 
@@ -5182,13 +5214,25 @@ function createFilterUI() {
     }
     cards.forEach((card) => {
       const dropdown = card.querySelector('.item-status-dropdown');
+      const percentCompleteInput = card.querySelector('.item-percent-complete');
       if (!dropdown) return;
       dropdown.value = nextStatus;
       const statusClass = typeof window.__estimateEditGetStatusClass === 'function'
         ? window.__estimateEditGetStatusClass(nextStatus)
         : 'status-pending';
       dropdown.className = `item-status-dropdown ${statusClass}`;
+      if (percentCompleteInput) {
+        const nextPercentComplete = nextStatus === 'completed'
+          ? 100
+          : nextStatus === 'in-progress'
+            ? 0
+          : clampProjectPhaseProgress(percentCompleteInput.value, nextStatus);
+        percentCompleteInput.value = String(nextPercentComplete);
+        card.dataset.percentComplete = String(nextPercentComplete);
+      }
     });
+    try { renderProjectPhaseBar(); } catch (_) {}
+    try { applyFilters(); } catch (_) {}
     await persistBatchDomChanges();
   }
 
@@ -5498,6 +5542,32 @@ function ensureListViewContainer() {
       #list-view-footer .lvf-inner {
         position: relative;
         will-change: transform;
+      }
+      #list-view-footer .lvf-selection-summary {
+        display: none;
+        position: absolute;
+        top: 50%;
+        right: 12px;
+        transform: translateY(-50%);
+        align-items: center;
+        justify-content: flex-end;
+        pointer-events: none;
+        z-index: 1;
+      }
+      #list-view-footer .lvf-selection-summary.is-visible {
+        display: flex;
+      }
+      #list-view-footer .lvf-selection-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: #dbeafe;
+        color: #1d4ed8;
+        font-size: 13px;
+        font-weight: 700;
+        box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.14);
       }
       #list-view-footer table {
         width: 100%;
@@ -6147,6 +6217,9 @@ function ensureListViewContainer() {
     footer.className = 'lvf';
     footer.innerHTML = `
       <div class="lvf-inner">
+        <div class="lvf-selection-summary" data-role="selection-summary" aria-live="polite">
+          <span class="lvf-selection-pill" data-role="selection-summary-text"></span>
+        </div>
         <table class="estimate-table">
           <tfoot>
             <tr>
@@ -6548,6 +6621,7 @@ function showCardView() {
       updateTableFooterTotals(shouldUseFilteredTotalsForMobileFooter());
     }
   } catch (_) {}
+  try { updateSelectedLaborCost(); } catch (_) {}
 }
 
 function showListView() {
@@ -6575,6 +6649,7 @@ function showListView() {
   }
   try { initSeparatedListHeader(); } catch(_) {}
   try { updateTopbarHeight(); } catch(_) {}
+  try { updateSelectedLaborCost(); } catch (_) {}
 }
 
 // Debounced autosave helper for list-view edits
@@ -8125,22 +8200,41 @@ function populateFilterOptions() {
   // Get vendor filter dropdown
   const vendorSelect = document.getElementById('filter-vendor');
   if (!vendorSelect) return;
+  const previousVendor = vendorSelect.value;
   
   // Clear existing options except the first two (All Vendors, Unassigned)
   while (vendorSelect.options.length > 2) {
     vendorSelect.remove(2);
   }
   
-  // Populate vendor filter from vendorMap
-  if (window.vendorMap) {
-    Object.values(window.vendorMap).forEach(vendor => {
-      if (vendor && vendor._id && vendor.name) {
-        const option = document.createElement('option');
-        option.value = vendor._id;
-        option.textContent = vendor.name;
-        vendorSelect.appendChild(option);
-      }
+  const participatingVendors = new Map();
+  document.querySelectorAll('.line-item-card').forEach((card) => {
+    const vendorId = String(card.getAttribute('data-assigned-to') || '').trim();
+    if (!vendorId) return;
+
+    const vendorFromMap = window.vendorMap && window.vendorMap[vendorId];
+    const vendorName = vendorFromMap?.name
+      || card.querySelector('.vendor-name')?.getAttribute('data-fullname')?.trim()
+      || vendorId;
+
+    if (!participatingVendors.has(vendorId)) {
+      participatingVendors.set(vendorId, vendorName);
+    }
+  });
+
+  Array.from(participatingVendors.entries())
+    .sort((left, right) => String(left[1]).localeCompare(String(right[1]), undefined, { sensitivity: 'base' }))
+    .forEach(([vendorId, vendorName]) => {
+      const option = document.createElement('option');
+      option.value = vendorId;
+      option.textContent = vendorName;
+      vendorSelect.appendChild(option);
     });
+
+  if (previousVendor && Array.from(vendorSelect.options).some((option) => option.value === previousVendor)) {
+    vendorSelect.value = previousVendor;
+  } else if (previousVendor && previousVendor !== 'unassigned') {
+    vendorSelect.value = '';
   }
 
   try { refreshBatchCategoryOptions(); } catch (_) {}
