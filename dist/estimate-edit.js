@@ -283,7 +283,6 @@ function renderProjectPhaseBar() {
 
   const cards = getEstimateLineItemCards();
   const phaseFilter = document.getElementById('filter-phase');
-  const currentPhaseOnly = document.getElementById('filter-current-phase');
   const activePhase = phaseFilter?.value || '';
   const currentPhase = getCurrentProjectPhase(cards);
   const overdueCount = cards.filter((card) => isLineItemOverdue(card)).length;
@@ -329,7 +328,6 @@ function renderProjectPhaseBar() {
     const phaseValue = button.getAttribute('data-phase-value') || DEFAULT_PROJECT_PHASE;
     button.addEventListener('click', () => {
       const nextValue = button.getAttribute('data-phase-value') || '';
-      if (currentPhaseOnly) currentPhaseOnly.checked = false;
       if (phaseFilter) {
         phaseFilter.value = phaseFilter.value === nextValue ? '' : nextValue;
       }
@@ -337,11 +335,9 @@ function renderProjectPhaseBar() {
     });
   });
 
-  const viewingPhaseLabel = currentPhaseOnly?.checked
-    ? `${getProjectPhaseLabel(currentPhase)} (current)`
-    : activePhase
-      ? getProjectPhaseLabel(activePhase)
-      : 'All phases';
+  const viewingPhaseLabel = activePhase
+    ? getProjectPhaseLabel(activePhase)
+    : getProjectPhaseLabel(currentPhase);
 
   phaseSummary.innerHTML = `
     <span><strong>Viewing:</strong> ${viewingPhaseLabel}</span>
@@ -905,24 +901,47 @@ async function updatePhotoSection(itemId, type) {
   let contentHTML = "";
 
   try {
+    const estimateSnapshot = typeof window !== 'undefined' ? window.__estimateSnapshot : null;
+    const snapshotPhotos = estimateSnapshot?.lineItems
+      ?.flatMap((category) => Array.isArray(category.items) ? category.items : [])
+      ?.find((item) => String(item._id) === String(itemId))?.photos?.[type];
+
+    if (Array.isArray(snapshotPhotos) && snapshotPhotos.length) {
+      contentHTML = generatePhotoPreview(snapshotPhotos, itemId, type);
+    }
+
     const estimateId = new URLSearchParams(window.location.search).get("estimateId");
     const vendorId = localStorage.getItem("vendorId");
 
-    const res = await fetch(`/api/estimates/${estimateId}`);
-    if (res.ok) {
-      const { estimate } = await res.json();
-      const item = estimate.lineItems.flatMap(cat => cat.items).find(i => i._id === itemId);
-      if (item?.photos?.[type]) {
-        contentHTML = generatePhotoPreview(item.photos[type], itemId, type);
+    if (!contentHTML && estimateId) {
+      try {
+        const res = await fetch(`/api/estimates/${estimateId}`);
+        if (res.ok) {
+          const { estimate } = await res.json();
+          const item = estimate.lineItems.flatMap((cat) => cat.items).find((i) => String(i._id) === String(itemId));
+          if (item?.photos?.[type]) {
+            contentHTML = generatePhotoPreview(item.photos[type], itemId, type);
+          }
+        }
+      } catch (fetchError) {
+        if (!String(fetchError?.message || '').includes('Failed to fetch')) {
+          throw fetchError;
+        }
       }
     }
 
     if (!contentHTML && vendorId && vendorId !== "null" && vendorId !== "undefined") {
-      const res = await fetch(`/api/vendors/${vendorId}/items/${itemId}/photos`);
-      if (res.ok) {
-        const { photos } = await res.json();
-        if (photos?.[type]) {
-          contentHTML = generatePhotoPreview(photos[type], itemId, type);
+      try {
+        const res = await fetch(`/api/vendors/${vendorId}/items/${itemId}/photos`);
+        if (res.ok) {
+          const { photos } = await res.json();
+          if (photos?.[type]) {
+            contentHTML = generatePhotoPreview(photos[type], itemId, type);
+          }
+        }
+      } catch (fetchError) {
+        if (!String(fetchError?.message || '').includes('Failed to fetch')) {
+          throw fetchError;
         }
       }
     }
@@ -3417,6 +3436,9 @@ function updateSummary() {
   if (isListViewActive && isListViewActive()) {
     scheduleListViewRebuild(600);
   }
+  if (isGanttViewActive && isGanttViewActive()) {
+    try { buildGanttViewFromCards(); } catch (_) {}
+  }
 }
   
 
@@ -3538,7 +3560,8 @@ function updateSelectedLaborCost() {
   const selectionSummary = listViewFooter?.querySelector('[data-role="selection-summary"]');
   const selectionSummaryText = listViewFooter?.querySelector('[data-role="selection-summary-text"]');
   const listViewActive = !!listViewFooter && listViewFooter.style.display !== 'none';
-  const cardViewActive = !listViewActive;
+  const ganttViewActive = typeof isGanttViewActive === 'function' && isGanttViewActive();
+  const cardViewActive = !listViewActive && !ganttViewActive;
   let floatingLaborCost = document.getElementById("floating-labor-cost");
 
   if (!floatingLaborCost) {
@@ -4066,7 +4089,6 @@ async function performSaveEstimate(options = {}) {
         const laborCost = parseFloat(card.querySelector(".item-labor-cost").value) || 0;
         const materialCost = parseFloat(card.querySelector(".item-material-cost").value) || 0;
         const costCode = card.querySelector(".item-cost-code")?.value.trim() || "Uncategorized";
-        const status = "new";
         const photos = undefined;
         const qualityControl = undefined;
 
@@ -4091,7 +4113,6 @@ body: JSON.stringify({
                 materialCost,
                 total: laborCost, // Always use laborCost as total for vendor
                 costCode,
-                status,
                 photos,
                 qualityControl
               }
@@ -4805,16 +4826,18 @@ function createFilterUI() {
             <option value="unassigned">Unassigned</option>
           </select>
         </div>
-        <label class="filter-group" style="justify-content:flex-end; gap:8px; min-width:145px;">
-          <span>Overdue only</span>
-          <input type="checkbox" id="filter-overdue">
-        </label>
-        <label class="filter-group" style="justify-content:flex-end; gap:8px; min-width:165px;">
-          <span>Current phase only</span>
-          <input type="checkbox" id="filter-current-phase">
-        </label>
         <button id="clear-filters" class="btn-secondary">Clear Filters</button>
         <button id="toggle-all-categories-btn-card" class="topbar-category-collapse-toggle estimate-disclosure-btn" type="button" aria-pressed="false" title="Collapse all categories" style="display:inline-flex; align-items:center; justify-content:center; margin-top:11px;">${getDisclosureIconSvg()}</button>
+        <button id="show-gantt-view-btn" title="Show gantt view" aria-pressed="false" aria-label="Gantt View" style="display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid #e2e8f0; border-radius:8px; background:#ffffff; cursor:pointer; color:#0f172a; margin-top:11px; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.04); transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease; width:34px; height:34px; padding:0; justify-content:center;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true">
+            <path d="M3 5h18"></path>
+            <path d="M3 12h18"></path>
+            <path d="M3 19h18"></path>
+            <rect x="4" y="4" width="6" height="2.5" rx="1.25" fill="#93c5fd" stroke="none"></rect>
+            <rect x="10" y="11" width="8" height="2.5" rx="1.25" fill="#60a5fa" stroke="none"></rect>
+            <rect x="7" y="18" width="11" height="2.5" rx="1.25" fill="#2563eb" stroke="none"></rect>
+          </svg>
+        </button>
          <button id="toggle-view-btn" title="Toggle list/card view" aria-pressed="false" style="display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid #e2e8f0; border-radius:8px; background:#ffffff; cursor:pointer; color:#0f172a; margin-top:11px; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.04); transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease; width:34px; height:34px; padding:0; justify-content:center;">
             <span id="toggle-view-icon" class="tvi-icon" aria-hidden="true" data-mode="card">
               <!-- List icon (shown when in card mode to switch to list) -->
@@ -5052,6 +5075,9 @@ function createFilterUI() {
     if (typeof isListViewActive === 'function' && isListViewActive()) {
       try { buildListViewFromCards(); } catch (_) {}
       try { if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false); } catch (_) {}
+    }
+    if (typeof isGanttViewActive === 'function' && isGanttViewActive()) {
+      try { buildGanttViewFromCards(); } catch (_) {}
     }
     if (typeof window.autoSaveEstimate === 'function') {
       await window.autoSaveEstimate(true);
@@ -5478,7 +5504,9 @@ function createFilterUI() {
   wireToggleViewButton();
   // Restore last view mode (lazy-init list view only if needed)
   const mode = (localStorage.getItem('estimateViewMode') || 'card');
-  if (mode === 'list') {
+  if (mode === 'gantt') {
+    showGanttView();
+  } else if (mode === 'list') {
     showListView();
   } else {
     showCardView();
@@ -6562,26 +6590,87 @@ function signaturesEqual(a, b) {
 
 function wireToggleViewButton() {
   const btn = document.getElementById('toggle-view-btn');
-  if (!btn) return;
-  btn.addEventListener('click', () => {
-    const isList = isListViewActive();
-    if (isList) {
-      showCardView();
-      localStorage.setItem('estimateViewMode', 'card');
-    } else {
-      showListView();
-      localStorage.setItem('estimateViewMode', 'list');
-    }
-    // Reflect pressed state and styling
-    const nowList = isListViewActive();
-    btn.setAttribute('aria-pressed', nowList ? 'true' : 'false');
-    if (nowList) btn.classList.add('is-list'); else btn.classList.remove('is-list');
-  });
+  const ganttBtn = document.getElementById('show-gantt-view-btn');
+  if (btn && btn.dataset.viewBound !== 'true') {
+    btn.dataset.viewBound = 'true';
+    btn.addEventListener('click', () => {
+      const mode = getCurrentEstimateViewMode();
+      if (mode === 'list' || mode === 'gantt') {
+        showCardView();
+        localStorage.setItem('estimateViewMode', 'card');
+      } else {
+        showListView();
+        localStorage.setItem('estimateViewMode', 'list');
+      }
+      syncEstimateViewButtons();
+    });
+  }
+  if (ganttBtn && ganttBtn.dataset.viewBound !== 'true') {
+    ganttBtn.dataset.viewBound = 'true';
+    ganttBtn.addEventListener('click', () => {
+      if (isGanttViewActive()) {
+        showCardView();
+        localStorage.setItem('estimateViewMode', 'card');
+      } else {
+        showGanttView();
+        localStorage.setItem('estimateViewMode', 'gantt');
+      }
+      syncEstimateViewButtons();
+    });
+  }
+  syncEstimateViewButtons();
 }
 
 function isListViewActive() {
   const tableContainer = document.getElementById('line-items-table-container');
   return tableContainer && tableContainer.style.display !== 'none';
+}
+
+function isGanttViewActive() {
+  const ganttContainer = document.getElementById('gantt-view-container');
+  return !!ganttContainer && ganttContainer.style.display !== 'none';
+}
+
+function getCurrentEstimateViewMode() {
+  if (isGanttViewActive()) return 'gantt';
+  if (isListViewActive()) return 'list';
+  return 'card';
+}
+
+function syncEstimateViewButtons(mode = getCurrentEstimateViewMode()) {
+  const btn = document.getElementById('toggle-view-btn');
+  const ganttBtn = document.getElementById('show-gantt-view-btn');
+  const icon = document.getElementById('toggle-view-icon');
+  const label = document.getElementById('toggle-view-label');
+  const listActive = mode === 'list';
+  const ganttActive = mode === 'gantt';
+
+  if (btn) {
+    btn.setAttribute('aria-pressed', listActive ? 'true' : 'false');
+    btn.classList.toggle('is-list', listActive);
+    btn.style.background = listActive
+      ? 'linear-gradient(180deg, #eef2ff, #e0e7ff)'
+      : '#ffffff';
+    btn.style.borderColor = listActive ? '#c7d2fe' : '#e2e8f0';
+    btn.style.boxShadow = listActive
+      ? '0 8px 20px rgba(99, 102, 241, 0.18)'
+      : '0 1px 2px rgba(0,0,0,0.04)';
+    btn.title = listActive ? 'Show card view' : 'Show list view';
+  }
+  if (icon) icon.setAttribute('data-mode', listActive ? 'list' : 'card');
+  if (label) label.textContent = listActive ? 'Card View' : 'List View';
+
+  if (ganttBtn) {
+    ganttBtn.setAttribute('aria-pressed', ganttActive ? 'true' : 'false');
+    ganttBtn.style.background = ganttActive
+      ? 'linear-gradient(180deg, #eff6ff, #dbeafe)'
+      : '#ffffff';
+    ganttBtn.style.borderColor = ganttActive ? '#93c5fd' : '#e2e8f0';
+    ganttBtn.style.boxShadow = ganttActive
+      ? '0 8px 20px rgba(37, 99, 235, 0.18)'
+      : '0 1px 2px rgba(0,0,0,0.04)';
+    ganttBtn.title = ganttActive ? 'Return to card view' : 'Show gantt view';
+  }
 }
 
 function shouldUseFilteredTotalsForMobileFooter() {
@@ -6594,10 +6683,12 @@ function showCardView() {
   const tableContainer = document.getElementById('line-items-table-container');
   const header = document.getElementById('list-view-header');
   const footer = document.getElementById('list-view-footer');
+  const ganttContainer = document.getElementById('gantt-view-container');
   if (cards) cards.style.display = '';
   if (tableContainer) tableContainer.style.display = 'none';
   if (header) header.style.display = 'none';
   if (footer) footer.style.display = 'none';
+  if (ganttContainer) ganttContainer.style.display = 'none';
   const icon = document.getElementById('toggle-view-icon');
   const label = document.getElementById('toggle-view-label');
   if (icon) icon.setAttribute('data-mode', 'card');
@@ -6621,6 +6712,7 @@ function showCardView() {
       updateTableFooterTotals(shouldUseFilteredTotalsForMobileFooter());
     }
   } catch (_) {}
+  syncEstimateViewButtons('card');
   try { updateSelectedLaborCost(); } catch (_) {}
 }
 
@@ -6631,10 +6723,12 @@ function showListView() {
   const tableContainer = document.getElementById('line-items-table-container');
   const header = document.getElementById('list-view-header');
   const footer = document.getElementById('list-view-footer');
+  const ganttContainer = document.getElementById('gantt-view-container');
   if (cards) cards.style.display = 'none';
   if (tableContainer) tableContainer.style.display = '';
   if (header) header.style.display = '';
   if (footer) footer.style.display = 'block';
+  if (ganttContainer) ganttContainer.style.display = 'none';
   const icon = document.getElementById('toggle-view-icon');
   const label = document.getElementById('toggle-view-label');
   if (icon) icon.setAttribute('data-mode', 'list');
@@ -6649,7 +6743,1254 @@ function showListView() {
   }
   try { initSeparatedListHeader(); } catch(_) {}
   try { updateTopbarHeight(); } catch(_) {}
+  syncEstimateViewButtons('list');
   try { updateSelectedLaborCost(); } catch (_) {}
+}
+
+function parseGanttDateValue(value) {
+  if (!value) return null;
+  const parts = String(value).split('-').map((part) => Number(part));
+  if (parts.length !== 3 || parts.some((part) => !Number.isFinite(part))) return null;
+  return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+}
+
+function addGanttDays(date, days) {
+  const next = new Date(date.getTime());
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
+function getGanttDayDiff(startDate, endDate) {
+  return Math.round((endDate.getTime() - startDate.getTime()) / 86400000);
+}
+
+function formatEstimateDateKey(date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+}
+
+function formatGanttRangeLabel(startDate, endDate) {
+  if (!startDate || !endDate) return 'No dates yet';
+  return `${startDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' })} - ${endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' })}`;
+}
+
+function formatEstimateStatusLabel(statusValue) {
+  return String(statusValue || 'new')
+    .split('-')
+    .map((part) => part ? `${part.charAt(0).toUpperCase()}${part.slice(1)}` : '')
+    .join(' ')
+    .trim() || 'New';
+}
+
+function getGanttStatusClass(statusValue) {
+  const normalized = String(statusValue || 'new').trim().toLowerCase().replace(/[\s_]+/g, '-');
+  switch (normalized) {
+    case 'in-progress':
+      return 'status-in-progress';
+    case 'completed':
+      return 'status-completed';
+    case 'approved':
+      return 'status-approved';
+    case 'rework':
+      return 'status-rework';
+    case 'overdue':
+      return 'status-overdue';
+    case 'on-hold':
+      return 'status-on-hold';
+    case 'new':
+    case 'pending':
+    default:
+      return 'status-pending';
+  }
+}
+
+function escapeGanttHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+const GANTT_CATEGORY_THEMES = [
+  { color: '#2563eb', dark: '#1d4ed8', text: '#ffffff' },
+  { color: '#0f766e', dark: '#115e59', text: '#ffffff' },
+  { color: '#7c3aed', dark: '#6d28d9', text: '#ffffff' },
+  { color: '#be123c', dark: '#9f1239', text: '#ffffff' },
+  { color: '#c2410c', dark: '#9a3412', text: '#ffffff' },
+  { color: '#475569', dark: '#334155', text: '#ffffff' },
+  { color: '#ca8a04', dark: '#a16207', text: '#ffffff' },
+  { color: '#0369a1', dark: '#075985', text: '#ffffff' }
+];
+
+function getGanttCategoryTheme(categoryName) {
+  const key = String(categoryName || 'uncategorized').trim().toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < key.length; i += 1) {
+    hash = ((hash << 5) - hash) + key.charCodeAt(i);
+    hash |= 0;
+  }
+  return GANTT_CATEGORY_THEMES[Math.abs(hash) % GANTT_CATEGORY_THEMES.length];
+}
+
+const GANTT_ZOOM_LEVELS = [28, 36, 44, 56];
+const GANTT_ZOOM_STORAGE_KEY = 'estimateGanttZoomIndex';
+let __ganttDragState = null;
+const __expandedGanttRows = new Set();
+
+function getStoredGanttZoomIndex() {
+  try {
+    const rawValue = Number(window.localStorage.getItem(GANTT_ZOOM_STORAGE_KEY));
+    if (Number.isInteger(rawValue) && rawValue >= 0 && rawValue < GANTT_ZOOM_LEVELS.length) {
+      return rawValue;
+    }
+  } catch (_) {}
+  return 1;
+}
+
+function getCurrentGanttDayWidth() {
+  return GANTT_ZOOM_LEVELS[getStoredGanttZoomIndex()] || GANTT_ZOOM_LEVELS[1];
+}
+
+function persistGanttZoomIndex(nextIndex) {
+  try {
+    window.localStorage.setItem(GANTT_ZOOM_STORAGE_KEY, String(nextIndex));
+  } catch (_) {}
+}
+
+function setCurrentGanttZoomIndex(nextIndex) {
+  const clampedIndex = Math.max(0, Math.min(GANTT_ZOOM_LEVELS.length - 1, Number(nextIndex) || 0));
+  persistGanttZoomIndex(clampedIndex);
+  const container = document.getElementById('gantt-view-container');
+  if (container) {
+    syncGanttZoomControls(container);
+  }
+  if (typeof isGanttViewActive === 'function' && isGanttViewActive()) {
+    buildGanttViewFromCards();
+  }
+}
+
+function syncGanttZoomControls(container = document.getElementById('gantt-view-container')) {
+  if (!container) return;
+  const zoomIndex = getStoredGanttZoomIndex();
+  const zoomValue = GANTT_ZOOM_LEVELS[zoomIndex] || GANTT_ZOOM_LEVELS[1];
+  const zoomOutButton = container.querySelector('[data-gantt-zoom="out"]');
+  const zoomInButton = container.querySelector('[data-gantt-zoom="in"]');
+  const zoomLabel = container.querySelector('[data-role="gantt-zoom-label"]');
+  if (zoomOutButton) zoomOutButton.disabled = zoomIndex <= 0;
+  if (zoomInButton) zoomInButton.disabled = zoomIndex >= GANTT_ZOOM_LEVELS.length - 1;
+  if (zoomLabel) zoomLabel.textContent = `${zoomValue}px/day`;
+}
+
+function isGanttRowExpanded(itemId) {
+  return __expandedGanttRows.has(String(itemId || ''));
+}
+
+function toggleGanttRowExpanded(itemId) {
+  const key = String(itemId || '');
+  if (!key) return;
+  if (__expandedGanttRows.has(key)) {
+    __expandedGanttRows.delete(key);
+  } else {
+    __expandedGanttRows.add(key);
+  }
+}
+
+function clearGanttPreviewIndicators() {
+  const container = document.getElementById('gantt-view-container');
+  if (!container) return;
+  container.querySelectorAll('.gantt-day-cell.is-preview-start, .gantt-day-cell.is-preview-end, .gantt-day-cell.is-preview-span')
+    .forEach((cell) => cell.classList.remove('is-preview-start', 'is-preview-end', 'is-preview-span'));
+  container.querySelectorAll('.gantt-row-track.has-preview').forEach((track) => {
+    track.classList.remove('has-preview');
+    track.style.removeProperty('--gantt-preview-left');
+    track.style.removeProperty('--gantt-preview-width');
+  });
+}
+
+function updateGanttPreviewIndicators(rangeStart, previewStartDate, previewEndDate, itemId, dayWidth) {
+  const container = document.getElementById('gantt-view-container');
+  if (!container || !rangeStart || !previewStartDate || !previewEndDate) return;
+
+  clearGanttPreviewIndicators();
+
+  const previewStartKey = formatEstimateDateKey(previewStartDate);
+  const previewEndKey = formatEstimateDateKey(previewEndDate);
+  const previewLeft = getGanttDayDiff(rangeStart, previewStartDate) * dayWidth;
+  const previewSpanDays = Math.max(0, getGanttDayDiff(previewStartDate, previewEndDate));
+  const previewWidth = Math.max(previewSpanDays * dayWidth, dayWidth);
+
+  container.querySelectorAll('.gantt-day-cell').forEach((cell) => {
+    const cellKey = cell.getAttribute('data-day-key') || '';
+    if (!cellKey) return;
+    if (cellKey >= previewStartKey && cellKey <= previewEndKey) {
+      cell.classList.add('is-preview-span');
+    }
+    if (cellKey === previewStartKey) {
+      cell.classList.add('is-preview-start');
+    }
+    if (cellKey === previewEndKey) {
+      cell.classList.add('is-preview-end');
+    }
+  });
+
+  const activeTrack = container.querySelector(`.gantt-row-track[data-card-id="${itemId}"]`);
+  if (activeTrack) {
+    activeTrack.classList.add('has-preview');
+    activeTrack.style.setProperty('--gantt-preview-left', `${previewLeft}px`);
+    activeTrack.style.setProperty('--gantt-preview-width', `${previewWidth}px`);
+  }
+}
+
+function commitGanttSchedule(itemId, nextStartValue, nextEndValue, options = {}) {
+  const { silent = false } = options;
+  const card = findLineItemCardById(itemId);
+  if (!card) return Promise.resolve(false);
+
+  const startInput = card.querySelector('.item-start-date');
+  const endInput = card.querySelector('.item-end-date');
+  const lineItemId = card.getAttribute('data-item-id') || '';
+  const startValue = String(nextStartValue || '');
+  const endValue = String(nextEndValue || '');
+  const currentStart = startInput?.value || '';
+  const currentEnd = endInput?.value || '';
+
+  if (currentStart === startValue && currentEnd === endValue) {
+    return Promise.resolve(false);
+  }
+
+  if (startInput) startInput.value = startValue;
+  if (endInput) endInput.value = endValue;
+
+  try { renderProjectPhaseBar(); } catch (_) {}
+  try { applyFilters(); } catch (_) {}
+  try { updateSummary(); } catch (_) {}
+
+  return fetch(`/api/estimates/line-items/${lineItemId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ startDate: startValue, endDate: endValue })
+  }).then((response) => {
+    if (!response.ok) {
+      throw new Error('Failed to update gantt dates');
+    }
+    if (!silent) {
+      showToast('Schedule updated!');
+    }
+    try { buildGanttViewFromCards(); } catch (_) {}
+    return true;
+  }).catch((error) => {
+    if (startInput) startInput.value = currentStart;
+    if (endInput) endInput.value = currentEnd;
+    try { renderProjectPhaseBar(); } catch (_) {}
+    try { applyFilters(); } catch (_) {}
+    try { updateSummary(); } catch (_) {}
+    try { buildGanttViewFromCards(); } catch (_) {}
+    if (!silent) {
+      showToast('Failed to update schedule');
+    }
+    throw error;
+  });
+}
+
+function clearGanttDragState() {
+  if (!__ganttDragState) return;
+  const { barEl, trackEl, pointerId, moveHandler, upHandler } = __ganttDragState;
+  try { if (barEl && pointerId !== undefined) barEl.releasePointerCapture(pointerId); } catch (_) {}
+  try { if (trackEl) trackEl.classList.remove('is-dragging'); } catch (_) {}
+  try { if (barEl) barEl.classList.remove('is-dragging'); } catch (_) {}
+  try { clearGanttPreviewIndicators(); } catch (_) {}
+  try { window.removeEventListener('pointermove', moveHandler, true); } catch (_) {}
+  try { window.removeEventListener('pointerup', upHandler, true); } catch (_) {}
+  __ganttDragState = null;
+}
+
+function beginGanttBarDrag(event, barEl, dragMode) {
+  if (!barEl || !dragMode) return;
+  const trackEl = barEl.closest('.gantt-row-track');
+  const itemId = barEl.getAttribute('data-card-id') || '';
+  const startDate = parseGanttDateValue(barEl.getAttribute('data-start-date') || '');
+  const endDate = parseGanttDateValue(barEl.getAttribute('data-end-date') || '');
+  const rangeStart = parseGanttDateValue(trackEl?.getAttribute('data-range-start') || '');
+  const dayWidth = Number(trackEl?.getAttribute('data-day-width') || getCurrentGanttDayWidth()) || getCurrentGanttDayWidth();
+  if (!trackEl || !itemId || !startDate || !endDate || !rangeStart) return;
+
+  clearGanttDragState();
+
+  const durationDays = Math.max(0, getGanttDayDiff(startDate, endDate));
+  const initialOffset = getGanttDayDiff(rangeStart, startDate);
+  const initialLeft = initialOffset * dayWidth + 4;
+  const initialWidth = Math.max((durationDays + 1) * dayWidth - 8, Math.max(dayWidth - 8, 20));
+
+  const moveHandler = (moveEvent) => {
+    if (!__ganttDragState) return;
+    const deltaDays = Math.round((moveEvent.clientX - __ganttDragState.startClientX) / __ganttDragState.dayWidth);
+    let nextStartDate = __ganttDragState.originalStartDate;
+    let nextEndDate = __ganttDragState.originalEndDate;
+
+    if (__ganttDragState.dragMode === 'move') {
+      nextStartDate = addGanttDays(__ganttDragState.originalStartDate, deltaDays);
+      nextEndDate = addGanttDays(__ganttDragState.originalEndDate, deltaDays);
+    } else if (__ganttDragState.dragMode === 'resize-start') {
+      nextStartDate = addGanttDays(__ganttDragState.originalStartDate, deltaDays);
+      if (nextStartDate > nextEndDate) nextStartDate = nextEndDate;
+    } else if (__ganttDragState.dragMode === 'resize-end') {
+      nextEndDate = addGanttDays(__ganttDragState.originalEndDate, deltaDays);
+      if (nextEndDate < nextStartDate) nextEndDate = nextStartDate;
+    }
+
+    const nextLeft = getGanttDayDiff(__ganttDragState.rangeStart, nextStartDate) * __ganttDragState.dayWidth + 4;
+    const nextSpanDays = Math.max(0, getGanttDayDiff(nextStartDate, nextEndDate));
+    const nextWidth = Math.max(nextSpanDays * __ganttDragState.dayWidth - 8, Math.max(__ganttDragState.dayWidth - 8, 20));
+    __ganttDragState.previewStartValue = formatEstimateDateKey(nextStartDate);
+    __ganttDragState.previewEndValue = formatEstimateDateKey(nextEndDate);
+    __ganttDragState.barEl.style.left = `${nextLeft}px`;
+    __ganttDragState.barEl.style.width = `${nextWidth}px`;
+    __ganttDragState.barEl.setAttribute('data-preview-range', formatGanttRangeLabel(nextStartDate, nextEndDate));
+    updateGanttPreviewIndicators(__ganttDragState.rangeStart, nextStartDate, nextEndDate, __ganttDragState.itemId, __ganttDragState.dayWidth);
+  };
+
+  const upHandler = () => {
+    const activeState = __ganttDragState;
+    clearGanttDragState();
+    if (!activeState) return;
+    const nextStartValue = activeState.previewStartValue || formatEstimateDateKey(activeState.originalStartDate);
+    const nextEndValue = activeState.previewEndValue || formatEstimateDateKey(activeState.originalEndDate);
+    commitGanttSchedule(activeState.itemId, nextStartValue, nextEndValue, { silent: true }).catch(() => {});
+  };
+
+  __ganttDragState = {
+    itemId,
+    barEl,
+    trackEl,
+    pointerId: event.pointerId,
+    dragMode,
+    dayWidth,
+    startClientX: event.clientX,
+    rangeStart,
+    originalStartDate: startDate,
+    originalEndDate: endDate,
+    previewStartValue: formatEstimateDateKey(startDate),
+    previewEndValue: formatEstimateDateKey(endDate),
+    initialLeft,
+    initialWidth,
+    moveHandler,
+    upHandler
+  };
+
+  barEl.classList.add('is-dragging');
+  trackEl.classList.add('is-dragging');
+  updateGanttPreviewIndicators(rangeStart, startDate, endDate, itemId, dayWidth);
+  try { barEl.setPointerCapture(event.pointerId); } catch (_) {}
+  window.addEventListener('pointermove', moveHandler, true);
+  window.addEventListener('pointerup', upHandler, true);
+}
+
+function findLineItemCardById(itemId) {
+  return Array.from(document.querySelectorAll('.line-item-card')).find((card) => String(card.getAttribute('data-item-id') || '') === String(itemId || '')) || null;
+}
+
+function ensureGanttViewContainer() {
+  const cards = document.getElementById('line-items-cards');
+  if (!cards || !cards.parentNode) return null;
+
+  let container = document.getElementById('gantt-view-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'gantt-view-container';
+    container.style.display = 'none';
+    container.style.marginTop = '10px';
+    container.innerHTML = `
+      <style>
+        #gantt-view-container {
+          position: relative;
+        }
+        #gantt-view-container .gantt-shell {
+          border: 1px solid #dbe4f0;
+          border-radius: 20px;
+          background:
+            radial-gradient(circle at top left, rgba(96, 165, 250, 0.18), transparent 28%),
+            linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+          box-shadow: 0 24px 48px rgba(15, 23, 42, 0.12);
+          overflow: hidden;
+        }
+        #gantt-view-container .gantt-toolbar {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 16px;
+          padding: 18px 20px 14px;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+          background: linear-gradient(135deg, rgba(239, 246, 255, 0.96), rgba(255, 255, 255, 0.92));
+        }
+        #gantt-view-container .gantt-eyebrow {
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: #2563eb;
+          margin-bottom: 8px;
+        }
+        #gantt-view-container .gantt-toolbar h3 {
+          margin: 0;
+          font-size: 20px;
+          line-height: 1.1;
+          color: #0f172a;
+        }
+        #gantt-view-container .gantt-toolbar p {
+          margin: 6px 0 0;
+          max-width: 460px;
+          color: #475569;
+          font-size: 13px;
+        }
+        #gantt-view-container .gantt-toolbar-right {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+          gap: 10px;
+        }
+        #gantt-view-container .gantt-stats {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          justify-content: flex-end;
+        }
+        #gantt-view-container .gantt-stat {
+          min-width: 108px;
+          padding: 10px 12px;
+          border-radius: 14px;
+          background: rgba(255, 255, 255, 0.88);
+          border: 1px solid rgba(191, 219, 254, 0.9);
+          box-shadow: 0 10px 20px rgba(148, 163, 184, 0.12);
+        }
+        #gantt-view-container .gantt-stat strong,
+        #gantt-view-container .gantt-stat span {
+          display: block;
+          color: #0f172a;
+          font-size: 12px;
+          font-weight: 700;
+        }
+        #gantt-view-container .gantt-stat small {
+          display: block;
+          margin-top: 4px;
+          color: #64748b;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+        }
+        #gantt-view-container .gantt-zoom-controls {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 10px;
+          border-radius: 14px;
+          background: rgba(255, 255, 255, 0.88);
+          border: 1px solid rgba(191, 219, 254, 0.9);
+          box-shadow: 0 10px 20px rgba(148, 163, 184, 0.12);
+        }
+        #gantt-view-container .gantt-zoom-button {
+          width: 30px;
+          height: 30px;
+          border-radius: 10px;
+          border: 1px solid #bfdbfe;
+          background: #ffffff;
+          color: #1d4ed8;
+          font-size: 18px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+        #gantt-view-container .gantt-zoom-button:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+        #gantt-view-container .gantt-zoom-label {
+          min-width: 70px;
+          color: #0f172a;
+          font-size: 12px;
+          font-weight: 800;
+          text-align: center;
+        }
+        #gantt-view-container .gantt-scroll {
+          overflow: auto;
+          max-height: min(72vh, calc(100vh - 260px));
+          padding: 0 0 10px;
+          overscroll-behavior: contain;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        #gantt-view-container .gantt-scroll::-webkit-scrollbar {
+          width: 0;
+          height: 0;
+          display: none;
+        }
+        #gantt-view-container .gantt-board {
+          min-width: max-content;
+        }
+        #gantt-view-container .gantt-header,
+        #gantt-view-container .gantt-subheader,
+        #gantt-view-container .gantt-row {
+          display: grid;
+          grid-template-columns: 280px minmax(0, 1fr);
+          align-items: stretch;
+        }
+        #gantt-view-container .gantt-header,
+        #gantt-view-container .gantt-subheader {
+          position: sticky;
+          top: 0;
+          z-index: 6;
+        }
+        #gantt-view-container .gantt-subheader {
+          top: 40px;
+          z-index: 5;
+        }
+        #gantt-view-container .gantt-sticky-cell {
+          position: sticky;
+          left: 0;
+          z-index: 7;
+          display: flex;
+          align-items: center;
+          padding: 10px 14px;
+          background: rgba(248, 250, 252, 0.96);
+          border-right: 1px solid rgba(226, 232, 240, 0.9);
+          color: #334155;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+        #gantt-view-container .gantt-months,
+        #gantt-view-container .gantt-days,
+        #gantt-view-container .gantt-row-track {
+          position: relative;
+          min-height: 40px;
+          background: rgba(255, 255, 255, 0.9);
+        }
+        #gantt-view-container .gantt-months {
+          display: grid;
+          border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+        }
+        #gantt-view-container .gantt-month-cell {
+          padding: 10px 8px 8px;
+          border-right: 1px solid rgba(226, 232, 240, 0.85);
+          color: #475569;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          background: rgba(255, 255, 255, 0.96);
+        }
+        #gantt-view-container .gantt-days {
+          display: grid;
+          border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+        }
+        #gantt-view-container .gantt-day-cell {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 1px;
+          min-height: 34px;
+          border-right: 1px solid rgba(226, 232, 240, 0.75);
+          color: #64748b;
+          font-size: 10px;
+          background: rgba(255, 255, 255, 0.94);
+        }
+        #gantt-view-container .gantt-day-cell strong {
+          color: #0f172a;
+          font-size: 12px;
+        }
+        #gantt-view-container .gantt-day-cell.is-weekend {
+          background: rgba(241, 245, 249, 0.95);
+        }
+        #gantt-view-container .gantt-day-cell.is-today {
+          background: linear-gradient(180deg, rgba(191, 219, 254, 0.98), rgba(219, 234, 254, 0.95));
+          box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.18);
+        }
+        #gantt-view-container .gantt-day-cell.is-today strong {
+          color: #1d4ed8;
+        }
+        #gantt-view-container .gantt-day-cell.is-preview-span {
+          background: rgba(254, 240, 138, 0.45);
+        }
+        #gantt-view-container .gantt-day-cell.is-preview-start,
+        #gantt-view-container .gantt-day-cell.is-preview-end {
+          background: rgba(253, 224, 71, 0.62);
+          box-shadow: inset 0 0 0 1px rgba(202, 138, 4, 0.24);
+        }
+        #gantt-view-container .gantt-row {
+          min-height: 40px;
+          border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+        }
+        #gantt-view-container .gantt-row.is-expanded {
+          min-height: 82px;
+        }
+        #gantt-view-container .gantt-row-info {
+          position: sticky;
+          left: 0;
+          z-index: 4;
+          padding: 0px 12px;
+          background: rgba(255, 255, 255, 0.96);
+          border-right: 1px solid rgba(226, 232, 240, 0.85);
+        }
+        #gantt-view-container .gantt-row-summary {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          width: 100%;
+          min-height: 34px;
+          padding: 0;
+          border: 0;
+          background: transparent;
+          text-align: left;
+          cursor: pointer;
+        }
+        #gantt-view-container .gantt-row-summary:focus-visible {
+          outline: 2px solid rgba(96, 165, 250, 0.35);
+          outline-offset: 2px;
+          border-radius: 8px;
+        }
+        #gantt-view-container .gantt-row-summary-left {
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex: 1 1 auto;
+        }
+        #gantt-view-container .gantt-row-summary-right {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          flex: 0 0 auto;
+        }
+        #gantt-view-container .gantt-row-toggle {
+          width: 18px;
+          height: 18px;
+          border-radius: 999px;
+          background: #eff6ff;
+          color: #2563eb;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
+          font-weight: 800;
+          flex: 0 0 auto;
+        }
+        #gantt-view-container .gantt-row.is-expanded .gantt-row-toggle {
+          transform: rotate(90deg);
+        }
+        #gantt-view-container .gantt-row-title {
+          margin: 0;
+          color: #0f172a;
+          font-size: 13px;
+          font-weight: 800;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        #gantt-view-container .gantt-row-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 7px;
+        }
+        #gantt-view-container .gantt-row-details {
+          display: none;
+          margin-top: 8px;
+        }
+        #gantt-view-container .gantt-row.is-expanded .gantt-row-details {
+          display: block;
+        }
+        #gantt-view-container .gantt-chip {
+          display: inline-flex;
+          align-items: center;
+          padding: 4px 8px;
+          border-radius: 999px;
+          font-size: 10px;
+          font-weight: 700;
+          color: #1e293b;
+          background: #f1f5f9;
+        }
+        #gantt-view-container .gantt-chip.phase {
+          background: #dbeafe;
+          color: #1d4ed8;
+        }
+        #gantt-view-container .gantt-chip.progress {
+          background: #ecfccb;
+          color: #3f6212;
+        }
+        #gantt-view-container .gantt-chip.status {
+          color: #ffffff;
+          box-shadow: 0 8px 16px rgba(15, 23, 42, 0.12);
+        }
+        #gantt-view-container .gantt-chip.status.status-in-progress {
+          background: linear-gradient(135deg, #facc15, #eab308);
+          color: #422006;
+        }
+        #gantt-view-container .gantt-chip.status.status-completed,
+        #gantt-view-container .gantt-chip.status.status-approved {
+          background: linear-gradient(135deg, #22c55e, #15803d);
+          color: #ffffff;
+        }
+        #gantt-view-container .gantt-chip.status.status-rework {
+          background: linear-gradient(135deg, #f97316, #ea580c);
+        }
+        #gantt-view-container .gantt-chip.status.status-pending,
+        #gantt-view-container .gantt-chip.status.status-new,
+        #gantt-view-container .gantt-chip.status.status-on-hold {
+          background: linear-gradient(135deg, #94a3b8, #64748b);
+        }
+        #gantt-view-container .gantt-chip.status.status-overdue {
+          background: linear-gradient(135deg, #ef4444, #b91c1c);
+        }
+        #gantt-view-container .gantt-chip.status-badge {
+          color: #ffffff;
+          padding: 5px 9px;
+          box-shadow: 0 8px 16px rgba(15, 23, 42, 0.12);
+        }
+        #gantt-view-container .gantt-chip.status-badge.status-pending,
+        #gantt-view-container .gantt-chip.status-badge.status-new {
+          background: linear-gradient(135deg, #94a3b8, #64748b);
+        }
+        #gantt-view-container .gantt-chip.status-badge.status-in-progress {
+          background: linear-gradient(135deg, #facc15, #eab308);
+          color: #422006;
+        }
+        #gantt-view-container .gantt-chip.status-badge.status-completed,
+        #gantt-view-container .gantt-chip.status-badge.status-approved {
+          background: linear-gradient(135deg, #22c55e, #15803d);
+        }
+        #gantt-view-container .gantt-chip.status-badge.status-rework {
+          background: linear-gradient(135deg, #f97316, #ea580c);
+        }
+        #gantt-view-container .gantt-chip.status-badge.status-overdue {
+          background: linear-gradient(135deg, #ef4444, #b91c1c);
+        }
+        #gantt-view-container .gantt-row-dates {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+          margin-top: 9px;
+        }
+        #gantt-view-container .gantt-row-dates label {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          min-width: 0;
+          flex: 1 1 0;
+          color: #64748b;
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        }
+        #gantt-view-container .gantt-date-input {
+          width: 100%;
+          min-width: 0;
+          padding: 6px 8px;
+          border-radius: 10px;
+          border: 1px solid #cbd5e1;
+          background: rgba(255, 255, 255, 0.95);
+          color: #0f172a;
+          font-size: 12px;
+          box-sizing: border-box;
+        }
+        #gantt-view-container .gantt-date-input:focus {
+          outline: none;
+          border-color: #60a5fa;
+          box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
+        }
+        #gantt-view-container .gantt-row-track {
+          overflow: hidden;
+          background-image: repeating-linear-gradient(
+            to right,
+            rgba(226, 232, 240, 0.75) 0,
+            rgba(226, 232, 240, 0.75) 1px,
+            transparent 1px,
+            transparent var(--gantt-day-width, 36px)
+          );
+        }
+        #gantt-view-container .gantt-row-track.is-dragging {
+          cursor: grabbing;
+        }
+        #gantt-view-container .gantt-row-track::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg, rgba(248, 250, 252, 0.5), rgba(255, 255, 255, 0.12));
+          pointer-events: none;
+        }
+        #gantt-view-container .gantt-track-today {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          width: var(--gantt-day-width, 36px);
+          background: linear-gradient(180deg, rgba(191, 219, 254, 0.36), rgba(147, 197, 253, 0.22));
+          border-left: 1px solid rgba(37, 99, 235, 0.22);
+          border-right: 1px solid rgba(37, 99, 235, 0.16);
+          pointer-events: none;
+          z-index: 0;
+        }
+        #gantt-view-container .gantt-track-preview {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: var(--gantt-preview-left, 0px);
+          width: var(--gantt-preview-width, 0px);
+          background: linear-gradient(180deg, rgba(253, 224, 71, 0.24), rgba(250, 204, 21, 0.14));
+          border-left: 2px solid rgba(202, 138, 4, 0.65);
+          border-right: 2px solid rgba(202, 138, 4, 0.45);
+          opacity: 0;
+          pointer-events: none;
+          z-index: 1;
+          transition: opacity 0.08s ease;
+        }
+        #gantt-view-container .gantt-row-track.has-preview .gantt-track-preview {
+          opacity: 1;
+        }
+        #gantt-view-container .gantt-row-bar {
+          position: absolute;
+          top: 11px;
+          height: 24px;
+          display: inline-flex;
+          align-items: center;
+          padding: 0 28px 0 18px;
+          border-radius: 11px;
+          color: var(--gantt-cat-text, #ffffff);
+          background: linear-gradient(135deg, var(--gantt-cat-color, #64748b), var(--gantt-cat-color-dark, #475569));
+          font-size: 11px;
+          font-weight: 700;
+          white-space: nowrap;
+          box-shadow: 0 14px 28px rgba(15, 23, 42, 0.18);
+          backdrop-filter: blur(8px);
+          overflow: hidden;
+          cursor: grab;
+          touch-action: none;
+          z-index: 2;
+        }
+        #gantt-view-container .gantt-row-bar.is-dragging {
+          cursor: grabbing;
+          box-shadow: 0 18px 32px rgba(15, 23, 42, 0.24);
+        }
+        #gantt-view-container .gantt-row-bar::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(90deg, rgba(255,255,255,0.16), transparent 55%);
+          pointer-events: none;
+        }
+        #gantt-view-container .gantt-row-bar::before {
+          content: attr(data-preview-range);
+          position: absolute;
+          right: 8px;
+          top: 50%;
+          transform: translateY(-50%);
+          font-size: 9px;
+          font-weight: 700;
+          opacity: 0.86;
+        }
+        #gantt-view-container .gantt-row-bar-label {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          position: relative;
+          z-index: 1;
+        }
+        #gantt-view-container .gantt-row-handle {
+          position: absolute;
+          top: 4px;
+          bottom: 4px;
+          width: 10px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.42);
+          cursor: ew-resize;
+          z-index: 2;
+        }
+        #gantt-view-container .gantt-row-handle.start {
+          left: 4px;
+        }
+        #gantt-view-container .gantt-row-handle.end {
+          right: 4px;
+        }
+        #gantt-view-container .gantt-row.is-expanded .gantt-row-bar {
+          top: 21px;
+        }
+        #gantt-view-container .gantt-row-placeholder {
+          position: absolute;
+          top: 12px;
+          left: 10px;
+          display: inline-flex;
+          align-items: center;
+          padding: 6px 10px;
+          border-radius: 999px;
+          border: 1px dashed #cbd5e1;
+          background: rgba(255, 255, 255, 0.85);
+          color: #64748b;
+          font-size: 11px;
+          font-weight: 700;
+        }
+        #gantt-view-container .gantt-row.is-expanded .gantt-row-placeholder {
+          top: 22px;
+        }
+        #gantt-view-container .gantt-empty {
+          padding: 48px 24px;
+          text-align: center;
+          color: #64748b;
+          font-size: 15px;
+        }
+        @media (max-width: 960px) {
+          #gantt-view-container .gantt-toolbar {
+            flex-direction: column;
+          }
+          #gantt-view-container .gantt-stats {
+            justify-content: flex-start;
+          }
+          #gantt-view-container .gantt-toolbar-right {
+            justify-content: flex-start;
+          }
+          #gantt-view-container .gantt-header,
+          #gantt-view-container .gantt-subheader,
+          #gantt-view-container .gantt-row {
+            grid-template-columns: 250px minmax(0, 1fr);
+          }
+        }
+      </style>
+      <div class="gantt-shell">
+        <div class="gantt-toolbar">
+          <div>
+            <div class="gantt-eyebrow">Project Schedule</div>
+           
+            
+          </div>
+          <div class="gantt-toolbar-right">
+            <div class="gantt-zoom-controls">
+              <button type="button" class="gantt-zoom-button" data-gantt-zoom="out" aria-label="Zoom out">-</button>
+              <span class="gantt-zoom-label" data-role="gantt-zoom-label">36px/day</span>
+              <button type="button" class="gantt-zoom-button" data-gantt-zoom="in" aria-label="Zoom in">+</button>
+            </div>
+            <div class="gantt-stats">
+              <div class="gantt-stat"><span data-role="gantt-scheduled-count">0</span><small>Scheduled</small></div>
+              <div class="gantt-stat"><span data-role="gantt-range-label">No dates yet</span><small>Timeline</small></div>
+            </div>
+          </div>
+        </div>
+        <div class="gantt-scroll">
+          <div class="gantt-board" data-role="gantt-board"></div>
+        </div>
+      </div>
+    `;
+    cards.parentNode.insertBefore(container, cards.nextSibling);
+  }
+
+  if (container.dataset.bound !== 'true') {
+    container.dataset.bound = 'true';
+    container.addEventListener('change', (event) => {
+      const input = event.target.closest('.gantt-date-input');
+      if (!input) return;
+      const cardId = input.getAttribute('data-card-id') || '';
+      const field = input.getAttribute('data-date-field') || 'start';
+      const card = findLineItemCardById(cardId);
+      if (!card) return;
+      const startValue = field === 'start'
+        ? input.value
+        : (card.querySelector('.item-start-date')?.value || '');
+      const endValue = field === 'end'
+        ? input.value
+        : (card.querySelector('.item-end-date')?.value || '');
+      commitGanttSchedule(cardId, startValue, endValue).catch(() => {});
+    });
+    container.addEventListener('click', (event) => {
+      const zoomButton = event.target.closest('[data-gantt-zoom]');
+      if (zoomButton) {
+        const direction = zoomButton.getAttribute('data-gantt-zoom') === 'in' ? 1 : -1;
+        setCurrentGanttZoomIndex(getStoredGanttZoomIndex() + direction);
+        return;
+      }
+      const toggleAllButton = event.target.closest('[data-gantt-toggle-all-categories]');
+      if (toggleAllButton) {
+        const headers = Array.from(document.querySelectorAll('.category-header')).filter((header) => header.style.display !== 'none');
+        if (headers.length) {
+          const nextCollapsed = !headers.every((header) => isCategoryCollapsed(header));
+          headers.forEach((header) => setCategoryCollapsed(header, nextCollapsed));
+          try { applyCategoryCollapseState(); } catch (_) {}
+          buildGanttViewFromCards();
+        }
+        return;
+      }
+      const categoryButton = event.target.closest('.gantt-row-summary[data-category-key]');
+      if (categoryButton && !categoryButton.hasAttribute('data-card-id')) {
+        const categoryKey = categoryButton.getAttribute('data-category-key') || '';
+        const categoryHeader = Array.from(document.querySelectorAll('.category-header')).find((header) => ensureCategoryCollapseKey(header) === categoryKey) || null;
+        if (categoryHeader) {
+          setCategoryCollapsed(categoryHeader, !isCategoryCollapsed(categoryHeader));
+          try { applyCategoryCollapseState(); } catch (_) {}
+          buildGanttViewFromCards();
+        }
+        return;
+      }
+      const summaryButton = event.target.closest('.gantt-row-summary');
+      if (!summaryButton) return;
+      const itemId = summaryButton.getAttribute('data-card-id') || '';
+      if (!itemId) return;
+      toggleGanttRowExpanded(itemId);
+      buildGanttViewFromCards();
+    });
+    container.addEventListener('pointerdown', (event) => {
+      const handle = event.target.closest('.gantt-row-handle');
+      const bar = event.target.closest('.gantt-row-bar');
+      if (!bar) return;
+      const dragMode = handle
+        ? (handle.classList.contains('start') ? 'resize-start' : 'resize-end')
+        : 'move';
+      event.preventDefault();
+      beginGanttBarDrag(event, bar, dragMode);
+    });
+  }
+
+  syncGanttZoomControls(container);
+
+  return container;
+}
+
+function buildGanttViewFromCards() {
+  const container = ensureGanttViewContainer();
+  const board = container?.querySelector('[data-role="gantt-board"]');
+  const scheduledCountEl = container?.querySelector('[data-role="gantt-scheduled-count"]');
+  const rangeLabelEl = container?.querySelector('[data-role="gantt-range-label"]');
+  if (!container || !board) return;
+
+  const cards = Array.from(document.querySelectorAll('.line-item-card'));
+  const visibleCards = cards.filter((card) => card.dataset.filterVisible !== 'false');
+  if (!visibleCards.length) {
+    board.innerHTML = '<div class="gantt-empty">No line items match the current filters.</div>';
+    if (scheduledCountEl) scheduledCountEl.textContent = '0';
+    if (rangeLabelEl) rangeLabelEl.textContent = 'No dates yet';
+    return;
+  }
+
+  const items = visibleCards.map((card) => {
+    const itemId = card.getAttribute('data-item-id') || '';
+    const name = card.querySelector('.item-name')?.value?.trim() || 'Untitled line item';
+    let categoryHeader = card?.previousElementSibling || null;
+    while (categoryHeader && !categoryHeader.classList.contains('category-header')) {
+      categoryHeader = categoryHeader.previousElementSibling;
+    }
+    const categoryName = categoryHeader?.querySelector('.category-title span[contenteditable]')?.textContent?.trim() || 'Uncategorized';
+    const statusValue = String(card.querySelector('.item-status-dropdown')?.value || 'new').toLowerCase();
+    const statusClass = getGanttStatusClass(statusValue);
+    const phaseValue = typeof getLineItemPhaseFromCard === 'function' ? getLineItemPhaseFromCard(card) : DEFAULT_PROJECT_PHASE;
+    const phaseLabel = typeof getProjectPhaseLabel === 'function' ? getProjectPhaseLabel(phaseValue, true) : phaseValue;
+    const percentComplete = typeof getLineItemCompletionFromCard === 'function' ? getLineItemCompletionFromCard(card) : 0;
+    const startValue = card.querySelector('.item-start-date')?.value || '';
+    const endValue = card.querySelector('.item-end-date')?.value || '';
+    const startDate = parseGanttDateValue(startValue);
+    const endDate = parseGanttDateValue(endValue);
+    return {
+      itemId,
+      name,
+      categoryName,
+      statusValue,
+      statusClass,
+      phaseLabel,
+      percentComplete,
+      startValue,
+      endValue,
+      startDate,
+      endDate
+    };
+  });
+
+  const groupedItems = [];
+  items.forEach((item, index) => {
+    const card = visibleCards[index];
+    let categoryHeader = card?.previousElementSibling || null;
+    while (categoryHeader && !categoryHeader.classList.contains('category-header')) {
+      categoryHeader = categoryHeader.previousElementSibling;
+    }
+    const categoryName = item.categoryName || 'Uncategorized';
+    const categoryKey = categoryHeader
+      ? ensureCategoryCollapseKey(categoryHeader, categoryName)
+      : `name:${String(categoryName).toLowerCase()}`;
+    const lastGroup = groupedItems[groupedItems.length - 1];
+    if (!lastGroup || lastGroup.categoryKey !== categoryKey) {
+      groupedItems.push({
+        categoryKey,
+        categoryHeader,
+        categoryName,
+        items: [item]
+      });
+    } else {
+      lastGroup.items.push(item);
+    }
+  });
+  const groupedCategoryHeaders = groupedItems
+    .map((group) => group.categoryHeader)
+    .filter(Boolean);
+  const allGroupedCategoriesCollapsed = groupedCategoryHeaders.length > 0
+    && groupedCategoryHeaders.every((header) => isCategoryCollapsed(header));
+
+  const datedItems = items.filter((item) => item.startDate && item.endDate);
+  const estimateStart = parseGanttDateValue(document.getElementById('estimate-start-date')?.value || '');
+  const estimateEnd = parseGanttDateValue(document.getElementById('estimate-end-date')?.value || '');
+  const today = parseGanttDateValue(new Date().toISOString().slice(0, 10));
+  let rangeStart = datedItems.length
+    ? datedItems.reduce((min, item) => item.startDate < min ? item.startDate : min, datedItems[0].startDate)
+    : estimateStart || today;
+  let rangeEnd = datedItems.length
+    ? datedItems.reduce((max, item) => item.endDate > max ? item.endDate : max, datedItems[0].endDate)
+    : estimateEnd || addGanttDays(rangeStart, 13);
+
+  if (estimateStart && estimateStart < rangeStart) rangeStart = estimateStart;
+  if (estimateEnd && estimateEnd > rangeEnd) rangeEnd = estimateEnd;
+  if (rangeEnd < rangeStart) rangeEnd = rangeStart;
+
+  rangeStart = addGanttDays(rangeStart, -1);
+  rangeEnd = addGanttDays(rangeEnd, 1);
+
+  const totalDays = Math.max(1, getGanttDayDiff(rangeStart, rangeEnd) + 1);
+  const dayWidth = getCurrentGanttDayWidth();
+  const timelineWidth = totalDays * dayWidth;
+
+  const dayDates = Array.from({ length: totalDays }, (_, index) => addGanttDays(rangeStart, index));
+  const monthSegments = [];
+  let currentSegment = null;
+  dayDates.forEach((date) => {
+    const monthKey = `${date.getUTCFullYear()}-${date.getUTCMonth()}`;
+    if (!currentSegment || currentSegment.key !== monthKey) {
+      currentSegment = {
+        key: monthKey,
+        label: date.toLocaleDateString(undefined, { month: 'short', year: 'numeric', timeZone: 'UTC' }),
+        span: 1
+      };
+      monthSegments.push(currentSegment);
+    } else {
+      currentSegment.span += 1;
+    }
+  });
+
+  board.innerHTML = `
+    <div class="gantt-header">
+      <div class="gantt-sticky-cell">Line Items</div>
+      <div class="gantt-months" style="grid-template-columns: ${monthSegments.map((segment) => `${segment.span * dayWidth}px`).join(' ')}; width:${timelineWidth}px;">
+        ${monthSegments.map((segment) => `<div class="gantt-month-cell">${escapeGanttHtml(segment.label)}</div>`).join('')}
+      </div>
+    </div>
+    <div class="gantt-subheader">
+      <div class="gantt-sticky-cell">Schedule
+        <button
+          type="button"
+          class="estimate-disclosure-btn"
+          data-gantt-toggle-all-categories="true"
+          aria-pressed="${allGroupedCategoriesCollapsed ? 'true' : 'false'}"
+          title="${allGroupedCategoriesCollapsed ? 'Expand all categories' : 'Collapse all categories'}"
+          aria-label="${allGroupedCategoriesCollapsed ? 'Expand all categories' : 'Collapse all categories'}"
+          style="margin-left:auto;"
+          ${groupedCategoryHeaders.length ? '' : 'disabled'}
+        >${getDisclosureIconSvg()}</button>
+      </div>
+      <div class="gantt-days" style="grid-template-columns: repeat(${totalDays}, ${dayWidth}px); width:${timelineWidth}px;">
+        ${dayDates.map((date) => {
+          const isWeekend = date.getUTCDay() === 0 || date.getUTCDay() === 6;
+          const isToday = today && formatEstimateDateKey(date) === formatEstimateDateKey(today);
+          return `<div class="gantt-day-cell${isWeekend ? ' is-weekend' : ''}${isToday ? ' is-today' : ''}" data-day-key="${formatEstimateDateKey(date)}"><span>${date.toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' }).slice(0, 1)}</span><strong>${date.getUTCDate()}</strong></div>`;
+        }).join('')}
+      </div>
+    </div>
+    ${groupedItems.map((group) => {
+      const categoryCollapsed = group.categoryHeader ? isCategoryCollapsed(group.categoryHeader) : false;
+      const groupHtml = [
+        `
+        <div class="gantt-row gantt-category-row${categoryCollapsed ? ' is-collapsed' : ''}" data-category-key="${escapeGanttHtml(group.categoryKey)}" style="background: linear-gradient(180deg, rgba(248,250,252,0.98), rgba(241,245,249,0.94)); min-height:48px;">
+          <div class="gantt-row-info" style="background: linear-gradient(180deg, rgba(248,250,252,0.98), rgba(241,245,249,0.96));">
+            <button type="button" class="gantt-row-summary" data-category-key="${escapeGanttHtml(group.categoryKey)}" aria-expanded="${categoryCollapsed ? 'false' : 'true'}" title="${categoryCollapsed ? 'Expand category' : 'Collapse category'}">
+              <span class="gantt-row-summary-left">
+                <span class="gantt-row-toggle">›</span>
+                <p class="gantt-row-title">${escapeGanttHtml(group.categoryName)}</p>
+              </span>
+              <span class="gantt-row-summary-right">
+                <span class="gantt-category-count">${group.items.length} item${group.items.length === 1 ? '' : 's'}</span>
+              </span>
+            </button>
+          </div>
+          <div class="gantt-row-track" data-category-key="${escapeGanttHtml(group.categoryKey)}" style="width:${timelineWidth}px; --gantt-day-width:${dayWidth}px;"></div>
+        </div>
+        `,
+        ...(categoryCollapsed ? [] : group.items.map((item) => {
+          const hasSchedule = item.startDate && item.endDate && item.endDate >= item.startDate;
+          const expanded = isGanttRowExpanded(item.itemId);
+          const startOffset = hasSchedule ? getGanttDayDiff(rangeStart, item.startDate) : 0;
+          const barSpanDays = hasSchedule ? Math.max(0, getGanttDayDiff(item.startDate, item.endDate)) : 0;
+          const barWidth = hasSchedule ? Math.max(barSpanDays * dayWidth - 8, Math.max(dayWidth - 8, 20)) : 0;
+          const statusLabel = formatEstimateStatusLabel(item.statusValue);
+          const rangeLabel = hasSchedule ? formatGanttRangeLabel(item.startDate, item.endDate) : '';
+          const categoryTheme = getGanttCategoryTheme(item.categoryName);
+          const todayOffset = today ? getGanttDayDiff(rangeStart, today) : -1;
+          const todayInRange = todayOffset >= 0 && todayOffset < totalDays;
+          return `
+        <div class="gantt-row gantt-item-row${expanded ? ' is-expanded' : ''}">
+          <div class="gantt-row-info">
+            <button type="button" class="gantt-row-summary" data-card-id="${escapeGanttHtml(item.itemId)}" aria-expanded="${expanded ? 'true' : 'false'}" title="${expanded ? 'Collapse details' : 'Expand details'}">
+              <span class="gantt-row-summary-left">
+                <span class="gantt-row-toggle">›</span>
+                <p class="gantt-row-title">${escapeGanttHtml(item.name)}</p>
+              </span>
+              <span class="gantt-row-summary-right">
+                <span class="gantt-chip status-badge ${escapeGanttHtml(item.statusClass)}">${escapeGanttHtml(statusLabel)}</span>
+              </span>
+            </button>
+            <div class="gantt-row-details">
+              <div class="gantt-row-meta">
+                <span class="gantt-chip">${escapeGanttHtml(item.categoryName)}</span>
+                <span class="gantt-chip phase">${escapeGanttHtml(item.phaseLabel)}</span>
+                <span class="gantt-chip progress">${escapeGanttHtml(`${item.percentComplete}% complete`)}</span>
+              </div>
+              <div class="gantt-row-dates">
+                <label>Start
+                  <input type="date" class="gantt-date-input" data-card-id="${escapeGanttHtml(item.itemId)}" data-date-field="start" value="${escapeGanttHtml(item.startValue)}">
+                </label>
+                <label>Finish
+                  <input type="date" class="gantt-date-input" data-card-id="${escapeGanttHtml(item.itemId)}" data-date-field="end" value="${escapeGanttHtml(item.endValue)}">
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="gantt-row-track" data-card-id="${escapeGanttHtml(item.itemId)}" data-range-start="${escapeGanttHtml(formatEstimateDateKey(rangeStart))}" data-day-width="${dayWidth}" style="width:${timelineWidth}px; --gantt-day-width:${dayWidth}px;">
+            ${todayInRange ? `<div class="gantt-track-today" style="left:${todayOffset * dayWidth}px;"></div>` : ''}
+            <div class="gantt-track-preview"></div>
+            ${hasSchedule
+              ? `<div class="gantt-row-bar ${escapeGanttHtml(item.statusClass)}" data-card-id="${escapeGanttHtml(item.itemId)}" data-start-date="${escapeGanttHtml(item.startValue)}" data-end-date="${escapeGanttHtml(item.endValue)}" data-preview-range="${escapeGanttHtml(rangeLabel)}" title="Drag to change dates" style="left:${startOffset * dayWidth + 4}px; width:${barWidth}px; --gantt-cat-color:${categoryTheme.color}; --gantt-cat-color-dark:${categoryTheme.dark}; --gantt-cat-text:${categoryTheme.text};"><span class="gantt-row-handle start" role="presentation"></span><span class="gantt-row-bar-label">${escapeGanttHtml(item.name)}</span><span class="gantt-row-handle end" role="presentation"></span></div>`
+              : '<div class="gantt-row-placeholder">Set start and finish dates to place this item on the timeline.</div>'}
+          </div>
+        </div>
+      `;
+        }))
+      ];
+      return groupHtml.join('');
+    }).join('')}
+  `;
+
+  if (scheduledCountEl) scheduledCountEl.textContent = String(datedItems.length);
+  if (rangeLabelEl) rangeLabelEl.textContent = formatGanttRangeLabel(rangeStart, rangeEnd);
+  syncGanttZoomControls(container);
+}
+
+function showGanttView() {
+  ensureGanttViewContainer();
+  buildGanttViewFromCards();
+  const cards = document.getElementById('line-items-cards');
+  const tableContainer = document.getElementById('line-items-table-container');
+  const header = document.getElementById('list-view-header');
+  const footer = document.getElementById('list-view-footer');
+  const ganttContainer = document.getElementById('gantt-view-container');
+  if (cards) cards.style.display = 'none';
+  if (tableContainer) tableContainer.style.display = 'none';
+  if (header) header.style.display = 'none';
+  if (footer) footer.style.display = 'none';
+  if (ganttContainer) ganttContainer.style.display = '';
+  try { toggleSummaryVisibility(false); } catch (_) {}
+  syncEstimateViewButtons('gantt');
+  try { updateSelectedLaborCost(); } catch (_) {}
+  try { updateTopbarHeight(); } catch (_) {}
 }
 
 // Debounced autosave helper for list-view edits
@@ -8131,11 +9472,9 @@ function initializeFilterListeners() {
   const categoryFilter = document.getElementById('filter-category');
   const statusFilter = document.getElementById('filter-status');
   const vendorFilter = document.getElementById('filter-vendor');
-  const overdueFilter = document.getElementById('filter-overdue');
-  const currentPhaseFilter = document.getElementById('filter-current-phase');
   const clearFiltersButton = document.getElementById('clear-filters');
 
-  if (!itemNameFilter || !phaseFilter || !categoryFilter || !statusFilter || !vendorFilter || !overdueFilter || !currentPhaseFilter || !clearFiltersButton) {
+  if (!itemNameFilter || !phaseFilter || !categoryFilter || !statusFilter || !vendorFilter || !clearFiltersButton) {
     console.error("Filter elements not found");
     return;
   }
@@ -8144,7 +9483,7 @@ function initializeFilterListeners() {
   populateFilterOptions();
 
   // Add event listeners to filter controls
-  [itemNameFilter, phaseFilter, categoryFilter, statusFilter, vendorFilter, overdueFilter, currentPhaseFilter].forEach(filter => {
+  [itemNameFilter, phaseFilter, categoryFilter, statusFilter, vendorFilter].forEach(filter => {
     filter.addEventListener('input', applyFilters);
     filter.addEventListener('change', applyFilters);
   });
@@ -8239,6 +9578,9 @@ function populateFilterOptions() {
 
   try { refreshBatchCategoryOptions(); } catch (_) {}
   renderProjectPhaseBar();
+  if (typeof isGanttViewActive === 'function' && isGanttViewActive()) {
+    try { buildGanttViewFromCards(); } catch (_) {}
+  }
 }
 
 // ✅ Apply filters to line items - Card View Only
@@ -8247,25 +9589,25 @@ function applyFilters() {
   const categoryValue = document.getElementById('filter-category')?.value || '';
   const statusValue = document.getElementById('filter-status')?.value || '';
   const vendorValue = document.getElementById('filter-vendor')?.value || '';
-  const overdueOnly = !!document.getElementById('filter-overdue')?.checked;
-  const currentPhaseOnly = !!document.getElementById('filter-current-phase')?.checked;
   
   // Apply filters to cards
-  applyCardViewFilters(categoryValue, statusValue, vendorValue, phaseValue, overdueOnly, currentPhaseOnly);
+  applyCardViewFilters(categoryValue, statusValue, vendorValue, phaseValue);
   
   // Update counts
   updateFilterCounts();
   renderProjectPhaseBar();
+  if (typeof isGanttViewActive === 'function' && isGanttViewActive()) {
+    try { buildGanttViewFromCards(); } catch (_) {}
+  }
 }
 
 // ✅ Apply filters to card view
-function applyCardViewFilters(categoryValue, statusValue, vendorValue, phaseValue, overdueOnly, currentPhaseOnly) {
+function applyCardViewFilters(categoryValue, statusValue, vendorValue, phaseValue) {
   const itemNameValue = document.getElementById('filter-item-name')?.value.trim().toLowerCase() || '';
   let visibleCount = 0;
   let hiddenCount = 0;
 
   const cards = Array.from(document.querySelectorAll('.line-item-card'));
-  const effectivePhase = currentPhaseOnly ? getCurrentProjectPhase(cards) : phaseValue;
   cards.forEach(card => {
     // Get the category for this card
     let categoryHeader = card.previousElementSibling;
@@ -8291,16 +9633,15 @@ const cardStatus = statusDropdown ? statusDropdown.value.toLowerCase() : 'new';
 
     // Check if card matches all active filters
     const matchesItemName = !itemNameValue || itemName.includes(itemNameValue);
-    const matchesPhase = !effectivePhase || cardPhase === effectivePhase;
+    const matchesPhase = !phaseValue || cardPhase === phaseValue;
     const matchesCategory = !categoryValue || cardCategory === categoryValue;
     const matchesStatus = !statusValue || cardStatus.includes(statusValue.toLowerCase());
     const matchesVendor = !vendorValue ||
       (vendorValue === 'unassigned' && !isAssigned) ||
       (isAssigned && assignedTo === vendorValue);
-    const matchesOverdue = !overdueOnly || isLineItemOverdue(card);
 
     // Show or hide based on filter matches
-    if (matchesItemName && matchesPhase && matchesCategory && matchesStatus && matchesVendor && matchesOverdue) {
+    if (matchesItemName && matchesPhase && matchesCategory && matchesStatus && matchesVendor) {
       card.dataset.filterVisible = 'true';
       card.style.display = '';
       visibleCount++;
@@ -8410,18 +9751,6 @@ function updateFilterCounts() {
       name: 'Vendor', 
       value: document.getElementById('filter-vendor')?.value || '',
       label: document.getElementById('filter-vendor')?.selectedOptions[0]?.textContent || ''
-    },
-    {
-      id: 'filter-overdue',
-      name: 'Schedule',
-      value: document.getElementById('filter-overdue')?.checked ? 'overdue' : '',
-      label: 'Overdue'
-    },
-    {
-      id: 'filter-current-phase',
-      name: 'Path',
-      value: document.getElementById('filter-current-phase')?.checked ? 'current' : '',
-      label: 'Current Phase'
     }
   ].filter(f => f.value);
   
@@ -8504,10 +9833,6 @@ function clearFilters() {
   // Also reset the item name text filter
   const itemNameInput = document.getElementById('filter-item-name');
   if (itemNameInput) itemNameInput.value = '';
-  const overdueInput = document.getElementById('filter-overdue');
-  const currentPhaseInput = document.getElementById('filter-current-phase');
-  if (overdueInput) overdueInput.checked = false;
-  if (currentPhaseInput) currentPhaseInput.checked = false;
   
   filterElements.forEach(el => {
     if (el) el.value = '';
