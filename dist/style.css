@@ -2517,45 +2517,125 @@ input, textarea {
 
 
 
-#projectFilters label {
+.map-filters-panel {
+  width: 100%;
+  max-width: 1200px;
+  margin: 10px auto 18px auto;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  border: 1px solid #dbe7f7;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.map-filter-group {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.map-filter-group-title {
+  width: 100%;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1f3a5f;
+  margin-bottom: 2px;
+}
+
+.map-filter-chip {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
-  background: #f1f5f9;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #d7e2f0;
+  background: #f8fbff;
+  color: #1e293b;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background 0.3s;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
-#projectFilters label:hover {
-  background: #e2e8f0;
+.map-filter-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.14);
+  border-color: #b8cdf0;
 }
 
-#projectFilters input[type="checkbox"] {
+.map-filter-chip input[type="checkbox"] {
   appearance: none;
-  width: 18px;
-  height: 18px;
-  border: 2px solid #3b82f6;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 2px solid #94a3b8;
   border-radius: 4px;
+  background: #fff;
   display: grid;
   place-content: center;
-  transition: all 0.2s;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
 }
 
-#projectFilters input[type="checkbox"]:checked {
-  background-color: #3b82f6;
-  border-color: #3b82f6;
+.map-filter-chip input[type="checkbox"]:checked {
+  background: #2563eb;
+  border-color: #2563eb;
 }
 
-#projectFilters input[type="checkbox"]:checked::before {
-  content: "✔";
-  color: white;
-  font-size: 12px;
-  font-weight: bold;
+.map-filter-chip input[type="checkbox"]:checked::before {
+  content: "";
+  width: 8px;
+  height: 5px;
+  border-left: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(-45deg) translateY(-1px);
+}
+
+.map-filter-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.map-filter-chip-active .map-filter-dot {
+  background: #16a34a;
+}
+
+.map-filter-chip-upcoming .map-filter-dot {
+  background: #f97316;
+}
+
+.map-filter-chip-completed .map-filter-dot {
+  background: #3b82f6;
+}
+
+.map-filter-chip-onmarket .map-filter-dot {
+  background: #ef4444;
+}
+
+.map-filter-chip-type {
+  background: #f5f8fc;
+}
+
+@media (max-width: 768px) {
+  .map-filters-panel {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .map-filter-group {
+    padding: 8px;
+  }
 }
 
 
