@@ -47,6 +47,17 @@ let projectSearchClearBtn = null;
 let projectNoResultsEl = null;
 const projectSearchState = { activeTabIndex: 0, isSearchActive: false };
 
+// Keep Google Maps callback globally available immediately.
+window.__dashboardMapsLoaded = false;
+window.__dashboardDomReady = false;
+window.__dashboardInitMap = null;
+window.initMap = function () {
+  window.__dashboardMapsLoaded = true;
+  if (window.__dashboardDomReady && typeof window.__dashboardInitMap === "function") {
+    window.__dashboardInitMap();
+  }
+};
+
 function restoreProjectColumnsToActiveTab() {
   const columns = document.querySelectorAll('.column');
   const tabs = document.querySelectorAll('.tab');
@@ -244,6 +255,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
     let map;
+     let geocoder;
 let markers = [];
 let markerCluster;
 const geocodeCache = new Map();
@@ -1102,24 +1114,64 @@ function createMarker(lat, lng, title, markerType) {
 }
 
 
-// 🗺️ Convert Address → Lat/Lng (with cache)
+// 🗺️ Convert Address → Lat/Lng (with cache + fallback variants)
 async function getLatLngFromAddress(address) {
-  if (geocodeCache.has(address)) return geocodeCache.get(address);
+  const normalizedAddress = address
+    .replace(/\s+/g, " ")
+    .replace(/\s*,\s*/g, ", ")
+    .trim();
 
-  const apiKey = "AIzaSyCvzkKpCkAY2PHwU8I8zZiM_FLMzMj1bbg";
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
+  if (geocodeCache.has(normalizedAddress)) return geocodeCache.get(normalizedAddress);
 
-  const res = await fetch(url);
-  const data = await res.json();
+  const addressVariants = [
+    normalizedAddress,
+    normalizedAddress
+      .replace(/\bNorth\b/gi, "N")
+      .replace(/\bSouth\b/gi, "S")
+      .replace(/\bEast\b/gi, "E")
+      .replace(/\bWest\b/gi, "W")
+  ];
 
-  if (data.status === "OK") {
-    const location = data.results[0].geometry.location;
-    geocodeCache.set(address, location);
-    return location;
-  } else {
-    console.warn(`Geocode failed: ${data.status} for ${address}`);
-    return null;
+  const uniqueVariants = [...new Set(addressVariants)];
+
+  for (const variant of uniqueVariants) {
+    try {
+      if (geocoder && typeof geocoder.geocode === "function") {
+        const geocodeResult = await new Promise((resolve) => {
+          geocoder.geocode({ address: variant }, (results, status) => {
+            resolve({ results, status });
+          });
+        });
+
+        if (geocodeResult.status === "OK" && geocodeResult.results?.[0]?.geometry?.location) {
+          const loc = geocodeResult.results[0].geometry.location;
+          const location = {
+            lat: typeof loc.lat === "function" ? loc.lat() : loc.lat,
+            lng: typeof loc.lng === "function" ? loc.lng() : loc.lng
+          };
+          geocodeCache.set(normalizedAddress, location);
+          return location;
+        }
+      }
+
+      // Fallback: REST geocoder if the Google Maps Geocoder object is unavailable.
+      const apiKey = "AIzaSyCvzkKpCkAY2PHwU8I8zZiM_FLMzMj1bbg";
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(variant)}&key=${apiKey}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.status === "OK") {
+        const location = data.results[0].geometry.location;
+        geocodeCache.set(normalizedAddress, location);
+        return location;
+      }
+    } catch (err) {
+      console.warn(`Geocode attempt failed for: ${variant}`, err);
+    }
   }
+
+  console.warn(`Geocode failed for all variants of: ${normalizedAddress}`);
+  return null;
 }
 
 // ✅ Load All Project Locations
@@ -1190,10 +1242,12 @@ async function loadProjectLocations() {
   }
 }
 
-
 // ✅ Init Map
 function initMap() {
-  map = new google.maps.Map(document.getElementById("map"), {
+  const mapEl = document.getElementById("map");
+  if (!mapEl) return;
+
+  map = new google.maps.Map(mapEl, {
     center: { lat: 29.4241, lng: -98.4936 },
     zoom: 10,
     gestureHandling: "greedy",
@@ -1201,6 +1255,8 @@ function initMap() {
     streetViewControl: false,
     fullscreenControl: false
   });
+
+  geocoder = new google.maps.Geocoder();
 
   loadProjectLocations();
   setupFilterCheckboxes();
@@ -1216,11 +1272,12 @@ function setupFilterCheckboxes() {
   });
 }
 
-// ✅ Expose to Google Maps loader
-window.initMap = initMap;
-
-// ✅ Load once DOM is ready
-document.addEventListener("DOMContentLoaded", initMap);
+// ✅ Resolve loader + DOM race for Google Maps callback
+window.__dashboardInitMap = initMap;
+window.__dashboardDomReady = true;
+if (window.__dashboardMapsLoaded) {
+  window.__dashboardInitMap();
+}
 
 
 
