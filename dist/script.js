@@ -267,7 +267,23 @@ const projectFilters = {
 };
 
 
+const projectTypeFilters = {
+  residential: true,
+  multifamily: true
+};
 
+function normalizeProjectType(typeValue) {
+  const normalized = String(typeValue || "").trim().toLowerCase();
+  if (normalized.includes("res")) return "residential";
+  if (normalized.includes("multi")) return "multifamily";
+  return "";
+}
+
+function passesProjectTypeFilter(project) {
+  const normalizedType = normalizeProjectType(project?.type);
+  if (!normalizedType) return true;
+  return !!projectTypeFilters[normalizedType];
+}
 
 
 
@@ -1203,7 +1219,9 @@ async function loadProjectLocations() {
       ...upcoming.projects.map(p => ({ ...p, markerType: "upcoming" })),
       ...completed.projects.map(p => ({ ...p, markerType: "completed" })),
       ...onMarket.projects.map(p => ({ ...p, markerType: "onMarket" }))
-    ].filter(p => projectFilters[p.markerType]);
+    ]
+      .filter(p => projectFilters[p.markerType])
+      .filter(p => passesProjectTypeFilter(p));
 
     if (allProjects.length === 0) {
       showToast("⚠️ No project locations available.");
@@ -1266,7 +1284,12 @@ function initMap() {
 function setupFilterCheckboxes() {
   document.querySelectorAll("#projectFilters input[type='checkbox']").forEach(cb => {
     cb.addEventListener("change", () => {
-      projectFilters[cb.value] = cb.checked;
+     const filterGroup = cb.dataset.filterGroup || "status";
+      if (filterGroup === "type") {
+        projectTypeFilters[cb.value] = cb.checked;
+      } else {
+        projectFilters[cb.value] = cb.checked;
+      }
       loadProjectLocations();
     });
   });
