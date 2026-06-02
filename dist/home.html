@@ -218,14 +218,44 @@
       <h3>Project Locations</h3>
       <div id="map"></div>
   </section>
-      
-     <div id="projectFilters" style="display: flex; gap: 12px; padding: 0px 0; flex-wrap: wrap;">
-     <label><input type="checkbox" value="active" checked> 🟢 Active</label>
-    <label><input type="checkbox" value="upcoming" checked> 🟠 Upcoming</label>
-    <label><input type="checkbox" value="completed" checked> 🔵 Completed</label>
-    <label><input type="checkbox" value="onMarket" checked> 🔴 On Market</label>
+  <div id="projectFilters" class="map-filters-panel" aria-label="Project map filters">
+    <div class="map-filter-group" role="group" aria-labelledby="map-filter-status-label">
+      <div id="map-filter-status-label" class="map-filter-group-title">Project Status</div>
+      <label class="map-filter-chip map-filter-chip-active">
+        <input type="checkbox" value="active" data-filter-group="status" checked>
+        <span class="map-filter-dot" aria-hidden="true"></span>
+        <span>Active</span>
+      </label>
+      <label class="map-filter-chip map-filter-chip-upcoming">
+        <input type="checkbox" value="upcoming" data-filter-group="status" checked>
+        <span class="map-filter-dot" aria-hidden="true"></span>
+        <span>Upcoming</span>
+      </label>
+      <label class="map-filter-chip map-filter-chip-completed">
+        <input type="checkbox" value="completed" data-filter-group="status" checked>
+        <span class="map-filter-dot" aria-hidden="true"></span>
+        <span>Completed</span>
+      </label>
+      <label class="map-filter-chip map-filter-chip-onmarket">
+        <input type="checkbox" value="onMarket" data-filter-group="status" checked>
+        <span class="map-filter-dot" aria-hidden="true"></span>
+        <span>On Market</span>
+      </label>
     </div>
 
+    <div class="map-filter-group" role="group" aria-labelledby="map-filter-type-label">
+      <div id="map-filter-type-label" class="map-filter-group-title">Project Type</div>
+      <label class="map-filter-chip map-filter-chip-type">
+        <input type="checkbox" value="residential" data-filter-group="type" checked>
+        <span>Residential</span>
+      </label>
+      <label class="map-filter-chip map-filter-chip-type">
+        <input type="checkbox" value="multifamily" data-filter-group="type" checked>
+        <span> Bluerain MultifamilY</span>
+      </label>
+    </div>
+  </div>
+  
    <!-- Daily Updates Panel -->
 <div id="daily-updates-panel">
 
