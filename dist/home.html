@@ -29,9 +29,9 @@
           <div class="dropdown">
             <button class="dropdown-button">Create New</button>
             <div class="dropdown-content">
-              <a href="add-client.html">Add Client</a>
+            <a href="#" onclick="openNewClientModal(); return false;">Add Client</a>
             
-              <a href="add-project.html">Add New Project</a> <!-- New Option -->
+             <a href="#" onclick="openNewProjectModal(); return false;">Add New Project</a> <!-- New Option -->
               <a href="createquote.html">Create Quote</a>
             </div>
           </div>
@@ -535,7 +535,7 @@
 
 
 <!-- Bottom Toolbar for Mobile -->
-<nav class="bottom-toolbar">
+<nav class="bottom-toolbar" aria-label="Mobile navigation">
    <a href="home.html" class="toolbar-icon" id="toolbar-home">
     <i class="fas fa-home"></i>
     <span>Home</span>
@@ -546,7 +546,7 @@
   </a>
   <a href="#" class="toolbar-icon menu-link" id="toolbar-add">
     <i class="fas fa-plus-circle"></i>
-    <span></span>
+    <span>Add</span>
   </a>
   <a href="#" class="toolbar-icon menu-link" id="toolbar-daily">
     <i class="fas fa-sync-alt"></i>
@@ -554,7 +554,7 @@
   </a>
   <a href="#" class="toolbar-icon menu-link" id="toolbar-more">
     <i class="fas fa-ellipsis-h"></i>
-    <span>More</span>
+   <span>Menu</span>
   </a>
 </nav>
      
