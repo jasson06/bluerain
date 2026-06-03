@@ -886,9 +886,120 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
+function openNewProjectModal() {
+  openProjectEditModal({});
+}
+
+window.openNewProjectModal = openNewProjectModal;
+
+function openNewClientModal() {
+  let modal = document.getElementById('clientCreateModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'clientCreateModal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content client-modal-content">
+        <span class="close" id="closeClientCreateModal">&times;</span>
+        <div class="client-modal-header">
+          <p class="client-modal-kicker">Client Workspace</p>
+          <h3>Create Client</h3>
+          <p class="client-modal-subtitle">Add a client profile without leaving the dashboard.</p>
+        </div>
+        <form id="clientCreateForm">
+          <div class="client-modal-grid">
+            <section class="client-modal-section client-modal-section-full">
+              <div class="client-modal-section-header">
+                <h4>Contact Details</h4>
+                <p>Save the information you need for jobs, estimates, and communication.</p>
+              </div>
+              <div class="client-modal-fields">
+                <div class="client-field client-field-span-2">
+                  <label for="newClientName">Client Name</label>
+                  <input id="newClientName" name="name" type="text" required />
+                </div>
+                <div class="client-field client-field-span-2">
+                  <label for="newClientAddress">Address</label>
+                  <input id="newClientAddress" name="address" type="text" required />
+                </div>
+                <div class="client-field">
+                  <label for="newClientEmail">Email</label>
+                  <input id="newClientEmail" name="email" type="email" required />
+                </div>
+                <div class="client-field">
+                  <label for="newClientPhone">Phone</label>
+                  <input id="newClientPhone" name="phone" type="tel" required />
+                </div>
+              </div>
+            </section>
+          </div>
+          <div class="client-modal-actions">
+            <button type="button" class="btn-secondary" id="cancelClientCreateButton">Cancel</button>
+            <button type="submit" class="btn-primary">Create Client</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const closeClientModal = () => {
+      modal.style.display = 'none';
+    };
+
+    document.getElementById('closeClientCreateModal').onclick = closeClientModal;
+    document.getElementById('cancelClientCreateButton').onclick = closeClientModal;
+    modal.onclick = (e) => { if (e.target === modal) closeClientModal(); };
+
+    document.getElementById('clientCreateForm').onsubmit = async function(e) {
+      e.preventDefault();
+
+      const payload = {
+        name: document.getElementById('newClientName').value.trim(),
+        address: document.getElementById('newClientAddress').value.trim(),
+        email: document.getElementById('newClientEmail').value.trim(),
+        phone: document.getElementById('newClientPhone').value.trim()
+      };
+
+      if (!payload.name || !payload.address || !payload.email || !payload.phone) {
+        showToast('Please complete all client fields.');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/add-client', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create client');
+        }
+
+        modal.style.display = 'none';
+        this.reset();
+        showToast('Client created!');
+
+        if (typeof fetchClients === 'function' && window.location.pathname.includes('clients')) {
+          fetchClients();
+        }
+      } catch (err) {
+        showToast('Failed to create client.');
+      }
+    };
+  }
+
+  document.getElementById('clientCreateForm').reset();
+  modal.style.display = 'flex';
+}
+
+window.openNewClientModal = openNewClientModal;
 
 // --- Add this function to open the edit modal ---
 function openProjectEditModal(project) {
+  const projectRecord = project || {};
+  const isEditing = Boolean(projectRecord._id);
+
   // Use the same modal and form IDs as before
   let modal = document.getElementById('projectEditModal');
   if (!modal) {
@@ -896,80 +1007,128 @@ function openProjectEditModal(project) {
     modal.id = 'projectEditModal';
     modal.className = 'modal';
     modal.innerHTML = `
-      <div class="modal-content" style="max-width:850px;">
+      <div class="modal-content project-modal-content">
         <span class="close" id="closeProjectEditModal" style="position:absolute;top:12px;right:18px;font-size:1.5rem;cursor:pointer;">&times;</span>
-        <h3>Edit Project & Utilities</h3>
+        <div class="project-modal-header">
+          <p class="project-modal-kicker">Project Workspace</p>
+          <h3 id="projectEditModalTitle">Edit Project & Utilities</h3>
+          <p class="project-modal-subtitle">Manage the project profile, address, and utility tracking from one place.</p>
+        </div>
         <form id="projectEditForm">
-          <label for="editProjectName">Name:</label>
-          <input id="editProjectName" type="text" required />
+          <div class="project-modal-grid project-modal-grid-main">
+            <section class="project-modal-section project-modal-section-primary">
+              <div class="project-modal-section-header">
+                <h4>Project Details</h4>
+                <p>Core naming, workflow, and type settings.</p>
+              </div>
+              <div class="project-modal-grid project-modal-grid-fields">
+                <div class="project-field project-field-span-2">
+                  <label for="editProjectName">Name</label>
+                  <input id="editProjectName" type="text" required />
+                </div>
+                <div class="project-field">
+                  <label for="editProjectStatus">Status</label>
+                  <select id="editProjectStatus" required>
+                    <option value="Upcoming">Upcoming</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="On Market">On Market</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+                <div class="project-field project-field-color">
+                  <label for="editProjectColor">Color</label>
+                  <input id="editProjectColor" type="color" />
+                </div>
+                <div class="project-field">
+                  <label for="editProjectType">Project Type</label>
+                  <select id="editProjectType" class="form-control" required>
+                    <option value="Residential">Residential</option>
+                    <option value="Multifamily">Multifamily</option>
+                  </select>
+                </div>
+                <div class="project-field">
+                  <label for="editProjectCode" id="editProjectCodeLabel">Lockbox Code</label>
+                  <input id="editProjectCode" type="text" />
+                </div>
+              </div>
+            </section>
 
-          <label for="editProjectStatus">Status:</label>
-          <select id="editProjectStatus" required>
-            <option value="Upcoming">Upcoming</option>
-            <option value="In Progress">In Progress</option>
-            <option value="On Market">On Market</option>
-            <option value="completed">Completed</option>
-          </select>
+            <section class="project-modal-section">
+              <div class="project-modal-section-header">
+                <h4>Address</h4>
+                <p>Property location and mailing details.</p>
+              </div>
+              <div class="project-modal-grid project-modal-grid-fields">
+                <div class="project-field project-field-span-2">
+                  <label for="editProjectAddressLine1">Address Line 1</label>
+                  <input id="editProjectAddressLine1" type="text" />
+                </div>
+                <div class="project-field project-field-span-2">
+                  <label for="editProjectAddressLine2">Address Line 2</label>
+                  <input id="editProjectAddressLine2" type="text" />
+                </div>
+                <div class="project-field">
+                  <label for="editProjectCity">City</label>
+                  <input id="editProjectCity" type="text" required />
+                </div>
+                <div class="project-field">
+                  <label for="editProjectState">State</label>
+                  <input id="editProjectState" type="text" required />
+                </div>
+                <div class="project-field">
+                  <label for="editProjectZip">Zip Code</label>
+                  <input id="editProjectZip" type="text" />
+                </div>
+              </div>
+            </section>
 
-          <label for="editProjectColor">Color:</label>
-          <input id="editProjectColor" type="color" />
+            <section class="project-modal-section project-modal-section-primary">
+              <div class="project-modal-section-header">
+                <h4>Utilities</h4>
+                <p>Track readiness before vendors or residents arrive.</p>
+              </div>
+              <div class="project-modal-grid project-modal-grid-fields project-modal-grid-utilities">
+                <div class="project-field">
+                  <label for="editWaterStatus">Water Status</label>
+                  <select id="editWaterStatus">
+                    <option value="unknown">Unknown</option>
+                    <option value="active">Active</option>
+                    <option value="disconnected">Disconnected</option>
+                  </select>
+                </div>
+                <div class="project-field">
+                  <label for="editGasStatus">Gas Status</label>
+                  <select id="editGasStatus">
+                    <option value="unknown">Unknown</option>
+                    <option value="active">Active</option>
+                    <option value="disconnected">Disconnected</option>
+                  </select>
+                </div>
+                <div class="project-field">
+                  <label for="editElectricityStatus">Electricity Status</label>
+                  <select id="editElectricityStatus">
+                    <option value="unknown">Unknown</option>
+                    <option value="active">Active</option>
+                    <option value="disconnected">Disconnected</option>
+                  </select>
+                </div>
+              </div>
+            </section>
 
-          <div class="form-group">
-            <label for="editProjectType"><strong>Project Type</strong></label>
-            <select id="editProjectType" class="form-control" required>
-              <option value="Residential">Residential</option>
-              <option value="Multifamily">Multifamily</option>
-            </select>
+            <section class="project-modal-section project-modal-section-full">
+              <div class="project-modal-section-header">
+                <h4>Description</h4>
+                <p>Capture scope, notes, or special access instructions.</p>
+              </div>
+              <div class="project-field project-field-span-2">
+                <label for="editProjectDescription">Description</label>
+                <textarea id="editProjectDescription"></textarea>
+              </div>
+            </section>
           </div>
-
-          <label for="editProjectCode">Lockbox Code:</label>
-          <input id="editProjectCode" type="text" required />
-
-          <label for="editProjectAddressLine1">Address Line 1:</label>
-          <input id="editProjectAddressLine1" type="text" />
-
-          <label for="editProjectAddressLine2">Address Line 2:</label>
-          <input id="editProjectAddressLine2" type="text" />
-
-          <label for="editProjectCity">City:</label>
-          <input id="editProjectCity" type="text" required />
-
-          <label for="editProjectState">State:</label>
-          <input id="editProjectState" type="text" required />
-
-          <label for="editProjectZip">Zip Code:</label>
-          <input id="editProjectZip" type="text" />
-
-          <label for="editProjectDescription">Description:</label>
-          <textarea id="editProjectDescription"></textarea>
-
-          <hr>
-          <label>Water Status:
-            <select id="editWaterStatus">
-              <option value="unknown">Unknown</option>
-              <option value="active">Active</option>
-
-              <option value="disconnected">Disconnected</option>
-            </select>
-          </label>
-          <label>Gas Status:
-            <select id="editGasStatus">
-              <option value="unknown">Unknown</option>
-              <option value="active">Active</option>
-
-              <option value="disconnected">Disconnected</option>
-            </select>
-          </label>
-          <label>Electricity Status:
-            <select id="editElectricityStatus">
-              <option value="unknown">Unknown</option>
-              <option value="active">Active</option>
-
-              <option value="disconnected">Disconnected</option>
-            </select>
-          </label>
-          <br><br>
-          <button type="submit" class="btn-primary">Save</button>
+          <div class="project-modal-actions">
+            <button type="submit" class="btn-primary" id="projectEditSubmitButton">Save</button>
+          </div>
         </form>
       </div>
     `;
@@ -980,26 +1139,30 @@ function openProjectEditModal(project) {
     modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
   }
 
+  document.getElementById('projectEditModalTitle').textContent = isEditing ? 'Edit Project & Utilities' : 'Create Project';
+  document.getElementById('projectEditSubmitButton').textContent = isEditing ? 'Save' : 'Create Project';
+  document.getElementById('editProjectCode').required = isEditing;
+
   // Populate form with project data
-  document.getElementById('editProjectName').value = project.name || '';
-  document.getElementById('editProjectStatus').value = project.status || 'Upcoming';
-  document.getElementById('editProjectColor').value = project.color || '#2563eb';
-  document.getElementById('editProjectType').value = project.type || 'Residential';
-  document.getElementById('editProjectCode').value = project.code || '';
-  document.getElementById('editProjectAddressLine1').value = project.address?.addressLine1 || '';
-  document.getElementById('editProjectAddressLine2').value = project.address?.addressLine2 || '';
-  document.getElementById('editProjectCity').value = project.address?.city || '';
-  document.getElementById('editProjectState').value = project.address?.state || '';
-  document.getElementById('editProjectZip').value = project.address?.zip || '';
-  document.getElementById('editProjectDescription').value = project.description || '';
-  document.getElementById('editWaterStatus').value = project.utilityAccounts?.water?.status || 'unknown';
-  document.getElementById('editGasStatus').value = project.utilityAccounts?.gas?.status || 'unknown';
-  document.getElementById('editElectricityStatus').value = project.utilityAccounts?.electricity?.status || 'unknown';
+  document.getElementById('editProjectName').value = projectRecord.name || '';
+  document.getElementById('editProjectStatus').value = projectRecord.status || 'Upcoming';
+  document.getElementById('editProjectColor').value = projectRecord.color || '#2563eb';
+  document.getElementById('editProjectType').value = projectRecord.type || 'Residential';
+  document.getElementById('editProjectCode').value = projectRecord.code || '';
+  document.getElementById('editProjectAddressLine1').value = projectRecord.address?.addressLine1 || '';
+  document.getElementById('editProjectAddressLine2').value = projectRecord.address?.addressLine2 || '';
+  document.getElementById('editProjectCity').value = projectRecord.address?.city || '';
+  document.getElementById('editProjectState').value = projectRecord.address?.state || '';
+  document.getElementById('editProjectZip').value = projectRecord.address?.zip || '';
+  document.getElementById('editProjectDescription').value = projectRecord.description || '';
+  document.getElementById('editWaterStatus').value = projectRecord.utilityAccounts?.water?.status || 'unknown';
+  document.getElementById('editGasStatus').value = projectRecord.utilityAccounts?.gas?.status || 'unknown';
+  document.getElementById('editElectricityStatus').value = projectRecord.utilityAccounts?.electricity?.status || 'unknown';
 
   // Submit handler
   document.getElementById('projectEditForm').onsubmit = async function(e) {
     e.preventDefault();
-    const updatedProject = {
+    const projectPayload = {
       name: document.getElementById('editProjectName').value,
       status: document.getElementById('editProjectStatus').value,
       color: document.getElementById('editProjectColor').value,
@@ -1014,31 +1177,53 @@ function openProjectEditModal(project) {
       },
       description: document.getElementById('editProjectDescription').value,
       utilityAccounts: {
-        water: { ...project.utilityAccounts?.water, status: document.getElementById('editWaterStatus').value },
-        gas: { ...project.utilityAccounts?.gas, status: document.getElementById('editGasStatus').value },
-        electricity: { ...project.utilityAccounts?.electricity, status: document.getElementById('editElectricityStatus').value }
+        water: { ...projectRecord.utilityAccounts?.water, status: document.getElementById('editWaterStatus').value },
+        gas: { ...projectRecord.utilityAccounts?.gas, status: document.getElementById('editGasStatus').value },
+        electricity: { ...projectRecord.utilityAccounts?.electricity, status: document.getElementById('editElectricityStatus').value }
       }
     };
+
     try {
-      await fetch(`/api/projects/${project._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedProject)
-      });
-      // Optionally update only utilityAccounts (if you have a dedicated endpoint)
-      await fetch(`/api/projects/${project._id}/utilities`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ utilityAccounts: updatedProject.utilityAccounts })
-      });
+      if (isEditing) {
+        const updateResponse = await fetch(`/api/projects/${projectRecord._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(projectPayload)
+        });
+
+        if (!updateResponse.ok) {
+          throw new Error('Failed to update project');
+        }
+
+        const utilitiesResponse = await fetch(`/api/projects/${projectRecord._id}/utilities`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ utilityAccounts: projectPayload.utilityAccounts })
+        });
+
+        if (!utilitiesResponse.ok) {
+          throw new Error('Failed to update utilities');
+        }
+      } else {
+        const createResponse = await fetch('/api/add-project', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(projectPayload)
+        });
+
+        if (!createResponse.ok) {
+          throw new Error('Failed to create project');
+        }
+      }
+
       modal.style.display = 'none';
-      showToast('Project updated!');
+      showToast(isEditing ? 'Project updated!' : 'Project created!');
       loadProjects();
       loadUpcomingProjects();
       loadOnMarketProjects();
       loadCompletedProjects();
     } catch (err) {
-      showToast('Failed to update project.');
+      showToast(isEditing ? 'Failed to update project.' : 'Failed to create project.');
     }
   };
 
@@ -1062,6 +1247,7 @@ function addEditIconToProjectCard(itemDiv, project) {
   itemDiv.style.position = 'relative';
   itemDiv.appendChild(editIcon);
 }
+
 
     
 
@@ -4019,15 +4205,66 @@ customReportForm.onsubmit = async (e) => {
 
 
 // Highlight active toolbar icon based on page
+function setMobileToolbarState(activeId) {
+  document.querySelectorAll('.bottom-toolbar .toolbar-icon').forEach(icon => icon.classList.remove('active', 'is-open'));
+  if (!activeId) return;
+  const target = document.getElementById(activeId);
+  if (!target) return;
+  target.classList.add('active');
+  if (activeId === 'toolbar-add' || activeId === 'toolbar-more') {
+    target.classList.add('is-open');
+  }
+}
+
+function closeMobileAddMenu() {
+  const addModal = document.getElementById('mobileAddModal');
+  if (addModal) addModal.style.display = 'none';
+  document.body.classList.remove('mobile-toolbar-modal-open');
+  setActiveToolbarIcon();
+}
+
+function closeMobileMenu() {
+  const menuModal = document.getElementById('mobileMenuModal');
+  if (menuModal) menuModal.style.display = 'none';
+  document.body.classList.remove('mobile-toolbar-modal-open');
+  setActiveToolbarIcon();
+}
+
+function closeMobileToolbarOverlays() {
+  closeMobileAddMenu();
+  closeMobileMenu();
+}
+
+let lastMobileToolbarScrollY = window.scrollY;
+
+function syncMobileToolbarScrollState() {
+  if (window.innerWidth > 768 || document.body.classList.contains('mobile-toolbar-modal-open')) {
+    document.body.classList.remove('mobile-toolbar-scrolled');
+    lastMobileToolbarScrollY = window.scrollY;
+    return;
+  }
+
+  const currentScrollY = window.scrollY;
+  const scrollDelta = currentScrollY - lastMobileToolbarScrollY;
+
+  if (currentScrollY <= 24 || scrollDelta < -6) {
+    document.body.classList.remove('mobile-toolbar-scrolled');
+  } else if (currentScrollY > 48 && scrollDelta > 6) {
+    document.body.classList.add('mobile-toolbar-scrolled');
+  }
+
+  lastMobileToolbarScrollY = currentScrollY;
+}
+
 function setActiveToolbarIcon() {
-  document.querySelectorAll('.bottom-toolbar .toolbar-icon').forEach(icon => icon.classList.remove('active'));
+  document.querySelectorAll('.bottom-toolbar .toolbar-icon').forEach(icon => icon.classList.remove('active', 'is-open'));
   const path = window.location.pathname;
-  if (path.includes('property-management.html')) {
-    document.getElementById('toolbar-rentals').classList.add('active');
+  if (path.endsWith('/') || path.endsWith('/index.html') || path.endsWith('index.html') || path === '/') {
+    document.getElementById('toolbar-home')?.classList.add('active');
   } else if (path.includes('quotes.html')) {
-    document.getElementById('toolbar-quotes').classList.add('active');
+    document.getElementById('toolbar-quotes')?.classList.add('active');
   } else if (path.includes('daily')) {
-    document.getElementById('toolbar-daily').classList.add('active');
+    document.getElementById('toolbar-daily')?.classList.add('active');
   }
 }
 
@@ -4035,6 +4272,13 @@ function setActiveToolbarIcon() {
 document.addEventListener('DOMContentLoaded', setActiveToolbarIcon);
 
 function openAddMenu() {
+      const existingModal = document.getElementById('mobileAddModal');
+  if (existingModal && existingModal.style.display === 'flex') {
+    closeMobileAddMenu();
+    return;
+  }
+
+  closeMobileMenu();
   let addModal = document.getElementById('mobileAddModal');
   if (!addModal) {
     addModal = document.createElement('div');
@@ -4058,10 +4302,10 @@ function openAddMenu() {
           position: absolute; top: 16px; right: 22px; font-size: 2rem; color: #2563eb; cursor: pointer; font-weight: bold; opacity: 0.85; transition: color 0.2s;
         ">&times;</span>
         <h3 style="margin-bottom:18px; color:#2563eb; font-size:1.18rem;">Quick Add</h3>
-        <div style="display: flex; flex-direction: column; gap: 16px;">
+         <div style="display: flex; flex-direction: column; gap: 16px;">
           <a href="createquote.html" class="toolbar-icon menu-link"><i class="fas fa-file-invoice-dollar"></i> <span>New Quote</span></a>
-          <a href="add-project.html" class="toolbar-icon menu-link"><i class="fas fa-tasks"></i> <span>New Job</span></a>
-          <a href="add-client.html" class="toolbar-icon menu-link"><i class="fas fa-user-plus"></i> <span>New Client</span></a>
+          <a href="#" class="toolbar-icon menu-link" onclick="closeMobileAddMenu(); openNewProjectModal(); return false;"><i class="fas fa-tasks"></i> <span>New Job</span></a>
+          <a href="#" class="toolbar-icon menu-link" onclick="closeMobileAddMenu(); openNewClientModal(); return false;"><i class="fas fa-user-plus"></i> <span>New Client</span></a>
         </div>
       </div>
       <style>
@@ -4100,16 +4344,21 @@ function openAddMenu() {
     `;
     document.body.appendChild(addModal);
 
-    document.getElementById('closeMobileAddMenu').onclick = () => addModal.style.display = 'none';
+    document.getElementById('closeMobileAddMenu').onclick = () => closeMobileAddMenu();
     addModal.onclick = (e) => {
-      if (e.target === addModal) addModal.style.display = 'none';
+      if (e.target === addModal) closeMobileAddMenu();
     };
-  } else {
-    addModal.style.display = 'flex';
   }
+
+  addModal.style.display = 'flex';
+  document.body.classList.add('mobile-toolbar-modal-open');
+  setMobileToolbarState('toolbar-add');
 }
 
 function navigateToDailyUpdates() {
+      closeMobileToolbarOverlays();
+  setMobileToolbarState('toolbar-daily');
+    
   const dailyUpdatesPanelEl = document.getElementById('daily-updates-panel');
   if (dailyUpdatesPanelEl) {
     dailyUpdatesPanelEl.style.display = '';
@@ -4165,10 +4414,27 @@ document.addEventListener('DOMContentLoaded', function() {
       navigateToDailyUpdates();
     });
   }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeMobileToolbarOverlays();
+    }
+  });
+
+  window.addEventListener('scroll', syncMobileToolbarScrollState, { passive: true });
+  window.addEventListener('resize', syncMobileToolbarScrollState);
+  syncMobileToolbarScrollState();
 });
 
 // --- Mobile "More" Toolbar Menu ---
 function openMobileMenu() {
+      const existingModal = document.getElementById('mobileMenuModal');
+  if (existingModal && existingModal.style.display === 'flex') {
+    closeMobileMenu();
+    return;
+  }
+
+  closeMobileAddMenu();
   let menuModal = document.getElementById('mobileMenuModal');
   if (!menuModal) {
     menuModal = document.createElement('div');
@@ -4238,7 +4504,7 @@ function openMobileMenu() {
       const diff = currentY - startY;
       if (diff > 80) {
         // If swiped down enough, close modal
-        menuModal.style.display = 'none';
+        closeMobileMenu();
         content.style.transform = '';
         content.style.opacity = '';
       } else {
@@ -4251,7 +4517,7 @@ function openMobileMenu() {
 
     // Also close when tapping outside the modal content
     menuModal.onclick = (e) => {
-      if (e.target === menuModal) menuModal.style.display = 'none';
+      if (e.target === menuModal) closeMobileMenu();
     };
 
     // Reports button logic
@@ -4259,7 +4525,7 @@ function openMobileMenu() {
     if (openCustomReportMobile) {
       openCustomReportMobile.onclick = async function(e) {
         e.preventDefault();
-        menuModal.style.display = 'none';
+       closeMobileMenu();
         await openCustomReportModalLogic();
       };
     }
@@ -4268,7 +4534,7 @@ function openMobileMenu() {
     if (assignmentsLink) {
       assignmentsLink.addEventListener('click', (e) => {
         e.preventDefault();
-        menuModal.style.display = 'none';
+        closeMobileMenu();
         showAssignmentsSection();
       });
     }
@@ -4277,30 +4543,24 @@ function openMobileMenu() {
     if (dailyUpdatesLink) {
       dailyUpdatesLink.addEventListener('click', (e) => {
         e.preventDefault();
-        menuModal.style.display = 'none';
+       closeMobileMenu();
         navigateToDailyUpdates();
       });
     }
 
     menuModal.querySelectorAll('.mobile-menu-links a').forEach(link => {
       link.addEventListener('click', () => {
-        menuModal.style.display = 'none';
+       closeMobileMenu();
       });
     });
   }
+    
   menuModal.style.display = 'flex';
+    
+  document.body.classList.add('mobile-toolbar-modal-open');
+  setMobileToolbarState('toolbar-more');
 }
 
-// Attach event to More icon (wait for DOMContentLoaded)
-document.addEventListener('DOMContentLoaded', function() {
-  const toolbarMore = document.getElementById('toolbar-more');
-  if (toolbarMore) {
-    toolbarMore.addEventListener('click', function(e) {
-      e.preventDefault();
-      openMobileMenu();
-    });
-  }
-});
 
 
 
