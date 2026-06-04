@@ -24,34 +24,203 @@
     }
     .sidebar {
       width: 280px;
-      background: #f1f5f9;
+      background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
       padding: 1rem;
-      border-right: 2px solid #e2e8f0;
+      border-right: 1px solid #d8e7f8;
       overflow-y: auto;
+      box-shadow: inset -1px 0 0 rgba(255,255,255,0.7);
     }
     .sidebar h2 {
       font-size: 20px;
       margin-bottom: 10px;
       font-weight: 700;
     }
+    .sidebar-header {
+      position: sticky;
+      top: 0;
+      background: rgba(248, 250, 252, 0.94);
+      backdrop-filter: blur(10px);
+      padding-bottom: 12px;
+      z-index: 2;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .sidebar-header-top {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .sidebar-home-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      text-decoration: none;
+      background: rgba(255,255,255,0.92);
+      color: #0f172a;
+      border: 1px solid #dbe7f3;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+      font-weight: 700;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+    .sidebar-home-link:hover {
+      transform: translateY(-1px);
+      border-color: #7dd3fc;
+      box-shadow: 0 12px 22px rgba(14, 165, 233, 0.14);
+    }
+    .sidebar-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 10px 0;
+    }
+    .sidebar-title-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #dbeafe, #eff6ff);
+      color: #0284c7;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 10px 18px rgba(14, 165, 233, 0.10);
+      font-size: 18px;
+      flex-shrink: 0;
+    }
     .carpet {
       padding: 10px 12px;
-      margin-bottom: 6px;
-      border-radius: 8px;
-      background: #fff;
+      margin-bottom: 8px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      box-shadow: 0 8px 18px rgba(14, 165, 233, 0.06);
+      backdrop-filter: blur(10px);
       cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: center;
       font-weight: 500;
-      transition: all 0.3s ease;
+      transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, border-color 0.22s ease;
     }
     .carpet:hover {
-      background: #e0f2fe;
+      background: linear-gradient(135deg, rgba(224, 242, 254, 0.95), rgba(255, 255, 255, 0.98));
+      border-color: rgba(14, 165, 233, 0.28);
+      box-shadow: 0 14px 24px rgba(14, 165, 233, 0.12);
+      transform: translateX(3px);
     }
     .carpet.selected {
-      background: #bae6fd;
+      background: linear-gradient(135deg, #d7f0ff 0%, #f5fbff 100%);
+      border-color: rgba(14, 165, 233, 0.38);
+      box-shadow: 0 16px 28px rgba(14, 165, 233, 0.15);
       font-weight: 600;
+    }
+    .folder-wrapper {
+      position: relative;
+    }
+    .folder-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+    }
+    .folder-handle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+      padding: 2px 0;
+      cursor: grab;
+      user-select: none;
+    }
+    .folder-handle:active {
+      cursor: grabbing;
+    }
+    .folder-glyph {
+      width: 34px;
+      height: 34px;
+      border-radius: 11px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #dbeafe, #eff6ff);
+      color: #0369a1;
+      flex-shrink: 0;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+      font-size: 18px;
+    }
+    .folder-wrapper[data-system-folder='true'] .folder-glyph {
+      background: linear-gradient(135deg, #e0f2fe, #ecfeff);
+      color: #0f766e;
+    }
+    .folder-name-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #0f172a;
+      letter-spacing: 0.01em;
+    }
+    .folder-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      opacity: 0;
+      transform: translateX(6px);
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .folder-wrapper:hover .folder-actions,
+    .folder-wrapper:focus-within .folder-actions {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+    .folder-action-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(255,255,255,0.94);
+      color: #334155;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+      transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+    }
+    .folder-action-btn:hover {
+      transform: translateY(-1px) scale(1.04);
+      background: #ffffff;
+    }
+    .folder-action-btn.delete {
+      color: #dc2626;
+    }
+    .folder-chevron {
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      color: #64748b;
+      flex-shrink: 0;
+      box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+      transition: color 0.2s ease, transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+    .folder-wrapper:hover .folder-chevron,
+    .folder-wrapper:focus-within .folder-chevron {
+      color: #0ea5e9;
+      background: #ffffff;
+      border-color: rgba(14, 165, 233, 0.24);
+    }
+    .folder-chevron.expanded {
+      transform: rotate(90deg);
     }
     .carpet span {
       display: flex;
@@ -96,7 +265,7 @@
       color: white;
       border: none;
       border-radius: 6px;
-      padding: 10px 16px;
+      padding: 4px 9px;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
@@ -109,20 +278,157 @@
       width: 100%;
       border-collapse: collapse;
       min-width: 600px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
     }
     .file-table th, .file-table td {
       padding: 14px;
       text-align: left;
     }
     .file-table thead {
-      background: #f1f5f9;
+      background: linear-gradient(180deg, #f8fafc 0%, #eef6ff 100%);
       font-weight: 600;
     }
     .file-table tbody tr {
       border-bottom: 1px solid #e2e8f0;
+      transition: background 0.18s ease, transform 0.18s ease;
     }
     .file-table tbody tr:hover {
-      background: #f8fafc;
+      background: #f8fbff;
+    }
+    .file-table tbody tr:last-child {
+      border-bottom: none;
+    }
+    .file-name-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: #0f172a;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .file-name-link:hover {
+      color: #0284c7;
+    }
+    .file-type-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: #edf7ff;
+      color: #0369a1;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+    .view-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px;
+      background: #eaf2fb;
+      border: 1px solid #d8e7f8;
+      border-radius: 12px;
+    }
+    .view-toggle button {
+      background: transparent;
+      color: #475569;
+      border: none;
+      border-radius: 10px;
+      padding: 9px 14px;
+      font-weight: 700;
+      box-shadow: none;
+    }
+    .view-toggle button:hover {
+      background: rgba(255,255,255,0.85);
+      color: #0f172a;
+    }
+    .view-toggle button.active {
+      background: #ffffff;
+      color: #0369a1;
+      box-shadow: 0 8px 20px rgba(14, 165, 233, 0.14);
+    }
+    .file-grid {
+      display: none;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 18px;
+      padding: 20px;
+    }
+    .file-grid.active {
+      display: grid;
+    }
+    .grid-card {
+      position: relative;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border: 1px solid #dbe7f3;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 16px 30px rgba(15, 23, 42, 0.07);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      min-height: 210px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .grid-card:hover {
+      transform: translateY(-3px);
+      border-color: #7dd3fc;
+      box-shadow: 0 20px 36px rgba(14, 165, 233, 0.12);
+    }
+    .grid-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .grid-file-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #dbeafe, #eff6ff);
+      color: #0369a1;
+      font-size: 28px;
+      flex-shrink: 0;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 14px 22px rgba(14, 165, 233, 0.12);
+    }
+    .grid-card-title {
+      margin: 0;
+      font-size: 1.02rem;
+      line-height: 1.45;
+      color: #0f172a;
+      word-break: break-word;
+      max-width: 100%;
+    }
+    .grid-card-body {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 14px;
+      min-width: 0;
+    }
+    .grid-card-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.88rem;
+      color: #334155;
+    }
+    .grid-card-footer {
+      margin-top: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .file-table-wrap.hidden {
+      display: none;
     }
     .dropdown {
   position: relative;
@@ -152,7 +458,7 @@
   display: none;
   position: absolute;
   right: 0;
-  top: 120%;
+  top: calc(100% + 6px);
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.06);
@@ -197,7 +503,17 @@
   background: #f1f5f9;
 }
 
-    .dropdown:hover .dropdown-content {
+    .dropdown::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 100%;
+      width: 100%;
+      height: 10px;
+    }
+
+    .dropdown:hover .dropdown-content,
+    .dropdown:focus-within .dropdown-content {
       display: block;
     }
 
@@ -240,6 +556,42 @@
   width: 320px;
 }
 
+    .upload-trigger {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-width: 132px;
+      background: linear-gradient(to right, #0ea5e9, #3b82f6);
+      color: white;
+      border-radius: 10px;
+      font-weight: 600;
+      padding: 10px 18px;
+      cursor: pointer;
+      box-shadow: 0 10px 22px rgba(59, 130, 246, 0.18);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    }
+    .upload-trigger:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 26px rgba(59, 130, 246, 0.24);
+    }
+    .upload-trigger.disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .visually-hidden-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
 
     .sidebar input[type="text"] {
       width: 100%;
@@ -266,6 +618,7 @@
   transition: opacity 0.3s ease, transform 0.3s ease;
   pointer-events: none;
     }
+    
     .spinner {
       display: none;
       position: fixed;
@@ -297,6 +650,9 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 0px;
+      }
+      .file-grid {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -337,9 +693,19 @@
     <div class="toast" id="toast"></div>
     <div class="container">
       <div class="sidebar" ondragover="event.preventDefault()" ondrop="dropToFolder(event)">
-        <div style="position: sticky; top: 0; background: #f8fafc; padding-bottom: 10px; z-index: 2; border-bottom: 1px solid #e2e8f0;">
-          <button onclick="triggerFolderCreate()" style="margin-bottom: 10px; background: linear-gradient(to right, #0ea5e9, #3b82f6); border-radius: 12px; font-weight: 600;">+ Add Folder</button>
-          <h2 style="margin: 0 0 10px 0; font-size: 1.4rem; color: #0ea5e9;">Folders</h2>
+        <div class="sidebar-header">
+          <div class="sidebar-header-top">
+            <a href="home.html" class="sidebar-home-link">
+              <span>⌂</span>
+              <span>Home</span>
+            </a>
+            
+          </div>
+          <div class="sidebar-title-row">
+            <span class="sidebar-title-icon">📁</span>
+            <h2 style="margin: 0; font-size: 1.4rem; color: #0ea5e9;">Folders</h2>
+            <button onclick="triggerFolderCreate()" style="background: linear-gradient(to right, #0ea5e9, #3b82f6); border-radius: 12px; font-weight: 600;">+</button>
+          </div>
           <input type="text" id="folder-search" placeholder="Search files..." oninput="renderFiles()" style="width: 100%; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 12px; background: #ffffff; color: #0f172a; font-size: 1rem;" />
         </div>
         <div id="carpet-list"></div>
@@ -355,21 +721,46 @@
 
             <span id="active-folder-name">No folder selected</span>
           </h3>
-          <div>
-            <input type="file" id="file-input" multiple style="padding: 10px; border-radius: 12px; border: 1px solid #cbd5e1; background: #ffffff; margin-right: 10px;" />
-            <button onclick="uploadFile()" style="background: linear-gradient(to right, #0ea5e9, #3b82f6); color: white; border-radius: 10px; font-weight: 600; padding: 10px 20px;">Upload</button>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+            <div id="folder-filter-group" style="display:none; align-items:center; gap:10px;">
+              <select id="property-filter" onchange="renderFiles()" style="padding: 10px 12px; border-radius: 10px; border: 1px solid #cbd5e1; background: #ffffff; min-width: 220px;">
+                <option value="">All Properties</option>
+              </select>
+              <select id="document-type-filter" onchange="renderFiles()" style="padding: 10px 12px; border-radius: 10px; border: 1px solid #cbd5e1; background: #ffffff; min-width: 180px;">
+                <option value="">All Document Types</option>
+              </select>
+            </div>
+
+            <div class="view-toggle" aria-label="View mode">
+              <button id="list-view-button" type="button" class="active" onclick="setViewMode('list')">List</button>
+              <button id="grid-view-button" type="button" onclick="setViewMode('grid')">Grid</button>
+            </div>
+
+            <button id="share-folder-button" onclick="shareCurrentFolder()" style="background:white; color:#0ea5e9; border:1px solid #7dd3fc; border-radius:10px; font-weight:600; padding:10px 16px; cursor:pointer;">Share Folder</button>
+            <label id="upload-button" class="upload-trigger" for="file-input">Upload Files</label>
+            <input type="file" id="file-input" class="visually-hidden-input" multiple onchange="uploadFile()" />
+            
           </div>
         </div>
-    
+
+              <div id="selection-actions" style="display:none; align-items:center; gap:10px; background:#e0f2fe; border:1px solid #bae6fd; border-radius:12px; padding:8px 10px;">
+              <span id="selection-count" style="font-weight:600; color:#0f172a; min-width:90px;">0 selected</span>
+              <button onclick="shareSelectedFiles()" style="background:white; color:#0ea5e9; border:none; padding:10px 16px; border-radius:10px; cursor:pointer;">Share Selected</button>
+              <button onclick="downloadSelectedFiles()" style="background:white; color:#0ea5e9; border:none; padding:10px 16px; border-radius:10px; cursor:pointer;">Download</button>
+              <button onclick="deleteSelectedFiles()" style="background:white; color:#0ea5e9; border:none; padding:10px 16px; border-radius:10px; cursor:pointer;">Delete</button>
+            </div>
+
+            
         <div class="file-list" style="padding: 20px;">
+          <div id="file-table-wrap" class="file-table-wrap">
           <table class="file-table" style="width: 100%; background-color: #ffffff; border-collapse: collapse; font-size: 0.95rem; color: #0f172a;">
             <thead>
               <tr>
                 <th style="background: #f1f5f9; border: 1px solid #e2e8f0;"><input type="checkbox" onclick="selectAllFiles(this.checked)" /></th>
                 <th style="cursor:pointer; background: #f1f5f9; border: 1px solid #e2e8f0;" onclick="toggleSort('name')">Name <span id="sort-name-arrow"></span></th>
                 <th style="cursor:pointer; background: #f1f5f9; border: 1px solid #e2e8f0;" onclick="toggleSort('date')">Date Modified <span id="sort-date-arrow"></span></th>
-                <th style="background: #f1f5f9; border: 1px solid #e2e8f0;">Type</th>
-                <th style="background: #f1f5f9; border: 1px solid #e2e8f0;">Size</th>
+                <th id="type-column-header" style="background: #f1f5f9; border: 1px solid #e2e8f0;">Type</th>
+                <th id="meta-column-header" style="background: #f1f5f9; border: 1px solid #e2e8f0;">Size</th>
                 <th style="background: #f1f5f9; border: 1px solid #e2e8f0;">Actions</th>
               </tr>
             </thead>
@@ -377,13 +768,10 @@
               <tr><td colspan="6" style="text-align:center; padding: 20px;">Select a folder to see files.</td></tr>
             </tbody>
           </table>
+          </div>
+          <div id="file-grid" class="file-grid"></div>
         </div>
       </div>
-    </div>
-    
-    <!-- Floating Toolbar -->
-    <div id="bulk-toolbar" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#0ea5e9; color:white; padding:10px 20px; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,0.1); z-index:1000; gap:10px; display:flex; flex-wrap:wrap; justify-content:center; font-weight:600;">
-      <button onclick="deleteSelectedFiles()" style="background:white; color:#0ea5e9; border:none; padding:10px 16px; border-radius:10px; cursor:pointer;">Delete Selected</button>
     </div>
     
     <script>
@@ -407,6 +795,9 @@
           document.getElementById('active-folder-name').textContent = currentFolder.name;
           document.getElementById('back-folder-icon').style.display = currentFolder.parentId ? 'inline' : 'none';
         }
+
+        syncFolderUrl();
+        updateFolderActionState();
       }
     </script>
     <script>
@@ -418,19 +809,23 @@
         
           Sortable.create(el, {
             animation: 150,
-            handle: ".drag-corner",  // ✅ Drag only from the corner icon
+            handle: ".folder-handle",
             ghostClass: "drag-ghost",
-            filter: ".no-drag",       // ✅ Prevent dragging when clicking buttons or other UI
+            filter: ".no-drag",
             onStart: () => {
               document.body.classList.add("dragging-folders");
             },
             onEnd: async function () {
               document.body.classList.remove("dragging-folders");
         
-              const order = [...el.children].map((div, index) => ({
-                _id: div.getAttribute("data-folder-id"),
-                position: index
-              }));
+                const order = [...el.children]
+                  .map((div, index) => ({
+                    _id: div.getAttribute("data-folder-id"),
+                    isSystem: div.getAttribute('data-system-folder') === 'true',
+                    position: index
+                  }))
+                  .filter(item => item._id && !item.isSystem)
+                  .map((item, index) => ({ _id: item._id, position: index }));
         
               try {
                 await fetch('/api/folders/reorder', {
@@ -471,6 +866,179 @@
     
     let folders = [];
     let currentFolder = null;
+    let currentRenderedFiles = [];
+    let currentViewMode = 'list';
+
+    function getFolderShareUrl(folderId = currentFolder?._id) {
+      if (!folderId) return window.location.href;
+      const url = new URL(window.location.href);
+      url.searchParams.set('folder', folderId);
+      return url.toString();
+    }
+
+    function syncFolderUrl() {
+      if (!currentFolder?._id || !window.history?.replaceState) return;
+      window.history.replaceState({}, '', getFolderShareUrl(currentFolder._id));
+    }
+
+    async function copyTextToClipboard(text) {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', 'readonly');
+      textarea.style.position = 'absolute';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const copied = document.execCommand('copy');
+      textarea.remove();
+      return copied;
+    }
+
+    async function shareCurrentFolder() {
+      if (!currentFolder?._id) return showToast('No folder selected.');
+
+      try {
+        await copyTextToClipboard(getFolderShareUrl(currentFolder._id));
+        showToast('Folder link copied to clipboard');
+      } catch {
+        showToast('Could not copy folder link');
+      }
+    }
+
+    function isSystemFolder(folder = currentFolder) {
+      return Boolean(folder && folder.isSystem);
+    }
+
+    function formatDocumentTypeLabel(type) {
+      const value = String(type || 'other');
+      return value.charAt(0).toUpperCase() + value.slice(1);
+    }
+
+    function setViewMode(mode) {
+      currentViewMode = mode === 'grid' ? 'grid' : 'list';
+      updateViewToggle();
+      renderFiles();
+    }
+
+    function updateViewToggle() {
+      const listButton = document.getElementById('list-view-button');
+      const gridButton = document.getElementById('grid-view-button');
+      if (listButton) listButton.classList.toggle('active', currentViewMode === 'list');
+      if (gridButton) gridButton.classList.toggle('active', currentViewMode === 'grid');
+    }
+
+    function getSelectedFileDescriptors() {
+      return [...document.querySelectorAll('.file-checkbox:checked')].map(cb => ({
+        sourceIndex: cb.dataset.index === '' ? null : Number(cb.dataset.index),
+        documentId: cb.dataset.documentId || '',
+        projectId: cb.dataset.projectId || '',
+        downloadUrl: cb.dataset.downloadUrl || cb.dataset.url || '',
+        url: cb.dataset.url || '',
+        name: cb.dataset.name || '',
+        isSystem: cb.dataset.system === 'true'
+      }));
+    }
+
+    function updateFilterControls() {
+      const propertyFilter = document.getElementById('property-filter');
+      const documentTypeFilter = document.getElementById('document-type-filter');
+      if (!propertyFilter || !documentTypeFilter) return;
+
+      if (!isSystemFolder() || !currentFolder) {
+        propertyFilter.innerHTML = '<option value="">All Properties</option>';
+        documentTypeFilter.innerHTML = '<option value="">All Document Types</option>';
+        propertyFilter.disabled = true;
+        documentTypeFilter.disabled = true;
+        propertyFilter.value = '';
+        documentTypeFilter.value = '';
+        return;
+      }
+
+      const currentPropertyValue = propertyFilter.value;
+      const currentTypeValue = documentTypeFilter.value;
+      const propertyOptions = [...new Set((currentFolder.files || []).map(file => file.propertyLabel).filter(Boolean))].sort();
+      const typeOptions = [...new Set((currentFolder.files || []).map(file => file.type).filter(Boolean))].sort();
+
+      propertyFilter.innerHTML = '<option value="">All Properties</option>' + propertyOptions.map(label => `<option value="${label}">${label}</option>`).join('');
+      documentTypeFilter.innerHTML = '<option value="">All Document Types</option>' + typeOptions.map(type => `<option value="${type}">${formatDocumentTypeLabel(type)}</option>`).join('');
+
+      propertyFilter.disabled = false;
+      documentTypeFilter.disabled = false;
+      propertyFilter.value = propertyOptions.includes(currentPropertyValue) ? currentPropertyValue : '';
+      documentTypeFilter.value = typeOptions.includes(currentTypeValue) ? currentTypeValue : '';
+    }
+
+    function updateTableHeaders() {
+      const typeHeader = document.getElementById('type-column-header');
+      const metaHeader = document.getElementById('meta-column-header');
+      if (!typeHeader || !metaHeader) return;
+
+      if (isSystemFolder()) {
+        typeHeader.textContent = 'Document Type';
+        metaHeader.textContent = 'Property';
+      } else {
+        typeHeader.textContent = 'Type';
+        metaHeader.textContent = 'Size';
+      }
+    }
+
+    function triggerDownload(url, filename) {
+      if (!url) return;
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename || '';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
+    function updateFolderActionState() {
+      const fileInput = document.getElementById('file-input');
+      const uploadButton = document.getElementById('upload-button');
+      const propertyFilter = document.getElementById('property-filter');
+      const documentTypeFilter = document.getElementById('document-type-filter');
+      const filterGroup = document.getElementById('folder-filter-group');
+      const shareFolderButton = document.getElementById('share-folder-button');
+      const readOnly = !currentFolder || isSystemFolder();
+      const showFolderFilters = Boolean(currentFolder && isSystemFolder());
+      const showUploadButton = Boolean(currentFolder && !isSystemFolder());
+
+      if (fileInput) {
+        fileInput.disabled = readOnly;
+        fileInput.title = readOnly ? 'Property documents are managed from the Property Management documents tab.' : '';
+      }
+
+      if (uploadButton) {
+        uploadButton.classList.toggle('disabled', readOnly);
+        uploadButton.setAttribute('aria-disabled', readOnly ? 'true' : 'false');
+        uploadButton.title = readOnly ? 'Upload property documents from the Property Management documents tab.' : 'Choose files to upload';
+        uploadButton.style.display = showUploadButton ? 'inline-flex' : 'none';
+      }
+
+      if (propertyFilter) {
+        propertyFilter.disabled = !isSystemFolder();
+      }
+
+      if (documentTypeFilter) {
+        documentTypeFilter.disabled = !isSystemFolder();
+      }
+
+      if (filterGroup) {
+        filterGroup.style.display = showFolderFilters ? 'flex' : 'none';
+      }
+
+      if (shareFolderButton) {
+        shareFolderButton.style.display = currentFolder ? 'inline-flex' : 'none';
+      }
+
+      updateFilterControls();
+      updateTableHeaders();
+    }
     
     function getSelectedFileIndexes() {
   return [...document.querySelectorAll('.file-checkbox:checked')].map(cb => parseInt(cb.dataset.index));
@@ -483,12 +1051,21 @@ function selectAllFiles(checked) {
 
 
 function toggleFloatingToolbar() {
-  const toolbar = document.getElementById('bulk-toolbar');
-  toolbar.style.display = getSelectedFileIndexes().length > 0 ? 'flex' : 'none';
+  const toolbar = document.getElementById('selection-actions');
+  const selectionCount = document.getElementById('selection-count');
+  const selectedCount = getSelectedFileDescriptors().length;
+
+  if (toolbar) {
+    toolbar.style.display = selectedCount > 0 ? 'flex' : 'none';
+  }
+
+  if (selectionCount) {
+    selectionCount.textContent = `${selectedCount} selected`;
+  }
 }
 
 async function deleteSelectedFiles() {
-  const selected = getSelectedFileIndexes();
+  const selected = getSelectedFileDescriptors();
   if (!selected.length) {
     toggleFloatingToolbar();
     return showToast('Select at least one file.');
@@ -496,11 +1073,20 @@ async function deleteSelectedFiles() {
 
   showSpinner();
   try {
-    await fetch(`/api/folders/${currentFolder._id}/delete-files`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ indexes: selected })
-    });
+    if (isSystemFolder()) {
+      const responses = await Promise.all(selected.map(file => fetch(`/api/properties/${file.projectId}/documents/${file.documentId}`, {
+        method: 'DELETE'
+      })));
+      if (responses.some(response => !response.ok)) throw new Error('Delete failed');
+    } else {
+      const indexes = selected.map(file => file.sourceIndex);
+      const response = await fetch(`/api/folders/${currentFolder._id}/delete-files`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ indexes })
+      });
+      if (!response.ok) throw new Error('Delete failed');
+    }
 
     await fetchFolders(currentFolder._id);
     showToast('Selected files deleted');
@@ -509,6 +1095,31 @@ async function deleteSelectedFiles() {
   } finally {
     hideSpinner();
     toggleFloatingToolbar();
+  }
+}
+
+function downloadSelectedFiles() {
+  const selected = getSelectedFileDescriptors();
+  if (!selected.length) {
+    return showToast('Select at least one file.');
+  }
+
+  selected.forEach(file => triggerDownload(file.downloadUrl || file.url, file.name));
+  showToast(selected.length === 1 ? 'Download started' : 'Downloads started');
+}
+
+async function shareSelectedFiles() {
+  const selected = getSelectedFileDescriptors();
+  if (!selected.length) {
+    return showToast('Select at least one file.');
+  }
+
+  const links = selected.map(file => new URL(file.url || file.downloadUrl, window.location.origin).toString()).join('\n');
+  try {
+    await copyTextToClipboard(links);
+    showToast(selected.length === 1 ? 'File link copied to clipboard' : 'File links copied to clipboard');
+  } catch {
+    showToast('Could not copy selected links');
   }
 }
 
@@ -535,6 +1146,7 @@ async function fetchFolders(selectFolderId = null) {
   try {
     const res = await fetch('/api/folders');
     folders = await res.json();
+    const sharedFolderId = new URLSearchParams(window.location.search).get('folder');
 
     // Normalize all parentId values to strings for accurate matching
     folders.forEach(folder => {
@@ -543,9 +1155,14 @@ async function fetchFolders(selectFolderId = null) {
       }
     });
 
+    if (currentFolder) {
+      currentFolder = folders.find(folder => String(folder._id) === String(currentFolder._id)) || currentFolder;
+    }
+
     renderFolders(); // ✅ renders sidebar
-    if (selectFolderId) {
-      const match = folders.find(f => f._id === selectFolderId);
+    const nextFolderId = selectFolderId || sharedFolderId;
+    if (nextFolderId) {
+      const match = folders.find(f => String(f._id) === String(nextFolderId));
       if (match) {
         currentFolder = match;
         updateActiveFolderUI();
@@ -626,7 +1243,7 @@ function highlightNewFolder(folderId) {
 async function uploadFile() {
   const input = document.getElementById('file-input');
   const files = Array.from(input.files);
-  if (!files.length || !currentFolder) return;
+  if (!files.length || !currentFolder || isSystemFolder()) return;
 
   showSpinner();
   try {
@@ -691,6 +1308,8 @@ function renderFolders(parentId = null, container = null, level = 0) {
     .forEach((folder) => {
       const wrapper = document.createElement('div');
       wrapper.className = 'folder-wrapper';
+      wrapper.setAttribute('data-folder-id', folder._id);
+      wrapper.setAttribute('data-system-folder', folder.isSystem ? 'true' : 'false');
 
       const div = document.createElement('div');
       div.className = 'carpet' + (currentFolder && currentFolder._id === folder._id ? ' selected' : '');
@@ -712,23 +1331,28 @@ function renderFolders(parentId = null, container = null, level = 0) {
       leftGroup.style.flexGrow = '1';
 
       const twisty = document.createElement('span');
-      twisty.textContent = expandedFolderIds.has(folder._id) ? '▾' : '▸';
+      twisty.textContent = '›';
       twisty.style.cursor = 'pointer';
       twisty.style.userSelect = 'none';
 
       const span = document.createElement('span');
+      span.className = 'folder-handle';
       span.style.cursor = 'pointer';
       span.style.display = 'flex';
       span.style.alignItems = 'center';
       span.style.gap = '6px';
       span.style.flexGrow = '1';
 
+      const iconBadge = document.createElement('span');
+      iconBadge.className = 'folder-glyph';
+      iconBadge.textContent = '📁';
+
       const folderTextEl = document.createElement('strong');
       folderTextEl.className = 'folder-name-text';
       folderTextEl.textContent = folder.name;
 
       span.innerHTML = '';
-      span.appendChild(document.createTextNode('📁'));
+      span.appendChild(iconBadge);
       span.appendChild(folderTextEl);
 
       span.addEventListener('click', () => {
@@ -792,14 +1416,9 @@ function renderFolders(parentId = null, container = null, level = 0) {
         input.focus();
       });
 
-      const dragIcon = document.createElement('span');
-      dragIcon.className = 'drag-corner';
-      dragIcon.textContent = '☰';
-      dragIcon.style.cursor = 'grab';
-      dragIcon.title = 'Drag to reorder';
-
       const addSubBtn = document.createElement('button');
-addSubBtn.title = 'Add Subfolder';
+    addSubBtn.title = 'Add Subfolder';
+    addSubBtn.className = 'folder-action-btn no-drag';
 
 // Apply styles for modern circular design
 Object.assign(addSubBtn.style, {
@@ -836,6 +1455,7 @@ addSubBtn.onclick = (e) => {
 
 
       const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'folder-action-btn delete no-drag';
       deleteBtn.innerHTML = '🗑️';
       deleteBtn.title = 'Delete Folder';
       deleteBtn.style.border = 'none';
@@ -869,17 +1489,20 @@ addSubBtn.onclick = (e) => {
         renderFolders();
       };
 
+      twisty.className = 'folder-chevron' + (expandedFolderIds.has(folder._id) ? ' expanded' : '');
       leftGroup.appendChild(twisty);
       leftGroup.appendChild(span);
-      leftGroup.appendChild(dragIcon);
 
       const rightGroup = document.createElement('div');
+      rightGroup.className = 'folder-actions';
       rightGroup.style.display = 'flex';
       rightGroup.style.alignItems = 'center';
       rightGroup.style.gap = '4px';
 
-      rightGroup.appendChild(addSubBtn);
-      rightGroup.appendChild(deleteBtn);
+      if (!folder.isSystem) {
+        rightGroup.appendChild(addSubBtn);
+        rightGroup.appendChild(deleteBtn);
+      }
 
       headerRow.appendChild(leftGroup);
       headerRow.appendChild(rightGroup);
@@ -959,8 +1582,15 @@ async function renameFolder(folderId) {
     
 function renderFiles() {
   const tbody = document.getElementById('file-table-body');
+  const tableWrap = document.getElementById('file-table-wrap');
+  const grid = document.getElementById('file-grid');
+  let visibleFileCount = 0;
   tbody.innerHTML = '';
+  if (grid) grid.innerHTML = '';
   const searchTerm = document.getElementById('folder-search')?.value.toLowerCase() || '';
+  const readOnlyFolder = isSystemFolder();
+  const propertyFilterValue = document.getElementById('property-filter')?.value || '';
+  const documentTypeFilterValue = document.getElementById('document-type-filter')?.value || '';
 
   if (!currentFolder) {
     tbody.innerHTML = '<tr><td colspan="6">No folder selected.</td></tr>';
@@ -974,10 +1604,24 @@ function renderFiles() {
     return String(f.parentId) === String(currentFolder._id);
   });
 
-  const files = [...currentFolder.files];
+  const files = Array.isArray(currentFolder.files)
+    ? currentFolder.files.map((file, sourceIndex) => ({ ...file, sourceIndex }))
+    : [];
+  currentRenderedFiles = [];
+  updateViewToggle();
+
+  if (tableWrap) tableWrap.classList.toggle('hidden', currentViewMode === 'grid');
+  if (grid) grid.classList.toggle('active', currentViewMode === 'grid');
 
   if (!subfolders.length && !files.length) {
-    tbody.innerHTML = '<tr><td colspan="6">No files or folders in this folder.</td></tr>';
+    const emptyMarkup = readOnlyFolder
+      ? '<tr><td colspan="6">No property documents found.</td></tr>'
+      : '<tr><td colspan="6">No files or folders in this folder.</td></tr>';
+    const emptyGridMarkup = readOnlyFolder
+      ? '<div class="grid-card"><p style="margin:0; color:#475569;">No property documents found.</p></div>'
+      : '<div class="grid-card"><p style="margin:0; color:#475569;">No files or folders in this folder.</p></div>';
+    tbody.innerHTML = emptyMarkup;
+    if (grid) grid.innerHTML = emptyGridMarkup;
     updateSortIndicators();
     return;
   }
@@ -1015,58 +1659,207 @@ function renderFiles() {
   // 📄 Render files
   files.forEach((file, index) => {
     if (searchTerm && !file.name.toLowerCase().includes(searchTerm)) return;
+    if (readOnlyFolder && propertyFilterValue && file.propertyLabel !== propertyFilterValue) return;
+    if (readOnlyFolder && documentTypeFilterValue && file.type !== documentTypeFilterValue) return;
 
-    const row = document.createElement('tr');
-    row.setAttribute('data-index', index);
+    currentRenderedFiles.push(file);
+    visibleFileCount += 1;
 
-    row.innerHTML = `
-      <td>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="drag-corner" style="cursor: grab;" data-drag-handle>☰</span>
-          <input type="checkbox" class="file-checkbox" data-index="${index}" onchange="toggleFloatingToolbar()" />
-        </div>
-      </td>
-      <td><a href="${file.url}" target="_blank" style="text-decoration:underline">📄 ${file.name}</a></td>
-      <td>${file.modified}</td>
-      <td>${file.type}</td>
-      <td>${file.size}</td>
-      <td>
-        <div class="dropdown">
-          <button class="dropdown-toggle" onclick="toggleDropdown(event)">⋮</button>
-          <div class="dropdown-content">
-            <button onclick="event.stopPropagation(); renameFile(${index})">Edit</button>
-            <button onclick="event.stopPropagation(); deleteFile(${index}, event)">Delete</button>
+    if (currentViewMode === 'list') {
+      const row = document.createElement('tr');
+      row.setAttribute('data-index', file.sourceIndex ?? index);
+      row.setAttribute('data-document-id', file.sourceDocumentId || '');
+
+      row.innerHTML = `
+        <td>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            ${readOnlyFolder ? '' : '<span class="drag-corner" style="cursor: grab;" data-drag-handle>☰</span>'}
+            <input type="checkbox" class="file-checkbox" data-index="${file.sourceIndex ?? index}" data-document-id="${file.sourceDocumentId || ''}" data-project-id="${file.projectId || ''}" data-download-url="${file.downloadUrl || file.url || ''}" data-url="${file.url || ''}" data-name="${file.name}" data-system="${readOnlyFolder ? 'true' : 'false'}" onchange="toggleFloatingToolbar()" />
+          </div>
+        </td>
+        <td><a href="${file.url}" target="_blank" class="file-name-link"><span>📄</span><span>${file.name}</span></a></td>
+        <td>${file.modified}</td>
+        <td><span class="file-type-pill">${readOnlyFolder ? formatDocumentTypeLabel(file.type) : (file.displayType || file.type)}</span></td>
+        <td>${readOnlyFolder ? (file.propertyLabel || 'Unknown Property') : file.size}</td>
+        <td>
+          ${readOnlyFolder ? `<div class="dropdown">
+            <button class="dropdown-toggle" onclick="toggleDropdown(event)">⋮</button>
+            <div class="dropdown-content">
+              <button onclick="event.stopPropagation(); triggerDownload('${file.downloadUrl || file.url}', '${file.name.replace(/'/g, "&#39;")}')">Download</button>
+              <button onclick="event.stopPropagation(); renameSystemDocumentInline('${file.projectId}', '${file.sourceDocumentId}')">Rename</button>
+              <button onclick="event.stopPropagation(); deleteSelectedFilesFromRow('${file.projectId}', '${file.sourceDocumentId}')">Delete</button>
+            </div>
+          </div>` : `<div class="dropdown">
+            <button class="dropdown-toggle" onclick="toggleDropdown(event)">⋮</button>
+            <div class="dropdown-content">
+              <button onclick="event.stopPropagation(); renameFile(${file.sourceIndex})">Edit</button>
+              <button onclick="event.stopPropagation(); deleteFile(${file.sourceIndex}, event)">Delete</button>
+            </div>
+          </div>`}
+        </td>
+      `;
+      tbody.appendChild(row);
+    }
+
+    if (grid && currentViewMode === 'grid') {
+      const card = document.createElement('div');
+      card.className = 'grid-card';
+      card.setAttribute('data-index', file.sourceIndex ?? index);
+      card.setAttribute('data-document-id', file.sourceDocumentId || '');
+      card.innerHTML = `
+        <div class="grid-card-header">
+          <div class="grid-file-icon">📄</div>
+          <div class="dropdown">
+            <button class="dropdown-toggle" onclick="toggleDropdown(event)">⋮</button>
+            <div class="dropdown-content">
+              ${readOnlyFolder ? `
+              <button onclick="event.stopPropagation(); triggerDownload('${file.downloadUrl || file.url}', '${file.name.replace(/'/g, "&#39;")}')">Download</button>
+              <button onclick="event.stopPropagation(); renameSystemDocumentInline('${file.projectId}', '${file.sourceDocumentId}')">Rename</button>
+              <button onclick="event.stopPropagation(); deleteSelectedFilesFromRow('${file.projectId}', '${file.sourceDocumentId}')">Delete</button>
+              ` : `
+              <button onclick="event.stopPropagation(); renameFile(${file.sourceIndex})">Edit</button>
+              <button onclick="event.stopPropagation(); deleteFile(${file.sourceIndex}, event)">Delete</button>
+              `}
+            </div>
           </div>
         </div>
-      </td>
-    `;
-    tbody.appendChild(row);
+        <div class="grid-card-body">
+          <h3 class="grid-card-title">${file.name}</h3>
+          <span class="file-type-pill">${readOnlyFolder ? formatDocumentTypeLabel(file.type) : (file.displayType || file.type)}</span>
+        </div>
+        <div class="grid-card-footer">
+          <label class="grid-card-check">
+            <input type="checkbox" class="file-checkbox" data-index="${file.sourceIndex ?? index}" data-document-id="${file.sourceDocumentId || ''}" data-project-id="${file.projectId || ''}" data-download-url="${file.downloadUrl || file.url || ''}" data-url="${file.url || ''}" data-name="${file.name}" data-system="${readOnlyFolder ? 'true' : 'false'}" onchange="toggleFloatingToolbar()" />
+            Select
+          </label>
+          <a href="${file.url}" target="_blank" class="file-name-link" style="font-size:0.88rem;">Open</a>
+        </div>
+      `;
+      grid.appendChild(card);
+    }
   });
+
+  if (visibleFileCount === 0) {
+    const emptyMarkup = readOnlyFolder
+      ? '<tr><td colspan="6">No property documents match the current filters.</td></tr>'
+      : '<tr><td colspan="6">No files match the current search.</td></tr>';
+    const emptyGridMarkup = readOnlyFolder
+      ? '<div class="grid-card"><p style="margin:0; color:#475569;">No property documents match the current filters.</p></div>'
+      : '<div class="grid-card"><p style="margin:0; color:#475569;">No files match the current search.</p></div>';
+    tbody.innerHTML = emptyMarkup;
+    if (grid) grid.innerHTML = emptyGridMarkup;
+  }
 
   updateSortIndicators();
   toggleFloatingToolbar();
 
   // ✅ Enable drag sorting for files
-  Sortable.create(tbody, {
-    animation: 150,
-    handle: '[data-drag-handle]',
-    onEnd: async (evt) => {
-      if (evt.oldIndex !== evt.newIndex) {
-        const moved = currentFolder.files.splice(evt.oldIndex, 1)[0];
-        currentFolder.files.splice(evt.newIndex, 0, moved);
-        try {
-          await fetch(`/api/folders/${currentFolder._id}/reorder-files`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ files: currentFolder.files })
-          });
-          showToast('File order updated');
-        } catch {
-          showToast('Failed to update file order');
+  if (!readOnlyFolder && currentViewMode === 'list') {
+    Sortable.create(tbody, {
+      animation: 150,
+      handle: '[data-drag-handle]',
+      onEnd: async (evt) => {
+        if (evt.oldIndex !== evt.newIndex) {
+          const moved = currentFolder.files.splice(evt.oldIndex, 1)[0];
+          currentFolder.files.splice(evt.newIndex, 0, moved);
+          try {
+            await fetch(`/api/folders/${currentFolder._id}/reorder-files`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ files: currentFolder.files })
+            });
+            showToast('File order updated');
+          } catch {
+            showToast('Failed to update file order');
+          }
         }
       }
+    });
+  }
+}
+
+function getRenderedSystemDocument(documentId) {
+  return currentRenderedFiles.find(file => String(file.sourceDocumentId) === String(documentId));
+}
+
+function renameSystemDocumentInline(projectId, documentId) {
+  const row = document.querySelector(`tr[data-document-id="${documentId}"]`);
+  const file = getRenderedSystemDocument(documentId);
+  if (!row || !file) return;
+
+  const nameCell = row.querySelector('td:nth-child(2)');
+  const currentLink = nameCell.querySelector('a');
+  const input = document.createElement('input');
+  input.value = file.name;
+  input.style.padding = '8px 10px';
+  input.style.borderRadius = '8px';
+  input.style.border = '1px solid #cbd5e1';
+  input.style.fontSize = '0.95rem';
+  input.style.width = '100%';
+  input.style.background = '#ffffffcc';
+  input.style.outline = 'none';
+  input.style.boxShadow = '0 0 0 2px rgba(14,165,233,0.2)';
+
+  const resetName = () => {
+    if (currentLink) {
+      nameCell.innerHTML = '';
+      nameCell.appendChild(currentLink);
+    } else {
+      renderFiles();
     }
+  };
+
+  const commitRename = async () => {
+    const nextName = input.value.trim();
+    if (!nextName || nextName === file.name) {
+      resetName();
+      return;
+    }
+
+    showSpinner();
+    try {
+      const response = await fetch(`/api/properties/${projectId}/documents/${documentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: nextName })
+      });
+      if (!response.ok) throw new Error('Rename failed');
+      await fetchFolders(currentFolder._id);
+      showToast('File renamed');
+    } catch {
+      showToast('Rename failed');
+      resetName();
+    } finally {
+      hideSpinner();
+    }
+  };
+
+  input.addEventListener('blur', commitRename);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') input.blur();
+    if (e.key === 'Escape') resetName();
   });
+
+  nameCell.innerHTML = '';
+  nameCell.appendChild(input);
+  input.focus();
+  input.select();
+}
+
+async function deleteSelectedFilesFromRow(projectId, documentId) {
+  showSpinner();
+  try {
+    const response = await fetch(`/api/properties/${projectId}/documents/${documentId}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Delete failed');
+    await fetchFolders(currentFolder._id);
+    showToast('File deleted');
+  } catch {
+    showToast('Delete failed');
+  } finally {
+    hideSpinner();
+  }
 }
 
 
@@ -1076,6 +1869,7 @@ function renderFiles() {
 function toggleDropdown(event) {
   event.stopPropagation();
 
+  const dropdownRoot = event.currentTarget.closest('.dropdown');
   const dropdown = event.currentTarget.nextElementSibling;
   const isVisible = dropdown && dropdown.style.display === 'block';
 
@@ -1091,7 +1885,7 @@ function toggleDropdown(event) {
 
       if (
         stillExists &&
-        (!dropdown.contains(target) && (!event.currentTarget || !event.currentTarget.contains(target)))
+        (!dropdown.contains(target) && (!dropdownRoot || !dropdownRoot.contains(target)))
       ) {
         dropdown.style.display = 'none';
         document.removeEventListener('click', closeOnOutsideClick);
@@ -1244,6 +2038,12 @@ async function renameFile(index) {
     hideSpinner();
   }
 }
+
+
+    
+    
+
+
 
     // Ensure function is globally available
 window.openSubfolder = function (folderId) {
