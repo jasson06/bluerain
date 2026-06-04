@@ -1256,6 +1256,53 @@ const Quote = mongoose.model('Quote', quoteSchema);
 const LaborCost = mongoose.model('LaborCost', laborCostSchema);
 const FileSystem = mongoose.model('FileSystem', folderSchema);
 const Folder = mongoose.model('Folder', folderSchema); // ✅ Add this line
+
+const SYSTEM_FOLDER_IDS = Object.freeze({
+  allPropertyDocuments: 'system-all-property-documents'
+});
+
+function formatProjectDocumentLabel(project) {
+  if (!project) return 'Unknown Property';
+
+  const addressLine = [project.address?.addressLine1, project.address?.city, project.address?.state]
+    .filter(Boolean)
+    .join(', ');
+
+  return [project.name, addressLine].filter(Boolean).join(' - ') || 'Unknown Property';
+}
+
+async function buildAllPropertyDocumentsFolder() {
+  const [documents, projects] = await Promise.all([
+    Document.find({}).sort({ createdAt: -1 }).lean(),
+    Project.find({}, 'name address').lean()
+  ]);
+
+  const projectLabels = new Map(
+    projects.map(project => [String(project._id), formatProjectDocumentLabel(project)])
+  );
+
+  return {
+    _id: SYSTEM_FOLDER_IDS.allPropertyDocuments,
+    name: 'All Property Documents',
+    position: -1,
+    parentId: null,
+    isSystem: true,
+    files: documents.map(doc => ({
+      _id: String(doc._id),
+      name: doc.name,
+      size: doc.type ? doc.type.charAt(0).toUpperCase() + doc.type.slice(1) : 'Document',
+      type: doc.type || 'other',
+      displayType: projectLabels.get(String(doc.projectId)) || 'Unknown Property',
+      propertyLabel: projectLabels.get(String(doc.projectId)) || 'Unknown Property',
+      modified: new Date(doc.createdAt).toLocaleString(),
+      url: `/api/properties/${doc.projectId}/documents/${doc._id}/view`,
+      downloadUrl: `/api/properties/${doc.projectId}/documents/${doc._id}/download`,
+      projectId: String(doc.projectId),
+      sourceDocumentId: String(doc._id),
+      uploadedBy: doc.uploadedBy || 'System'
+    }))
+  };
+}
 const Expense = mongoose.model('Expense', expenseSchema);
 const Unit = mongoose.model('Unit', unitSchema);
 const Tenant = mongoose.model('Tenant', tenantSchema);
@@ -6295,7 +6342,10 @@ app.put("/api/items/:itemId/quality-review", async (req, res) => {
 // GET all folders (no population to keep parentId as string)
 app.get("/api/folders", async (req, res) => {
   try {
-    const folders = await FileSystem.find().lean();
+    const [folders, leasesFolder] = await Promise.all([
+      FileSystem.find().lean(),
+      buildAllPropertyDocumentsFolder()
+    ]);
     
     // Normalize ObjectId to string for comparison in frontend
     folders.forEach(f => {
@@ -6306,7 +6356,7 @@ app.get("/api/folders", async (req, res) => {
       }
     });
 
-    res.json(folders);
+   res.json([leasesFolder, ...folders]);
   } catch (err) {
     console.error("❌ Failed to fetch folders:", err);
     res.status(500).json({ message: "Error fetching folders." });
@@ -7378,15 +7428,53 @@ app.post('/api/properties/:propertyId/documents', upload.single('file'), async (
     }
 });
 
+app.put('/api/properties/:propertyId/documents/:documentId', async (req, res) => {
+  try {
+    const { propertyId, documentId } = req.params;
+    const nextName = String(req.body.name || '').trim();
+
+    if (!nextName) {
+      return res.status(400).json({ message: 'Document name is required' });
+    }
+
+    const document = await Document.findOne({
+      _id: documentId,
+      projectId: propertyId
+    });
+
+    if (!document) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+
+    const currentExt = path.extname(document.name || '');
+    const requestedExt = path.extname(nextName);
+    const normalizedName = requestedExt
+      ? nextName
+      : `${nextName}${currentExt}`;
+
+    document.name = normalizedName;
+    await document.save();
+
+    res.json(document);
+  } catch (error) {
+    console.error('Error renaming document:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 app.delete('/api/properties/:propertyId/documents/:documentId', async (req, res) => {
   try {
-    const document = await Document.findById(req.params.documentId);
+    const document = await Document.findOne({
+      _id: req.params.documentId,
+      projectId: req.params.propertyId
+    });
+
     if (!document) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
     // Delete file from filesystem
-    const filePath = path.join(__dirname, document.filePath);
+    const filePath = path.join(__dirname, document.filePath.replace(/^\//, ''));
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
