@@ -1299,6 +1299,7 @@ button:active {
     position:relative; overflow:hidden; border-radius:12px; margin-bottom:8px;
 }
 .entry-swipe-wrap:last-child { margin-bottom:0; }
+.entry-swipe-wrap.touch-dragging { z-index:20; }
 .entry-swipe-bg {
     position:absolute; top:0; right:0; bottom:0; width:80px;
     display:flex; align-items:center; justify-content:center; flex-direction:column; gap:2px;
@@ -1308,7 +1309,65 @@ button:active {
     letter-spacing:0.3px;
 }
 .entry-swipe-wrap.swiping .entry-swipe-bg { opacity:1; }
-.entry-swipe-wrap .entry { margin-bottom:0; position:relative; z-index:1; transition:transform 0.15s; }
+.entry-swipe-wrap .entry { margin-bottom:0; position:relative; z-index:1; transition:transform 0.15s, box-shadow 0.15s, opacity 0.15s; }
+.entry-swipe-wrap.touch-dragging .entry,
+.entry.dragging {
+    opacity:0.76;
+    box-shadow:0 12px 28px rgba(99,102,241,0.22);
+}
+.meal-group-header-actions {
+    margin-left:auto;
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+.meal-group-body {
+    min-height:56px;
+    padding:2px;
+    border-radius:12px;
+    border:1px dashed transparent;
+    transition:border-color 0.15s, background 0.15s;
+}
+.meal-group.drop-target .meal-group-header {
+    color:#4f46e5;
+}
+.meal-group.drop-target .meal-group-body {
+    border-color:rgba(99,102,241,0.42);
+    background:rgba(224,231,255,0.35);
+}
+.meal-group-paste-btn {
+    border:1px solid rgba(99,102,241,0.18);
+    background:rgba(255,255,255,0.45);
+    color:#4f46e5;
+    padding:5px 10px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:700;
+    cursor:pointer;
+    transition:all 0.15s;
+}
+.meal-group-paste-btn:hover {
+    background:rgba(224,231,255,0.72);
+    border-color:rgba(99,102,241,0.32);
+}
+.meal-group-empty {
+    padding:14px 12px;
+    text-align:center;
+    color:#64748b;
+    font-size:12px;
+    border-radius:10px;
+    background:rgba(255,255,255,0.2);
+}
+.food-log-clipboard {
+    margin-bottom:10px;
+    padding:10px 12px;
+    border-radius:12px;
+    background:rgba(224,231,255,0.45);
+    border:1px solid rgba(99,102,241,0.16);
+    color:#3730a3;
+    font-size:12px;
+    font-weight:600;
+}
 
 /* ---- QUICK ADD ---- */
 .quick-foods {
@@ -1579,15 +1638,83 @@ button:active {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 0;
+    flex-wrap: wrap;
+    padding: 8px 0;
     border-bottom: 1px solid rgba(0,0,0,0.05);
     font-size: 13px;
 }
 .save-meal-modal .meal-item-row input[type="checkbox"] { flex-shrink: 0; }
 .save-meal-modal .meal-item-name { flex: 1; color: #1e293b; }
 .save-meal-modal .meal-item-cal { color: #475569; font-size: 11px; white-space: nowrap; }
+.save-meal-modal .meal-item-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+.save-meal-modal .meal-item-macro-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+}
+.save-meal-modal .meal-item-macro-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+}
+.save-meal-modal .meal-item-macro-grid input {
+    width: 100%;
+    padding: 4px 6px;
+    border-radius: 6px;
+    border: 1px solid rgba(0,0,0,0.12);
+    font-size: 11px;
+    color: #1e293b;
+    background: rgba(255,255,255,0.72);
+    box-sizing: border-box;
+}
+.scan-meal-picker {
+    display: none;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 10px 0 12px;
+}
+.scan-meal-picker.show { display: flex; }
+.scan-meal-picker button {
+    flex: 1;
+    min-width: 92px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(99,102,241,0.18);
+    background: rgba(255,255,255,0.42);
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.scan-meal-picker button.active {
+    background: linear-gradient(135deg, #6366f1, #818cf8);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.22);
+}
 .save-meal-modal .btn-row { display: flex; gap: 8px; }
 .save-meal-modal .btn-row button { flex: 1; }
+
+@media (max-width: 640px) {
+    .save-meal-modal .meal-item-macro-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .scan-meal-picker button {
+        min-width: calc(50% - 6px);
+    }
+}
 
 /* ---- ANIMATIONS ---- */
 @keyframes slideUp {
@@ -2447,6 +2574,13 @@ document.addEventListener('keydown', function(e) {
             <input id="scanAddInput" placeholder="Add a food..." autocomplete="off" oninput="scanAddSearch(this.value)">
             <button class="btn-primary" onclick="scanAddFood()" style="flex:none;padding:9px 14px">+ Add</button>
             <div class="scan-add-suggestions" id="scanAddSuggestions"></div>
+        </div>
+
+        <div class="scan-meal-picker" id="scanMealPicker">
+            <button type="button" data-meal="breakfast" onclick="setScanPreviewMeal('breakfast')">&#x1F305; Breakfast</button>
+            <button type="button" data-meal="lunch" onclick="setScanPreviewMeal('lunch')">&#x2600;&#xFE0F; Lunch</button>
+            <button type="button" data-meal="snack" onclick="setScanPreviewMeal('snack')">&#x1F36A; Snack</button>
+            <button type="button" data-meal="dinner" onclick="setScanPreviewMeal('dinner')">&#x1F319; Dinner</button>
         </div>
 
         <div class="scan-totals" id="scanTotals">
@@ -3864,7 +3998,15 @@ function save(){
 }
 
 // ------------------- SAVED MEALS -------------------
+const mealOrder = ['breakfast','lunch','snack','dinner'];
+const mealLabels = {breakfast:'Breakfast', lunch:'Lunch', snack:'Snack', dinner:'Dinner'};
+const mealIcons = {breakfast:'&#x1F305;', lunch:'&#x2600;&#xFE0F;', snack:'&#x1F36A;', dinner:'&#x1F319;'};
+const mealIconsText = {breakfast:'\u{1F305}', lunch:'\u2600\uFE0F', snack:'\u{1F36A}', dinner:'\u{1F319}'};
+
 let savedMeals = JSON.parse(localStorage.getItem("savedMeals")) || [];
+let copiedEntry = null;
+let draggedEntryIndex = null;
+let touchDragMealTarget = null;
 
 function saveSavedMeals() {
     localStorage.setItem("savedMeals", JSON.stringify(savedMeals));
@@ -3929,6 +4071,18 @@ function logSavedMeal(index) {
 
 let mealBuilderItems = []; // dynamic list for the modal
 
+function setMealBuilderMacro(idx, field, value) {
+    if (!mealBuilderItems[idx]) return;
+    const parsed = field === 'calories' ? Math.round(parseFloat(value)) || 0 : Math.round((parseFloat(value) || 0) * 10) / 10;
+    mealBuilderItems[idx][field] = parsed;
+    const row = document.querySelectorAll('#saveMealItems .meal-item-row')[idx];
+    if (!row) return;
+    const calSpan = row.querySelector('.mb-cal');
+    if (calSpan) {
+        calSpan.innerHTML = `<strong>${mealBuilderItems[idx].calories || 0}</strong> cal<div style="display:flex;gap:3px;margin-top:2px"><span style="background:#dbeafe;color:#1d4ed8;padding:1px 4px;border-radius:4px;font-size:9px">${mealBuilderItems[idx].protein || 0}p</span><span style="background:#fef3c7;color:#b45309;padding:1px 4px;border-radius:4px;font-size:9px">${mealBuilderItems[idx].carbs || 0}c</span><span style="background:#fce7f3;color:#be185d;padding:1px 4px;border-radius:4px;font-size:9px">${mealBuilderItems[idx].fat || 0}f</span></div>`;
+    }
+}
+
 function recalcMealBuilderItem(idx) {
     const it = mealBuilderItems[idx];
     if (!it) return;
@@ -3965,18 +4119,26 @@ function renderMealBuilderItems() {
         return;
     }
     el.innerHTML = mealBuilderItems.map((it, i) => `
-        <div class="meal-item-row" style="gap:6px">
-            <input type="checkbox" checked data-idx="${i}" style="flex:none;margin:0;width:16px;height:16px">
-            <span class="meal-item-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.food}</span>
-            <input type="number" class="mb-qty" value="${it.qty}" min="0" step="any" onchange="recalcMealBuilderItem(${i})" oninput="recalcMealBuilderItem(${i})" style="width:46px;padding:3px 4px;border-radius:6px;border:1px solid rgba(0,0,0,0.12);font-size:11px;text-align:center;background:rgba(255,255,255,0.6);flex:none">
-            <select class="mb-unit" onchange="recalcMealBuilderItem(${i})" style="width:44px;padding:3px 1px;border-radius:6px;border:1px solid rgba(0,0,0,0.12);font-size:10px;background:rgba(255,255,255,0.6);flex:none">
-                <option value="g"${it.unit==='g'?' selected':''}>g</option>
-                <option value="oz"${it.unit==='oz'?' selected':''}>oz</option>
-                <option value="serving"${it.unit==='serving'?' selected':''}>srv</option>
-                <option value="unit"${it.unit==='unit'?' selected':''}>unit</option>
-            </select>
-            <span class="mb-cal" style="font-size:10px;color:#475569;white-space:nowrap;flex:none;text-align:right;line-height:1.3"><strong>${it.calories}</strong> cal<div style="display:flex;gap:3px;margin-top:2px;justify-content:flex-end"><span style="background:#dbeafe;color:#1d4ed8;padding:1px 4px;border-radius:4px;font-size:9px">${it.protein}p</span><span style="background:#fef3c7;color:#b45309;padding:1px 4px;border-radius:4px;font-size:9px">${it.carbs}c</span><span style="background:#fce7f3;color:#be185d;padding:1px 4px;border-radius:4px;font-size:9px">${it.fat}f</span></div></span>
-            <button onclick="removeMealBuilderItem(${i})" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;color:#94a3b8;flex:none" title="Remove">&times;</button>
+        <div class="meal-item-row">
+            <div class="meal-item-main">
+                <input type="checkbox" checked data-idx="${i}" style="flex:none;margin:0;width:16px;height:16px">
+                <span class="meal-item-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.food}</span>
+                <input type="number" class="mb-qty" value="${it.qty}" min="0" step="any" onchange="recalcMealBuilderItem(${i})" oninput="recalcMealBuilderItem(${i})" style="width:52px;padding:3px 4px;border-radius:6px;border:1px solid rgba(0,0,0,0.12);font-size:11px;text-align:center;background:rgba(255,255,255,0.6);flex:none">
+                <select class="mb-unit" onchange="recalcMealBuilderItem(${i})" style="width:50px;padding:3px 1px;border-radius:6px;border:1px solid rgba(0,0,0,0.12);font-size:10px;background:rgba(255,255,255,0.6);flex:none">
+                    <option value="g"${it.unit==='g'?' selected':''}>g</option>
+                    <option value="oz"${it.unit==='oz'?' selected':''}>oz</option>
+                    <option value="serving"${it.unit==='serving'?' selected':''}>srv</option>
+                    <option value="unit"${it.unit==='unit'?' selected':''}>unit</option>
+                </select>
+                <span class="mb-cal" style="font-size:10px;color:#475569;white-space:nowrap;flex:none;text-align:right;line-height:1.3"><strong>${it.calories}</strong> cal<div style="display:flex;gap:3px;margin-top:2px;justify-content:flex-end"><span style="background:#dbeafe;color:#1d4ed8;padding:1px 4px;border-radius:4px;font-size:9px">${it.protein}p</span><span style="background:#fef3c7;color:#b45309;padding:1px 4px;border-radius:4px;font-size:9px">${it.carbs}c</span><span style="background:#fce7f3;color:#be185d;padding:1px 4px;border-radius:4px;font-size:9px">${it.fat}f</span></div></span>
+                <button onclick="removeMealBuilderItem(${i})" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;color:#94a3b8;flex:none" title="Remove">&times;</button>
+            </div>
+            <div class="meal-item-macro-grid">
+                <label>Cal<input type="number" value="${it.calories}" min="0" oninput="setMealBuilderMacro(${i}, 'calories', this.value)"></label>
+                <label>Protein<input type="number" value="${it.protein}" min="0" step="0.1" oninput="setMealBuilderMacro(${i}, 'protein', this.value)"></label>
+                <label>Carbs<input type="number" value="${it.carbs}" min="0" step="0.1" oninput="setMealBuilderMacro(${i}, 'carbs', this.value)"></label>
+                <label>Fat<input type="number" value="${it.fat}" min="0" step="0.1" oninput="setMealBuilderMacro(${i}, 'fat', this.value)"></label>
+            </div>
         </div>`).join('');
 }
 
@@ -4180,9 +4342,6 @@ function buildYesterdayBtns() {
     const yDate = getYesterdayStr();
     const yList = data[yDate] || [];
     if (yList.length === 0) { card.style.display = 'none'; return; }
-    const mealOrder = ['breakfast','lunch','snack','dinner'];
-    const mealLabels = {breakfast:'Breakfast',lunch:'Lunch',snack:'Snack',dinner:'Dinner'};
-    const mealIcons = {breakfast:'\u{1F305}',lunch:'\u2600\uFE0F',snack:'\u{1F36A}',dinner:'\u{1F319}'};
     const groups = {};
     yList.forEach(e => {
         const m = e.meal || 'snack';
@@ -4194,7 +4353,7 @@ function buildYesterdayBtns() {
         if (!groups[m] || groups[m].length === 0) continue;
         const cnt = groups[m].length;
         const cal = groups[m].reduce((a, b) => a + (b.calories || 0), 0);
-        btns.push(`<button class="yesterday-btn" onclick="copyYesterdayMeal('${m}')"><span class="yb-icon">${mealIcons[m]}</span>+ Yesterday's ${mealLabels[m]}<span class="yb-meta">${cnt} item${cnt>1?'s':''} · ${cal} cal</span></button>`);
+        btns.push(`<button class="yesterday-btn" onclick="copyYesterdayMeal('${m}')"><span class="yb-icon">${mealIconsText[m]}</span>+ Yesterday's ${mealLabels[m]}<span class="yb-meta">${cnt} item${cnt>1?'s':''} · ${cal} cal</span></button>`);
     }
     if (btns.length === 0) { card.style.display = 'none'; return; }
     card.style.display = '';
@@ -4202,8 +4361,6 @@ function buildYesterdayBtns() {
 }
 
 function copyYesterdayMeal(meal) {
-    const mealLabels = {breakfast:'Breakfast',lunch:'Lunch',snack:'Snack',dinner:'Dinner'};
-    const mealIcons = {breakfast:'\u{1F305}',lunch:'\u2600\uFE0F',snack:'\u{1F36A}',dinner:'\u{1F319}'};
     const yDate = getYesterdayStr();
     const yList = data[yDate] || [];
     const items = yList.filter(e => (e.meal || 'snack') === meal);
@@ -4230,50 +4387,196 @@ function copyYesterdayMeal(meal) {
     });
 
     // Set title for yesterday review mode
-    document.getElementById('scanPreviewTitle').innerHTML = `${mealIcons[meal] || ''} Yesterday's ${mealLabels[meal] || meal}`;
+    document.getElementById('scanPreviewTitle').innerHTML = `${mealIconsText[meal] || ''} Yesterday's ${mealLabels[meal] || meal}`;
     document.getElementById('scanPreviewSub').textContent = 'Review and adjust before logging';
+    syncScanMealPicker();
 
     renderScanItems();
     document.getElementById('scanOverlay').classList.add('show');
     document.getElementById('scanAddInput').value = '';
 }
 
-// ------------------- SWIPE TO DUPLICATE -------------------
+function syncScanMealPicker() {
+    const picker = document.getElementById('scanMealPicker');
+    if (!picker) return;
+    const activeMeal = _scanPreviewMealOverride || currentMealType;
+    picker.classList.toggle('show', !!_scanPreviewMealOverride);
+    picker.querySelectorAll('button').forEach(button => {
+        button.classList.toggle('active', button.dataset.meal === activeMeal);
+    });
+}
+
+function setScanPreviewMeal(meal) {
+    _scanPreviewMealOverride = meal;
+    syncScanMealPicker();
+}
+
+function clearMealDropTargets() {
+    document.querySelectorAll('.meal-group.drop-target').forEach(group => group.classList.remove('drop-target'));
+}
+
+function setMealDropTarget(meal) {
+    clearMealDropTargets();
+    if (!meal) return;
+    const group = document.querySelector(`.meal-group[data-meal="${meal}"]`);
+    if (group) group.classList.add('drop-target');
+}
+
+function copyEntryToClipboard(i) {
+    const list = data[viewDate];
+    if (!list || !list[i]) return;
+    const src = list[i];
+    copiedEntry = {
+        food: src.food,
+        qty: src.qty || 0,
+        unit: src.unit || 'g',
+        calories: src.calories || 0,
+        protein: src.protein || 0,
+        carbs: src.carbs || 0,
+        fat: src.fat || 0,
+        meal: src.meal || currentMealType
+    };
+    render();
+}
+
+function pasteCopiedEntry(meal) {
+    if (!copiedEntry) return;
+    const date = viewDate;
+    if (!data[date]) data[date] = [];
+    data[date].push({
+        food: copiedEntry.food,
+        meal,
+        qty: copiedEntry.qty || 0,
+        unit: copiedEntry.unit || 'g',
+        calories: copiedEntry.calories || 0,
+        protein: copiedEntry.protein || 0,
+        carbs: copiedEntry.carbs || 0,
+        fat: copiedEntry.fat || 0
+    });
+    save();
+    render();
+}
+
+function moveEntryToMeal(i, meal) {
+    const list = data[viewDate];
+    if (!list || !list[i]) return;
+    list[i].meal = meal;
+    save();
+    render();
+}
+
+function handleEntryDragStart(event, i) {
+    draggedEntryIndex = i;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(i));
+    const entryEl = event.currentTarget.querySelector('.entry') || event.currentTarget;
+    if (entryEl) entryEl.classList.add('dragging');
+}
+
+function handleEntryDragEnd() {
+    draggedEntryIndex = null;
+    clearMealDropTargets();
+    document.querySelectorAll('.entry.dragging').forEach(entry => entry.classList.remove('dragging'));
+}
+
+function handleMealDragOver(event, meal) {
+    event.preventDefault();
+    draggedEntryIndex = draggedEntryIndex ?? parseInt(event.dataTransfer.getData('text/plain'));
+    event.dataTransfer.dropEffect = 'move';
+    setMealDropTarget(meal);
+}
+
+function handleMealDragLeave(event) {
+    if (event.currentTarget.contains(event.relatedTarget)) return;
+    event.currentTarget.classList.remove('drop-target');
+}
+
+function handleMealDrop(event, meal) {
+    event.preventDefault();
+    const index = draggedEntryIndex ?? parseInt(event.dataTransfer.getData('text/plain'));
+    handleEntryDragEnd();
+    if (!Number.isNaN(index)) moveEntryToMeal(index, meal);
+}
+
+// ------------------- SWIPE TO COPY / HOLD TO MOVE -------------------
 function initSwipe(el, entryIndex) {
     let startX = 0, currentX = 0, swiping = false;
     const threshold = -60;
+    let holdTimer = null;
+    let holdActive = false;
+
+    function clearHoldTimer() {
+        if (holdTimer) {
+            clearTimeout(holdTimer);
+            holdTimer = null;
+        }
+    }
+
+    function resetTouchDrag() {
+        holdActive = false;
+        touchDragMealTarget = null;
+        draggedEntryIndex = null;
+        clearMealDropTargets();
+        el.classList.remove('touch-dragging');
+    }
+
+    function updateTouchMealTarget(touch) {
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+        const mealGroup = target ? target.closest('.meal-group') : null;
+        touchDragMealTarget = mealGroup ? mealGroup.dataset.meal : null;
+        setMealDropTarget(touchDragMealTarget);
+    }
+
     el.addEventListener('touchstart', e => {
-        startX = e.touches[0].clientX; swiping = true; currentX = 0;
+        startX = e.touches[0].clientX;
+        swiping = true;
+        currentX = 0;
+        holdActive = false;
+        clearHoldTimer();
+        holdTimer = setTimeout(() => {
+            holdActive = true;
+            draggedEntryIndex = entryIndex;
+            el.classList.add('touch-dragging');
+            updateTouchMealTarget(e.touches[0]);
+        }, 320);
     }, {passive:true});
     el.addEventListener('touchmove', e => {
+        if (holdActive) {
+            e.preventDefault();
+            updateTouchMealTarget(e.touches[0]);
+            return;
+        }
         if (!swiping) return;
         currentX = e.touches[0].clientX - startX;
+        if (Math.abs(currentX) > 8) clearHoldTimer();
         if (currentX < 0) {
             const entry = el.querySelector('.entry');
             entry.style.transform = 'translateX(' + Math.max(currentX, -80) + 'px)';
             if (currentX < threshold) el.classList.add('swiping');
             else el.classList.remove('swiping');
         }
-    }, {passive:true});
+    }, {passive:false});
     el.addEventListener('touchend', () => {
+        clearHoldTimer();
         const entry = el.querySelector('.entry');
-        if (currentX < threshold) duplicateEntry(entryIndex);
+        if (holdActive) {
+            const targetMeal = touchDragMealTarget;
+            resetTouchDrag();
+            if (targetMeal) moveEntryToMeal(entryIndex, targetMeal);
+            return;
+        }
+        if (currentX < threshold) copyEntryToClipboard(entryIndex);
         entry.style.transform = ''; el.classList.remove('swiping');
         swiping = false;
     });
-}
-
-function duplicateEntry(i) {
-    const list = data[viewDate];
-    if (!list || !list[i]) return;
-    const src = list[i];
-    data[viewDate].push({
-        food: src.food, meal: src.meal || currentMealType,
-        qty: src.qty || 0, unit: src.unit || 'g',
-        calories: src.calories || 0, protein: src.protein || 0,
-        carbs: src.carbs || 0, fat: src.fat || 0
+    el.addEventListener('touchcancel', () => {
+        clearHoldTimer();
+        const entry = el.querySelector('.entry');
+        if (entry) entry.style.transform = '';
+        el.classList.remove('swiping');
+        swiping = false;
+        resetTouchDrag();
     });
-    save(); render();
 }
 
 // ------------------- RENDER -------------------
@@ -4286,46 +4589,42 @@ function render(){
 
     entriesEl.innerHTML = "";
 
-    if(list.length === 0){
-        entriesEl.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">&#x1F37D;&#xFE0F;</div>
-                No meals logged yet today.<br>Start by adding your first meal!
-            </div>
-        `;
-    } else {
-        const mealOrder = ['breakfast','lunch','snack','dinner'];
-        const mealLabels = {breakfast:'Breakfast',lunch:'Lunch',snack:'Snack',dinner:'Dinner'};
-        const mealIcons = {breakfast:'&#x1F305;',lunch:'&#x2600;&#xFE0F;',snack:'&#x1F36A;',dinner:'&#x1F319;'};
+    // Group entries by meal, preserving index for delete
+    const groups = {};
+    list.forEach((e,i)=>{
+        cal += e.calories;
+        prot += e.protein;
+        carb += e.carbs;
+        fat += e.fat;
+        const meal = e.meal || 'snack';
+        if(!groups[meal]) groups[meal] = [];
+        groups[meal].push({entry:e, index:i});
+    });
 
-        // Group entries by meal, preserving index for delete
-        const groups = {};
-        list.forEach((e,i)=>{
-            cal+=e.calories;
-            prot+=e.protein;
-            carb+=e.carbs;
-            fat+=e.fat;
-            const meal = e.meal || 'snack';
-            if(!groups[meal]) groups[meal] = [];
-            groups[meal].push({entry:e, index:i});
-        });
+    if (copiedEntry) {
+        entriesEl.innerHTML += `<div class="food-log-clipboard">Copied ${escapeHtml(copiedEntry.food)}. Use Paste here on today's meal sections below.</div>`;
+    }
 
-        for(const meal of mealOrder){
-            if(!groups[meal] || groups[meal].length === 0) continue;
-            const groupCal = groups[meal].reduce((a,b) => a + b.entry.calories, 0);
-            const groupProt = Math.round(groups[meal].reduce((a,b) => a + b.entry.protein, 0) * 10) / 10;
-            entriesEl.innerHTML += `
-                <div class="meal-group">
-                    <div class="meal-group-header">
-                        <span class="meal-icon">${mealIcons[meal]}</span>
-                        ${mealLabels[meal]}
+    for(const meal of mealOrder){
+        const groupEntries = groups[meal] || [];
+        const groupCal = groupEntries.reduce((a,b) => a + b.entry.calories, 0);
+        const groupProt = Math.round(groupEntries.reduce((a,b) => a + b.entry.protein, 0) * 10) / 10;
+        entriesEl.innerHTML += `
+            <div class="meal-group" data-meal="${meal}" ondragover="handleMealDragOver(event, '${meal}')" ondragleave="handleMealDragLeave(event)" ondrop="handleMealDrop(event, '${meal}')">
+                <div class="meal-group-header">
+                    <span class="meal-icon">${mealIcons[meal]}</span>
+                    ${mealLabels[meal]}
+                    <div class="meal-group-header-actions">
                         <span class="meal-cal">${groupCal} cal · ${groupProt}g protein</span>
+                        ${copiedEntry ? `<button class="meal-group-paste-btn" type="button" onclick="pasteCopiedEntry('${meal}')">Paste here</button>` : ''}
                     </div>
-                    ${groups[meal].map(({entry:e, index:i}) => {
+                </div>
+                <div class="meal-group-body">
+                    ${groupEntries.length ? groupEntries.map(({entry:e, index:i}) => {
                         const qtyLabel = e.qty ? `${e.qty}${e.unit === 'g' ? 'g' : e.unit === 'oz' ? 'oz' : e.unit === 'serving' ? ' srv' : ' pcs'}` : '';
                         return `
-                        <div class="entry-swipe-wrap" data-idx="${i}">
-                            <div class="entry-swipe-bg"><span style="font-size:16px">&#x2795;</span>Copy</div>
+                        <div class="entry-swipe-wrap" data-idx="${i}" draggable="true" ondragstart="handleEntryDragStart(event, ${i})" ondragend="handleEntryDragEnd()">
+                            <div class="entry-swipe-bg"><span style="font-size:16px">&#x1F4CB;</span>Copy</div>
                             <div class="entry" id="entry-${i}">
                                 <div class="entry-info">
                                     <div class="entry-name">${escapeHtml(e.food)}${qtyLabel ? ' <span style="color:#475569;font-weight:400;font-size:12px">(' + qtyLabel + ')</span>' : ''}</div>
@@ -4339,10 +4638,19 @@ function render(){
                             </div>
                         </div>
                         `;
-                    }).join('')}
+                    }).join('') : '<div class="meal-group-empty">Drop or paste a copied food here.</div>'}
                 </div>
-            `;
-        }
+            </div>
+        `;
+    }
+
+    if(list.length === 0 && !copiedEntry){
+        entriesEl.insertAdjacentHTML('afterbegin', `
+            <div class="empty-state">
+                <div class="empty-icon">&#x1F37D;&#xFE0F;</div>
+                No meals logged yet today.<br>Start by adding your first meal!
+            </div>
+        `);
     }
 
     const calRounded = Math.round(cal);
@@ -4879,6 +5187,7 @@ function openScanPreview(identifiedItems) {
         document.getElementById('scanPreviewTitle').innerHTML = '&#x1F4CB; Scan Preview';
         document.getElementById('scanPreviewSub').textContent = 'Review items before adding to your log';
     }
+    syncScanMealPicker();
 
     // Auto-populate from identified items
     if (identifiedItems && identifiedItems.length > 0) {
@@ -4955,6 +5264,7 @@ function closeScanPreview() {
     // Reset title back to default
     document.getElementById('scanPreviewTitle').innerHTML = '&#x1F4CB; Scan Preview';
     document.getElementById('scanPreviewSub').textContent = 'Review items before adding to your log';
+    syncScanMealPicker();
 }
 
 // --- Search within scan preview ---
