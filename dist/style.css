@@ -1761,7 +1761,7 @@ input, textarea {
   gap: 16px;
   align-items: start;
   overflow: auto;
-  max-width: 1400px;
+  max-width: 1500px;
   min-height: 500px;
 }
 
