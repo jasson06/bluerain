@@ -25,7 +25,7 @@ body {
 }
 
 .container {
-  max-width: 1000px;
+  max-width: 100%;
   margin: auto;
   background: var(--white);
   padding: 24px;
@@ -57,6 +57,57 @@ label {
   font-weight: bold;
   display: block;
   margin: 15px 0 5px;
+}
+
+.party-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 0.8fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.party-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+
+.party-card h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: var(--primary);
+}
+
+.party-card p {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--secondary);
+}
+
+.party-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.party-card-grid .span-2 {
+  grid-column: span 2;
+}
+
+.field-label {
+  display: block;
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.field-tight {
+  margin-bottom: 0;
 }
 
 input[type="text"],
@@ -92,6 +143,11 @@ select:focus {
   min-width: 150px;
 }
 
+.line-item-row select {
+  flex: 1 1 220px;
+  min-width: 180px;
+}
+
 /* 👇 Invoice table fix */
 table {
   width: 100%;
@@ -113,8 +169,8 @@ th[data-sort] {
   cursor: pointer;
 }
 
-th:nth-child(3),
-td:nth-child(3) {
+th:nth-child(4),
+td:nth-child(4) {
   width: 40%;
 }
 
@@ -148,6 +204,318 @@ td:nth-child(3) {
 
 .history {
   margin-top: 40px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.history-header h3 {
+  margin: 0;
+}
+
+.history-header p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--secondary);
+}
+
+.history-filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.8fr) minmax(180px, 1fr) auto;
+  gap: 10px;
+  margin-bottom: 12px;
+  align-items: end;
+}
+
+.history-filter-clear {
+  min-width: 44px;
+  padding: 10px 12px;
+}
+
+.history-filter-clear-icon {
+  display: none;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.history-table-wrap {
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.history-table-wrap table {
+  margin-top: 0;
+}
+
+.history-table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f0f4f8;
+}
+
+.history-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.history-pagination-info {
+  color: var(--secondary);
+  font-size: 13px;
+}
+
+.history-pagination-page {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.history-pagination-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.history-pagination-actions .btn {
+  margin: 0;
+}
+
+.history-page-size {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--secondary);
+  font-size: 13px;
+}
+
+.history-page-size select {
+  width: auto;
+  min-width: 84px;
+  margin-bottom: 0;
+}
+
+.history-link-button {
+  background: none;
+  border: none;
+  color: var(--primary);
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.history-menu-action {
+  width: 100%;
+  background: none;
+  border: none;
+  color: #333;
+  font: inherit;
+  text-align: left;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.history-menu-action:hover {
+  background-color: #f1f5f9;
+}
+
+.import-flow {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  margin-bottom: 18px;
+}
+
+.import-flow-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.import-flow-header h3 {
+  margin: 0;
+}
+
+.import-flow-header p {
+  margin: 4px 0 0;
+  color: var(--secondary);
+  font-size: 14px;
+}
+
+.import-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.import-step {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.import-step.is-active {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.08);
+}
+
+.import-step.is-complete {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.import-step-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #e8f1ff;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.import-step.is-active .import-step-label {
+  background: #dbeafe;
+}
+
+.import-step.is-complete .import-step-label {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.import-step-title {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.import-step-note {
+  display: block;
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.import-step select {
+  margin-bottom: 0;
+}
+
+.import-list-wrap {
+  margin-top: 12px;
+}
+
+.import-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.import-list-title {
+  font-weight: 700;
+}
+
+.import-list-note {
+  color: var(--secondary);
+  font-size: 13px;
+}
+
+.import-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 76px;
+  text-align: center;
+  color: var(--secondary);
+  font-size: 14px;
+  padding: 8px;
+}
+
+.import-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.import-actions p {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 13px;
+}
+
+.entry-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 12px;
+  color: var(--secondary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.entry-divider::before,
+.entry-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.manual-entry-wrap {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 12px;
+}
+
+.manual-entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.manual-entry-header h4 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 16px;
+}
+
+.manual-entry-header p {
+  margin: 4px 0 0;
+  color: var(--secondary);
+  font-size: 13px;
 }
 
 
@@ -251,12 +619,64 @@ td:nth-child(3) {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .invoice-info {
-    flex-direction: column;
+  .party-grid,
+  .party-card-grid,
+  .history-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .history-filters {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .history-filters input,
+  .history-filters select {
+    font-size: 14px;
+    padding: 8px 10px;
+    margin-bottom: 0;
+  }
+
+  .history-filters input {
+    grid-column: 1 / -1;
+  }
+
+  .history-filter-clear {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+  }
+
+  .history-filter-clear-text {
+    display: none;
+  }
+
+  .history-filter-clear-icon {
+    display: inline-block;
   }
 
   .line-item-row input {
     flex: 1 1 100%;
+  }
+
+  .import-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .import-flow-header,
+  .history-header,
+  .history-pagination,
+  .import-actions,
+  .import-list-header,
+  .manual-entry-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .modal-content {
@@ -446,25 +866,44 @@ td:nth-child(3) {
     </button>
   </header>
   
-<!-- FROM Section -->
-<label style="font-weight: bold; margin-top: 20px; display: block;">FROM</label>
+<div class="party-grid">
+  <div class="party-card">
+    <h3>From</h3>
+    <p>Business details for the invoice sender.</p>
+    <div class="party-card-grid">
+      <div class="span-2">
+        <label class="field-label" for="companyName">Company</label>
+        <input type="text" id="companyName" class="field-tight" placeholder="Company Name" />
+      </div>
+      <div class="span-2">
+        <label class="field-label" for="companyAddress">Street</label>
+        <input type="text" id="companyAddress" class="field-tight" placeholder="Street Address" />
+      </div>
+      <div>
+        <label class="field-label" for="companyCityZip">City / ZIP</label>
+        <input type="text" id="companyCityZip" class="field-tight" placeholder="City, ST ZIP Code" />
+      </div>
+      <div>
+        <label class="field-label" for="companyPhoneFax">Phone / Fax</label>
+        <input type="text" id="companyPhoneFax" class="field-tight" placeholder="Phone / Fax" />
+      </div>
+    </div>
+  </div>
 
-<h2><input type="text" id="companyName" placeholder="Company Name" /></h2>
-<input type="text" id="companyAddress" placeholder="Street Address" />
-<input type="text" id="companyCityZip" placeholder="City, ST ZIP Code" />
-<input type="text" id="companyPhoneFax" placeholder="Phone: (xxx) xxx-xxxx | Fax: (xxx) xxx-xxxx" />
+  <div class="party-card">
+    <h3>To</h3>
+    <p>Recipient information for this invoice.</p>
+    <label class="field-label" for="recipientCompany">Company</label>
+    <input type="text" id="recipientCompany" class="field-tight" placeholder="Company Name" />
+  </div>
 
-
-<!-- TO Section -->
-<label style="font-weight: bold; margin-top: 20px; display: block;">TO</label>
-<input type="text" id="recipientCompany" placeholder="Company Name" />
-
-
-
-
-<!-- Invoice Meta -->
-<label for="invoiceDate"><strong>Invoice Date:</strong></label>
-<input type="date" id="invoiceDate" />
+  <div class="party-card">
+    <h3>Invoice Date</h3>
+    <p>Use today or set a different billing date.</p>
+    <label class="field-label" for="invoiceDate">Date</label>
+    <input type="date" id="invoiceDate" class="field-tight" />
+  </div>
+</div>
 
 
 
@@ -472,33 +911,77 @@ td:nth-child(3) {
 <div class="container">
   <h2>Create Invoice</h2>
 
-  <!-- Step 1: Project Selection -->
-  <label for="projectSelect"><strong>Select Project:</strong></label>
-  <select id="projectSelect" style="width: 100%; padding: 10px; margin-bottom: 15px;">
-    <option value="">-- Loading Projects --</option>
-  </select>
+  <div class="import-flow">
+    <div class="import-flow-header">
+      <div>
+        <h3>Add Line Items</h3>
+        <p>Use assigned work when available, or add a manual line item in the same section.</p>
+      </div>
+    </div>
 
-  <!-- Step 2: Estimate Selection (populated based on selected project) -->
-  <label for="estimateSelect"><strong>Select Estimate:</strong></label>
-  <select id="estimateSelect" style="width: 100%; padding: 10px; margin-bottom: 15px;">
-    <option value="">-- Select Estimate --</option>
-  </select>
+    <div class="import-steps">
+      <div class="import-step is-active" data-import-step="1">
+        <span class="import-step-label">1</span>
+        <span class="import-step-title">Choose project</span>
+        
+        <select id="projectSelect" style="width: 100%; padding: 10px;">
+          <option value="">-- Loading Projects --</option>
+        </select>
+      </div>
 
-  <!-- Step 3: Line Items -->
-<label><strong>Import Line Items:</strong></label>
-<div id="lineItemCheckboxList" style="max-height: 220px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; margin-bottom: 15px;"></div>
-<button onclick="importLineItems()" class="btn">Import Selected Items</button>
-</div>
+      <div class="import-step" data-import-step="2">
+        <span class="import-step-label">2</span>
+        <span class="import-step-title">Choose estimate</span>
+        
+        <select id="estimateSelect" style="width: 100%; padding: 10px;">
+          <option value="">-- Select Estimate --</option>
+        </select>
+      </div>
 
+      <div class="import-step" data-import-step="3">
+        <span class="import-step-label">3</span>
+        <span class="import-step-title">Import approved items</span>
+        
+      </div>
+    </div>
 
-<h3>Manual Line Item Entry</h3>
-<div class="line-item-row" style="display: flex; flex-wrap: wrap; gap: 10px; position: relative; margin-bottom: 20px;">
-  <input type="text" id="itemCostCode" placeholder="Cost Code" style="flex: 0 0 100px; min-width: 80px;">
-  <input type="text" id="itemName" placeholder="Item Name" style="flex: 1 1 160px; min-width: 140px;">
-  <input type="text" id="itemDesc" placeholder="Description" style="flex: 2 1 400px; min-width: 200px;"> <!-- 🔥 Wider and grows nicely -->
-  <input type="number" id="itemQty" placeholder="Quantity" style="flex: 0 0 80px; min-width: 60px;">
-  <input type="number" id="itemPrice" placeholder="Unit Price" style="flex: 0 0 100px; min-width: 80px;">
-  <button class="btn" onclick="addManualItem()" style="flex: 0 0 70px;">Add</button>
+    <div class="import-list-wrap">
+      <div class="import-list-header">
+        <span class="import-list-title">Available line items</span>
+        <span class="import-list-note">Approved or completed items are selectable.</span>
+      </div>
+      <div id="lineItemCheckboxList" style="max-height: 220px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; margin-bottom: 0;">
+        <div class="import-empty-state">Step 1: choose a project to load available estimates.</div>
+      </div>
+      <div class="import-actions">
+        <p>Select items, then import them into the invoice table below.</p>
+        <button onclick="importLineItems()" class="btn">Import</button>
+      </div>
+    </div>
+
+    <div class="entry-divider">Or</div>
+
+    <div class="manual-entry-wrap">
+      <div class="manual-entry-header">
+        <div>
+          <h4>Add Manually</h4>
+          <p>Use this when the item is not in assigned work or you need a custom entry.</p>
+        </div>
+      </div>
+
+      <div class="line-item-row" style="display: flex; flex-wrap: wrap; gap: 10px; position: relative; margin-bottom: 0;">
+        <select id="itemProjectSelect" style="flex: 1 1 180px; min-width: 80px;">
+          <option value="">-- Select Project For Item --</option>
+        </select>
+        <input type="text" id="itemCostCode" placeholder="Cost Code" style="flex: 0 0 100px; min-width: 80px;">
+        <input type="text" id="itemName" placeholder="Item Name" style="flex: 1 1 160px; min-width: 140px;">
+        <input type="text" id="itemDesc" placeholder="Description" style="flex: 2 1 400px; min-width: 200px;">
+        <input type="number" id="itemQty" placeholder="Qty" style="flex: 0 0 80px; min-width: 60px;">
+        <input type="number" id="itemPrice" placeholder="Unit Price" style="flex: 0 0 100px; min-width: 80px;">
+        <button class="btn" onclick="addManualItem()" style="flex: 0 0 70px;">Add</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 
@@ -509,6 +992,7 @@ td:nth-child(3) {
   <table>
     <thead>
       <tr>
+        <th>Project</th>
         <th>Cost Code</th>
         <th>Name</th>
         <th>Description</th>
@@ -531,8 +1015,26 @@ td:nth-child(3) {
     <button class="btn" onclick="submitInvoice()">Submit Invoice</button>
 
     <div class="history">
-      <h3>Invoice History</h3>
-      <div class="responsive-table-wrapper">
+      <div class="history-header">
+        <div>
+          <h3>Invoice History</h3>
+          <p>Filter recent invoices and reopen them without losing your place.</p>
+        </div>
+      </div>
+      <div class="history-filters">
+        <input type="text" id="historySearch" placeholder="Filter by invoice #, project, or address" />
+        <select id="historySortFilter">
+          <option value="recent">Most Recent First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="highest">Highest Total</option>
+          <option value="lowest">Lowest Total</option>
+        </select>
+        <button type="button" class="btn secondary-btn history-filter-clear" id="clearHistoryFilters" aria-label="Clear history filters" title="Clear filters">
+          <span class="history-filter-clear-text">Clear</span>
+          <span class="history-filter-clear-icon">×</span>
+        </button>
+      </div>
+      <div class="responsive-table-wrapper history-table-wrap">
         <table>
           <thead>
             <tr>
@@ -545,6 +1047,22 @@ td:nth-child(3) {
           </thead>
           <tbody id="invoiceHistoryTable"></tbody>
         </table>
+      </div>
+      <div class="history-pagination">
+        <div class="history-pagination-info" id="historyPaginationInfo">Showing 0 to 0 of 0 invoices</div>
+        <div class="history-page-size">
+          <span>Page size</span>
+          <select id="historyPageSize">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+          </select>
+        </div>
+        <div class="history-pagination-page" id="historyPageIndicator">Page 0 of 0</div>
+        <div class="history-pagination-actions">
+          <button type="button" class="btn secondary-btn" id="historyPrevPage">Previous</button>
+          <button type="button" class="btn secondary-btn" id="historyNextPage">Next</button>
+        </div>
       </div>
     </div>
     
@@ -700,6 +1218,103 @@ window.onload = async () => {
 
     
     let lineItems = [];
+    let assignedProjects = [];
+    let vendorName = 'Vendor';
+    let invoiceHistoryCache = [];
+    let historyCurrentPage = 1;
+
+    function formatProjectAddress(address = {}) {
+      return [address.addressLine1, address.city, address.state, address.zip]
+        .filter(Boolean)
+        .join(', ') || 'N/A';
+    }
+
+    function getProjectById(projectId) {
+      const normalizedId = projectId && typeof projectId === 'object' ? String(projectId._id || projectId.id || '') : String(projectId || '');
+      return assignedProjects.find(project => String(project._id) === normalizedId) || null;
+    }
+
+    function buildProjectOptionsHtml(selectedProjectId = '') {
+      const normalizedSelectedId = String(selectedProjectId || '');
+      const options = ['<option value="">-- Select Project For Item --</option>'];
+
+      assignedProjects.forEach(project => {
+        const projectId = String(project._id);
+        const selected = projectId === normalizedSelectedId ? ' selected' : '';
+        options.push(`<option value="${projectId}"${selected}>${project.name}</option>`);
+      });
+
+      return options.join('');
+    }
+
+    function populateLineItemProjectSelect(selectedProjectId = '', preserveSelection = false) {
+      const select = document.getElementById('itemProjectSelect');
+      if (!select) return;
+
+      const currentValue = preserveSelection ? select.value : '';
+      const nextValue = selectedProjectId || currentValue;
+      select.innerHTML = buildProjectOptionsHtml(nextValue);
+    }
+
+    function syncManualProjectSelection(projectId, force = false) {
+      const select = document.getElementById('itemProjectSelect');
+      if (!select) return;
+      if (force || !select.value) {
+        select.value = projectId || '';
+      }
+    }
+
+    function getLineItemProjectNames(items = lineItems) {
+      return [...new Set(
+        items
+          .map(item => item.projectName || getProjectById(item.projectId)?.name)
+          .filter(Boolean)
+      )];
+    }
+
+    function getLineItemProjectAddresses(items = lineItems) {
+      return [...new Set(
+        items
+          .map(item => item.projectAddress || getProjectById(item.projectId)?.addressLabel)
+          .filter(Boolean)
+      )];
+    }
+
+    function setImportListMessage(message) {
+      const container = document.getElementById('lineItemCheckboxList');
+      if (!container) return;
+      container.innerHTML = `<div class="import-empty-state">${message}</div>`;
+    }
+
+    function updateImportStepState(currentStep = 1, completedSteps = []) {
+      document.querySelectorAll('[data-import-step]').forEach(step => {
+        const stepNumber = Number(step.dataset.importStep);
+        step.classList.remove('is-active', 'is-complete');
+
+        if (completedSteps.includes(stepNumber)) {
+          step.classList.add('is-complete');
+        } else if (stepNumber === currentStep) {
+          step.classList.add('is-active');
+        }
+      });
+    }
+
+    function resetImportFlow() {
+      const projectSelect = document.getElementById('projectSelect');
+      const estimateSelect = document.getElementById('estimateSelect');
+
+      if (projectSelect) {
+        projectSelect.value = '';
+      }
+
+      if (estimateSelect) {
+        estimateSelect.innerHTML = '<option value="">-- Select Estimate --</option>';
+        estimateSelect.value = '';
+      }
+
+      setImportListMessage('Step 1: choose a project to load available estimates.');
+      updateImportStepState(1, []);
+    }
 
 
 
@@ -773,25 +1388,45 @@ async function fetchAssignedProjects(vendorId) {
       ...(data.completed || [])
     ];
 
+    const seenProjectIds = new Set();
+    assignedProjects = projects
+      .map(p => p.projectId || p)
+      .filter(project => {
+        if (!project?._id || !project?.name) return false;
+        const projectId = String(project._id);
+        if (seenProjectIds.has(projectId)) return false;
+        seenProjectIds.add(projectId);
+        return true;
+      })
+      .map(project => ({
+        ...project,
+        addressLabel: formatProjectAddress(project.address || {})
+      }));
+
     const projectSelect = document.getElementById('projectSelect');
     projectSelect.innerHTML = `<option value="">-- Select Project --</option>`;
 
-    projects.forEach(p => {
-      const project = p.projectId || p; // in case structure is { projectId: {...} }
-      if (project?._id && project?.name) {
-        const option = document.createElement("option");
-        option.value = project._id;
-        option.textContent = project.name;
-         // ✅ Add full address as data-address
-    option.dataset.address = `${project.address?.addressLine1 || ''}, ${project.address?.city || ''}, ${project.address?.state || ''}, ${project.address?.zip || ''}`.replace(/, ,/g, ',').trim();
-        projectSelect.appendChild(option);
-      }
+    assignedProjects.forEach(project => {
+      const option = document.createElement("option");
+      option.value = project._id;
+      option.textContent = project.name;
+      option.dataset.address = project.addressLabel;
+      projectSelect.appendChild(option);
     });
+
+    populateLineItemProjectSelect();
+    resetImportFlow();
 
     // 📌 Hook up estimate selection after selecting a project
     projectSelect.addEventListener("change", function () {
       const projectId = this.value;
-      if (projectId) fetchEstimatesForProject(vendorId, projectId);
+      syncManualProjectSelection(projectId, true);
+      if (projectId) {
+        updateImportStepState(2, [1]);
+        fetchEstimatesForProject(vendorId, projectId);
+      } else {
+        resetImportFlow();
+      }
     });
 
   } catch (err) {
@@ -807,7 +1442,8 @@ async function fetchEstimatesForProject(vendorId, projectId) {
     const estimateSelect = document.getElementById('estimateSelect');
     const lineItemCheckboxList = document.getElementById('lineItemCheckboxList');
     estimateSelect.innerHTML = `<option value="">-- Select Estimate --</option>`;
-    if (lineItemCheckboxList) lineItemCheckboxList.innerHTML = '';
+    if (lineItemCheckboxList) setImportListMessage('Step 2: choose an estimate to view its line items.');
+    updateImportStepState(2, [1]);
 
     // 1. Fetch assigned items
     const itemsRes = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
@@ -848,6 +1484,8 @@ async function fetchEstimatesForProject(vendorId, projectId) {
 
     if (estimateMap.size === 0) {
       estimateSelect.innerHTML = `<option value="">-- No Assigned Estimates --</option>`;
+      setImportListMessage('No assigned estimates were found for this project yet.');
+      updateImportStepState(2, [1]);
       showToast("⚠️ No estimates with assigned items found.");
       return;
     }
@@ -874,6 +1512,8 @@ async function fetchEstimatesForProject(vendorId, projectId) {
 
     if (matchedEstimates === 0) {
       estimateSelect.innerHTML = `<option value="">-- No Assigned Estimates Found --</option>`;
+      setImportListMessage('No matching estimates were found for your assigned items in this project.');
+      updateImportStepState(2, [1]);
       showToast("⚠️ No estimates assigned to you in this project.");
       return;
     }
@@ -895,7 +1535,8 @@ async function fetchEstimatesForProject(vendorId, projectId) {
         console.log("📦 Assigned Items for Selected Estimate:", assignedItems);
         displayLineItems(assignedItems);
       } else {
-        lineItemSelect.innerHTML = '';
+        updateImportStepState(2, [1]);
+        setImportListMessage('Step 2: choose an estimate to view its line items.');
       }
     });
 
@@ -923,8 +1564,12 @@ async function importLineItems() {
   const usedIds = await getPreviouslySubmittedLineItemIds(vendorId);
 
   let duplicateCount = 0;
+  let notApprovedCount = 0;
+  let importedCount = 0;
   checkboxes.forEach(box => {
     const item = JSON.parse(box.dataset.details);
+
+
 
     // Only check for duplicates if the item has a unique _id
     if (item._id && usedIds.has(item._id)) {
@@ -944,10 +1589,17 @@ async function importLineItems() {
     }
 
     addItemToTable(item, true);
+    importedCount++;
   });
 
-  if (duplicateCount === 0) {
-    showToast('Imported selected line items.');
+  if (importedCount > 0) {
+    resetImportFlow();
+    showToast(
+      duplicateCount === 0 && notApprovedCount === 0
+        ? `Imported ${importedCount} line item${importedCount === 1 ? '' : 's'}.`
+        : `Imported ${importedCount} line item${importedCount === 1 ? '' : 's'}. Some items were skipped.`,
+      importedCount > 0 && (duplicateCount > 0 || notApprovedCount > 0) ? 'warning' : 'success'
+    );
   }
 }
 
@@ -964,8 +1616,6 @@ async function getPreviouslySubmittedLineItemIds(vendorId) {
     return new Set();
   }
 }
-
-
 // Display line items with checkboxes
 async function displayLineItems(items) {
   const container = document.getElementById('lineItemCheckboxList');
@@ -974,6 +1624,14 @@ async function displayLineItems(items) {
   // Fetch all previously submitted line item IDs for this vendor
   const vendorId = localStorage.getItem("vendorId");
   const usedIds = vendorId ? await getPreviouslySubmittedLineItemIds(vendorId) : new Set();
+
+  if (!items.length) {
+    updateImportStepState(3, [1, 2]);
+    setImportListMessage('No line items are available for this estimate yet.');
+    return;
+  }
+
+  updateImportStepState(3, [1, 2]);
 
   items.forEach((item, idx) => {
     const status = String(item.status || '').toLowerCase();
@@ -1024,6 +1682,8 @@ async function displayLineItems(items) {
 
 
 
+
+
 // Enable live suggestions
 document.getElementById('itemName').addEventListener('input', showLaborSuggestions);
 
@@ -1041,7 +1701,7 @@ function showLaborSuggestions() {
     box.style.border = '1px solid #ccc';
     box.style.borderRadius = '6px';
     box.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-    box.style.maxHeight = '150px';
+    box.style.maxHeight = '330px';
     box.style.overflowY = 'auto';
     box.style.zIndex = '1000';
     document.getElementById('itemName').parentNode.appendChild(box);
@@ -1103,13 +1763,24 @@ function showLaborSuggestions() {
 
 // Add manual item (auto-includes cost code now!)
 function addManualItem() {
+  const selectedProjectId = document.getElementById('itemProjectSelect').value || document.getElementById('projectSelect').value;
+  const selectedProject = getProjectById(selectedProjectId);
+
   const item = {
+    projectId: selectedProjectId,
+    projectName: selectedProject?.name || '',
+    projectAddress: selectedProject?.addressLabel || '',
     costCode: document.getElementById('itemCostCode').value.trim() || "Uncategorized",
     name: document.getElementById('itemName').value.trim(),
     description: document.getElementById('itemDesc').value.trim(),
     quantity: Number(document.getElementById('itemQty').value),
     unitPrice: Number(document.getElementById('itemPrice').value)
   };
+
+  if (!item.projectId) {
+    showToast('Please select a project for this line item.', 'warning');
+    return;
+  }
 
   
   
@@ -1121,6 +1792,7 @@ function addManualItem() {
   document.getElementById('itemDesc').value = '';
   document.getElementById('itemQty').value = '';
   document.getElementById('itemPrice').value = '';
+  syncManualProjectSelection(document.getElementById('projectSelect').value, true);
   
   const suggestionBox = document.getElementById('suggestionBox');
   if (suggestionBox) suggestionBox.style.display = 'none';
@@ -1132,8 +1804,15 @@ function addManualItem() {
 
 
 function addItemToTable(item, isImported = false) {
+  const normalizedProjectId = typeof item.projectId === 'object'
+    ? String(item.projectId._id || item.projectId.id || '')
+    : String(item.projectId || document.getElementById('projectSelect').value || '');
+  const project = getProjectById(normalizedProjectId);
   const cleaned = {
     _id: item._id, // preserve unique line item ID
+    projectId: normalizedProjectId,
+    projectName: item.projectName || project?.name || document.getElementById('projectSelect').selectedOptions[0]?.text || '',
+    projectAddress: item.projectAddress || project?.addressLabel || '',
     name: item.name,
     description: item.description,
     quantity: Number(item.quantity) || 0,
@@ -1153,7 +1832,6 @@ function addItemToTable(item, isImported = false) {
 
 
 
-
 function renderLineItems() {
   const tbody = document.getElementById('lineItemsTable');
   tbody.innerHTML = '';
@@ -1161,6 +1839,7 @@ function renderLineItems() {
   lineItems.forEach((item, index) => {
     const row = document.createElement('tr');
     row.innerHTML = `
+      <td>${item.projectName || 'N/A'}</td>
       <td>${item.costCode}</td>
       <td>${item.name}</td>
       <td>${item.description}</td>
@@ -1187,6 +1866,7 @@ function renderLineItems() {
 
     function editItem(index) {
       const item = lineItems[index];
+      document.getElementById('itemProjectSelect').value = item.projectId || '';
       document.getElementById('itemCostCode').value = item.costCode;
       document.getElementById('itemName').value = item.name;
       document.getElementById('itemDesc').value = item.description;
@@ -1235,11 +1915,16 @@ function getSelectedProjectAddress() {
 
 
 function openInvoicePreview(savedInvoice) {
-  const projectAddress = getSelectedProjectAddress();
+  const projectNames = getLineItemProjectNames();
+  const projectAddresses = getLineItemProjectAddresses();
+  const selectedProjectName = document.getElementById('projectSelect').selectedOptions[0]?.text || 'Project Name';
+  const projectName = projectNames.length === 0
+    ? selectedProjectName
+    : (projectNames.length === 1 ? projectNames[0] : `${projectNames.length} Projects`);
   const manualServiceAddress = document.getElementById('recipientAddress')?.value || 'N/A';
-  const finalServiceAddress = projectAddress === 'N/A' ? manualServiceAddress : projectAddress;
-
-  const projectName = document.getElementById('projectSelect').selectedOptions[0]?.text || 'Project Name';
+  const finalServiceAddress = projectAddresses.length === 0
+    ? (getSelectedProjectAddress() === 'N/A' ? manualServiceAddress : getSelectedProjectAddress())
+    : (projectAddresses.length === 1 ? projectAddresses[0] : 'Multiple service addresses');
   const email = document.getElementById('invoiceEmail').value || 'example@email.com';
   const invoiceNumber = savedInvoice?.invoiceNumber || 'N/A';
   const invoiceDate = savedInvoice?.date
@@ -1291,6 +1976,7 @@ function openInvoicePreview(savedInvoice) {
       <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
         <thead>
           <tr style="background: #f0f4f8;">
+            <th style="border: 1px solid #ccc; padding: 10px;">PROJECT</th>
             <th style="border: 1px solid #ccc; padding: 10px;">COST CODE</th>
             <th style="border: 1px solid #ccc; padding: 10px;">ITEM</th>
             <th style="border: 1px solid #ccc; padding: 10px;">DESCRIPTION</th>
@@ -1304,6 +1990,7 @@ function openInvoicePreview(savedInvoice) {
             const total = (parseFloat(item.total) || 0).toFixed(2); // Always use .total
             return `
               <tr>
+                <td style="border: 1px solid #ccc; padding: 8px;">${item.projectName || 'N/A'}</td>
                 <td style="border: 1px solid #ccc; padding: 8px;">${item.costCode || 'N/A'}</td>
                 <td style="border: 1px solid #ccc; padding: 8px;">${item.name}</td>
                 <td style="border: 1px solid #ccc; padding: 8px;">${item.description}</td>
@@ -1332,6 +2019,7 @@ function openInvoicePreview(savedInvoice) {
 
   document.getElementById('invoiceModal').style.display = 'flex';
 }
+
 
 
 
@@ -1499,6 +2187,9 @@ async function submitInvoice() {
   // Ensure each line item has a total property and includes estimateId/itemId
   const lineItemsWithTotal = lineItems.map(item => ({
     ...item,
+    projectId: item.projectId,
+    projectName: item.projectName || getProjectById(item.projectId)?.name || '',
+    projectAddress: item.projectAddress || getProjectById(item.projectId)?.addressLabel || '',
     total: typeof item.total !== "undefined"
       ? Number(item.total)
       : (typeof item.laborCost !== "undefined"
@@ -1508,9 +2199,11 @@ async function submitInvoice() {
     itemId: item.itemId || item._id || undefined // <-- ADD
   }));
 
+
+  const fallbackProjectId = document.getElementById('projectSelect').value || lineItemsWithTotal[0]?.projectId || '';
   const invoiceData = {
     vendorId,
-    projectId: document.getElementById('projectSelect').value,
+    projectId: fallbackProjectId,
     email: document.getElementById('invoiceEmail').value || "jleonel3915@gmail.com",
     invoiceNumber: generateInvoiceNumber(),
     date: invoiceDate,
@@ -1527,8 +2220,13 @@ async function submitInvoice() {
     }
   };
 
-  if (!invoiceData.projectId || !lineItems.length) {
-    showToast('❌ Please select a project and add at least one line item.');
+  if (!lineItems.length) {
+    showToast('❌ Please add at least one line item.');
+    return;
+  }
+
+  if (lineItemsWithTotal.some(item => !item.projectId)) {
+    showToast('❌ Every line item must have a project selected.');
     return;
   }
   showLoader(); // 👈 START
@@ -1607,7 +2305,11 @@ async function submitInvoice() {
 
     // ✅ 5. Final UI updates
     showToast('✅ Invoice submitted!');
-    displayInvoiceHistory(invoiceData);
+    invoiceHistoryCache.unshift({
+      ...savedInvoice,
+      lineItems: lineItemsWithTotal
+    });
+    await renderInvoiceHistoryTable();
     lineItems = [];
     renderLineItems();
     closeInvoicePreview();
@@ -1630,7 +2332,8 @@ async function fetchInvoiceHistory(vendorId) {
   try {
     const res = await fetch(`/history?vendorId=${vendorId}`);
     const data = await res.json();
-    data.forEach(displayInvoiceHistory);
+    invoiceHistoryCache = await Promise.all((Array.isArray(data) ? data : []).map(enrichInvoiceHistoryInvoice));
+    await renderInvoiceHistoryTable();
   } catch (err) {
     console.error('Error loading history:', err);
   } finally {
@@ -1640,53 +2343,159 @@ async function fetchInvoiceHistory(vendorId) {
 
 
 
+function getInvoiceHistoryTimestamp(invoice) {
+  const rawDate = invoice.createdAt || invoice.date;
+  const timestamp = rawDate ? new Date(rawDate).getTime() : 0;
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+
+async function enrichInvoiceHistoryInvoice(invoice) {
+  const clonedInvoice = { ...invoice };
+  const itemProjectAddresses = [...new Set((clonedInvoice.lineItems || []).map(item => item.projectAddress).filter(Boolean))];
+  const itemProjectNames = [...new Set((clonedInvoice.lineItems || []).map(item => item.projectName).filter(Boolean))];
+
+  let projectAddress = itemProjectAddresses.length > 1 ? 'Multiple service addresses' : (itemProjectAddresses[0] || 'N/A');
+  let projectName = itemProjectNames.length > 1 ? `${itemProjectNames.length} Projects` : (itemProjectNames[0] || '');
+
+  if (projectAddress === 'N/A' && typeof clonedInvoice.projectId === 'object' && clonedInvoice.projectId?.address) {
+    projectAddress = formatProjectAddress(clonedInvoice.projectId.address || {});
+    projectName = projectName || clonedInvoice.projectId?.name || '';
+  } else if ((projectAddress === 'N/A' || !projectName) && typeof clonedInvoice.projectId === 'string') {
+    try {
+      const res = await fetch(`/api/projects/${clonedInvoice.projectId}`);
+      if (res.ok) {
+        const { project } = await res.json();
+        if (projectAddress === 'N/A') {
+          projectAddress = formatProjectAddress(project.address || {});
+        }
+        if (!projectName) {
+          projectName = project.name || '';
+        }
+      }
+    } catch (err) {
+      console.error('❌ Failed to enrich invoice history project:', err);
+    }
+  }
+
+  clonedInvoice._historyProjectAddress = projectAddress;
+  clonedInvoice._historyProjectName = projectName;
+  clonedInvoice._historySearchText = [
+    clonedInvoice.invoiceNumber,
+    projectName,
+    projectAddress,
+    ...(clonedInvoice.lineItems || []).flatMap(item => [item.projectName, item.projectAddress, item.name, item.description])
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return clonedInvoice;
+}
+
+
+function getInvoiceHistorySearchValue(invoice) {
+  return String(invoice._historySearchText || invoice.invoiceNumber || '').toLowerCase();
+}
+
+
+async function renderInvoiceHistoryTable() {
+  const tbody = document.getElementById('invoiceHistoryTable');
+  const paginationInfo = document.getElementById('historyPaginationInfo');
+  const pageIndicator = document.getElementById('historyPageIndicator');
+  const prevButton = document.getElementById('historyPrevPage');
+  const nextButton = document.getElementById('historyNextPage');
+  const pageSize = Number(document.getElementById('historyPageSize')?.value || 10);
+  const searchValue = String(document.getElementById('historySearch')?.value || '').trim().toLowerCase();
+  const sortValue = document.getElementById('historySortFilter')?.value || 'recent';
+  tbody.innerHTML = '';
+
+  const filteredInvoices = invoiceHistoryCache
+    .filter(invoice => !searchValue || getInvoiceHistorySearchValue(invoice).includes(searchValue))
+    .sort((a, b) => {
+      if (sortValue === 'invoiceAsc') {
+        return String(a.invoiceNumber || '').localeCompare(String(b.invoiceNumber || ''));
+      }
+      if (sortValue === 'invoiceDesc') {
+        return String(b.invoiceNumber || '').localeCompare(String(a.invoiceNumber || ''));
+      }
+      if (sortValue === 'projectAsc') {
+        return getInvoiceHistorySearchValue(a).localeCompare(getInvoiceHistorySearchValue(b));
+      }
+      if (sortValue === 'oldest') {
+        return getInvoiceHistoryTimestamp(a) - getInvoiceHistoryTimestamp(b);
+      }
+      if (sortValue === 'highest') {
+        return Number(b.total || 0) - Number(a.total || 0);
+      }
+      if (sortValue === 'lowest') {
+        return Number(a.total || 0) - Number(b.total || 0);
+      }
+      return getInvoiceHistoryTimestamp(b) - getInvoiceHistoryTimestamp(a);
+    });
+
+  const totalInvoices = filteredInvoices.length;
+  const totalPages = Math.max(1, Math.ceil(totalInvoices / pageSize));
+  historyCurrentPage = Math.min(historyCurrentPage, totalPages);
+  historyCurrentPage = Math.max(1, historyCurrentPage);
+
+  const startIndex = (historyCurrentPage - 1) * pageSize;
+  const pagedInvoices = filteredInvoices.slice(startIndex, startIndex + pageSize);
+
+  for (const invoice of pagedInvoices) {
+    await displayInvoiceHistory(invoice);
+  }
+
+  if (pagedInvoices.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#6b7280;">No invoices match the current filters.</td></tr>';
+  }
+
+  const rangeStart = totalInvoices === 0 ? 0 : startIndex + 1;
+  const rangeEnd = totalInvoices === 0 ? 0 : Math.min(startIndex + pageSize, totalInvoices);
+  paginationInfo.textContent = `Showing ${rangeStart} to ${rangeEnd} of ${totalInvoices} invoices`;
+  pageIndicator.textContent = `Page ${totalInvoices === 0 ? 0 : historyCurrentPage} of ${totalInvoices === 0 ? 0 : totalPages}`;
+  prevButton.disabled = historyCurrentPage <= 1;
+  nextButton.disabled = historyCurrentPage >= totalPages || totalInvoices === 0;
+}
+
+
+
 
     async function displayInvoiceHistory(invoice) {
   const row = document.createElement('tr');
 
-  let projectAddress = 'N/A';
-
-  if (typeof invoice.projectId === 'object' && invoice.projectId.address) {
-    const a = invoice.projectId.address;
-    projectAddress = `${a.addressLine1 || ''}, ${a.city || ''}, ${a.state || ''}, ${a.zip || ''}`;
-  } else if (typeof invoice.projectId === 'string') {
-    try {
-      const res = await fetch(`/api/projects/${invoice.projectId}`);
-      if (res.ok) {
-        const { project } = await res.json();
-        const a = project.address || {};
-        projectAddress = `${a.addressLine1 || ''}, ${a.city || ''}, ${a.state || ''}, ${a.zip || ''}`;
-      }
-    } catch (err) {
-      console.error('❌ Failed to fetch project:', err);
-    }
-  }
+  const projectAddress = invoice._historyProjectAddress || 'N/A';
 
   const formattedDate = invoice.date
     ? new Date(invoice.date).toLocaleDateString()
     : 'N/A';
 
+  row.dataset.invoiceNumber = String(invoice.invoiceNumber || '');
+  row.dataset.project = projectAddress;
+  row.dataset.date = String(getInvoiceHistoryTimestamp(invoice));
+  row.dataset.total = String(Number(invoice.total || 0));
+
   row.innerHTML = `
     <td>
-      <a href="#" onclick="openSavedInvoiceModal('${invoice.invoiceNumber}')" style="color: #007bff; text-decoration: underline;">
+      <button type="button" class="history-link-button" onclick="openSavedInvoiceModal('${invoice.invoiceNumber}')">
         ${invoice.invoiceNumber || 'N/A'}
-      </a>
+      </button>
     </td>
     <td>${projectAddress}</td>
     <td>${formattedDate}</td>
     <td>$${invoice.total.toFixed(2)}</td>
     <td>
       <div class="dropdown">
-        <button class="dropdown-btn">⋮</button>
+        <button type="button" class="dropdown-btn">⋮</button>
         <div class="dropdown-content">
-          <a href="#" onclick="openSavedInvoiceModal('${invoice.invoiceNumber}')">View</a>
-          <a href="#" onclick="deleteInvoice('${invoice._id}', this)">Delete</a>
+          <button type="button" class="history-menu-action" onclick="openSavedInvoiceModal('${invoice.invoiceNumber}')">View</button>
+          <button type="button" class="history-menu-action" onclick="deleteInvoice('${invoice._id}', this)">Delete</button>
         </div>
       </div>
     </td>
   `;
 
-  document.getElementById('invoiceHistoryTable').prepend(row);
+  document.getElementById('invoiceHistoryTable').appendChild(row);
 }
 
 
@@ -1702,48 +2511,61 @@ document.addEventListener('click', function(e) {
 });
 
 
-let currentSort = { column: null, direction: 1 };
-
 document.querySelectorAll('th[data-sort]').forEach(header => {
   header.addEventListener('click', () => {
     const column = header.getAttribute('data-sort');
-    const rows = Array.from(document.querySelectorAll('#invoiceHistoryTable tr'));
+    const sortSelect = document.getElementById('historySortFilter');
 
-    // Toggle sort direction
-    if (currentSort.column === column) {
-      currentSort.direction *= -1;
-    } else {
-      currentSort.column = column;
-      currentSort.direction = 1;
+    if (column === 'invoiceNumber') {
+      sortSelect.value = sortSelect.value === 'invoiceAsc' ? 'invoiceDesc' : 'invoiceAsc';
+    } else if (column === 'project') {
+      sortSelect.value = 'projectAsc';
+    } else if (column === 'date') {
+      sortSelect.value = sortSelect.value === 'oldest' ? 'recent' : 'oldest';
+    } else if (column === 'total') {
+      sortSelect.value = sortSelect.value === 'lowest' ? 'highest' : 'lowest';
     }
 
-    // Determine column index
-    const colIndex = Array.from(header.parentElement.children).indexOf(header);
-
-    // Sort rows
-    rows.sort((a, b) => {
-      const cellA = a.children[colIndex].textContent.trim();
-      const cellB = b.children[colIndex].textContent.trim();
-
-      // Try numeric sort first
-      const numA = parseFloat(cellA.replace(/[^0-9.]/g, ''));
-      const numB = parseFloat(cellB.replace(/[^0-9.]/g, ''));
-      if (!isNaN(numA) && !isNaN(numB)) {
-        return (numA - numB) * currentSort.direction;
-      }
-
-      // Fallback: string sort
-      return cellA.localeCompare(cellB) * currentSort.direction;
-    });
-
-    // Re-append sorted rows
-    const tbody = document.getElementById('invoiceHistoryTable');
-    rows.forEach(row => tbody.appendChild(row));
-
-    // Visual indicator (optional)
     document.querySelectorAll('.sort-indicator').forEach(i => i.textContent = '');
-    header.querySelector('.sort-indicator').textContent = currentSort.direction === 1 ? '▲' : '▼';
+    header.querySelector('.sort-indicator').textContent = '▲';
+    historyCurrentPage = 1;
+    renderInvoiceHistoryTable();
   });
+});
+
+document.getElementById('historySearch').addEventListener('input', () => {
+  historyCurrentPage = 1;
+  renderInvoiceHistoryTable();
+});
+
+document.getElementById('historySortFilter').addEventListener('change', () => {
+  historyCurrentPage = 1;
+  renderInvoiceHistoryTable();
+});
+
+document.getElementById('clearHistoryFilters').addEventListener('click', () => {
+  document.getElementById('historySearch').value = '';
+  document.getElementById('historySortFilter').value = 'recent';
+  document.getElementById('historyPageSize').value = '10';
+  document.querySelectorAll('.sort-indicator').forEach(i => i.textContent = '');
+  historyCurrentPage = 1;
+  renderInvoiceHistoryTable();
+});
+
+document.getElementById('historyPageSize').addEventListener('change', () => {
+  historyCurrentPage = 1;
+  renderInvoiceHistoryTable();
+});
+
+document.getElementById('historyPrevPage').addEventListener('click', () => {
+  if (historyCurrentPage <= 1) return;
+  historyCurrentPage -= 1;
+  renderInvoiceHistoryTable();
+});
+
+document.getElementById('historyNextPage').addEventListener('click', () => {
+  historyCurrentPage += 1;
+  renderInvoiceHistoryTable();
 });
 
 
@@ -1755,16 +2577,22 @@ async function openSavedInvoiceModal(invoiceNumber) {
     if (!res.ok) throw new Error("Failed to fetch invoice");
     const { invoice } = await res.json();
 
-    let projectName = 'Unnamed Project';
-    let projectAddress = 'N/A';
+    const itemProjectNames = [...new Set((invoice.lineItems || []).map(item => item.projectName).filter(Boolean))];
+    const itemProjectAddresses = [...new Set((invoice.lineItems || []).map(item => item.projectAddress).filter(Boolean))];
+    let projectName = itemProjectNames.length > 1 ? `${itemProjectNames.length} Projects` : (itemProjectNames[0] || 'Unnamed Project');
+    let projectAddress = itemProjectAddresses.length > 1 ? 'Multiple service addresses' : (itemProjectAddresses[0] || 'N/A');
 
-    if (invoice.projectId) {
+    if ((projectName === 'Unnamed Project' || projectAddress === 'N/A') && invoice.projectId) {
       const projectRes = await fetch(`/api/projects/${invoice.projectId}`);
       if (projectRes.ok) {
         const { project } = await projectRes.json();
         const a = project.address || {};
-        projectAddress = `${a.addressLine1 || ''}, ${a.city || ''}, ${a.state || ''}, ${a.zip || ''}`;
-        projectName = project.name || 'Unnamed Project';
+        if (projectAddress === 'N/A') {
+          projectAddress = `${a.addressLine1 || ''}, ${a.city || ''}, ${a.state || ''}, ${a.zip || ''}`;
+        }
+        if (projectName === 'Unnamed Project') {
+          projectName = project.name || 'Unnamed Project';
+        }
       }
     }
 
@@ -1803,6 +2631,7 @@ async function openSavedInvoiceModal(invoiceNumber) {
         <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
           <thead>
             <tr style="background: #f0f4f8;">
+              <th style="border: 1px solid #ccc; padding: 10px;">PROJECT</th>
               <th style="border: 1px solid #ccc; padding: 10px;">COST CODE</th>
               <th style="border: 1px solid #ccc; padding: 10px;">ITEM</th>
               <th style="border: 1px solid #ccc; padding: 10px;">DESCRIPTION</th>
@@ -1814,6 +2643,7 @@ async function openSavedInvoiceModal(invoiceNumber) {
 <tbody>
   ${invoice.lineItems.map(item => `
     <tr>
+      <td style="border: 1px solid #ccc; padding: 8px;">${item.projectName || projectName}</td>
       <td style="border: 1px solid #ccc; padding: 8px;">${item.costCode || 'N/A'}</td>
       <td style="border: 1px solid #ccc; padding: 8px;">${item.name}</td>
       <td style="border: 1px solid #ccc; padding: 8px;">${item.description}</td>
@@ -1957,9 +2787,8 @@ async function deleteInvoice(invoiceId, element) {
 
     if (!res.ok) throw new Error("Failed to delete");
 
-    // Remove row from table
-    const row = element.closest("tr");
-    row.remove();
+    invoiceHistoryCache = invoiceHistoryCache.filter(invoice => String(invoice._id) !== String(invoiceId));
+    await renderInvoiceHistoryTable();
 
     showToast("✅ Invoice deleted.");
   } catch (err) {
@@ -2008,8 +2837,3 @@ function closeHelpVideo() {
   </script>
 </body>
 </html>
-
-
-
-
-
