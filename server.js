@@ -750,6 +750,9 @@ const invoiceSchema = new mongoose.Schema({
   date: String,
   lineItems: [
     {
+      projectId: String,
+      projectName: String,
+      projectAddress: String,
       name: String,
       description: String,
       quantity: Number,
@@ -5361,13 +5364,30 @@ app.post('/api/create', async (req, res) => {
       vendorId
     } = req.body;
 
-    if (!projectId || !invoiceNumber || !lineItems?.length) {
+    if (!invoiceNumber || !lineItems?.length) {
       return res.status(400).json({ message: 'Missing required invoice fields.' });
+    }
+
+    const normalizeProjectId = value => {
+      if (!value) return '';
+      if (typeof value === 'object') {
+        return String(value._id || value.id || '').trim();
+      }
+      return String(value).trim();
+    };
+
+    const primaryProjectId = normalizeProjectId(projectId) || normalizeProjectId(lineItems.find(item => item.projectId)?.projectId);
+
+    if (!primaryProjectId) {
+      return res.status(400).json({ message: 'Each invoice must include at least one project.' });
     }
 
     // Ensure each line item has a total and includes estimateId and itemId if present
     const lineItemsWithIds = lineItems.map(item => ({
       ...item,
+      projectId: normalizeProjectId(item.projectId) || primaryProjectId,
+      projectName: item.projectName || '',
+      projectAddress: item.projectAddress || '',
       total: typeof item.total !== "undefined"
         ? Number(item.total)
         : (typeof item.laborCost !== "undefined"
@@ -5377,9 +5397,13 @@ app.post('/api/create', async (req, res) => {
       itemId: item.itemId ? item.itemId : undefined
     }));
 
+    if (lineItemsWithIds.some(item => !item.projectId)) {
+      return res.status(400).json({ message: 'Each line item must include a projectId.' });
+    }
+
     const invoice = new Invoice({
       vendorId: vendorId ? new mongoose.Types.ObjectId(vendorId) : undefined,
-      projectId: new mongoose.Types.ObjectId(projectId),
+      projectId: primaryProjectId,
       email,
       invoiceNumber,
       date,
@@ -5396,7 +5420,6 @@ app.post('/api/create', async (req, res) => {
     res.status(500).json({ message: 'Failed to create invoice', error: err.message });
   }
 });
-
 
 // ✅ GET invoices filtered by projectId WITH project name
 app.get('/api/invoices', async (req, res) => {
