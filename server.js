@@ -8932,6 +8932,7 @@ async function updateNextScheduledDates() {
         costCode: 'Maintenance',
         quantity: 1,
         unitPrice: schedule.cost || 0,
+        laborCost: schedule.cost || 0,
         total: schedule.cost || 0,
         status: 'in-progress',
         assignedTo: schedule.assignedVendor?._id || schedule.assignedVendor || null,
@@ -9041,7 +9042,7 @@ function scheduleDailyUpdateNextScheduledDates() {
 }
 
 scheduleDailyUpdateNextScheduledDates();
-
+updateNextScheduledDates();
 
 
 
