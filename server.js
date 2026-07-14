@@ -9042,7 +9042,7 @@ function scheduleDailyUpdateNextScheduledDates() {
 }
 
 scheduleDailyUpdateNextScheduledDates();
-updateNextScheduledDates();
+
 
 
 
