@@ -265,6 +265,55 @@ function isLineItemOverdue(card, todayString = new Date().toISOString().slice(0,
   return getLineItemCompletionFromCard(card) < 100 && targetFinish < todayString;
 }
 
+function getNextPercentCompleteForStatus(nextStatus, currentValue) {
+  return nextStatus === 'completed'
+    ? 100
+    : nextStatus === 'in-progress'
+      ? 0
+      : clampProjectPhaseProgress(currentValue, nextStatus);
+}
+
+async function persistLineItemStatusChange(lineItemId, newStatus, options = {}) {
+  const {
+    vendorId = '',
+    estimateId = new URLSearchParams(window.location.search).get('estimateId'),
+    percentComplete = getNextPercentCompleteForStatus(newStatus, 0)
+  } = options;
+
+  try {
+    const response = await fetch(`/api/estimates/line-items/${lineItemId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus, percentComplete })
+    });
+    if (!response.ok) {
+      return { ok: false, error: 'estimate' };
+    }
+  } catch (_) {
+    return { ok: false, error: 'estimate' };
+  }
+
+  let vendorSyncFailed = false;
+  if (vendorId && /^[a-f\d]{24}$/i.test(vendorId)) {
+    try {
+      const vendorRes = await fetch(`/api/vendors/${vendorId}/update-item-status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          itemId: lineItemId,
+          status: newStatus,
+          estimateId: estimateId
+        })
+      });
+      vendorSyncFailed = !vendorRes.ok;
+    } catch (_) {
+      vendorSyncFailed = true;
+    }
+  }
+
+  return { ok: true, vendorSyncFailed };
+}
+
 function getCurrentProjectPhase(cards = getEstimateLineItemCards()) {
   for (const phase of PROJECT_PHASES) {
     const phaseCards = cards.filter((card) => getLineItemPhaseFromCard(card) === phase.value);
@@ -1257,7 +1306,7 @@ function refreshLineItems(categories) {
   // Add Category Header
   function addCategoryHeader(category = { category: "New Category", status: "in-progress", items: [] }, options = {}) {
     const lineItemsContainer = document.getElementById("line-items-cards");
-    const shouldAutoFocus = options.autoFocus !== false;
+    const shouldAutoFocus = options.autoFocus !== false && shouldAllowEstimateAutoFocus();
     const header = document.createElement("div");
     header.classList.add("category-header");
     header.dataset.categoryId = category._id || "";
@@ -2491,7 +2540,7 @@ try { window.__estimateEditRunSplitFlowForCard = runSplitFlowForCard; } catch (_
 
 // Add Line Item Card Function
 function addLineItemCard(item = {}, categoryHeader = null, insertAfter = null, options = {}) {
-  const shouldAutoFocus = options.autoFocus !== false;
+  const shouldAutoFocus = options.autoFocus !== false && shouldAllowEstimateAutoFocus();
   const card = document.createElement("div");
   card.classList.add("line-item-card");
   card.setAttribute("data-item-id", item._id || `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
@@ -2734,45 +2783,15 @@ card.innerHTML = `
     const newStatus = statusDropdown.value;
     const lineItemId = card.getAttribute("data-item-id");
     const vendorId = card.getAttribute("data-assigned-to");
-    const estimateId = new URLSearchParams(window.location.search).get("estimateId");
-    const nextPercentComplete = newStatus === 'completed'
-      ? 100
-      : newStatus === 'in-progress'
-        ? 0
-      : clampProjectPhaseProgress(percentCompleteInput?.value, newStatus);
+    const nextPercentComplete = getNextPercentCompleteForStatus(newStatus, percentCompleteInput?.value);
+    const result = await persistLineItemStatusChange(lineItemId, newStatus, {
+      vendorId,
+      percentComplete: nextPercentComplete
+    });
 
-    // 1. Update estimate line item status
-    try {
-      const response = await fetch(`/api/estimates/line-items/${lineItemId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus, percentComplete: nextPercentComplete })
-      });
-      if (!response.ok) {
-        showToast("Failed to update estimate status");
-        return;
-      }
-    } catch (err) {
-      showToast("Error updating estimate status");
+    if (!result.ok) {
+      showToast("Failed to update estimate status");
       return;
-    }
-    // 2. Update vendor assigned item status (if assigned)
-    if (vendorId && /^[a-f\d]{24}$/i.test(vendorId)) {
-      fetch(`/api/vendors/${vendorId}/update-item-status`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          itemId: lineItemId,
-          status: newStatus,
-          estimateId: estimateId
-        })
-      }).then((vendorRes) => {
-        if (!vendorRes.ok) {
-          showToast("Vendor status update failed");
-        }
-      }).catch(() => {
-        showToast("Error updating vendor status");
-      });
     }
     // Update dropdown color
     const newClass = getStatusClass(newStatus);
@@ -2783,6 +2802,10 @@ card.innerHTML = `
     syncPhaseTrackingUi();
     applyFilters();
     clearSelectedLineItems();
+    if (result.vendorSyncFailed) {
+      showToast("Vendor status update failed");
+      return;
+    }
     showToast("Status updated!");
   });
 
@@ -4387,6 +4410,12 @@ function updatePage() {
   
 // --- Floating Vendor Select Menu ---
 (function() {
+  function showToast(message, options = {}) {
+    if (typeof window.__estimateEditShowToast === 'function') {
+      window.__estimateEditShowToast(message, options);
+    }
+  }
+
   const floatingMenu = document.getElementById("floating-vendor-select");
   const dropdown = document.getElementById("floating-vendor-dropdown");
   const searchInput = document.getElementById("floating-vendor-search");
@@ -4515,6 +4544,10 @@ function isMobileEstimateViewport() {
   return !!(window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
 }
 
+function shouldAllowEstimateAutoFocus() {
+  return !isMobileEstimateViewport();
+}
+
 function getSelectedAssignableCards() {
   return Array.from(document.querySelectorAll('.line-item-select:checked'))
     .map((checkbox) => checkbox.closest('.line-item-card'))
@@ -4558,7 +4591,7 @@ function wireMobileExperience() {
   mobileActionsButton?.addEventListener('click', () => {
     const selectedCards = getSelectedAssignableCards();
     if (!selectedCards.length) {
-      showToast('Select at least one line item first.');
+      window.__estimateEditShowToast?.('Select at least one line item first.');
       return;
     }
     window.__estimateEditOpenBatchActionDrawer?.();
@@ -5231,17 +5264,27 @@ function createFilterUI() {
     const cards = getSelectedCards();
     const nextStatus = document.getElementById('batch-status-select')?.value || '';
     if (!cards.length) {
-      showToast('Select at least one item.');
+      window.__estimateEditShowToast?.('Select at least one item.');
       return;
     }
     if (!nextStatus) {
-      showToast('Select a status to apply.');
+      window.__estimateEditShowToast?.('Select a status to apply.');
       return;
     }
-    cards.forEach((card) => {
+    const statusUpdates = await Promise.all(cards.map(async (card) => {
       const dropdown = card.querySelector('.item-status-dropdown');
       const percentCompleteInput = card.querySelector('.item-percent-complete');
-      if (!dropdown) return;
+      if (!dropdown) return { ok: false, skipped: true, vendorSyncFailed: false };
+      const lineItemId = card.getAttribute('data-item-id');
+      const vendorId = card.getAttribute('data-assigned-to');
+      const nextPercentComplete = getNextPercentCompleteForStatus(nextStatus, percentCompleteInput?.value);
+      const result = await persistLineItemStatusChange(lineItemId, nextStatus, {
+        vendorId,
+        percentComplete: nextPercentComplete
+      });
+      if (!result.ok) {
+        return result;
+      }
       dropdown.value = nextStatus;
       const statusClass = typeof window.__estimateEditGetStatusClass === 'function'
         ? window.__estimateEditGetStatusClass(nextStatus)
@@ -5256,21 +5299,40 @@ function createFilterUI() {
         percentCompleteInput.value = String(nextPercentComplete);
         card.dataset.percentComplete = String(nextPercentComplete);
       }
-    });
+      return result;
+    }));
+
+    const failedEstimateUpdates = statusUpdates.filter((result) => result && !result.ok && !result.skipped).length;
+    const vendorSyncFailures = statusUpdates.filter((result) => result && result.ok && result.vendorSyncFailed).length;
+    const successfulUpdates = statusUpdates.filter((result) => result && result.ok).length;
+
+    if (!successfulUpdates) {
+      window.__estimateEditShowToast?.('Failed to update selected item statuses.');
+      return;
+    }
     try { renderProjectPhaseBar(); } catch (_) {}
     try { applyFilters(); } catch (_) {}
     await persistBatchDomChanges();
+    if (failedEstimateUpdates) {
+      window.__estimateEditShowToast?.(`Updated ${successfulUpdates} item${successfulUpdates === 1 ? '' : 's'}; ${failedEstimateUpdates} failed.`);
+      return;
+    }
+    if (vendorSyncFailures) {
+      window.__estimateEditShowToast?.(`Status updated for ${successfulUpdates} item${successfulUpdates === 1 ? '' : 's'}; vendor sync failed for ${vendorSyncFailures}.`);
+      return;
+    }
+    window.__estimateEditShowToast?.(`Status updated for ${successfulUpdates} item${successfulUpdates === 1 ? '' : 's'}.`);
   }
 
   async function applyBatchPhase() {
     const cards = getSelectedCards();
     const nextPhase = document.getElementById('batch-phase-select')?.value || '';
     if (!cards.length) {
-      showToast('Select at least one item.');
+      window.__estimateEditShowToast?.('Select at least one item.');
       return;
     }
     if (!nextPhase) {
-      showToast('Select a phase to apply.');
+      window.__estimateEditShowToast?.('Select a phase to apply.');
       return;
     }
     cards.forEach((card) => {
@@ -5287,11 +5349,11 @@ function createFilterUI() {
     const categoryKey = document.getElementById('batch-category-select')?.value || '';
     const targetHeader = findCategoryHeaderByKey(categoryKey);
     if (!cards.length) {
-      showToast('Select at least one item.');
+      window.__estimateEditShowToast?.('Select at least one item.');
       return;
     }
     if (!targetHeader) {
-      showToast('Select a destination category.');
+      window.__estimateEditShowToast?.('Select a destination category.');
       return;
     }
     cards.forEach((card) => moveCardIntoCategory(card, targetHeader));
@@ -5303,11 +5365,11 @@ function createFilterUI() {
     const startDate = document.getElementById('batch-start-date')?.value || '';
     const endDate = document.getElementById('batch-end-date')?.value || '';
     if (!cards.length) {
-      showToast('Select at least one item.');
+      window.__estimateEditShowToast?.('Select at least one item.');
       return;
     }
     if (!startDate && !endDate) {
-      showToast('Enter at least one date.');
+      window.__estimateEditShowToast?.('Enter at least one date.');
       return;
     }
     cards.forEach((card) => {
@@ -5373,7 +5435,7 @@ function createFilterUI() {
   async function duplicateSelected() {
     const cards = getSelectedCards();
     if (!cards.length) {
-      showToast('Select at least one item.');
+      window.__estimateEditShowToast?.('Select at least one item.');
       return;
     }
     cards.forEach((card) => {
@@ -5394,13 +5456,13 @@ function createFilterUI() {
   async function deleteSelected() {
     const cards = getSelectedCards();
     if (!cards.length) {
-      showToast('Select at least one item.');
+      window.__estimateEditShowToast?.('Select at least one item.');
       return;
     }
     const deletableCards = cards.filter((card) => !isCardAssigned(card));
     const skippedAssignedCount = cards.length - deletableCards.length;
     if (!deletableCards.length) {
-      showToast('Assigned line items cannot be deleted. Remove the vendor assignment first.');
+      window.__estimateEditShowToast?.('Assigned line items cannot be deleted. Remove the vendor assignment first.');
       return;
     }
     if (!window.confirm(`Delete ${deletableCards.length} selected item${deletableCards.length === 1 ? '' : 's'}?`)) {
@@ -5409,7 +5471,7 @@ function createFilterUI() {
     deletableCards.forEach((card) => card.remove());
     await persistBatchDomChanges();
     if (skippedAssignedCount) {
-      showToast(`${skippedAssignedCount} assigned item${skippedAssignedCount === 1 ? '' : 's'} skipped. Remove the vendor assignment first to delete them.`);
+      window.__estimateEditShowToast?.(`${skippedAssignedCount} assigned item${skippedAssignedCount === 1 ? '' : 's'} skipped. Remove the vendor assignment first to delete them.`);
     }
   }
 
@@ -6311,24 +6373,26 @@ function syncSeparatedListHeader() {
   let hg = headerTable.querySelector('colgroup');
   if (!hg) { hg = document.createElement('colgroup'); headerTable.insertBefore(hg, headerTable.firstChild); }
   hg.innerHTML = colgroupHTML;
-  headerTable.style.width = '100%';
+  headerTable.style.width = `${totalWidth}px`;
   headerTable.style.minWidth = `${totalWidth}px`;
   let bg = bodyTable.querySelector('colgroup');
   if (!bg) { bg = document.createElement('colgroup'); bodyTable.insertBefore(bg, bodyTable.firstChild); }
   bg.innerHTML = colgroupHTML;
-  bodyTable.style.width = '100%';
+  bodyTable.style.width = `${totalWidth}px`;
   bodyTable.style.minWidth = `${totalWidth}px`;
   const footerTable = footer?.querySelector('table');
   if (footerTable) {
     let fg = footerTable.querySelector('colgroup');
     if (!fg) { fg = document.createElement('colgroup'); footerTable.insertBefore(fg, footerTable.firstChild); }
     fg.innerHTML = colgroupHTML;
-    footerTable.style.width = '100%';
+    footerTable.style.width = `${totalWidth}px`;
     footerTable.style.minWidth = `${totalWidth}px`;
   }
 
   if (footer) {
     const rect = tableContainer.getBoundingClientRect();
+    header.style.width = `${Math.max(0, rect.width)}px`;
+    header.style.maxWidth = `${Math.max(0, rect.width)}px`;
     footer.style.left = `${Math.max(0, rect.left)}px`;
     footer.style.width = `${Math.max(0, rect.width)}px`;
   }
@@ -6337,18 +6401,13 @@ function syncSeparatedListHeader() {
   const inner = header.querySelector('.lvh-inner');
   const footerInner = footer?.querySelector('.lvf-inner') || null;
   if (inner) {
-    const isMobile = window.matchMedia && window.matchMedia('(max-width: 480px)').matches;
-    if (isMobile) {
-      // In mobile mode, let the header inner scroll natively and mirror scrollLeft
-      inner.style.transform = '';
-      try { inner.scrollLeft = scroller.scrollLeft; } catch(_) {}
-      if (footerInner) {
-        footerInner.style.transform = '';
-        try { footerInner.scrollLeft = scroller.scrollLeft; } catch(_) {}
-      }
-    } else {
-      inner.style.transform = `translateX(${-scroller.scrollLeft}px)`;
-      if (footerInner) footerInner.style.transform = `translateX(${-scroller.scrollLeft}px)`;
+    inner.style.width = `${totalWidth}px`;
+    inner.style.overflowX = 'hidden';
+    inner.style.transform = `translateX(${-scroller.scrollLeft}px)`;
+    if (footerInner) {
+      footerInner.style.width = `${totalWidth}px`;
+      footerInner.style.overflowX = 'hidden';
+      footerInner.style.transform = `translateX(${-scroller.scrollLeft}px)`;
     }
   }
 }
@@ -6360,52 +6419,32 @@ function initSeparatedListHeader() {
   if (!header || !scroller || !footer) return;
 
   syncSeparatedListHeader();
-  const inner = header.querySelector('.lvh-inner');
-  const footerInner = footer.querySelector('.lvf-inner');
-  const isMobile = window.matchMedia && window.matchMedia('(max-width: 480px)').matches;
-  if (isMobile && inner && footerInner) {
-    // Two-way scroll sync for mobile: scrolling header scrolls body and vice-versa
-    if (!scroller.__lvhMobileBound) {
-      let syncing = false;
-      const syncFromScroller = () => {
-        if (syncing) return; syncing = true;
-        try { inner.scrollLeft = scroller.scrollLeft; } catch(_) {}
-        try { footerInner.scrollLeft = scroller.scrollLeft; } catch(_) {}
-        syncing = false;
-      };
-      const syncFromHeader = () => {
-        if (syncing) return; syncing = true;
-        try { scroller.scrollLeft = inner.scrollLeft; } catch(_) {}
-        syncing = false;
-      };
-      const syncFromFooter = () => {
-        if (syncing) return; syncing = true;
-        try { scroller.scrollLeft = footerInner.scrollLeft; } catch(_) {}
-        try { inner.scrollLeft = footerInner.scrollLeft; } catch(_) {}
-        syncing = false;
-      };
-      scroller.addEventListener('scroll', syncFromScroller, { passive: true });
-      inner.addEventListener('scroll', syncFromHeader, { passive: true });
-      footerInner.addEventListener('scroll', syncFromFooter, { passive: true });
-      scroller.__lvhMobileBound = true;
-      scroller.__lvhMobileSyncFrom = syncFromScroller;
-      inner.__lvhMobileSyncFrom = syncFromHeader;
-      footerInner.__lvhMobileSyncFrom = syncFromFooter;
-    }
-  } else {
-    // Desktop/tablet: translate header to mirror scroller X
-    if (!scroller.__lvhBound) {
-      scroller.addEventListener('scroll', () => {
-        const inner2 = header.querySelector('.lvh-inner');
-        if (inner2) inner2.style.transform = `translateX(${-scroller.scrollLeft}px)`;
-        const footerInner2 = footer.querySelector('.lvf-inner');
-        if (footerInner2) footerInner2.style.transform = `translateX(${-scroller.scrollLeft}px)`;
-      }, { passive: true });
-      scroller.__lvhBound = true;
-    }
+  if (!scroller.__lvhSyncBound) {
+    const syncFromScroller = () => {
+      const headerEl = document.getElementById('list-view-header');
+      const footerEl = document.getElementById('list-view-footer');
+      const headerInner = headerEl?.querySelector('.lvh-inner');
+      const footerInner = footerEl?.querySelector('.lvf-inner');
+      if (!headerInner) return;
+      headerInner.style.transform = `translateX(${-scroller.scrollLeft}px)`;
+      if (footerInner) {
+        footerInner.style.transform = `translateX(${-scroller.scrollLeft}px)`;
+      }
+    };
+
+    scroller.addEventListener('scroll', syncFromScroller, { passive: true });
+    scroller.__lvhSyncBound = true;
+    scroller.__lvhSyncHandler = syncFromScroller;
   }
+  try { scroller.__lvhSyncHandler?.(); } catch (_) {}
   if (!window.__lvhResizeBound) {
-    window.addEventListener('resize', () => { try { syncSeparatedListHeader(); } catch(_) {} });
+    window.addEventListener('resize', () => {
+      try { syncSeparatedListHeader(); } catch(_) {}
+      try {
+        const activeScroller = document.querySelector('#line-items-table-container .table-scroll');
+        activeScroller?.__lvhSyncHandler?.();
+      } catch (_) {}
+    });
     window.__lvhResizeBound = true;
   }
 }
