@@ -1024,6 +1024,8 @@ const tenantSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Unit'
   },
+  parking: { type: String, default: '' },
+  accessCode: { type: String, default: '' },
   emergencyContact: {
     name: String,
     phone: String,
@@ -1087,14 +1089,14 @@ leaseHolders: {
   type: [{ name: String, phone: String, email: String }],
   default: []
 },
-  // Chat-style internal notes timeline for tenants
+// Chat-style internal notes timeline for tenants
 notesHistory: [
   {
     text: { type: String, required: true },
     createdAt: { type: Date, default: Date.now }
   }
 ],
-    //  checklist (per-tenant)
+  // Move-in readiness checklist (per-tenant)
   moveInChecklistCompleted: {
     type: [String],
     default: []
@@ -1150,6 +1152,11 @@ const documentSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Project',
     required: true
+  },
+  tenantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tenant',
+    default: null
   },
   name: { type: String, required: true },
   type: {
@@ -7377,6 +7384,7 @@ app.delete('/api/properties/:propertyId/maintenance/:requestId', async (req, res
 app.get('/api/properties/:propertyId/documents', async (req, res) => {
   try {
     const documents = await Document.find({ projectId: req.params.propertyId })
+      .populate('tenantId', 'name')
       .sort({ createdAt: -1 });
     res.json(documents);
   } catch (error) {
@@ -7425,40 +7433,46 @@ app.get('/api/properties/:propertyId/documents/:documentId/view', async (req, re
 });
 
 app.post('/api/properties/:propertyId/documents', upload.single('file'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ message: 'No file uploaded' });
-        }
-
-        const originalName = req.file.originalname;
-        const ext = path.extname(originalName);
-        const baseName = req.body.name ? req.body.name.replace(ext, '') : path.basename(originalName, ext);
-        const displayName = baseName + ext; // Always has extension
-
-        // Save absolute file path in MongoDB
-        const document = new Document({
-            projectId: req.params.propertyId,
-            name: displayName,
-            type: req.body.type,
-            filePath: req.file.path, // Absolute path
-            uploadedBy: req.body.uploadedBy || 'System'
-        });
-        await document.save();
-        res.status(201).json(document);
-    } catch (error) {
-        console.error('Error uploading document:', error);
-        res.status(500).json({ message: 'Server error' });
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
     }
+
+const tenantId = String(req.body.tenantId || '').trim();
+if (tenantId) {
+  const tenant = await Tenant.findOne({ _id: tenantId, projectId: req.params.propertyId }).select('_id');
+  if (!tenant) {
+    return res.status(400).json({ message: 'Selected tenant was not found for this property' });
+  }
+}
+
+const originalName = req.file.originalname;
+const ext = path.extname(originalName);
+const baseName = req.body.name ? req.body.name.replace(ext, '') : path.basename(originalName, ext);
+const displayName = baseName + ext; // Always has extension
+
+const document = new Document({
+  projectId: req.params.propertyId,
+  tenantId: tenantId || null,
+  name: displayName,
+  type: req.body.type,
+  filePath: `/uploads/${req.file.filename}`,
+  uploadedBy: req.body.uploadedBy || 'System'
+});
+    await document.save();
+    res.status(201).json(document);
+  } catch (error) {
+    console.error('Error uploading document:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 app.put('/api/properties/:propertyId/documents/:documentId', async (req, res) => {
   try {
     const { propertyId, documentId } = req.params;
     const nextName = String(req.body.name || '').trim();
-
-    if (!nextName) {
-      return res.status(400).json({ message: 'Document name is required' });
-    }
+    const nextType = String(req.body.type || '').trim();
+    const tenantIdRaw = typeof req.body.tenantId === 'string' ? req.body.tenantId.trim() : req.body.tenantId;
 
     const document = await Document.findOne({
       _id: documentId,
@@ -7469,14 +7483,34 @@ app.put('/api/properties/:propertyId/documents/:documentId', async (req, res) =>
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    const currentExt = path.extname(document.name || '');
-    const requestedExt = path.extname(nextName);
-    const normalizedName = requestedExt
-      ? nextName
-      : `${nextName}${currentExt}`;
+    if (nextName) {
+      const currentExt = path.extname(document.name || '');
+      const requestedExt = path.extname(nextName);
+      const normalizedName = requestedExt
+        ? nextName
+        : `${nextName}${currentExt}`;
 
-    document.name = normalizedName;
+      document.name = normalizedName;
+    }
+
+    if (nextType) {
+      document.type = nextType;
+    }
+
+    if (tenantIdRaw !== undefined) {
+      if (tenantIdRaw) {
+        const tenant = await Tenant.findOne({ _id: tenantIdRaw, projectId: propertyId }).select('_id');
+        if (!tenant) {
+          return res.status(400).json({ message: 'Selected tenant was not found for this property' });
+        }
+        document.tenantId = tenant._id;
+      } else {
+        document.tenantId = null;
+      }
+    }
+
     await document.save();
+    await document.populate('tenantId', 'name');
 
     res.json(document);
   } catch (error) {
