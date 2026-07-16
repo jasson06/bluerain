@@ -1552,10 +1552,112 @@ body.dark-theme .maintenance-header h3 {
 
 /* Document Grid */
 .documents-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 24px;
+    display: block;
     padding: 20px 0;
+}
+
+.documents-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 8px 0 4px;
+    flex-wrap: wrap;
+}
+
+.documents-search {
+    min-width: 240px;
+    max-width: 360px;
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 0.95rem;
+    background: #fff;
+    color: var(--text-color);
+}
+
+.documents-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(44, 62, 80, 0.07);
+}
+
+.documents-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 860px;
+}
+
+.documents-table th,
+.documents-table td {
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid #eef2f7;
+    vertical-align: middle;
+}
+
+.documents-table th {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    background: #f8fafc;
+}
+
+.documents-table tbody tr:hover {
+    background: #f8fbff;
+}
+
+.documents-file-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.documents-file-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #eaf6ff;
+    color: var(--accent-color);
+    font-size: 1.05rem;
+}
+
+.documents-file-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.documents-file-meta strong {
+    color: var(--primary-color);
+    word-break: break-word;
+}
+
+.documents-file-meta span {
+    color: #64748b;
+    font-size: 0.85rem;
+}
+
+.documents-assignment-select {
+    min-width: 180px;
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: #fff;
+}
+
+.documents-empty-row {
+    text-align: center;
+    color: #64748b;
+    padding: 26px 18px;
 }
 
 .document-card {
@@ -1600,9 +1702,8 @@ body.dark-theme .maintenance-header h3 {
 .document-actions {
     display: flex;
     gap: 10px;
-    margin-top: 16px;
-    width: 100%;
     justify-content: flex-end;
+    width: 100%;
 }
 
 .document-actions button {
@@ -1633,6 +1734,86 @@ body.dark-theme .maintenance-header h3 {
 .document-actions .delete-btn:hover {
     background: rgba(231, 76, 60, 0.08);
     color: #fff;
+}
+
+.document-name-button {
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--primary-color);
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+
+.document-name-button:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
+
+.document-menu {
+    position: relative;
+}
+
+.document-menu summary {
+    list-style: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+   
+   
+    color: #475569;
+    cursor: pointer;
+   
+    align-items: center;
+    
+}
+
+.document-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.document-menu[open] summary,
+.document-menu summary:hover {
+    background: #f8fbff;
+    color: var(--accent-color);
+    border-color: #bfd8ee;
+}
+
+.document-menu-list {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 150px;
+    padding: 6px;
+    background: #fff;
+    border: 1px solid #dbe4ee;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+    z-index: 20;
+}
+
+.document-menu-list button {
+    width: 100%;
+    justify-content: flex-start;
+    background: transparent;
+    color: var(--primary-color);
+    padding: 9px 10px;
+}
+
+.document-menu-list button:hover {
+    background: #f3f8fd;
+    color: var(--accent-color);
+}
+
+.document-menu-list .delete-btn {
+    color: var(--danger-color);
+}
+
+.document-menu-list .delete-btn:hover {
+    background: rgba(231, 76, 60, 0.08);
+    color: var(--danger-color);
 }
 
 /* Add to your existing styles */
@@ -3742,10 +3923,12 @@ body.dark-theme .portfolio-task-meta {
   .units-grid,
   .documents-grid,
   .tenants-list {
-    grid-template-columns: 1fr !important;
     gap: 12px !important;
     padding: 0 !important;
   }
+    .documents-table {
+        min-width: 700px;
+    }
   .tab-btn {
     font-size: 15px;
     padding: 8px 8px;
@@ -4634,6 +4817,9 @@ tr[data-maint-id][data-editing="true"] {
                             <h2>Documents</h2>
                             <button class="btn-secondary" id="uploadDocumentBtn">+ Upload Document</button>
                         </div>
+                        <div class="documents-toolbar">
+                            <input type="search" id="documentsSearchBar" class="documents-search" placeholder="Search documents by name, type, or tenant">
+                        </div>
                         <div class="documents-grid" id="documentsGrid"></div>
                     </div>
 
@@ -5090,6 +5276,16 @@ tr[data-maint-id][data-editing="true"] {
                 </select>
             </div>
             <div class="form-group">
+                <label>Parking</label>
+                <input type="text" id="tenantParking" placeholder="Spot, garage, or permit">
+            </div>
+            <div class="form-group">
+                <label>Access Code</label>
+                <input type="text" id="tenantAccessCode" placeholder="Gate, door, or unit code">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
                 <label>Authorized Occupants (one per line)</label>
                 <textarea id="authorizedOccupants"></textarea>
             </div>
@@ -5297,6 +5493,12 @@ tr[data-maint-id][data-editing="true"] {
         <option value="other">Other</option>
     </select>
 </div>
+            <div class="form-group">
+                <label>Assign To Tenant</label>
+                <select id="documentTenant">
+                    <option value="">Unassigned</option>
+                </select>
+            </div>
             <div class="form-group">
                 <label>File</label>
                 <input type="file" id="documentFile" required>
@@ -5654,6 +5856,7 @@ const state = {
     payments: [],
     applications: [],
     invites: [],
+    documentSearchQuery: '',
     highlightMaintenanceId: null,
     highlightMaintenanceScheduleId: null,
     highlightApplicationId: null,
@@ -5734,6 +5937,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeApplicationsSubtabs();
     initializeApplicationsSearch();
     initializeInvitesSearch();
+    initializeDocumentsSearch();
     initializeGlobalSearch();
     renderPortfolioNotesPanel();
     setPortfolioWelcomeText();
@@ -5916,6 +6120,7 @@ function initializeEventListeners() {
         showNotification('Please select a property first', 'error');
         return;
     }
+    populateDocumentTenantSelect();
     openModal('uploadDocumentModal');
 });
     document.getElementById('uploadDocumentForm')?.addEventListener('submit', handleDocumentUpload);
@@ -6301,9 +6506,48 @@ function autoSuggestApplications(){
     const values = document.getElementById('applicationsSuggestValues');
     if (values && partial) Array.from(values.querySelectorAll('.suggest-value')).forEach(li=>{ const v=(li.getAttribute('data-value')||'').toLowerCase(); li.style.display = v.includes(partial) ? 'flex' : 'none'; });
 }
-function renderFilteredApplications(){
+
+function normalizePropertyFilterText(value) {
+    return String(value || '')
+        .replace(/<br\s*\/?/gi, ' ')
+        .replace(/>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+}
+
+function getCurrentPropertyFilterTerms() {
+    if (!state.currentProperty) return [];
+    const property = state.currentProperty;
+    const address = property.address || {};
+    const line1 = address.line1 || address.addressLine1 || '';
+    const line2 = address.line2 || address.addressLine2 || '';
+    const city = address.city || '';
+    const stateCode = address.state || '';
+    const zip = address.zip || '';
+    const values = [
+        property.name,
+        line1,
+        [line1, line2].filter(Boolean).join(' '),
+        [line1, city, stateCode, zip].filter(Boolean).join(' '),
+        [line1, line2, city, stateCode, zip].filter(Boolean).join(' '),
+        [line1, city, stateCode, zip].filter(Boolean).join(', '),
+        [line1, line2, city, stateCode, zip].filter(Boolean).join(', ')
+    ];
+    return Array.from(new Set(values.map(normalizePropertyFilterText).filter(Boolean)));
+}
+
+function matchesSelectedProperty(rawPropertyValue) {
+    const terms = getCurrentPropertyFilterTerms();
+    if (!terms.length) return true;
+    const haystack = normalizePropertyFilterText(rawPropertyValue);
+    if (!haystack) return false;
+    return terms.some(term => haystack.includes(term) || term.includes(haystack));
+}
+
+function getFilteredApplicationsList() {
     const { tokens, text } = getApplicationsSearch();
-    const items = (state.applications||[]).filter(a=>{
+    return (state.applications||[]).filter(a=>{
         const nm = (a.name||'').toLowerCase();
         const em = (a.email||'').toLowerCase();
         const ph = (a.phone||'').toLowerCase();
@@ -6322,8 +6566,13 @@ function renderFilteredApplications(){
         const hitStatus = !tokens.statusList.length || tokens.statusList.includes(st);
         const hitMoveIn = !tokens.movein || String(mv).startsWith(tokens.movein);
         const hitSubmitted = !tokens.submitted || String(sb).startsWith(tokens.submitted);
-        return hitText && hitName && hitEmail && hitPhone && hitProp && hitUnit && hitStatus && hitMoveIn && hitSubmitted;
+        const hitCurrentProperty = matchesSelectedProperty(propertyName);
+        return hitCurrentProperty && hitText && hitName && hitEmail && hitPhone && hitProp && hitUnit && hitStatus && hitMoveIn && hitSubmitted;
     });
+}
+
+function renderFilteredApplications(){
+    const items = getFilteredApplicationsList();
     renderApplications(items);
 }
 
@@ -6541,6 +6790,9 @@ function renderFilteredInvites(){
         const nm = (inv.name||'').toLowerCase();
         const em = (inv.email||'').toLowerCase();
         const prop = (inv.propertyName||'').toLowerCase();
+        const invitePropertyId = inv.propertyId && typeof inv.propertyId === 'object'
+            ? String(inv.propertyId._id || inv.propertyId)
+            : String(inv.propertyId || '');
         const un = String(inv.unitNumber||'').toLowerCase();
         const st = (inv.status||'').toLowerCase();
         const sent = String(inv.sentAt||'');
@@ -6562,7 +6814,10 @@ function renderFilteredInvites(){
                 if (op==='>') hitOpenCount = oc > val; else if (op==='>=') hitOpenCount = oc >= val; else if (op==='<') hitOpenCount = oc < val; else if (op==='<=') hitOpenCount = oc <= val; else hitOpenCount = oc === val;
             }
         }
-        return hitText && hitName && hitEmail && hitProp && hitUnit && hitStatus && hitSent && hitOpened && hitOpenCount;
+        const hitCurrentProperty = state.currentProperty?._id
+            ? (invitePropertyId && invitePropertyId === String(state.currentProperty._id)) || matchesSelectedProperty(prop)
+            : true;
+        return hitCurrentProperty && hitText && hitName && hitEmail && hitProp && hitUnit && hitStatus && hitSent && hitOpened && hitOpenCount;
     });
     renderInvites(items);
 }
@@ -8073,8 +8328,8 @@ function updateTabCounts() {
     document.getElementById('tabCountPayments').textContent = state.payments?.length || 0;
     // Applications
     const appsBadge = document.getElementById('tabCountApplications');
-    const appsAllCount = state.applications?.length || 0;
-    if (appsBadge) appsBadge.textContent = appsAllCount;
+    const appsFilteredCount = getFilteredApplicationsList().length;
+    if (appsBadge) appsBadge.textContent = appsFilteredCount;
     // Mirror PENDING applications count into top toolbar icon
     const pendingAppsCount = (state.applications || []).filter(a => (a.status || 'pending') === 'pending').length;
     const topApps = document.getElementById('topApplicationsCount');
@@ -8294,6 +8549,15 @@ async function selectProperty(propertyId) {
         state.currentProperty = state.properties.find(p => p._id === propertyId);
         if (!state.currentProperty) throw new Error('Property not found');
 
+        const shouldRefreshApplicationsTab = state.currentTab === 'applications';
+
+        if (Array.isArray(state.applications) && state.applications.length) {
+            renderFilteredApplications();
+        }
+        if (Array.isArray(state.invites) && state.invites.length) {
+            renderFilteredInvites();
+        }
+
         // Ensure property dashboard is visible when a property is selected
         const dashboard = document.getElementById('propertyDashboard');
         const portfolioSection = document.getElementById('portfolioOverviewSection');
@@ -8313,6 +8577,10 @@ async function selectProperty(propertyId) {
         runWhenIdle(() => loadPayments(propertyId).catch(() => {}));
         runWhenIdle(() => loadMaintenanceRequests(propertyId).catch(() => {}));
         runWhenIdle(() => loadMaintenanceSchedules(propertyId).catch(() => {}));
+        if (shouldRefreshApplicationsTab) {
+            runWhenIdle(() => loadApplications(true).catch(() => {}));
+            runWhenIdle(() => loadInvites(true).catch(() => {}));
+        }
         
         updatePropertyStats();
         showNotification('Property loaded successfully', 'success');
@@ -9132,6 +9400,8 @@ async function handleAddTenant(event) {
         name: document.getElementById('tenantName').value,
         phone: document.getElementById('tenantPhone').value,
         email: document.getElementById('tenantEmail').value,
+        parking: document.getElementById('tenantParking').value.trim(),
+        accessCode: document.getElementById('tenantAccessCode').value.trim(),
         leaseHolders: getLeaseHoldersFromForm(),
         emergencyContact: {
             name: document.getElementById('emergencyContactName').value,
@@ -9371,6 +9641,7 @@ function renderTenants() {
         // Find the associated unit
         const assignedUnit = typeof tenant.unitId === 'object' ? tenant.unitId : 
             state.units.find(u => u._id === tenant.unitId || u._id?.toString() === tenant.unitId?.toString());
+        const parkingAssignment = tenant.parking ? String(tenant.parking).trim() : '';
 
         // Format lease dates
         const leaseStart = tenant.leaseStart ? formatDateDisplay(tenant.leaseStart, 'en-US') : 'Not set';
@@ -9488,6 +9759,8 @@ function renderTenants() {
                             `Unit ${assignedUnit.number} (${assignedUnit.bedrooms} bed, ${assignedUnit.bathrooms} bath)` : 
                             'No unit assigned'}
                     </div>
+                    <div class="tenant-detail-row"><span>Parking:</span> <span>${parkingAssignment || 'Unassigned'}</span></div>
+                    <div class="tenant-detail-row"><span>Access Code:</span> <span>${tenant.accessCode || 'Not set'}</span></div>
                 </div>
                 <div class="tenant-section">
                     <div class="tenant-section-title"><i class="fas fa-calendar-alt"></i> Lease</div>
@@ -9631,6 +9904,8 @@ async function viewTenantDetails(tenantId) {
             <p><i class="fas fa-tint"></i> Water Fee: $${tenant.waterFee?.toFixed(2) || '0.00'}</p>
             <p><i class="fas fa-trash"></i> Trash Fee: $${tenant.trashFee?.toFixed(2) || '0.00'}</p>
             <p><i class="fas fa-user-cog"></i> Admin Fee: $${tenant.adminFee?.toFixed(2) || '0.00'}</p>
+            <p><i class="fas fa-square-parking"></i> Parking: ${tenant.parking || 'Unassigned'}</p>
+            <p><i class="fas fa-key"></i> Access Code: ${tenant.accessCode || 'Not set'}</p>
             ${
                 tenant.additionalFee?.amount
                     ? `<p><i class="fas fa-coins"></i> ${
@@ -9833,6 +10108,8 @@ async function editTenant(tenantId) {
         setVal('tenantName', tenant.name);
         setVal('tenantPhone', tenant.phone);
         setVal('tenantEmail', tenant.email);
+        setVal('tenantParking', tenant.parking || '');
+        setVal('tenantAccessCode', tenant.accessCode || '');
 
         populateLeaseHolders(tenant.leaseHolders || []);
 
@@ -10046,6 +10323,8 @@ async function handleUpdateTenant(tenantId) {
         name: document.getElementById('tenantName').value,
         phone: document.getElementById('tenantPhone').value,
         email: document.getElementById('tenantEmail').value,
+        parking: document.getElementById('tenantParking').value.trim(),
+        accessCode: document.getElementById('tenantAccessCode').value.trim(),
         leaseHolders: getLeaseHoldersFromForm(),
         emergencyContact: {
             name: document.getElementById('emergencyContactName').value,
@@ -12069,6 +12348,7 @@ async function handleDocumentUpload(event) {
     const fileInput = document.getElementById('documentFile');
     const nameInput = document.getElementById('documentName');
     const typeInput = document.getElementById('documentType');
+    const tenantInput = document.getElementById('documentTenant');
     
     if (!fileInput.files[0]) {
         showNotification('Please select a file to upload', 'error');
@@ -12081,6 +12361,7 @@ async function handleDocumentUpload(event) {
         formData.append('name', nameInput.value);
         formData.append('type', typeInput.value); // <-- Save the selected document type
         formData.append('propertyId', state.currentProperty._id);
+        formData.append('tenantId', tenantInput?.value || '');
 
         const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/documents`, {
             method: 'POST',
@@ -12099,6 +12380,58 @@ async function handleDocumentUpload(event) {
         showNotification('Error uploading document', 'error');
             } finally {
         hideLoader();
+    }
+}
+
+function initializeDocumentsSearch() {
+    const searchInput = document.getElementById('documentsSearchBar');
+    if (!searchInput || searchInput.dataset.bound === 'true') return;
+
+    searchInput.addEventListener('input', (event) => {
+        state.documentSearchQuery = event.target.value || '';
+        renderDocuments();
+    });
+
+    searchInput.dataset.bound = 'true';
+}
+
+function populateDocumentTenantSelect(selectedTenantId = '') {
+    const tenantSelect = document.getElementById('documentTenant');
+    if (!tenantSelect) return;
+
+    const selected = String(selectedTenantId || '');
+    const tenantOptions = (state.tenants || []).map(tenant => `
+        <option value="${tenant._id}" ${String(tenant._id) === selected ? 'selected' : ''}>${tenant.name}</option>
+    `).join('');
+
+    tenantSelect.innerHTML = `<option value="">Unassigned</option>${tenantOptions}`;
+}
+
+async function assignDocumentTenant(documentId, tenantId) {
+    if (!state.currentProperty?._id) return;
+
+    try {
+        const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/documents/${documentId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ tenantId })
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || 'Failed to assign tenant');
+        }
+
+        const updatedDocument = await response.json();
+        state.documents = (state.documents || []).map(doc => doc._id === updatedDocument._id ? updatedDocument : doc);
+        renderDocuments();
+        showNotification('Document assignment updated', 'success');
+    } catch (error) {
+        console.error('Error assigning document tenant:', error);
+        showNotification(error.message || 'Error updating document assignment', 'error');
+        renderDocuments();
     }
 }
 
@@ -12281,6 +12614,17 @@ async function loadDocuments(propertyId, force = false) {
 
 function renderDocuments() {
     const documentsGrid = document.getElementById('documentsGrid');
+    const rawSearch = String(state.documentSearchQuery || '').trim().toLowerCase();
+    const documents = !rawSearch
+        ? (state.documents || [])
+        : (state.documents || []).filter(doc => {
+            const tenantName = typeof doc.tenantId === 'object'
+                ? (doc.tenantId?.name || '')
+                : ((state.tenants || []).find(tenant => String(tenant._id) === String(doc.tenantId))?.name || '');
+            return [doc.name, doc.type, tenantName]
+                .filter(Boolean)
+                .some(value => String(value).toLowerCase().includes(rawSearch));
+        });
     
     if (!state.documents?.length) {
         documentsGrid.innerHTML = `
@@ -12294,36 +12638,87 @@ function renderDocuments() {
         return;
     }
 
-    documentsGrid.innerHTML = state.documents.map(doc => `
-        <div class="document-card">
-            <div class="document-icon">
-                <i class="fas fa-file-${getFileIcon(doc.name)}"></i>
-            </div>
-            <div class="document-info">
-                <h3>${doc.name}</h3>
-                <p>Type: ${doc.type}</p>
-                <p>Added: ${new Date(doc.createdAt).toLocaleDateString()}</p>
-            </div>
-            <div class="document-actions">
-                <button onclick="viewDocument('${doc._id}')" title="View">
-                    <i class="fas fa-eye"></i> View
-                </button>
-                <button onclick="downloadDocument('${doc._id}')" title="Download">
-                    <i class="fas fa-download"></i> Download
-                </button>
-                <button onclick="deleteDocument('${doc._id}')" class="delete-btn" title="Delete">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
+    documentsGrid.innerHTML = `
+        <div class="documents-table-wrapper">
+            <table class="documents-table">
+                <thead>
+                    <tr>
+                        <th>Document</th>
+                        <th>Type</th>
+                        <th>Assigned Tenant</th>
+                        <th>Added</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${documents.length ? documents.map(doc => {
+                        const selectedTenantId = typeof doc.tenantId === 'object'
+                            ? (doc.tenantId?._id || '')
+                            : (doc.tenantId || '');
+                        const tenantOptions = (state.tenants || []).map(tenant => `
+                            <option value="${tenant._id}" ${String(tenant._id) === String(selectedTenantId) ? 'selected' : ''}>${tenant.name}</option>
+                        `).join('');
+                        const assignedTenantLabel = typeof doc.tenantId === 'object'
+                            ? (doc.tenantId?.name || 'Unassigned')
+                            : ((state.tenants || []).find(tenant => String(tenant._id) === String(doc.tenantId))?.name || 'Unassigned');
+
+                        return `
+                            <tr>
+                                <td>
+                                    <div class="documents-file-cell">
+                                        <span class="documents-file-icon"><i class="fas fa-file-${getFileIcon(doc.name)}"></i></span>
+                                        <div class="documents-file-meta">
+                                            <button type="button" class="document-name-button" onclick="viewDocument('${doc._id}')">${doc.name}</button>
+                                            <span>${assignedTenantLabel}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>${doc.type}</td>
+                                <td>
+                                    <select class="documents-assignment-select" onchange="assignDocumentTenant('${doc._id}', this.value)">
+                                        <option value="">Unassigned</option>
+                                        ${tenantOptions}
+                                    </select>
+                                </td>
+                                <td>${new Date(doc.createdAt).toLocaleDateString()}</td>
+                                <td>
+                                    <div class="document-actions">
+                                        <details class="document-menu">
+                                            <summary title="Document actions" aria-label="Document actions">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </summary>
+                                            <div class="document-menu-list">
+                                                <button type="button" onclick="downloadDocument('${doc._id}'); closeDocumentMenu(this)">
+                                                    <i class="fas fa-download"></i> Download
+                                                </button>
+                                                <button type="button" onclick="renameDocument('${doc._id}'); closeDocumentMenu(this)">
+                                                    <i class="fas fa-pen"></i> Rename
+                                                </button>
+                                                <button type="button" onclick="deleteDocument('${doc._id}'); closeDocumentMenu(this)" class="delete-btn">
+                                                    <i class="fas fa-trash"></i> Delete
+                                                </button>
+                                            </div>
+                                        </details>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('') : `
+                        <tr>
+                            <td colspan="5" class="documents-empty-row">No documents match your search.</td>
+                        </tr>
+                    `}
+                </tbody>
+            </table>
         </div>
-    `).join('');
+    `;
 }
 
 // Applications: fetch and render
 async function loadApplications(force = false) {
     try {
         if (!force && Array.isArray(state.applications) && state.applications.length) {
-            renderApplications();
+            renderFilteredApplications();
             updateTabCounts();
             return;
         }
@@ -12332,7 +12727,7 @@ async function loadApplications(force = false) {
         const all = await res.json();
         // Keep all applications (Pending, Approved, Rejected) in state for the Applications tab
         state.applications = Array.isArray(all) ? all : [];
-        renderApplications();
+        renderFilteredApplications();
         updateTabCounts();
     } catch (err) {
         console.error('Error loading applications:', err);
@@ -12344,13 +12739,13 @@ async function loadApplications(force = false) {
 async function loadInvites(force = false) {
     try {
         if (!force && Array.isArray(state.invites) && state.invites.length) {
-            renderInvites();
+            renderFilteredInvites();
             return;
         }
         const res = await fetch('/api/application-invites?limit=200');
         if (!res.ok) throw new Error('Failed to fetch invites');
         state.invites = await res.json();
-        renderInvites();
+        renderFilteredInvites();
     } catch (err) {
         console.error('Error loading invites:', err);
         showNotification('Error loading invites', 'error');
@@ -12613,10 +13008,10 @@ function renderInvites(items) {
         };
     }
 
-    // Wire invite name/notes click to open notes drawer
+                        renderFilteredApplications();
     list.querySelectorAll('.invite-notes-link').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            e.preventDefault();
+                        renderFilteredInvites();
             const id = btn.getAttribute('data-invite-id');
             if (!id) return;
             openNotesDrawerForInvite(id);
@@ -13941,31 +14336,8 @@ async function viewDocument(documentId) {
             throw new Error('Document not found in state');
         }
 
-        // Check file type based on extension
-        const fileExtension = docFile.name.split('.').pop().toLowerCase();
         const url = `${API_URL}/properties/${state.currentProperty._id}/documents/${documentId}/view`;
-
-        if (['jpg', 'jpeg', 'png', 'gif'].includes(fileExtension)) {
-            // Show images in modal
-            const modal = document.createElement('div');
-            modal.className = 'modal image-viewer';
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3>${docFile.name}</h3>
-                        <button onclick="closeImageViewer(this)" class="btn-close">×</button>
-                    </div>
-                    <div class="modal-body">
-                        <img src="${url}" alt="${docFile.name}" style="max-width: 100%; height: auto;">
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            modal.style.display = 'block';
-        } else {
-            // For PDFs and other docs, open the direct URL in a new tab
-            window.open(url, '_blank');
-        }
+        window.open(url, '_blank', 'noopener');
     } catch (error) {
         console.error('Error viewing document:', error);
         showNotification('Error viewing document', 'error');
@@ -14002,6 +14374,59 @@ async function downloadDocument(docId) {
         showNotification('Error downloading document', 'error');
            } finally {
         hideLoader(); 
+    }
+}
+
+function closeDocumentMenu(trigger) {
+    const menu = trigger?.closest('.document-menu');
+    if (menu) menu.removeAttribute('open');
+}
+
+document.addEventListener('click', (event) => {
+    document.querySelectorAll('.document-menu[open]').forEach(menu => {
+        if (!menu.contains(event.target)) {
+            menu.removeAttribute('open');
+        }
+    });
+});
+
+async function renameDocument(docId) {
+    const doc = (state.documents || []).find(d => d._id === docId);
+    if (!doc || !state.currentProperty?._id) {
+        showNotification('Document not found', 'error');
+        return;
+    }
+
+    const nextName = window.prompt('Rename document', doc.name || '');
+    if (nextName === null) return;
+
+    const trimmedName = nextName.trim();
+    if (!trimmedName || trimmedName === doc.name) return;
+
+    showLoader();
+    try {
+        const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/documents/${docId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name: trimmedName })
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || 'Failed to rename document');
+        }
+
+        const updatedDocument = await response.json();
+        state.documents = (state.documents || []).map(item => item._id === updatedDocument._id ? updatedDocument : item);
+        renderDocuments();
+        showNotification('Document renamed successfully', 'success');
+    } catch (error) {
+        console.error('Error renaming document:', error);
+        showNotification(error.message || 'Error renaming document', 'error');
+    } finally {
+        hideLoader();
     }
 }
 
