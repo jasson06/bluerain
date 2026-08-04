@@ -8769,6 +8769,7 @@ app.patch('/api/properties/:propertyId/maintenance-schedules/:scheduleId/complet
   try {
     const { propertyId, scheduleId } = req.params;
     const { completedBy, notes } = req.body || {};
+    const completedAt = new Date();
 
     // Find the schedule
     const schedule = await MaintenanceSchedule.findOne({ _id: scheduleId, projectId: propertyId });
@@ -8777,13 +8778,13 @@ app.patch('/api/properties/:propertyId/maintenance-schedules/:scheduleId/complet
     // Record completion in history
     schedule.history = schedule.history || [];
     schedule.history.push({
-      completedAt: new Date(),
+      completedAt,
       completedBy: completedBy || 'System',
       notes: notes || ''
     });
 
     // --- Determine base date for next schedule ---
-    const now = new Date();
+    const now = completedAt;
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     let baseDate = schedule.nextScheduledDate < today ? today : schedule.nextScheduledDate;
 
@@ -8804,6 +8805,7 @@ app.patch('/api/properties/:propertyId/maintenance-schedules/:scheduleId/complet
     // Reset status and completedAt for the next cycle
     schedule.status = 'pending';
     schedule.completedAt = null;
+    schedule.startDate = completedAt;
     schedule.nextScheduledDate = nextDate;
 
     await schedule.save();
