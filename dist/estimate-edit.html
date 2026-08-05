@@ -21,12 +21,309 @@
     }
 
     .container {
-      max-width: 1520px;
-      margin: 20px auto;
-      padding: 20px;
-      background: #ffffff;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      border-radius: 10px;
+      width: calc(100% - 32px);
+      max-width: none;
+      margin: 16px;
+      padding: 24px clamp(18px, 2vw, 10px) 28px;
+      box-sizing: border-box;
+      border: 1px solid #dbe4f0;
+      background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+      box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+      border-radius: 22px;
+    }
+
+    .studio-workspace {
+      display: grid;
+      grid-template-columns: 210px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+    }
+
+    .estimate-canvas {
+      min-width: 0;
+    }
+
+    .room-rail {
+      position: sticky;
+      top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 16px;
+      max-height: calc(100vh - 40px);
+      border: 1px solid #dbe4f0;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
+      box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+      transition: width 0.22s ease, padding 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+    }
+
+    .rail-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .rail-header span {
+      font-size: 0.88rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #0f172a;
+    }
+
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      padding: 7px 12px;
+      border: 1px solid #c7d2e2;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.96);
+      color: #1d4ed8;
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+    }
+
+    .icon-btn:hover {
+      background: #dbeafe;
+      border-color: #93c5fd;
+    }
+
+    .icon-btn:active {
+      transform: translateY(1px);
+    }
+
+    .icon-btn:focus-visible {
+      outline: 2px solid rgba(37, 99, 235, 0.26);
+      outline-offset: 2px;
+    }
+
+    .room-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      padding-right: 4px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;  /* IE and Edge */
+    }
+
+    .room-list::-webkit-scrollbar {
+      display: none;  /* Chrome, Safari, Opera */
+    }
+
+    .room-list:empty::before {
+      content: 'No rooms yet';
+      padding: 10px 12px;
+      border: 1px dashed #c7d2e2;
+      border-radius: 12px;
+      color: #64748b;
+      font-size: 0.92rem;
+    }
+
+    .room-rail-item {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      width: 100%;
+      gap: 4px;
+      padding: 12px 14px;
+      border: 1px solid #dbe4f0;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.92);
+      color: #0f172a;
+      text-align: left;
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+      cursor: pointer;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+    }
+
+    .room-rail-item:hover {
+      transform: translateY(-1px);
+      border-color: #93c5fd;
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.14);
+    }
+
+    .room-rail-item.is-active {
+      border-color: #2563eb;
+      background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+      box-shadow: 0 12px 28px rgba(37, 99, 235, 0.18);
+    }
+
+    .room-rail-item.is-collapsed-room {
+      border-style: dashed;
+    }
+
+    .room-rail-name {
+      font-size: 0.97rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .room-rail-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.76rem;
+      color: #64748b;
+    }
+
+    .mobile-room-sheet[hidden] {
+      display: none !important;
+    }
+
+    .mobile-room-sheet {
+      --mobile-room-sheet-bottom-gap: calc(124px + env(safe-area-inset-bottom, 0px));
+      position: fixed;
+      left: 14px;
+      right: 14px;
+      bottom: var(--mobile-room-sheet-bottom-gap);
+      z-index: 10070;
+      display: none;
+      align-items: flex-end;
+      justify-content: flex-end;
+      pointer-events: none;
+      box-sizing: border-box;
+    }
+
+    .mobile-room-sheet.is-open {
+      display: flex;
+    }
+
+    .mobile-room-sheet-backdrop {
+      display: none;
+    }
+
+    .mobile-room-sheet-panel {
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      max-height: min(56vh, 420px);
+      padding: 18px 16px 16px;
+      background: linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
+      border: 1px solid rgba(203, 213, 225, 0.95);
+      box-shadow: 0 18px 36px rgba(15, 23, 42, 0.16);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow: hidden;
+      border-radius: 22px;
+      pointer-events: auto;
+      opacity: 0;
+      transform: translateX(100%);
+      transition: transform 0.28s cubic-bezier(.22,.84,.24,1), opacity 0.18s ease;
+      will-change: transform, opacity;
+    }
+
+    .mobile-room-sheet.is-open .mobile-room-sheet-panel {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .mobile-room-sheet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .mobile-room-sheet-title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .mobile-room-sheet-title span {
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+
+    .mobile-room-sheet-title strong {
+      font-size: 1.1rem;
+      color: #0f172a;
+    }
+
+    .mobile-room-sheet-close {
+      width: 38px;
+      min-width: 38px;
+      height: 38px;
+      padding: 0;
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+
+    .mobile-room-sheet-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .mobile-room-sheet-clear {
+      border: 1px solid #c7d2e2;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.9);
+      color: #1d4ed8;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .mobile-room-sheet-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      padding-right: 4px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .mobile-room-sheet-list::-webkit-scrollbar {
+      display: none;
+    }
+
+    .mobile-room-sheet-note {
+      font-size: 0.82rem;
+      color: #64748b;
+      line-height: 1.45;
+      margin: 0;
+    }
+
+    body.rooms-rail-collapsed .studio-workspace {
+      grid-template-columns: 64px minmax(0, 1fr);
+    }
+
+    body.rooms-rail-collapsed .room-rail {
+      padding: 14px 10px;
+    }
+
+    body.rooms-rail-collapsed .rail-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    body.rooms-rail-collapsed .rail-header span,
+    body.rooms-rail-collapsed .room-list {
+      display: none;
+    }
+
+    body.rooms-rail-collapsed .icon-btn {
+      width: 100%;
+      padding-inline: 0;
     }
 
 /* Container Styling */
@@ -361,6 +658,26 @@
 
 /* Responsive Styling */
 @media (max-width: 768px) {
+  .studio-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .room-rail {
+    display: none;
+  }
+
+  .mobile-room-sheet {
+    --mobile-room-sheet-bottom-gap: calc(152px + env(safe-area-inset-bottom, 0px));
+  }
+
+  body.rooms-rail-collapsed .studio-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  body.rooms-rail-collapsed .room-rail {
+    display: none;
+  }
+
   #project-details {
     padding: 18px;
     border-radius: 12px;
@@ -965,6 +1282,7 @@ button:disabled {
 @media (max-width: 768px) {
   .container {
     padding: 15px;
+    width: 100%;
   }
 
 
@@ -1369,6 +1687,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
     /* Mobile Responsiveness */
     @media (max-width: 768px) {
       .container {
+        width: 100%;
         padding: 10px 10px calc(154px + env(safe-area-inset-bottom, 0px));
         margin: 0;
         min-height: 100vh;
@@ -1730,6 +2049,18 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
     }
 
     @media (max-width: 480px) {
+      .mobile-room-sheet {
+        --mobile-room-sheet-bottom-gap: calc(132px + env(safe-area-inset-bottom, 0px));
+        left: 10px;
+        right: 10px;
+      }
+
+      .mobile-room-sheet-panel {
+        width: 100%;
+        max-height: min(52vh, 360px);
+        border-radius: 18px;
+      }
+
       #button-action.topbar-compact {
         margin: -10px -10px 10px;
         padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 8px;
@@ -3460,7 +3791,16 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 
 
     
-    <section id="estimate-section">
+    <main class="studio-workspace">
+      <aside class="room-rail" aria-label="Rooms">
+        <div class="rail-header">
+          <span>Rooms</span>
+          <button id="collapse-rooms-btn" class="icon-btn" type="button" title="Collapse rooms">Hide</button>
+        </div>
+        <div id="room-list" class="room-list"></div>
+      </aside>
+
+    <section id="estimate-section" class="estimate-canvas">
       <div id="project-phase-path" class="project-phase-path">
         <div class="project-phase-path-header">
           <div>
@@ -3615,6 +3955,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
         <button id="cancel-estimate" class="btn-secondary" onclick="(function(){ const projectId = new URLSearchParams(window.location.search).get('projectId'); window.location.href = projectId ? ('/details/projects/' + encodeURIComponent(projectId)) : document.referrer; })()">Back</button>
       </div>
     </section>
+    </main>
     
   </div>
 
@@ -3655,7 +3996,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
     </button>
     <button id="mobile-add-room-btn" class="mobile-bottom-action" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-      <span>Room</span>
+      <span>Rooms</span>
     </button>
     <button id="mobile-add-item-btn" class="mobile-bottom-action primary" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -3670,6 +4011,24 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
       <span>Save</span>
     </button>
+  </div>
+</div>
+
+<div id="mobile-room-sheet" class="mobile-room-sheet" hidden aria-hidden="true">
+  <div class="mobile-room-sheet-backdrop" data-mobile-room-close></div>
+  <div class="mobile-room-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="mobile-room-sheet-title">
+    <div class="mobile-room-sheet-header">
+      <div class="mobile-room-sheet-title">
+        <span>Rooms</span>
+        
+      </div>
+      <button type="button" class="icon-btn mobile-room-sheet-close" data-mobile-room-close aria-label="Close room selector">&times;</button>
+    </div>
+    <div class="mobile-room-sheet-actions">
+      <button id="mobile-room-sheet-clear" class="mobile-room-sheet-clear" type="button">Show All Rooms</button>
+    </div>
+    <div id="mobile-room-list" class="mobile-room-sheet-list"></div>
+    <p class="mobile-room-sheet-note">Choose a room to focus the estimate on that area only.</p>
   </div>
 </div>
 
