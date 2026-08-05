@@ -215,6 +215,269 @@ function hideProjectPhaseTooltip() {
   tooltip.setAttribute('aria-hidden', 'true');
 }
 
+let __roomRailObserver = null;
+let __roomRailActiveKey = '';
+let __roomRailScrollTicking = false;
+
+function getRoomRailCollapseStorageKey() {
+  const projectId = new URLSearchParams(window.location.search).get('projectId') || 'default';
+  return `estimate-room-rail-collapsed:${projectId}`;
+}
+
+function getCategoryNameFromHeader(header) {
+  return header?.querySelector('.category-title span[contenteditable]')?.textContent?.trim() || 'Untitled Room';
+}
+
+function getEstimateRoomHeaders() {
+  return Array.from(document.querySelectorAll('.category-header'));
+}
+
+function escapeRoomRailHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char] || char));
+}
+
+function setRoomRailActiveKey(key) {
+  __roomRailActiveKey = key || '';
+  document.querySelectorAll('#room-list .room-rail-item, #mobile-room-list .room-rail-item').forEach((button) => {
+    const isActive = !!key && button.dataset.roomKey === key;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-current', isActive ? 'true' : 'false');
+  });
+}
+
+function setRoomRailCollapsedState(collapsed) {
+  document.body.classList.toggle('rooms-rail-collapsed', !!collapsed);
+  const toggleButton = document.getElementById('collapse-rooms-btn');
+  if (toggleButton) {
+    toggleButton.textContent = collapsed ? 'Show' : 'Hide';
+    toggleButton.title = collapsed ? 'Show rooms' : 'Collapse rooms';
+    toggleButton.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  }
+  try {
+    window.localStorage.setItem(getRoomRailCollapseStorageKey(), collapsed ? '1' : '0');
+  } catch (_) {}
+}
+
+function updateActiveRoomRailFromViewport() {
+  __roomRailScrollTicking = false;
+  const headers = getEstimateRoomHeaders();
+  if (!headers.length) {
+    setRoomRailActiveKey('');
+    return;
+  }
+
+  const viewportAnchor = window.innerWidth <= 768 ? 120 : 170;
+  let bestHeader = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  headers.forEach((header) => {
+    const rect = header.getBoundingClientRect();
+    const distance = Math.abs(rect.top - viewportAnchor);
+    if (rect.bottom > 0 && distance < bestDistance) {
+      bestDistance = distance;
+      bestHeader = header;
+    }
+  });
+
+  const fallbackHeader = bestHeader || headers[0];
+  setRoomRailActiveKey(fallbackHeader ? ensureCategoryCollapseKey(fallbackHeader) : '');
+}
+
+function scheduleActiveRoomRailSync() {
+  if (__roomRailScrollTicking) return;
+  __roomRailScrollTicking = true;
+  window.requestAnimationFrame(updateActiveRoomRailFromViewport);
+}
+
+function getRoomRailSelectedCategory() {
+  return document.getElementById('filter-category')?.value?.trim() || '';
+}
+
+function getRoomSelectionMarkup(headers) {
+  return headers.map((header) => {
+    const roomKey = ensureCategoryCollapseKey(header);
+    const roomNameText = getCategoryNameFromHeader(header);
+    const roomName = escapeRoomRailHtml(roomNameText);
+    const itemCount = getCategoryCards(header).length;
+    const roomTotal = Number(getCategoryTotalAmount(header) || 0).toFixed(2);
+    return `
+      <button
+        class="room-rail-item"
+        type="button"
+        data-room-key="${escapeRoomRailHtml(roomKey)}"
+        data-room-name="${roomName}"
+        aria-current="false"
+        title="Jump to ${roomName}"
+      >
+        <span class="room-rail-name">${roomName}</span>
+        <span class="room-rail-meta">
+          <span>${itemCount} item${itemCount === 1 ? '' : 's'}</span>
+          <span>$${roomTotal}</span>
+        </span>
+      </button>
+    `;
+  }).join('');
+}
+
+function applyRoomSelection(roomName) {
+  const categoryFilter = document.getElementById('filter-category');
+  if (categoryFilter) {
+    categoryFilter.value = roomName || '';
+    applyFilters();
+  }
+
+  const headers = getEstimateRoomHeaders();
+  const targetHeader = roomName
+    ? headers.find((header) => getCategoryNameFromHeader(header) === roomName)
+    : headers[0] || null;
+  if (targetHeader) {
+    setRoomRailActiveKey(ensureCategoryCollapseKey(targetHeader));
+    targetHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else if (!roomName) {
+    setRoomRailActiveKey('');
+  }
+}
+
+function closeMobileRoomSheet() {
+  const sheet = document.getElementById('mobile-room-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('is-open');
+  sheet.setAttribute('aria-hidden', 'true');
+  sheet.hidden = true;
+}
+
+function isMobileRoomSheetOpen() {
+  const sheet = document.getElementById('mobile-room-sheet');
+  return !!sheet && !sheet.hidden && sheet.classList.contains('is-open');
+}
+
+function openMobileRoomSheet() {
+  const sheet = document.getElementById('mobile-room-sheet');
+  if (!sheet) return;
+  sheet.hidden = false;
+  sheet.setAttribute('aria-hidden', 'false');
+  window.requestAnimationFrame(() => {
+    sheet.classList.add('is-open');
+  });
+}
+
+function toggleMobileRoomSheet() {
+  if (isMobileRoomSheetOpen()) {
+    closeMobileRoomSheet();
+    return;
+  }
+  openMobileRoomSheet();
+}
+
+function renderRoomRail() {
+  const roomList = document.getElementById('room-list');
+  const mobileRoomList = document.getElementById('mobile-room-list');
+  if (!roomList && !mobileRoomList) return;
+
+  const headers = getEstimateRoomHeaders();
+  const selectedCategory = getRoomRailSelectedCategory();
+  const roomSelectionMarkup = getRoomSelectionMarkup(headers);
+  if (roomList) roomList.innerHTML = roomSelectionMarkup;
+  if (mobileRoomList) mobileRoomList.innerHTML = roomSelectionMarkup;
+
+  document.querySelectorAll('#room-list .room-rail-item, #mobile-room-list .room-rail-item').forEach((button) => {
+    button.addEventListener('click', () => {
+      const isMobileRoomButton = !!button.closest('#mobile-room-list');
+      const roomKey = button.dataset.roomKey || '';
+      const header = headers.find((entry) => ensureCategoryCollapseKey(entry) === roomKey);
+      if (!header) return;
+      const roomName = getCategoryNameFromHeader(header);
+      const nextRoomName = getRoomRailSelectedCategory() === roomName ? '' : roomName;
+      applyRoomSelection(nextRoomName);
+      if (isMobileRoomButton && nextRoomName) {
+        closeMobileRoomSheet();
+      }
+    });
+  });
+
+  if (selectedCategory) {
+    const selectedHeader = headers.find((header) => getCategoryNameFromHeader(header) === selectedCategory);
+    setRoomRailActiveKey(selectedHeader ? ensureCategoryCollapseKey(selectedHeader) : '');
+  } else if (__roomRailActiveKey && headers.some((header) => ensureCategoryCollapseKey(header) === __roomRailActiveKey)) {
+    setRoomRailActiveKey(__roomRailActiveKey);
+  } else {
+    updateActiveRoomRailFromViewport();
+  }
+}
+
+function initRoomRail() {
+  const roomList = document.getElementById('room-list');
+  const toggleButton = document.getElementById('collapse-rooms-btn');
+  const lineItemsContainer = document.getElementById('line-items-cards');
+  const mobileRoomSheet = document.getElementById('mobile-room-sheet');
+  const mobileRoomClear = document.getElementById('mobile-room-sheet-clear');
+  if ((!roomList && !mobileRoomSheet) || !toggleButton || !lineItemsContainer) return;
+
+  if (toggleButton.dataset.roomRailBound !== 'true') {
+    toggleButton.dataset.roomRailBound = 'true';
+    toggleButton.addEventListener('click', () => {
+      const isCollapsed = document.body.classList.contains('rooms-rail-collapsed');
+      setRoomRailCollapsedState(!isCollapsed);
+    });
+  }
+
+  if (lineItemsContainer.dataset.roomRailBound !== 'true') {
+    lineItemsContainer.dataset.roomRailBound = 'true';
+
+    lineItemsContainer.addEventListener('input', (event) => {
+      if (event.target?.matches?.('.category-title span[contenteditable]')) {
+        renderRoomRail();
+      }
+    });
+
+    lineItemsContainer.addEventListener('blur', (event) => {
+      if (event.target?.matches?.('.category-title span[contenteditable]')) {
+        renderRoomRail();
+      }
+    }, true);
+
+    __roomRailObserver?.disconnect?.();
+    __roomRailObserver = new MutationObserver((mutations) => {
+      if (mutations.some((mutation) => mutation.type === 'childList')) {
+        renderRoomRail();
+      }
+    });
+    __roomRailObserver.observe(lineItemsContainer, { childList: true });
+
+    window.addEventListener('scroll', scheduleActiveRoomRailSync, { passive: true });
+    window.addEventListener('resize', scheduleActiveRoomRailSync, { passive: true });
+  }
+
+  if (mobileRoomSheet && mobileRoomSheet.dataset.roomSheetBound !== 'true') {
+    mobileRoomSheet.dataset.roomSheetBound = 'true';
+    mobileRoomSheet.addEventListener('click', (event) => {
+      if (event.target?.closest?.('[data-mobile-room-close]')) {
+        closeMobileRoomSheet();
+      }
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeMobileRoomSheet();
+    });
+    mobileRoomClear?.addEventListener('click', () => {
+      applyRoomSelection('');
+      closeMobileRoomSheet();
+    });
+  }
+
+  let shouldCollapse = false;
+  try {
+    shouldCollapse = window.localStorage.getItem(getRoomRailCollapseStorageKey()) === '1';
+  } catch (_) {}
+  setRoomRailCollapsedState(shouldCollapse);
+  renderRoomRail();
+}
+
 function bindProjectPhaseTooltip(target, value) {
   if (!target) return;
   const normalizedPhase = normalizeProjectPhase(value);
@@ -1263,12 +1526,39 @@ function refreshLineItems(categories) {
 
   rebuildSplitGroupHeaders();
   applyCategoryCollapseState();
+  renderRoomRail();
 
   // Update filters after rendering
   populateFilterOptions();
   applyFilters();
   renderProjectPhaseBar();
+  focusRequestedEstimateLineItem();
 
+
+function focusRequestedEstimateLineItem() {
+  const lineItemId = new URLSearchParams(window.location.search).get('lineItemId');
+  if (!lineItemId) return;
+
+  const card = document.querySelector(`.line-item-card[data-item-id="${lineItemId}"]`);
+  if (!card || card.dataset.linkedMaintenanceFocusApplied === 'true') return;
+
+  card.dataset.linkedMaintenanceFocusApplied = 'true';
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const previousTransition = card.style.transition;
+  const previousBoxShadow = card.style.boxShadow;
+  const previousBorder = card.style.border;
+  const previousBackground = card.style.background;
+  card.style.transition = 'box-shadow 0.35s ease, border-color 0.35s ease, background 0.35s ease';
+  card.style.boxShadow = '0 0 0 2px #2563eb, 0 18px 42px rgba(37,99,235,0.24)';
+  card.style.border = '1px solid #60a5fa';
+  card.style.background = 'linear-gradient(180deg, rgba(239,246,255,0.96), rgba(255,255,255,0.98))';
+  setTimeout(() => {
+    card.style.boxShadow = previousBoxShadow;
+    card.style.border = previousBorder;
+    card.style.background = previousBackground;
+    card.style.transition = previousTransition;
+  }, 2200);
+}
   // Utility: schedule work during idle periods
   const onIdle = window.requestIdleCallback || function(cb){ return setTimeout(() => cb({ timeRemaining: () => 0 }), 50); };
 
@@ -1369,6 +1659,7 @@ function refreshLineItems(categories) {
       removeCategoryCollapsedState(header);
       rebuildSplitGroupHeaders();
       applyCategoryCollapseState();
+      renderRoomRail();
       autoSaveEstimate(); // Auto-save when a category is removed
     });
 
@@ -1376,6 +1667,7 @@ function refreshLineItems(categories) {
   try { if (typeof window.__estimateEditWireCategoryDrag === 'function') window.__estimateEditWireCategoryDrag(header); } catch (_) {}
   try { syncCategoryHeaderTotal(header); } catch (_) {}
   try { syncCategorySelectionCheckboxes(); } catch (_) {}
+  try { renderRoomRail(); } catch (_) {}
 
     
     if (shouldAutoFocus) {
@@ -4585,7 +4877,7 @@ function wireMobileExperience() {
   const mobileSaveButton = document.getElementById('mobile-save-btn');
 
   mobileBackButton?.addEventListener('click', () => document.getElementById('cancel-estimate')?.click());
-  mobileAddRoomButton?.addEventListener('click', () => document.getElementById('add-category-header')?.click());
+  mobileAddRoomButton?.addEventListener('click', () => toggleMobileRoomSheet());
   mobileAddItemButton?.addEventListener('click', () => addLineItemCard());
   mobileSaveButton?.addEventListener('click', () => document.getElementById('save-estimate')?.click());
   mobileActionsButton?.addEventListener('click', () => {
@@ -4640,6 +4932,7 @@ function wireMobileExperience() {
     }
   });
   wireMobileExperience();
+  initRoomRail();
   try { window.__estimateEditRefreshBatchPhaseOptions?.(); } catch (_) {}
   try { window.__estimateEditRefreshBatchCategoryOptions?.(); } catch (_) {}
   try { window.__estimateEditSyncBatchActionState?.(); } catch (_) {}
@@ -4799,6 +5092,7 @@ function applyCategoryCollapseState() {
   try {
     if (typeof syncGlobalCategoryCollapseToggle === 'function') syncGlobalCategoryCollapseToggle();
   } catch (_) {}
+  try { renderRoomRail(); } catch (_) {}
 }
 
   async function runSplitFlowForCard(card) {
