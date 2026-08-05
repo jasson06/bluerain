@@ -7807,8 +7807,8 @@ app.put('/api/properties/:propertyId/maintenance/:requestId', maintenancePhotoUp
       const permanentDir = path.join('/mnt/data/uploads', 'maintenance');
       for (const tempUrl of tempPaths) {
         try {
-          const rel = tempUrl.replace(/^\/+/, '');
-         const abs = path.join('/mnt/data/uploads', rel);
+          const rel = tempUrl.replace(/^\/+/, '').replace(/^uploads\//, '');
+          const abs = path.join('/mnt/data/uploads', rel);
           if (fs.existsSync(abs)) {
             const filename = path.basename(abs).replace(/^temp-/, '');
             const dest = path.join(permanentDir, filename);
