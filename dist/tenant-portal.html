@@ -1,0 +1,2521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Tenant Portal | Blue Rain</title>
+  <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    :root {
+      --ink: #162033;
+      --muted: #64748b;
+      --line: #d9e2ec;
+      --paper: #ffffff;
+      --shell: #f5f7fb;
+      --nav: #102238;
+      --blue: #2563eb;
+      --teal: #0f766e;
+      --green: #15803d;
+      --amber: #b45309;
+      --red: #b91c1c;
+      --shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, rgba(16,34,56,0.94), rgba(20,83,45,0.72)),
+        url("https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1800&q=80") center/cover fixed;
+      letter-spacing: 0;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+
+    .hidden { display: none !important; }
+
+    .auth-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 430px;
+      align-items: stretch;
+    }
+
+    .auth-art {
+      padding: 44px;
+      color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 100vh;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      font-size: 1.05rem;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8fafc;
+      color: #102238;
+      box-shadow: var(--shadow);
+    }
+
+    .auth-copy {
+      max-width: 620px;
+      margin-bottom: 7vh;
+    }
+
+    .auth-copy h1 {
+      font-size: clamp(2.25rem, 5vw, 4.6rem);
+      line-height: 1;
+      margin: 0 0 18px;
+      letter-spacing: 0;
+    }
+
+    .auth-copy p {
+      max-width: 560px;
+      margin: 0;
+      color: #dbeafe;
+      font-size: 1.05rem;
+      line-height: 1.7;
+    }
+
+    .auth-panel {
+      background: rgba(255,255,255,0.96);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 30px;
+      box-shadow: -20px 0 50px rgba(15,23,42,0.26);
+    }
+
+    .login-card {
+      width: 100%;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 26px;
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--teal);
+      font-weight: 800;
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .login-card h2 {
+      margin: 0 0 6px;
+      font-size: 1.55rem;
+      letter-spacing: 0;
+    }
+
+    .hint {
+      margin: 0 0 22px;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 0.92rem;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 14px;
+    }
+
+    label {
+      font-weight: 700;
+      font-size: 0.82rem;
+      color: #334155;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 11px 12px;
+      background: #fff;
+      color: var(--ink);
+      outline: none;
+    }
+
+    textarea { min-height: 118px; resize: vertical; }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+    }
+
+    .btn {
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 10px 13px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 40px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary { background: var(--blue); color: #fff; box-shadow: 0 12px 24px rgba(37,99,235,0.24); }
+    .btn-dark { background: var(--nav); color: #fff; }
+    .btn-soft { background: #eef6ff; color: #1d4ed8; border-color: #c7ddff; }
+    .btn-plain { background: #fff; color: var(--ink); border-color: var(--line); }
+    .btn-danger { background: #fff1f2; color: var(--red); border-color: #fecdd3; }
+    .btn-full { width: 100%; }
+
+    .portal {
+      min-height: 100vh;
+      background: var(--shell);
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      background: var(--nav);
+      color: #e2e8f0;
+      padding: 22px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      position: sticky;
+      top: 0;
+      min-height: 100vh;
+    }
+
+    .tenant-chip {
+      border: 1px solid rgba(226,232,240,0.18);
+      border-radius: var(--radius);
+      padding: 12px;
+      background: rgba(255,255,255,0.07);
+    }
+
+    .tenant-chip strong { display: block; color: #fff; margin-bottom: 4px; }
+    .tenant-chip span { display: block; color: #bdd2e7; font-size: 0.82rem; line-height: 1.45; }
+
+    .nav {
+      display: grid;
+      gap: 6px;
+    }
+
+    .nav button,
+    .sidebar > #logoutBtn {
+      
+      justify-content: flex-start;
+      background: transparent;
+      color: #cbd5e1;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-weight: 700;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      text-align: left;
+    }
+
+    .nav button.active, .nav button:hover {
+      color: #fff;
+      background: rgba(255,255,255,0.11);
+      border-color: rgba(255,255,255,0.14);
+    }
+
+    .sidebar > #logoutBtn {
+      margin-top: auto;
+      min-height: 42px;
+    }
+
+    .sidebar > #logoutBtn:hover {
+      color: #fecaca;
+      background: rgba(239, 68, 68, 0.13);
+      border-color: rgba(248, 113, 113, 0.28);
+    }
+
+    .content {
+      min-width: 0;
+      padding: 24px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .topbar h1 {
+      margin: 0;
+      font-size: clamp(1.45rem, 3vw, 2.05rem);
+      letter-spacing: 0;
+    }
+
+    .topbar p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 28px rgba(15,23,42,0.08);
+    }
+
+    .kpi {
+      padding: 16px;
+      display: grid;
+      gap: 7px;
+      min-height: 118px;
+    }
+
+    .kpi .icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #e0f2fe;
+      color: #075985;
+    }
+
+    .kpi:nth-child(2) .icon { background: #dcfce7; color: #166534; }
+    .kpi:nth-child(3) .icon { background: #fef3c7; color: #92400e; }
+    .kpi:nth-child(4) .icon { background: #ede9fe; color: #5b21b6; }
+    .kpi span { color: var(--muted); font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
+    .kpi strong { font-size: 1.45rem; letter-spacing: 0; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
+      gap: 14px;
+    }
+
+    .panel {
+      padding: 16px;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: 0;
+    }
+
+    .panel-head span {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .info {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 11px;
+      background: #fbfdff;
+      min-height: 72px;
+    }
+
+    .info span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 5px;
+    }
+
+    .info strong {
+      font-size: 0.94rem;
+      line-height: 1.35;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #edf2f7;
+      text-align: left;
+      vertical-align: top;
+      font-size: 0.88rem;
+    }
+
+    th {
+      color: #475569;
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: #f8fafc;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-weight: 800;
+      font-size: 0.75rem;
+      background: #e0f2fe;
+      color: #075985;
+      white-space: nowrap;
+    }
+
+    .status.pending { background: #fef3c7; color: #92400e; }
+    .status.in-progress { background: #dbeafe; color: #1e40af; }
+    .status.completed { background: #dcfce7; color: #166534; }
+    .status.urgent, .status.high { background: #fee2e2; color: #991b1b; }
+
+    .section {
+      display: none;
+      animation: fadeIn 0.16s ease;
+    }
+
+    .section.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .stack { display: grid; gap: 14px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .form-grid .span-2 { grid-column: 1 / -1; }
+
+    .alert-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      margin: 0 0 14px;
+    }
+
+    .alert-card {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 12px;
+      border: 1px solid rgba(203, 213, 225, 0.78);
+      border-radius: 12px;
+      background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(239,246,255,0.84));
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+    }
+
+    .alert-card i {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #dbeafe;
+      color: #1d4ed8;
+      flex: 0 0 32px;
+    }
+
+    .alert-card strong {
+      display: block;
+      font-size: 0.9rem;
+      margin-bottom: 3px;
+    }
+
+    .alert-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.38;
+    }
+
+    .alert-card.warning i { background: #fef3c7; color: #92400e; }
+    .alert-card.success i { background: #dcfce7; color: #166534; }
+    .alert-card.danger i { background: #fee2e2; color: #991b1b; }
+
+    .insight-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.75fr) minmax(280px, 0.9fr);
+      gap: 12px;
+      margin: 0 0 14px;
+    }
+
+    .insight-card {
+      padding: 14px;
+      min-height: 148px;
+    }
+
+    .timeline-track {
+      position: relative;
+      height: 10px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      overflow: hidden;
+      margin: 16px 0 12px;
+    }
+
+    .timeline-fill {
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #38bdf8, #34d399);
+      transition: width 0.45s ease;
+    }
+
+    .timeline-steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .timeline-steps span:nth-child(2) { text-align: center; }
+    .timeline-steps span:nth-child(3) { text-align: right; }
+
+    .score-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .score-ring {
+      --score: 0%;
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: conic-gradient(#22c55e var(--score), #e2e8f0 0);
+      flex: 0 0 78px;
+      position: relative;
+    }
+
+    .score-ring::before {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: inset 0 1px 0 rgba(15,23,42,0.05);
+    }
+
+    .score-ring strong {
+      position: relative;
+      font-size: 1.02rem;
+      z-index: 1;
+    }
+
+    .announcement-list,
+    .thread-list {
+      display: grid;
+      gap: 9px;
+    }
+
+    .announcement-item {
+      padding: 10px;
+      border: 1px solid rgba(203, 213, 225, 0.78);
+      border-radius: 10px;
+      background: #f8fafc;
+    }
+
+    .announcement-item strong,
+    .thread-message strong {
+      display: block;
+      font-size: 0.84rem;
+      margin-bottom: 3px;
+    }
+
+    .announcement-item span,
+    .thread-message span {
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.35;
+    }
+
+    .thread {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(226,232,240,0.9);
+    }
+
+    .thread-message {
+      padding: 9px 10px;
+      border-radius: 10px;
+      background: #f8fafc;
+      border: 1px solid rgba(226,232,240,0.9);
+    }
+
+    .thread-message.tenant {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+
+    .thread-form {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      margin-top: 9px;
+    }
+
+    .thread-form input {
+      min-height: 38px;
+      padding: 8px 10px;
+    }
+
+    .thread-form .btn {
+      min-height: 38px;
+      padding: 8px 11px;
+    }
+
+    @media (min-width: 1101px) {
+      .section.active {
+        min-height: calc(100vh - 96px);
+      }
+
+      .section.active > .grid-2 {
+        align-items: stretch;
+      }
+
+      #overview.section.active > .grid-2 {
+        height: clamp(420px, calc(100vh - 292px), 760px);
+      }
+
+      #payments.section.active > .grid-2,
+      #maintenance.section.active > .grid-2 {
+        height: clamp(520px, calc(100vh - 132px), 860px);
+      }
+
+      .section.active > .grid-2 > .panel {
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+        scrollbar-width: none;
+      }
+
+      .section.active > .grid-2 > .panel::-webkit-scrollbar {
+        width: 9px;
+      }
+
+      .section.active > .grid-2 > .panel::-webkit-scrollbar-track {
+        background: rgba(226, 232, 240, 0.72);
+        border-radius: 999px;
+      }
+
+      .section.active > .grid-2 > .panel::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #38bdf8, #34d399);
+        border-radius: 999px;
+        border: 2px solid rgba(255, 255, 255, 0.86);
+      }
+
+      .section.active > .grid-2 > .panel .panel-head {
+        position: sticky;
+        top: -16px;
+        z-index: 3;
+        margin: -16px -16px 12px;
+        padding: 16px 16px 12px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.86));
+        backdrop-filter: blur(14px);
+      }
+    }
+
+    .empty {
+      color: var(--muted);
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 18px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 10;
+      background: #0f172a;
+      color: #fff;
+      border-radius: 8px;
+      padding: 12px 14px;
+      box-shadow: var(--shadow);
+      max-width: min(420px, calc(100vw - 36px));
+      font-weight: 700;
+      display: none;
+    }
+
+    .toast.show { display: block; }
+    .toast.error { background: #991b1b; }
+    .toast.success { background: #166534; }
+
+    .mobile-menu { display: none; }
+
+    /* Premium visual layer */
+    html {
+      scroll-behavior: smooth;
+      scrollbar-color: #7dd3fc rgba(15, 23, 42, 0.12);
+      scrollbar-width: thin;
+    }
+
+    ::selection {
+      background: rgba(125, 211, 252, 0.38);
+      color: #071827;
+    }
+
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.08); }
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #7dd3fc, #34d399);
+      border-radius: 999px;
+      border: 2px solid rgba(255, 255, 255, 0.78);
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: auto;
+      z-index: -1;
+      pointer-events: none;
+      filter: blur(4px);
+      opacity: 0.75;
+    }
+
+    body::before {
+      width: 38vw;
+      height: 38vw;
+      min-width: 420px;
+      min-height: 420px;
+      right: -12vw;
+      top: -12vw;
+      background:
+        radial-gradient(circle at 35% 30%, rgba(125, 211, 252, 0.66), transparent 56%),
+        radial-gradient(circle at 70% 70%, rgba(52, 211, 153, 0.42), transparent 58%);
+      animation: ambientFloat 18s ease-in-out infinite alternate;
+    }
+
+    body::after {
+      width: 34vw;
+      height: 34vw;
+      min-width: 360px;
+      min-height: 360px;
+      left: -12vw;
+      bottom: -14vw;
+      background:
+        radial-gradient(circle at 30% 35%, rgba(249, 115, 22, 0.28), transparent 56%),
+        radial-gradient(circle at 70% 65%, rgba(59, 130, 246, 0.42), transparent 60%);
+      animation: ambientFloat 22s ease-in-out infinite alternate-reverse;
+    }
+
+    @keyframes ambientFloat {
+      from { transform: translate3d(0, 0, 0) scale(1); }
+      to { transform: translate3d(-28px, 24px, 0) scale(1.08); }
+    }
+
+    #scrollProgress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 50;
+      width: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #38bdf8, #34d399, #f59e0b);
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.7);
+      transition: width 0.08s linear;
+    }
+
+    .auth-shell {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .auth-shell::before {
+      content: "";
+      position: absolute;
+      inset: 24px 430px 24px 24px;
+      pointer-events: none;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 24px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.11), rgba(255,255,255,0.02)),
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 96px);
+      mask-image: linear-gradient(90deg, #000 0%, rgba(0,0,0,0.72) 62%, transparent 100%);
+    }
+
+    .auth-art {
+      position: relative;
+      isolation: isolate;
+    }
+
+    .auth-art::after {
+      content: "";
+      position: absolute;
+      left: 44px;
+      right: 90px;
+      bottom: 34px;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.5), transparent);
+      opacity: 0.7;
+    }
+
+    .auth-copy {
+      animation: liftIn 0.75s cubic-bezier(.2,.8,.2,1) both;
+    }
+
+    .auth-copy h1 {
+      text-wrap: balance;
+      text-shadow: 0 24px 54px rgba(0, 0, 0, 0.35);
+    }
+
+    .auth-highlights {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      max-width: 620px;
+      margin-top: 26px;
+    }
+
+    .auth-highlight {
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.22);
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.14);
+    }
+
+    .auth-highlight i {
+      color: #7dd3fc;
+      margin-bottom: 9px;
+    }
+
+    .auth-highlight strong {
+      display: block;
+      color: #fff;
+      font-size: 0.86rem;
+      line-height: 1.3;
+    }
+
+    .auth-panel {
+      position: relative;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.94), rgba(241,245,249,0.9)),
+        radial-gradient(circle at top, rgba(125, 211, 252, 0.18), transparent 44%);
+      backdrop-filter: blur(22px);
+    }
+
+    .login-card {
+      position: relative;
+      overflow: hidden;
+      border-color: rgba(148, 163, 184, 0.48);
+      background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.82));
+      box-shadow: 0 32px 80px rgba(15, 23, 42, 0.22);
+      animation: liftIn 0.68s cubic-bezier(.2,.8,.2,1) 0.12s both;
+    }
+
+    .login-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(90deg, transparent, rgba(255,255,255,0.85), transparent);
+      transform: translateX(-120%);
+      animation: sheen 5.5s ease-in-out infinite;
+    }
+
+    @keyframes sheen {
+      0%, 58% { transform: translateX(-120%); opacity: 0; }
+      72% { opacity: 0.72; }
+      100% { transform: translateX(120%); opacity: 0; }
+    }
+
+    @keyframes liftIn {
+      from { opacity: 0; transform: translateY(18px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    input, select, textarea {
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease;
+    }
+
+    input:hover, select:hover, textarea:hover {
+      border-color: #a7bdd5;
+      background: #fbfdff;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      transform: translateY(-1px);
+    }
+
+    .btn {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent);
+      transform: translateX(-120%);
+      transition: transform 0.48s ease;
+    }
+
+    .btn:hover::after { transform: translateX(120%); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb, #0891b2 55%, #0f766e);
+      box-shadow: 0 18px 34px rgba(37,99,235,0.32), inset 0 1px 0 rgba(255,255,255,0.28);
+    }
+
+    .btn-dark {
+      background: linear-gradient(135deg, #0f172a, #164e63);
+      box-shadow: 0 16px 30px rgba(15,23,42,0.22);
+    }
+
+    .portal {
+      background:
+        linear-gradient(135deg, #edf6ff 0%, #f8fafc 34%, #f4fbf7 100%);
+      position: relative;
+      isolation: isolate;
+    }
+
+    .portal::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: radial-gradient(circle at 58% 22%, #000 0%, transparent 66%);
+    }
+
+    .sidebar {
+      background:
+        linear-gradient(180deg, rgba(8, 20, 35, 0.98), rgba(15, 52, 64, 0.94)),
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.28), transparent 36%);
+      box-shadow: 18px 0 46px rgba(15, 23, 42, 0.2);
+      backdrop-filter: blur(24px);
+      overflow: hidden;
+    }
+
+    .sidebar::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.08), transparent 22%),
+        repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 18px);
+      opacity: 0.7;
+    }
+
+    .sidebar > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand-mark {
+      background: linear-gradient(135deg, #ffffff, #dbeafe);
+      box-shadow: 0 16px 30px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.9);
+    }
+
+    .tenant-chip {
+      background: linear-gradient(145deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+      backdrop-filter: blur(18px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 18px 34px rgba(0,0,0,0.14);
+    }
+
+    .nav button {
+      transition: background 0.18s ease, transform 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+    }
+
+    .nav button.active,
+    .nav button:hover {
+      transform: translateX(3px);
+      background:
+        linear-gradient(135deg, rgba(125,211,252,0.24), rgba(52,211,153,0.14));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 8;
+      margin: -30px -30px 22px;
+      padding: 24px 30px 18px;
+      background: rgba(248, 250, 252, 0.78);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(203, 213, 225, 0.58);
+      box-shadow: 0 12px 34px rgba(15, 23, 42, 0.06);
+    }
+
+    .topbar h1 {
+      background: linear-gradient(135deg, #0f172a, #1d4ed8 56%, #0f766e);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .card {
+      border-color: rgba(203, 213, 225, 0.72);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.78));
+      backdrop-filter: blur(18px);
+      box-shadow: 0 18px 44px rgba(15,23,42,0.1);
+      transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(56, 189, 248, 0.46);
+      box-shadow: 0 26px 60px rgba(15,23,42,0.15);
+    }
+
+    .kpi {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 4px;
+      background: linear-gradient(90deg, #38bdf8, #34d399);
+    }
+
+    .kpi::after {
+      content: "";
+      position: absolute;
+      right: -46px;
+      bottom: -64px;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(56,189,248,0.16), transparent 68%);
+      transition: transform 0.24s ease;
+    }
+
+    .kpi:hover::after { transform: scale(1.2) translate(-8px, -8px); }
+
+    .kpi .icon {
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 10px 18px rgba(15,23,42,0.1);
+    }
+
+    .panel {
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(226,232,240,0.9);
+    }
+
+    .info {
+      background:
+        linear-gradient(145deg, rgba(248,250,252,0.95), rgba(255,255,255,0.82));
+      transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .info:hover {
+      transform: translateY(-2px);
+      border-color: rgba(14,165,233,0.34);
+      box-shadow: 0 16px 30px rgba(15,23,42,0.08);
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: rgba(248, 250, 252, 0.94);
+      backdrop-filter: blur(12px);
+    }
+
+    tbody tr {
+      transition: background 0.16s ease, transform 0.16s ease;
+    }
+
+    tbody tr:hover {
+      background: rgba(224, 242, 254, 0.46);
+    }
+
+    .status {
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
+    }
+
+    .section {
+      scroll-margin-top: 90px;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+
+    .reveal.in-view {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.55s ease, transform 0.55s cubic-bezier(.2,.8,.2,1);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+      }
+
+      .reveal {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    @media (max-width: 1100px) {
+      .auth-shell::before { inset: 18px; }
+      .auth-highlights { grid-template-columns: 1fr; }
+      .auth-shell { grid-template-columns: 1fr; }
+      .auth-art { min-height: 42vh; padding: 28px; }
+      .auth-panel { min-height: auto; padding: 22px; }
+      .portal { grid-template-columns: 1fr; }
+      .sidebar {
+        position: relative;
+        min-height: auto;
+        border-bottom: 1px solid rgba(255,255,255,0.16);
+      }
+      .nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .auth-copy h1 { font-size: 2.15rem; }
+      .content { padding: 16px; }
+      .topbar {
+        margin: -16px -16px 16px;
+        padding: 16px;
+      }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .kpis, .info-grid, .form-grid { grid-template-columns: 1fr; }
+      .table-scroll { overflow-x: auto; }
+      th, td { white-space: nowrap; }
+    }
+
+    /* Mobile app experience */
+    @media (max-width: 1100px) {
+      :root {
+        --mobile-top: 88px;
+        --mobile-bottom: 78px;
+      }
+
+      html,
+      body {
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+
+      body {
+        background:
+          linear-gradient(180deg, #eef8ff 0%, #f8fafc 42%, #f5fbf7 100%);
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      body::before,
+      body::after {
+        display: none;
+      }
+
+      .auth-shell {
+        display: block;
+        min-height: 100svh;
+        background:
+          linear-gradient(180deg, rgba(6, 32, 52, 0.8), rgba(6, 32, 52, 0.18)),
+          url("https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1100&q=80") center/cover;
+      }
+
+      .auth-shell::before {
+        display: none;
+      }
+
+      .auth-art {
+        min-height: auto;
+        padding: max(18px, env(safe-area-inset-top)) 18px 12px;
+      }
+
+      .auth-art::after {
+        display: none;
+      }
+
+      .auth-copy {
+        margin: 56px 0 10px;
+      }
+
+      .auth-copy h1 {
+        max-width: 340px;
+        font-size: clamp(2.1rem, 12vw, 3.05rem);
+        line-height: 0.96;
+        margin-bottom: 14px;
+      }
+
+      .auth-copy p {
+        font-size: 0.96rem;
+        line-height: 1.58;
+        color: rgba(241, 245, 249, 0.92);
+      }
+
+      .auth-highlights {
+        display: flex;
+        gap: 10px;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x mandatory;
+        padding: 10px 2px 4px;
+        margin-top: 18px;
+        scrollbar-width: none;
+      }
+
+      .auth-highlights::-webkit-scrollbar {
+        display: none;
+      }
+
+      .auth-highlight {
+        min-width: 184px;
+        scroll-snap-align: start;
+      }
+
+      .auth-panel {
+        min-height: auto;
+        align-items: stretch;
+        padding: 0 14px max(18px, env(safe-area-inset-bottom));
+        background: transparent;
+        box-shadow: none;
+      }
+
+      .login-card {
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: 0 -18px 60px rgba(15, 23, 42, 0.24);
+      }
+
+      .login-card h2 {
+        font-size: 1.35rem;
+      }
+
+      input,
+      select,
+      textarea {
+        min-height: 48px;
+        font-size: 16px;
+        border-radius: 12px;
+        padding: 12px 13px;
+      }
+
+      textarea {
+        min-height: 132px;
+      }
+
+      .btn {
+        min-height: 48px;
+        border-radius: 13px;
+      }
+
+      .portal {
+        display: block;
+        min-height: 100svh;
+        padding-top: calc(var(--mobile-top) + env(safe-area-inset-top));
+        padding-bottom: calc(var(--mobile-bottom) + env(safe-area-inset-bottom));
+        background:
+          radial-gradient(circle at top right, rgba(125, 211, 252, 0.28), transparent 34%),
+          linear-gradient(180deg, #eef8ff 0%, #f8fafc 46%, #f5fbf7 100%);
+      }
+
+      .portal::before {
+        background-size: 28px 28px;
+        opacity: 0.72;
+        mask-image: linear-gradient(180deg, #000 0%, transparent 72%);
+      }
+
+      .sidebar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        top: 0;
+        z-index: 30;
+        min-height: 0;
+        height: calc(var(--mobile-top) + env(safe-area-inset-top));
+        padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 0 0 24px 24px;
+        box-shadow: 0 18px 42px rgba(15, 23, 42, 0.18);
+        overflow: visible;
+        transform: none;
+        contain: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+      }
+
+      .sidebar .brand {
+        font-size: 0.94rem;
+        min-width: 0;
+      }
+
+      .brand-mark {
+        width: 36px;
+        height: 36px;
+        flex: 0 0 36px;
+      }
+
+      .tenant-chip {
+        grid-column: 1 / -1;
+        order: 3;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 14px;
+        min-width: 0;
+      }
+
+      .tenant-chip strong,
+      .tenant-chip span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .tenant-chip strong {
+        margin: 0;
+        font-size: 0.86rem;
+      }
+
+      .tenant-chip span {
+        font-size: 0.76rem;
+        text-align: right;
+      }
+
+      .nav {
+        position: fixed !important;
+        left: 10px !important;
+        right: 10px !important;
+        top: auto !important;
+        bottom: max(10px, env(safe-area-inset-bottom)) !important;
+        z-index: 1000;
+        display: grid !important;
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+        gap: 4px;
+        padding: 7px;
+        border-radius: 24px;
+        border: 1px solid rgba(203, 213, 225, 0.78);
+        background: rgba(255, 255, 255, 0.86);
+        backdrop-filter: blur(22px);
+        box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
+      }
+
+      .nav button[data-section] {
+        min-height: 58px;
+        padding: 7px 4px;
+        border-radius: 18px;
+        flex-direction: column;
+        justify-content: center;
+        gap: 4px;
+        color: #64748b;
+        font-size: 0.68rem;
+        line-height: 1.1;
+        text-align: center;
+      }
+
+      .nav button[data-section] i {
+        font-size: 1.08rem;
+      }
+
+      .nav button[data-section].active,
+      .nav button[data-section]:hover {
+        transform: translateY(-2px);
+        color: #0f172a;
+        background: linear-gradient(180deg, #ffffff, #e0f2fe);
+        border-color: rgba(56, 189, 248, 0.34);
+        box-shadow: 0 10px 24px rgba(14, 165, 233, 0.22);
+      }
+
+      #logoutBtn {
+        position: fixed !important;
+        right: 14px !important;
+        top: calc(12px + env(safe-area-inset-top)) !important;
+        bottom: auto !important;
+        z-index: 1001;
+        width: 42px;
+        height: 42px;
+        min-height: 42px;
+        padding: 0;
+        border-radius: 14px;
+        color: #fee2e2;
+        background: rgba(127, 29, 29, 0.42);
+        border-color: rgba(254, 202, 202, 0.32);
+        box-shadow: none;
+        font-size: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #logoutBtn i {
+        font-size: 1rem;
+      }
+
+      .content {
+        padding: 0 14px;
+      }
+
+      .topbar {
+        position: relative;
+        top: auto;
+        margin: 10 0 14px;
+        padding: 0;
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+        backdrop-filter: none;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+      }
+
+      .topbar h1 {
+        font-size: 1.72rem;
+        letter-spacing: 0;
+      }
+
+      .topbar p {
+        font-size: 0.86rem;
+        max-width: 250px;
+      }
+
+      #refreshBtn {
+        width: 46px;
+        min-width: 46px;
+        height: 46px;
+        padding: 0;
+        border-radius: 16px;
+        font-size: 0;
+      }
+
+      #refreshBtn i {
+        font-size: 1rem;
+      }
+
+      .section.active {
+        display: block;
+        min-height: calc(100svh - var(--mobile-top) - var(--mobile-bottom));
+      }
+
+      .kpis {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x mandatory;
+        padding: 4px 2px 12px;
+        margin: 0 -2px 12px;
+        scrollbar-width: none;
+      }
+
+      .kpis::-webkit-scrollbar {
+        display: none;
+      }
+
+      .kpi {
+        min-width: 78vw;
+        min-height: 138px;
+        scroll-snap-align: start;
+        border-radius: 20px;
+        padding: 18px;
+      }
+
+      .kpi strong {
+        font-size: 1.7rem;
+      }
+
+      .grid-2,
+      .insight-grid,
+      .form-grid,
+      .info-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .card,
+      .info,
+      .login-card {
+        border-radius: 20px;
+      }
+
+      .card:hover,
+      .info:hover {
+        transform: none;
+      }
+
+      .panel {
+        padding: 14px;
+      }
+
+      .panel-head {
+        align-items: flex-start;
+        gap: 6px;
+      }
+
+      .panel-head h2 {
+        font-size: 1.02rem;
+      }
+
+      .panel-head span {
+        font-size: 0.76rem;
+      }
+
+      .info {
+        min-height: 0;
+        padding: 13px;
+      }
+
+      .stack {
+        gap: 10px;
+      }
+
+      .table-scroll {
+        margin: 0 -14px;
+        padding: 0 14px 4px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x proximity;
+      }
+
+      table {
+        min-width: 620px;
+      }
+
+      th,
+      td {
+        padding: 11px 9px;
+        font-size: 0.84rem;
+      }
+
+      #documentsTable .btn {
+        min-height: 38px;
+        padding: 8px 10px;
+        border-radius: 11px;
+        font-size: 0.78rem;
+      }
+
+      #paymentNoticeForm,
+      #maintenanceForm,
+      #profileForm {
+        gap: 10px;
+      }
+
+      .alert-strip,
+      .insight-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .thread-form {
+        grid-template-columns: 1fr;
+      }
+
+      .field {
+        margin-bottom: 8px;
+      }
+
+      label {
+        font-size: 0.78rem;
+      }
+
+      .toast {
+        left: 14px;
+        right: 14px;
+        bottom: calc(var(--mobile-bottom) + env(safe-area-inset-bottom) + 12px);
+        max-width: none;
+        border-radius: 16px;
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .nav {
+        left: 6px;
+        right: 6px;
+        gap: 2px;
+        padding: 6px;
+      }
+
+      .nav button[data-section] {
+        font-size: 0.62rem;
+      }
+
+      .kpi {
+        min-width: 84vw;
+      }
+
+      .topbar h1 {
+        font-size: 1.48rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="scrollProgress" aria-hidden="true"></div>
+  <main id="authShell" class="auth-shell">
+    <section class="auth-art">
+      <div class="brand">
+        <span class="brand-mark"><i class="fa-solid fa-cloud-rain"></i></span>
+        <span>Blue Rain Tenant Portal</span>
+      </div>
+      <div class="auth-copy">
+        <h1>Your lease, ledger, and maintenance in one place.</h1>
+        <p>Sign in with the email and phone number on your tenant profile to review your home details, payment history, documents, and service requests.</p>
+        <div class="auth-highlights" aria-label="Portal features">
+          <div class="auth-highlight">
+            <i class="fa-solid fa-wallet"></i>
+            <strong>Live rent and deposit balance</strong>
+          </div>
+          <div class="auth-highlight">
+            <i class="fa-solid fa-screwdriver-wrench"></i>
+            <strong>Photo-ready maintenance requests</strong>
+          </div>
+          <div class="auth-highlight">
+            <i class="fa-solid fa-file-shield"></i>
+            <strong>Private tenant documents</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="auth-panel">
+      <form id="loginForm" class="login-card">
+        <p class="eyebrow">Tenant Access</p>
+        <h2>Sign in</h2>
+        <p class="hint">Use the email on your lease and the last four digits of your phone number.</p>
+        <div class="field">
+          <label for="loginEmail">Email</label>
+          <input id="loginEmail" type="email" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="loginPhone">Phone Last Four</label>
+          <input id="loginPhone" type="text" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" required>
+        </div>
+        <button class="btn btn-primary btn-full" type="submit"><i class="fa-solid fa-right-to-bracket"></i> Sign In</button>
+      </form>
+    </section>
+  </main>
+
+  <main id="portal" class="portal hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark"><i class="fa-solid fa-cloud-rain"></i></span>
+        <span>Blue Rain</span>
+      </div>
+      <div class="tenant-chip">
+        <strong id="sideTenant">Tenant</strong>
+        <span id="sideUnit">Unit</span>
+      </div>
+      <nav class="nav" id="nav">
+        <button class="active" data-section="overview"><i class="fa-solid fa-gauge"></i> Overview</button>
+        <button data-section="payments"><i class="fa-solid fa-receipt"></i> Payments</button>
+        <button data-section="maintenance"><i class="fa-solid fa-screwdriver-wrench"></i> Maintenance</button>
+        <button data-section="documents"><i class="fa-solid fa-folder-open"></i> Documents</button>
+        <button data-section="profile"><i class="fa-solid fa-user-gear"></i> Profile</button>
+      </nav>
+      <button id="logoutBtn" class="btn-danger"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out</button>
+    </aside>
+
+    <section class="content">
+      <header class="topbar">
+        <div>
+          <h1 id="pageTitle">Overview</h1>
+          <p id="pageSubtitle">Your current resident snapshot.</p>
+        </div>
+        <button class="btn btn-soft" id="refreshBtn"><i class="fa-solid fa-rotate"></i> Refresh</button>
+      </header>
+
+      <section id="overview" class="section active">
+        <div class="kpis">
+          <article class="card kpi">
+            <span class="icon"><i class="fa-solid fa-house"></i></span>
+            <span>Monthly Rent</span>
+            <strong id="kpiRent">$0.00</strong>
+          </article>
+          <article class="card kpi">
+            <span class="icon"><i class="fa-solid fa-circle-check"></i></span>
+            <span>Paid This Month</span>
+            <strong id="kpiPaid">$0.00</strong>
+          </article>
+          <article class="card kpi">
+            <span class="icon"><i class="fa-solid fa-scale-balanced"></i></span>
+            <span>Rent Balance</span>
+            <strong id="kpiBalance">$0.00</strong>
+          </article>
+          <article class="card kpi">
+            <span class="icon"><i class="fa-solid fa-shield-halved"></i></span>
+            <span>Deposit Remaining</span>
+            <strong id="kpiDeposit">$0.00</strong>
+          </article>
+        </div>
+
+        <div class="alert-strip" id="alertStrip"></div>
+
+        <div class="insight-grid">
+          <article class="card panel insight-card">
+            <div class="panel-head">
+              <h2>Rent Due Timeline</h2>
+              <span id="rentTimelineMeta"></span>
+            </div>
+            <div id="rentTimeline"></div>
+          </article>
+          <article class="card panel insight-card">
+            <div class="panel-head">
+              <h2>Profile Completion</h2>
+              <span id="profileScoreMeta"></span>
+            </div>
+            <div id="profileScoreCard"></div>
+          </article>
+          <article class="card panel insight-card">
+            <div class="panel-head">
+              <h2>Tenant Announcements</h2>
+              <span id="announcementMeta"></span>
+            </div>
+            <div class="announcement-list" id="announcementList"></div>
+          </article>
+        </div>
+
+        <div class="grid-2">
+          <article class="card panel">
+            <div class="panel-head">
+              <h2>Home Details</h2>
+              <span id="leaseStatus"></span>
+            </div>
+            <div class="info-grid" id="homeDetails"></div>
+          </article>
+          <article class="card panel">
+            <div class="panel-head">
+              <h2>Recent Activity</h2>
+              <span>Latest payments and requests</span>
+            </div>
+            <div id="recentActivity" class="stack"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="payments" class="section">
+        <div class="grid-2">
+          <article class="card panel">
+            <div class="panel-head">
+              <h2>Payment Ledger</h2>
+              <span id="paymentCount"></span>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr><th>Date</th><th>Type</th><th>Method</th><th>Amount</th><th>Balance</th><th>Note</th></tr>
+                </thead>
+                <tbody id="paymentsTable"></tbody>
+              </table>
+            </div>
+          </article>
+          <article class="card panel">
+            <div class="panel-head">
+              <h2>Send Payment Notice</h2>
+              <span>Not a payment processor</span>
+            </div>
+            <form id="paymentNoticeForm" class="stack">
+              <div class="field">
+                <label for="noticeAmount">Amount</label>
+                <input id="noticeAmount" type="number" min="0" step="0.01" required>
+              </div>
+              <div class="field">
+                <label for="noticeMethod">Method</label>
+                <select id="noticeMethod" required>
+                  <option value="">Select method</option>
+                  <option>Cash</option>
+                  <option>Check</option>
+                  <option>Bank transfer</option>
+                  <option>Online</option>
+                  <option>Money order</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="noticeReference">Reference</label>
+                <input id="noticeReference" type="text" placeholder="Confirmation, check number, or memo">
+              </div>
+              <div class="field">
+                <label for="noticeNote">Note</label>
+                <textarea id="noticeNote" placeholder="Anything the office should know"></textarea>
+              </div>
+              <button class="btn btn-dark" type="submit"><i class="fa-solid fa-paper-plane"></i> Send Notice</button>
+            </form>
+          </article>
+        </div>
+      </section>
+
+      <section id="maintenance" class="section">
+        <div class="grid-2">
+          <article class="card panel">
+            <div class="panel-head">
+              <h2>Submit Maintenance</h2>
+              <span>Photos supported</span>
+            </div>
+            <form id="maintenanceForm" class="form-grid">
+              <div class="field span-2">
+                <label for="maintTitle">Issue</label>
+                <input id="maintTitle" type="text" placeholder="Example: Kitchen sink leaking" required>
+              </div>
+              <div class="field">
+                <label for="maintPriority">Priority</label>
+                <select id="maintPriority">
+                  <option value="low">Low</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="maintPreferred">Preferred Time</label>
+                <input id="maintPreferred" type="text" placeholder="Weekdays after 3 PM">
+              </div>
+              <div class="field">
+                <label for="maintAccess">Access Permission</label>
+                <select id="maintAccess">
+                  <option>Contact me first</option>
+                  <option>Permission to enter</option>
+                  <option>Emergency access only</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="maintContact">Contact Preference</label>
+                <select id="maintContact">
+                  <option>Phone</option>
+                  <option>Email</option>
+                  <option>Text</option>
+                </select>
+              </div>
+              <div class="field span-2">
+                <label for="maintDescription">Description</label>
+                <textarea id="maintDescription" required placeholder="Describe what is happening, when it started, and any immediate concerns."></textarea>
+              </div>
+              <div class="field span-2">
+                <label for="maintPhotos">Photos</label>
+                <input id="maintPhotos" type="file" multiple accept="image/*">
+              </div>
+              <div class="span-2">
+                <button class="btn btn-primary" type="submit"><i class="fa-solid fa-plus"></i> Submit Request</button>
+              </div>
+            </form>
+          </article>
+          <article class="card panel">
+            <div class="panel-head">
+              <h2>Request History</h2>
+              <span id="maintenanceCount"></span>
+            </div>
+            <div id="maintenanceList" class="stack"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="documents" class="section">
+        <article class="card panel">
+          <div class="panel-head">
+            <h2>Documents</h2>
+            <span id="documentCount"></span>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr><th>Name</th><th>Type</th><th>Uploaded</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="documentsTable"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="profile" class="section">
+        <article class="card panel">
+          <div class="panel-head">
+            <h2>Contact Profile</h2>
+            <span>Updates sync to management</span>
+          </div>
+          <form id="profileForm" class="form-grid">
+            <div class="field">
+              <label for="profilePhone">Phone</label>
+              <input id="profilePhone" type="tel">
+            </div>
+            <div class="field">
+              <label for="emergencyName">Emergency Contact</label>
+              <input id="emergencyName" type="text">
+            </div>
+            <div class="field">
+              <label for="emergencyPhone">Emergency Phone</label>
+              <input id="emergencyPhone" type="tel">
+            </div>
+            <div class="field">
+              <label for="emergencyEmail">Emergency Email</label>
+              <input id="emergencyEmail" type="email">
+            </div>
+            <div class="field">
+              <label for="emergencyRelation">Relationship</label>
+              <input id="emergencyRelation" type="text">
+            </div>
+            <div class="field">
+              <label for="vehicleCount">Vehicles</label>
+              <input id="vehicleCount" type="number" min="0" step="1">
+            </div>
+            <div class="field span-2">
+              <label for="vehicleDetails">Vehicle Details</label>
+              <textarea id="vehicleDetails" placeholder="One vehicle per line: year, make, model, color, plate"></textarea>
+            </div>
+            <div class="span-2">
+              <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save Profile</button>
+            </div>
+          </form>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const API = '';
+    const TOKEN_KEY = 'blueRainTenantPortalToken';
+    let state = { portal: null, token: localStorage.getItem(TOKEN_KEY) || '' };
+
+    const $ = (id) => document.getElementById(id);
+    const money = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value) || 0);
+    const date = (value) => value ? new Date(value).toLocaleDateString('en-US') : 'N/A';
+    const title = (value) => String(value || '').replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const safe = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' }[c]));
+
+    function parseAnnouncementCalendarDate(value) {
+      if (!value) return null;
+      if (typeof value === 'string') {
+        const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+          return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+        }
+      }
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return null;
+      return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+    }
+
+    function formatAnnouncementDate(value) {
+      const parsed = parseAnnouncementCalendarDate(value);
+      return parsed ? parsed.toLocaleDateString('en-US') : 'N/A';
+    }
+
+    function getAnnouncementLifecycle(item, now = new Date()) {
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startsAt = parseAnnouncementCalendarDate(item?.startsAt);
+      const expiresAt = parseAnnouncementCalendarDate(item?.expiresAt);
+      if (expiresAt && expiresAt < today) return 'expired';
+      if (startsAt && !expiresAt && startsAt < today) return 'expired';
+      if (startsAt && startsAt > today) return 'scheduled';
+      return 'active';
+    }
+
+    function getAnnouncementTimingLabel(item) {
+      const startsAt = parseAnnouncementCalendarDate(item?.startsAt);
+      const expiresAt = parseAnnouncementCalendarDate(item?.expiresAt);
+      if (startsAt && expiresAt) {
+        const startsLabel = formatAnnouncementDate(startsAt);
+        const expiresLabel = formatAnnouncementDate(expiresAt);
+        return startsLabel === expiresLabel
+          ? `Scheduled for ${startsLabel}`
+          : `Runs ${startsLabel} to ${expiresLabel}`;
+      }
+      if (startsAt) return `Starts ${formatAnnouncementDate(startsAt)}`;
+      if (expiresAt) return `Available through ${formatAnnouncementDate(expiresAt)}`;
+      return `Posted ${formatAnnouncementDate(item?.createdAt)}`;
+    }
+
+    function toast(message, type = '') {
+      const el = $('toast');
+      el.textContent = message;
+      el.className = `toast show ${type}`;
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => el.className = 'toast', 3600);
+    }
+
+    async function request(path, options = {}) {
+      const headers = options.headers || {};
+      if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+      if (state.token) headers.Authorization = `Bearer ${state.token}`;
+      const res = await fetch(API + path, { ...options, headers });
+      if (!res.ok) {
+        let message = 'Request failed';
+        try { message = (await res.json()).message || message; } catch {}
+        throw new Error(message);
+      }
+      const type = res.headers.get('content-type') || '';
+      return type.includes('application/json') ? res.json() : res.blob();
+    }
+
+    function showPortal() {
+      $('authShell').classList.add('hidden');
+      $('portal').classList.remove('hidden');
+    }
+
+    function showLogin() {
+      $('portal').classList.add('hidden');
+      $('authShell').classList.remove('hidden');
+    }
+
+    function setSection(id) {
+      document.querySelectorAll('.section').forEach(section => section.classList.toggle('active', section.id === id));
+      document.querySelectorAll('.nav button[data-section]').forEach(button => button.classList.toggle('active', button.dataset.section === id));
+      const labels = {
+        overview: ['Overview', 'Your current resident snapshot.'],
+        payments: ['Payments', 'Review your ledger and send a payment notice.'],
+        maintenance: ['Maintenance', 'Submit and track service requests.'],
+        documents: ['Documents', 'Open lease files, notices, invoices, and shared documents.'],
+        profile: ['Profile', 'Keep your contact and emergency details current.']
+      };
+      $('pageTitle').textContent = labels[id][0];
+      $('pageSubtitle').textContent = labels[id][1];
+      if (window.matchMedia('(max-width: 1100px)').matches) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      requestAnimationFrame(hydrateMotion);
+    }
+
+    function updateScrollProgress() {
+      const progress = $('scrollProgress');
+      if (!progress) return;
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = max > 0 ? (window.scrollY / max) * 100 : 0;
+      progress.style.width = `${Math.min(100, Math.max(0, pct))}%`;
+    }
+
+    function hydrateMotion() {
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const targets = document.querySelectorAll('.section.active .card, .section.active .info, .section.active tr');
+      targets.forEach((el, index) => {
+        if (el.dataset.revealReady === 'true') return;
+        el.dataset.revealReady = 'true';
+        el.classList.add('reveal');
+        el.style.transitionDelay = prefersReduced ? '0ms' : `${Math.min(index * 28, 220)}ms`;
+      });
+
+      if (prefersReduced || !('IntersectionObserver' in window)) {
+        targets.forEach(el => el.classList.add('in-view'));
+        return;
+      }
+
+      const observer = new IntersectionObserver((entries, obs) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('in-view');
+          obs.unobserve(entry.target);
+        });
+      }, { threshold: 0.08, rootMargin: '0px 0px -24px 0px' });
+
+      targets.forEach(el => observer.observe(el));
+    }
+
+    function render() {
+      const portal = state.portal;
+      if (!portal) return;
+      const { tenant, property, unit, balances, payments, maintenance, documents } = portal;
+      const address = property.address || {};
+      const propertyLine = [address.line1, address.line2, address.city, address.state, address.zip].filter(Boolean).join(', ');
+
+      $('sideTenant').textContent = tenant.name || 'Tenant';
+      $('sideUnit').textContent = `${property.name || 'Property'}${unit?.number ? ' • Unit ' + unit.number : ''}`;
+      $('kpiRent').textContent = money(balances.expectedRent);
+      $('kpiPaid').textContent = money(balances.paidThisMonth);
+      $('kpiBalance').textContent = money(balances.rentBalance);
+      $('kpiDeposit').textContent = money(balances.depositBalance);
+      $('leaseStatus').innerHTML = `<span class="status">${safe(title(tenant.leaseStatus || 'active'))}</span>`;
+
+      $('homeDetails').innerHTML = [
+        ['Property', `${property.name || 'Property'}<br>${propertyLine || ''}`],
+        ['Unit', unit ? `Unit ${unit.number || ''} • ${unit.bedrooms || 0} bed / ${unit.bathrooms || 0} bath` : 'Not assigned'],
+        ['Lease Dates', `${date(tenant.leaseStart)} - ${date(tenant.leaseEnd)}`],
+        ['Parking / Access', `${tenant.parking || 'N/A'}${tenant.accessCode ? '<br>Access: ' + safe(tenant.accessCode) : ''}`],
+        ['Emergency Contact', tenant.emergencyContact?.name ? `${tenant.emergencyContact.name}<br>${tenant.emergencyContact.phone || ''}` : 'Not listed'],
+        ['Amenities', unit?.amenities?.length ? unit.amenities.map(safe).join(', ') : 'No amenities listed']
+      ].map(([label, value]) => `<div class="info"><span>${label}</span><strong>${value}</strong></div>`).join('');
+
+      renderAlerts(portal);
+      renderRentTimeline(portal);
+      renderProfileCompletion(tenant);
+      renderAnnouncements(portal);
+      renderRecent(payments, maintenance);
+      renderPayments(payments);
+      renderMaintenance(maintenance);
+      renderDocuments(documents);
+      fillProfile(tenant);
+      hydrateMotion();
+    }
+
+    function daysBetween(a, b) {
+      const day = 24 * 60 * 60 * 1000;
+      const start = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+      const end = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+      return Math.ceil((end - start) / day);
+    }
+
+    function getRentCycle() {
+      const now = new Date();
+      const dueThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const dueNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const lateStarts = new Date(now.getFullYear(), now.getMonth(), 6);
+      const dueDate = now.getDate() <= 1 ? dueThisMonth : dueNextMonth;
+      const daysUntilDue = Math.max(0, daysBetween(now, dueDate));
+      const cycleStart = now.getDate() <= 1 ? new Date(now.getFullYear(), now.getMonth() - 1, 1) : dueThisMonth;
+      const cycleLength = Math.max(1, daysBetween(cycleStart, dueDate));
+      const elapsed = Math.max(0, daysBetween(cycleStart, now));
+      return { dueDate, lateStarts, daysUntilDue, progress: Math.min(100, Math.round((elapsed / cycleLength) * 100)) };
+    }
+
+    function getProfileCompletion(tenant) {
+      const checks = [
+        { label: 'Phone number', done: Boolean(tenant.phone) },
+        { label: 'Emergency contact', done: Boolean(tenant.emergencyContact?.name && tenant.emergencyContact?.phone) },
+        { label: 'Emergency email', done: Boolean(tenant.emergencyContact?.email) },
+        { label: 'Vehicle info', done: Boolean(Number(tenant.cars?.count || 0) > 0 || (tenant.cars?.details || []).length) },
+        { label: 'Pet declaration', done: tenant.pets?.hasPets === true || tenant.pets?.hasPets === false },
+        { label: 'Parking/access details', done: Boolean(tenant.parking || tenant.accessCode) }
+      ];
+      const done = checks.filter(item => item.done).length;
+      return { checks, percent: Math.round((done / checks.length) * 100), missing: checks.filter(item => !item.done).map(item => item.label) };
+    }
+
+    function renderAlerts(portal) {
+      const { tenant, balances, maintenance, documents } = portal;
+      const cycle = getRentCycle();
+      const alerts = [];
+      const openMaintenance = (maintenance || []).filter(item => item.status !== 'completed');
+      const recentDocs = (documents || []).filter(doc => doc.createdAt && daysBetween(new Date(doc.createdAt), new Date()) <= 14);
+
+      if ((Number(balances.rentBalance) || 0) > 0) {
+        alerts.push({ tone: cycle.daysUntilDue <= 5 ? 'warning' : '', icon: 'fa-calendar-day', title: `Rent due in ${cycle.daysUntilDue} day${cycle.daysUntilDue === 1 ? '' : 's'}`, body: `${money(balances.rentBalance)} remaining for the current rent cycle.` });
+      } else {
+        alerts.push({ tone: 'success', icon: 'fa-circle-check', title: 'Rent is current', body: 'No current rent balance is showing in your ledger.' });
+      }
+
+      if (tenant.leaseEnd) {
+        const leaseDays = daysBetween(new Date(), new Date(tenant.leaseEnd));
+        if (leaseDays >= 0 && leaseDays <= 60) {
+          alerts.push({ tone: 'warning', icon: 'fa-file-signature', title: `Lease ends in ${leaseDays} day${leaseDays === 1 ? '' : 's'}`, body: `Current lease end date: ${date(tenant.leaseEnd)}.` });
+        }
+      }
+
+      if (openMaintenance.length) alerts.push({ tone: '', icon: 'fa-screwdriver-wrench', title: `${openMaintenance.length} open maintenance request${openMaintenance.length === 1 ? '' : 's'}`, body: 'Check request history for status updates and replies.' });
+      if (recentDocs.length) alerts.push({ tone: '', icon: 'fa-folder-open', title: `${recentDocs.length} recent document${recentDocs.length === 1 ? '' : 's'}`, body: 'New notices and tenant documents are available.' });
+
+      $('alertStrip').innerHTML = alerts.slice(0, 4).map(alert => `
+        <div class="alert-card ${alert.tone}">
+          <i class="fa-solid ${alert.icon}"></i>
+          <div><strong>${safe(alert.title)}</strong><span>${safe(alert.body)}</span></div>
+        </div>
+      `).join('');
+    }
+
+    function renderRentTimeline(portal) {
+      const cycle = getRentCycle();
+      const balance = Number(portal.balances.rentBalance) || 0;
+      const paid = balance <= 0;
+      $('rentTimelineMeta').textContent = paid ? 'Paid' : `${cycle.daysUntilDue} days`;
+      $('rentTimeline').innerHTML = `
+        <strong style="display:block;font-size:1.16rem;margin-top:2px;">${paid ? 'Rent is paid for this cycle' : `Rent due in ${cycle.daysUntilDue} day${cycle.daysUntilDue === 1 ? '' : 's'}`}</strong>
+        <div style="color:#64748b;font-size:.86rem;margin-top:5px;">Due ${date(cycle.dueDate)}. Late fee starts ${date(cycle.lateStarts)}.</div>
+        <div class="timeline-track"><div class="timeline-fill" style="width:${paid ? 100 : cycle.progress}%"></div></div>
+        <div class="timeline-steps"><span>Cycle start</span><span>${paid ? 'Paid' : money(balance)}</span><span>Due date</span></div>
+      `;
+    }
+
+    function renderProfileCompletion(tenant) {
+      const score = getProfileCompletion(tenant);
+      $('profileScoreMeta').textContent = `${score.percent}%`;
+      $('profileScoreCard').innerHTML = `
+        <div class="score-wrap">
+          <div class="score-ring" style="--score:${score.percent}%"><strong>${score.percent}%</strong></div>
+          <div>
+            <strong style="display:block;margin-bottom:5px;">${score.percent >= 90 ? 'Profile looks complete' : 'A few details are missing'}</strong>
+            <span style="display:block;color:#64748b;font-size:.84rem;line-height:1.42;">${score.missing.length ? `Missing: ${score.missing.slice(0, 3).map(safe).join(', ')}${score.missing.length > 3 ? '...' : ''}` : 'Emergency and resident details are ready.'}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderAnnouncements(portal) {
+      const liveAnnouncements = (portal.announcements || []).map(item => ({
+        title: item.title,
+        message: item.message,
+        category: item.category,
+        createdAt: item.createdAt,
+        pinned: item.pinned,
+        startsAt: item.startsAt,
+        expiresAt: item.expiresAt,
+        lifecycle: getAnnouncementLifecycle(item)
+      })).sort((left, right) => {
+        const statusOrder = { active: 0, scheduled: 1, expired: 2 };
+        const pinnedDelta = Number(Boolean(right.pinned)) - Number(Boolean(left.pinned));
+        if (pinnedDelta !== 0) return pinnedDelta;
+        const lifecycleDelta = (statusOrder[left.lifecycle] ?? 99) - (statusOrder[right.lifecycle] ?? 99);
+        if (lifecycleDelta !== 0) return lifecycleDelta;
+        const leftTime = parseAnnouncementCalendarDate(left.startsAt)?.getTime() || 0;
+        const rightTime = parseAnnouncementCalendarDate(right.startsAt)?.getTime() || 0;
+        return left.lifecycle === 'scheduled' ? leftTime - rightTime : rightTime - leftTime;
+      });
+      const documentAnnouncements = (portal.documents || [])
+        .filter(doc => ['notice', 'other'].includes(String(doc.type || '').toLowerCase()))
+        .map(doc => ({
+          title: doc.name,
+          message: `${title(doc.type)} posted ${date(doc.createdAt)}.`,
+          category: doc.type,
+          createdAt: doc.createdAt
+        }));
+      const announcements = (liveAnnouncements.length ? liveAnnouncements : documentAnnouncements).slice(0, 3);
+      if (liveAnnouncements.length) {
+        const activeCount = liveAnnouncements.filter(item => item.lifecycle === 'active').length;
+        const scheduledCount = liveAnnouncements.filter(item => item.lifecycle === 'scheduled').length;
+        $('announcementMeta').textContent = scheduledCount
+          ? `${activeCount} active • ${scheduledCount} scheduled`
+          : `${activeCount} active`;
+      } else {
+        $('announcementMeta').textContent = `${announcements.length} active`;
+      }
+      $('announcementList').innerHTML = announcements.length ? announcements.map(item => `
+        <div class="announcement-item">
+          <strong>${item.pinned ? '<i class="fa-solid fa-thumbtack"></i> ' : ''}${safe(item.title)}</strong>
+          ${item.lifecycle ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;"><span style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;font-size:0.72rem;font-weight:800;background:${item.lifecycle === 'scheduled' ? '#eff6ff' : '#ecfdf3'};color:${item.lifecycle === 'scheduled' ? '#1d4ed8' : '#15803d'};border:1px solid ${item.lifecycle === 'scheduled' ? '#bfdbfe' : '#bbf7d0'};">${safe(title(item.lifecycle))}</span><span style="color:#64748b;font-size:0.76rem;">${safe(getAnnouncementTimingLabel(item))}</span></div>` : ''}
+          <span>${safe(item.message || '')}</span>
+        </div>
+      `).join('') : `
+        <div class="announcement-item">
+          <strong>No active property notices</strong>
+          <span>Office messages, scheduled notices, inspections, utility notices, and parking updates will appear here.</span>
+        </div>
+      `;
+    }
+
+    function renderRecent(payments, maintenance) {
+      const activity = [
+        ...payments.slice(0, 3).map(p => ({ type: 'Payment', icon: 'receipt', label: `${money(p.amount)} ${title(p.applyTo || p.type)}`, date: p.date })),
+        ...maintenance.slice(0, 3).map(m => ({ type: 'Maintenance', icon: 'screwdriver-wrench', label: m.title, date: m.createdAt, status: m.status }))
+      ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 5);
+
+      $('recentActivity').innerHTML = activity.length ? activity.map(item => `
+        <div class="info">
+          <span><i class="fa-solid fa-${item.icon}"></i> ${item.type}</span>
+          <strong>${safe(item.label)}</strong>
+          <div style="margin-top:5px;color:#64748b;font-size:.82rem;">${date(item.date)} ${item.status ? ' • ' + title(item.status) : ''}</div>
+        </div>
+      `).join('') : '<div class="empty">No recent activity yet.</div>';
+    }
+
+    function renderPayments(payments) {
+      $('paymentCount').textContent = `${payments.length} record${payments.length === 1 ? '' : 's'}`;
+      $('paymentsTable').innerHTML = payments.length ? payments.map(payment => `
+        <tr>
+          <td>${date(payment.date)}</td>
+          <td>${safe(title(payment.applyTo || payment.type))}</td>
+          <td>${safe(title(payment.method))}</td>
+          <td>${money(payment.amount)}</td>
+          <td>${money(payment.balance)}</td>
+          <td>${safe(payment.note || '')}</td>
+        </tr>
+      `).join('') : '<tr><td colspan="6"><div class="empty">No payments have been recorded yet.</div></td></tr>';
+    }
+
+    function renderMaintenance(items) {
+      $('maintenanceCount').textContent = `${items.length} request${items.length === 1 ? '' : 's'}`;
+      $('maintenanceList').innerHTML = items.length ? items.map(item => `
+        <div class="info">
+          <span>${date(item.createdAt)} <span class="status ${safe(item.status)}">${safe(title(item.status))}</span></span>
+          <strong>${safe(item.title)}</strong>
+          <div style="margin-top:7px;color:#64748b;font-size:.86rem;white-space:pre-line;">${safe(item.description || '')}</div>
+          ${item.photos?.length ? `<div style="margin-top:8px;color:#2563eb;font-size:.82rem;"><i class="fa-solid fa-image"></i> ${item.photos.length} photo${item.photos.length === 1 ? '' : 's'}</div>` : ''}
+          <div class="thread">
+            <div class="thread-list">
+              ${(item.updates || []).length ? item.updates.slice(-4).map(update => `
+                <div class="thread-message ${safe(update.authorRole || '')}">
+                  <strong>${safe(update.authorName || title(update.authorRole || 'Update'))} <span>${date(update.createdAt)}</span></strong>
+                  <span>${safe(update.text || '')}</span>
+                </div>
+              `).join('') : `
+                <div class="thread-message">
+                  <strong>Office updates</strong>
+                  <span>Status changes and replies from management will appear here.</span>
+                </div>
+              `}
+            </div>
+            <form class="thread-form" onsubmit="sendMaintenanceMessage(event, '${item._id}')">
+              <input type="text" name="message" maxlength="1200" placeholder="Reply or add an update">
+              <button class="btn btn-soft" type="submit"><i class="fa-solid fa-paper-plane"></i></button>
+            </form>
+          </div>
+        </div>
+      `).join('') : '<div class="empty">No maintenance requests yet.</div>';
+    }
+
+    function renderDocuments(documents) {
+      $('documentCount').textContent = `${documents.length} document${documents.length === 1 ? '' : 's'}`;
+      $('documentsTable').innerHTML = documents.length ? documents.map(doc => `
+        <tr>
+          <td>${safe(doc.name)}</td>
+          <td>${safe(title(doc.type))}</td>
+          <td>${date(doc.createdAt)}</td>
+          <td>
+            <button class="btn btn-soft" type="button" onclick="openDocument('${doc._id}', 'view')"><i class="fa-solid fa-eye"></i> View</button>
+            <button class="btn btn-plain" type="button" onclick="openDocument('${doc._id}', 'download')"><i class="fa-solid fa-download"></i> Download</button>
+          </td>
+        </tr>
+      `).join('') : '<tr><td colspan="4"><div class="empty">No documents shared yet.</div></td></tr>';
+    }
+
+    function fillProfile(tenant) {
+      $('profilePhone').value = tenant.phone || '';
+      $('emergencyName').value = tenant.emergencyContact?.name || '';
+      $('emergencyPhone').value = tenant.emergencyContact?.phone || '';
+      $('emergencyEmail').value = tenant.emergencyContact?.email || '';
+      $('emergencyRelation').value = tenant.emergencyContact?.relation || '';
+      $('vehicleCount').value = tenant.cars?.count || 0;
+      $('vehicleDetails').value = (tenant.cars?.details || []).map(v => [v.year, v.make, v.model, v.color, v.licensePlate].filter(Boolean).join(', ')).join('\n');
+    }
+
+    async function loadPortal() {
+      if (!state.token) return showLogin();
+      try {
+        const data = await request('/api/tenant-portal/me');
+        state.portal = data.portal;
+        showPortal();
+        render();
+      } catch (error) {
+        localStorage.removeItem(TOKEN_KEY);
+        state.token = '';
+        showLogin();
+        toast(error.message, 'error');
+      }
+    }
+
+    async function openDocument(id, mode) {
+      try {
+        const blob = await request(`/api/tenant-portal/documents/${id}/${mode}`);
+        const url = URL.createObjectURL(blob);
+        if (mode === 'view') {
+          window.open(url, '_blank', 'noopener');
+        } else {
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'tenant-document';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+      } catch (error) {
+        toast(error.message, 'error');
+      }
+    }
+
+    window.openDocument = openDocument;
+
+    async function sendMaintenanceMessage(event, requestId) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const input = form.querySelector('input[name="message"]');
+      const text = (input?.value || '').trim();
+      if (!text) return toast('Type a message first', 'error');
+      try {
+        await request(`/api/tenant-portal/maintenance/${requestId}/messages`, {
+          method: 'POST',
+          body: JSON.stringify({ text })
+        });
+        input.value = '';
+        toast('Maintenance update sent', 'success');
+        await loadPortal();
+        setSection('maintenance');
+      } catch (error) {
+        toast(error.message, 'error');
+      }
+    }
+
+    window.sendMaintenanceMessage = sendMaintenanceMessage;
+
+    $('loginForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      try {
+        const data = await request('/api/tenant-portal/login', {
+          method: 'POST',
+          body: JSON.stringify({
+            email: $('loginEmail').value,
+            phoneLast4: $('loginPhone').value
+          })
+        });
+        state.token = data.token;
+        state.portal = data.portal;
+        localStorage.setItem(TOKEN_KEY, data.token);
+        showPortal();
+        render();
+        toast('Signed in successfully', 'success');
+      } catch (error) {
+        toast(error.message, 'error');
+      }
+    });
+
+    $('maintenanceForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = new FormData();
+      form.append('title', $('maintTitle').value);
+      form.append('priority', $('maintPriority').value);
+      form.append('preferredTime', $('maintPreferred').value);
+      form.append('accessPermission', $('maintAccess').value);
+      form.append('contactPreference', $('maintContact').value);
+      form.append('description', $('maintDescription').value);
+      Array.from($('maintPhotos').files).forEach(file => form.append('photos', file));
+      try {
+        await request('/api/tenant-portal/maintenance', { method: 'POST', body: form });
+        event.target.reset();
+        toast('Maintenance request submitted', 'success');
+        await loadPortal();
+        setSection('maintenance');
+      } catch (error) {
+        toast(error.message, 'error');
+      }
+    });
+
+    $('paymentNoticeForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      try {
+        await request('/api/tenant-portal/payment-notice', {
+          method: 'POST',
+          body: JSON.stringify({
+            amount: $('noticeAmount').value,
+            method: $('noticeMethod').value,
+            reference: $('noticeReference').value,
+            note: $('noticeNote').value
+          })
+        });
+        event.target.reset();
+        toast('Payment notice sent', 'success');
+      } catch (error) {
+        toast(error.message, 'error');
+      }
+    });
+
+    $('profileForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const vehicleLines = $('vehicleDetails').value.split('\n').map(line => line.trim()).filter(Boolean);
+      try {
+        const data = await request('/api/tenant-portal/profile', {
+          method: 'PUT',
+          body: JSON.stringify({
+            phone: $('profilePhone').value,
+            emergencyContact: {
+              name: $('emergencyName').value,
+              phone: $('emergencyPhone').value,
+              email: $('emergencyEmail').value,
+              relation: $('emergencyRelation').value
+            },
+            cars: {
+              hasCar: Number($('vehicleCount').value) > 0,
+              count: Number($('vehicleCount').value) || vehicleLines.length,
+              details: vehicleLines.map(line => {
+                const parts = line.split(',').map(part => part.trim());
+                return { year: parts[0] || '', make: parts[1] || '', model: parts[2] || '', color: parts[3] || '', licensePlate: parts[4] || '' };
+              })
+            }
+          })
+        });
+        state.portal = data.portal;
+        render();
+        toast('Profile updated', 'success');
+      } catch (error) {
+        toast(error.message, 'error');
+      }
+    });
+
+    $('nav').addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-section]');
+      if (button) setSection(button.dataset.section);
+    });
+
+    $('refreshBtn').addEventListener('click', () => loadPortal().then(() => toast('Portal refreshed', 'success')));
+    window.addEventListener('scroll', updateScrollProgress, { passive: true });
+    window.addEventListener('resize', updateScrollProgress);
+    $('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem(TOKEN_KEY);
+      state = { portal: null, token: '' };
+      showLogin();
+      toast('Signed out');
+    });
+
+    updateScrollProgress();
+    loadPortal();
+  </script>
+</body>
+</html>
