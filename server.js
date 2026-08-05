@@ -7118,6 +7118,236 @@ app.get('/api/public/availability', async (req, res) => {
   }
 });
 
+// Add new property
+app.post('/api/properties', async (req, res) => {
+  try {
+    const property = new Property(req.body);
+    await property.save();
+    res.status(201).json(property);
+  } catch (error) {
+    console.error('Error creating property:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+
+// Get property details
+app.get('/api/properties/:id', async (req, res) => {
+  try {
+    const property = await Property.findById(req.params.id)
+      .populate('units');
+    if (!property) {
+      return res.status(404).json({ message: 'Property not found' });
+    }
+    res.json(property);
+  } catch (error) {
+    console.error('Error fetching property:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update the property routes
+app.get('/api/properties/multifamily', async (req, res) => {
+  try {
+    console.log('Fetching multifamily properties...');
+    
+    const properties = await Property.find({ type: 'Multifamily' })
+      .populate({
+        path: 'units',
+        populate: [
+          { path: 'tenant' },
+          { path: 'lease' }
+        ]
+      });
+
+    console.log(`Found ${properties.length} multifamily properties`);
+    res.json(properties);
+  } catch (error) {
+    console.error('Error fetching properties:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update these routes to handle both Project and Property models
+
+// Get property/project units
+// Update the routes to handle units directly
+app.get('/api/properties/:id/units', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find the project
+    const project = await Project.findById(id);
+    if (!project) {
+      return res.status(404).json({ message: 'Property not found' });
+    }
+
+    // Find all units for this project
+    const units = await Unit.find({ projectId: id });
+
+    res.json({ 
+      property: {
+        _id: project._id,
+        name: project.name,
+        type: "Multifamily",
+        address: {
+          line1: project.address?.addressLine1 || '',
+          line2: project.address?.addressLine2 || '',
+          city: project.address?.city || '',
+          state: project.address?.state || '',
+          zip: project.address?.zip || ''
+        },
+        units: units
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching property units:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.post('/api/properties/:id/units', async (req, res) => {
+    try {
+        const { id } = req.params;
+    const { number, floor, bedrooms, bathrooms, sqft, status, rent } = req.body;
+
+        // Validate required fields
+        if (!number || !bedrooms || !bathrooms) {
+            return res.status(400).json({ 
+                message: 'Missing required fields: number, bedrooms, and bathrooms are required' 
+            });
+        }
+
+        // Validate project exists
+        const project = await Project.findById(id);
+        if (!project) {
+            return res.status(404).json({ message: 'Property not found' });
+        }
+
+        // Create new unit with validated data
+        const unit = new Unit({
+            projectId: project._id,
+            number: number.trim(),
+            floor: parseInt(floor) || 1,
+            bedrooms: parseInt(bedrooms),
+            bathrooms: parseInt(bathrooms),
+            sqft: parseInt(sqft) || 0,
+          rent: typeof rent === 'number' ? rent : parseFloat(rent) || 0,
+          status: status || 'vacant'
+        });
+
+        await unit.save();
+
+        res.status(201).json({
+            message: 'Unit added successfully',
+            unit: unit
+        });
+    } catch (error) {
+        console.error('Error adding unit:', error);
+        res.status(500).json({ 
+            message: 'Error adding unit',
+            error: error.message 
+        });
+    }
+});
+
+// Add route for updating units
+app.put('/api/properties/:propertyId/units/:unitId', async (req, res) => {
+  try {
+    const { propertyId, unitId } = req.params;
+    const updateData = req.body;
+
+    const unit = await Unit.findOneAndUpdate(
+      { _id: unitId, projectId: propertyId },
+      updateData,
+      { new: true }
+    );
+
+    if (!unit) {
+      return res.status(404).json({ message: 'Unit not found' });
+    }
+
+    res.json({
+      message: 'Unit updated successfully',
+      unit: unit
+    });
+  } catch (error) {
+    console.error('Error updating unit:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Add DELETE endpoint for units
+app.delete('/api/properties/:propertyId/units/:unitId', async (req, res) => {
+    try {
+        const { propertyId, unitId } = req.params;
+
+        // Find and delete the unit
+        const deletedUnit = await Unit.findOneAndDelete({ 
+            _id: unitId, 
+            projectId: propertyId 
+        });
+
+        if (!deletedUnit) {
+            return res.status(404).json({ message: 'Unit not found' });
+        }
+
+        res.json({ message: 'Unit deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting unit:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Public availability endpoint for marketing site (Blue Rain)
+// Returns multifamily and single-family projects with their units and backend statuses/rents
+app.get('/api/public/availability', async (req, res) => {
+  try {
+    // Include both multifamily and single-family rental projects
+    const projects = await Project.find({
+      type: { $regex: /family/i }
+    }).lean();
+
+    if (!projects.length) {
+      return res.json({ projects: [] });
+    }
+
+    const projectIds = projects.map(p => p._id);
+    const units = await Unit.find({ projectId: { $in: projectIds } }).lean();
+
+    const unitsByProject = {};
+    for (const unit of units) {
+      const pid = String(unit.projectId);
+      if (!unitsByProject[pid]) unitsByProject[pid] = [];
+      unitsByProject[pid].push({
+        _id: unit._id,
+        number: unit.number,
+        floor: unit.floor,
+        bedrooms: unit.bedrooms,
+        bathrooms: unit.bathrooms,
+        sqft: unit.sqft,
+        rent: unit.rent,
+        status: unit.status
+      });
+    }
+
+    const payload = projects.map(p => ({
+      id: p._id,
+      name: p.name,
+      type: p.type,
+      address: p.address,
+      units: unitsByProject[String(p._id)] || []
+    }));
+
+    res.json({ projects: payload });
+  } catch (error) {
+    console.error('Error fetching public availability:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
 // Tenant Routes
 app.get('/api/properties/:propertyId/tenants', async (req, res) => {
   try {
@@ -7307,6 +7537,7 @@ app.get('/api/properties/:propertyId/maintenance', async (req, res) => {
   try {
     const requests = await MaintenanceRequest.find({ projectId: req.params.propertyId })
       .populate('unitId')
+      .populate('assignedVendor', 'name email trade specialty')
       .sort({ createdAt: -1 });
     res.json(requests);
   } catch (error) {
@@ -7360,9 +7591,10 @@ app.post('/api/properties/:propertyId/maintenance', maintenancePhotoUpload.array
         }
       }
       for (const tempUrl of tempPaths) {
-        const rel = tempUrl.replace(/^\/+/, '');
-        const abs = path.join(__dirname, rel);
-        const permanentDir = path.join(__dirname, 'uploads', 'maintenance');
+        // Remove leading slashes and "uploads/" prefix
+        const rel = tempUrl.replace(/^\/+/, '').replace(/^uploads\//, '');
+        const abs = path.join('/mnt/data/uploads', rel);
+        const permanentDir = path.join('/mnt/data/uploads', 'maintenance');
         try {
           if (fs.existsSync(abs)) {
             const filename = path.basename(abs).replace(/^temp-/, '');
@@ -7571,11 +7803,11 @@ app.put('/api/properties/:propertyId/maintenance/:requestId', maintenancePhotoUp
           tempPaths = req.body.tempPhotosPaths.split(',').map(s => s.trim()).filter(Boolean);
         }
       }
-      const permanentDir = path.join(__dirname, 'uploads', 'maintenance');
+      const permanentDir = path.join('/mnt/data/uploads', 'maintenance');
       for (const tempUrl of tempPaths) {
         try {
           const rel = tempUrl.replace(/^\/+/, '');
-          const abs = path.join(__dirname, rel);
+         const abs = path.join('/mnt/data/uploads', rel);
           if (fs.existsSync(abs)) {
             const filename = path.basename(abs).replace(/^temp-/, '');
             const dest = path.join(permanentDir, filename);
@@ -7603,7 +7835,7 @@ app.put('/api/properties/:propertyId/maintenance/:requestId', maintenancePhotoUp
 
     // Remove selected photos
     if (removeList.length && Array.isArray(request.photos)) {
-      const baseDir = path.join(__dirname, 'uploads', 'maintenance');
+      const baseDir = path.join('/mnt/data/uploads', 'maintenance');
       request.photos = request.photos.filter(p => {
         const keep = !removeList.includes(p);
         if (!keep) {
