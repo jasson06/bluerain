@@ -256,6 +256,9 @@ app.post("/api/upload-photos", upload.array("photos", 10), async (req, res) => {
     // ✅ Save Estimate Changes After Vendor Upload
     if (updateSuccess && estimate) {
       await estimate.save();
+      if (estimateItem?.maintenanceRequestId) {
+      await syncMaintenanceRequestFromEstimateItem(estimate, estimateItem);
+      }
       return res.status(200).json({ message: "Photos uploaded successfully!", photoUrls });
     }
 
@@ -1119,6 +1122,126 @@ monthlyOverrides: {
 
 }, { timestamps: true });
 
+const MAINTENANCE_WORKFLOW_STAGES = [
+  'new',
+  'scheduled',
+  'waiting',
+  'in-progress',
+  'completed',
+  'closed'
+];
+
+function deriveMaintenanceStatusFromStage(stage, fallback = 'pending') {
+  if (stage === 'completed' || stage === 'closed') return 'completed';
+  if (['scheduled', 'waiting', 'in-progress'].includes(stage)) {
+    return 'in-progress';
+  }
+  if (stage === 'new') return 'pending';
+  return ['pending', 'in-progress', 'completed'].includes(fallback) ? fallback : 'pending';
+}
+
+function normalizeMaintenanceWorkflowStage(workflowStage, legacyStatus, hasAssignedVendor = false, hasScheduledFor = false, fallback = 'new') {
+  const normalizedInput = String(workflowStage || '').trim().toLowerCase();
+  const legacyStageMap = {
+    submitted: 'new',
+    acknowledged: 'new',
+    triaged: 'new',
+    assigned: 'scheduled',
+    'waiting-on-vendor': 'waiting',
+    'waiting-on-tenant': 'waiting'
+  };
+  const collapsedStage = legacyStageMap[normalizedInput] || normalizedInput;
+
+  if (MAINTENANCE_WORKFLOW_STAGES.includes(collapsedStage)) {
+    if (collapsedStage === 'scheduled' && !hasScheduledFor && !hasAssignedVendor) return 'new';
+    return collapsedStage;
+  }
+
+  if (legacyStatus === 'completed') return 'completed';
+  if (legacyStatus === 'pending') return 'new';
+  if (hasScheduledFor) return 'scheduled';
+  if (hasAssignedVendor) return 'scheduled';
+  if (legacyStatus === 'in-progress') return 'in-progress';
+  return MAINTENANCE_WORKFLOW_STAGES.includes(fallback) ? fallback : 'new';
+}
+ 
+function appendMaintenanceSystemUpdate(request, text) {
+  const message = String(text || '').trim();
+  if (!message) return;
+  request.updates = request.updates || [];
+  request.updates.push({
+    authorRole: 'system',
+    authorName: 'System',
+    text: message,
+    createdAt: new Date()
+  });
+}
+
+function parseMaintenanceDate(value) {
+  if (value === null || typeof value === 'undefined') return undefined;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+function parseMaintenanceCost(value) {
+  if (value === null || typeof value === 'undefined') return undefined;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const normalized = raw.replace(/[$,\s]/g, '');
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed < 0) return undefined;
+  return Math.round(parsed * 100) / 100;
+}
+
+function formatMaintenanceCost(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return '';
+  return amount.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function formatMaintenanceTimelineDate(value) {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+}
+
+function parseAnnouncementCalendarDate(value) {
+  if (!value) return null;
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return null;
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  }
+
+  const raw = String(value).trim();
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  }
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+}
+
+function getStartOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
 const maintenanceRequestSchema = new mongoose.Schema({
   projectId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -1142,9 +1265,38 @@ const maintenanceRequestSchema = new mongoose.Schema({
     default: 'pending'
   },
   assignedTo: String,
+  workflowStage: {
+    type: String,
+    enum: MAINTENANCE_WORKFLOW_STAGES,
+    default: 'submitted'
+  },
+  assignedVendor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Vendor',
+    default: null
+  },
+  linkedEstimateId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Estimate',
+    default: null
+  },
+  linkedEstimateItemId: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null
+  },
+  cost: { type: Number, default: null },
+  scheduledFor: { type: Date, default: null },
+  accessNotes: { type: String, default: '' },
   completedAt: Date,
   // New: photo file paths relative to /uploads
-  photos: [{ type: String }]
+  photos: [{ type: String }],
+  afterPhotos: [{ type: String }],
+  updates: [{
+    authorRole: { type: String, enum: ['tenant', 'manager', 'vendor', 'system'], default: 'system' },
+    authorName: { type: String, default: '' },
+    text: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+  }]
 }, { timestamps: true });
 
 const documentSchema = new mongoose.Schema({
@@ -1229,6 +1381,18 @@ const maintenanceScheduleSchema = new mongoose.Schema({
   }],
   createdAt: { type: Date, default: Date.now }
 });
+
+const announcementSchema = new mongoose.Schema({
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
+  title: { type: String, required: true },
+  message: { type: String, required: true },
+  category: { type: String, enum: ['notice', 'inspection', 'utility', 'parking', 'general'], default: 'general' },
+  targetTenantIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tenant' }],
+  pinned: { type: Boolean, default: false },
+  startsAt: { type: Date, default: null },
+  expiresAt: { type: Date, default: null },
+  createdBy: { type: String, default: 'Management' }
+}, { timestamps: true });
 
 const applicationSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -2273,6 +2437,13 @@ app.put("/api/estimates/:id", async (req, res) => {
       },
       { new: true, runValidators: true }
     );
+
+    const linkedMaintenanceItems = updatedEstimate.lineItems.flatMap(category =>
+    (category.items || []).filter(item => item.maintenanceRequestId)
+    );
+    for (const item of linkedMaintenanceItems) {
+      await syncMaintenanceRequestFromEstimateItem(updatedEstimate, item);
+    }
 
     // Log the update
     await logDailyUpdate(
@@ -3982,7 +4153,19 @@ app.post("/api/assign-items", async (req, res) => {
       await Estimate.bulkWrite(updateOperations);
     }
 
-    console.log("✅ Items assigned successfully with cost codes!");
+        const refreshedEstimate = await Estimate.findById(estimateId);
+    if (refreshedEstimate) {
+      for (const assignedItem of items) {
+        const refreshedEstimateItem = refreshedEstimate.lineItems
+          .flatMap(category => category.items || [])
+          .find(entry => entry._id?.toString() === String(assignedItem.itemId));
+        if (refreshedEstimateItem?.maintenanceRequestId) {
+          await syncMaintenanceRequestFromEstimateItem(refreshedEstimate, refreshedEstimateItem);
+        }
+      }
+    }
+
+    console.log("✅ Items assigned successfully ");
 
     // ✅ Send updated assignedItems back to frontend
     res.status(200).json({
@@ -4042,6 +4225,14 @@ app.post("/api/assign-items", async (req, res) => {
       // ✅ Check if deletion was successful
       const updateSuccess = vendor || estimate;
       if (updateSuccess) {
+                  if (estimate) {
+            const estimateItem = estimate.lineItems
+              .flatMap(category => category.items || [])
+              .find(entry => entry._id?.toString() === itemId);
+            if (estimateItem?.maintenanceRequestId) {
+              await syncMaintenanceRequestFromEstimateItem(estimate, estimateItem);
+            }
+          }
           console.log(`✅ Photo deleted from database successfully.`);
           return res.status(200).json({ message: "Photo deleted successfully!" });
       } else {
@@ -4215,6 +4406,11 @@ app.patch('/api/clear-vendor-assignment/:itemId', async (req, res) => {
       return res.status(404).json({ message: 'Item not found in any estimate.' });
     }
 
+      const estimateItem = estimate.lineItems
+      .flatMap(category => category.items || [])
+      .find(entry => entry._id?.toString() === itemId);
+
+
     // Step 2: Remove the item from the vendor's assignedItems array
     const vendorUpdate = await Vendor.updateOne(
       { 'assignedItems.itemId': itemId },
@@ -4226,6 +4422,10 @@ app.patch('/api/clear-vendor-assignment/:itemId', async (req, res) => {
     if (vendorUpdate.modifiedCount === 0) {
       console.log(`Item ID ${itemId} not found in vendor's assignedItems.`);
       return res.status(404).json({ message: 'Item not found in vendor data.' });
+    }
+
+    if (estimateItem?.maintenanceRequestId) {
+      await syncMaintenanceRequestFromEstimateItem(estimate, estimateItem);
     }
 
     res.status(200).json({ message: 'Vendor assignment cleared successfully.' });
@@ -5054,6 +5254,10 @@ app.put('/api/estimates/line-items/:lineItemId', async (req, res) => {
 
     const item = lineItem.items.find(item => item._id.toString() === lineItemId);
     const updatedField = Object.keys(updates).map(key => `${key}: ${updates[key]}`).join(', ');
+
+       if (item?.maintenanceRequestId) {
+      await syncMaintenanceRequestFromEstimateItem(estimate, item);
+    }
 
     // ✅ Log line item update in daily updates
     await logDailyUpdate(
@@ -7145,7 +7349,6 @@ const maintenanceTempUpload = multer({ storage: maintenanceTempStorage });
 app.post('/api/properties/:propertyId/maintenance', maintenancePhotoUpload.array('photos', 10), async (req, res) => {
   try {
     let photos = (req.files || []).map(f => `/uploads/maintenance/${f.filename}`);
-
     // Accept temp photo paths and move them to permanent
     if (req.body.tempPhotosPaths) {
       let tempPaths = [];
@@ -7157,10 +7360,9 @@ app.post('/api/properties/:propertyId/maintenance', maintenancePhotoUpload.array
         }
       }
       for (const tempUrl of tempPaths) {
-        // Remove leading slashes and "uploads/" prefix
-        const rel = tempUrl.replace(/^\/+/, '').replace(/^uploads\//, '');
-        const abs = path.join('/mnt/data/uploads', rel);
-        const permanentDir = path.join('/mnt/data/uploads', 'maintenance');
+        const rel = tempUrl.replace(/^\/+/, '');
+        const abs = path.join(__dirname, rel);
+        const permanentDir = path.join(__dirname, 'uploads', 'maintenance');
         try {
           if (fs.existsSync(abs)) {
             const filename = path.basename(abs).replace(/^temp-/, '');
@@ -7171,6 +7373,40 @@ app.post('/api/properties/:propertyId/maintenance', maintenancePhotoUpload.array
         } catch {}
       }
     }
+    const assignedVendorId = typeof req.body.assignedVendor === 'string' && req.body.assignedVendor.trim()
+      ? req.body.assignedVendor.trim()
+      : null;
+    if (assignedVendorId && !mongoose.Types.ObjectId.isValid(assignedVendorId)) {
+      return res.status(400).json({ message: 'Invalid vendor assignment' });
+    }
+
+    const scheduledFor = parseMaintenanceDate(req.body.scheduledFor);
+    if (typeof scheduledFor === 'undefined') {
+      return res.status(400).json({ message: 'Invalid scheduled date' });
+    }
+
+    const cost = parseMaintenanceCost(req.body.cost);
+    if (typeof cost === 'undefined') {
+      return res.status(400).json({ message: 'Invalid maintenance cost' });
+    }
+
+    let assignedVendor = null;
+    let assignedTo = '';
+    if (assignedVendorId) {
+      assignedVendor = await Vendor.findById(assignedVendorId).select('name email');
+      if (!assignedVendor) {
+        return res.status(404).json({ message: 'Assigned vendor not found' });
+      }
+      assignedTo = assignedVendor.name || assignedVendor.email || '';
+    }
+
+    const workflowStage = normalizeMaintenanceWorkflowStage(
+      req.body.workflowStage,
+      req.body.status || 'pending',
+      Boolean(assignedVendorId),
+      Boolean(scheduledFor),
+      'submitted'
+    );
 
     const request = new MaintenanceRequest({
       projectId: req.params.propertyId,
@@ -7178,10 +7414,24 @@ app.post('/api/properties/:propertyId/maintenance', maintenancePhotoUpload.array
       description: req.body.description,
       priority: req.body.priority,
       unitId: req.body.unitId || null,
-      status: req.body.status || 'pending',
+      status: deriveMaintenanceStatusFromStage(workflowStage, req.body.status || 'pending'),
+      workflowStage,
+      assignedTo,
+      assignedVendor: assignedVendorId,
+      cost,
+      scheduledFor,
+      accessNotes: String(req.body.accessNotes || '').trim(),
       photos
     });
+    appendMaintenanceSystemUpdate(request, `Request submitted`);
+    if (assignedTo) {
+      appendMaintenanceSystemUpdate(request, `Assigned to ${assignedTo}.`);
+    }
+    if (scheduledFor) {
+      appendMaintenanceSystemUpdate(request, `Scheduled for ${formatMaintenanceTimelineDate(scheduledFor)}.`);
+    }
     await request.save();
+    await syncMaintenanceRequestToEstimate(request);
     res.status(201).json(request);
   } catch (error) {
     console.error('Error creating maintenance request:', error);
@@ -7204,14 +7454,27 @@ app.post('/api/properties/:propertyId/maintenance/temp-photos', maintenanceTempU
 // Legacy status-only patch retained for quick status updates
 app.patch('/api/properties/:propertyId/maintenance/:requestId', async (req, res) => {
   try {
-    const update = { status: req.body.status };
-    if (req.body.status === 'completed') update.completedAt = new Date();
-    const request = await MaintenanceRequest.findByIdAndUpdate(
-      req.params.requestId,
-      update,
-      { new: true }
-    );
+    const request = await MaintenanceRequest.findById(req.params.requestId);
     if (!request) return res.status(404).json({ message: 'Maintenance request not found' });
+
+    const nextWorkflowStage = normalizeMaintenanceWorkflowStage(
+      req.body.workflowStage,
+      req.body.status || request.status,
+      Boolean(request.assignedVendor),
+      Boolean(request.scheduledFor),
+      request.workflowStage || 'submitted'
+    );
+    const nextStatus = deriveMaintenanceStatusFromStage(nextWorkflowStage, req.body.status || request.status);
+
+    if (request.status !== nextStatus || request.workflowStage !== nextWorkflowStage) {
+      request.status = nextStatus;
+      request.workflowStage = nextWorkflowStage;
+      appendMaintenanceSystemUpdate(request, `Workflow moved to ${nextWorkflowStage.replace(/-/g, ' ')}.`);
+    }
+    if (request.status === 'completed' && !request.completedAt) request.completedAt = new Date();
+    if (request.status !== 'completed') request.completedAt = null;
+    await request.save();
+    await syncMaintenanceRequestToEstimate(request);
     res.json(request);
   } catch (error) {
     console.error('Error updating maintenance request status:', error);
@@ -7225,17 +7488,74 @@ app.put('/api/properties/:propertyId/maintenance/:requestId', maintenancePhotoUp
     const request = await MaintenanceRequest.findById(req.params.requestId);
     if (!request) return res.status(404).json({ message: 'Maintenance request not found' });
 
+    const previousWorkflowStage = request.workflowStage || 'submitted';
+    const previousStatus = request.status || 'pending';
+    const previousAssignedVendorId = request.assignedVendor ? String(request.assignedVendor) : '';
+    const previousAssignedTo = request.assignedTo || '';
+    const previousCost = Number.isFinite(Number(request.cost)) ? Number(request.cost) : null;
+    const previousScheduledFor = request.scheduledFor ? new Date(request.scheduledFor).toISOString() : '';
+    const previousAccessNotes = request.accessNotes || '';
+
     // Update basic fields
-    ['title','description','priority','status','unitId'].forEach(f => {
+    ['title','description','priority','unitId','accessNotes'].forEach(f => {
       if (typeof req.body[f] !== 'undefined' && req.body[f] !== '') {
         request[f] = req.body[f];
       }
     });
+    if (typeof req.body.accessNotes !== 'undefined' && req.body.accessNotes === '') {
+      request.accessNotes = '';
+    }
+
+    if (typeof req.body.assignedVendor !== 'undefined') {
+      const assignedVendorId = String(req.body.assignedVendor || '').trim();
+      if (assignedVendorId && !mongoose.Types.ObjectId.isValid(assignedVendorId)) {
+        return res.status(400).json({ message: 'Invalid vendor assignment' });
+      }
+      if (!assignedVendorId) {
+        request.assignedVendor = null;
+        request.assignedTo = '';
+      } else {
+        const vendor = await Vendor.findById(assignedVendorId).select('name email');
+        if (!vendor) {
+          return res.status(404).json({ message: 'Assigned vendor not found' });
+        }
+        request.assignedVendor = vendor._id;
+        request.assignedTo = vendor.name || vendor.email || '';
+      }
+    }
+
+    if (typeof req.body.scheduledFor !== 'undefined') {
+      const scheduledFor = parseMaintenanceDate(req.body.scheduledFor);
+      if (typeof scheduledFor === 'undefined') {
+        return res.status(400).json({ message: 'Invalid scheduled date' });
+      }
+      request.scheduledFor = scheduledFor;
+    }
+
+    if (typeof req.body.cost !== 'undefined') {
+      const cost = parseMaintenanceCost(req.body.cost);
+      if (typeof cost === 'undefined') {
+        return res.status(400).json({ message: 'Invalid maintenance cost' });
+      }
+      request.cost = cost;
+    }
+
+    request.workflowStage = normalizeMaintenanceWorkflowStage(
+      req.body.workflowStage,
+      typeof req.body.status !== 'undefined' ? req.body.status : request.status,
+      Boolean(request.assignedVendor),
+      Boolean(request.scheduledFor),
+      request.workflowStage || 'submitted'
+    );
+    request.status = deriveMaintenanceStatusFromStage(
+      request.workflowStage,
+      typeof req.body.status !== 'undefined' ? req.body.status : request.status
+    );
 
     // Completed timestamp handling
-    if (req.body.status === 'completed' && !request.completedAt) {
+    if (request.status === 'completed' && !request.completedAt) {
       request.completedAt = new Date();
-    } else if (req.body.status && req.body.status !== 'completed') {
+    } else if (request.status !== 'completed') {
       request.completedAt = null;
     }
 
@@ -7251,11 +7571,11 @@ app.put('/api/properties/:propertyId/maintenance/:requestId', maintenancePhotoUp
           tempPaths = req.body.tempPhotosPaths.split(',').map(s => s.trim()).filter(Boolean);
         }
       }
-      const permanentDir = path.join('/mnt/data/uploads', 'maintenance');
+      const permanentDir = path.join(__dirname, 'uploads', 'maintenance');
       for (const tempUrl of tempPaths) {
         try {
-          const rel = tempUrl.replace(/^\/+/, '').replace(/^uploads\//, '');
-          const abs = path.join('/mnt/data/uploads', rel);
+          const rel = tempUrl.replace(/^\/+/, '');
+          const abs = path.join(__dirname, rel);
           if (fs.existsSync(abs)) {
             const filename = path.basename(abs).replace(/^temp-/, '');
             const dest = path.join(permanentDir, filename);
@@ -7283,14 +7603,14 @@ app.put('/api/properties/:propertyId/maintenance/:requestId', maintenancePhotoUp
 
     // Remove selected photos
     if (removeList.length && Array.isArray(request.photos)) {
-      const baseDir = path.join('/mnt/data/uploads', 'maintenance');
+      const baseDir = path.join(__dirname, 'uploads', 'maintenance');
       request.photos = request.photos.filter(p => {
         const keep = !removeList.includes(p);
         if (!keep) {
           // Best-effort file removal if within maintenance folder
           try {
-            const rel = p.replace(/^\/+/, '').replace(/^uploads\//, '');
-            const abs = path.join('/mnt/data/uploads', rel);
+            const rel = p.replace(/^\/+/, '');
+            const abs = path.join(__dirname, rel);
             if (abs.startsWith(baseDir) && fs.existsSync(abs)) fs.unlinkSync(abs);
           } catch {}
         }
@@ -7306,7 +7626,36 @@ app.put('/api/properties/:propertyId/maintenance/:requestId', maintenancePhotoUp
       }
     }
 
+    if (previousWorkflowStage !== request.workflowStage) {
+      appendMaintenanceSystemUpdate(request, `Workflow moved to ${request.workflowStage.replace(/-/g, ' ')}.`);
+    } else if (previousStatus !== request.status) {
+      appendMaintenanceSystemUpdate(request, `Status updated to ${request.status.replace(/-/g, ' ')}.`);
+    }
+
+    const nextAssignedVendorId = request.assignedVendor ? String(request.assignedVendor) : '';
+    if (previousAssignedVendorId !== nextAssignedVendorId) {
+      if (request.assignedTo) {
+        appendMaintenanceSystemUpdate(request, `Assigned to ${request.assignedTo}.`);
+      } else if (previousAssignedTo) {
+        appendMaintenanceSystemUpdate(request, 'Vendor assignment cleared.');
+      }
+    }
+
+    const nextScheduledFor = request.scheduledFor ? new Date(request.scheduledFor).toISOString() : '';
+    if (previousScheduledFor !== nextScheduledFor) {
+      if (request.scheduledFor) {
+        appendMaintenanceSystemUpdate(request, `Scheduled for ${formatMaintenanceTimelineDate(request.scheduledFor)}.`);
+      } else if (previousScheduledFor) {
+        appendMaintenanceSystemUpdate(request, 'Scheduled time cleared.');
+      }
+    }
+
+    if ((request.accessNotes || '') !== previousAccessNotes) {
+      appendMaintenanceSystemUpdate(request, request.accessNotes ? 'Access instructions updated.' : 'Access instructions cleared.');
+    }
+
     await request.save();
+    await syncMaintenanceRequestToEstimate(request);
     res.json(request);
   } catch (error) {
     console.error('Error fully updating maintenance request:', error);
@@ -7378,6 +7727,144 @@ app.delete('/api/properties/:propertyId/maintenance/:requestId', async (req, res
         console.error('Error deleting maintenance request:', error);
         res.status(500).json({ message: 'Server error' });
     }
+});
+
+app.post('/api/properties/:propertyId/maintenance/:requestId/messages', async (req, res) => {
+  try {
+    const { propertyId, requestId } = req.params;
+    const text = String(req.body.text || '').trim();
+    const authorName = String(req.body.authorName || 'Management').trim() || 'Management';
+    if (!text) return res.status(400).json({ message: 'Message is required' });
+    if (text.length > 1200) return res.status(400).json({ message: 'Message is too long' });
+
+    const request = await MaintenanceRequest.findOne({ _id: requestId, projectId: propertyId });
+    if (!request) return res.status(404).json({ message: 'Maintenance request not found' });
+
+    request.updates = request.updates || [];
+    request.updates.push({
+      authorRole: 'manager',
+      authorName,
+      text,
+      createdAt: new Date()
+    });
+    await request.save();
+    res.status(201).json({ message: 'Message added', updates: request.updates, request });
+  } catch (error) {
+    console.error('Property maintenance message error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.get('/api/properties/:propertyId/announcements', async (req, res) => {
+  try {
+    const announcements = await Announcement.find({ projectId: req.params.propertyId })
+      .populate('targetTenantIds', 'name email unitId')
+      .sort({ pinned: -1, startsAt: -1, createdAt: -1 })
+      .lean();
+    res.json(announcements);
+  } catch (error) {
+    console.error('Error fetching announcements:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.post('/api/properties/:propertyId/announcements', async (req, res) => {
+  try {
+    const title = String(req.body.title || '').trim();
+    const message = String(req.body.message || '').trim();
+    if (!title || !message) return res.status(400).json({ message: 'Title and message are required' });
+    const targetTenantIds = Array.isArray(req.body.targetTenantIds)
+      ? req.body.targetTenantIds.filter(id => mongoose.Types.ObjectId.isValid(id))
+      : [];
+    const startsAt = req.body.startsAt ? parseAnnouncementCalendarDate(req.body.startsAt) : null;
+    const expiresAt = req.body.expiresAt ? parseAnnouncementCalendarDate(req.body.expiresAt) : null;
+    if (req.body.startsAt && !startsAt) {
+      return res.status(400).json({ message: 'Invalid publish date' });
+    }
+    if (req.body.expiresAt && !expiresAt) {
+      return res.status(400).json({ message: 'Invalid expiration date' });
+    }
+    if (startsAt && expiresAt && expiresAt < startsAt) {
+      return res.status(400).json({ message: 'Expiration date must be after the publish date' });
+    }
+
+    const announcement = await Announcement.create({
+      projectId: req.params.propertyId,
+      title,
+      message,
+      category: ['notice', 'inspection', 'utility', 'parking', 'general'].includes(req.body.category) ? req.body.category : 'general',
+      targetTenantIds,
+      pinned: Boolean(req.body.pinned),
+      startsAt,
+      expiresAt,
+      createdBy: String(req.body.createdBy || 'Management').trim() || 'Management'
+    });
+    res.status(201).json(announcement);
+  } catch (error) {
+    console.error('Error creating announcement:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.put('/api/properties/:propertyId/announcements/:announcementId', async (req, res) => {
+  try {
+    const title = String(req.body.title || '').trim();
+    const message = String(req.body.message || '').trim();
+    if (!title || !message) return res.status(400).json({ message: 'Title and message are required' });
+
+    const targetTenantIds = Array.isArray(req.body.targetTenantIds)
+      ? req.body.targetTenantIds.filter(id => mongoose.Types.ObjectId.isValid(id))
+      : [];
+    const startsAt = req.body.startsAt ? parseAnnouncementCalendarDate(req.body.startsAt) : null;
+    const expiresAt = req.body.expiresAt ? parseAnnouncementCalendarDate(req.body.expiresAt) : null;
+    if (req.body.startsAt && !startsAt) {
+      return res.status(400).json({ message: 'Invalid publish date' });
+    }
+    if (req.body.expiresAt && !expiresAt) {
+      return res.status(400).json({ message: 'Invalid expiration date' });
+    }
+    if (startsAt && expiresAt && expiresAt < startsAt) {
+      return res.status(400).json({ message: 'Expiration date must be after the publish date' });
+    }
+
+    const updated = await Announcement.findOneAndUpdate(
+      {
+        _id: req.params.announcementId,
+        projectId: req.params.propertyId
+      },
+      {
+        title,
+        message,
+        category: ['notice', 'inspection', 'utility', 'parking', 'general'].includes(req.body.category) ? req.body.category : 'general',
+        targetTenantIds,
+        pinned: Boolean(req.body.pinned),
+        startsAt,
+        expiresAt,
+        createdBy: String(req.body.createdBy || 'Management').trim() || 'Management'
+      },
+      { new: true }
+    ).populate('targetTenantIds', 'name email unitId');
+
+    if (!updated) return res.status(404).json({ message: 'Announcement not found' });
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating announcement:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.delete('/api/properties/:propertyId/announcements/:announcementId', async (req, res) => {
+  try {
+    const deleted = await Announcement.findOneAndDelete({
+      _id: req.params.announcementId,
+      projectId: req.params.propertyId
+    });
+    if (!deleted) return res.status(404).json({ message: 'Announcement not found' });
+    res.json({ message: 'Announcement deleted' });
+  } catch (error) {
+    console.error('Error deleting announcement:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 // Document Routes
@@ -8658,15 +9145,15 @@ app.patch('/api/estimates/line-items/:lineItemId/status', async (req, res) => {
       return res.status(404).json({ message: 'Line item not found.' });
     }
 
-    // Find the updated line item and get maintenanceRequestId
-    let maintenanceRequestId = null;
+    // Find the updated line item and get maintenance linkage
+    let updatedEstimateItem = null;
     let itemName = null;
     let itemStartDate = null;
     let projectId = null;
     for (const cat of estimate.lineItems) {
       for (const item of cat.items) {
         if (item._id.toString() === lineItemId) {
-          maintenanceRequestId = item.maintenanceRequestId;
+          updatedEstimateItem = item;
           itemName = item.name;
           itemStartDate = item.startDate;
           projectId = estimate.projectId;
@@ -8674,17 +9161,9 @@ app.patch('/api/estimates/line-items/:lineItemId/status', async (req, res) => {
       }
     }
 
-    // Sync maintenance request status
-    if (maintenanceRequestId) {
-      let maintenanceStatus = 'pending';
-      if (status === 'in-progress' || status === 'rework') maintenanceStatus = 'in-progress';
-      if (status === 'completed' || status === 'approved') maintenanceStatus = 'completed';
-
-      await MaintenanceRequest.findByIdAndUpdate(
-        maintenanceRequestId,
-        { $set: { status: maintenanceStatus, ...(maintenanceStatus === 'completed' ? { completedAt: new Date() } : {}) } },
-        { new: true }
-      );
+    // Sync maintenance request status and metadata from the estimate item
+    if (updatedEstimateItem?.maintenanceRequestId) {
+      await syncMaintenanceRequestFromEstimateItem(estimate, updatedEstimateItem);
     }
 
     // --- If status is completed, also update the maintenance schedule with the same flow ---
@@ -8764,6 +9243,7 @@ if (status === "completed" && itemName && projectId) {
     res.status(500).json({ message: 'Server error', error });
   }
 });
+
 
 app.patch('/api/properties/:propertyId/maintenance-schedules/:scheduleId/complete', async (req, res) => {
   try {
@@ -8890,7 +9370,7 @@ async function sendTodayMaintenanceReminder(schedule) {
   // Manager reminder
   await transporter.sendMail({
     from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-     to: ["besfllc@gmail.com"], // Add more emails as needed
+    to: ["jleonel3915@gmail.com"], // Add more emails as needed
     subject: `Reminder: Maintenance Scheduled for Today`,
     html: getMaintenanceEmailHtml({
       recipientName: 'Team',
@@ -8901,14 +9381,453 @@ async function sendTodayMaintenanceReminder(schedule) {
   });
 }
 
+async function ensureScheduleActivatedForDate(schedule) {
+  // 1. Mark the schedule active for today and send reminders
+  schedule.status = 'in-progress';
+  await schedule.save();
+  await sendTodayMaintenanceReminder(schedule);
+  console.log(`Auto-updated schedule "${schedule.title}" to in-progress for today.`);
+
+  // 2. Ensure the assigned vendor is linked to the project
+  let vendor = null;
+  const projectIdStr = (schedule.projectId._id || schedule.projectId).toString();
+  if (schedule.assignedVendor) {
+    vendor = await Vendor.findById(schedule.assignedVendor);
+    if (vendor) {
+      const alreadyAssignedProject = vendor.assignedProjects.some(
+        p => p.projectId && p.projectId.toString() === projectIdStr
+      );
+      if (!alreadyAssignedProject) {
+        vendor.assignedProjects.push({ projectId: projectIdStr, status: 'new' });
+        await vendor.save();
+        console.log(`Assigned project ${projectIdStr} to vendor "${vendor.name}"`);
+        vendor = await Vendor.findById(schedule.assignedVendor);
+      }
+    }
+  }
+
+  // 3. Find or create the estimate shell for this recurring maintenance
+  let estimate = await Estimate.findOne({
+    projectId: schedule.projectId._id || schedule.projectId,
+    title: { $regex: new RegExp(`^Maintenance: ${schedule.title}$`, 'i') }
+  });
+
+  if (!estimate) {
+    estimate = new Estimate({
+      projectId: schedule.projectId._id || schedule.projectId,
+      invoiceNumber: `MS-${Date.now()}`,
+      title: `Maintenance: ${schedule.title}`,
+      lineItems: [],
+      total: 0,
+      tax: 0
+    });
+    await estimate.save();
+    estimate = await Estimate.findById(estimate._id);
+  }
+
+  // 4. Add the current recurrence as an in-progress estimate line item
+  const newItem = {
+    type: 'item',
+    name: schedule.title,
+    description: schedule.description || '',
+    costCode: 'Maintenance',
+    quantity: 1,
+    unitPrice: schedule.cost || 0,
+    laborCost: schedule.cost || 0,
+    total: schedule.cost || 0,
+    status: 'in-progress',
+    assignedTo: schedule.assignedVendor?._id || schedule.assignedVendor || null,
+    photos: { before: [], after: [] },
+    startDate: new Date(),
+    endDate: null
+  };
+
+  let maintenanceCategory = estimate.lineItems.find(cat => cat.category === 'Maintenance');
+  if (!maintenanceCategory) {
+    estimate.lineItems.push({
+      type: 'category',
+      category: 'Maintenance',
+      status: 'in-progress',
+      items: []
+    });
+    maintenanceCategory = estimate.lineItems.find(cat => cat.category === 'Maintenance');
+  }
+  maintenanceCategory.items.push(newItem);
+  estimate.markModified('lineItems');
+  estimate.total += schedule.cost || 0;
+  await estimate.save();
+
+  // 5. Push the generated line item to the vendor assignment list
+  const savedEstimate = await Estimate.findById(estimate._id);
+  const savedCategory = savedEstimate.lineItems.find(cat => cat.category === 'Maintenance');
+  const savedItem = savedCategory.items[savedCategory.items.length - 1];
+
+  if (vendor && savedItem && savedItem._id) {
+    const alreadyAssigned = vendor.assignedItems.some(i =>
+      i.itemId?.toString() === savedItem._id.toString()
+    );
+    if (!alreadyAssigned) {
+      vendor.assignedItems.push({
+        itemId: savedItem._id.toString(),
+        projectId: estimate.projectId,
+        estimateId: estimate._id,
+        name: savedItem.name,
+        description: savedItem.description,
+        quantity: savedItem.quantity,
+        unitPrice: savedItem.unitPrice,
+        total: savedItem.total,
+        status: 'new',
+        costCode: savedItem.costCode || 'Maintenance',
+        photos: { before: [], after: [] },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      await vendor.save();
+      console.log(`Assigned maintenance line item "${savedItem.name}" to vendor "${vendor.name}"`);
+    }
+  }
+}
+
+async function sendOverdueScheduleAlert(schedule) {
+  // 2. Send overdue alerts for schedules that are already past due
+  if (schedule.assignedVendor && schedule.assignedVendor.email) {
+    await transporter.sendMail({
+      from: `"BESF Team" <${process.env.EMAIL_USER}>`,
+      to: schedule.assignedVendor.email,
+      subject: `Overdue Maintenance Alert: ${schedule.title}`,
+      html: getOverdueMaintenanceEmailHtml({
+        recipientName: schedule.assignedVendor.name || 'Vendor',
+        schedule,
+        isManager: false
+      })
+    });
+  }
+
+  await transporter.sendMail({
+    from: `"BESF Team" <${process.env.EMAIL_USER}>`,
+    to: ['besfllc@gmail.com'],
+    subject: `Overdue Maintenance Alert: ${schedule.title}`,
+    html: getOverdueMaintenanceEmailHtml({
+      recipientName: 'Team',
+      schedule,
+      isManager: true
+    })
+  });
+  console.log(`Overdue maintenance alert sent for "${schedule.title}"`);
+}
+
+function getEstimateItemStatusFromMaintenanceStatus(status) {
+  if (status === 'completed') return 'completed';
+  if (status === 'in-progress') return 'in-progress';
+  return 'new';
+}
+
+function getMaintenanceStatusFromEstimateItemStatus(status) {
+  const normalized = String(status || 'new').trim().toLowerCase();
+  if (normalized === 'completed' || normalized === 'approved') return 'completed';
+  if (normalized === 'in-progress' || normalized === 'rework') return 'in-progress';
+  return 'pending';
+}
+
+function calculateEstimateTotal(lineItems = []) {
+  return lineItems.reduce((sum, category) => {
+    const categoryTotal = (category.items || []).reduce((itemSum, item) => {
+      const total = Number.isFinite(Number(item.total))
+        ? Number(item.total)
+        : (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0);
+      return itemSum + total;
+    }, 0);
+    return sum + categoryTotal;
+  }, 0);
+}
+
+async function ensureVendorProjectAssignment(vendorId, projectId) {
+  if (!vendorId || !projectId) return null;
+  let vendor = await Vendor.findById(vendorId);
+  if (!vendor) return null;
+
+  const projectIdStr = String(projectId);
+  const alreadyAssignedProject = (vendor.assignedProjects || []).some(
+    entry => entry.projectId && entry.projectId.toString() === projectIdStr
+  );
+  if (!alreadyAssignedProject) {
+    vendor.assignedProjects.push({ projectId: projectIdStr, status: 'new' });
+    await vendor.save();
+    vendor = await Vendor.findById(vendorId);
+  }
+
+  return vendor;
+}
+
+async function syncVendorAssignedEstimateItem(estimate, item, vendorId = null) {
+  const itemId = item?._id ? String(item._id) : '';
+  if (!itemId || !estimate?._id || !estimate?.projectId) return;
+
+  const normalizedVendorId = vendorId ? String(vendorId) : '';
+  const pullFilter = normalizedVendorId ? { _id: { $ne: normalizedVendorId } } : {};
+  await Vendor.updateMany(
+    { ...pullFilter, 'assignedItems.itemId': itemId },
+    { $pull: { assignedItems: { itemId } } }
+  );
+
+  if (!normalizedVendorId) return;
+
+  const vendor = await ensureVendorProjectAssignment(normalizedVendorId, estimate.projectId);
+  if (!vendor) return;
+
+  const payload = {
+    itemId,
+    projectId: estimate.projectId,
+    estimateId: estimate._id,
+    name: item.name,
+    description: item.description || 'No description provided',
+    quantity: Number(item.quantity) || 1,
+    unitPrice: Number(item.unitPrice) || 0,
+    total: Number.isFinite(Number(item.total)) ? Number(item.total) : (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0),
+    status: item.status || 'new',
+    costCode: item.costCode || 'Maintenance',
+    photos: item.photos || { before: [], after: [] },
+    updatedAt: new Date()
+  };
+
+  const assignedItem = (vendor.assignedItems || []).find(entry => entry.itemId?.toString() === itemId);
+  if (assignedItem) {
+    Object.assign(assignedItem, payload);
+  } else {
+    vendor.assignedItems.push({
+      ...payload,
+      createdAt: new Date()
+    });
+  }
+  await vendor.save();
+}
+
+async function syncMaintenanceRequestFromEstimateItem(estimate, item) {
+  if (!estimate?._id || !item?.maintenanceRequestId) return null;
+
+  const request = await MaintenanceRequest.findById(item.maintenanceRequestId);
+  if (!request) return null;
+
+  const assignedVendorId = item.assignedTo ? String(item.assignedTo) : '';
+  const vendor = assignedVendorId
+    ? await Vendor.findById(assignedVendorId).select('name email')
+    : null;
+
+  request.linkedEstimateId = estimate._id;
+  request.linkedEstimateItemId = item._id;
+  request.title = item.name || request.title;
+  request.description = typeof item.description === 'string' ? item.description : request.description;
+  request.assignedVendor = vendor?._id || null;
+  request.assignedTo = vendor ? (vendor.name || vendor.email || '') : '';
+  request.photos = Array.from(new Set(
+    Array.isArray(item.photos?.before) ? item.photos.before : []
+  ));
+  request.afterPhotos = Array.from(new Set(
+    Array.isArray(item.photos?.after) ? item.photos.after : []
+  ));
+  request.cost = Number.isFinite(Number(item.total))
+    ? Number(item.total)
+    : (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0);
+  request.scheduledFor = item.startDate || null;
+  request.status = getMaintenanceStatusFromEstimateItemStatus(item.status);
+  request.workflowStage = normalizeMaintenanceWorkflowStage(
+    request.workflowStage,
+    request.status,
+    Boolean(request.assignedVendor),
+    Boolean(request.scheduledFor),
+    request.workflowStage || 'submitted'
+  );
+
+  if (request.status === 'completed') {
+    request.completedAt = item.endDate || request.completedAt || new Date();
+  } else {
+    request.completedAt = null;
+  }
+
+  await request.save();
+  await syncVendorAssignedEstimateItem(estimate, item, request.assignedVendor);
+  return request;
+}
+
+async function syncMaintenanceRequestToEstimate(request) {
+  if (!request?._id || !request.projectId || !request.title) return;
+
+  const defaultMaintenanceEstimateTitle = 'Maintenance request';
+  const rawUnitId = request.unitId && (request.unitId._id || request.unitId);
+  let unitNumber = typeof request.unitId?.number === 'string' ? request.unitId.number.trim() : '';
+  if (!unitNumber && rawUnitId) {
+    const linkedUnit = await Unit.findById(rawUnitId).select('number').lean().catch(() => null);
+    unitNumber = String(linkedUnit?.number || '').trim();
+  }
+  const unitLabel = unitNumber ? `Unit ${unitNumber}` : '';
+  const unitCategoryName = unitLabel ? `Maintenance ${unitLabel}` : '';
+  const estimateItemName = unitLabel ? `${unitLabel} - ${request.title}` : request.title;
+
+  // 1. Ensure the assigned vendor is linked to the project when one exists
+  if (request.assignedVendor) {
+    await ensureVendorProjectAssignment(request.assignedVendor, request.projectId);
+  }
+
+  // 2. Find or create the default estimate shell for maintenance requests
+  let estimate = request.linkedEstimateId ? await Estimate.findById(request.linkedEstimateId) : null;
+  if (!estimate) {
+    estimate = await Estimate.findOne({
+      projectId: request.projectId,
+      title: { $regex: new RegExp(`^${defaultMaintenanceEstimateTitle}$`, 'i') }
+    });
+  }
+
+  if (!estimate) {
+    estimate = new Estimate({
+      projectId: request.projectId,
+      invoiceNumber: `MR-${Date.now()}`,
+      title: defaultMaintenanceEstimateTitle,
+      lineItems: [],
+      total: 0,
+      tax: 0
+    });
+    await estimate.save();
+    estimate = await Estimate.findById(estimate._id);
+  } else if (estimate.title !== defaultMaintenanceEstimateTitle) {
+    estimate.title = defaultMaintenanceEstimateTitle;
+  }
+
+  // 3. Add a linked line item for the maintenance request
+  const itemStatus = getEstimateItemStatusFromMaintenanceStatus(request.status);
+  const requestCost = Number.isFinite(Number(request.cost)) ? Number(request.cost) : 0;
+  let maintenanceCategory = estimate.lineItems.find(category => category.category === 'Maintenance');
+  if (!maintenanceCategory) {
+    estimate.lineItems.push({
+      type: 'category',
+      category: 'Maintenance',
+      status: itemStatus === 'completed' ? 'completed' : 'in-progress',
+      items: []
+    });
+    maintenanceCategory = estimate.lineItems.find(category => category.category === 'Maintenance');
+  }
+  let targetCategory = maintenanceCategory;
+  if (unitCategoryName) {
+    targetCategory = estimate.lineItems.find(
+      category => String(category.category || '').trim().toLowerCase() === unitCategoryName.toLowerCase()
+    );
+
+    if (!targetCategory) {
+      estimate.lineItems.push({
+        type: 'category',
+        category: unitCategoryName,
+        status: itemStatus === 'completed' ? 'completed' : 'in-progress',
+        items: []
+      });
+      targetCategory = estimate.lineItems.find(
+        category => String(category.category || '').trim().toLowerCase() === unitCategoryName.toLowerCase()
+      );
+    }
+  }
+
+  let estimateItem = estimate.lineItems
+    .flatMap(category => category.items || [])
+    .find(item => {
+      const matchesLink = request.linkedEstimateItemId && item._id?.toString() === request.linkedEstimateItemId.toString();
+      const matchesRequest = item.maintenanceRequestId && item.maintenanceRequestId.toString() === request._id.toString();
+      return matchesLink || matchesRequest;
+    });
+  const currentCategory = estimateItem
+    ? estimate.lineItems.find(category => (category.items || []).some(item => item._id?.toString() === estimateItem._id?.toString()))
+    : null;
+
+  if (!estimateItem) {
+    estimateItem = {
+      type: 'item',
+      name: estimateItemName,
+      description: request.description || '',
+      costCode: 'Maintenance',
+      quantity: 1,
+      unitPrice: requestCost,
+      laborCost: requestCost,
+      total: requestCost,
+      status: itemStatus,
+      maintenanceRequestId: request._id,
+      assignedTo: request.assignedVendor || null,
+      photos: {
+        before: Array.isArray(request.photos) ? [...request.photos] : [],
+        after: Array.isArray(request.afterPhotos) ? [...request.afterPhotos] : []
+      },
+      startDate: request.scheduledFor || request.createdAt || new Date(),
+      endDate: request.completedAt || null
+    };
+    targetCategory.items.push(estimateItem);
+  } else {
+    estimateItem.name = estimateItemName;
+    estimateItem.description = request.description || '';
+    estimateItem.costCode = estimateItem.costCode || 'Maintenance';
+    estimateItem.quantity = 1;
+    estimateItem.unitPrice = requestCost;
+    estimateItem.laborCost = requestCost;
+    estimateItem.total = requestCost;
+    estimateItem.status = itemStatus;
+    estimateItem.maintenanceRequestId = request._id;
+    estimateItem.assignedTo = request.assignedVendor || null;
+    estimateItem.photos = {
+      before: Array.isArray(request.photos) ? [...request.photos] : [],
+      after: Array.isArray(estimateItem.photos?.after)
+        ? estimateItem.photos.after
+        : (Array.isArray(request.afterPhotos) ? [...request.afterPhotos] : [])
+    };
+    estimateItem.startDate = request.scheduledFor || request.createdAt || estimateItem.startDate || new Date();
+    estimateItem.endDate = request.completedAt || null;
+
+    if (currentCategory && targetCategory && currentCategory !== targetCategory) {
+      currentCategory.items = (currentCategory.items || []).filter(item => item._id?.toString() !== estimateItem._id?.toString());
+      targetCategory.items = targetCategory.items || [];
+      targetCategory.items.push(estimateItem);
+    }
+  }
+
+  for (const category of estimate.lineItems) {
+    const categoryItems = category.items || [];
+    category.status = categoryItems.length && categoryItems.every(item => ['completed', 'approved'].includes(String(item.status || '').toLowerCase()))
+      ? 'completed'
+      : 'in-progress';
+  }
+  estimate.markModified('lineItems');
+  estimate.total = calculateEstimateTotal(estimate.lineItems);
+  await estimate.save();
+
+  // 4. Mirror the line item onto the vendor assignment list when assigned
+  const savedEstimate = await Estimate.findById(estimate._id);
+  const savedItem = savedEstimate.lineItems
+    .flatMap(category => category.items || [])
+    .find(item => item.maintenanceRequestId && item.maintenanceRequestId.toString() === request._id.toString());
+
+  if (savedItem && savedItem._id) {
+    let requestNeedsSave = false;
+    if (!request.linkedEstimateId || String(request.linkedEstimateId) !== String(savedEstimate._id)) {
+      request.linkedEstimateId = savedEstimate._id;
+      requestNeedsSave = true;
+    }
+    if (!request.linkedEstimateItemId || String(request.linkedEstimateItemId) !== String(savedItem._id)) {
+      request.linkedEstimateItemId = savedItem._id;
+      requestNeedsSave = true;
+    }
+    if (requestNeedsSave) {
+      await request.save();
+    }
+
+    await syncVendorAssignedEstimateItem(savedEstimate, savedItem, request.assignedVendor);
+  }
+}
+ 
 // --- auto schedule logic ---
-async function updateNextScheduledDates() {
+async function updateNextScheduledDates(scheduleId = null) {
   try {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // 0. Optionally scope processing to a single schedule when editing
+    const scheduleFilter = scheduleId ? { _id: scheduleId } : {};
 
     // 1. Set status to "in-progress" if nextScheduledDate is today and not already in-progress
     const schedulesToday = await MaintenanceSchedule.find({
+      ...scheduleFilter,
       nextScheduledDate: {
         $gte: today,
         $lt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
@@ -8917,146 +9836,18 @@ async function updateNextScheduledDates() {
     }).populate('assignedVendor projectId');
 
     for (const schedule of schedulesToday) {
-      schedule.status = 'in-progress';
-      await schedule.save();
-      await sendTodayMaintenanceReminder(schedule);
-      console.log(`Auto-updated schedule "${schedule.title}" to in-progress for today.`);
-
-      // --- 1. Ensure vendor is assigned to the project first ---
-      let vendor = null;
-      let projectIdStr = (schedule.projectId._id || schedule.projectId).toString();
-      if (schedule.assignedVendor) {
-        vendor = await Vendor.findById(schedule.assignedVendor);
-        if (vendor) {
-          const alreadyAssignedProject = vendor.assignedProjects.some(
-            p => p.projectId && p.projectId.toString() === projectIdStr
-          );
-          if (!alreadyAssignedProject) {
-            vendor.assignedProjects.push({ projectId: projectIdStr, status: "new" });
-            await vendor.save();
-            console.log(`Assigned project ${projectIdStr} to vendor "${vendor.name}"`);
-            // Reload vendor to ensure up-to-date state for next steps
-            vendor = await Vendor.findById(schedule.assignedVendor);
-          }
-        }
-      }
-
-      // --- 2. Create estimate if not exists ---
-      let estimate = await Estimate.findOne({
-        projectId: schedule.projectId._id || schedule.projectId,
-        title: { $regex: new RegExp(`^Maintenance: ${schedule.title}$`, 'i') }
-      });
-
-      if (!estimate) {
-        estimate = new Estimate({
-          projectId: schedule.projectId._id || schedule.projectId,
-          invoiceNumber: `MS-${Date.now()}`,
-          title: `Maintenance: ${schedule.title}`,
-          lineItems: [],
-          total: 0,
-          tax: 0
-        });
-        await estimate.save(); // Save to get _id and enable subdoc arrays
-        estimate = await Estimate.findById(estimate._id); // Reload as Mongoose doc
-      }
-
-      // --- 3. Always create a new line item for this recurrence ---
-      const newItem = {
-        type: 'item',
-        name: schedule.title,
-        description: schedule.description || '',
-        costCode: 'Maintenance',
-        quantity: 1,
-        unitPrice: schedule.cost || 0,
-        laborCost: schedule.cost || 0,
-        total: schedule.cost || 0,
-        status: 'in-progress',
-        assignedTo: schedule.assignedVendor?._id || schedule.assignedVendor || null,
-        photos: { before: [], after: [] },
-        startDate: now,
-        endDate: null
-      };
-
-      // Find or create the "Maintenance" category as a real subdoc
-      let maintenanceCategory = estimate.lineItems.find(cat => cat.category === 'Maintenance');
-      if (!maintenanceCategory) {
-        estimate.lineItems.push({
-          type: 'category',
-          category: 'Maintenance',
-          status: 'in-progress',
-          items: []
-        });
-        maintenanceCategory = estimate.lineItems.find(cat => cat.category === 'Maintenance');
-      }
-      maintenanceCategory.items.push(newItem);
-      estimate.markModified('lineItems');
-      estimate.total += schedule.cost || 0;
-      await estimate.save();
-
-      // Fetch the saved item with _id
-      const savedEstimate = await Estimate.findById(estimate._id);
-      const savedCategory = savedEstimate.lineItems.find(cat => cat.category === 'Maintenance');
-      const savedItem = savedCategory.items[savedCategory.items.length - 1]; // The last one is the new one
-
-      // --- Assign to Vendor's assignedItems if vendor is present and savedItem._id exists ---
-      if (vendor && savedItem && savedItem._id) {
-        const alreadyAssigned = vendor.assignedItems.some(i =>
-          i.itemId?.toString() === savedItem._id.toString()
-        );
-        if (!alreadyAssigned) {
-          vendor.assignedItems.push({
-            itemId: savedItem._id.toString(),
-            projectId: estimate.projectId,
-            estimateId: estimate._id,
-            name: savedItem.name,
-            description: savedItem.description,
-            quantity: savedItem.quantity,
-            unitPrice: savedItem.unitPrice,
-            total: savedItem.total,
-            status: 'new',
-            costCode: savedItem.costCode || 'Maintenance',
-            photos: { before: [], after: [] },
-            createdAt: new Date(),
-            updatedAt: new Date()
-          });
-          await vendor.save();
-          console.log(`Assigned maintenance line item "${savedItem.name}" to vendor "${vendor.name}"`);
-        }
-      }
+      await ensureScheduleActivatedForDate(schedule);
     }
 
     // 2. Notify for overdue schedules (nextScheduledDate < today, not completed)
     const overdueSchedules = await MaintenanceSchedule.find({
+      ...scheduleFilter,
       nextScheduledDate: { $lt: today },
       status: { $ne: 'completed' }
     }).populate('assignedVendor projectId');
 
     for (const schedule of overdueSchedules) { 
-      // Send to vendor if assigned
-      if (schedule.assignedVendor && schedule.assignedVendor.email) {
-        await transporter.sendMail({
-          from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-          to: schedule.assignedVendor.email,
-          subject: `Overdue Maintenance Alert: ${schedule.title}`,
-          html: getOverdueMaintenanceEmailHtml({
-            recipientName: schedule.assignedVendor.name || 'Vendor',
-            schedule,
-            isManager: false
-          })
-        });
-      }
-      // Send to default manager emails
-      await transporter.sendMail({
-        from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-         to: ["besfllc@gmail.com"],
-        subject: `Overdue Maintenance Alert: ${schedule.title}`,
-        html: getOverdueMaintenanceEmailHtml({
-          recipientName: 'Team',
-          schedule,
-          isManager: true
-        })
-      });
-      console.log(`Overdue maintenance alert sent for "${schedule.title}"`);
+      await sendOverdueScheduleAlert(schedule);
     }
   } catch (err) {
     console.error('Error updating nextScheduledDates:', err);
@@ -9078,8 +9869,6 @@ function scheduleDailyUpdateNextScheduledDates() {
 }
 
 scheduleDailyUpdateNextScheduledDates();
-
-
 
 
 // Replace the HTML in sendMaintenanceReminders with this improved style:
@@ -9134,8 +9923,6 @@ function getMaintenanceEmailHtml({ recipientName, schedule, dayLabel, isManager 
   `;
 }
 
-
-
 // In sendMaintenanceReminders, update the email sending logic:
 async function sendMaintenanceReminders() {
   try {
@@ -9180,7 +9967,7 @@ async function sendMaintenanceReminders() {
       // Send to default project manager email
 await transporter.sendMail({
   from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-  to: ["besfllc@gmail.com"], // <-- Add both emails here
+  to: ["jleonel3915@gmail.com"], // <-- Add both emails here
   subject: `Reminder: Maintenance Scheduled for Tomorrow`,
   html: getMaintenanceEmailHtml({
     recipientName: 'Team',
@@ -9202,6 +9989,7 @@ setTimeout(function() {
   sendMaintenanceReminders();
   setInterval(sendMaintenanceReminders, 24 * 60 * 60 * 1000); // every 24 hours
 }, millisTill11 > 0 ? millisTill11 : 0);
+
 
 
 // API to create a schedule
@@ -9256,6 +10044,8 @@ app.get('/api/properties/:propertyId/maintenance-schedules', async (req, res) =>
 app.put('/api/properties/:propertyId/maintenance-schedules/:scheduleId', async (req, res) => {
   try {
     const { title, description, frequency, intervalDays, startDate, assignedVendor, unitId, status, cost } = req.body;
+    const existingSchedule = await MaintenanceSchedule.findOne({ _id: req.params.scheduleId, projectId: req.params.propertyId });
+    if (!existingSchedule) return res.status(404).json({ message: 'Schedule not found.' });
     let nextDate = new Date(startDate);
     switch (frequency) {
       case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
@@ -9288,8 +10078,13 @@ app.put('/api/properties/:propertyId/maintenance-schedules/:scheduleId', async (
       { _id: req.params.scheduleId, projectId: req.params.propertyId },
       updateObj,
       { new: true }
-    ); 
-    if (!updated) return res.status(404).json({ message: 'Schedule not found.' });
+    );
+
+    const startDateChanged = Boolean(startDate) && new Date(existingSchedule.startDate).getTime() !== new Date(startDate).getTime();
+    if (startDateChanged && updated?._id) {
+      await updateNextScheduledDates(updated._id);
+    }
+
     res.json(updated);
   } catch (err) {
     res.status(500).json({ message: 'Failed to update schedule.' });
@@ -9308,6 +10103,377 @@ app.delete('/api/properties/:propertyId/maintenance-schedules/:scheduleId', asyn
   } catch (err) {
     res.status(500).json({ message: 'Failed to delete schedule.' });
   }
+});
+
+
+// ===================== TENANT PORTAL API =====================
+
+function authTenantPortal(req, res, next) {
+  const header = req.headers.authorization || '';
+  if (!header.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+
+  try {
+    const decoded = jwt.verify(header.split(' ')[1], JWT_SECRET);
+    if (!decoded.tenantPortalTenantId) {
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+    req.tenantPortalTenantId = decoded.tenantPortalTenantId;
+    req.tenantPortalProjectId = decoded.projectId;
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: 'Invalid token' });
+  }
+}
+
+function normalizePhoneDigits(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function normalizeAddressForTenantPortal(project) {
+  const address = project?.address || {};
+  const line1 = address.line1 || address.addressLine1 || address.street || '';
+  const line2 = address.line2 || address.addressLine2 || address.suite || '';
+  return {
+    line1,
+    line2,
+    city: address.city || '',
+    state: address.state || '',
+    zip: address.zip || address.postalCode || ''
+  };
+}
+
+async function buildTenantPortalPayload(tenantId) {
+  const tenant = await Tenant.findById(tenantId).populate('unitId').lean();
+  if (!tenant) return null;
+  const today = getStartOfToday();
+
+  const [project, payments, maintenance, documents, announcementRecords] = await Promise.all([
+    Project.findById(tenant.projectId).lean().catch(() => null),
+    Payment.find({ tenantId: tenant._id }).sort({ date: -1, createdAt: -1 }).lean(),
+    MaintenanceRequest.find({
+      projectId: tenant.projectId,
+      ...(tenant.unitId?._id ? { unitId: tenant.unitId._id } : {})
+    }).sort({ createdAt: -1 }).lean(),
+    Document.find({
+      projectId: tenant.projectId,
+      $or: [
+        { tenantId: tenant._id },
+        { tenantId: null, type: { $in: ['notice', 'other'] } }
+      ]
+    }).sort({ createdAt: -1 }).lean(),
+    Announcement.find({
+      projectId: tenant.projectId,
+      $or: [
+        { targetTenantIds: { $exists: false } },
+        { targetTenantIds: { $size: 0 } },
+        { targetTenantIds: tenant._id }
+      ],
+      $or: [{ expiresAt: null }, { expiresAt: { $gte: today } }]
+    }).sort({ pinned: -1, startsAt: 1, createdAt: -1 }).limit(10).lean()
+  ]);
+
+  const announcements = announcementRecords.filter(item => {
+    const startsAt = parseAnnouncementCalendarDate(item?.startsAt);
+    const expiresAt = parseAnnouncementCalendarDate(item?.expiresAt);
+    if (expiresAt && expiresAt < today) return false;
+    if (startsAt && !expiresAt && startsAt < today) return false;
+    return true;
+  });
+
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  const expectedRent = computeExpectedRentForMonth(tenant, now, 'rent') || 0;
+  const currentRentPayments = payments.filter(payment => {
+    if (payment.applyTo !== 'rent' || !payment.date) return false;
+    const d = new Date(payment.date);
+    return d >= monthStart && d <= monthEnd;
+  });
+  const paidThisMonth = currentRentPayments.reduce((sum, payment) => sum + Math.abs(Number(payment.amount) || 0), 0);
+  const lateFeesThisMonth = currentRentPayments.reduce((sum, payment) => sum + (Number(payment.lateFee) || 0), 0);
+  const rentBalance = expectedRent + lateFeesThisMonth - paidThisMonth;
+  const depositRequired = Number(tenant.deposit) || 0;
+  const depositPaid = Number(tenant.depositPaid) || 0;
+
+  return {
+    tenant: {
+      id: tenant._id,
+      name: tenant.name,
+      email: tenant.email,
+      phone: tenant.phone,
+      leaseStart: tenant.leaseStart,
+      leaseEnd: tenant.leaseEnd,
+      leaseStatus: tenant.leaseStatus,
+      parking: tenant.parking,
+      accessCode: tenant.accessCode,
+      emergencyContact: tenant.emergencyContact || {},
+      cars: tenant.cars || {},
+      pets: tenant.pets || {}
+    },
+    property: {
+      id: project?._id || tenant.projectId,
+      name: project?.name || 'Your Property',
+      type: project?.type || '',
+      address: normalizeAddressForTenantPortal(project)
+    },
+    unit: tenant.unitId ? {
+      id: tenant.unitId._id,
+      number: tenant.unitId.number,
+      floor: tenant.unitId.floor,
+      bedrooms: tenant.unitId.bedrooms,
+      bathrooms: tenant.unitId.bathrooms,
+      sqft: tenant.unitId.sqft,
+      amenities: tenant.unitId.amenities || [],
+      utilityAccounts: tenant.unitId.utilityAccounts || {}
+    } : null,
+    balances: {
+      expectedRent,
+      paidThisMonth,
+      lateFeesThisMonth,
+      rentBalance,
+      depositRequired,
+      depositPaid,
+      depositBalance: Math.max(0, depositRequired - depositPaid)
+    },
+    payments,
+    maintenance,
+    documents: documents.map(doc => ({
+      _id: doc._id,
+      name: doc.name,
+      type: doc.type,
+      uploadedBy: doc.uploadedBy,
+      createdAt: doc.createdAt,
+      viewUrl: `/api/tenant-portal/documents/${doc._id}/view`,
+      downloadUrl: `/api/tenant-portal/documents/${doc._id}/download`
+    })),
+    announcements
+  };
+}
+
+app.post('/api/tenant-portal/login', async (req, res) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const phoneLast4 = normalizePhoneDigits(req.body.phoneLast4).slice(-4);
+
+    if (!email || phoneLast4.length !== 4) {
+      return res.status(400).json({ message: 'Email and phone last four are required' });
+    }
+
+    const tenants = await Tenant.find({ email: new RegExp(`^${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') })
+      .sort({ leaseStatus: 1, updatedAt: -1 })
+      .lean();
+
+    const tenant = tenants.find(t => normalizePhoneDigits(t.phone).slice(-4) === phoneLast4);
+    if (!tenant) {
+      return res.status(401).json({ message: 'We could not match that tenant record' });
+    }
+
+    const token = jwt.sign(
+      { tenantPortalTenantId: tenant._id, projectId: tenant.projectId },
+      JWT_SECRET,
+      { expiresIn: '14d' }
+    );
+    const portal = await buildTenantPortalPayload(tenant._id);
+    res.json({ token, portal });
+  } catch (error) {
+    console.error('Tenant portal login error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.get('/api/tenant-portal/me', authTenantPortal, async (req, res) => {
+  try {
+    const portal = await buildTenantPortalPayload(req.tenantPortalTenantId);
+    if (!portal) return res.status(404).json({ message: 'Tenant not found' });
+    res.json({ portal });
+  } catch (error) {
+    console.error('Tenant portal me error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.put('/api/tenant-portal/profile', authTenantPortal, async (req, res) => {
+  try {
+    const update = {};
+    if (typeof req.body.phone === 'string') update.phone = req.body.phone.trim();
+    if (req.body.emergencyContact && typeof req.body.emergencyContact === 'object') {
+      update.emergencyContact = {
+        name: String(req.body.emergencyContact.name || '').trim(),
+        phone: String(req.body.emergencyContact.phone || '').trim(),
+        email: String(req.body.emergencyContact.email || '').trim(),
+        relation: String(req.body.emergencyContact.relation || '').trim(),
+        address: String(req.body.emergencyContact.address || '').trim()
+      };
+    }
+    if (req.body.cars && typeof req.body.cars === 'object') update.cars = req.body.cars;
+    if (req.body.pets && typeof req.body.pets === 'object') update.pets = req.body.pets;
+
+    await Tenant.findByIdAndUpdate(req.tenantPortalTenantId, { $set: update }, { new: true });
+    const portal = await buildTenantPortalPayload(req.tenantPortalTenantId);
+    res.json({ message: 'Profile updated', portal });
+  } catch (error) {
+    console.error('Tenant portal profile update error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.post('/api/tenant-portal/maintenance', authTenantPortal, maintenancePhotoUpload.array('photos', 10), async (req, res) => {
+  try {
+    const tenant = await Tenant.findById(req.tenantPortalTenantId).lean();
+    if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
+
+    const title = String(req.body.title || '').trim();
+    const description = String(req.body.description || '').trim();
+    if (!title || !description) {
+      return res.status(400).json({ message: 'Title and description are required' });
+    }
+
+    const details = [
+      description,
+      req.body.accessPermission ? `Access permission: ${req.body.accessPermission}` : '',
+      req.body.preferredTime ? `Preferred time: ${req.body.preferredTime}` : '',
+      req.body.contactPreference ? `Contact preference: ${req.body.contactPreference}` : ''
+    ].filter(Boolean).join('\n\n');
+
+    const request = await MaintenanceRequest.create({
+      projectId: tenant.projectId,
+      unitId: tenant.unitId || null,
+      title,
+      description: details,
+      priority: ['low', 'medium', 'high', 'urgent'].includes(req.body.priority) ? req.body.priority : 'medium',
+      status: 'pending',
+      photos: (req.files || []).map(file => `/uploads/maintenance/${file.filename}`),
+      updates: [{
+        authorRole: 'tenant',
+        authorName: tenant.name || 'Tenant',
+        text: 'Maintenance request submitted from the tenant portal.',
+        createdAt: new Date()
+      }]
+    });
+
+    await syncMaintenanceRequestToEstimate(request);
+
+    res.status(201).json({ message: 'Maintenance request submitted', request });
+  } catch (error) {
+    console.error('Tenant portal maintenance create error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.post('/api/tenant-portal/maintenance/:requestId/messages', authTenantPortal, async (req, res) => {
+  try {
+    const text = String(req.body.text || '').trim();
+    if (!text) return res.status(400).json({ message: 'Message is required' });
+    if (text.length > 1200) return res.status(400).json({ message: 'Message is too long' });
+
+    const tenant = await Tenant.findById(req.tenantPortalTenantId).lean();
+    if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
+
+    const request = await MaintenanceRequest.findOne({
+      _id: req.params.requestId,
+      projectId: tenant.projectId,
+      ...(tenant.unitId ? { unitId: tenant.unitId } : {})
+    });
+
+    if (!request) return res.status(404).json({ message: 'Maintenance request not found' });
+
+    request.updates = request.updates || [];
+    request.updates.push({
+      authorRole: 'tenant',
+      authorName: tenant.name || 'Tenant',
+      text,
+      createdAt: new Date()
+    });
+    await request.save();
+
+    res.status(201).json({ message: 'Message added', updates: request.updates });
+  } catch (error) {
+    console.error('Tenant portal maintenance message error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.post('/api/tenant-portal/payment-notice', authTenantPortal, async (req, res) => {
+  try {
+    const tenant = await Tenant.findById(req.tenantPortalTenantId).populate('unitId').lean();
+    if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
+    const amount = Number(req.body.amount) || 0;
+    const method = String(req.body.method || '').trim();
+    const reference = String(req.body.reference || '').trim();
+    const note = String(req.body.note || '').trim();
+    if (!amount || !method) return res.status(400).json({ message: 'Amount and method are required' });
+
+    await transporter.sendMail({
+      from: `Tenant Portal <${process.env.EMAIL_USER}>`,
+      to: process.env.EMAIL_USER,
+      subject: `Tenant payment notice - ${tenant.name}`,
+      html: `
+        <div style="font-family:Arial,sans-serif;line-height:1.5;">
+          <h2>Tenant Payment Notice</h2>
+          <p><strong>Tenant:</strong> ${tenant.name}</p>
+          <p><strong>Email:</strong> ${tenant.email}</p>
+          <p><strong>Unit:</strong> ${tenant.unitId?.number || 'N/A'}</p>
+          <p><strong>Amount:</strong> $${amount.toFixed(2)}</p>
+          <p><strong>Method:</strong> ${method}</p>
+          <p><strong>Reference:</strong> ${reference || 'N/A'}</p>
+          <p><strong>Note:</strong><br>${note || 'N/A'}</p>
+        </div>
+      `
+    });
+
+    res.json({ message: 'Payment notice sent' });
+  } catch (error) {
+    console.error('Tenant portal payment notice error:', error);
+    res.status(500).json({ message: 'Unable to send payment notice' });
+  }
+});
+
+async function sendTenantPortalDocument(req, res, disposition) {
+  try {
+    const tenant = await Tenant.findById(req.tenantPortalTenantId).select('_id projectId').lean();
+    if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
+    const doc = await Document.findOne({
+      _id: req.params.documentId,
+      projectId: tenant.projectId,
+      $or: [
+        { tenantId: tenant._id },
+        { tenantId: null, type: { $in: ['notice', 'other'] } }
+      ]
+    }).lean();
+    if (!doc) return res.status(404).json({ message: 'Document not found' });
+
+    const filePath = path.join(__dirname, doc.filePath.replace(/^\//, ''));
+    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on server' });
+
+    const ext = path.extname(doc.name).toLowerCase();
+    const contentType = {
+      '.pdf': 'application/pdf',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.txt': 'text/plain',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif'
+    }[ext] || 'application/octet-stream';
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `${disposition}; filename="${doc.name}"`);
+    fs.createReadStream(filePath).pipe(res);
+  } catch (error) {
+    console.error('Tenant portal document error:', error);
+    res.status(500).json({ message: 'Error serving document' });
+  }
+}
+
+app.get('/api/tenant-portal/documents/:documentId/view', authTenantPortal, (req, res) => {
+  sendTenantPortalDocument(req, res, 'inline');
+});
+
+app.get('/api/tenant-portal/documents/:documentId/download', authTenantPortal, (req, res) => {
+  sendTenantPortalDocument(req, res, 'attachment');
 });
 
 
