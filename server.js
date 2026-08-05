@@ -1485,6 +1485,7 @@ const Document = mongoose.model('Document', documentSchema);
 const Payment = mongoose.model('Payment', paymentSchema);
 const RoomPackage = mongoose.model('RoomPackage', roomPackageSchema);
 const MaintenanceSchedule = mongoose.model('MaintenanceSchedule', maintenanceScheduleSchema);
+const Announcement = mongoose.model('Announcement', announcementSchema);
 const Application = mongoose.model('Application', applicationSchema);
 const ApplicationInvite = mongoose.model('ApplicationInvite', new mongoose.Schema({
   name: { type: String, default: 'Applicant' },
