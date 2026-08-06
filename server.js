@@ -1229,7 +1229,8 @@ function formatMaintenanceTimelineDate(value) {
     day: 'numeric',
     year: 'numeric',
     hour: 'numeric',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: 'America/Chicago'
   });
 }
 
