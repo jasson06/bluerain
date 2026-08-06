@@ -2928,6 +2928,8 @@ body.dark-theme .download-btn:hover {
     top: 72px;
     z-index: 9;
     background: var(--background-color);
+    height: calc(100vh - 88px);
+    min-height: calc(100vh - 88px);
 }
 
 .portfolio-overview-header {
@@ -2963,14 +2965,19 @@ body.dark-theme .portfolio-welcome-text {
 
 .portfolio-overview-layout {
     display: flex;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 0px;
     padding-right: 0px;
+    height: 100%;
+    min-height: 0;
 }
 
 .portfolio-overview-main {
     flex: 1 1 auto;
     min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .portfolio-strip {
@@ -2984,6 +2991,7 @@ body.dark-theme .portfolio-welcome-text {
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
     scroll-snap-type: x mandatory;
+    flex: 0 0 auto;
 }
 
 .portfolio-strip {
@@ -3303,9 +3311,12 @@ body.dark-theme .portfolio-apps-tag-btn.portfolio-apps-tag-active {
 
 .portfolio-details {
     padding: 0 24px 20px 24px;
-    height: 580px;
+    flex: 1 1 auto;
+    height: 100%;
+    max-height: 100%;
     display: flex;
     flex-direction: column;
+    min-height: 0;
 }
 
 .portfolio-details-header {
@@ -3315,11 +3326,12 @@ body.dark-theme .portfolio-apps-tag-btn.portfolio-apps-tag-active {
 .portfolio-details-body {
     flex: 1 1 auto;
     min-height: 0;
+    overflow: hidden;
 }
 
 /* Let the inner table wrapper handle scrolling so sticky headers work correctly */
 .portfolio-details-body .table-responsive {
-    max-height: 100%;
+    max-height: 80%;
     overflow-y: auto;
 }
 
@@ -3524,9 +3536,11 @@ body.dark-theme #portfolioTenantsActiveFilterChips .chip-remove {
     box-shadow: 0 2px 10px rgba(15,23,42,0.08);
     border: 1px solid rgba(226,232,240,0.9);
     padding: 10px 12px 12px;
-    height: 650px;
+    height: 98%;
+    max-height: 100%;
     display: flex;
     flex-direction: column;
+    min-height: 0;
 }
 
 body.dark-theme .portfolio-tasks-sidebar {
@@ -3548,7 +3562,7 @@ body.dark-theme .portfolio-tasks-sidebar {
     }
     .portfolio-tasks-sidebar {
         height: auto;
-        
+        max-height: none;
     }
     .portfolio-strip {
         padding-left: 16px;
@@ -3650,7 +3664,9 @@ body.dark-theme #portfolioRentMonthPicker {
     border-top: 1px solid rgb(112 116 121 / 90%);
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
     gap: 6px;
+    min-height: 0;
 }
 
 .portfolio-notes-header h3 {
@@ -3665,7 +3681,9 @@ body.dark-theme #portfolioRentMonthPicker {
 }
 
 .portfolio-notes-list {
-    max-height: 150px;
+    flex: 1 1 auto;
+    max-height: 100%;
+    min-height: 0;
     overflow-y: auto;
     padding-right: 2px;
 }
@@ -6615,8 +6633,12 @@ function formatMaintenanceDateTimeInput(value) {
     if (!value) return '';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '';
-    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-    return localDate.toISOString().slice(0, 16);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 function serializeMaintenanceDateTimeForApi(value) {

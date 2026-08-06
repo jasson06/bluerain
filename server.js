@@ -1181,6 +1181,20 @@ function parseMaintenanceDate(value) {
   if (value === null || typeof value === 'undefined') return undefined;
   const raw = String(value).trim();
   if (!raw) return null;
+  const localMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (localMatch) {
+    const [, year, month, day, hours, minutes, seconds] = localMatch;
+    const parsed = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hours),
+      Number(minutes),
+      Number(seconds || 0),
+      0
+    );
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  }
   const parsed = new Date(raw);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
@@ -1485,6 +1499,7 @@ const Document = mongoose.model('Document', documentSchema);
 const Payment = mongoose.model('Payment', paymentSchema);
 const RoomPackage = mongoose.model('RoomPackage', roomPackageSchema);
 const MaintenanceSchedule = mongoose.model('MaintenanceSchedule', maintenanceScheduleSchema);
+const Announcement = mongoose.model('Announcement', announcementSchema);
 const Application = mongoose.model('Application', applicationSchema);
 const ApplicationInvite = mongoose.model('ApplicationInvite', new mongoose.Schema({
   name: { type: String, default: 'Applicant' },
@@ -7806,8 +7821,8 @@ app.put('/api/properties/:propertyId/maintenance/:requestId', maintenancePhotoUp
       const permanentDir = path.join('/mnt/data/uploads', 'maintenance');
       for (const tempUrl of tempPaths) {
         try {
-          const rel = tempUrl.replace(/^\/+/, '');
-         const abs = path.join('/mnt/data/uploads', rel);
+          const rel = tempUrl.replace(/^\/+/, '').replace(/^uploads\//, '');
+          const abs = path.join('/mnt/data/uploads', rel);
           if (fs.existsSync(abs)) {
             const filename = path.basename(abs).replace(/^temp-/, '');
             const dest = path.join(permanentDir, filename);
