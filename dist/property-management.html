@@ -11921,7 +11921,7 @@ async function updateMaintenanceInlineFields(projectId, requestId, payload, opti
 }
 
 document.getElementById('maintenanceList')?.addEventListener('change', async (event) => {
-    const changedField = event.target.closest('.maintenance-inline-workflow, .maintenance-inline-vendor, .maintenance-inline-scheduled');
+    const changedField = event.target.closest('.maintenance-inline-workflow, .maintenance-inline-vendor');
     if (!changedField) return;
     const editor = changedField.closest('.maintenance-inline-editor');
     const requestId = editor?.getAttribute('data-request-id');
@@ -11955,6 +11955,49 @@ document.getElementById('maintenanceList')?.addEventListener('change', async (ev
         showNotification('Maintenance request updated', 'success');
     } catch (error) {
         console.error('Error updating maintenance request from card view:', error);
+        showNotification('Could not update maintenance request', 'error');
+    } finally {
+        delete editor.dataset.isSaving;
+        [workflowSelect, vendorSelect, scheduledInput].forEach(field => {
+            if (field) field.disabled = false;
+        });
+        hideLoader();
+    }
+});
+
+document.getElementById('maintenanceList')?.addEventListener('focusout', async (event) => {
+    const scheduledInput = event.target.closest('.maintenance-inline-scheduled');
+    if (!scheduledInput) return;
+    const editor = scheduledInput.closest('.maintenance-inline-editor');
+    const requestId = editor?.getAttribute('data-request-id');
+    const projectId = state.currentProperty?._id;
+    if (!requestId || !editor || !projectId) {
+        return;
+    }
+    if (editor.dataset.isSaving === 'true') return;
+
+    const workflowSelect = editor.querySelector('.maintenance-inline-workflow');
+    const vendorSelect = editor.querySelector('.maintenance-inline-vendor');
+    const payload = {
+        workflowStage: workflowSelect?.value || 'new',
+        assignedVendor: vendorSelect?.value || '',
+        scheduledFor: serializeMaintenanceDateTimeForApi(scheduledInput.value || '')
+    };
+
+    try {
+        editor.dataset.isSaving = 'true';
+        [workflowSelect, vendorSelect, scheduledInput].forEach(field => {
+            if (field) field.disabled = true;
+        });
+        showLoader();
+        await updateMaintenanceInlineFields(projectId, requestId, payload, {
+            refreshProperty: true,
+            refreshPortfolio: true,
+            refreshOverview: false
+        });
+        showNotification('Maintenance request updated', 'success');
+    } catch (error) {
+        console.error('Error updating maintenance request from scheduled field:', error);
         showNotification('Could not update maintenance request', 'error');
     } finally {
         delete editor.dataset.isSaving;
@@ -21389,7 +21432,7 @@ function renderPortfolioDetails(type) {
             });
 
             portfolioMaintenanceListTable.addEventListener('change', async (event) => {
-                const changedField = event.target.closest('.portfolio-maint-workflow-select, .maintenance-inline-workflow, .maintenance-inline-vendor, .maintenance-inline-scheduled');
+                const changedField = event.target.closest('.portfolio-maint-workflow-select, .maintenance-inline-workflow, .maintenance-inline-vendor');
                 const recurringVendorField = event.target.closest('.recurring-maintenance-inline-vendor');
                 if (recurringVendorField) {
                     const row = recurringVendorField.closest('tr[data-maint-id][data-project-id][data-maint-source="recurring"]');
@@ -21454,6 +21497,49 @@ function renderPortfolioDetails(type) {
                     setPortfolioMaintenanceItemSaving(requestId, 'request', false);
                 }
             });
+
+            portfolioMaintenanceListTable.addEventListener('focusout', async (event) => {
+                const scheduledInput = event.target.closest('.maintenance-inline-scheduled');
+                if (!scheduledInput) return;
+                const row = scheduledInput.closest('tr[data-maint-id][data-project-id]');
+                if (!row || row.dataset.maintSource === 'recurring') return;
+                if (row.dataset.isSaving === 'true') return;
+
+                const requestId = row.dataset.maintId;
+                const projectId = row.dataset.projectId;
+                const workflowSelect = row.querySelector('.portfolio-maint-workflow-select, .maintenance-inline-workflow');
+                const vendorSelect = row.querySelector('.maintenance-inline-vendor');
+                const newWorkflowStage = workflowSelect?.value || 'new';
+                if (!requestId || !projectId || !workflowSelect) return;
+
+                try {
+                    row.dataset.isSaving = 'true';
+                    [workflowSelect, vendorSelect, scheduledInput].forEach(field => {
+                        if (field) field.disabled = true;
+                    });
+                    state.keepPortfolioMaintenanceFiltersOnNextRender = true;
+                    setPortfolioMaintenanceItemSaving(requestId, 'request', true);
+                    await updateMaintenanceInlineFields(projectId, requestId, {
+                        workflowStage: newWorkflowStage,
+                        assignedVendor: vendorSelect?.value || '',
+                        scheduledFor: serializeMaintenanceDateTimeForApi(scheduledInput.value || '')
+                    }, {
+                        refreshProperty: state.currentProperty && String(state.currentProperty._id) === String(projectId),
+                        refreshPortfolio: true,
+                        refreshOverview: false
+                    });
+                    showNotification('Maintenance request updated', 'success');
+                } catch (err) {
+                    console.error('Error updating portfolio maintenance scheduled time from list view:', err);
+                    showNotification('Could not update maintenance request', 'error');
+                } finally {
+                    delete row.dataset.isSaving;
+                    [workflowSelect, vendorSelect, scheduledInput].forEach(field => {
+                        if (field) field.disabled = false;
+                    });
+                    setPortfolioMaintenanceItemSaving(requestId, 'request', false);
+                }
+            });
         }
 
         const maintTbody = document.getElementById('portfolioDetailsTbody');
@@ -21486,7 +21572,7 @@ function renderPortfolioDetails(type) {
                     return;
                 }
 
-                const changedField = e.target.closest('.maintenance-inline-workflow, .maintenance-inline-vendor, .maintenance-inline-scheduled');
+                const changedField = e.target.closest('.maintenance-inline-workflow, .maintenance-inline-vendor');
                 if (!changedField) return;
                 const editor = changedField.closest('.maintenance-inline-editor');
                 const card = changedField.closest('[data-maint-id][data-project-id]');
@@ -21522,6 +21608,51 @@ function renderPortfolioDetails(type) {
                     showNotification('Maintenance request updated', 'success');
                 } catch (err) {
                     console.error('Error updating portfolio maintenance from card view:', err);
+                    showNotification('Could not update maintenance request', 'error');
+                } finally {
+                    delete editor.dataset.isSaving;
+                    [workflowSelect, vendorSelect, scheduledInput].forEach(field => {
+                        if (field) field.disabled = false;
+                    });
+                    setPortfolioMaintenanceItemSaving(requestId, 'request', false);
+                }
+            });
+
+            maintTbody.addEventListener('focusout', async (event) => {
+                const scheduledInput = event.target.closest('.maintenance-inline-scheduled');
+                if (!scheduledInput) return;
+                const editor = scheduledInput.closest('.maintenance-inline-editor');
+                const card = scheduledInput.closest('[data-maint-id][data-project-id]');
+                const requestId = editor?.getAttribute('data-request-id') || card?.getAttribute('data-maint-id');
+                const projectId = card?.getAttribute('data-project-id');
+                if (!editor || !requestId || !projectId || card?.dataset.maintSource === 'recurring') {
+                    return;
+                }
+                if (editor.dataset.isSaving === 'true') return;
+
+                const workflowSelect = editor.querySelector('.maintenance-inline-workflow');
+                const vendorSelect = editor.querySelector('.maintenance-inline-vendor');
+                const payload = {
+                    workflowStage: workflowSelect?.value || 'new',
+                    assignedVendor: vendorSelect?.value || '',
+                    scheduledFor: serializeMaintenanceDateTimeForApi(scheduledInput.value || '')
+                };
+
+                try {
+                    editor.dataset.isSaving = 'true';
+                    state.keepPortfolioMaintenanceFiltersOnNextRender = true;
+                    [workflowSelect, vendorSelect, scheduledInput].forEach(field => {
+                        if (field) field.disabled = true;
+                    });
+                    setPortfolioMaintenanceItemSaving(requestId, 'request', true);
+                    await updateMaintenanceInlineFields(projectId, requestId, payload, {
+                        refreshProperty: state.currentProperty && String(state.currentProperty._id) === String(projectId),
+                        refreshPortfolio: true,
+                        refreshOverview: false
+                    });
+                    showNotification('Maintenance request updated', 'success');
+                } catch (err) {
+                    console.error('Error updating portfolio maintenance scheduled time from card view:', err);
                     showNotification('Could not update maintenance request', 'error');
                 } finally {
                     delete editor.dataset.isSaving;
