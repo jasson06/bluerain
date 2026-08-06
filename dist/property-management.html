@@ -13687,8 +13687,12 @@ async function handleUpdateMaintenanceSchedule(scheduleId, options = {}) {
         return;
     }
 
-  showLoader();
+  const useItemLoader = options.source === 'portfolio';
+
   try {
+            if (useItemLoader) {
+            setPortfolioMaintenanceItemSaving(scheduleId, 'recurring', true);
+        }
         const res = await fetch(`/api/properties/${projectId}/maintenance-schedules/${scheduleId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -13719,12 +13723,10 @@ async function handleUpdateMaintenanceSchedule(scheduleId, options = {}) {
         }
   } catch (err) {
     showNotification('Error updating schedule', 'error');
-  } finally {
-        if (useItemLoader) {
-                setPortfolioMaintenanceItemSaving(scheduleId, 'recurring', false);
-        } else {
-                hideLoader();
-        }
+    } finally {
+                if (useItemLoader) {
+                        setPortfolioMaintenanceItemSaving(scheduleId, 'recurring', false);
+                }
   }
 }
 
