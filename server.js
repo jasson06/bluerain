@@ -1181,6 +1181,20 @@ function parseMaintenanceDate(value) {
   if (value === null || typeof value === 'undefined') return undefined;
   const raw = String(value).trim();
   if (!raw) return null;
+  const localMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (localMatch) {
+    const [, year, month, day, hours, minutes, seconds] = localMatch;
+    const parsed = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hours),
+      Number(minutes),
+      Number(seconds || 0),
+      0
+    );
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  }
   const parsed = new Date(raw);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
