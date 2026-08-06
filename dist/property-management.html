@@ -6619,6 +6619,14 @@ function formatMaintenanceDateTimeInput(value) {
     return localDate.toISOString().slice(0, 16);
 }
 
+function serializeMaintenanceDateTimeForApi(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) return raw;
+    return parsed.toISOString();
+}
+
 async function loadMaintenanceVendors(force = false) {
     if (!force && Array.isArray(state.vendors) && state.vendors.length) {
         return state.vendors;
@@ -11403,7 +11411,7 @@ async function handleAddMaintenance(event) {
             formData.append('workflowStage', document.getElementById('maintenanceWorkflowStage').value);
             formData.append('unitId', document.getElementById('maintenanceUnit').value);
             formData.append('assignedVendor', document.getElementById('maintenanceVendor').value);
-            formData.append('scheduledFor', document.getElementById('maintenanceScheduledFor').value);
+            formData.append('scheduledFor', serializeMaintenanceDateTimeForApi(document.getElementById('maintenanceScheduledFor').value));
             formData.append('cost', document.getElementById('maintenanceCost').value);
             formData.append('accessNotes', document.getElementById('maintenanceAccessNotes').value.trim());
             formData.append('status', 'pending');
@@ -11420,7 +11428,7 @@ async function handleAddMaintenance(event) {
                 workflowStage: document.getElementById('maintenanceWorkflowStage').value,
                 unitId: document.getElementById('maintenanceUnit').value,
                 assignedVendor: document.getElementById('maintenanceVendor').value,
-                scheduledFor: document.getElementById('maintenanceScheduledFor').value,
+                scheduledFor: serializeMaintenanceDateTimeForApi(document.getElementById('maintenanceScheduledFor').value),
                 cost: document.getElementById('maintenanceCost').value,
                 accessNotes: document.getElementById('maintenanceAccessNotes').value.trim(),
                 status: 'pending'
@@ -11894,7 +11902,7 @@ document.getElementById('maintenanceList')?.addEventListener('change', async (ev
     const payload = {
         workflowStage: workflowSelect?.value || 'new',
         assignedVendor: vendorSelect?.value || '',
-        scheduledFor: scheduledInput?.value || ''
+        scheduledFor: serializeMaintenanceDateTimeForApi(scheduledInput?.value || '')
     };
 
     try {
@@ -12462,7 +12470,7 @@ async function editMaintenance(requestId, options = {}) {
                 fd.append('workflowStage', document.getElementById('editMaintenanceWorkflowStage').value);
                                 fd.append('unitId', document.getElementById('editMaintenanceUnit').value);
                 fd.append('assignedVendor', document.getElementById('editMaintenanceVendor').value);
-                fd.append('scheduledFor', document.getElementById('editMaintenanceScheduledFor').value);
+                fd.append('scheduledFor', serializeMaintenanceDateTimeForApi(document.getElementById('editMaintenanceScheduledFor').value));
                 fd.append('cost', document.getElementById('editMaintenanceCost').value);
                 fd.append('accessNotes', document.getElementById('editMaintenanceAccessNotes').value.trim());
                                 const photoInput = document.getElementById('editMaintenancePhotos');
@@ -21392,7 +21400,7 @@ function renderPortfolioDetails(type) {
                     await updateMaintenanceInlineFields(projectId, requestId, {
                         workflowStage: newWorkflowStage,
                         assignedVendor: vendorSelect?.value || '',
-                        scheduledFor: scheduledInput?.value || ''
+                        scheduledFor: serializeMaintenanceDateTimeForApi(scheduledInput?.value || '')
                     }, {
                         refreshProperty: state.currentProperty && String(state.currentProperty._id) === String(projectId),
                         refreshPortfolio: true,
@@ -21460,7 +21468,7 @@ function renderPortfolioDetails(type) {
                 const payload = {
                     workflowStage: workflowSelect?.value || 'new',
                     assignedVendor: vendorSelect?.value || '',
-                    scheduledFor: scheduledInput?.value || ''
+                    scheduledFor: serializeMaintenanceDateTimeForApi(scheduledInput?.value || '')
                 };
 
                 try {
