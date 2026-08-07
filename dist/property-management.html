@@ -27,7 +27,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-}
+} 
 
 /* Body and container */
 body {
@@ -2005,7 +2005,7 @@ body.dark-theme .maintenance-header h3 {
 /* Add to your existing styles */
 .tenants-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 20px;
     padding: 20px 0;
 }
@@ -2059,6 +2059,118 @@ body.dark-theme .tenants-list {
 
 .tenant-info {
     padding: 20px;
+}
+
+.tenant-card-scroll {
+    overflow: visible;
+}
+
+.tenant-card-layout {
+    padding: 16px 20px 20px;
+    display: grid;
+    grid-template-columns: minmax(320px, 1.15fr) minmax(300px, 0.85fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.tenant-card-main {
+    min-width: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.tenant-card-main .tenant-info {
+    padding: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.tenant-card-main .tenant-actions {
+    padding: 0;
+    border-top: none;
+    background: transparent;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+}
+
+.tenant-card-thread {
+    min-width: 0;
+    min-height: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px;
+    background: #f8fafc;
+    display: grid;
+    gap: 6px;
+    align-content: start;
+}
+
+.tenant-card-thread-header {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 0.88rem;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tenant-card-thread-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+}
+
+.tenant-card-note {
+    margin-bottom: 2px;
+}
+
+.tenant-card-note-bubble {
+    position: relative;
+    padding: 8px 32px 8px 10px;
+    border-radius: 8px;
+}
+
+.tenant-card-note-delete {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.78rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease, color 0.18s ease;
+}
+
+.tenant-card-note:hover .tenant-card-note-delete,
+.tenant-card-note-bubble:hover .tenant-card-note-delete,
+.tenant-card-note-delete:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.tenant-card-note-delete:hover,
+.tenant-card-note-delete:focus-visible {
+    color: #dc2626;
+}
+
+body.dark-theme .tenant-card-main .tenant-actions {
+    background: transparent;
+}
+
+body.dark-theme .tenant-card-thread {
+    background: rgba(15,23,42,0.62);
+    border-color: rgba(148,163,184,0.35);
+}
+
+body.dark-theme .tenant-card-note-delete {
+    color: #94a3b8;
 }
 
 .tenant-info h3 {
@@ -3549,6 +3661,10 @@ body.dark-theme .portfolio-tasks-sidebar {
     box-shadow: 0 2px 14px rgba(0,0,0,0.95);
 }
 
+.portfolio-tasks-drawer-hint {
+    display: none;
+}
+
 /* Stack portfolio overview and tasks panel on small screens */
 @media (max-width: 767px) {
     .portfolio-overview-layout {
@@ -3567,6 +3683,62 @@ body.dark-theme .portfolio-tasks-sidebar {
     .portfolio-strip {
         padding-left: 16px;
         padding-right: 16px;
+    }
+}
+
+@media (max-width: 900px) {
+    .portfolio-overview-section {
+        position: static;
+        top: auto;
+        height: auto;
+        min-height: calc(100vh - 180px);
+        padding-bottom: 94px;
+    }
+
+    .portfolio-overview-layout {
+        display: block;
+    }
+
+    .portfolio-tasks-sidebar {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: 82px;
+        width: auto;
+        max-width: none;
+        height: min(72vh, 680px);
+        max-height: min(72vh, 680px);
+        border-radius: 24px;
+        padding: 14px 14px 16px;
+        box-shadow: 0 24px 70px rgba(15,23,42,0.28);
+        z-index: 145;
+        transform: translateY(calc(100% + 32px));
+        opacity: 0;
+        pointer-events: none;
+        transition: transform 0.28s ease, opacity 0.28s ease, box-shadow 0.28s ease;
+    }
+
+    .portfolio-tasks-sidebar.mobile-open {
+        transform: translateY(0);
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .portfolio-tasks-drawer-hint {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.74rem;
+        color: #64748b;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #eef4ff;
+        border: 1px solid #dbeafe;
+    }
+
+    .portfolio-tasks-list,
+    .portfolio-notes-list {
+        -webkit-overflow-scrolling: touch;
     }
 }
 
@@ -3995,6 +4167,47 @@ body.dark-theme .portfolio-task-meta {
     gap: 12px !important;
     padding: 0 !important;
   }
+}
+
+@media (max-width: 1400px) {
+    .tenants-list {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tenant-card {
+        overflow-x: hidden;
+        overflow-y: hidden;
+    }
+
+    .tenant-card-scroll {
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        width: 100%;
+    }
+
+ 
+
+    .tenant-card-thread {
+        min-width: 320px;
+    }
+}
+
+@media (max-width: 760px) {
+    .tenant-card-scroll {
+        overflow-x: visible !important;
+    }
+
+    .tenant-card-layout {
+        grid-template-columns: minmax(0, 1fr);
+        min-width: 0;
+        width: auto;
+        overflow-x: visible;
+    }
+}
+
+@media (max-width: 900px) {
     .documents-table {
         min-width: 700px;
     }
@@ -4105,46 +4318,119 @@ body.dark-theme .portfolio-task-meta {
     display: block;
 }
 
+#mobilePanelOverlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 140;
+        background: rgba(15,23,42,0.34);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+}
 
-/* Sidebar toggle tab for mobile (bottom center) */
+#mobilePanelOverlay.visible {
+        display: block;
+}
+
+
+/* Mobile bottom navigation */
 @media (max-width: 900px) {
-  #sidebarToggleBtn {
+    .main-content {
+        margin-left: 0;
+        padding-bottom: 88px;
+    }
+
+    #mobileBottomNav {
     position: fixed;
-    left: 0;
-    right: 0;
+        left: 12px;
+        right: 12px;
     bottom: 0;
-    top: auto;
-    width: 100vw;
-    transform: none;
-    z-index: 120;
-    background: linear-gradient(90deg, #2c3e50 0%, #2c3e50 100%);
-    color: #fff;
-    border: none;
-    border-radius: 18px 18px 0 0;
-    height: 48px;
-    display: flex;
+        z-index: 160;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+        background: linear-gradient(135deg, rgba(255,255,255,0.94), rgba(239,246,255,0.98));
+        border: 1px solid rgba(191,219,254,0.95);
+        border-radius: 24px 24px 0 0;
+        box-shadow: 0 -12px 32px rgba(15,23,42,0.16);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+    }
+
+    .mobile-nav-btn {
+        border: none;
+        background: transparent;
+        color: #334155;
+        min-height: 56px;
+        border-radius: 18px;
+        display: flex;
+        flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
-    box-shadow: 0 2px 8px rgba(44,62,80,0.13);
+        gap: 4px;
     cursor: pointer;
-    transition: background 0.18s;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    gap: 12px;
-    border-bottom: 2px solid #e0e0e0;
+        transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
   }
-  #sidebarToggleBtn i {
-    font-size: 1.3em;
+
+    .mobile-nav-btn i {
+        font-size: 1.05rem;
   }
-  #sidebarToggleBtn:hover {
-    background: #217dbb;
+
+    .mobile-nav-btn span {
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+    }
+
+    .mobile-nav-btn:hover,
+    .mobile-nav-btn:focus-visible,
+    .mobile-nav-btn.active {
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+        color: #ffffff;
+        box-shadow: 0 10px 24px rgba(37,99,235,0.32);
+        transform: translateY(-1px);
+        outline: none;
+    }
+
+    .mobile-nav-btn.is-hidden {
+        display: none;
   }
 }
 
-/* Hide toggle button on desktop */
+body.dark-theme #mobilePanelOverlay {
+        background: rgba(2,6,23,0.68);
+}
+
+body.dark-theme #mobileBottomNav {
+        background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,0.88));
+        border-color: rgba(51,65,85,0.92);
+        box-shadow: 0 -18px 40px rgba(0,0,0,0.74);
+}
+
+body.dark-theme .mobile-nav-btn {
+        color: #cbd5e1;
+}
+
+body.dark-theme .mobile-nav-btn:hover,
+body.dark-theme .mobile-nav-btn:focus-visible,
+body.dark-theme .mobile-nav-btn.active {
+        background: linear-gradient(135deg, rgba(8,47,73,0.96), rgba(37,99,235,0.92));
+        color: #f8fafc;
+        box-shadow: 0 12px 28px rgba(2,132,199,0.32);
+}
+
+body.dark-theme .portfolio-tasks-drawer-hint {
+        background: rgba(15,23,42,0.92);
+        border-color: rgba(51,65,85,0.9);
+        color: #94a3b8;
+}
+
+/* Hide mobile nav on desktop */
 @media (min-width: 901px) {
-    #sidebarToggleBtn, #sidebarOverlay {
+        #mobileBottomNav,
+        #mobilePanelOverlay,
+        #sidebarOverlay {
         display: none !important;
     }
     .sidebar {
@@ -4504,7 +4790,7 @@ body.dark-theme .portfolio-maintenance-sticky-bar {
 }
 
 .compact-maintenance-thread .maintenance-thread-messages {
-    max-height: 220px !important;
+    max-height: 380px !important;
     gap: 6px !important;
     margin-bottom: 6px !important;
 }
@@ -4726,11 +5012,24 @@ tr[data-maint-id][data-editing="true"] {
 
 
 
-<!-- Sidebar toggle tab for mobile (bottom center) -->
-<button id="sidebarToggleBtn" aria-label="Open sidebar">
-    <i class="fas fa-chevron-up"></i>
-    <span style="font-size:1.05em;">Properties</span>
-</button>
+<nav id="mobileBottomNav" aria-label="Mobile navigation">
+    <button type="button" class="mobile-nav-btn" id="mobileNavPropertiesBtn" aria-label="Open properties drawer" aria-expanded="false">
+        <i class="fas fa-building"></i>
+        <span>Properties</span>
+    </button>
+    <button type="button" class="mobile-nav-btn" id="mobileNavTasksBtn" aria-label="Open portfolio overview" aria-expanded="false">
+        <i class="fas fa-chart-pie"></i>
+        <span>Overview</span>
+    </button>
+    <button type="button" class="mobile-nav-btn" id="mobileNavMaintenanceBtn" aria-label="Open maintenance overview">
+        <i class="fas fa-tools"></i>
+        <span>Maintenance</span>
+    </button>
+    <button type="button" class="mobile-nav-btn" id="mobileNavApplicationsBtn" aria-label="Open applications overview">
+        <i class="fas fa-file-alt"></i>
+        <span>Applications</span>
+    </button>
+</nav>
 
 
     <div class="container">
@@ -4750,6 +5049,7 @@ tr[data-maint-id][data-editing="true"] {
             </div>
         </aside>
                <div id="sidebarOverlay"></div>
+             <div id="mobilePanelOverlay"></div>
 
 
         
@@ -4842,6 +5142,7 @@ tr[data-maint-id][data-editing="true"] {
                     <aside class="portfolio-tasks-sidebar" id="portfolioTasksSidebar">
                         <div class="portfolio-tasks-header">
                             <h3>Tasks</h3>
+                            <span class="portfolio-tasks-drawer-hint"><i class="fas fa-layer-group"></i> Quick desk</span>
                         </div>
                         <form class="portfolio-tasks-new" id="portfolioTaskForm">
                             <input type="text" id="portfolioTaskTitleInput" placeholder="Add a task..." autocomplete="off" />
@@ -6430,7 +6731,7 @@ function renderPortfolioMaintenanceRequestCard(request) {
                     <div class="maintenance-thread compact-maintenance-thread" style="border:1px solid #e5e7eb;border-radius:10px;padding:10px;background:#f8fafc;display:grid;gap:6px;">
                         <div style="font-weight:700;color:#0f172a;font-size:0.88rem;margin-bottom:6px;"><i class="fas fa-comments" style="color:#2563eb;margin-right:6px;"></i>Maintenance Chat / Updates</div>
                         <div class="maintenance-thread-messages" style="display:grid;gap:6px;margin-bottom:6px;max-height:220px;overflow-y:auto;padding-right:4px;align-content:start;scrollbar-width:none;">
-                            ${Array.isArray(request.updates) && request.updates.length ? request.updates.map(update => `<div style="padding:8px 10px;border-radius:8px;border:1px solid ${update.authorRole === 'tenant' ? '#bfdbfe' : '#d1fae5'};background:${update.authorRole === 'tenant' ? '#eff6ff' : '#ecfdf5'};"><div style="font-weight:700;font-size:0.8rem;color:#0f172a;">${update.authorName || update.authorRole || 'Update'} <span style="font-weight:500;color:#64748b;">${formatMaintenanceUpdateTimestamp(update.createdAt)}</span></div><div style="font-size:0.84rem;color:#475569;margin-top:3px;white-space:pre-line;">${update.text || ''}</div></div>`).join('') : '<div style="font-size:0.84rem;color:#64748b;padding:8px;border:1px dashed #cbd5e1;border-radius:8px;background:#fff;">No chat updates yet.</div>'}
+                            ${Array.isArray(request.updates) && request.updates.length ? request.updates.map(update => `<div style="padding:8px 10px;border-radius:8px;border:1px solid ${update.authorRole === 'tenant' ? '#bfdbfe' : '#d1fae5'};background:${update.authorRole === 'tenant' ? '#eff6ff' : '#ecfdf5'};"><div style="font-weight:700;font-size:0.8rem;color:#0f172a;">${update.authorName || update.authorRole || 'Update'} <span style="font-weight:500;color:#64748b;">${update.createdAt ? new Date(update.createdAt).toLocaleString() : ''}</span></div><div style="font-size:0.84rem;color:#475569;margin-top:3px;white-space:pre-line;">${update.text || ''}</div></div>`).join('') : '<div style="font-size:0.84rem;color:#64748b;padding:8px;border:1px dashed #cbd5e1;border-radius:8px;background:#fff;">No chat updates yet.</div>'}
                         </div>
                         <form onsubmit="sendPortfolioMaintenanceMessage(event, '${request._id}', '${projectId}')" style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;">
                             <input name="message" type="text" maxlength="1200" placeholder="Reply to tenant or add office update" style="border:1px solid #cbd5e1;border-radius:8px;padding:7px 9px;background:#fff;">
@@ -6629,20 +6930,6 @@ function formatMaintenanceDateTime(value) {
     });
 }
 
-function formatMaintenanceUpdateTimestamp(value) {
-    if (!value) return '';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '';
-    return date.toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZone: 'America/Chicago'
-    });
-}
-
 function formatMaintenanceDateTimeInput(value) {
     if (!value) return '';
     const date = new Date(value);
@@ -6653,14 +6940,6 @@ function formatMaintenanceDateTimeInput(value) {
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
-
-function serializeMaintenanceDateTimeForApi(value) {
-    const raw = String(value || '').trim();
-    if (!raw) return '';
-    const parsed = new Date(raw);
-    if (Number.isNaN(parsed.getTime())) return raw;
-    return parsed.toISOString();
 }
 
 async function loadMaintenanceVendors(force = false) {
@@ -6870,6 +7149,7 @@ async function openPortfolioOverview() {
     if (!section) return;
     if (dashboard) dashboard.style.display = 'none';
     section.style.display = 'block';
+    syncMobilePortfolioUi();
     showLoader();
     try {
         // Prioritize the main portfolio metrics so the overview appears quickly.
@@ -9427,6 +9707,8 @@ async function selectProperty(propertyId) {
         if (window.innerWidth <= 900 && sidebar.classList.contains('visible')) {
             sidebar.classList.remove('visible');
         }
+        setMobileTasksDrawerOpen(false);
+        syncMobilePortfolioUi();
 
     } catch (error) {
         console.error('Error selecting property:', error);
@@ -10583,13 +10865,39 @@ function renderTenants() {
     }
 
     // Tenant notes badge (shared style with portfolio tenants table)
-    const notesCount = Array.isArray(tenant.notesHistory) ? tenant.notesHistory.length : 0;
+    const notesHistory = Array.isArray(tenant.notesHistory) ? tenant.notesHistory : [];
+    const notesCount = notesHistory.length;
     const notesBadge = `<button class="portfolio-tenant-notes-link" data-tenant-id="${tenant._id}" style="background:none;border:none;padding:0;margin:0;font:inherit;cursor:pointer;">
                 <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#4f46e5;font-size:0.8rem;">
                     <i class=\"fas fa-sticky-note\"></i>
                     ${notesCount}
                 </span>
             </button>`;
+    const tenantNotesMessages = notesHistory.length
+        ? notesHistory
+            .slice()
+            .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
+            .slice(-8)
+            .map(note => {
+                const noteId = note._id || '';
+                const managerFallback = note.authorRole === 'tenant'
+                    ? 'Tenant'
+                    : (localStorage.getItem('managerName') || localStorage.getItem('userName') || localStorage.getItem('managerId') || 'Management');
+                const authorLabel = escapeHtml(note.authorName || note.createdByName || note.managerName || note.createdBy || note.managerId || managerFallback);
+                const timestamp = note.createdAt ? new Date(note.createdAt).toLocaleString('en-US') : '';
+                const bubbleBackground = note.authorRole === 'tenant' ? '#eff6ff' : '#ecfdf5';
+                const bubbleBorder = note.authorRole === 'tenant' ? '#bfdbfe' : '#bbf7d0';
+                const deleteButton = noteId ? `<button type="button" class="tenant-card-note-delete" data-tenant-id="${tenant._id}" data-note-id="${noteId}" title="Delete note"><i class="fas fa-trash"></i></button>` : '';
+                return `<div class="tenant-card-note" data-note-id="${noteId}"><div class="tenant-card-note-bubble" style="border:1px solid ${bubbleBorder};background:${bubbleBackground};">
+                            ${deleteButton}
+                            <div style="font-weight:700;font-size:0.8rem;color:#0f172a;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;">
+                                <span>${authorLabel}</span>
+                                <span style="font-weight:500;color:#64748b;">${escapeHtml(timestamp)}</span>
+                            </div>
+                            <div style="font-size:0.84rem;color:#475569;margin-top:3px;white-space:pre-line;">${escapeHtml(note.text || '')}</div>
+                        </div></div>`;
+            }).join('')
+        : '<div style="font-size:0.84rem;color:#64748b;padding:8px;border:1px dashed #cbd5e1;border-radius:8px;background:#fff;">No notes yet. Start the conversation below.</div>';
 
     return `
         <div class="tenant-card">
@@ -10597,55 +10905,73 @@ function renderTenants() {
                 <div class="tenant-avatar-small">${initials}</div>
                 <h3>${tenant.name}</h3>
             </div>
-            <div class="tenant-info">
-                <div class="tenant-section">
-                    <div class="tenant-section-title"><i class="fas fa-home"></i> Unit</div>
-                    <div class="tenant-detail-row">
-                        ${assignedUnit ? 
-                            `Unit ${assignedUnit.number} (${assignedUnit.bedrooms} bed, ${assignedUnit.bathrooms} bath)` : 
-                            'No unit assigned'}
+            <div class="tenant-card-scroll">
+                <div class="tenant-card-layout">
+                    <div class="tenant-card-main">
+                        <div class="tenant-info">
+                            <div class="tenant-section">
+                                <div class="tenant-section-title"><i class="fas fa-home"></i> Unit</div>
+                                <div class="tenant-detail-row">
+                                    ${assignedUnit ? 
+                                        `Unit ${assignedUnit.number} (${assignedUnit.bedrooms} bed, ${assignedUnit.bathrooms} bath)` : 
+                                        'No unit assigned'}
+                                </div>
+                                <div class="tenant-detail-row"><span>Parking:</span> <span>${parkingAssignment || 'Unassigned'}</span></div>
+                                <div class="tenant-detail-row"><span>Access Code:</span> <span>${tenant.accessCode || 'Not set'}</span></div>
+                            </div>
+                            <div class="tenant-section">
+                                <div class="tenant-section-title"><i class="fas fa-calendar-alt"></i> Lease</div>
+                                <div class="tenant-detail-row"><span>Lease:</span> <span>${leaseStart} - ${leaseEnd}</span></div>
+                                ${leaseCountdownHtml}
+                                ${rentStatusBadge ? `<div class="tenant-detail-row">${rentStatusBadge}</div>` : ''}
+                                <div class="tenant-detail-row"><span>Deposit:</span> <span>$${(tenant.deposit ?? 0).toFixed(2)}</span></div>
+                                <div class="tenant-detail-row"><span>Base Rent:</span> <span>$${(Number(tenant.baseRent) || 0).toFixed(2)}</span></div>
+                                <div class="tenant-detail-row"><span>Total Fees:</span> <span style="font-weight:600; color:#2980b9;">$${additionalFees.toFixed(2)}</span></div>
+                                <div class="tenant-detail-row">
+                                    <span>Total Rent:</span>
+                                    <span style="font-weight:700; color:#217dbb; font-size:1.08em; letter-spacing:0.5px; background:#eaf6ff; padding:3px 12px; border-radius:12px;">
+                                        $${totalRent.toFixed(2)}
+                                    </span>
+                                </div>
+                                <div class="tenant-detail-row">
+                                    <span>Status:</span>
+                                    <span class="lease-badge ${tenant.leaseStatus || 'active'}">
+                                        <i class="fas fa-circle"></i>
+                                        ${(tenant.leaseStatus || 'active').charAt(0).toUpperCase() + (tenant.leaseStatus || 'active').slice(1)}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="tenant-section">
+                                <div class="tenant-section-title"><i class="fas fa-user-shield"></i> Emergency</div>
+                                ${emergency}
+                            </div>
+                        </div>
+                        <div class="tenant-actions">
+                            <button onclick="viewTenantDetails('${tenant._id}')" class="btn-secondary">
+                                <i class="fas fa-eye"></i> Details
+                            </button>
+                            <button onclick="editTenant('${tenant._id}')" class="btn-secondary">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button onclick="deleteTenant('${tenant._id}')" class="btn-icon delete-btn" title="Delete Tenant">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="tenant-detail-row"><span>Parking:</span> <span>${parkingAssignment || 'Unassigned'}</span></div>
-                    <div class="tenant-detail-row"><span>Access Code:</span> <span>${tenant.accessCode || 'Not set'}</span></div>
-                </div>
-                <div class="tenant-section">
-                    <div class="tenant-section-title"><i class="fas fa-calendar-alt"></i> Lease</div>
-                    <div class="tenant-detail-row"><span>Lease:</span> <span>${leaseStart} - ${leaseEnd}</span></div>
-                    ${leaseCountdownHtml}
-                    ${rentStatusBadge ? `<div class="tenant-detail-row">${rentStatusBadge}</div>` : ''}
-                    <div class="tenant-detail-row"><span>Deposit:</span> <span>$${(tenant.deposit ?? 0).toFixed(2)}</span></div>
-                    <div class="tenant-detail-row"><span>Base Rent:</span> <span>$${(Number(tenant.baseRent) || 0).toFixed(2)}</span></div>
-                    <div class="tenant-detail-row"><span>Total Fees:</span> <span style="font-weight:600; color:#2980b9;">$${additionalFees.toFixed(2)}</span></div>
-                    <div class="tenant-detail-row">
-                        <span>Total Rent:</span>
-                        <span style="font-weight:700; color:#217dbb; font-size:1.08em; letter-spacing:0.5px; background:#eaf6ff; padding:3px 12px; border-radius:12px;">
-                            $${totalRent.toFixed(2)}
-                        </span>
-                    </div>
-                    <div class="tenant-detail-row">
-                        <span>Status:</span>
-                        <span class="lease-badge ${tenant.leaseStatus || 'active'}">
-                            <i class="fas fa-circle"></i>
-                            ${(tenant.leaseStatus || 'active').charAt(0).toUpperCase() + (tenant.leaseStatus || 'active').slice(1)}
-                        </span>
+                    <div class="maintenance-thread compact-maintenance-thread tenant-card-thread">
+                        <div class="tenant-card-thread-header">
+                            <span><i class="fas fa-comments" style="color:#2563eb;margin-right:6px;"></i>Tenant Notes</span>
+                            
+                        </div>
+                        <div class="maintenance-thread-messages" style="display:grid;gap:6px;margin-bottom:6px;max-height:220px;overflow-y:auto;padding-right:4px;align-content:start;scrollbar-width:none;">
+                            ${tenantNotesMessages}
+                        </div>
+                        <form onsubmit="sendTenantCardNote(event, '${tenant._id}')" class="tenant-card-thread-form">
+                            <input name="message" type="text" maxlength="1200" placeholder="Add tenant note or reply" style="border:1px solid #cbd5e1;border-radius:8px;padding:7px 9px;background:#fff;">
+                            <button type="submit" class="btn-secondary"><i class="fas fa-paper-plane"></i> Send</button>
+                        </form>
                     </div>
                 </div>
-                <div class="tenant-section">
-                    <div class="tenant-section-title"><i class="fas fa-user-shield"></i> Emergency</div>
-                    ${emergency}
-                </div>
-            </div>
-            <div class="tenant-actions">
-                <button onclick="viewTenantDetails('${tenant._id}')" class="btn-secondary">
-                    <i class="fas fa-eye"></i> Details
-                </button>
-                <button onclick="editTenant('${tenant._id}')" class="btn-secondary">
-                    <i class="fas fa-edit"></i> Edit
-                </button>
-                ${notesBadge}
-                <button onclick="deleteTenant('${tenant._id}')" class="btn-icon delete-btn" title="Delete Tenant">
-                    <i class="fas fa-trash"></i>
-                </button>
             </div>
         </div>
     `;
@@ -10680,6 +11006,92 @@ function renderTenants() {
             }
         });
     });
+
+    tenantsList.querySelectorAll('.tenant-card-note-delete').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const tenantId = btn.getAttribute('data-tenant-id');
+            const noteId = btn.getAttribute('data-note-id');
+            if (!tenantId || !noteId) return;
+            deleteTenantCardNote(tenantId, noteId);
+        });
+    });
+}
+
+async function sendTenantCardNote(event, tenantId) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const input = form?.querySelector('input[name="message"]');
+    const text = (input?.value || '').trim();
+    if (!tenantId || !input || !text) return;
+    if (form.dataset.isSaving === 'true') return;
+
+    try {
+        form.dataset.isSaving = 'true';
+        input.disabled = true;
+        const button = form.querySelector('button[type="submit"]');
+        if (button) button.disabled = true;
+        const managerId = localStorage.getItem('managerId') || '';
+        const managerName = localStorage.getItem('managerName') || localStorage.getItem('userName') || '';
+
+        const res = await fetch(`/api/tenants/${tenantId}/notes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                text,
+                managerId,
+                authorName: managerName,
+                createdBy: managerName || managerId
+            })
+        });
+        if (!res.ok) throw new Error('Failed to add note');
+
+        const data = await res.json();
+        const notes = data.notes || [];
+        state.tenants = (state.tenants || []).map(t =>
+            String(t._id) === String(tenantId) ? { ...t, notesHistory: notes } : t
+        );
+        state.allTenants = (state.allTenants || []).map(t =>
+            String(t._id) === String(tenantId) ? { ...t, notesHistory: notes } : t
+        );
+
+        renderTenants();
+    } catch (error) {
+        console.error('Error adding tenant note from card:', error);
+        showNotification('Could not add tenant note', 'error');
+    } finally {
+        delete form.dataset.isSaving;
+        input.disabled = false;
+        const button = form.querySelector('button[type="submit"]');
+        if (button) button.disabled = false;
+    }
+}
+
+async function deleteTenantCardNote(tenantId, noteId) {
+    if (!tenantId || !noteId) return;
+    if (!confirm('Delete this note? This cannot be undone.')) return;
+
+    try {
+        const res = await fetch(`/api/tenants/${tenantId}/notes/${noteId}`, {
+            method: 'DELETE'
+        });
+        if (!res.ok) throw new Error('Failed to delete note');
+
+        const data = await res.json();
+        const notes = data.notes || [];
+        state.tenants = (state.tenants || []).map(t =>
+            String(t._id) === String(tenantId) ? { ...t, notesHistory: notes } : t
+        );
+        state.allTenants = (state.allTenants || []).map(t =>
+            String(t._id) === String(tenantId) ? { ...t, notesHistory: notes } : t
+        );
+
+        renderTenants();
+    } catch (error) {
+        console.error('Error deleting tenant note from card:', error);
+        showNotification('Could not delete tenant note', 'error');
+    }
 }
 
 
@@ -11447,7 +11859,7 @@ async function handleAddMaintenance(event) {
             formData.append('workflowStage', document.getElementById('maintenanceWorkflowStage').value);
             formData.append('unitId', document.getElementById('maintenanceUnit').value);
             formData.append('assignedVendor', document.getElementById('maintenanceVendor').value);
-            formData.append('scheduledFor', serializeMaintenanceDateTimeForApi(document.getElementById('maintenanceScheduledFor').value));
+            formData.append('scheduledFor', document.getElementById('maintenanceScheduledFor').value);
             formData.append('cost', document.getElementById('maintenanceCost').value);
             formData.append('accessNotes', document.getElementById('maintenanceAccessNotes').value.trim());
             formData.append('status', 'pending');
@@ -11464,7 +11876,7 @@ async function handleAddMaintenance(event) {
                 workflowStage: document.getElementById('maintenanceWorkflowStage').value,
                 unitId: document.getElementById('maintenanceUnit').value,
                 assignedVendor: document.getElementById('maintenanceVendor').value,
-                scheduledFor: serializeMaintenanceDateTimeForApi(document.getElementById('maintenanceScheduledFor').value),
+                scheduledFor: document.getElementById('maintenanceScheduledFor').value,
                 cost: document.getElementById('maintenanceCost').value,
                 accessNotes: document.getElementById('maintenanceAccessNotes').value.trim(),
                 status: 'pending'
@@ -11818,7 +12230,7 @@ function renderMaintenanceRequests() {
                                 <div class="maintenance-thread-messages" style="display:grid;gap:6px;margin-bottom:6px;max-height:220px;overflow-y:auto;padding-right:4px;align-content:start;scrollbar-width: none;">
                                     ${Array.isArray(request.updates) && request.updates.length ? request.updates.map(update => `
                                         <div style="padding:8px 10px;border-radius:8px;border:1px solid ${update.authorRole === 'tenant' ? '#bfdbfe' : '#d1fae5'};background:${update.authorRole === 'tenant' ? '#eff6ff' : '#ecfdf5'};">
-                                            <div style="font-weight:700;font-size:0.8rem;color:#0f172a;">${update.authorName || update.authorRole || 'Update'} <span style="font-weight:500;color:#64748b;">${formatMaintenanceUpdateTimestamp(update.createdAt)}</span></div>
+                                            <div style="font-weight:700;font-size:0.8rem;color:#0f172a;">${update.authorName || update.authorRole || 'Update'} <span style="font-weight:500;color:#64748b;">${update.createdAt ? new Date(update.createdAt).toLocaleString() : ''}</span></div>
                                             <div style="font-size:0.84rem;color:#475569;margin-top:3px;white-space:pre-line;">${update.text || ''}</div>
                                         </div>
                                     `).join('') : '<div style="font-size:0.84rem;color:#64748b;padding:8px;border:1px dashed #cbd5e1;border-radius:8px;background:#fff;">No chat updates yet.</div>'}
@@ -11921,7 +12333,7 @@ async function updateMaintenanceInlineFields(projectId, requestId, payload, opti
 }
 
 document.getElementById('maintenanceList')?.addEventListener('change', async (event) => {
-    const changedField = event.target.closest('.maintenance-inline-workflow, .maintenance-inline-vendor');
+    const changedField = event.target.closest('.maintenance-inline-workflow, .maintenance-inline-vendor, .maintenance-inline-scheduled');
     if (!changedField) return;
     const editor = changedField.closest('.maintenance-inline-editor');
     const requestId = editor?.getAttribute('data-request-id');
@@ -11938,7 +12350,7 @@ document.getElementById('maintenanceList')?.addEventListener('change', async (ev
     const payload = {
         workflowStage: workflowSelect?.value || 'new',
         assignedVendor: vendorSelect?.value || '',
-        scheduledFor: serializeMaintenanceDateTimeForApi(scheduledInput?.value || '')
+        scheduledFor: scheduledInput?.value || ''
     };
 
     try {
@@ -11955,49 +12367,6 @@ document.getElementById('maintenanceList')?.addEventListener('change', async (ev
         showNotification('Maintenance request updated', 'success');
     } catch (error) {
         console.error('Error updating maintenance request from card view:', error);
-        showNotification('Could not update maintenance request', 'error');
-    } finally {
-        delete editor.dataset.isSaving;
-        [workflowSelect, vendorSelect, scheduledInput].forEach(field => {
-            if (field) field.disabled = false;
-        });
-        hideLoader();
-    }
-});
-
-document.getElementById('maintenanceList')?.addEventListener('focusout', async (event) => {
-    const scheduledInput = event.target.closest('.maintenance-inline-scheduled');
-    if (!scheduledInput) return;
-    const editor = scheduledInput.closest('.maintenance-inline-editor');
-    const requestId = editor?.getAttribute('data-request-id');
-    const projectId = state.currentProperty?._id;
-    if (!requestId || !editor || !projectId) {
-        return;
-    }
-    if (editor.dataset.isSaving === 'true') return;
-
-    const workflowSelect = editor.querySelector('.maintenance-inline-workflow');
-    const vendorSelect = editor.querySelector('.maintenance-inline-vendor');
-    const payload = {
-        workflowStage: workflowSelect?.value || 'new',
-        assignedVendor: vendorSelect?.value || '',
-        scheduledFor: serializeMaintenanceDateTimeForApi(scheduledInput.value || '')
-    };
-
-    try {
-        editor.dataset.isSaving = 'true';
-        [workflowSelect, vendorSelect, scheduledInput].forEach(field => {
-            if (field) field.disabled = true;
-        });
-        showLoader();
-        await updateMaintenanceInlineFields(projectId, requestId, payload, {
-            refreshProperty: true,
-            refreshPortfolio: true,
-            refreshOverview: false
-        });
-        showNotification('Maintenance request updated', 'success');
-    } catch (error) {
-        console.error('Error updating maintenance request from scheduled field:', error);
         showNotification('Could not update maintenance request', 'error');
     } finally {
         delete editor.dataset.isSaving;
@@ -12549,7 +12918,7 @@ async function editMaintenance(requestId, options = {}) {
                 fd.append('workflowStage', document.getElementById('editMaintenanceWorkflowStage').value);
                                 fd.append('unitId', document.getElementById('editMaintenanceUnit').value);
                 fd.append('assignedVendor', document.getElementById('editMaintenanceVendor').value);
-                fd.append('scheduledFor', serializeMaintenanceDateTimeForApi(document.getElementById('editMaintenanceScheduledFor').value));
+                fd.append('scheduledFor', document.getElementById('editMaintenanceScheduledFor').value);
                 fd.append('cost', document.getElementById('editMaintenanceCost').value);
                 fd.append('accessNotes', document.getElementById('editMaintenanceAccessNotes').value.trim());
                                 const photoInput = document.getElementById('editMaintenancePhotos');
@@ -13687,10 +14056,10 @@ async function handleUpdateMaintenanceSchedule(scheduleId, options = {}) {
         return;
     }
 
-  const useItemLoader = options.source === 'portfolio';
+    const useItemLoader = options.source === 'portfolio';
 
   try {
-            if (useItemLoader) {
+        if (useItemLoader) {
             setPortfolioMaintenanceItemSaving(scheduleId, 'recurring', true);
         }
         const res = await fetch(`/api/properties/${projectId}/maintenance-schedules/${scheduleId}`, {
@@ -16144,108 +16513,22 @@ async function renderGlobalMaintenanceOverview(resetFilters = true) {
 // Top toolbar icon clicks: jump to respective tabs
 document.getElementById('topToolMaintenance')?.addEventListener('click', async () => {
     try {
-        await renderGlobalMaintenanceOverview();
-                openModal('globalOverviewModal');
+        await openPortfolioOverview();
+        setActivePortfolioCard('maintenance');
+        renderPortfolioDetails('maintenance');
     } catch (e) {
-        console.error('Error opening maintenance overview modal:', e);
+        console.error('Error opening maintenance portfolio overview:', e);
         showNotification('Could not open maintenance overview', 'error');
     }
 });
 
 document.getElementById('topToolApplications')?.addEventListener('click', async () => {
     try {
-        if (!state.applications || !state.applications.length) {
-            await loadApplications(true);
-        }
-        const body = document.getElementById('globalOverviewBody');
-        const title = document.getElementById('globalOverviewTitle');
-        if (body && title) {
-            // Show only pending applications in the global overview
-            const pendingApps = (state.applications || []).filter(a => (a.status || 'pending') === 'pending');
-            title.textContent = 'Pending Applications';
-
-            if (!pendingApps.length) {
-                body.innerHTML = `
-                    <div class="empty-state" style="text-align:center;padding:24px;">
-                        <i class="fas fa-file-alt" style="font-size:2em;color:#3498db;margin-bottom:8px;"></i>
-                        <p>No pending applications found.</p>
-                    </div>`;
-            } else {
-                const rows = pendingApps.map(a => {
-                    let propertyAddress = '';
-                    let unitNumber = a.unit || '';
-                    if (a.notes) {
-                        try {
-                            const n = JSON.parse(a.notes);
-                            propertyAddress = n.propertyAddress || '';
-                            unitNumber = n.unitNumber || unitNumber;
-                        } catch {}
-                    }
-                    let moveIn = '';
-                    if (a.moveIn) {
-                        try {
-                            const d = new Date(a.moveIn);
-                            if (!isNaN(d.getTime())) {
-                                const y = d.getUTCFullYear();
-                                const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-                                const day = String(d.getUTCDate()).padStart(2, '0');
-                                moveIn = `${m}/${day}/${y}`;
-                            }
-                        } catch {}
-                    }
-                    const submitted = a.submitted ? new Date(a.submitted).toLocaleString('en-US') : '';
-                    const status = (a.status || 'pending');
-                    const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
-                    const viewLink = `/applications/review/${a._id}`;
-                    return `
-                        <tr style="border-bottom:1px solid #e1e8ed;" data-app-id="${a._id}">
-                            <td style="padding:10px 8px;font-weight:600;color:#2563eb;">
-                                <button class="application-jump-link" data-app-id="${a._id}" style="background:none;border:none;color:#2563eb;padding:0;margin:0;font:inherit;text-align:left;cursor:pointer;">
-                                    ${a.name || ''}
-                                </button>
-                            </td>
-                            <td style="padding:10px 8px;">${a.email || ''}</td>
-                            <td style="padding:10px 8px;">${a.phone || ''}</td>
-                            <td style="padding:10px 8px;">${propertyAddress || '—'}</td>
-                            <td style="padding:10px 8px;">${unitNumber || '—'}</td>
-                            <td style="padding:10px 8px;">${moveIn || '—'}</td>
-                            <td style="padding:10px 8px;">${submitted || '—'}</td>
-                            <td style="padding:10px 8px;">${statusLabel}</td>
-                            <td style="padding:10px 8px;">
-                                <a class="btn-secondary" href="${viewLink}" target="_blank" rel="noopener" style="text-decoration:none;padding:6px 10px;border-radius:8px;display:inline-block;">
-                                     View
-                                </a>
-                            </td>
-                        </tr>`;
-                }).join('');
-
-                body.innerHTML = `
-                  <div style="overflow-x:auto;">
-                    <table class="maintenance-table" style="width:100%;border-collapse:collapse;background:#99a0a500;border-radius:12px;box-shadow:0 2px 8px rgba(44,62,80,0.07);">
-                      <thead>
-                        <tr style="background:#99a0a500;">
-                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Applicant</th>
-                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Email</th>
-                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Phone</th>
-                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Property Address</th>
-                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Unit</th>
-                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Move-In</th>
-                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Submitted</th>
-                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Status</th>
-                          <th style="padding:12px 8px;font-weight:600;color:#2980b9;">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${rows}
-                      </tbody>
-                    </table>
-                  </div>
-                `;
-            }
-        }
-        openModal('globalOverviewModal');
+        await openPortfolioOverview();
+        setActivePortfolioCard('applications');
+        renderPortfolioDetails('applications');
     } catch (e) {
-        console.error('Error opening applications overview modal:', e);
+        console.error('Error opening applications portfolio overview:', e);
         showNotification('Could not open applications overview', 'error');
     }
 });
@@ -17149,10 +17432,17 @@ document.getElementById('notesDrawerForm')?.addEventListener('submit', async (e)
 
     try {
         setNotesDrawerLoading(true);
+        const managerId = localStorage.getItem('managerId') || '';
+        const managerName = localStorage.getItem('managerName') || localStorage.getItem('userName') || '';
         const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text })
+            body: JSON.stringify({
+                text,
+                managerId,
+                authorName: managerName,
+                createdBy: managerName || managerId
+            })
         });
         if (!res.ok) throw new Error('Failed to add note');
         const data = await res.json();
@@ -20304,10 +20594,71 @@ function renderPortfolioTasksList() {
             </div>`;
     }).join('');
 }
+
+function isPortfolioOverviewVisible() {
+    const section = document.getElementById('portfolioOverviewSection');
+    return Boolean(section && section.style.display !== 'none');
+}
+
+function setMobileTasksDrawerOpen(isOpen) {
+    const tasksSidebar = document.getElementById('portfolioTasksSidebar');
+    const overlay = document.getElementById('mobilePanelOverlay');
+    const tasksBtn = document.getElementById('mobileNavTasksBtn');
+    if (!tasksSidebar || !overlay) return;
+
+    const canOpen = window.innerWidth <= 900 && isPortfolioOverviewVisible();
+    const shouldOpen = Boolean(isOpen && canOpen);
+
+    tasksSidebar.classList.toggle('mobile-open', shouldOpen);
+    overlay.classList.toggle('visible', shouldOpen);
+
+    if (tasksBtn) {
+        tasksBtn.classList.toggle('active', shouldOpen);
+        tasksBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    }
+}
+
+function syncMobilePortfolioUi() {
+    const tasksBtn = document.getElementById('mobileNavTasksBtn');
+    const propertiesBtn = document.getElementById('mobileNavPropertiesBtn');
+    const sidebar = document.querySelector('.sidebar');
+    const portfolioVisible = isPortfolioOverviewVisible();
+
+    if (tasksBtn) {
+        const iconEl = tasksBtn.querySelector('i');
+        const labelEl = tasksBtn.querySelector('span');
+        if (portfolioVisible) {
+            if (iconEl) iconEl.className = 'fas fa-list-check';
+            if (labelEl) labelEl.textContent = 'Tasks';
+            tasksBtn.setAttribute('aria-label', 'Open tasks drawer');
+        } else {
+            if (iconEl) iconEl.className = 'fas fa-chart-pie';
+            if (labelEl) labelEl.textContent = 'Overview';
+            tasksBtn.setAttribute('aria-label', 'Open portfolio overview');
+            tasksBtn.classList.remove('active');
+            tasksBtn.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    if (propertiesBtn && sidebar) {
+        const sidebarOpen = window.innerWidth <= 900 && sidebar.classList.contains('visible');
+        propertiesBtn.classList.toggle('active', sidebarOpen);
+        propertiesBtn.setAttribute('aria-expanded', sidebarOpen ? 'true' : 'false');
+    }
+
+    if (window.innerWidth > 900 || !portfolioVisible) {
+        setMobileTasksDrawerOpen(false);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.querySelector('.sidebar');
-    const toggleBtn = document.getElementById('sidebarToggleBtn');
+    const propertiesBtn = document.getElementById('mobileNavPropertiesBtn');
+    const tasksBtn = document.getElementById('mobileNavTasksBtn');
+    const maintenanceBtn = document.getElementById('mobileNavMaintenanceBtn');
+    const applicationsBtn = document.getElementById('mobileNavApplicationsBtn');
     const overlay = document.getElementById('sidebarOverlay');
+    const panelOverlay = document.getElementById('mobilePanelOverlay');
 
     // Hide sidebar by default on mobile
     function setSidebarInitial() {
@@ -20318,18 +20669,60 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     setSidebarInitial();
+    syncMobilePortfolioUi();
 
-    toggleBtn.addEventListener('click', () => {
-        // Toggle sidebar open/close for mobile
+    propertiesBtn?.addEventListener('click', () => {
         if (window.innerWidth <= 900) {
+            setMobileTasksDrawerOpen(false);
             sidebar.classList.toggle('visible');
-        } else {
-            sidebar.classList.add('visible');
+            syncMobilePortfolioUi();
+            return;
         }
+        sidebar.classList.add('visible');
+        syncMobilePortfolioUi();
+    });
+
+    tasksBtn?.addEventListener('click', () => {
+        if (window.innerWidth > 900) return;
+        if (!isPortfolioOverviewVisible()) {
+            sidebar.classList.remove('visible');
+            setMobileTasksDrawerOpen(false);
+            openPortfolioOverview().catch((error) => {
+                console.error('Error opening portfolio overview from mobile nav:', error);
+                showNotification('Could not open portfolio overview', 'error');
+            });
+            syncMobilePortfolioUi();
+            return;
+        }
+        sidebar.classList.remove('visible');
+        const tasksSidebar = document.getElementById('portfolioTasksSidebar');
+        const willOpen = !tasksSidebar?.classList.contains('mobile-open');
+        setMobileTasksDrawerOpen(willOpen);
+        syncMobilePortfolioUi();
+    });
+
+    maintenanceBtn?.addEventListener('click', () => {
+        sidebar.classList.remove('visible');
+        setMobileTasksDrawerOpen(false);
+        syncMobilePortfolioUi();
+        document.getElementById('topToolMaintenance')?.click();
+    });
+
+    applicationsBtn?.addEventListener('click', () => {
+        sidebar.classList.remove('visible');
+        setMobileTasksDrawerOpen(false);
+        syncMobilePortfolioUi();
+        document.getElementById('topToolApplications')?.click();
     });
 
     overlay.addEventListener('click', () => {
         sidebar.classList.remove('visible');
+        syncMobilePortfolioUi();
+    });
+
+    panelOverlay?.addEventListener('click', () => {
+        setMobileTasksDrawerOpen(false);
+        syncMobilePortfolioUi();
     });
 
         // Touch support for maintenance-card hover effect on iOS/mobile
@@ -20349,6 +20742,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Hide sidebar on resize if needed
     window.addEventListener('resize', () => {
         setSidebarInitial();
+        syncMobilePortfolioUi();
     });
 });
 
@@ -21434,7 +21828,7 @@ function renderPortfolioDetails(type) {
             });
 
             portfolioMaintenanceListTable.addEventListener('change', async (event) => {
-                const changedField = event.target.closest('.portfolio-maint-workflow-select, .maintenance-inline-workflow, .maintenance-inline-vendor');
+                const changedField = event.target.closest('.portfolio-maint-workflow-select, .maintenance-inline-workflow, .maintenance-inline-vendor, .maintenance-inline-scheduled');
                 const recurringVendorField = event.target.closest('.recurring-maintenance-inline-vendor');
                 if (recurringVendorField) {
                     const row = recurringVendorField.closest('tr[data-maint-id][data-project-id][data-maint-source="recurring"]');
@@ -21481,7 +21875,7 @@ function renderPortfolioDetails(type) {
                     await updateMaintenanceInlineFields(projectId, requestId, {
                         workflowStage: newWorkflowStage,
                         assignedVendor: vendorSelect?.value || '',
-                        scheduledFor: serializeMaintenanceDateTimeForApi(scheduledInput?.value || '')
+                        scheduledFor: scheduledInput?.value || ''
                     }, {
                         refreshProperty: state.currentProperty && String(state.currentProperty._id) === String(projectId),
                         refreshPortfolio: true,
@@ -21490,49 +21884,6 @@ function renderPortfolioDetails(type) {
                     showNotification('Maintenance request updated', 'success');
                 } catch (err) {
                     console.error('Error updating portfolio maintenance from list view:', err);
-                    showNotification('Could not update maintenance request', 'error');
-                } finally {
-                    delete row.dataset.isSaving;
-                    [workflowSelect, vendorSelect, scheduledInput].forEach(field => {
-                        if (field) field.disabled = false;
-                    });
-                    setPortfolioMaintenanceItemSaving(requestId, 'request', false);
-                }
-            });
-
-            portfolioMaintenanceListTable.addEventListener('focusout', async (event) => {
-                const scheduledInput = event.target.closest('.maintenance-inline-scheduled');
-                if (!scheduledInput) return;
-                const row = scheduledInput.closest('tr[data-maint-id][data-project-id]');
-                if (!row || row.dataset.maintSource === 'recurring') return;
-                if (row.dataset.isSaving === 'true') return;
-
-                const requestId = row.dataset.maintId;
-                const projectId = row.dataset.projectId;
-                const workflowSelect = row.querySelector('.portfolio-maint-workflow-select, .maintenance-inline-workflow');
-                const vendorSelect = row.querySelector('.maintenance-inline-vendor');
-                const newWorkflowStage = workflowSelect?.value || 'new';
-                if (!requestId || !projectId || !workflowSelect) return;
-
-                try {
-                    row.dataset.isSaving = 'true';
-                    [workflowSelect, vendorSelect, scheduledInput].forEach(field => {
-                        if (field) field.disabled = true;
-                    });
-                    state.keepPortfolioMaintenanceFiltersOnNextRender = true;
-                    setPortfolioMaintenanceItemSaving(requestId, 'request', true);
-                    await updateMaintenanceInlineFields(projectId, requestId, {
-                        workflowStage: newWorkflowStage,
-                        assignedVendor: vendorSelect?.value || '',
-                        scheduledFor: serializeMaintenanceDateTimeForApi(scheduledInput.value || '')
-                    }, {
-                        refreshProperty: state.currentProperty && String(state.currentProperty._id) === String(projectId),
-                        refreshPortfolio: true,
-                        refreshOverview: false
-                    });
-                    showNotification('Maintenance request updated', 'success');
-                } catch (err) {
-                    console.error('Error updating portfolio maintenance scheduled time from list view:', err);
                     showNotification('Could not update maintenance request', 'error');
                 } finally {
                     delete row.dataset.isSaving;
@@ -21574,7 +21925,7 @@ function renderPortfolioDetails(type) {
                     return;
                 }
 
-                const changedField = e.target.closest('.maintenance-inline-workflow, .maintenance-inline-vendor');
+                const changedField = e.target.closest('.maintenance-inline-workflow, .maintenance-inline-vendor, .maintenance-inline-scheduled');
                 if (!changedField) return;
                 const editor = changedField.closest('.maintenance-inline-editor');
                 const card = changedField.closest('[data-maint-id][data-project-id]');
@@ -21592,7 +21943,7 @@ function renderPortfolioDetails(type) {
                 const payload = {
                     workflowStage: workflowSelect?.value || 'new',
                     assignedVendor: vendorSelect?.value || '',
-                    scheduledFor: serializeMaintenanceDateTimeForApi(scheduledInput?.value || '')
+                    scheduledFor: scheduledInput?.value || ''
                 };
 
                 try {
@@ -21610,51 +21961,6 @@ function renderPortfolioDetails(type) {
                     showNotification('Maintenance request updated', 'success');
                 } catch (err) {
                     console.error('Error updating portfolio maintenance from card view:', err);
-                    showNotification('Could not update maintenance request', 'error');
-                } finally {
-                    delete editor.dataset.isSaving;
-                    [workflowSelect, vendorSelect, scheduledInput].forEach(field => {
-                        if (field) field.disabled = false;
-                    });
-                    setPortfolioMaintenanceItemSaving(requestId, 'request', false);
-                }
-            });
-
-            maintTbody.addEventListener('focusout', async (event) => {
-                const scheduledInput = event.target.closest('.maintenance-inline-scheduled');
-                if (!scheduledInput) return;
-                const editor = scheduledInput.closest('.maintenance-inline-editor');
-                const card = scheduledInput.closest('[data-maint-id][data-project-id]');
-                const requestId = editor?.getAttribute('data-request-id') || card?.getAttribute('data-maint-id');
-                const projectId = card?.getAttribute('data-project-id');
-                if (!editor || !requestId || !projectId || card?.dataset.maintSource === 'recurring') {
-                    return;
-                }
-                if (editor.dataset.isSaving === 'true') return;
-
-                const workflowSelect = editor.querySelector('.maintenance-inline-workflow');
-                const vendorSelect = editor.querySelector('.maintenance-inline-vendor');
-                const payload = {
-                    workflowStage: workflowSelect?.value || 'new',
-                    assignedVendor: vendorSelect?.value || '',
-                    scheduledFor: serializeMaintenanceDateTimeForApi(scheduledInput.value || '')
-                };
-
-                try {
-                    editor.dataset.isSaving = 'true';
-                    state.keepPortfolioMaintenanceFiltersOnNextRender = true;
-                    [workflowSelect, vendorSelect, scheduledInput].forEach(field => {
-                        if (field) field.disabled = true;
-                    });
-                    setPortfolioMaintenanceItemSaving(requestId, 'request', true);
-                    await updateMaintenanceInlineFields(projectId, requestId, payload, {
-                        refreshProperty: state.currentProperty && String(state.currentProperty._id) === String(projectId),
-                        refreshPortfolio: true,
-                        refreshOverview: false
-                    });
-                    showNotification('Maintenance request updated', 'success');
-                } catch (err) {
-                    console.error('Error updating portfolio maintenance scheduled time from card view:', err);
                     showNotification('Could not update maintenance request', 'error');
                 } finally {
                     delete editor.dataset.isSaving;
