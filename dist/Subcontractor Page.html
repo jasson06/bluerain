@@ -19,6 +19,10 @@ body {
   padding-bottom: 92px;
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
 .container {
     width: 90%;
     max-width: 1200px;
@@ -654,6 +658,121 @@ button:hover,
   display: block;
 }
 
+.maintenance-photo-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.86);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 10020;
+}
+
+.maintenance-photo-modal.is-open {
+  display: flex;
+}
+
+.maintenance-photo-modal-dialog {
+  position: relative;
+  width: min(92vw, 900px);
+  max-height: 92vh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.96));
+  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.34);
+}
+
+.maintenance-photo-modal-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.maintenance-photo-modal-caption {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.maintenance-photo-modal-close,
+.maintenance-photo-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.maintenance-photo-modal-close {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  margin: 0;
+  font-size: 18px;
+}
+
+.maintenance-photo-stage {
+  position: relative;
+  min-height: min(68vh, 560px);
+  border-radius: 18px;
+  overflow: hidden;
+  background: #dbeafe;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.maintenance-photo-stage img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: linear-gradient(180deg, #eff6ff, #dbeafe);
+}
+
+.maintenance-photo-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  padding: 0;
+  margin: 0;
+  background: rgba(15, 23, 42, 0.72);
+  color: #fff;
+  box-shadow: none;
+}
+
+.maintenance-photo-nav:hover,
+.maintenance-photo-nav:focus {
+  background: rgba(15, 23, 42, 0.88);
+}
+
+.maintenance-photo-nav[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.maintenance-photo-nav.prev {
+  left: 14px;
+}
+
+.maintenance-photo-nav.next {
+  right: 14px;
+}
+
+.maintenance-photo-modal-hint {
+  text-align: center;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 500;
+}
+
 .maintenance-placeholder {
   color: #64748b;
   font-size: 13px;
@@ -1023,6 +1142,54 @@ button:hover,
   .mobile-nav-btn i {
     font-size: 15px;
   }
+
+  .maintenance-photo-modal {
+    padding: 10px;
+  }
+
+  .maintenance-photo-modal-dialog {
+    width: 100%;
+    max-height: 96vh;
+    padding: 14px;
+    border-radius: 20px;
+    gap: 10px;
+  }
+
+  .maintenance-photo-modal-topbar {
+    gap: 8px;
+  }
+
+  .maintenance-photo-modal-caption {
+    font-size: 12px;
+  }
+
+  .maintenance-photo-modal-close {
+    width: 38px;
+    height: 38px;
+    font-size: 16px;
+  }
+
+  .maintenance-photo-stage {
+    min-height: 56vh;
+    border-radius: 16px;
+  }
+
+  .maintenance-photo-nav {
+    width: 42px;
+    height: 42px;
+  }
+
+  .maintenance-photo-nav.prev {
+    left: 8px;
+  }
+
+  .maintenance-photo-nav.next {
+    right: 8px;
+  }
+
+  .maintenance-photo-modal-hint {
+    font-size: 11px;
+  }
 }
 
   </style>
@@ -1095,6 +1262,27 @@ button:hover,
   </button>
 </nav>
 
+<div id="maintenance-photo-modal" class="maintenance-photo-modal" aria-hidden="true">
+  <div class="maintenance-photo-modal-dialog" role="dialog" aria-modal="true" aria-label="Maintenance photo viewer">
+    <div class="maintenance-photo-modal-topbar">
+      <div id="maintenance-photo-caption" class="maintenance-photo-modal-caption">Photo 1 of 1</div>
+      <button type="button" class="maintenance-photo-modal-close" id="maintenance-photo-close" aria-label="Close photo viewer">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="maintenance-photo-stage" id="maintenance-photo-stage">
+      <button type="button" class="maintenance-photo-nav prev" id="maintenance-photo-prev" aria-label="Previous photo">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <img id="maintenance-photo-image" src="" alt="Maintenance photo preview">
+      <button type="button" class="maintenance-photo-nav next" id="maintenance-photo-next" aria-label="Next photo">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+    
+  </div>
+</div>
+
 
 
 
@@ -1149,9 +1337,17 @@ align-items: center;
 
   <script>
 let maintenanceItemsCache = [];
+let maintenancePhotoViewer = {
+  photos: [],
+  index: 0,
+  itemId: "",
+  type: "",
+  touchStartX: null
+};
 
 document.addEventListener("DOMContentLoaded", async () => {
     const vendorId = localStorage.getItem("vendorId");
+    initializeMaintenancePhotoModal();
 
     // Fetch vendor name and display below dashboard title (left)
     if (vendorId) {
@@ -1309,8 +1505,111 @@ function getMaintenanceActionLabel(status) {
   return "Mark as In Progress";
 }
 
-function openMaintenancePhoto(url) {
-  window.open(url, "_blank", "noopener");
+function initializeMaintenancePhotoModal() {
+  const modal = document.getElementById("maintenance-photo-modal");
+  const closeButton = document.getElementById("maintenance-photo-close");
+  const prevButton = document.getElementById("maintenance-photo-prev");
+  const nextButton = document.getElementById("maintenance-photo-next");
+  const stage = document.getElementById("maintenance-photo-stage");
+
+  if (!modal || !closeButton || !prevButton || !nextButton || !stage) return;
+
+  closeButton.addEventListener("click", closeMaintenancePhotoModal);
+  prevButton.addEventListener("click", () => stepMaintenancePhoto(-1));
+  nextButton.addEventListener("click", () => stepMaintenancePhoto(1));
+
+  modal.addEventListener("click", event => {
+    if (event.target === modal) {
+      closeMaintenancePhotoModal();
+    }
+  });
+
+  stage.addEventListener("touchstart", event => {
+    maintenancePhotoViewer.touchStartX = event.changedTouches?.[0]?.clientX ?? null;
+  }, { passive: true });
+
+  stage.addEventListener("touchend", event => {
+    const touchEndX = event.changedTouches?.[0]?.clientX ?? null;
+    if (maintenancePhotoViewer.touchStartX === null || touchEndX === null) return;
+
+    const deltaX = touchEndX - maintenancePhotoViewer.touchStartX;
+    maintenancePhotoViewer.touchStartX = null;
+
+    if (Math.abs(deltaX) < 40) return;
+    stepMaintenancePhoto(deltaX < 0 ? 1 : -1);
+  }, { passive: true });
+
+  document.addEventListener("keydown", event => {
+    if (!modal.classList.contains("is-open")) return;
+    if (event.key === "Escape") closeMaintenancePhotoModal();
+    if (event.key === "ArrowLeft") stepMaintenancePhoto(-1);
+    if (event.key === "ArrowRight") stepMaintenancePhoto(1);
+  });
+}
+
+function openMaintenancePhoto(itemId, type, index) {
+  const item = getMaintenanceItemById(itemId);
+  const photos = Array.isArray(item?.photos?.[type]) ? item.photos[type] : [];
+  if (!photos.length) return;
+
+  maintenancePhotoViewer = {
+    ...maintenancePhotoViewer,
+    itemId: String(itemId),
+    type: String(type || "before"),
+    photos,
+    index: Math.max(0, Math.min(Number(index) || 0, photos.length - 1)),
+    touchStartX: null
+  };
+
+  const modal = document.getElementById("maintenance-photo-modal");
+  if (!modal) return;
+
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+  renderMaintenancePhotoModal();
+}
+
+function closeMaintenancePhotoModal() {
+  const modal = document.getElementById("maintenance-photo-modal");
+  if (!modal) return;
+
+  modal.classList.remove("is-open");
+  modal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("modal-open");
+}
+
+function stepMaintenancePhoto(direction) {
+  const totalPhotos = maintenancePhotoViewer.photos.length;
+  if (totalPhotos <= 1) return;
+
+  const nextIndex = maintenancePhotoViewer.index + direction;
+  if (nextIndex < 0 || nextIndex >= totalPhotos) return;
+
+  maintenancePhotoViewer.index = nextIndex;
+  renderMaintenancePhotoModal();
+}
+
+function renderMaintenancePhotoModal() {
+  const image = document.getElementById("maintenance-photo-image");
+  const caption = document.getElementById("maintenance-photo-caption");
+  const prevButton = document.getElementById("maintenance-photo-prev");
+  const nextButton = document.getElementById("maintenance-photo-next");
+  const currentPhoto = maintenancePhotoViewer.photos[maintenancePhotoViewer.index];
+  const totalPhotos = maintenancePhotoViewer.photos.length;
+
+  if (!image || !caption || !prevButton || !nextButton || !currentPhoto) return;
+
+  image.src = currentPhoto;
+  image.alt = `${maintenancePhotoViewer.type} photo ${maintenancePhotoViewer.index + 1}`;
+  caption.textContent = `${capitalizeMaintenancePhotoType(maintenancePhotoViewer.type)} photo ${maintenancePhotoViewer.index + 1} of ${totalPhotos}`;
+  prevButton.disabled = maintenancePhotoViewer.index === 0;
+  nextButton.disabled = maintenancePhotoViewer.index === totalPhotos - 1;
+}
+
+function capitalizeMaintenancePhotoType(type) {
+  const value = String(type || "photo");
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function getMaintenanceItemById(itemId) {
@@ -1400,11 +1699,23 @@ function generateMaintenancePhotoList(photos, itemId, type) {
     return `<p class="maintenance-placeholder">No photos uploaded.</p>`;
   }
 
-  return photos.map(photo => `
-    <button type="button" class="maintenance-photo-thumb" onclick="openMaintenancePhoto('${photo}')">
+  return photos.map((photo, index) => `
+    <button type="button" class="maintenance-photo-thumb" onclick="openMaintenancePhoto('${itemId}', '${type}', ${index})">
       <img src="${photo}" alt="${type} photo for item ${itemId}">
     </button>
   `).join("");
+}
+
+async function syncMaintenanceEstimateItemStatus(itemId, status) {
+  try {
+    await fetch(`/api/estimates/line-items/${itemId}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status })
+    });
+  } catch (error) {
+    console.warn("Maintenance estimate status sync failed:", error);
+  }
 }
 
 async function projectHasAssignedEstimate(vendorId, projectId) {
@@ -1584,6 +1895,8 @@ async function toggleMaintenanceItemStatus(itemId, currentStatus) {
     });
 
     if (!response.ok) throw new Error("Failed to update maintenance item status.");
+
+    await syncMaintenanceEstimateItemStatus(itemId, nextStatus);
 
     showToast(`Maintenance item updated to ${nextStatus}.`);
     updateMaintenanceItemStatusLocally(itemId, nextStatus);
