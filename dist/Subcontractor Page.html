@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Subcontractor Dashboard</title>
   <!-- Toastify CSS & JS -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
@@ -16,6 +16,7 @@ body {
     background-color: #f4f4f9;
     margin: 0;
     padding: 0;
+  padding-bottom: 92px;
 }
 
 .container {
@@ -26,7 +27,8 @@ body {
 
 /* Header */
 header.header {
-  background: linear-gradient(90deg, #2563eb 0%, #0ea5e9 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04)),
+      linear-gradient(135deg, rgba(37, 99, 235, 0.94) 0%, rgba(14, 165, 233, 0.9) 55%, rgba(15, 118, 110, 0.88) 100%);
   color: #fff;
   text-align: left;
   padding: 18px 24px;
@@ -112,7 +114,8 @@ h2 {
 button,
 .btn,
 .logout-button {
-  background: linear-gradient(90deg, #2563eb 0%, #0ea5e9 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04)),
+      linear-gradient(135deg, rgba(37, 99, 235, 0.94) 0%, rgba(14, 165, 233, 0.9) 55%, rgba(15, 118, 110, 0.88) 100%);
   color: #fff;
   border: none;
   padding: 10px 22px;
@@ -305,6 +308,14 @@ button:hover,
   box-shadow: 0 2px 8px rgba(0,0,0,0.03);
 }
 
+.mobile-app-nav {
+  display: none;
+}
+
+.mobile-app-shell {
+  position: relative;
+}
+
 .tab-btn {
   background: #f1f5f9;
   color: #007bff;
@@ -318,7 +329,8 @@ button:hover,
   margin-bottom: -2px;
 }
 .tab-btn.active {
-  background: #007bff;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04)),
+      linear-gradient(135deg, rgba(37, 99, 235, 0.94) 0%, rgba(14, 165, 233, 0.9) 55%, rgba(15, 118, 110, 0.88) 100%);
   color: #fff;
   border-bottom: 2px solid #fff;
   z-index: 2;
@@ -360,10 +372,17 @@ button:hover,
     padding: 8px 10px;
   }
   #job-tabs {
-    flex-wrap: wrap;
-    gap: 4px;
-    padding-top: 4px;
-    padding-bottom: 4px;
+    flex-wrap: nowrap;
+    justify-content: flex-start !important;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    padding: 6px 10px 10px;
+    scrollbar-width: none;
+  }
+  #job-tabs::-webkit-scrollbar {
+    display: none;
   }
   .project-card,
   .item-card {
@@ -417,10 +436,11 @@ button:hover,
     padding: 6px 6px;
   }
   #job-tabs {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 2px;
-    position: static;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    position: sticky;
+    top: 74px;
     box-shadow: none;
   }
   .project-card,
@@ -475,7 +495,7 @@ button:hover,
   }
 }
 
-    .rework-badge {
+.rework-badge {
     background-color: #dc2626;
     color: white;
     padding: 4px 12px;
@@ -514,7 +534,7 @@ button:hover,
     }
 }
 
-  .start-job-btn {
+.start-job-btn {
   background: linear-gradient(90deg, #ffc107 0%, #d7a203 100%);
   color: #fff;
   border: none;
@@ -536,7 +556,475 @@ button:hover,
   box-shadow: 0 8px 24px rgba(34, 197, 94, 0.22);
   transform: translateY(-2px) scale(1.04);
 }
-  
+
+.maintenance-card {
+  border: 1px solid #dbeafe;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.08);
+  overflow: hidden;
+}
+
+.maintenance-card h3 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.maintenance-project-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #e0ecff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.maintenance-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.maintenance-meta p {
+  margin: 0;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.maintenance-card > p {
+  margin: 10px 0 0;
+}
+
+.maintenance-description {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.maintenance-description ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.maintenance-description li {
+  margin-bottom: 6px;
+}
+
+.maintenance-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.maintenance-photo-block {
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.maintenance-photo-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 48px;
+}
+
+.maintenance-photo-thumb {
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  background: #e2e8f0;
+  cursor: pointer;
+}
+
+.maintenance-photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.maintenance-placeholder {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.maintenance-upload-label {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.maintenance-upload-label input {
+  display: none;
+}
+
+.maintenance-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.maintenance-card.is-busy {
+  opacity: 0.76;
+}
+
+.maintenance-status-btn[disabled],
+.maintenance-upload-label.is-disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.maintenance-status-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 190px;
+}
+
+.maintenance-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex: 0 0 auto;
+}
+
+.maintenance-photo-loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 72px;
+}
+
+.maintenance-photo-loader .maintenance-spinner {
+  width: 28px;
+  height: 28px;
+  border-width: 4px;
+  border-color: #f3f3f3;
+  border-top-color: #0ea5e9;
+}
+
+.maintenance-status-btn {
+  background: linear-gradient(90deg, #007bff 60%, #0ea5e9 100%);
+}
+
+@media (max-width: 768px) {
+  body {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+    background:
+      radial-gradient(circle at top, rgba(14, 165, 233, 0.12), transparent 30%),
+      linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+  }
+
+  .container {
+    width: calc(100% - 50px);
+    margin: 12px auto 0;
+    padding: 0;
+  }
+
+  header.header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    border-radius: 0 0 22px 22px;
+    padding: 14px 14px 16px;
+    box-shadow: 0 10px 30px rgba(37, 99, 235, 0.18);
+  }
+
+  #job-tabs {
+    display: flex !important;
+    position: sticky;
+    top: 86px;
+    z-index: 19;
+    justify-content: flex-start !important;
+    margin: 10px 0 0 !important;
+    background: transparent;
+  }
+
+  .mobile-app-shell {
+    padding: 6px 10px 0;
+  }
+
+  section {
+    margin-top: 14px;
+  }
+
+  h2 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom-width: 1px;
+  }
+
+  .scroll-container {
+    gap: 12px;
+  }
+
+  .project-card,
+  .item-card {
+    border-radius: 16px;
+    padding: 12px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .project-card h3,
+  .item-card h4,
+  .maintenance-card h3 {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  .project-card p,
+  .item-card p,
+  .maintenance-meta p,
+  .maintenance-description,
+  .maintenance-upload-label,
+  .maintenance-placeholder {
+    font-size: 12px;
+  }
+
+  .maintenance-card {
+    padding: 0;
+    border-radius: 18px;
+  }
+
+  .maintenance-card h3,
+  .maintenance-card > p,
+  .maintenance-meta,
+  .maintenance-description,
+  .maintenance-actions {
+    margin-left: 12px;
+    margin-right: 12px;
+  }
+
+  .maintenance-card h3 {
+    margin-top: 12px;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .maintenance-project-tag {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  .maintenance-meta {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-top: 8px;
+    margin-bottom: 10px;
+  }
+
+  .maintenance-meta p {
+    padding: 8px 10px;
+  }
+
+  .maintenance-description {
+    margin-top: 0;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+  }
+
+  .maintenance-description ul {
+    padding-left: 16px;
+  }
+
+  .maintenance-photo-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 0;
+    padding: 0 12px;
+  }
+
+  .maintenance-photo-block {
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .maintenance-photo-list {
+    gap: 6px;
+    min-height: 40px;
+  }
+
+  .maintenance-photo-thumb {
+    width: 58px;
+    height: 58px;
+    border-radius: 8px;
+  }
+
+  .maintenance-upload-label {
+    width: 100%;
+    justify-content: center;
+    margin-top: 8px;
+    padding: 8px 10px;
+  }
+
+  .maintenance-actions {
+    margin-top: 10px;
+    margin-bottom: 12px;
+  }
+
+  .maintenance-status-btn {
+    width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+  }
+
+  .tab-btn {
+    flex: 0 0 auto;
+    margin: 0;
+    border-radius: 999px;
+    padding: 9px 14px;
+    font-size: 12px;
+    line-height: 1;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  }
+
+  .tab-btn.active {
+    border-bottom: none;
+  }
+
+  .tab-btn .rework-badge {
+    margin-left: 6px;
+    padding: 3px 8px;
+    font-size: 0.72rem;
+  }
+
+  .mobile-app-nav {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: max(10px, env(safe-area-inset-bottom, 0px));
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px;
+    border-radius: 24px;
+    border: 1px solid rgba(191, 219, 254, 0.32);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04)),
+      linear-gradient(135deg, rgba(37, 99, 235, 0.94) 0%, rgba(14, 165, 233, 0.9) 55%, rgba(15, 118, 110, 0.88) 100%);
+    box-shadow:
+      0 18px 38px rgba(15, 23, 42, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .mobile-nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 0;
+    padding: 10px 4px 9px;
+    border: none;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(239, 246, 255, 0.78);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.28px;
+    transform: none;
+    margin: 0;
+    transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  }
+
+  .mobile-nav-btn i {
+    font-size: 17px;
+    opacity: 0.92;
+  }
+
+  .mobile-nav-btn span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  .mobile-nav-btn.is-active {
+    color: #0f4c75;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 255, 0.92));
+    box-shadow:
+      0 10px 22px rgba(15, 23, 42, 0.16),
+      inset 0 0 0 1px rgba(147, 197, 253, 0.38);
+    transform: translateY(-1px);
+  }
+
+  .mobile-nav-btn.is-active i {
+    color: #2563eb;
+    opacity: 1;
+  }
+
+  .mobile-nav-btn:hover,
+  .mobile-nav-btn:focus {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+}
+
+@media (max-width: 480px) {
+  #job-tabs {
+    top: 78px;
+    padding: 8px 8px 10px;
+  }
+
+  .tab-btn {
+    padding: 8px 12px;
+    font-size: 11px;
+  }
+
+  .maintenance-photo-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-app-nav {
+    left: 8px;
+    right: 8px;
+    gap: 4px;
+    padding: 8px;
+    border-radius: 20px;
+  }
+
+  .mobile-nav-btn {
+    font-size: 9px;
+    padding: 9px 2px 8px;
+  }
+
+  .mobile-nav-btn i {
+    font-size: 15px;
+  }
+}
+
   </style>
 </head>
 <body>
@@ -554,13 +1042,14 @@ button:hover,
 <div id="job-tabs" style="display: flex; gap: 10px; margin: 30px 0 10px 0; justify-content: flex-end;">
   <button class="tab-btn active" id="tab-new-jobs" data-tab="new-jobs">New Jobs</button>
   <button class="tab-btn" id="tab-in-progress" data-tab="in-progress">In Progress</button>
+  <button class="tab-btn" id="tab-maintenance" data-tab="maintenance">Maintenance</button>
     <button class="tab-btn" id="tab-rework" data-tab="rework">
         Rework <span class="rework-badge"><i class="fas fa-sync-alt"></i><span class="count">0</span></span>
     </button>
   <button class="tab-btn" id="tab-completed" data-tab="completed">Completed</button>
 </div>
 
-<main class="container">
+<main class="container mobile-app-shell">
   <section id="new-jobs" class="section-tab active">
     <h2>New Jobs</h2>
     <div id="new-jobs-container" class="scroll-container"></div>
@@ -568,6 +1057,10 @@ button:hover,
   <section id="in-progress" class="section-tab">
     <h2>In Progress</h2>
     <div id="in-progress-container" class="scroll-container"></div>
+  </section>
+  <section id="maintenance" class="section-tab">
+    <h2>Maintenance</h2>
+    <div id="maintenance-container" class="scroll-container"></div>
   </section>
   <section id="rework" class="section-tab">
     <h2>Rework</h2>
@@ -578,6 +1071,31 @@ button:hover,
     <div id="completed-container" class="scroll-container"></div>
   </section>
 </main>
+
+<nav class="mobile-app-nav" aria-label="Dashboard navigation">
+  <button class="mobile-nav-btn is-active" type="button" data-tab="new-jobs">
+    <i class="fas fa-home"></i>
+    <span>New</span>
+  </button>
+  <button class="mobile-nav-btn" type="button" data-tab="in-progress">
+    <i class="fas fa-hourglass-half"></i>
+    <span>Active</span>
+  </button>
+  <button class="mobile-nav-btn" type="button" data-tab="maintenance">
+    <i class="fas fa-tools"></i>
+    <span>Maintenance</span>
+  </button>
+  <button class="mobile-nav-btn" type="button" data-tab="rework">
+    <i class="fas fa-sync-alt"></i>
+    <span>Rework</span>
+  </button>
+  <button class="mobile-nav-btn" type="button" data-tab="completed">
+    <i class="fas fa-check-circle"></i>
+    <span>Done</span>
+  </button>
+</nav>
+
+
 
 
     <!-- Toast Notification -->
@@ -630,6 +1148,8 @@ align-items: center;
 </style>
 
   <script>
+let maintenanceItemsCache = [];
+
 document.addEventListener("DOMContentLoaded", async () => {
     const vendorId = localStorage.getItem("vendorId");
 
@@ -673,6 +1193,38 @@ function hideLoader() {
   document.getElementById('loader').style.display = 'none';
 }
 
+function centerActiveTab(tabName) {
+  const activeTab = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+  const tabStrip = document.getElementById('job-tabs');
+  if (!activeTab || !tabStrip) return;
+
+  const stripRect = tabStrip.getBoundingClientRect();
+  const tabRect = activeTab.getBoundingClientRect();
+  const currentScroll = tabStrip.scrollLeft;
+  const targetScroll = currentScroll + (tabRect.left - stripRect.left) - ((stripRect.width - tabRect.width) / 2);
+
+  tabStrip.scrollTo({
+    left: Math.max(0, targetScroll),
+    behavior: 'smooth'
+  });
+}
+
+function activateTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach(button => {
+    button.classList.toggle('active', button.getAttribute('data-tab') === tabName);
+  });
+
+  document.querySelectorAll('.section-tab').forEach(section => {
+    section.classList.toggle('active', section.id === tabName);
+  });
+
+  document.querySelectorAll('.mobile-nav-btn').forEach(button => {
+    button.classList.toggle('is-active', button.getAttribute('data-tab') === tabName);
+  });
+
+  centerActiveTab(tabName);
+}
+
 // Helper function to return a CSS class based on status
 function getStatusClass(status) {
       if (status === "new") return "status-new";
@@ -682,9 +1234,440 @@ function getStatusClass(status) {
       return "";
     }
 
+function formatProjectAddress(address = {}) {
+  return [address.addressLine1, address.city, address.state]
+    .filter(Boolean)
+    .join(", ") || "N/A";
+}
+
+function formatMaintenanceDescription(desc) {
+  if (!desc) return "<p>No description provided.</p>";
+
+  const tasks = desc.split(/\s*\d+\.\s*\/\s*/).filter(task => task.trim() !== "");
+  if (!tasks.length) {
+    return `<p>${desc}</p>`;
+  }
+
+  return `<ul>${tasks.map(task => `<li>${task.trim()}</li>`).join("")}</ul>`;
+}
+
+function hasMaintenanceRequestId(item) {
+  const maintenanceId = item?.maintenanceRequestId;
+  return maintenanceId !== null && maintenanceId !== undefined && String(maintenanceId).trim() !== "";
+}
+
+function isOpenMaintenanceStatus(status) {
+  const normalizedStatus = String(status || "new").trim().toLowerCase();
+  return normalizedStatus !== "completed" && normalizedStatus !== "approved";
+}
+
+function normalizeObjectId(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value._id) return String(value._id);
+  return String(value);
+}
+
+function buildMaintenanceLookupFromEstimates(estimates = []) {
+  const lookup = new Map();
+
+  estimates.forEach(estimate => {
+    (estimate.lineItems || []).forEach(category => {
+      (category.items || []).forEach(item => {
+        if (!hasMaintenanceRequestId(item)) return;
+        lookup.set(normalizeObjectId(item._id), {
+          maintenanceRequestId: normalizeObjectId(item.maintenanceRequestId),
+          estimateId: normalizeObjectId(estimate._id),
+          itemStatus: item.status || "new",
+          itemPhotos: item.photos || { before: [], after: [] }
+        });
+      });
+    });
+  });
+
+  return lookup;
+}
+
+function getMaintenanceNextStatus(status) {
+  const currentStatus = String(status || "new").toLowerCase();
+  if (currentStatus === "new" || currentStatus === "rework") {
+    return { status: "in-progress", label: "Mark as In Progress" };
+  }
+  if (currentStatus === "in-progress") {
+    return { status: "completed", label: "Mark as Completed" };
+  }
+  if (currentStatus === "completed" || currentStatus === "approved") {
+    return { status: "in-progress", label: "Mark as In Progress" };
+  }
+  return { status: "in-progress", label: "Mark as In Progress" };
+}
+
+function getMaintenanceActionLabel(status) {
+  const currentStatus = String(status || "new").toLowerCase();
+  if (currentStatus === "in-progress") return "Mark as Completed";
+  if (currentStatus === "completed" || currentStatus === "approved") return "Mark as In Progress";
+  return "Mark as In Progress";
+}
+
+function openMaintenancePhoto(url) {
+  window.open(url, "_blank", "noopener");
+}
+
+function getMaintenanceItemById(itemId) {
+  return maintenanceItemsCache.find(item => String(item.itemId) === String(itemId)) || null;
+}
+
+function updateMaintenanceTabCount() {
+  const maintenanceTab = document.getElementById("tab-maintenance");
+  if (!maintenanceTab) return;
+  const countMaintenance = document.querySelectorAll("#maintenance-container .maintenance-card").length;
+  maintenanceTab.innerHTML = `Maintenance <span style="color:#fff;background:#d7a203;border-radius:10px;padding:2px 8px;font-size:13px;margin-left:6px;">${countMaintenance}</span>`;
+}
+
+function setMaintenanceItemBusy(itemId, busy, label = "") {
+  const card = document.getElementById(`maintenance-card-${itemId}`);
+  const button = document.getElementById(`maintenance-status-btn-${itemId}`);
+  const beforeInput = document.getElementById(`maintenance-before-input-${itemId}`);
+  const afterInput = document.getElementById(`maintenance-after-input-${itemId}`);
+  const beforeLabel = document.getElementById(`maintenance-before-label-${itemId}`);
+  const afterLabel = document.getElementById(`maintenance-after-label-${itemId}`);
+
+  if (card) {
+    card.classList.toggle("is-busy", busy);
+  }
+
+  if (button) {
+    if (busy) {
+      button.dataset.previousLabel = button.textContent.trim();
+      button.innerHTML = `<span class="maintenance-spinner"></span><span>${label || "Updating..."}</span>`;
+      button.disabled = true;
+    } else {
+      const item = getMaintenanceItemById(itemId);
+      const nextLabel = item ? getMaintenanceActionLabel(item.status) : (button.dataset.previousLabel || "Update");
+      button.textContent = nextLabel;
+      button.disabled = false;
+      delete button.dataset.previousLabel;
+    }
+  }
+
+  [beforeInput, afterInput].forEach(input => {
+    if (input) input.disabled = busy;
+  });
+  [beforeLabel, afterLabel].forEach(uploadLabel => {
+    if (uploadLabel) uploadLabel.classList.toggle("is-disabled", busy);
+  });
+}
+
+function setMaintenancePhotoBusy(itemId, type, busy) {
+  const photoContainer = document.getElementById(`maintenance-${type}-${itemId}`);
+  const uploadInput = document.getElementById(`maintenance-${type}-input-${itemId}`);
+  const uploadLabel = document.getElementById(`maintenance-${type}-label-${itemId}`);
+
+  if (uploadInput) uploadInput.disabled = busy;
+  if (uploadLabel) uploadLabel.classList.toggle("is-disabled", busy);
+
+  if (photoContainer && busy) {
+    photoContainer.innerHTML = `
+      <div class="maintenance-photo-loader">
+        <div class="maintenance-spinner"></div>
+      </div>
+    `;
+  }
+}
+
+function removeMaintenanceItem(itemId) {
+  maintenanceItemsCache = maintenanceItemsCache.filter(item => String(item.itemId) !== String(itemId));
+  renderMaintenanceAssignments(maintenanceItemsCache);
+  updateMaintenanceTabCount();
+}
+
+function updateMaintenanceItemStatusLocally(itemId, status) {
+  const item = getMaintenanceItemById(itemId);
+  if (!item) return;
+  item.status = status;
+
+  if (!isOpenMaintenanceStatus(status)) {
+    removeMaintenanceItem(itemId);
+    return;
+  }
+
+  renderMaintenanceAssignments(maintenanceItemsCache);
+  updateMaintenanceTabCount();
+}
+
+function generateMaintenancePhotoList(photos, itemId, type) {
+  if (!Array.isArray(photos) || photos.length === 0) {
+    return `<p class="maintenance-placeholder">No photos uploaded.</p>`;
+  }
+
+  return photos.map(photo => `
+    <button type="button" class="maintenance-photo-thumb" onclick="openMaintenancePhoto('${photo}')">
+      <img src="${photo}" alt="${type} photo for item ${itemId}">
+    </button>
+  `).join("");
+}
+
+async function projectHasAssignedEstimate(vendorId, projectId) {
+  if (!vendorId || !projectId) return false;
+
+  try {
+    const [assignedResponse, estimatesResponse] = await Promise.all([
+      fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}?t=${Date.now()}`),
+      fetch(`/api/estimates?projectId=${projectId}&t=${Date.now()}`)
+    ]);
+
+    if (!assignedResponse.ok || !estimatesResponse.ok) {
+      return false;
+    }
+
+    const assignedData = await assignedResponse.json();
+    const estimatesData = await estimatesResponse.json();
+    const assignedItems = assignedData.items || [];
+    const estimates = estimatesData.estimates || [];
+
+    if (!assignedItems.length || !estimates.length) {
+      return false;
+    }
+
+    const estimateIds = new Set(estimates.map(estimate => normalizeObjectId(estimate._id)).filter(Boolean));
+    return assignedItems.some(item => {
+      const estimateId = normalizeObjectId(item.estimateId);
+      return estimateId && estimateIds.has(estimateId);
+    });
+  } catch (error) {
+    console.error("Error checking assigned estimates for project:", error);
+    return false;
+  }
+}
+
+async function fetchMaintenanceAssignments(vendorId, projectGroups) {
+  const container = document.getElementById("maintenance-container");
+  if (!container) return;
+
+  if (!Array.isArray(projectGroups) || projectGroups.length === 0) {
+    maintenanceItemsCache = [];
+    renderMaintenanceAssignments([]);
+    return;
+  }
+
+  const uniqueProjects = [];
+  const seenProjectIds = new Set();
+  projectGroups.forEach(entry => {
+    const projectId = entry?.projectId?._id ? String(entry.projectId._id) : "";
+    if (!projectId || seenProjectIds.has(projectId)) return;
+    seenProjectIds.add(projectId);
+    uniqueProjects.push(entry);
+  });
+
+  const maintenanceGroups = await Promise.all(uniqueProjects.map(async (entry) => {
+    const projectId = String(entry.projectId._id);
+    try {
+      const [assignedResponse, estimatesResponse] = await Promise.all([
+        fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}?t=${Date.now()}`),
+        fetch(`/api/estimates?projectId=${projectId}&t=${Date.now()}`)
+      ]);
+
+      if (!assignedResponse.ok) throw new Error(`Failed to fetch project items for ${projectId}`);
+      if (!estimatesResponse.ok) throw new Error(`Failed to fetch estimates for ${projectId}`);
+
+      const assignedData = await assignedResponse.json();
+      const estimatesData = await estimatesResponse.json();
+      const maintenanceLookup = buildMaintenanceLookupFromEstimates(estimatesData.estimates || []);
+
+      return (assignedData.items || [])
+        .map(item => {
+          const itemId = normalizeObjectId(item.itemId);
+          const matchedMaintenanceItem = maintenanceLookup.get(itemId);
+          if (!matchedMaintenanceItem && !hasMaintenanceRequestId(item)) return null;
+
+          return {
+            ...item,
+            itemId,
+            estimateId: normalizeObjectId(item.estimateId) || matchedMaintenanceItem?.estimateId || "",
+            maintenanceRequestId: normalizeObjectId(item.maintenanceRequestId) || matchedMaintenanceItem?.maintenanceRequestId || "",
+            status: item.status || matchedMaintenanceItem?.itemStatus || "new",
+            photos: item.photos || matchedMaintenanceItem?.itemPhotos || { before: [], after: [] },
+            projectName: entry.projectId.name || "Unnamed Project",
+            projectAddress: formatProjectAddress(entry.projectId.address || {})
+          };
+        })
+        .filter(Boolean)
+        .filter(item => hasMaintenanceRequestId(item))
+        .filter(item => isOpenMaintenanceStatus(item.status));
+    } catch (error) {
+      console.error("Error fetching maintenance assignments:", error);
+      return [];
+    }
+  }));
+
+  maintenanceItemsCache = maintenanceGroups
+    .flat()
+    .sort((left, right) => String(left.projectName || "").localeCompare(String(right.projectName || "")));
+
+  renderMaintenanceAssignments(maintenanceItemsCache);
+}
+
+function renderMaintenanceAssignments(items) {
+  const container = document.getElementById("maintenance-container");
+  if (!container) return;
+
+  if (!Array.isArray(items) || items.length === 0) {
+    container.innerHTML = "<p>No maintenance items assigned.</p>";
+    return;
+  }
+
+  container.innerHTML = items.map(item => {
+    const currentStatus = String(item.status || "new").toLowerCase();
+    const statusClass = getStatusClass(currentStatus);
+    const actionLabel = getMaintenanceActionLabel(currentStatus);
+
+    return `
+      <article class="item-card maintenance-card" id="maintenance-card-${item.itemId}">
+        <h3>
+          <span>${item.name || "Unnamed Maintenance Item"}</span>
+          <span class="maintenance-project-tag"><i class="fas fa-tools"></i>${item.projectName || "Unknown Project"}</span>
+        </h3>
+        <p><strong>Status:</strong> <span class="${statusClass}">${currentStatus}</span></p>
+        <div class="maintenance-meta">
+          <p><strong>Project Address:</strong> ${item.projectAddress || "N/A"}</p>
+        </div>
+        <div class="maintenance-description">
+          <strong>Description</strong>
+          ${formatMaintenanceDescription(item.description)}
+        </div>
+        <div class="maintenance-photo-grid">
+          <div class="maintenance-photo-block">
+            
+            <div class="maintenance-photo-list" id="maintenance-before-${item.itemId}">
+              ${generateMaintenancePhotoList(item.photos?.before || [], item.itemId, "before")}
+            </div>
+            <label class="maintenance-upload-label" id="maintenance-before-label-${item.itemId}">
+              <input id="maintenance-before-input-${item.itemId}" type="file" accept="image/*" multiple onchange="uploadMaintenancePhoto(event, '${item.itemId}', 'before', '${item.projectId}', '${item.estimateId || ""}')">
+              <span>Upload Before</span>
+            </label>
+          </div>
+          <div class="maintenance-photo-block">
+            
+            <div class="maintenance-photo-list" id="maintenance-after-${item.itemId}">
+              ${generateMaintenancePhotoList(item.photos?.after || [], item.itemId, "after")}
+            </div>
+            <label class="maintenance-upload-label" id="maintenance-after-label-${item.itemId}">
+              <input id="maintenance-after-input-${item.itemId}" type="file" accept="image/*" multiple onchange="uploadMaintenancePhoto(event, '${item.itemId}', 'after', '${item.projectId}', '${item.estimateId || ""}')">
+              <span>Upload After</span>
+            </label>
+          </div>
+        </div>
+        <div class="maintenance-actions">
+          <button class="maintenance-status-btn" id="maintenance-status-btn-${item.itemId}" onclick="toggleMaintenanceItemStatus('${item.itemId}', '${currentStatus}')">${actionLabel}</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+async function toggleMaintenanceItemStatus(itemId, currentStatus) {
+  const vendorId = localStorage.getItem("vendorId");
+  if (!vendorId) {
+    showToast("Vendor not authenticated.");
+    return;
+  }
+
+  const nextStatus = getMaintenanceNextStatus(currentStatus).status;
+  let removedFromView = false;
+
+  setMaintenanceItemBusy(itemId, true, nextStatus === "completed" ? "Completing..." : "Updating...");
+  try {
+    const response = await fetch(`/api/vendors/${vendorId}/update-item-status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itemId, status: nextStatus })
+    });
+
+    if (!response.ok) throw new Error("Failed to update maintenance item status.");
+
+    showToast(`Maintenance item updated to ${nextStatus}.`);
+    updateMaintenanceItemStatusLocally(itemId, nextStatus);
+    removedFromView = !isOpenMaintenanceStatus(nextStatus);
+  } catch (error) {
+    console.error("Error updating maintenance item status:", error);
+    showToast("Failed to update maintenance item status.");
+  } finally {
+    if (!removedFromView) {
+      setMaintenanceItemBusy(itemId, false);
+    }
+  }
+}
+
+async function uploadMaintenancePhoto(event, itemId, type, projectId, estimateId) {
+  const files = event.target.files;
+  if (!files || files.length === 0) return;
+
+  const vendorId = localStorage.getItem("vendorId");
+  if (!vendorId || !projectId || !estimateId) {
+    showToast("Missing upload context for this maintenance item.");
+    return;
+  }
+
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append("photos", file);
+  }
+
+  formData.append("itemId", itemId);
+  formData.append("type", type);
+  formData.append("estimateId", estimateId);
+  formData.append("vendorId", vendorId);
+
+  setMaintenancePhotoBusy(itemId, type, true);
+
+  try {
+    const response = await fetch("/api/upload-photos", {
+      method: "POST",
+      body: formData
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || "Upload failed.");
+
+    showToast(`${files.length} photo(s) uploaded.`);
+    await refreshMaintenancePhotoSection(projectId, estimateId, itemId, type);
+  } catch (error) {
+    console.error("Maintenance photo upload error:", error);
+    showToast("Failed to upload maintenance photos.");
+  } finally {
+    setMaintenancePhotoBusy(itemId, type, false);
+    event.target.value = "";
+  }
+}
+
+async function refreshMaintenancePhotoSection(projectId, estimateId, itemId, type) {
+  const vendorId = localStorage.getItem("vendorId");
+  if (!vendorId) return;
+
+  try {
+    const response = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}?estimateId=${estimateId}&t=${Date.now()}`);
+    if (!response.ok) throw new Error("Failed to refresh maintenance item photos.");
+
+    const data = await response.json();
+    const item = (data.items || []).find(entry => String(entry.itemId) === String(itemId));
+    if (!item) throw new Error("Maintenance item not found after upload.");
+
+    const cachedItem = getMaintenanceItemById(itemId);
+    if (cachedItem) {
+      cachedItem.photos = item.photos || cachedItem.photos || { before: [], after: [] };
+    }
+
+    const photoContainer = document.getElementById(`maintenance-${type}-${itemId}`);
+    if (photoContainer) {
+      photoContainer.innerHTML = generateMaintenancePhotoList(item.photos?.[type] || [], itemId, type);
+    }
+  } catch (error) {
+    console.error("Error refreshing maintenance photo section:", error);
+  }
+}
+
 // ✅ Fetch Assigned Projects
 async function fetchAssignedProjects(vendorId) {
-  let projects = []; // Define projects at the start
     showLoader();
     try {
         const response = await fetch(`/api/vendors/${vendorId}/assigned-projects?t=${new Date().getTime()}`);
@@ -699,12 +1682,14 @@ async function fetchAssignedProjects(vendorId) {
         const inProgress = data.inProgress || [];
         const completed = data.completed || [];
         const rework = data.rework || [];
+        const allProjectGroups = [...newJobs, ...inProgress, ...completed, ...rework];
 
         // Display projects
         await displayAssignedProjects(newJobs, "new-jobs-container");
         await displayAssignedProjects(inProgress, "in-progress-container");
         await displayAssignedProjects(completed, "completed-container");
         await displayAssignedProjects(rework, "rework-container");
+        await fetchMaintenanceAssignments(vendorId, allProjectGroups);
 
         
 
@@ -713,6 +1698,7 @@ async function fetchAssignedProjects(vendorId) {
         const countInProgress = document.querySelectorAll("#in-progress-container .project-card").length;
         const countCompleted = document.querySelectorAll("#completed-container .project-card").length;
         const countRework = document.querySelectorAll("#rework-container .project-card").length;
+        const countMaintenance = document.querySelectorAll("#maintenance-container .maintenance-card").length;
     
                 // Update regular tabs with styled count
         const countStyle = 'style="color:#fff;background:#007bff;border-radius:10px;padding:2px 8px;font-size:13px;margin-left:6px;"';
@@ -720,6 +1706,7 @@ async function fetchAssignedProjects(vendorId) {
         // --- Update tab counts ---
         document.getElementById("tab-new-jobs").innerHTML = `New Jobs <span style="color:#fff;background:#007bff;border-radius:10px;padding:2px 8px;font-size:13px;margin-left:6px;">${countNew}</span>`;
         document.getElementById("tab-in-progress").innerHTML = `In Progress <span style="color:#fff;background:#007bff;border-radius:10px;padding:2px 8px;font-size:13px;margin-left:6px;">${countInProgress}</span>`;
+        document.getElementById("tab-maintenance").innerHTML = `Maintenance <span style="color:#fff;background:#d7a203;border-radius:10px;padding:2px 8px;font-size:13px;margin-left:6px;">${countMaintenance}</span>`;
        
         document.getElementById("tab-completed").innerHTML = `Completed <span style="color:#fff;background:#007bff;border-radius:10px;padding:2px 8px;font-size:13px;margin-left:6px;">${countCompleted}</span>`;
 
@@ -768,18 +1755,30 @@ async function fetchAssignedProjects(vendorId) {
 
 
 
+
 // ✅ Display Projects
 async function displayAssignedProjects(projects, containerId) {
   const container = document.getElementById(containerId);
+  const vendorId = localStorage.getItem("vendorId");
   container.innerHTML = "";
   if (!projects || projects.length === 0) {
     container.innerHTML = "<p>No projects available.</p>";
     return;
   }
+  let renderedProjectCount = 0;
   for (const project of projects) {
     const { projectId } = project;
     console.log(projectId);
     if (!projectId) continue;
+
+    const shouldRequireAssignedEstimate = containerId === "new-jobs-container" || containerId === "in-progress-container";
+    if (shouldRequireAssignedEstimate) {
+      const hasAssignedEstimate = await projectHasAssignedEstimate(vendorId, projectId._id);
+      if (!hasAssignedEstimate) {
+        continue;
+      }
+    }
+
     // Fetch project details to get the code
     let projectCode = "N/A";
     try {
@@ -810,6 +1809,11 @@ if (containerId === "new-jobs-container") {
       ${startJobBtn}
     `;
     container.appendChild(card);
+    renderedProjectCount += 1;
+  }
+
+  if (renderedProjectCount === 0) {
+    container.innerHTML = "<p>No projects available.</p>";
   }
 }
     
@@ -824,27 +1828,6 @@ function goToInvoicePage() {
 function viewProject(projectId, status) {
 
     window.location.href = `/projectview.html?projectId=${projectId}`;
-}
-
-// ✅ Start a Project
-async function startProject(projectId) {
-    try {
-        const response = await fetch('/api/vendor/update-project-status', {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ vendorId: localStorage.getItem("vendorId"), projectId, status: "in-progress" }),
-        });
-
-        if (!response.ok) throw new Error("Failed to start project.");
-
-        showToast("Project has been started. You can now view it.", "success");
-        fetchAssignedProjects(localStorage.getItem("vendorId"));
-    } catch (error) {
-        showToast("Error starting project.", "error");
-        console.error("Error starting project:", error);
-    }
 }
 
 async function checkAndUpdateProjectStatus(vendorId, projectId, currentStatus) {
@@ -1049,14 +2032,9 @@ async function completeProject(projectId) {
 }
 
 // Tab toggle logic
-document.querySelectorAll('.tab-btn').forEach(btn => {
+document.querySelectorAll('.tab-btn, .mobile-nav-btn').forEach(btn => {
   btn.addEventListener('click', function() {
-    // Remove active from all tabs and sections
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.section-tab').forEach(sec => sec.classList.remove('active'));
-    // Add active to clicked tab and corresponding section
-    this.classList.add('active');
-    document.getElementById(this.getAttribute('data-tab')).classList.add('active');
+    activateTab(this.getAttribute('data-tab'));
   });
 });
 
@@ -1108,6 +2086,7 @@ async function startJob(projectId) {
     hideLoader();
   }
 }
+
   </script>
 </body>
 </html>
