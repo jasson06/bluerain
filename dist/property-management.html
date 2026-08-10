@@ -6487,6 +6487,10 @@ const state = {
 };
 
 const API_URL = '/api';
+let propertyMaintenancePhotoHydrationStarted = false;
+let propertyMaintenancePhotoHydrationComplete = false;
+let portfolioMaintenancePhotoHydrationStarted = false;
+let portfolioMaintenancePhotoHydrationComplete = false;
 const MAINTENANCE_WORKFLOW_STAGE_OPTIONS = [
     ['new', 'New'],
     ['scheduled', 'Scheduled'],
@@ -12006,6 +12010,8 @@ async function loadMaintenanceRequests(propertyId, force = false) {
             console.warn('Error loading vendors for maintenance requests:', vendorError);
         }
         state.maintenanceRequests = requests;
+        propertyMaintenancePhotoHydrationStarted = false;
+        propertyMaintenancePhotoHydrationComplete = false;
         console.log('Loaded maintenance requests:', state.maintenanceRequests);
         if (maintenanceRequestListView) {
             renderMaintenanceRequestsList(state.maintenanceRequests);
@@ -12030,6 +12036,47 @@ function renderMaintenancePhotoGallery(request, source = 'property') {
         return '';
     }
 
+    const requestId = String(request?._id || '').trim();
+    const deferPhotos = shouldDeferMaintenancePhotos(source);
+
+    return `
+        <div data-maint-photo-gallery="true" data-request-id="${requestId}" data-source="${source}" style="display:grid;gap:0;">
+            ${deferPhotos ? renderMaintenancePhotoGalleryLoadingState(beforePhotos, afterPhotos) : renderMaintenancePhotoGalleryContent(request, source)}
+        </div>
+    `;
+}
+
+function shouldDeferMaintenancePhotos(source = 'property') {
+    if (source === 'portfolio') {
+        return !portfolioMaintenancePhotoHydrationComplete && !portfolioMaintenanceListView;
+    }
+
+    return !propertyMaintenancePhotoHydrationComplete && !maintenanceRequestListView;
+}
+
+function renderMaintenancePhotoGalleryLoadingState(beforePhotos = [], afterPhotos = []) {
+    const renderPlaceholder = (photoType, label, count) => `
+        <div style="margin-top:8px;">
+            <div style="font-size:0.8rem;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;color:${photoType === 'after' ? '#92400e' : '#334155'};margin-bottom:6px;">
+                <i class="fas ${photoType === 'after' ? 'fa-flag-checkered' : 'fa-camera'}" style="margin-right:6px;"></i>${label}
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;min-height:72px;padding:12px;border-radius:10px;background:linear-gradient(180deg, rgba(248,250,252,0.96), rgba(239,246,255,0.92));border:1px solid #dbeafe;">
+                <span style="width:22px;height:22px;border:2px solid rgba(14,165,233,0.2);border-top-color:#0ea5e9;border-radius:50%;animation:spin 0.8s linear infinite;flex:0 0 auto;"></span>
+                <span style="font-size:0.85rem;color:#475569;font-weight:600;">Loading ${count} ${label.toLowerCase()}...</span>
+            </div>
+        </div>
+    `;
+
+    return [
+        beforePhotos.length ? renderPlaceholder('before', 'Request Photos', beforePhotos.length) : '',
+        afterPhotos.length ? renderPlaceholder('after', 'After Photos', afterPhotos.length) : ''
+    ].join('');
+}
+
+function renderMaintenancePhotoGalleryContent(request, source = 'property') {
+    const beforePhotos = Array.isArray(request?.photos) ? request.photos : [];
+    const afterPhotos = Array.isArray(request?.afterPhotos) ? request.afterPhotos : [];
+
     const renderThumbs = (photos, photoType, label) => `
         <div style="margin-top:8px;">
             <div style="font-size:0.8rem;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;color:${photoType === 'after' ? '#92400e' : '#334155'};margin-bottom:6px;">
@@ -12037,8 +12084,11 @@ function renderMaintenancePhotoGallery(request, source = 'property') {
             </div>
             <div class="maintenance-photos" style="display:flex;flex-wrap:wrap;gap:6px;">
                 ${photos.map((src, idx) => `
-                    <div class="photo-thumb" style="width:64px;height:64px;border-radius:6px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.12);cursor:pointer;">
-                        <img src="${src}" alt="${label} ${idx + 1}" style="width:100%;height:100%;object-fit:cover;" onclick="openMaintenancePhotoViewer('${request._id}', ${idx}, '${source}', '${photoType}')">
+                    <div class="photo-thumb maintenance-photo-thumb-loading" style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:6px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.12);cursor:pointer;background:linear-gradient(180deg,#eff6ff,#dbeafe);">
+                        <span class="maintenance-photo-thumb-overlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg, rgba(239,246,255,0.92), rgba(219,234,254,0.88));z-index:1;pointer-events:none;">
+                            <span style="width:18px;height:18px;border:2px solid rgba(14,165,233,0.22);border-top-color:#0ea5e9;border-radius:50%;animation:spin 0.8s linear infinite;"></span>
+                        </span>
+                        <img src="${src}" alt="${label} ${idx + 1}" loading="lazy" decoding="async" fetchpriority="low" style="width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 0.2s ease;" onclick="openMaintenancePhotoViewer('${request._id}', ${idx}, '${source}', '${photoType}')" onload="handlePropertyManagementMaintenancePhotoLoad(this)" onerror="handlePropertyManagementMaintenancePhotoLoad(this)">
                     </div>
                 `).join('')}
             </div>
@@ -12049,6 +12099,79 @@ function renderMaintenancePhotoGallery(request, source = 'property') {
         beforePhotos.length ? renderThumbs(beforePhotos, 'before', 'Request Photos') : '',
         afterPhotos.length ? renderThumbs(afterPhotos, 'after', 'After Photos') : ''
     ].join('');
+}
+
+function handlePropertyManagementMaintenancePhotoLoad(imageElement) {
+    const thumb = imageElement?.closest('.maintenance-photo-thumb-loading');
+    if (!thumb) return;
+    const overlay = thumb.querySelector('.maintenance-photo-thumb-overlay');
+    if (overlay) overlay.style.display = 'none';
+    imageElement.style.opacity = '1';
+}
+
+function getMaintenancePhotoSourceItems(source = 'property') {
+    return source === 'portfolio' ? (state.portfolioMaintenance || []) : (state.maintenanceRequests || []);
+}
+
+function hydrateMaintenancePhotoGalleries(source = 'property', startIndex = 0, batchSize = 3) {
+    const galleryNodes = Array.from(document.querySelectorAll(`[data-maint-photo-gallery="true"][data-source="${source}"]`));
+    const isPortfolio = source === 'portfolio';
+
+    if (!galleryNodes.length) {
+        if (isPortfolio) {
+            portfolioMaintenancePhotoHydrationComplete = true;
+            portfolioMaintenancePhotoHydrationStarted = false;
+        } else {
+            propertyMaintenancePhotoHydrationComplete = true;
+            propertyMaintenancePhotoHydrationStarted = false;
+        }
+        return;
+    }
+
+    const itemsById = new Map(getMaintenancePhotoSourceItems(source).map(item => [String(item?._id || ''), item]));
+    const currentBatch = galleryNodes.slice(startIndex, startIndex + batchSize);
+    currentBatch.forEach(node => {
+        const requestId = String(node.getAttribute('data-request-id') || '');
+        const item = itemsById.get(requestId);
+        if (item) {
+            node.innerHTML = renderMaintenancePhotoGalleryContent(item, source);
+        }
+    });
+
+    const nextIndex = startIndex + batchSize;
+    if (nextIndex >= galleryNodes.length) {
+        if (isPortfolio) {
+            portfolioMaintenancePhotoHydrationComplete = true;
+            portfolioMaintenancePhotoHydrationStarted = false;
+        } else {
+            propertyMaintenancePhotoHydrationComplete = true;
+            propertyMaintenancePhotoHydrationStarted = false;
+        }
+        return;
+    }
+
+    window.requestAnimationFrame(() => hydrateMaintenancePhotoGalleries(source, nextIndex, batchSize));
+}
+
+function scheduleMaintenancePhotoHydration(source = 'property') {
+    const isPortfolio = source === 'portfolio';
+    const isStarted = isPortfolio ? portfolioMaintenancePhotoHydrationStarted : propertyMaintenancePhotoHydrationStarted;
+    const isComplete = isPortfolio ? portfolioMaintenancePhotoHydrationComplete : propertyMaintenancePhotoHydrationComplete;
+    const items = getMaintenancePhotoSourceItems(source);
+
+    if (isStarted || isComplete || !Array.isArray(items) || !items.length) {
+        return;
+    }
+
+    if (isPortfolio) {
+        portfolioMaintenancePhotoHydrationStarted = true;
+    } else {
+        propertyMaintenancePhotoHydrationStarted = true;
+    }
+
+    runWhenIdle(() => {
+        window.requestAnimationFrame(() => hydrateMaintenancePhotoGalleries(source, 0, 3));
+    });
 }
 
 function renderMaintenanceRequestsList(requests) {
@@ -12248,6 +12371,7 @@ function renderMaintenanceRequests() {
 
     // If we navigated here from the global overview, focus the selected request
     focusMaintenanceRequest();
+        scheduleMaintenancePhotoHydration('property');
 }
 
 function focusMaintenanceRequest() {
@@ -20189,6 +20313,8 @@ async function renderPortfolioOverview() {
             let pendingRequestCount = 0;
             let recurringUpcoming = 0;
             let recurringInProgress = 0;
+            portfolioMaintenancePhotoHydrationStarted = false;
+            portfolioMaintenancePhotoHydrationComplete = false;
             try {
                 // Include completed requests in the portfolio maintenance dataset so
                 // completed via filters, but only count pending + in-progress in the chip.
@@ -21732,6 +21858,9 @@ function renderPortfolioDetails(type) {
         }
         initializePortfolioDetailsSearch();
         renderFilteredPortfolioDetailsRows();
+        if (!portfolioMaintenanceListView) {
+            scheduleMaintenancePhotoHydration('portfolio');
+        }
 
         const portfolioMaintenanceViewToggleBtn = document.getElementById('portfolioMaintenanceViewToggleBtn');
         if (portfolioMaintenanceViewToggleBtn) {
