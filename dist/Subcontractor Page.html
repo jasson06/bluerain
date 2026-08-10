@@ -76,6 +76,38 @@ h2 {
     scroll-snap-type: none;
 }
 
+.scroll-container.is-loading {
+  gap: 12px;
+}
+
+.section-loader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 84px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 255, 0.92));
+  border: 1px solid #dbeafe;
+  box-shadow: 0 10px 26px rgba(37, 99, 235, 0.08);
+}
+
+.section-loader-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #dbeafe;
+  border-top-color: #0ea5e9;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex: 0 0 auto;
+}
+
+.section-loader-text {
+  color: #0f4c75;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 /* Hide scrollbar for Chrome, Safari, Edge */
 .scroll-container::-webkit-scrollbar {
     display: none;
@@ -908,6 +940,16 @@ button:hover,
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
   }
 
+  .section-loader {
+    min-height: 72px;
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .section-loader-text {
+    font-size: 13px;
+  }
+
   .project-card h3,
   .item-card h4,
   .maintenance-card h3 {
@@ -1344,6 +1386,8 @@ let maintenancePhotoViewer = {
   type: "",
   touchStartX: null
 };
+const projectAssignmentBundles = new Map();
+const projectCodeCache = new Map();
 
 document.addEventListener("DOMContentLoaded", async () => {
     const vendorId = localStorage.getItem("vendorId");
@@ -1387,6 +1431,59 @@ function showLoader() {
 
 function hideLoader() {
   document.getElementById('loader').style.display = 'none';
+}
+
+function getDashboardContainerIds() {
+  return [
+    "new-jobs-container",
+    "in-progress-container",
+    "maintenance-container",
+    "rework-container",
+    "completed-container"
+  ];
+}
+
+function renderSectionLoader(message = "Loading...") {
+  return `
+    <div class="section-loader" aria-live="polite">
+      <div class="section-loader-spinner"></div>
+      <div class="section-loader-text">${message}</div>
+    </div>
+  `;
+}
+
+function setContainerLoading(containerId, isLoading, message = "Loading...") {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  container.classList.toggle("is-loading", isLoading);
+  if (isLoading) {
+    container.innerHTML = renderSectionLoader(message);
+  }
+}
+
+function setDashboardLoadingState(isLoading) {
+  const loaderMessages = {
+    "new-jobs-container": "Loading new jobs...",
+    "in-progress-container": "Loading active jobs...",
+    "maintenance-container": "Loading maintenance items...",
+    "rework-container": "Loading rework items...",
+    "completed-container": "Loading completed jobs..."
+  };
+
+  getDashboardContainerIds().forEach(containerId => {
+    setContainerLoading(containerId, isLoading, loaderMessages[containerId] || "Loading...");
+  });
+}
+
+function renderDashboardLoadError() {
+  getDashboardContainerIds().forEach(containerId => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.classList.remove("is-loading");
+    container.innerHTML = "<p>Unable to load this section right now.</p>";
+  });
 }
 
 function centerActiveTab(tabName) {
@@ -1612,6 +1709,94 @@ function capitalizeMaintenancePhotoType(type) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function mergeUniquePhotoUrls(existingPhotos = [], newPhotos = []) {
+  const merged = Array.isArray(existingPhotos) ? [...existingPhotos] : [];
+
+  newPhotos.forEach(photoUrl => {
+    if (photoUrl && !merged.includes(photoUrl)) {
+      merged.push(photoUrl);
+    }
+  });
+
+  return merged;
+}
+
+async function fetchProjectAssignmentBundle(vendorId, projectId, options = {}) {
+  const projectKey = String(projectId || "");
+  const shouldForce = options.force === true;
+  if (!vendorId || !projectKey) return null;
+
+  if (!shouldForce && projectAssignmentBundles.has(projectKey)) {
+    return projectAssignmentBundles.get(projectKey);
+  }
+
+  const [assignedResponse, estimatesResponse] = await Promise.all([
+    fetch(`/api/vendors/${vendorId}/assigned-items/${projectKey}?t=${Date.now()}`),
+    fetch(`/api/estimates?projectId=${projectKey}&t=${Date.now()}`)
+  ]);
+
+  if (!assignedResponse.ok) {
+    throw new Error(`Failed to fetch project items for ${projectKey}`);
+  }
+
+  if (!estimatesResponse.ok) {
+    throw new Error(`Failed to fetch estimates for ${projectKey}`);
+  }
+
+  const assignedData = await assignedResponse.json();
+  const estimatesData = await estimatesResponse.json();
+  const estimates = estimatesData.estimates || [];
+  const assignedItems = assignedData.items || [];
+  const estimateIds = new Set(estimates.map(estimate => normalizeObjectId(estimate._id)).filter(Boolean));
+  const bundle = {
+    assignedItems,
+    estimates,
+    maintenanceLookup: buildMaintenanceLookupFromEstimates(estimates),
+    hasAssignedEstimate: assignedItems.some(item => {
+      const estimateId = normalizeObjectId(item.estimateId);
+      return estimateId && estimateIds.has(estimateId);
+    })
+  };
+
+  projectAssignmentBundles.set(projectKey, bundle);
+  return bundle;
+}
+
+async function fetchProjectCode(projectId) {
+  const projectKey = String(projectId || "");
+  if (!projectKey) return "N/A";
+
+  if (projectCodeCache.has(projectKey)) {
+    return projectCodeCache.get(projectKey);
+  }
+
+  try {
+    const res = await fetch(`/api/details/projects/${projectKey}`);
+    if (!res.ok) {
+      projectCodeCache.set(projectKey, "N/A");
+      return "N/A";
+    }
+
+    const data = await res.json();
+    const projectCode = data.project?.code || "N/A";
+    projectCodeCache.set(projectKey, projectCode);
+    return projectCode;
+  } catch (error) {
+    projectCodeCache.set(projectKey, "N/A");
+    return "N/A";
+  }
+}
+
+function updateCachedAssignedItem(itemId, updater) {
+  for (const bundle of projectAssignmentBundles.values()) {
+    const assignedItem = (bundle.assignedItems || []).find(entry => String(entry.itemId) === String(itemId));
+    if (assignedItem) {
+      updater(assignedItem);
+      break;
+    }
+  }
+}
+
 function getMaintenanceItemById(itemId) {
   return maintenanceItemsCache.find(item => String(item.itemId) === String(itemId)) || null;
 }
@@ -1680,18 +1865,65 @@ function removeMaintenanceItem(itemId) {
   updateMaintenanceTabCount();
 }
 
+function updateMaintenanceCardStatus(itemId, status) {
+  const statusElement = document.getElementById(`maintenance-status-${itemId}`);
+  if (statusElement) {
+    statusElement.className = getStatusClass(status);
+    statusElement.textContent = status;
+  }
+
+  const button = document.getElementById(`maintenance-status-btn-${itemId}`);
+  if (button) {
+    button.textContent = getMaintenanceActionLabel(status);
+    button.disabled = false;
+    delete button.dataset.previousLabel;
+  }
+}
+
+function applyMaintenancePhotoUpdate(itemId, type, newPhotoUrls) {
+  const cachedItem = getMaintenanceItemById(itemId);
+  if (!cachedItem) return;
+
+  const existingPhotos = cachedItem.photos?.[type] || [];
+  const mergedPhotos = mergeUniquePhotoUrls(existingPhotos, newPhotoUrls);
+  cachedItem.photos = {
+    ...(cachedItem.photos || {}),
+    [type]: mergedPhotos
+  };
+
+  updateCachedAssignedItem(itemId, assignedItem => {
+    assignedItem.photos = {
+      ...(assignedItem.photos || {}),
+      [type]: mergedPhotos
+    };
+  });
+
+  const photoContainer = document.getElementById(`maintenance-${type}-${itemId}`);
+  if (photoContainer) {
+    photoContainer.innerHTML = generateMaintenancePhotoList(mergedPhotos, itemId, type);
+  }
+
+  if (maintenancePhotoViewer.itemId === String(itemId) && maintenancePhotoViewer.type === type) {
+    maintenancePhotoViewer.photos = mergedPhotos;
+    maintenancePhotoViewer.index = Math.min(maintenancePhotoViewer.index, Math.max(mergedPhotos.length - 1, 0));
+    renderMaintenancePhotoModal();
+  }
+}
+
 function updateMaintenanceItemStatusLocally(itemId, status) {
   const item = getMaintenanceItemById(itemId);
   if (!item) return;
   item.status = status;
+  updateCachedAssignedItem(itemId, assignedItem => {
+    assignedItem.status = status;
+  });
 
   if (!isOpenMaintenanceStatus(status)) {
     removeMaintenanceItem(itemId);
     return;
   }
 
-  renderMaintenanceAssignments(maintenanceItemsCache);
-  updateMaintenanceTabCount();
+  updateMaintenanceCardStatus(itemId, status);
 }
 
 function generateMaintenancePhotoList(photos, itemId, type) {
@@ -1701,7 +1933,7 @@ function generateMaintenancePhotoList(photos, itemId, type) {
 
   return photos.map((photo, index) => `
     <button type="button" class="maintenance-photo-thumb" onclick="openMaintenancePhoto('${itemId}', '${type}', ${index})">
-      <img src="${photo}" alt="${type} photo for item ${itemId}">
+      <img src="${photo}" alt="${type} photo for item ${itemId}" loading="lazy" decoding="async" fetchpriority="low">
     </button>
   `).join("");
 }
@@ -1722,29 +1954,8 @@ async function projectHasAssignedEstimate(vendorId, projectId) {
   if (!vendorId || !projectId) return false;
 
   try {
-    const [assignedResponse, estimatesResponse] = await Promise.all([
-      fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}?t=${Date.now()}`),
-      fetch(`/api/estimates?projectId=${projectId}&t=${Date.now()}`)
-    ]);
-
-    if (!assignedResponse.ok || !estimatesResponse.ok) {
-      return false;
-    }
-
-    const assignedData = await assignedResponse.json();
-    const estimatesData = await estimatesResponse.json();
-    const assignedItems = assignedData.items || [];
-    const estimates = estimatesData.estimates || [];
-
-    if (!assignedItems.length || !estimates.length) {
-      return false;
-    }
-
-    const estimateIds = new Set(estimates.map(estimate => normalizeObjectId(estimate._id)).filter(Boolean));
-    return assignedItems.some(item => {
-      const estimateId = normalizeObjectId(item.estimateId);
-      return estimateId && estimateIds.has(estimateId);
-    });
+    const bundle = await fetchProjectAssignmentBundle(vendorId, projectId);
+    return Boolean(bundle?.hasAssignedEstimate);
   } catch (error) {
     console.error("Error checking assigned estimates for project:", error);
     return false;
@@ -1773,22 +1984,13 @@ async function fetchMaintenanceAssignments(vendorId, projectGroups) {
   const maintenanceGroups = await Promise.all(uniqueProjects.map(async (entry) => {
     const projectId = String(entry.projectId._id);
     try {
-      const [assignedResponse, estimatesResponse] = await Promise.all([
-        fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}?t=${Date.now()}`),
-        fetch(`/api/estimates?projectId=${projectId}&t=${Date.now()}`)
-      ]);
+      const bundle = await fetchProjectAssignmentBundle(vendorId, projectId);
+      if (!bundle) return [];
 
-      if (!assignedResponse.ok) throw new Error(`Failed to fetch project items for ${projectId}`);
-      if (!estimatesResponse.ok) throw new Error(`Failed to fetch estimates for ${projectId}`);
-
-      const assignedData = await assignedResponse.json();
-      const estimatesData = await estimatesResponse.json();
-      const maintenanceLookup = buildMaintenanceLookupFromEstimates(estimatesData.estimates || []);
-
-      return (assignedData.items || [])
+      return (bundle.assignedItems || [])
         .map(item => {
           const itemId = normalizeObjectId(item.itemId);
-          const matchedMaintenanceItem = maintenanceLookup.get(itemId);
+          const matchedMaintenanceItem = bundle.maintenanceLookup.get(itemId);
           if (!matchedMaintenanceItem && !hasMaintenanceRequestId(item)) return null;
 
           return {
@@ -1821,6 +2023,7 @@ async function fetchMaintenanceAssignments(vendorId, projectGroups) {
 function renderMaintenanceAssignments(items) {
   const container = document.getElementById("maintenance-container");
   if (!container) return;
+  container.classList.remove("is-loading");
 
   if (!Array.isArray(items) || items.length === 0) {
     container.innerHTML = "<p>No maintenance items assigned.</p>";
@@ -1838,7 +2041,7 @@ function renderMaintenanceAssignments(items) {
           <span>${item.name || "Unnamed Maintenance Item"}</span>
           <span class="maintenance-project-tag"><i class="fas fa-tools"></i>${item.projectName || "Unknown Project"}</span>
         </h3>
-        <p><strong>Status:</strong> <span class="${statusClass}">${currentStatus}</span></p>
+        <p><strong>Status:</strong> <span class="${statusClass}" id="maintenance-status-${item.itemId}">${currentStatus}</span></p>
         <div class="maintenance-meta">
           <p><strong>Project Address:</strong> ${item.projectAddress || "N/A"}</p>
         </div>
@@ -1943,7 +2146,11 @@ async function uploadMaintenancePhoto(event, itemId, type, projectId, estimateId
     if (!response.ok) throw new Error(result.message || "Upload failed.");
 
     showToast(`${files.length} photo(s) uploaded.`);
-    await refreshMaintenancePhotoSection(projectId, estimateId, itemId, type);
+    if (Array.isArray(result.photoUrls) && result.photoUrls.length > 0) {
+      applyMaintenancePhotoUpdate(itemId, type, result.photoUrls);
+    } else {
+      await refreshMaintenancePhotoSection(projectId, estimateId, itemId, type);
+    }
   } catch (error) {
     console.error("Maintenance photo upload error:", error);
     showToast("Failed to upload maintenance photos.");
@@ -1958,22 +2165,11 @@ async function refreshMaintenancePhotoSection(projectId, estimateId, itemId, typ
   if (!vendorId) return;
 
   try {
-    const response = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}?estimateId=${estimateId}&t=${Date.now()}`);
-    if (!response.ok) throw new Error("Failed to refresh maintenance item photos.");
-
-    const data = await response.json();
-    const item = (data.items || []).find(entry => String(entry.itemId) === String(itemId));
+    const bundle = await fetchProjectAssignmentBundle(vendorId, projectId, { force: true });
+    const item = (bundle?.assignedItems || []).find(entry => String(entry.itemId) === String(itemId));
     if (!item) throw new Error("Maintenance item not found after upload.");
 
-    const cachedItem = getMaintenanceItemById(itemId);
-    if (cachedItem) {
-      cachedItem.photos = item.photos || cachedItem.photos || { before: [], after: [] };
-    }
-
-    const photoContainer = document.getElementById(`maintenance-${type}-${itemId}`);
-    if (photoContainer) {
-      photoContainer.innerHTML = generateMaintenancePhotoList(item.photos?.[type] || [], itemId, type);
-    }
+    applyMaintenancePhotoUpdate(itemId, type, item.photos?.[type] || []);
   } catch (error) {
     console.error("Error refreshing maintenance photo section:", error);
   }
@@ -1981,8 +2177,9 @@ async function refreshMaintenancePhotoSection(projectId, estimateId, itemId, typ
 
 // ✅ Fetch Assigned Projects
 async function fetchAssignedProjects(vendorId) {
-    showLoader();
+  setDashboardLoadingState(true);
     try {
+    projectAssignmentBundles.clear();
         const response = await fetch(`/api/vendors/${vendorId}/assigned-projects?t=${new Date().getTime()}`);
         if (!response.ok) throw new Error("Failed to fetch assigned projects.");
 
@@ -2061,8 +2258,9 @@ async function fetchAssignedProjects(vendorId) {
 
     } catch (error) {
         console.error("Error fetching assigned projects:", error);
+    renderDashboardLoadError();
     } finally {
-        hideLoader();
+    getDashboardContainerIds().forEach(containerId => setContainerLoading(containerId, false));
     }
 }
 
@@ -2073,61 +2271,50 @@ async function fetchAssignedProjects(vendorId) {
 async function displayAssignedProjects(projects, containerId) {
   const container = document.getElementById(containerId);
   const vendorId = localStorage.getItem("vendorId");
+  if (!container) return;
+  container.classList.remove("is-loading");
   container.innerHTML = "";
   if (!projects || projects.length === 0) {
     container.innerHTML = "<p>No projects available.</p>";
     return;
   }
-  let renderedProjectCount = 0;
-  for (const project of projects) {
+  const shouldRequireAssignedEstimate = containerId === "new-jobs-container" || containerId === "in-progress-container";
+  const projectCards = await Promise.all(projects.map(async (project) => {
     const { projectId } = project;
-    console.log(projectId);
-    if (!projectId) continue;
+    if (!projectId) return "";
 
-    const shouldRequireAssignedEstimate = containerId === "new-jobs-container" || containerId === "in-progress-container";
     if (shouldRequireAssignedEstimate) {
       const hasAssignedEstimate = await projectHasAssignedEstimate(vendorId, projectId._id);
       if (!hasAssignedEstimate) {
-        continue;
+        return "";
       }
     }
 
-    // Fetch project details to get the code
-    let projectCode = "N/A";
-    try {
-      const res = await fetch(`/api/details/projects/${projectId._id}`);
-      if (res.ok) {
-        const data = await res.json();
-        projectCode = data.project?.code || "N/A";
-      }
-    } catch (e) {}
-    const card = document.createElement("div");
-    card.classList.add("project-card");
+    const projectCode = await fetchProjectCode(projectId._id);
+    const startJobBtn = containerId === "new-jobs-container"
+      ? `<button class="start-job-btn" onclick="startJob('${projectId._id}')"><i class="fas fa-play" style="margin-right:8px;"></i>Start Job</button>`
+      : "";
 
-
-    
-    // Only show "Start Job" button in the New Jobs section
-let startJobBtn = "";
-if (containerId === "new-jobs-container") {
-  startJobBtn = `<button class="start-job-btn" onclick="startJob('${projectId._id}')"><i class="fas fa-play" style="margin-right:8px;"></i>Start Job</button>`;
-}
-
-    card.innerHTML = `
-      <h3>${projectId.name || "Unnamed Project"}</h3>
-      <p><strong>Status:</strong> <span class="${getStatusClass(project.status)}">${project.status}</span></p>
-      <p><strong>Type:</strong> ${projectId.type || "N/A"}</p>
-      <p><strong>Address:</strong> ${projectId.address?.addressLine1 || ""}, ${projectId.address?.city || ""}, ${projectId.address?.state || ""}</p>
-      <p><strong>Lockbox Code:</strong> ${projectCode}</p>
-      <button onclick="viewProject('${projectId._id}', '${project.status}')">Line items</button>
-      ${startJobBtn}
+    return `
+      <div class="project-card">
+        <h3>${projectId.name || "Unnamed Project"}</h3>
+        <p><strong>Status:</strong> <span class="${getStatusClass(project.status)}">${project.status}</span></p>
+        <p><strong>Type:</strong> ${projectId.type || "N/A"}</p>
+        <p><strong>Address:</strong> ${projectId.address?.addressLine1 || ""}, ${projectId.address?.city || ""}, ${projectId.address?.state || ""}</p>
+        <p><strong>Lockbox Code:</strong> ${projectCode}</p>
+        <button onclick="viewProject('${projectId._id}', '${project.status}')">Line items</button>
+        ${startJobBtn}
+      </div>
     `;
-    container.appendChild(card);
-    renderedProjectCount += 1;
+  }));
+
+  const renderedCards = projectCards.filter(Boolean);
+  if (renderedCards.length === 0) {
+    container.innerHTML = "<p>No projects available.</p>";
+    return;
   }
 
-  if (renderedProjectCount === 0) {
-    container.innerHTML = "<p>No projects available.</p>";
-  }
+  container.innerHTML = renderedCards.join("");
 }
     
 
@@ -2144,8 +2331,6 @@ function viewProject(projectId, status) {
 }
 
 async function checkAndUpdateProjectStatus(vendorId, projectId, currentStatus) {
-  showLoader();
-  
   // 1. Normalize the current status for consistent comparison
   const normalizedCurrentStatus = normalizeStatus(currentStatus);
   
@@ -2160,7 +2345,6 @@ async function checkAndUpdateProjectStatus(vendorId, projectId, currentStatus) {
     
     if (!response.ok) {
       console.warn(`⚠️ API Error: ${response.status} for project ${projectId}`);
-      hideLoader();
       return normalizedCurrentStatus;
     }
 
@@ -2169,7 +2353,6 @@ async function checkAndUpdateProjectStatus(vendorId, projectId, currentStatus) {
 
     if (assignedItems.length === 0) {
       console.warn(`⚠️ No items found for project ${projectId}`);
-      hideLoader();
       return normalizedCurrentStatus;
     }
 
@@ -2269,12 +2452,10 @@ if (statusCounts.rework > 0) {
       console.log(`ℹ️ No status change needed, staying at "${normalizedCurrentStatus}"`);
     }
 
-    hideLoader();
     return newStatus;
   } catch (error) {
     console.error(`❌ Error in checkAndUpdateProjectStatus:`, error);
     showToast("Error checking project status", "error");
-    hideLoader();
     return normalizedCurrentStatus;
   }
 }
