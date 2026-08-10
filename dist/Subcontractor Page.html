@@ -674,6 +674,10 @@ button:hover,
 }
 
 .maintenance-photo-thumb {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 72px;
   height: 72px;
   border-radius: 10px;
@@ -683,11 +687,44 @@ button:hover,
   cursor: pointer;
 }
 
+.maintenance-photo-thumb.is-loading {
+  background: linear-gradient(180deg, #eff6ff, #dbeafe);
+}
+
+.maintenance-thumb-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.92), rgba(219, 234, 254, 0.88));
+  z-index: 1;
+}
+
+.maintenance-photo-thumb:not(.is-loading) .maintenance-thumb-loader {
+  display: none;
+}
+
+.maintenance-thumb-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(14, 165, 233, 0.22);
+  border-top-color: #0ea5e9;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
 .maintenance-photo-thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.maintenance-photo-thumb:not(.is-loading) img {
+  opacity: 1;
 }
 
 .maintenance-photo-modal {
@@ -1379,6 +1416,8 @@ align-items: center;
 
   <script>
 let maintenanceItemsCache = [];
+let maintenancePhotoHydrationStarted = false;
+let maintenancePhotoHydrationComplete = false;
 let maintenancePhotoViewer = {
   photos: [],
   index: 0,
@@ -1516,6 +1555,10 @@ function activateTab(tabName) {
   });
 
   centerActiveTab(tabName);
+
+  if (tabName === "maintenance") {
+    ensureMaintenancePhotosLoaded();
+  }
 }
 
 // Helper function to return a CSS class based on status
@@ -1926,16 +1969,34 @@ function updateMaintenanceItemStatusLocally(itemId, status) {
   updateMaintenanceCardStatus(itemId, status);
 }
 
+function renderMaintenancePhotoShell(type) {
+  return `
+    <div class="maintenance-photo-loader">
+      <div class="maintenance-spinner"></div>
+      <span class="maintenance-placeholder">Loading ${type} photos...</span>
+    </div>
+  `;
+}
+
 function generateMaintenancePhotoList(photos, itemId, type) {
   if (!Array.isArray(photos) || photos.length === 0) {
     return `<p class="maintenance-placeholder">No photos uploaded.</p>`;
   }
 
   return photos.map((photo, index) => `
-    <button type="button" class="maintenance-photo-thumb" onclick="openMaintenancePhoto('${itemId}', '${type}', ${index})">
-      <img src="${photo}" alt="${type} photo for item ${itemId}" loading="lazy" decoding="async" fetchpriority="low">
+    <button type="button" class="maintenance-photo-thumb is-loading" onclick="openMaintenancePhoto('${itemId}', '${type}', ${index})">
+      <span class="maintenance-thumb-loader" aria-hidden="true">
+        <span class="maintenance-thumb-spinner"></span>
+      </span>
+      <img src="${photo}" alt="${type} photo for item ${itemId}" loading="lazy" decoding="async" fetchpriority="low" onload="handleMaintenancePhotoThumbLoad(this)" onerror="handleMaintenancePhotoThumbLoad(this)">
     </button>
   `).join("");
+}
+
+function handleMaintenancePhotoThumbLoad(imageElement) {
+  const thumb = imageElement?.closest(".maintenance-photo-thumb");
+  if (!thumb) return;
+  thumb.classList.remove("is-loading");
 }
 
 async function syncMaintenanceEstimateItemStatus(itemId, status) {
@@ -1966,9 +2027,12 @@ async function fetchMaintenanceAssignments(vendorId, projectGroups) {
   const container = document.getElementById("maintenance-container");
   if (!container) return;
 
+  maintenancePhotoHydrationStarted = false;
+  maintenancePhotoHydrationComplete = false;
+
   if (!Array.isArray(projectGroups) || projectGroups.length === 0) {
     maintenanceItemsCache = [];
-    renderMaintenanceAssignments([]);
+    renderMaintenanceAssignments([], { renderPhotos: false });
     return;
   }
 
@@ -2017,13 +2081,18 @@ async function fetchMaintenanceAssignments(vendorId, projectGroups) {
     .flat()
     .sort((left, right) => String(left.projectName || "").localeCompare(String(right.projectName || "")));
 
-  renderMaintenanceAssignments(maintenanceItemsCache);
+  renderMaintenanceAssignments(maintenanceItemsCache, { renderPhotos: false });
+
+  if (document.querySelector('.section-tab.active')?.id === 'maintenance') {
+    ensureMaintenancePhotosLoaded();
+  }
 }
 
-function renderMaintenanceAssignments(items) {
+function renderMaintenanceAssignments(items, options = {}) {
   const container = document.getElementById("maintenance-container");
   if (!container) return;
   container.classList.remove("is-loading");
+  const renderPhotos = options.renderPhotos ?? maintenancePhotoHydrationComplete;
 
   if (!Array.isArray(items) || items.length === 0) {
     container.innerHTML = "<p>No maintenance items assigned.</p>";
@@ -2053,7 +2122,7 @@ function renderMaintenanceAssignments(items) {
           <div class="maintenance-photo-block">
             
             <div class="maintenance-photo-list" id="maintenance-before-${item.itemId}">
-              ${generateMaintenancePhotoList(item.photos?.before || [], item.itemId, "before")}
+              ${renderPhotos ? generateMaintenancePhotoList(item.photos?.before || [], item.itemId, "before") : renderMaintenancePhotoShell("before")}
             </div>
             <label class="maintenance-upload-label" id="maintenance-before-label-${item.itemId}">
               <input id="maintenance-before-input-${item.itemId}" type="file" accept="image/*" multiple onchange="uploadMaintenancePhoto(event, '${item.itemId}', 'before', '${item.projectId}', '${item.estimateId || ""}')">
@@ -2063,7 +2132,7 @@ function renderMaintenanceAssignments(items) {
           <div class="maintenance-photo-block">
             
             <div class="maintenance-photo-list" id="maintenance-after-${item.itemId}">
-              ${generateMaintenancePhotoList(item.photos?.after || [], item.itemId, "after")}
+              ${renderPhotos ? generateMaintenancePhotoList(item.photos?.after || [], item.itemId, "after") : renderMaintenancePhotoShell("after")}
             </div>
             <label class="maintenance-upload-label" id="maintenance-after-label-${item.itemId}">
               <input id="maintenance-after-input-${item.itemId}" type="file" accept="image/*" multiple onchange="uploadMaintenancePhoto(event, '${item.itemId}', 'after', '${item.projectId}', '${item.estimateId || ""}')">
@@ -2077,6 +2146,41 @@ function renderMaintenanceAssignments(items) {
       </article>
     `;
   }).join("");
+}
+
+function hydrateMaintenancePhotosInBatches(startIndex = 0, batchSize = 4) {
+  const nextItems = maintenanceItemsCache.slice(startIndex, startIndex + batchSize);
+
+  nextItems.forEach(item => {
+    const beforeContainer = document.getElementById(`maintenance-before-${item.itemId}`);
+    const afterContainer = document.getElementById(`maintenance-after-${item.itemId}`);
+
+    if (beforeContainer) {
+      beforeContainer.innerHTML = generateMaintenancePhotoList(item.photos?.before || [], item.itemId, "before");
+    }
+
+    if (afterContainer) {
+      afterContainer.innerHTML = generateMaintenancePhotoList(item.photos?.after || [], item.itemId, "after");
+    }
+  });
+
+  const nextIndex = startIndex + batchSize;
+  if (nextIndex >= maintenanceItemsCache.length) {
+    maintenancePhotoHydrationComplete = true;
+    maintenancePhotoHydrationStarted = false;
+    return;
+  }
+
+  window.requestAnimationFrame(() => hydrateMaintenancePhotosInBatches(nextIndex, batchSize));
+}
+
+function ensureMaintenancePhotosLoaded() {
+  if (maintenancePhotoHydrationComplete || maintenancePhotoHydrationStarted || !maintenanceItemsCache.length) {
+    return;
+  }
+
+  maintenancePhotoHydrationStarted = true;
+  window.requestAnimationFrame(() => hydrateMaintenancePhotosInBatches(0, 4));
 }
 
 async function toggleMaintenanceItemStatus(itemId, currentStatus) {
