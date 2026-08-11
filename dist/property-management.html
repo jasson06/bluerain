@@ -29,6 +29,16 @@
     box-sizing: border-box;
 } 
 
+@supports (-webkit-touch-callout: none) {
+    @media (pointer: coarse) {
+        input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+        select,
+        textarea {
+            font-size: 16px !important;
+        }
+    }
+}
+
 /* Body and container */
 body {
     font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;

@@ -6,6 +6,17 @@
 
 }
 
+@supports (-webkit-touch-callout: none) {
+  @media (pointer: coarse) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+}
+
+
 body {
   font-family: "Poppins", sans-serif;
   background-color: #f6f8fa;
