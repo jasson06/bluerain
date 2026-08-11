@@ -11,6 +11,9 @@ function ensureMobileInputZoomStyles() {
     @supports (-webkit-touch-callout: none) {
       @media (pointer: coarse) {
         input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+        #smart-filter-input,
+        .filter-search-input,
+        .filter-input,
         select,
         textarea {
           font-size: 16px !important;
