@@ -6684,7 +6684,7 @@ function ensureListViewContainer() {
     <style>
       /* Sticky header handled separately in HTML */
       #line-items-table-container { position: relative; width: 100%; max-width: 100%; min-width: 0; }
-      #line-items-table-container > .table-scroll { overflow-x: auto; overflow-y: visible; width: 100%; max-width: 100%; }
+      #line-items-table-container > .table-scroll { overflow-x: auto; overflow-y: visible; width: 100%; max-width: 100%; min-height: 340px; }
       #line-items-table-container .estimate-table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1560px; table-layout: fixed; }
       #line-items-table-container .estimate-table thead { display: none; }
       #line-items-table-container .estimate-table tfoot { display: none; }
@@ -9502,7 +9502,7 @@ function buildListViewFromCards() {
         // Suggestion box for list view item names
         const nameSuggest = document.createElement('div');
         nameSuggest.className = 'lv-suggestion-box';
-        nameSuggest.style.cssText = 'display:none; position:absolute; left:10px; right:10px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,0.08); max-height:300px; overflow-y:auto; z-index:2000; margin-top:6px;';
+        nameSuggest.style.cssText = 'display:none; position:absolute; left:10px; right:10px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,0.08); max-height:300px; overflow-y:auto; z-index:2000; margin-top:6px; min-width:400px;';
         // Prevent input blur while clicking suggestions
         nameSuggest.addEventListener('mousedown', (e) => { e.preventDefault(); });
 
