@@ -2,6 +2,27 @@ function getDisclosureIconSvg() {
   return '<svg aria-hidden="true" viewBox="0 0 20 20" width="14" height="14" fill="currentColor"><path d="M7.293 14.707a1 1 0 0 1 0-1.414L10.586 10 7.293 6.707a1 1 0 1 1 1.414-1.414l4 4a1 1 0 0 1 0 1.414l-4 4a1 1 0 0 1-1.414 0z"></path></svg>';
 }
 
+function ensureMobileInputZoomStyles() {
+  if (typeof document === 'undefined' || document.getElementById('estimate-mobile-input-zoom-styles')) return;
+
+  const style = document.createElement('style');
+  style.id = 'estimate-mobile-input-zoom-styles';
+  style.textContent = `
+    @supports (-webkit-touch-callout: none) {
+      @media (pointer: coarse) {
+        input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+        select,
+        textarea {
+          font-size: 16px !important;
+        }
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+ensureMobileInputZoomStyles();
+
 function ensureDisclosureStyles() {
   if (typeof document === 'undefined' || document.getElementById('estimate-disclosure-styles')) return;
 
