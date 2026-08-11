@@ -8,14 +8,30 @@ function ensureMobileInputZoomStyles() {
   const style = document.createElement('style');
   style.id = 'estimate-mobile-input-zoom-styles';
   style.textContent = `
+    html {
+      -webkit-text-size-adjust: 100%;
+    }
+
     @supports (-webkit-touch-callout: none) {
       @media (pointer: coarse) {
         input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+        input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus,
         #smart-filter-input,
+        #smart-filter-input:focus,
         .filter-search-input,
+        .filter-search-input:focus,
         .filter-input,
+        .filter-input:focus,
         select,
+        select:focus,
         textarea {
+          font-size: 16px !important;
+        }
+
+        #button-action.topbar-compact .filters-container.topbar-inline .filter-search-input,
+        #button-action.topbar-compact .filters-container.topbar-inline .filter-search-input:focus,
+        #button-action.topbar-compact .filters-container.topbar-inline #smart-filter-input,
+        #button-action.topbar-compact .filters-container.topbar-inline #smart-filter-input:focus {
           font-size: 16px !important;
         }
       }
@@ -6661,11 +6677,14 @@ function ensureListViewContainer() {
   container.id = 'line-items-table-container';
   container.style.display = 'none';
   container.style.marginTop = '10px';
+  container.style.width = '100%';
+  container.style.maxWidth = '100%';
+  container.style.minWidth = '0';
   container.innerHTML = `
     <style>
       /* Sticky header handled separately in HTML */
-      #line-items-table-container { position: relative; }
-      #line-items-table-container > .table-scroll { overflow-x: auto; overflow-y: visible; width: 100%; }
+      #line-items-table-container { position: relative; width: 100%; max-width: 100%; min-width: 0; }
+      #line-items-table-container > .table-scroll { overflow-x: auto; overflow-y: visible; width: 100%; max-width: 100%; }
       #line-items-table-container .estimate-table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1560px; table-layout: fixed; }
       #line-items-table-container .estimate-table thead { display: none; }
       #line-items-table-container .estimate-table tfoot { display: none; }
@@ -7419,45 +7438,49 @@ function syncSeparatedListHeader() {
   };
   const widths = Array.from(ths).map((th) => readDeclaredWidth(th));
   const totalWidth = Math.ceil(widths.reduce((sum, width) => sum + width, 0));
+  const availableWidth = Math.max(0, tableContainer.getBoundingClientRect().width);
+  const frameWidth = Math.max(totalWidth, availableWidth);
 
   // Create/replace colgroups so columns lock to same widths
   const colgroupHTML = widths.map(w => `<col style="width:${w}px">`).join('');
   let hg = headerTable.querySelector('colgroup');
   if (!hg) { hg = document.createElement('colgroup'); headerTable.insertBefore(hg, headerTable.firstChild); }
   hg.innerHTML = colgroupHTML;
-  headerTable.style.width = `${totalWidth}px`;
-  headerTable.style.minWidth = `${totalWidth}px`;
+  headerTable.style.width = `${frameWidth}px`;
+  headerTable.style.minWidth = `${frameWidth}px`;
   let bg = bodyTable.querySelector('colgroup');
   if (!bg) { bg = document.createElement('colgroup'); bodyTable.insertBefore(bg, bodyTable.firstChild); }
   bg.innerHTML = colgroupHTML;
-  bodyTable.style.width = `${totalWidth}px`;
-  bodyTable.style.minWidth = `${totalWidth}px`;
+  bodyTable.style.width = `${frameWidth}px`;
+  bodyTable.style.minWidth = `${frameWidth}px`;
   const footerTable = footer?.querySelector('table');
   if (footerTable) {
     let fg = footerTable.querySelector('colgroup');
     if (!fg) { fg = document.createElement('colgroup'); footerTable.insertBefore(fg, footerTable.firstChild); }
     fg.innerHTML = colgroupHTML;
-    footerTable.style.width = `${totalWidth}px`;
-    footerTable.style.minWidth = `${totalWidth}px`;
+    footerTable.style.width = `${frameWidth}px`;
+    footerTable.style.minWidth = `${frameWidth}px`;
   }
 
+  header.style.width = `${availableWidth}px`;
+  header.style.maxWidth = `${availableWidth}px`;
+  header.style.minWidth = '0';
   if (footer) {
     const rect = tableContainer.getBoundingClientRect();
-    header.style.width = `${Math.max(0, rect.width)}px`;
-    header.style.maxWidth = `${Math.max(0, rect.width)}px`;
     footer.style.left = `${Math.max(0, rect.left)}px`;
-    footer.style.width = `${Math.max(0, rect.width)}px`;
+    footer.style.width = `${availableWidth}px`;
+    footer.style.maxWidth = `${availableWidth}px`;
   }
 
   // Sync horizontal scroll position
   const inner = header.querySelector('.lvh-inner');
   const footerInner = footer?.querySelector('.lvf-inner') || null;
   if (inner) {
-    inner.style.width = `${totalWidth}px`;
+    inner.style.width = `${frameWidth}px`;
     inner.style.overflowX = 'hidden';
     inner.style.transform = `translateX(${-scroller.scrollLeft}px)`;
     if (footerInner) {
-      footerInner.style.width = `${totalWidth}px`;
+      footerInner.style.width = `${frameWidth}px`;
       footerInner.style.overflowX = 'hidden';
       footerInner.style.transform = `translateX(${-scroller.scrollLeft}px)`;
     }
