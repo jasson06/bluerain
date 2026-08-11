@@ -371,6 +371,7 @@ function closeMobileRoomSheet() {
   sheet.classList.remove('is-open');
   sheet.setAttribute('aria-hidden', 'true');
   sheet.hidden = true;
+  syncMobileBottomNavState('mobile-add-item-btn');
 }
 
 function isMobileRoomSheetOpen() {
@@ -386,6 +387,7 @@ function openMobileRoomSheet() {
   window.requestAnimationFrame(() => {
     sheet.classList.add('is-open');
   });
+  syncMobileBottomNavState('mobile-add-room-btn');
 }
 
 function toggleMobileRoomSheet() {
@@ -858,6 +860,106 @@ function showLoader() {
 
 function hideLoader() {
   document.getElementById('loader').style.display = 'none';
+}
+
+function ensureLineItemsLoaderStyles() {
+  if (typeof document === 'undefined' || document.getElementById('line-items-loader-styles')) return;
+
+  const style = document.createElement('style');
+  style.id = 'line-items-loader-styles';
+  style.textContent = `
+    #line-items-cards.line-items-loading {
+      position: relative;
+      min-height: 240px;
+    }
+
+    .line-items-loader {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 24px;
+      border-radius: 18px;
+      background: rgba(248, 250, 252, 0.92);
+      backdrop-filter: blur(1px);
+      z-index: 20;
+    }
+
+    .line-items-loader[hidden] {
+      display: none !important;
+    }
+
+    .line-items-loader-spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(37, 99, 235, 0.18);
+      border-top-color: #2563eb;
+      border-radius: 999px;
+      animation: line-items-loader-spin 0.8s linear infinite;
+      flex: 0 0 auto;
+    }
+
+    .line-items-loader-label {
+      color: #0f172a;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    @keyframes line-items-loader-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function showLineItemsContainerLoader(message = 'Loading line items...') {
+  const container = document.getElementById('line-items-cards');
+  if (!container) return;
+
+  ensureLineItemsLoaderStyles();
+  container.classList.add('line-items-loading');
+  if (!container.style.position) {
+    container.style.position = 'relative';
+  }
+
+  let loader = container.querySelector('.line-items-loader');
+  if (!loader) {
+    loader = document.createElement('div');
+    loader.className = 'line-items-loader';
+    loader.setAttribute('role', 'status');
+    loader.setAttribute('aria-live', 'polite');
+    loader.innerHTML = `
+      <span class="line-items-loader-spinner" aria-hidden="true"></span>
+      <span class="line-items-loader-label"></span>
+    `;
+    container.appendChild(loader);
+  }
+
+  const label = loader.querySelector('.line-items-loader-label');
+  if (label) label.textContent = message;
+  loader.hidden = false;
+  container.setAttribute('aria-busy', 'true');
+}
+
+function hideLineItemsContainerLoader() {
+  const container = document.getElementById('line-items-cards');
+  if (!container) return;
+
+  container.classList.remove('line-items-loading');
+  container.removeAttribute('aria-busy');
+  const loader = container.querySelector('.line-items-loader');
+  if (loader) loader.hidden = true;
+}
+
+function waitForNextPaint() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
 }
   
  function generatePhotoPreview(photos, itemId, type) {
@@ -1479,13 +1581,14 @@ window.invoices = await fetch('/api/invoices?projectId=' + projectId).then(r => 
 async function loadEstimateDetails() {
   if (!estimateId) return;
   showLoader(); // 👈 START
+  showLineItemsContainerLoader();
   try {
       const response = await fetch(`/api/estimates/${estimateId}`);
       if (!response.ok) throw new Error("Failed to fetch estimate details.");
       const { estimate } = await response.json();
   __estimateSnapshot = estimate || null;
 
-      
+      await waitForNextPaint();
 
       refreshLineItems(estimate.lineItems);
       document.getElementById("tax-input").value = estimate.tax || 0;
@@ -1525,6 +1628,7 @@ async function loadEstimateDetails() {
   } catch (error) {
       console.error("❌ Error loading estimate details:", error);
   } finally {
+      hideLineItemsContainerLoader();
       hideLoader(); // 👈 END
   }
 }
@@ -4890,27 +4994,286 @@ function syncMobileBottomBarState(selectedCount) {
   }
 }
 
+function escapeAttributeSelectorValue(value) {
+  return String(value ?? '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+function findListViewRowByItemId(itemId) {
+  const table = document.getElementById('line-items-table-container');
+  if (!table || !itemId) return null;
+  return table.querySelector(`tbody tr[data-card-id="${escapeAttributeSelectorValue(itemId)}"]`);
+}
+
+function getListViewSourceLineItemCards() {
+  const cards = [];
+  document.querySelectorAll('.category-header').forEach((header) => {
+    if (!header || header.style.display === 'none') return;
+
+    getCategoryCards(header).forEach((card) => {
+      if (!card || card.dataset.filterVisible === 'false') return;
+      cards.push(card);
+    });
+  });
+  return cards;
+}
+
+function ensureListViewBoundaryRow(card) {
+  if (!card) return null;
+  const itemId = card.getAttribute('data-item-id');
+  if (!itemId) return null;
+
+  let row = findListViewRowByItemId(itemId);
+  if (row && row.offsetParent !== null) return row;
+
+  const header = getCardCategoryHeader(card);
+  if (header && typeof isCategoryCollapsed === 'function' && isCategoryCollapsed(header)) {
+    try { setCategoryCollapsed(header, false); } catch (_) {}
+    try { if (typeof applyCategoryCollapseState === 'function') applyCategoryCollapseState(); } catch (_) {}
+    try { if (typeof buildListViewFromCards === 'function') buildListViewFromCards(); } catch (_) {}
+    try { if (typeof updateTableFooterTotals === 'function') updateTableFooterTotals(false); } catch (_) {}
+    try { if (typeof initSeparatedListHeader === 'function') initSeparatedListHeader(); } catch (_) {}
+    row = findListViewRowByItemId(itemId);
+  }
+
+  return row && row.offsetParent !== null ? row : null;
+}
+
+function getVisibleListViewLineItemTargets() {
+  const table = document.getElementById('line-items-table-container');
+  if (!table) return [];
+
+  const rows = [];
+  getListViewSourceLineItemCards().forEach((card) => {
+    const itemId = card.getAttribute('data-item-id');
+    if (!itemId) return;
+    const row = table.querySelector(`tbody tr[data-card-id="${escapeAttributeSelectorValue(itemId)}"]`);
+    if (row && row.offsetParent !== null) rows.push(row);
+  });
+
+  return rows;
+}
+
+function getVisibleLineItemTargetsForCurrentView() {
+  if (isGanttViewActive()) {
+    return Array.from(document.querySelectorAll('.gantt-row-summary[data-card-id]')).filter((button) => button.offsetParent !== null);
+  }
+
+  if (isListViewActive()) {
+    return getVisibleListViewLineItemTargets();
+  }
+
+  return Array.from(document.querySelectorAll('.line-item-card')).filter((card) => card.offsetParent !== null && card.dataset.filterVisible !== 'false');
+}
+
+function getLineItemBoundaryTargets() {
+  const targets = getVisibleLineItemTargetsForCurrentView();
+  return {
+    first: targets[0] || null,
+    last: targets[targets.length - 1] || null,
+    hasTargets: targets.length > 0
+  };
+}
+
+function isElementNearViewportTop(element, threshold = 72) {
+  if (!element) return false;
+  const rect = element.getBoundingClientRect();
+  return rect.top <= threshold && rect.bottom > threshold;
+}
+
+function isElementNearViewportBottom(element, threshold = 120) {
+  if (!element) return false;
+  const rect = element.getBoundingClientRect();
+  const viewportBottom = window.innerHeight || document.documentElement.clientHeight || 0;
+  return rect.bottom >= (viewportBottom - threshold) && rect.top < viewportBottom;
+}
+
+function isViewportNearDocumentStart(threshold = 96) {
+  const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
+  return scrollTop <= threshold;
+}
+
+function isViewportNearDocumentEnd(threshold = 120) {
+  const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+  const scrollHeight = Math.max(
+    document.documentElement.scrollHeight || 0,
+    document.body?.scrollHeight || 0
+  );
+  return scrollTop + viewportHeight >= scrollHeight - threshold;
+}
+
+function applyMobileJumpToggleState(button, jumpTarget) {
+  const shouldPointLast = jumpTarget === 'last';
+  button.dataset.jumpTarget = shouldPointLast ? 'last' : 'first';
+  button.classList.toggle('is-pointing-last', shouldPointLast);
+  button.setAttribute('aria-label', shouldPointLast ? 'Jump to last line item' : 'Jump to first line item');
+  button.title = shouldPointLast ? 'Jump to last line item' : 'Jump to first line item';
+}
+
+function scrollBoundaryTargetIntoView(target) {
+  if (!target) return;
+
+  if (isListViewActive()) {
+    const topbarOffset = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topbar-height')) || 0;
+    const targetTop = window.scrollY + target.getBoundingClientRect().top - Math.max(72, topbarOffset + 14);
+    window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+    return;
+  }
+
+  target.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+}
+
+function syncMobileJumpToggleState() {
+  const button = document.getElementById('mobile-jump-toggle');
+  if (!button) return;
+
+  if (isListViewActive()) {
+    const sourceCards = getListViewSourceLineItemCards();
+    if (!sourceCards.length) {
+      button.hidden = true;
+      return;
+    }
+
+    const firstRow = findListViewRowByItemId(sourceCards[0].getAttribute('data-item-id'));
+    const lastRow = findListViewRowByItemId(sourceCards[sourceCards.length - 1].getAttribute('data-item-id'));
+    const atStart = isViewportNearDocumentStart() || (firstRow ? isElementNearViewportTop(firstRow, 120) : false);
+    const atEnd = isViewportNearDocumentEnd() || (lastRow ? isElementNearViewportBottom(lastRow, 160) : false);
+
+    button.hidden = false;
+    if (atEnd) {
+      applyMobileJumpToggleState(button, 'first');
+    } else if (atStart) {
+      applyMobileJumpToggleState(button, 'last');
+    } else if (!button.dataset.jumpTarget) {
+      applyMobileJumpToggleState(button, 'first');
+    }
+    return;
+  }
+
+  const { first, last, hasTargets } = getLineItemBoundaryTargets();
+  if (!hasTargets) {
+    button.hidden = true;
+    return;
+  }
+
+  button.hidden = false;
+  const atStart = isViewportNearDocumentStart() || isElementNearViewportTop(first, 120);
+  const atEnd = isViewportNearDocumentEnd() || (last ? isElementNearViewportBottom(last, 160) : false);
+  if (atEnd) {
+    applyMobileJumpToggleState(button, 'first');
+  } else if (atStart) {
+    applyMobileJumpToggleState(button, 'last');
+  } else if (!button.dataset.jumpTarget) {
+    applyMobileJumpToggleState(button, 'first');
+  }
+}
+
+function jumpToLineItemBoundary() {
+  const button = document.getElementById('mobile-jump-toggle');
+  if (isListViewActive()) {
+    const sourceCards = getListViewSourceLineItemCards();
+    if (!sourceCards.length) {
+      window.__estimateEditShowToast?.('No line items available yet.');
+      return;
+    }
+
+    const jumpTarget = button?.dataset.jumpTarget === 'last' ? 'last' : 'first';
+    const sourceCard = jumpTarget === 'last' ? sourceCards[sourceCards.length - 1] : sourceCards[0];
+    const targetRow = ensureListViewBoundaryRow(sourceCard);
+    if (!targetRow) {
+      window.__estimateEditShowToast?.('Unable to find that line item right now.');
+      return;
+    }
+
+    if (button) {
+      button.dataset.jumpTarget = jumpTarget === 'last' ? 'first' : 'last';
+    }
+    scrollBoundaryTargetIntoView(targetRow);
+    window.setTimeout(syncMobileJumpToggleState, 260);
+    return;
+  }
+
+  const { first, last, hasTargets } = getLineItemBoundaryTargets();
+  if (!hasTargets) {
+    window.__estimateEditShowToast?.('No line items available yet.');
+    return;
+  }
+
+  const shouldGoLast = isElementNearViewportTop(first);
+  const target = shouldGoLast ? (last || first) : first;
+  if (!target) return;
+
+  scrollBoundaryTargetIntoView(target);
+  window.setTimeout(syncMobileJumpToggleState, 260);
+}
+
+function setMobileBottomNavActive(buttonId) {
+  document.querySelectorAll('.mobile-bottom-action').forEach((button) => {
+    const isActive = !!buttonId && button.id === buttonId;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-current', isActive ? 'page' : 'false');
+  });
+}
+
+function syncMobileBottomNavState(fallbackButtonId = 'mobile-add-item-btn') {
+  if (isMobileRoomSheetOpen()) {
+    setMobileBottomNavActive('mobile-add-room-btn');
+    return;
+  }
+
+  const batchDrawer = document.getElementById('batch-actions-drawer');
+  if (batchDrawer && !batchDrawer.hidden) {
+    setMobileBottomNavActive('mobile-actions-btn');
+    return;
+  }
+
+  setMobileBottomNavActive(fallbackButtonId);
+}
+
 function wireMobileExperience() {
   const mobileBackButton = document.getElementById('mobile-back-btn');
   const mobileAddRoomButton = document.getElementById('mobile-add-room-btn');
   const mobileAddItemButton = document.getElementById('mobile-add-item-btn');
   const mobileActionsButton = document.getElementById('mobile-actions-btn');
-  const mobileSaveButton = document.getElementById('mobile-save-btn');
+  const mobileJumpToggle = document.getElementById('mobile-jump-toggle');
+  const batchDrawer = document.getElementById('batch-actions-drawer');
 
   mobileBackButton?.addEventListener('click', () => document.getElementById('cancel-estimate')?.click());
-  mobileAddRoomButton?.addEventListener('click', () => toggleMobileRoomSheet());
-  mobileAddItemButton?.addEventListener('click', () => addLineItemCard());
-  mobileSaveButton?.addEventListener('click', () => document.getElementById('save-estimate')?.click());
+  mobileAddRoomButton?.addEventListener('click', () => {
+    toggleMobileRoomSheet();
+    syncMobileBottomNavState();
+  });
+  mobileAddItemButton?.addEventListener('click', () => {
+    addLineItemCard();
+    syncMobileBottomNavState('mobile-add-item-btn');
+  });
   mobileActionsButton?.addEventListener('click', () => {
     const selectedCards = getSelectedAssignableCards();
     if (!selectedCards.length) {
       window.__estimateEditShowToast?.('Select at least one line item first.');
+      syncMobileBottomNavState('mobile-add-item-btn');
       return;
     }
+    setMobileBottomNavActive('mobile-actions-btn');
     window.__estimateEditOpenBatchActionDrawer?.();
   });
+  mobileJumpToggle?.addEventListener('click', jumpToLineItemBoundary);
+
+  if (batchDrawer && batchDrawer.dataset.mobileNavObserved !== 'true' && typeof MutationObserver !== 'undefined') {
+    const observer = new MutationObserver(() => syncMobileBottomNavState('mobile-add-item-btn'));
+    observer.observe(batchDrawer, { attributes: true, attributeFilter: ['hidden'] });
+    batchDrawer.dataset.mobileNavObserved = 'true';
+  }
+
+  if (!window.__estimateEditMobileJumpScrollBound) {
+    window.addEventListener('scroll', syncMobileJumpToggleState, { passive: true });
+    window.addEventListener('resize', syncMobileJumpToggleState, { passive: true });
+    window.__estimateEditMobileJumpScrollBound = true;
+  }
 
   syncMobileBottomBarState();
+  syncMobileBottomNavState('mobile-add-item-btn');
+  syncMobileJumpToggleState();
 }
 
 
@@ -5140,39 +5503,43 @@ function createFilterUI() {
         <h3>Filters</h3>
       </div>
       <div class="filter-options">
-        <div class="filter-group">
-          <label for="filter-item-name">Item Name</label>
-          <input type="text" id="filter-item-name" class="filter-input" placeholder="Search by item name">
-        </div>
-        <div class="filter-group">
-          <label for="filter-phase">Phase</label>
-          <select id="filter-phase" class="filter-select">
-            <option value="">All Phases</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label for="filter-category">Category</label>
-          <select id="filter-category" class="filter-select">
-            <option value="">All Categories</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label for="filter-status">Status</label>
-          <select id="filter-status" class="filter-select">
-            <option value="">All Statuses</option>
-            <option value="new">New</option>
-            <option value="in-progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="approved">Approved</option>
-            <option value="rework">Rework</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label for="filter-vendor">Assigned To</label>
-          <select id="filter-vendor" class="filter-select">
-            <option value="">All Vendors</option>
-            <option value="unassigned">Unassigned</option>
-          </select>
+        <div class="filter-group filter-group-search">
+          <label for="smart-filter-input">Smart Search</label>
+          <div class="filter-search-shell">
+            <input type="text" id="smart-filter-input" class="filter-input filter-search-input" placeholder="Search item names or filter by category, status, or assigned to" autocomplete="off" spellcheck="false">
+            <div id="smart-filter-suggestions" class="filter-search-suggestions" hidden>
+              <div class="filter-search-suggestions-header">
+                <span id="smart-filter-suggest-title">Choose a filter</span>
+                <button id="smart-filter-suggest-back" class="filter-search-suggest-back" type="button" style="display:none;">Back</button>
+              </div>
+              <ul id="smart-filter-suggest-list" class="filter-search-suggest-list"></ul>
+              <ul id="smart-filter-suggest-values" class="filter-search-suggest-list" style="display:none;"></ul>
+              <div class="filter-search-suggestions-footnote">Use tokens like <strong>category:</strong> or <strong>status:</strong> for precise filters.</div>
+            </div>
+          </div>
+          <div id="smart-filter-tokens" class="filter-search-tokens" hidden></div>
+          
+          <div class="filter-hidden-controls" hidden aria-hidden="true">
+            <input type="text" id="filter-item-name" class="filter-input" value="">
+            <select id="filter-phase" class="filter-select">
+              <option value="">All Phases</option>
+            </select>
+            <select id="filter-category" class="filter-select">
+              <option value="">All Categories</option>
+            </select>
+            <select id="filter-status" class="filter-select">
+              <option value="">All Statuses</option>
+              <option value="new">New</option>
+              <option value="in-progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="approved">Approved</option>
+              <option value="rework">Rework</option>
+            </select>
+            <select id="filter-vendor" class="filter-select">
+              <option value="">All Vendors</option>
+              <option value="unassigned">Unassigned</option>
+            </select>
+          </div>
         </div>
         <button id="clear-filters" class="btn-secondary">Clear Filters</button>
         <button id="toggle-all-categories-btn-card" class="topbar-category-collapse-toggle estimate-disclosure-btn" type="button" aria-pressed="false" title="Collapse all categories" style="display:inline-flex; align-items:center; justify-content:center; margin-top:11px;">${getDisclosureIconSvg()}</button>
@@ -5891,6 +6258,373 @@ function createFilterUI() {
 
   // After rendering filters, update sticky offset to actual topbar height
   try { if (typeof updateTopbarHeight === 'function') updateTopbarHeight(); } catch (_) {}
+}
+
+const SMART_FILTER_STATUS_OPTIONS = [
+  { value: 'new', label: 'New' },
+  { value: 'in-progress', label: 'In Progress' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rework', label: 'Rework' },
+  { value: 'unassigned', label: 'Unassigned' }
+];
+
+const SMART_FILTER_TOKEN_TYPES = ['item', 'category', 'status', 'vendor'];
+
+function escapeFilterHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char] || char));
+}
+
+function getEstimateAccumulatedSearch() {
+  return String(window.__estimateEditAccumulatedQuery || '').trim();
+}
+
+function setEstimateAccumulatedSearch(value) {
+  window.__estimateEditAccumulatedQuery = String(value || '').trim();
+  return window.__estimateEditAccumulatedQuery;
+}
+
+function resetSmartFilterState() {
+  return setEstimateAccumulatedSearch('');
+}
+
+function getSmartFilterCollections() {
+  const categories = Array.from(new Set(
+    Array.from(document.querySelectorAll('.category-header .category-title span[contenteditable]'))
+      .map((node) => (node.textContent || '').trim())
+      .filter(Boolean)
+  )).sort((left, right) => left.localeCompare(right, undefined, { sensitivity: 'base' }));
+
+  const vendors = [];
+  const vendorMap = new Map();
+  document.querySelectorAll('.line-item-card').forEach((card) => {
+    const vendorId = String(card.getAttribute('data-assigned-to') || '').trim();
+    if (!vendorId || vendorMap.has(vendorId)) return;
+    const vendorName = window.vendorMap?.[vendorId]?.name
+      || card.querySelector('.vendor-name')?.getAttribute('data-fullname')?.trim()
+      || vendorId;
+    vendorMap.set(vendorId, vendorName);
+  });
+  Array.from(vendorMap.entries())
+    .sort((left, right) => String(left[1]).localeCompare(String(right[1]), undefined, { sensitivity: 'base' }))
+    .forEach(([value, label]) => vendors.push({ value, label }));
+  vendors.unshift({ value: 'unassigned', label: 'Unassigned' });
+
+  const itemNames = Array.from(new Set(
+    Array.from(document.querySelectorAll('.line-item-card .item-name'))
+      .map((input) => (input.value || '').trim())
+      .filter(Boolean)
+  )).sort((left, right) => left.localeCompare(right, undefined, { sensitivity: 'base' }));
+
+  return {
+    categories,
+    vendors,
+    itemNames,
+    statuses: SMART_FILTER_STATUS_OPTIONS
+  };
+}
+
+function parseEstimateSmartSearch(queryStr) {
+  const tokens = { item: '', category: '', status: '', assigned: '' };
+  const parts = String(queryStr || '').trim().split(/\s+/).filter(Boolean);
+  const rest = [];
+  for (const part of parts) {
+    const low = part.toLowerCase();
+    if (low.startsWith('item:')) tokens.item = part.slice(5).trim().toLowerCase();
+    else if (low.startsWith('category:')) tokens.category = part.slice(9).trim().toLowerCase();
+    else if (low.startsWith('status:')) tokens.status = part.slice(7).trim().toLowerCase();
+    else if (low.startsWith('assigned:')) tokens.assigned = part.slice(9).trim().toLowerCase();
+    else rest.push(part);
+  }
+  if (rest.length) {
+    const freeText = rest.join(' ').trim().toLowerCase();
+    tokens.item = tokens.item ? `${tokens.item} ${freeText}`.trim() : freeText;
+  }
+  return { tokens, text: tokens.item };
+}
+
+function buildEstimateSmartSearch(tokens) {
+  const parts = [];
+  if (tokens.item) parts.push(`item:${tokens.item}`);
+  if (tokens.category) parts.push(`category:${tokens.category}`);
+  if (tokens.status) parts.push(`status:${tokens.status}`);
+  if (tokens.assigned) parts.push(`assigned:${tokens.assigned}`);
+  return parts.join(' ').trim();
+}
+
+function getSmartFilterTypeLabel(type) {
+  switch (type) {
+    case 'item': return 'Item:';
+    case 'category': return 'Category:';
+    case 'status': return 'Status:';
+    case 'assigned': return 'Assigned:';
+    default: return 'Search:';
+  }
+}
+
+function resolveEstimateSmartTokenDisplay(type, value) {
+  if (!value) return '';
+  const collections = getSmartFilterCollections();
+  if (type === 'status') {
+    return collections.statuses.find((entry) => entry.value === value || entry.label.toLowerCase() === value)?.label || value;
+  }
+  if (type === 'assigned') {
+    return collections.vendors.find((entry) => entry.value === value || String(entry.label).toLowerCase() === value)?.label || value;
+  }
+  if (type === 'category') {
+    return collections.categories.find((entry) => entry.toLowerCase() === value) || value;
+  }
+  return value;
+}
+
+function renderSmartFilterTokens() {
+  const container = document.getElementById('smart-filter-tokens');
+  if (!container) return;
+  const input = document.getElementById('smart-filter-input');
+  const combined = `${getEstimateAccumulatedSearch()} ${(input?.value || '').trim()}`.trim();
+  const { tokens } = parseEstimateSmartSearch(combined);
+  const chips = [];
+  if (tokens.item) chips.push({ key: 'item:', value: tokens.item, label: resolveEstimateSmartTokenDisplay('item', tokens.item) });
+  if (tokens.category) chips.push({ key: 'category:', value: tokens.category, label: resolveEstimateSmartTokenDisplay('category', tokens.category) });
+  if (tokens.status) chips.push({ key: 'status:', value: tokens.status, label: resolveEstimateSmartTokenDisplay('status', tokens.status) });
+  if (tokens.assigned) chips.push({ key: 'assigned:', value: tokens.assigned, label: resolveEstimateSmartTokenDisplay('assigned', tokens.assigned) });
+  container.hidden = chips.length === 0;
+  container.innerHTML = chips.map((chip) => `
+    <span class="filter-search-token filter-chip" data-key="${escapeFilterHtml(chip.key)}" data-value="${escapeFilterHtml(chip.value)}">
+      <span class="filter-search-token-kind">${escapeFilterHtml(chip.key)}</span>
+      <span class="filter-search-token-value">${escapeFilterHtml(chip.label)}</span>
+      <button type="button" class="filter-search-token-remove chip-remove" aria-label="Remove ${escapeFilterHtml(chip.key)}${escapeFilterHtml(chip.label)}">×</button>
+    </span>
+  `).join('');
+}
+
+function syncHiddenFiltersFromSmartState() {
+  const input = document.getElementById('smart-filter-input');
+  const combined = `${getEstimateAccumulatedSearch()} ${(input?.value || '').trim()}`.trim();
+  const { tokens } = parseEstimateSmartSearch(combined);
+  const itemNameInput = document.getElementById('filter-item-name');
+  const categorySelect = document.getElementById('filter-category');
+  const statusSelect = document.getElementById('filter-status');
+  const vendorSelect = document.getElementById('filter-vendor');
+  const collections = getSmartFilterCollections();
+  const resolveOptionValue = (type, value) => {
+    if (!value) return '';
+    if (type === 'category') {
+      return collections.categories.find((entry) => entry.toLowerCase() === value) || '';
+    }
+    if (type === 'status') {
+      return collections.statuses.find((entry) => entry.value === value || entry.label.toLowerCase() === value)?.value || '';
+    }
+    if (type === 'assigned') {
+      return collections.vendors.find((entry) => entry.value === value || String(entry.label).toLowerCase() === value)?.value || '';
+    }
+    return value;
+  };
+  if (itemNameInput) itemNameInput.value = tokens.item || '';
+  if (categorySelect) categorySelect.value = resolveOptionValue('category', tokens.category);
+  if (statusSelect) statusSelect.value = resolveOptionValue('status', tokens.status);
+  if (vendorSelect) vendorSelect.value = resolveOptionValue('assigned', tokens.assigned);
+}
+
+function syncSmartStateFromHiddenFilters() {
+  const parts = [];
+  const itemValue = document.getElementById('filter-item-name')?.value?.trim().toLowerCase() || '';
+  const categoryValue = document.getElementById('filter-category')?.value?.trim().toLowerCase() || '';
+  const statusValue = document.getElementById('filter-status')?.value?.trim().toLowerCase() || '';
+  const vendorValue = document.getElementById('filter-vendor')?.value?.trim().toLowerCase() || '';
+  if (itemValue) parts.push(`item:${itemValue}`);
+  if (categoryValue) parts.push(`category:${categoryValue}`);
+  if (statusValue) parts.push(`status:${statusValue}`);
+  if (vendorValue) parts.push(`assigned:${vendorValue}`);
+  return setEstimateAccumulatedSearch(parts.join(' '));
+}
+
+function clearSmartFilterToken(type) {
+  const { tokens } = parseEstimateSmartSearch(getEstimateAccumulatedSearch());
+  if (type === 'item') tokens.item = '';
+  if (type === 'category') tokens.category = '';
+  if (type === 'status') tokens.status = '';
+  if (type === 'assigned') tokens.assigned = '';
+  setEstimateAccumulatedSearch(buildEstimateSmartSearch(tokens));
+}
+
+function applySmartFilterState() {
+  syncHiddenFiltersFromSmartState();
+  renderSmartFilterTokens();
+  applyFilters();
+}
+
+function removeEstimateFilterTokenFromSearch(key, value) {
+  const { tokens } = parseEstimateSmartSearch(getEstimateAccumulatedSearch());
+  const normalized = String(value || '').trim().toLowerCase();
+  if (key === 'item:' && tokens.item === normalized) tokens.item = '';
+  if (key === 'category:' && tokens.category === normalized) tokens.category = '';
+  if (key === 'status:' && tokens.status === normalized) tokens.status = '';
+  if (key === 'assigned:' && tokens.assigned === normalized) tokens.assigned = '';
+  setEstimateAccumulatedSearch(buildEstimateSmartSearch(tokens));
+  const input = document.getElementById('smart-filter-input');
+  if (input) input.value = '';
+  applySmartFilterState();
+}
+
+function showEstimateSearchSuggestions(show) {
+  const box = document.getElementById('smart-filter-suggestions');
+  if (!box) return;
+  if (show) renderEstimateSuggestionTokens();
+  box.hidden = !show;
+  box.style.display = show ? 'block' : 'none';
+}
+
+function positionEstimateSearchSuggestions() {
+  const shell = document.querySelector('.filter-search-shell');
+  const input = document.getElementById('smart-filter-input');
+  const box = document.getElementById('smart-filter-suggestions');
+  if (!shell || !input || !box) return;
+  const shellRect = shell.getBoundingClientRect();
+  const inputRect = input.getBoundingClientRect();
+  box.style.left = `${Math.max(0, inputRect.left - shellRect.left)}px`;
+  box.style.top = `${inputRect.bottom - shellRect.top + 6}px`;
+  box.style.minWidth = `${Math.max(inputRect.width, 280)}px`;
+}
+
+function getEstimateSuggestionRank(label, partial) {
+  const normalizedLabel = String(label || '').trim().toLowerCase();
+  const normalizedPartial = String(partial || '').trim().toLowerCase();
+  if (!normalizedPartial) return 999;
+  if (normalizedLabel === normalizedPartial) return 0;
+  if (normalizedLabel.startsWith(normalizedPartial)) return 1;
+  if (normalizedLabel.includes(normalizedPartial)) return 2;
+  return 999;
+}
+
+function renderEstimateSuggestionTokens() {
+  const list = document.getElementById('smart-filter-suggest-list');
+  const title = document.getElementById('smart-filter-suggest-title');
+  const values = document.getElementById('smart-filter-suggest-values');
+  const backBtn = document.getElementById('smart-filter-suggest-back');
+  if (!list) return;
+  const tokens = ['item:', 'category:', 'status:', 'assigned:'];
+  list.innerHTML = tokens.map((token) => `
+    <li class="suggest-item filter-search-suggestion" data-token="${token}">
+      <span class="filter-search-suggestion-kind">${token}</span>
+      <span class="filter-search-suggestion-label">Add ${token} filter</span>
+    </li>
+  `).join('');
+  if (title) title.textContent = 'Choose a filter';
+  if (backBtn) backBtn.style.display = 'none';
+  if (values) {
+    values.style.display = 'none';
+    values.innerHTML = '';
+  }
+  list.style.display = 'block';
+}
+
+function showEstimateValueSuggestions(token, partial = '') {
+  const list = document.getElementById('smart-filter-suggest-list');
+  const values = document.getElementById('smart-filter-suggest-values');
+  const title = document.getElementById('smart-filter-suggest-title');
+  const backBtn = document.getElementById('smart-filter-suggest-back');
+  if (!list || !values || !title) return;
+  const collections = getSmartFilterCollections();
+  let items = [];
+  if (token === 'category:') {
+    items = collections.categories.map((entry) => ({ label: entry, value: entry.toLowerCase() }));
+  } else if (token === 'status:') {
+    items = collections.statuses.map((entry) => ({ label: entry.label, value: entry.value }));
+  } else if (token === 'assigned:') {
+    items = collections.vendors.map((entry) => ({ label: entry.label, value: entry.value }));
+  } else if (token === 'item:') {
+    items = collections.itemNames.slice(0, 60).map((entry) => ({ label: entry, value: entry.toLowerCase() }));
+  }
+  const normalizedPartial = String(partial || '').trim().toLowerCase();
+  if (normalizedPartial) {
+    items = items
+      .map((item) => ({ ...item, rank: getEstimateSuggestionRank(item.label, normalizedPartial) }))
+      .filter((item) => item.rank < 999)
+      .sort((left, right) => left.rank - right.rank || String(left.label).localeCompare(String(right.label), undefined, { sensitivity: 'base' }));
+  }
+  title.textContent = `Choose a value for ${token}`;
+  if (backBtn) backBtn.style.display = 'inline';
+  list.style.display = 'none';
+  values.innerHTML = items.map((item) => `
+    <li class="suggest-value filter-search-suggestion" data-token="${token}" data-value="${escapeFilterHtml(item.value)}">
+      <span class="filter-search-suggestion-label">${escapeFilterHtml(item.label)}</span>
+    </li>
+  `).join('');
+  values.style.display = items.length ? 'block' : 'none';
+  if (!items.length) {
+    values.innerHTML = '<li class="filter-search-empty" style="display:block;">No matching values found.</li>';
+    values.style.display = 'block';
+  }
+}
+
+function autoSuggestEstimateSearch() {
+  const input = document.getElementById('smart-filter-input');
+  const value = (input?.value || '').trim();
+  const match = value.match(/(item:|category:|status:|assigned:)([^\s]*)$/i);
+  if (!match) {
+    renderEstimateSuggestionTokens();
+    return;
+  }
+  showEstimateValueSuggestions(match[1].toLowerCase(), match[2] || '');
+}
+
+function closeSmartFilterSuggestions() {
+  showEstimateSearchSuggestions(false);
+}
+
+function applySmartFilterQuery(rawQuery) {
+  const query = String(rawQuery || '').trim();
+  if (!query) {
+    applySmartFilterState();
+    return;
+  }
+
+  const { tokens } = parseEstimateSmartSearch(query);
+  const existing = parseEstimateSmartSearch(getEstimateAccumulatedSearch()).tokens;
+  if (tokens.item) existing.item = tokens.item;
+  if (tokens.category) existing.category = tokens.category;
+  if (tokens.status) existing.status = tokens.status;
+  if (tokens.assigned) existing.assigned = tokens.assigned;
+  if (!tokens.item && !tokens.category && !tokens.status && !tokens.assigned) {
+    existing.item = query.toLowerCase();
+  }
+  setEstimateAccumulatedSearch(buildEstimateSmartSearch(existing));
+
+  const smartInput = document.getElementById('smart-filter-input');
+  if (smartInput) smartInput.value = '';
+  closeSmartFilterSuggestions();
+  syncSmartFilterInputState();
+  applySmartFilterState();
+}
+
+function syncSmartFilterInputState() {
+  const smartInput = document.getElementById('smart-filter-input');
+  if (!smartInput) return;
+  const pendingInput = smartInput.value.trim();
+  if (!pendingInput) {
+    syncSmartStateFromHiddenFilters();
+  }
+  renderSmartFilterTokens();
+  const { tokens } = parseEstimateSmartSearch(getEstimateAccumulatedSearch());
+  if (pendingInput) return;
+
+  const activeLabels = [];
+  if (tokens.item) activeLabels.push(`item:${resolveEstimateSmartTokenDisplay('item', tokens.item)}`);
+  if (tokens.category) activeLabels.push(`category:${resolveEstimateSmartTokenDisplay('category', tokens.category)}`);
+  if (tokens.status) activeLabels.push(`status:${resolveEstimateSmartTokenDisplay('status', tokens.status)}`);
+  if (tokens.assigned) activeLabels.push(`assigned:${resolveEstimateSmartTokenDisplay('assigned', tokens.assigned)}`);
+  if (activeLabels.length) {
+    smartInput.placeholder = activeLabels.join('  ');
+    return;
+  }
+  smartInput.placeholder = 'Try: item:, category:, status:, assigned:';
 }
 
 // Dynamically set CSS variable for sticky offsets based on actual topbar height
@@ -7072,6 +7806,7 @@ function showCardView() {
 
 function showListView() {
   ensureListViewContainer();
+  try { syncMobileJumpToggleState(); } catch (_) {}
   buildListViewFromCards();
   const cards = document.getElementById('line-items-cards');
   const tableContainer = document.getElementById('line-items-table-container');
@@ -7099,6 +7834,7 @@ function showListView() {
   try { updateTopbarHeight(); } catch(_) {}
   syncEstimateViewButtons('list');
   try { updateSelectedLaborCost(); } catch (_) {}
+  try { syncMobileJumpToggleState(); } catch (_) {}
 }
 
 function parseGanttDateValue(value) {
@@ -8345,6 +9081,7 @@ function showGanttView() {
   syncEstimateViewButtons('gantt');
   try { updateSelectedLaborCost(); } catch (_) {}
   try { updateTopbarHeight(); } catch (_) {}
+  try { syncMobileJumpToggleState(); } catch (_) {}
 }
 
 // Debounced autosave helper for list-view edits
@@ -9827,20 +10564,110 @@ function initializeFilterListeners() {
   const statusFilter = document.getElementById('filter-status');
   const vendorFilter = document.getElementById('filter-vendor');
   const clearFiltersButton = document.getElementById('clear-filters');
+  const smartInput = document.getElementById('smart-filter-input');
+  const suggestionBox = document.getElementById('smart-filter-suggestions');
+  const tokenContainer = document.getElementById('smart-filter-tokens');
+  const backButton = document.getElementById('smart-filter-suggest-back');
 
-  if (!itemNameFilter || !phaseFilter || !categoryFilter || !statusFilter || !vendorFilter || !clearFiltersButton) {
+  if (!itemNameFilter || !phaseFilter || !categoryFilter || !statusFilter || !vendorFilter || !clearFiltersButton || !smartInput || !suggestionBox || !tokenContainer || !backButton) {
     console.error("Filter elements not found");
     return;
   }
 
   // Populate filter dropdowns
   populateFilterOptions();
+  syncSmartFilterInputState();
+  closeSmartFilterSuggestions();
 
   // Add event listeners to filter controls
   [itemNameFilter, phaseFilter, categoryFilter, statusFilter, vendorFilter].forEach(filter => {
     filter.addEventListener('input', applyFilters);
     filter.addEventListener('change', applyFilters);
   });
+
+  if (smartInput.dataset.smartFilterBound !== 'true') {
+    smartInput.dataset.smartFilterBound = 'true';
+    smartInput.addEventListener('input', () => {
+      applySmartFilterState();
+      if (!suggestionBox.hidden) {
+        positionEstimateSearchSuggestions();
+        autoSuggestEstimateSearch();
+      }
+    });
+    const openEstimateSearchSuggestions = () => {
+      positionEstimateSearchSuggestions();
+      showEstimateSearchSuggestions(true);
+      autoSuggestEstimateSearch();
+    };
+    smartInput.addEventListener('focus', openEstimateSearchSuggestions);
+    smartInput.addEventListener('click', openEstimateSearchSuggestions);
+    smartInput.addEventListener('change', () => {
+      applySmartFilterState();
+    });
+    smartInput.addEventListener('blur', () => setTimeout(() => showEstimateSearchSuggestions(false), 120));
+    smartInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeSmartFilterSuggestions();
+        return;
+      }
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        applySmartFilterQuery(smartInput.value);
+      }
+    });
+  }
+
+  if (suggestionBox.dataset.smartFilterBound !== 'true') {
+    suggestionBox.dataset.smartFilterBound = 'true';
+    suggestionBox.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      const tokenEl = event.target.closest('.suggest-item');
+      const valueEl = event.target.closest('.suggest-value');
+      if (tokenEl) {
+        const token = tokenEl.getAttribute('data-token') || '';
+        showEstimateValueSuggestions(token);
+        return;
+      }
+      if (valueEl) {
+        const token = valueEl.getAttribute('data-token') || '';
+        const value = valueEl.getAttribute('data-value') || '';
+        const existing = parseEstimateSmartSearch(getEstimateAccumulatedSearch()).tokens;
+        if (token === 'item:') existing.item = value;
+        if (token === 'category:') existing.category = value;
+        if (token === 'status:') existing.status = value;
+        if (token === 'assigned:') existing.assigned = value;
+        setEstimateAccumulatedSearch(buildEstimateSmartSearch(existing));
+        smartInput.value = '';
+        applySmartFilterState();
+        showEstimateSearchSuggestions(false);
+      }
+    });
+  }
+
+  if (backButton.dataset.smartFilterBound !== 'true') {
+    backButton.dataset.smartFilterBound = 'true';
+    backButton.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      renderEstimateSuggestionTokens();
+    });
+  }
+
+  if (tokenContainer.dataset.smartFilterBound !== 'true') {
+    tokenContainer.dataset.smartFilterBound = 'true';
+    tokenContainer.addEventListener('click', (event) => {
+      const token = event.target.closest('.filter-chip');
+      if (!token) return;
+      removeEstimateFilterTokenFromSearch(token.getAttribute('data-key') || '', token.getAttribute('data-value') || '');
+    });
+  }
+
+  if (!window.__estimateEditSmartFilterDocBound) {
+    document.addEventListener('click', (event) => {
+      if (event.target?.closest?.('.filter-search-shell')) return;
+      showEstimateSearchSuggestions(false);
+    });
+    window.__estimateEditSmartFilterDocBound = true;
+  }
 
   // Clear filters button
   clearFiltersButton.addEventListener('click', clearFilters);
@@ -9930,6 +10757,7 @@ function populateFilterOptions() {
     vendorSelect.value = '';
   }
 
+  syncSmartFilterInputState();
   try { refreshBatchCategoryOptions(); } catch (_) {}
   renderProjectPhaseBar();
   if (typeof isGanttViewActive === 'function' && isGanttViewActive()) {
@@ -9949,6 +10777,7 @@ function applyFilters() {
   
   // Update counts
   updateFilterCounts();
+  syncSmartFilterInputState();
   renderProjectPhaseBar();
   if (typeof isGanttViewActive === 'function' && isGanttViewActive()) {
     try { buildGanttViewFromCards(); } catch (_) {}
@@ -10082,11 +10911,11 @@ function updateFilterCounts() {
   
   // Get active filters
   const activeFilters = [
-    { 
-      id: 'filter-phase', 
-      name: 'Phase', 
-      value: document.getElementById('filter-phase')?.value || '',
-      label: document.getElementById('filter-phase')?.selectedOptions[0]?.textContent || ''
+    {
+      id: 'filter-item-name',
+      name: 'Search',
+      value: document.getElementById('filter-item-name')?.value || '',
+      label: document.getElementById('filter-item-name')?.value || ''
     },
     { 
       id: 'filter-category', 
@@ -10102,7 +10931,7 @@ function updateFilterCounts() {
     },
     { 
       id: 'filter-vendor', 
-      name: 'Vendor', 
+      name: 'Assigned', 
       value: document.getElementById('filter-vendor')?.value || '',
       label: document.getElementById('filter-vendor')?.selectedOptions[0]?.textContent || ''
     }
@@ -10144,39 +10973,13 @@ function updateFilterCounts() {
     }
   }
   
-  // Clear existing badges
   badgesContainer.innerHTML = '';
-  
-  // Hide badges container if no active filters
-  badgesContainer.style.display = activeFilters.length ? 'inline-flex' : 'none';
-  
-  // Create badges for each active filter
-  activeFilters.forEach(filter => {
-    const badge = document.createElement('div');
-    badge.className = 'filter-badge';
-    badge.innerHTML = `
-      <span class="filter-badge-name">${filter.name}:</span>
-      <span class="filter-badge-value">${filter.label}</span>
-      <button class="filter-badge-remove" data-filter-id="${filter.id}">×</button>
-    `;
-    badgesContainer.appendChild(badge);
-    
-    // Add click event to remove button
-    badge.querySelector('.filter-badge-remove').addEventListener('click', function() {
-      const filterElement = document.getElementById(filter.id);
-      if (!filterElement) return;
-      if (filterElement.type === 'checkbox') {
-        filterElement.checked = false;
-      } else {
-        filterElement.value = '';
-      }
-      applyFilters();
-    });
-  });
+  badgesContainer.style.display = 'none';
 }
 
 // ✅ Update clearFilters to also update badge display
 function clearFilters() {
+  resetSmartFilterState();
   // Reset all filter dropdowns
   const filterElements = [
     document.getElementById('filter-phase'),
@@ -10186,11 +10989,14 @@ function clearFilters() {
   ];
   // Also reset the item name text filter
   const itemNameInput = document.getElementById('filter-item-name');
+  const smartInput = document.getElementById('smart-filter-input');
   if (itemNameInput) itemNameInput.value = '';
+  if (smartInput) smartInput.value = '';
   
   filterElements.forEach(el => {
     if (el) el.value = '';
   });
+  closeSmartFilterSuggestions();
   
   // Show all cards and category headers
   document.querySelectorAll('.line-item-card, .category-header').forEach(el => {
@@ -10214,9 +11020,11 @@ function clearFilters() {
     badgesContainer.style.display = 'none';
     badgesContainer.innerHTML = '';
   }
+  renderSmartFilterTokens();
   
   // Reset filter counts
   updateFilterCounts();
+  syncSmartFilterInputState();
   renderProjectPhaseBar();
   
   
