@@ -5541,7 +5541,7 @@ function createFilterUI() {
             </select>
           </div>
         </div>
-        <button id="clear-filters" class="btn-secondary">Clear Filters</button>
+        <button id="clear-filters" class="btn-secondary"></button>
         <button id="toggle-all-categories-btn-card" class="topbar-category-collapse-toggle estimate-disclosure-btn" type="button" aria-pressed="false" title="Collapse all categories" style="display:inline-flex; align-items:center; justify-content:center; margin-top:11px;">${getDisclosureIconSvg()}</button>
         <button id="show-gantt-view-btn" title="Show gantt view" aria-pressed="false" aria-label="Gantt View" style="display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid #e2e8f0; border-radius:8px; background:#ffffff; cursor:pointer; color:#0f172a; margin-top:11px; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.04); transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease; width:34px; height:34px; padding:0; justify-content:center;">
           <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true">
