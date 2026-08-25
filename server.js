@@ -74,6 +74,19 @@ if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+function resolveStoredUploadPath(storedPath) {
+  const value = String(storedPath || '').trim();
+  if (!value) return '';
+
+  const normalized = value.replace(/\\/g, '/');
+  if (normalized.startsWith('/uploads/') || normalized.startsWith('uploads/')) {
+    const relativePath = normalized.replace(/^\/?uploads\//, '');
+    return path.join(uploadDir, relativePath);
+  }
+
+  return path.isAbsolute(value) ? value : path.join(__dirname, value);
+}
+
 // ✅ Configure multer for file storage on Render Persistent Disk
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -8140,7 +8153,10 @@ app.get('/api/properties/:propertyId/documents/:documentId/view', async (req, re
             return res.status(404).json({ message: 'Document not found' });
         }
 
-        if (!fs.existsSync(doc.filePath)) {
+        const filePath = resolveStoredUploadPath(doc.filePath);
+        console.log('📄 Resolved document view path:', { storedPath: doc.filePath, filePath });
+
+        if (!filePath || !fs.existsSync(filePath)) {
             return res.status(404).json({ message: 'File not found on server' });
         }
 
@@ -8160,7 +8176,7 @@ app.get('/api/properties/:propertyId/documents/:documentId/view', async (req, re
         res.setHeader('Content-Disposition', `inline; filename="${doc.name}"`);
         res.setHeader('Cache-Control', 'public, max-age=0');
 
-        fs.createReadStream(doc.filePath).pipe(res);
+        fs.createReadStream(filePath).pipe(res);
     } catch (error) {
         console.error('Error serving document:', error);
         res.status(500).json({ message: 'Error serving document' });
@@ -8266,7 +8282,7 @@ app.delete('/api/properties/:propertyId/documents/:documentId', async (req, res)
     }
 
     // Delete file from filesystem
-    const filePath = path.join(__dirname, document.filePath.replace(/^\//, ''));
+    const filePath = resolveStoredUploadPath(document.filePath);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
@@ -8294,11 +8310,14 @@ app.get('/api/properties/:propertyId/documents/:documentId/download', async (req
             return res.status(404).json({ message: 'Document not found' });
         }
 
-        if (!fs.existsSync(doc.filePath)) {
+        const filePath = resolveStoredUploadPath(doc.filePath);
+        console.log('📄 Resolved document download path:', { storedPath: doc.filePath, filePath });
+
+        if (!filePath || !fs.existsSync(filePath)) {
             return res.status(404).json({ message: 'File not found on server' });
         }
 
-        res.download(doc.filePath, doc.name);
+        res.download(filePath, doc.name);
     } catch (error) {
         console.error('Error serving document:', error);
         res.status(500).json({ message: 'Error serving document' });
@@ -10692,7 +10711,7 @@ async function sendTenantPortalDocument(req, res, disposition) {
     }).lean();
     if (!doc) return res.status(404).json({ message: 'Document not found' });
 
-    const filePath = path.join(__dirname, doc.filePath.replace(/^\//, ''));
+    const filePath = resolveStoredUploadPath(doc.filePath);
     if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on server' });
 
     const ext = path.extname(doc.name).toLowerCase();
