@@ -87,6 +87,28 @@ function resolveStoredUploadPath(storedPath) {
   return path.isAbsolute(value) ? value : path.join(__dirname, value);
 }
 
+function sanitizeHeaderFilename(filename) {
+  const fallback = path.basename(String(filename || 'document')) || 'document';
+  return fallback
+    .replace(/[\r\n\0]/g, ' ')
+    .replace(/["\\]/g, '_')
+    .replace(/[^\x20-\x7E]/g, '_')
+    .trim() || 'document';
+}
+
+function encodeRFC5987Value(value) {
+  return Array.from(Buffer.from(String(value || 'document'), 'utf8'))
+    .map(byte => `%${byte.toString(16).toUpperCase().padStart(2, '0')}`)
+    .join('');
+}
+
+function getContentDispositionHeader(disposition, filename) {
+  const safeDisposition = disposition === 'attachment' ? 'attachment' : 'inline';
+  const safeFilename = sanitizeHeaderFilename(filename);
+  const encodedFilename = encodeRFC5987Value(String(filename || safeFilename).replace(/[\r\n\0]/g, ' '));
+  return `${safeDisposition}; filename="${safeFilename}"; filename*=UTF-8''${encodedFilename}`;
+}
+
 // ✅ Configure multer for file storage on Render Persistent Disk
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -8173,7 +8195,7 @@ app.get('/api/properties/:propertyId/documents/:documentId/view', async (req, re
         }[ext] || 'application/octet-stream';
 
         res.setHeader('Content-Type', contentType);
-        res.setHeader('Content-Disposition', `inline; filename="${doc.name}"`);
+        res.setHeader('Content-Disposition', getContentDispositionHeader('inline', doc.name));
         res.setHeader('Cache-Control', 'public, max-age=0');
 
         fs.createReadStream(filePath).pipe(res);
@@ -8317,7 +8339,8 @@ app.get('/api/properties/:propertyId/documents/:documentId/download', async (req
             return res.status(404).json({ message: 'File not found on server' });
         }
 
-        res.download(filePath, doc.name);
+        res.setHeader('Content-Disposition', getContentDispositionHeader('attachment', doc.name));
+        fs.createReadStream(filePath).pipe(res);
     } catch (error) {
         console.error('Error serving document:', error);
         res.status(500).json({ message: 'Error serving document' });
@@ -10727,7 +10750,7 @@ async function sendTenantPortalDocument(req, res, disposition) {
     }[ext] || 'application/octet-stream';
 
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `${disposition}; filename="${doc.name}"`);
+    res.setHeader('Content-Disposition', getContentDispositionHeader(disposition, doc.name));
     fs.createReadStream(filePath).pipe(res);
   } catch (error) {
     console.error('Tenant portal document error:', error);
