@@ -584,6 +584,7 @@ async function persistLineItemStatusChange(lineItemId, newStatus, options = {}) 
     estimateId = new URLSearchParams(window.location.search).get('estimateId'),
     percentComplete = getNextPercentCompleteForStatus(newStatus, 0)
   } = options;
+  let completionDate = null;
 
   try {
     const response = await fetch(`/api/estimates/line-items/${lineItemId}/status`, {
@@ -594,6 +595,8 @@ async function persistLineItemStatusChange(lineItemId, newStatus, options = {}) 
     if (!response.ok) {
       return { ok: false, error: 'estimate' };
     }
+    const result = await response.json().catch(() => ({}));
+    completionDate = result.completionDate || null;
   } catch (_) {
     return { ok: false, error: 'estimate' };
   }
@@ -616,7 +619,7 @@ async function persistLineItemStatusChange(lineItemId, newStatus, options = {}) 
     }
   }
 
-  return { ok: true, vendorSyncFailed };
+  return { ok: true, vendorSyncFailed, completionDate };
 }
 
 function getCurrentProjectPhase(cards = getEstimateLineItemCards()) {
@@ -981,6 +984,42 @@ function waitForNextPaint() {
   });
 }
   
+const __estimatePhotoCache = new Map();
+
+function getPhotoCacheKey(itemId, type) {
+  return `${String(itemId)}:${type}`;
+}
+
+window.__estimateEditPhotoCache = __estimatePhotoCache;
+window.__estimateEditGetPhotoCacheKey = getPhotoCacheKey;
+
+function cacheLineItemPhotos(itemId, photos = {}) {
+  ['before', 'after'].forEach((type) => {
+    __estimatePhotoCache.set(
+      getPhotoCacheKey(itemId, type),
+      Array.isArray(photos?.[type]) ? [...photos[type]] : []
+    );
+  });
+}
+
+function updatePhotoCount(itemId) {
+  const card = findLineItemCardById(itemId);
+  const countEl = card?.querySelector('.photo-count');
+  if (!countEl) return;
+  const beforeCount = (__estimatePhotoCache.get(getPhotoCacheKey(itemId, 'before')) || []).length;
+  const afterCount = (__estimatePhotoCache.get(getPhotoCacheKey(itemId, 'after')) || []).length;
+  const total = beforeCount + afterCount;
+  countEl.textContent = `${total} photo${total === 1 ? '' : 's'} (${beforeCount} before, ${afterCount} after)`;
+}
+
+function renderPhotoSection(itemId, type, photos) {
+  const photoContainer = document.getElementById(`${type}-photos-${itemId}`);
+  if (!photoContainer) return false;
+  photoContainer.innerHTML = generatePhotoPreview(photos, itemId, type);
+  enableSwipe(itemId, type);
+  return true;
+}
+
  function generatePhotoPreview(photos, itemId, type) {
     if (!photos || photos.length === 0) {
         return `<p class="placeholder">No photos</p>`;
@@ -989,13 +1028,13 @@ function waitForNextPaint() {
     return `
         <div class="photo-container">
             <!-- Left Navigation Button -->
-            <button class="nav-button left" onclick="changePhoto('${itemId}', '${type}', -1)">&#10094;</button>
+            ${photos.length > 1 ? `<button class="nav-button left" type="button" aria-label="Previous ${type} photo" onclick="changePhoto('${itemId}', '${type}', -1)">&#10094;</button>` : ''}
 
             <!-- Photo Wrapper for Sliding -->
             <div class="photo-wrapper" id="photo-wrapper-${type}-${itemId}" data-index="0">
                 ${photos.map((photo, index) => `
                     <div class="photo-slide">
-                        <img src="${photo}" draggable="false" onclick="openPhotoViewer('${photo.replace(/'/g, "\\'")}', ${JSON.stringify(photos).replace(/"/g, '&quot;')})">
+                        <img src="${photo}" loading="lazy" decoding="async" draggable="false" alt="${type} photo ${index + 1}" onclick="openPhotoViewer('${photo.replace(/'/g, "\\'")}', ${JSON.stringify(photos).replace(/"/g, '&quot;')})">
                     <button class="delete-photo" onclick="deletePhoto('${itemId}', '${photo.replace(/'/g, "\\'")}', '${type}')" aria-label="Delete ${type} photo ${index + 1}" title="Delete photo">
                       <svg aria-hidden="true" viewBox="0 0 20 20" width="12" height="12" fill="currentColor"><path d="M7.5 3.5A1.5 1.5 0 0 1 9 2h2a1.5 1.5 0 0 1 1.5 1.5V4H16a.75.75 0 0 1 0 1.5h-.72l-.64 9.03A2 2 0 0 1 12.65 16H7.35a2 2 0 0 1-1.99-1.47L4.72 5.5H4A.75.75 0 0 1 4 4h3.5v-.5ZM11 4v-.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5V4H11Zm-2 3.25a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0V8A.75.75 0 0 1 9 7.25Zm2.75.75a.75.75 0 0 0-1.5 0v4a.75.75 0 0 0 1.5 0V8Z"></path></svg>
                     </button>
@@ -1004,10 +1043,10 @@ function waitForNextPaint() {
             </div>
 
             <!-- Right Navigation Button -->
-            <button class="nav-button right" onclick="changePhoto('${itemId}', '${type}', 1)">&#10095;</button>
+            ${photos.length > 1 ? `<button class="nav-button right" type="button" aria-label="Next ${type} photo" onclick="changePhoto('${itemId}', '${type}', 1)">&#10095;</button>` : ''}
 
             <!-- Navigation Dots -->
-            <div class="photo-dots" id="dots-${type}-${itemId}">
+            <div class="photo-dots" id="dots-${type}-${itemId}" ${photos.length > 1 ? '' : 'hidden'}>
                 ${photos.map((_, index) => `
                     <span class="dot" data-index="${index}" onclick="jumpToPhoto('${itemId}', '${type}', ${index})"></span>
                 `).join("")}
@@ -1069,14 +1108,12 @@ function enableSwipe(itemId, type) {
       return;
   }
 
+  if (wrapper.dataset.swipeBound === 'true') return;
+  wrapper.dataset.swipeBound = 'true';
+
   let startX = 0;
   let moveX = 0;
   let isSwiping = false;
-
-  // ✅ Remove previous event listeners to prevent duplication
-  wrapper.removeEventListener("touchstart", handleTouchStart);
-  wrapper.removeEventListener("touchmove", handleTouchMove);
-  wrapper.removeEventListener("touchend", handleTouchEnd);
 
   function handleTouchStart(e) {
       // ✅ Prevent swipe if touching a button
@@ -1175,6 +1212,8 @@ function enableFullScreenSwipe() {
   let endX = 0;
 
   if (!viewer) return;
+  if (viewer.dataset.swipeBound === 'true') return;
+  viewer.dataset.swipeBound = 'true';
 
   viewer.addEventListener("touchstart", (e) => {
       startX = e.touches[0].clientX;
@@ -1210,138 +1249,79 @@ window.closePhotoViewer = closePhotoViewer;
 
 
  // ✅ Upload Photo (Supports Before & After)
-function uploadPhoto(event, itemId, type) {
-  const files = event.target.files;
-  if (!files || files.length === 0) return;
+ async function uploadPhoto(event, itemId, type) {
+  const input = event.target;
+  const files = Array.from(input.files || []);
+  if (!files.length) return;
 
   const estimateId = new URLSearchParams(window.location.search).get("estimateId");
-  const vendorId = localStorage.getItem("vendorId"); // This might be null if the item is unassigned
-
   if (!estimateId) {
-      showToast("Estimate ID is missing! Please save the estimate first.");
-      return;
+    showToast("Save the estimate before adding photos.", { variant: 'info' });
+    input.value = '';
+    return;
   }
 
   const formData = new FormData();
-  for (let file of files) {
-      formData.append("photos", file);
-  }
+  files.forEach((file) => formData.append("photos", file));
   formData.append("estimateId", estimateId);
   formData.append("itemId", itemId);
   formData.append("type", type);
 
+  const vendorId = localStorage.getItem("vendorId");
   if (vendorId && vendorId !== "null" && vendorId !== "undefined") {
-      formData.append("vendorId", vendorId);
+    formData.append("vendorId", vendorId);
   }
 
-  // ✅ Show inline loader in the photo section
-  const containerId = `${type}-photos-${itemId}`;
-  const photoContainer = document.getElementById(containerId);
-  if (photoContainer) {
-      photoContainer.innerHTML = `
-          <div style="display: flex; justify-content: center; align-items: center; min-height: 100px;">
-              <div style="border: 4px solid #f3f3f3; border-top: 4px solid #0ea5e9; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;"></div>
-          </div>
-      `;
+  const cacheKey = getPhotoCacheKey(itemId, type);
+  const previousPhotos = [...(__estimatePhotoCache.get(cacheKey) || [])];
+  const photoContainer = document.getElementById(`${type}-photos-${itemId}`);
+  input.disabled = true;
+  photoContainer?.setAttribute('aria-busy', 'true');
+  photoContainer?.classList.add('photo-is-loading');
+
+  try {
+    const response = await fetch("/api/upload-photos", { method: "POST", body: formData });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !Array.isArray(result.photoUrls)) {
+      throw new Error(result.message || "The upload failed.");
+    }
+
+    const nextPhotos = [...new Set([...previousPhotos, ...result.photoUrls])];
+    __estimatePhotoCache.set(cacheKey, nextPhotos);
+    renderPhotoSection(itemId, type, nextPhotos);
+    updatePhotoCount(itemId);
+    showToast(`${files.length} photo${files.length === 1 ? '' : 's'} uploaded.`, { variant: 'success' });
+    try {
+      if (typeof isListViewActive === 'function' && isListViewActive() && typeof scheduleListViewRebuild === 'function') {
+        scheduleListViewRebuild(100);
+      }
+    } catch (_) {}
+  } catch (error) {
+    console.error("Photo upload error:", error);
+    renderPhotoSection(itemId, type, previousPhotos);
+    showToast(error.message || "Failed to upload photos.", { variant: 'error' });
+  } finally {
+    input.disabled = false;
+    input.value = '';
+    photoContainer?.removeAttribute('aria-busy');
+    photoContainer?.classList.remove('photo-is-loading');
   }
-
-  fetch("/api/upload-photos", { method: "POST", body: formData })
-      .then(response => response.json())
-      .then(result => {
-          if (!result || !result.photoUrls) {
-              throw new Error(result.message || "Invalid server response.");
-          }
-
-          showToast(`✅ ${files.length} Photo(s) uploaded successfully!`);
-
-          // ✅ Immediately refresh the photos
-          setTimeout(() => {
-            updatePhotoSection(itemId, type);
-            try {
-              if (typeof isListViewActive === 'function' && isListViewActive() && typeof scheduleListViewRebuild === 'function') {
-                scheduleListViewRebuild(220);
-              }
-            } catch (_) {}
-          }, 500);
-      })
-      .catch(error => {
-          console.error("❌ Photo Upload Error:", error);
-          showToast("Failed to upload photos.");
-          // Clear loader on error
-          if (photoContainer) {
-              photoContainer.innerHTML = `<p class="placeholder">Error uploading photos.</p>`;
-          }
-      });
 }
 
 
 
   window.uploadPhoto = uploadPhoto;
 
- // ✅ Update Photo Section After Upload
-async function updatePhotoSection(itemId, type) {
-
-  showLoader(); // 👈 START
-    try {
-        const estimateId = new URLSearchParams(window.location.search).get("estimateId");
-        const vendorId = localStorage.getItem("vendorId");
-
-        let response;
-
-        // ✅ First, check the estimate for photos
-        response = await fetch(`/api/estimates/${estimateId}`);
-        if (response.ok) {
-            const { estimate } = await response.json();
-            const item = estimate.lineItems.flatMap(cat => cat.items).find(i => i._id === itemId);
-            if (item && item.photos) {
-                document.getElementById(`${type}-photos-${itemId}`).innerHTML = generatePhotoPreview(item.photos[type], itemId, type);
-
-                // ✅ Ensure Swipe is Enabled After Photos Are Rendered
-                setTimeout(() => enableSwipe(itemId, type), 100);
-                return;
-            }
-        }
-
-        // ✅ If vendor has photos, check vendor API
-        if (vendorId && vendorId !== "null" && vendorId !== "undefined") {
-            response = await fetch(`/api/vendors/${vendorId}/items/${itemId}/photos`);
-            if (response.ok) {
-                const { photos } = await response.json();
-                document.getElementById(`${type}-photos-${itemId}`).innerHTML = generatePhotoPreview(photos[type], itemId, type);
-
-                // ✅ Ensure Swipe is Enabled After Photos Are Rendered
-                setTimeout(() => enableSwipe(itemId, type), 100);
-                return;
-            }
-        }
-
-        console.warn("⚠️ No photos found for item:", itemId);
-    } catch (error) {
-        console.error("❌ Error updating photo section:", error);
-      } finally {
-        hideLoader(); // 👈 END
-
-    }
-}
-
-
-
-
-
-  
-
 async function updatePhotoSection(itemId, type) {
   const containerId = `${type}-photos-${itemId}`;
-  let retries = 10;
-
-  // ⏳ Wait for the DOM element to exist
-  while (retries-- > 0 && !document.getElementById(containerId)) {
-    await new Promise(r => setTimeout(r, 50));
-  }
-
   const photoContainer = document.getElementById(containerId);
   if (!photoContainer) {
-    console.warn(`❌ Photo container not found: ${containerId}`);
+    return;
+  }
+
+  const cacheKey = getPhotoCacheKey(itemId, type);
+  if (__estimatePhotoCache.has(cacheKey)) {
+    renderPhotoSection(itemId, type, __estimatePhotoCache.get(cacheKey));
     return;
   }
 
@@ -1355,13 +1335,14 @@ async function updatePhotoSection(itemId, type) {
   let contentHTML = "";
 
   try {
-    const estimateSnapshot = typeof window !== 'undefined' ? window.__estimateSnapshot : null;
+    const estimateSnapshot = __estimateSnapshot;
     const snapshotPhotos = estimateSnapshot?.lineItems
       ?.flatMap((category) => Array.isArray(category.items) ? category.items : [])
       ?.find((item) => String(item._id) === String(itemId))?.photos?.[type];
 
     if (Array.isArray(snapshotPhotos) && snapshotPhotos.length) {
       contentHTML = generatePhotoPreview(snapshotPhotos, itemId, type);
+      __estimatePhotoCache.set(cacheKey, [...snapshotPhotos]);
     }
 
     const estimateId = new URLSearchParams(window.location.search).get("estimateId");
@@ -1375,6 +1356,7 @@ async function updatePhotoSection(itemId, type) {
           const item = estimate.lineItems.flatMap((cat) => cat.items).find((i) => String(i._id) === String(itemId));
           if (item?.photos?.[type]) {
             contentHTML = generatePhotoPreview(item.photos[type], itemId, type);
+            __estimatePhotoCache.set(cacheKey, [...item.photos[type]]);
           }
         }
       } catch (fetchError) {
@@ -1391,6 +1373,7 @@ async function updatePhotoSection(itemId, type) {
           const { photos } = await res.json();
           if (photos?.[type]) {
             contentHTML = generatePhotoPreview(photos[type], itemId, type);
+            __estimatePhotoCache.set(cacheKey, [...photos[type]]);
           }
         }
       } catch (fetchError) {
@@ -1402,6 +1385,7 @@ async function updatePhotoSection(itemId, type) {
 
     if (!contentHTML) {
       contentHTML = `<p class="placeholder">No ${type} photos found.</p>`;
+      __estimatePhotoCache.set(cacheKey, []);
     }
 
   } catch (error) {
@@ -1412,9 +1396,10 @@ async function updatePhotoSection(itemId, type) {
   // ✅ Replace loader with actual content
   photoContainer.innerHTML = contentHTML;
 
-  // ✅ Swipe re-init
-  setTimeout(() => enableSwipe(itemId, type), 100);
+  enableSwipe(itemId, type);
 }
+
+window.__estimateEditUpdatePhotoSection = updatePhotoSection;
 
 
 
@@ -1491,35 +1476,15 @@ window.jumpToPhoto = jumpToPhoto;
 
 // ✅ Updated Delete Photo Function for Render
 async function deletePhoto(itemId, photoUrl, type) {
-
-
-    // ✅ Show inline loader in the photo section
-    const containerId = `${type}-photos-${itemId}`;
-    const photoContainer = document.getElementById(containerId);
-    if (photoContainer) {
-        photoContainer.innerHTML = `
-            <div style="display: flex; justify-content: center; align-items: center; min-height: 100px;">
-                <div style="border: 4px solid #f3f3f3; border-top: 4px solid #0ea5e9; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;"></div>
-            </div>
-        `;
-    }
-
-
+  if (!itemId || !photoUrl || !type) return;
+  const cacheKey = getPhotoCacheKey(itemId, type);
+  const previousPhotos = [...(__estimatePhotoCache.get(cacheKey) || [])];
+  const photoContainer = document.getElementById(`${type}-photos-${itemId}`);
+  photoContainer?.setAttribute('aria-busy', 'true');
+  photoContainer?.classList.add('photo-is-loading');
     try {
-        // Ensure vendorId is correctly retrieved and not null/undefined
         const vendorId = localStorage.getItem("vendorId") || "default";
-
-        if (!itemId || !photoUrl || !type) {
-            alert("❌ Missing required parameters for deleting photo.");
-            return;
-        }
-
-        // Construct absolute URL (Ensure correct Render API path)
         const apiUrl = `${window.location.origin}/api/delete-photo/${vendorId}/${itemId}/${encodeURIComponent(photoUrl)}`;
-
-        
-
-        // Send DELETE request
         const response = await fetch(apiUrl, {
             method: "DELETE",
             headers: {
@@ -1532,25 +1497,24 @@ async function deletePhoto(itemId, photoUrl, type) {
             throw new Error(`Failed to delete photo. Server Response: ${errorMessage}`);
         }
 
-       
-
-        // ✅ Force Refresh the UI after deletion
-        updatePhotoSection(itemId, type);
+          const nextPhotos = previousPhotos.filter((photo) => photo !== photoUrl);
+          __estimatePhotoCache.set(cacheKey, nextPhotos);
+          renderPhotoSection(itemId, type, nextPhotos);
+          updatePhotoCount(itemId);
         try {
           if (typeof isListViewActive === 'function' && isListViewActive() && typeof scheduleListViewRebuild === 'function') {
-            scheduleListViewRebuild(220);
+            scheduleListViewRebuild(100);
           }
         } catch (_) {}
-        showToast("🗑️ Photo deleted successfully!");
+          showToast("Photo deleted.", { variant: 'success' });
 
     } catch (error) {
-        console.error("❌ Error deleting photo:", error);
-        showToast("Failed to delete photo.");
-          // Clear loader on error
-          if (photoContainer) {
-              photoContainer.innerHTML = `<p class="placeholder">Error uploading photos.</p>`;
-          }
-
+          console.error("Error deleting photo:", error);
+          renderPhotoSection(itemId, type, previousPhotos);
+          showToast("Failed to delete photo.", { variant: 'error' });
+        } finally {
+          photoContainer?.removeAttribute('aria-busy');
+          photoContainer?.classList.remove('photo-is-loading');
     }
 }
 
@@ -1606,6 +1570,7 @@ async function loadEstimateDetails() {
       if (!response.ok) throw new Error("Failed to fetch estimate details.");
       const { estimate } = await response.json();
   __estimateSnapshot = estimate || null;
+        __estimatePhotoCache.clear();
 
       await waitForNextPaint();
 
@@ -1618,28 +1583,6 @@ async function loadEstimateDetails() {
       const endDateInput = document.getElementById("estimate-end-date");
       if (startDateInput) startDateInput.value = estimate.startDate ? estimate.startDate.substring(0, 10) : "";
       if (endDateInput) endDateInput.value = estimate.endDate ? estimate.endDate.substring(0, 10) : "";
-
-      // ✅ Defer initial photo setup to idle time for faster first paint
-      try {
-        const onIdle = window.requestIdleCallback || function(cb){ return setTimeout(() => cb({ timeRemaining: () => 0 }), 50); };
-        const ids = [];
-        estimate.lineItems.forEach(category => { category.items.forEach(item => ids.push(item._id)); });
-        let i = 0;
-        onIdle(function step(deadline){
-          let processed = 0;
-          while (i < ids.length && (deadline.timeRemaining ? deadline.timeRemaining() > 8 : processed < 3)) {
-            const id = ids[i++];
-            try {
-              updatePhotoSection(id, 'before');
-              updatePhotoSection(id, 'after');
-              enableSwipe(id, 'before');
-              enableSwipe(id, 'after');
-            } catch (_) {}
-            processed++;
-          }
-          if (i < ids.length) onIdle(step);
-        });
-      } catch (_) {}
 
       // ✅ Update the summary to reflect the latest totals
       updateSummary();
@@ -1656,15 +1599,12 @@ async function loadEstimateDetails() {
 function refreshLineItems(categories) {
   const lineItemsContainer = document.getElementById("line-items-cards");
   lineItemsContainer.innerHTML = "";
-  const renderOptions = { autoFocus: false };
+  const renderOptions = { autoFocus: false, deferDerivedUpdates: true };
 
-  const pendingPhotoItems = [];
   categories.forEach(category => {
     const categoryHeader = addCategoryHeader(category, renderOptions);
     category.items.forEach(item => {
       addLineItemCard(item, categoryHeader, null, renderOptions);
-      // Defer photo setup to idle time to speed initial render
-      pendingPhotoItems.push(item._id);
     });
   });
 
@@ -1705,26 +1645,6 @@ function focusRequestedEstimateLineItem() {
 }
   // Utility: schedule work during idle periods
   const onIdle = window.requestIdleCallback || function(cb){ return setTimeout(() => cb({ timeRemaining: () => 0 }), 50); };
-
-  // Batch setup of photos and swipe in idle time to avoid blocking first paint
-  try {
-    let idx = 0;
-    onIdle(function step(deadline){
-      // Process a few items per idle period
-      let count = 0;
-      while (idx < pendingPhotoItems.length && (deadline.timeRemaining ? deadline.timeRemaining() > 8 : count < 3)) {
-        const id = pendingPhotoItems[idx++];
-        try {
-          updatePhotoSection(id, "before");
-          updatePhotoSection(id, "after");
-          enableSwipe(id, "before");
-          enableSwipe(id, "after");
-        } catch (_) {}
-        count++;
-      }
-      if (idx < pendingPhotoItems.length) onIdle(step);
-    });
-  } catch (_) {}
 
   // Auto-resize textareas after rendering, but do it lazily during idle
   onIdle(() => {
@@ -1811,7 +1731,9 @@ function focusRequestedEstimateLineItem() {
   try { if (typeof window.__estimateEditWireCategoryDrag === 'function') window.__estimateEditWireCategoryDrag(header); } catch (_) {}
   try { syncCategoryHeaderTotal(header); } catch (_) {}
   try { syncCategorySelectionCheckboxes(); } catch (_) {}
-  try { renderRoomRail(); } catch (_) {}
+  if (!options.deferDerivedUpdates) {
+    try { renderRoomRail(); } catch (_) {}
+  }
 
     
     if (shouldAutoFocus) {
@@ -1832,7 +1754,7 @@ function focusRequestedEstimateLineItem() {
 
     // ✅ If list view is active, immediately rebuild so the new category appears
     try {
-      if (typeof isListViewActive === 'function' && isListViewActive()) {
+      if (!options.deferDerivedUpdates && typeof isListViewActive === 'function' && isListViewActive()) {
         // Small delay to ensure DOM is updated before measuring widths
         setTimeout(() => {
           try { if (typeof buildListViewFromCards === 'function') buildListViewFromCards(); } catch(_) {}
@@ -1843,8 +1765,8 @@ function focusRequestedEstimateLineItem() {
     } catch (_) {}
 
     // ✅ Refresh filter dropdowns and counts to include the new category
-    try { if (typeof populateFilterOptions === 'function') populateFilterOptions(); } catch(_) {}
-    try { if (typeof updateFilterCounts === 'function') updateFilterCounts(); } catch(_) {}
+    try { if (!options.deferDerivedUpdates && typeof populateFilterOptions === 'function') populateFilterOptions(); } catch(_) {}
+    try { if (!options.deferDerivedUpdates && typeof updateFilterCounts === 'function') updateFilterCounts(); } catch(_) {}
 
     return header;
   }
@@ -1914,14 +1836,114 @@ function syncVendorTriggerState(card) {
   if (!vendorEl) return;
   const isAssigned = !!String(card.getAttribute('data-assigned-to') || '').trim();
   vendorEl.removeAttribute('title');
-  vendorEl.setAttribute('aria-haspopup', 'dialog');
   if (isAssigned) {
+    vendorEl.setAttribute('aria-haspopup', 'dialog');
     vendorEl.setAttribute('role', 'button');
     vendorEl.setAttribute('tabindex', '0');
+    vendorEl.removeAttribute('aria-autocomplete');
+    vendorEl.removeAttribute('aria-expanded');
+    if (vendorEl instanceof HTMLInputElement) vendorEl.readOnly = true;
   } else {
-    vendorEl.removeAttribute('role');
+    vendorEl.setAttribute('role', 'combobox');
+    vendorEl.setAttribute('aria-autocomplete', 'list');
+    vendorEl.setAttribute('aria-expanded', 'false');
+    vendorEl.removeAttribute('aria-haspopup');
     vendorEl.removeAttribute('tabindex');
+    if (vendorEl instanceof HTMLInputElement) vendorEl.readOnly = false;
   }
+}
+
+function wireCardVendorCombobox(card) {
+  const input = card?.querySelector('.card-vendor-input');
+  const menu = card?.querySelector('.card-vendor-menu');
+  if (!input || !menu || input.dataset.vendorComboboxBound === 'true') return;
+  input.dataset.vendorComboboxBound = 'true';
+  let filteredVendors = [];
+  let activeIndex = -1;
+
+  const isAssigned = () => !!String(card.getAttribute('data-assigned-to') || '').trim();
+  const closeMenu = (restoreValue = false) => {
+    menu.hidden = true;
+    input.setAttribute('aria-expanded', 'false');
+    activeIndex = -1;
+    if (restoreValue) {
+      const vendorId = card.getAttribute('data-assigned-to') || '';
+      input.value = vendorId ? (window.vendorMap?.[vendorId]?.name || input.dataset.fullname || '') : '';
+    }
+  };
+  const setActiveOption = (index) => {
+    const options = Array.from(menu.querySelectorAll('.card-vendor-option'));
+    activeIndex = options.length ? Math.max(0, Math.min(index, options.length - 1)) : -1;
+    options.forEach((option, optionIndex) => option.classList.toggle('is-active', optionIndex === activeIndex));
+    options[activeIndex]?.scrollIntoView({ block: 'nearest' });
+  };
+  const selectVendor = async (vendor) => {
+    if (!vendor?._id || isAssigned()) return;
+    input.disabled = true;
+    closeMenu();
+    const assigned = await window.__estimateEditAssignSingleLineItemToVendor?.(card, String(vendor._id));
+    input.disabled = false;
+    if (assigned) {
+      input.value = vendor.name || '';
+      input.dataset.fullname = vendor.name || '';
+      syncVendorTriggerState(card);
+    } else {
+      input.value = '';
+    }
+  };
+  const renderMenu = (searchTerm = '') => {
+    const normalizedSearch = String(searchTerm || '').trim().toLowerCase();
+    filteredVendors = Object.values(window.vendorMap || {})
+      .filter((vendor) => !normalizedSearch || String(vendor.name || '').toLowerCase().includes(normalizedSearch))
+      .sort((left, right) => String(left.name || '').localeCompare(String(right.name || ''), undefined, { sensitivity: 'base' }));
+    menu.replaceChildren();
+    if (!filteredVendors.length) {
+      const empty = document.createElement('div');
+      empty.className = 'card-vendor-empty';
+      empty.textContent = 'No matching vendors';
+      menu.appendChild(empty);
+    } else {
+      filteredVendors.forEach((vendor) => {
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.className = 'card-vendor-option';
+        option.setAttribute('role', 'option');
+        option.textContent = vendor.name || 'Unnamed Vendor';
+        option.addEventListener('mousedown', (event) => event.preventDefault());
+        option.addEventListener('click', () => selectVendor(vendor));
+        menu.appendChild(option);
+      });
+    }
+    menu.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+    activeIndex = -1;
+  };
+
+  input.addEventListener('focus', () => {
+    if (isAssigned()) return;
+    renderMenu('');
+  });
+  input.addEventListener('input', () => {
+    if (!isAssigned()) renderMenu(input.value);
+  });
+  input.addEventListener('keydown', (event) => {
+    if (isAssigned()) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (menu.hidden) renderMenu(input.value);
+      setActiveOption(activeIndex + (event.key === 'ArrowDown' ? 1 : -1));
+    } else if (event.key === 'Enter' && activeIndex >= 0) {
+      event.preventDefault();
+      selectVendor(filteredVendors[activeIndex]);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      closeMenu(true);
+      input.blur();
+    }
+  });
+  input.addEventListener('blur', () => {
+    if (!isAssigned()) window.setTimeout(() => closeMenu(true), 100);
+  });
 }
 
 function getCardEffectiveQuantity(card) {
@@ -2973,13 +2995,24 @@ async function runSplitFlowForCard(card) {
 
 try { window.__estimateEditRunSplitFlowForCard = runSplitFlowForCard; } catch (_) {}
 
+let __temporaryLineItemSequence = 0;
+
+function createTemporaryLineItemId() {
+  __temporaryLineItemSequence += 1;
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `item-${crypto.randomUUID()}`;
+  }
+  return `item-${Date.now()}-${__temporaryLineItemSequence}`;
+}
+
 
 // Add Line Item Card Function
 function addLineItemCard(item = {}, categoryHeader = null, insertAfter = null, options = {}) {
   const shouldAutoFocus = options.autoFocus !== false && shouldAllowEstimateAutoFocus();
   const card = document.createElement("div");
   card.classList.add("line-item-card");
-  card.setAttribute("data-item-id", item._id || `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
+  card.setAttribute("data-item-id", item._id || createTemporaryLineItemId());
+  cacheLineItemPhotos(card.getAttribute("data-item-id"), item.photos);
   card.setAttribute("data-assigned-to", (item.assignedTo && item.assignedTo._id) ? item.assignedTo._id : (typeof item.assignedTo === "string" ? item.assignedTo : ""));
 
   const assignedToName = item.assignedTo?.name || "Unassigned";
@@ -3096,7 +3129,7 @@ card.innerHTML = `
   </div>
   <!-- Collapsible Photo Section -->
   <div class="photo-toggle-section-modern">
-    <button class="toggle-photos-btn-modern">📸 Show Photos</button>
+    <button class="toggle-photos-btn-modern" type="button" aria-expanded="false">Show Photos</button>
       <span class="photo-count" style="margin-left:10px; font-weight:500; color:#2563eb;">
   ${
     (() => {
@@ -3129,7 +3162,7 @@ card.innerHTML = `
   <div class="card-footer" style="
     
     border-top: 1px solid #e5e7eb;
-    padding: 6px 24px;
+    padding: 6px 12px;
     border-radius: 0 0 12px 12px;
     box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
     display: flex;
@@ -3162,9 +3195,10 @@ card.innerHTML = `
         </select>
         </span>
         <span class="phase-vendor-pill">
-          <span>Assigned</span>
-          <span class="vendor-name tooltip-click" data-fullname="${assignedToName}">
-            ${assignedToInitials}
+          
+          <span class="card-vendor-combobox">
+            <input class="vendor-name card-vendor-input tooltip-click" type="text" value="${assignedToName === 'Unassigned' ? '' : escapeVendorModalHtml(assignedToName)}" data-fullname="${escapeVendorModalHtml(assignedToName)}" placeholder="Assign vendor" autocomplete="off">
+            <span class="card-vendor-menu" role="listbox" hidden></span>
           </span>
         </span>
       </div>
@@ -3234,6 +3268,9 @@ card.innerHTML = `
     statusDropdown.className = "item-status-dropdown " + newClass;
     if (percentCompleteInput) {
       percentCompleteInput.value = String(nextPercentComplete);
+    }
+    if (result.completionDate && endDateInput) {
+      endDateInput.value = result.completionDate;
     }
     syncPhaseTrackingUi();
     applyFilters();
@@ -3426,29 +3463,26 @@ const photoSection = card.querySelector('.photo-section-modern');
     if (photoSection.style.display === "none") {
       photoSection.style.display = "flex";
       toggleBtn.textContent = "Hide Photos";
+      toggleBtn.setAttribute('aria-expanded', 'true');
       if (!photosLoaded) {
-        // Load photos only when first opened
-        await updatePhotoSection(card.getAttribute("data-item-id"), "before");
-        await updatePhotoSection(card.getAttribute("data-item-id"), "after");
+        const itemId = card.getAttribute("data-item-id");
+        renderPhotoSection(itemId, "before", __estimatePhotoCache.get(getPhotoCacheKey(itemId, "before")) || []);
+        renderPhotoSection(itemId, "after", __estimatePhotoCache.get(getPhotoCacheKey(itemId, "after")) || []);
         photosLoaded = true;
       }
     } else {
       photoSection.style.display = "none";
       toggleBtn.textContent = "Show Photos";
+      toggleBtn.setAttribute('aria-expanded', 'false');
     }
   });
 
  
 
   syncVendorTriggerState(card);
+  wireCardVendorCombobox(card);
    
 
-    // ✅ Enable swipe gestures for newly added items
-    setTimeout(() => {
-        enableSwipe(card.getAttribute("data-item-id"), "before");
-        enableSwipe(card.getAttribute("data-item-id"), "after");
-    }, 100);
-   
   // Add functionality for the "Unassign" button
   const unassignButton = card.querySelector(".unassign-item");
   if (unassignButton) {
@@ -4069,6 +4103,105 @@ function updateSelectedLaborCost() {
 // Expose for external callers (e.g., list view actions)
 try { window.updateSelectedLaborCost = updateSelectedLaborCost; } catch (_) {}
 
+function buildVendorAssignmentItem(card, vendorId) {
+  const itemId = card?.getAttribute('data-item-id') || '';
+  let categoryHeader = card?.previousElementSibling || null;
+  while (categoryHeader && !categoryHeader.classList.contains('category-header')) {
+    categoryHeader = categoryHeader.previousElementSibling;
+  }
+  let costCode = card?.querySelector('.item-cost-code')?.value.trim() || 'Uncategorized';
+  if (!costCode || costCode === 'Uncategorized') {
+    costCode = categoryHeader?.querySelector('.category-title span[contenteditable]')?.textContent?.trim() || 'Uncategorized';
+  }
+  return {
+    itemId,
+    name: card?.querySelector('.item-name')?.value.trim() || 'Line Item',
+    description: card?.querySelector('.item-description')?.value.trim() || 'No description provided',
+    quantity: parseInt(card?.querySelector('.item-quantity')?.value, 10) || 1,
+    unitPrice: parseFloat(card?.querySelector('.item-price')?.value) || 0,
+    laborCost: parseFloat(card?.querySelector('.item-labor-cost')?.value) || 0,
+    materialCost: parseFloat(card?.querySelector('.item-material-cost')?.value) || 0,
+    calcMode: card?.querySelector('.item-calc-mode')?.value || 'each',
+    area: parseFloat(card?.querySelector('.item-area')?.value) || 0,
+    length: parseFloat(card?.querySelector('.item-length')?.value) || 0,
+    total: parseFloat(card?.querySelector('.item-labor-cost')?.value) || 0,
+    assignedTo: vendorId,
+    costCode
+  };
+}
+
+async function assignSingleLineItemToVendor(card, vendorId) {
+  if (!card || !vendorId || !window.vendorMap?.[vendorId]) return false;
+  const itemId = card.getAttribute('data-item-id') || '';
+  if (!/^[a-f\d]{24}$/i.test(itemId)) {
+    showToast('Save the estimate before assigning this line item.', { variant: 'info' });
+    return false;
+  }
+  if (isCardAssigned(card)) {
+    showToast('Remove the current vendor before assigning a different vendor.', { variant: 'info' });
+    return false;
+  }
+
+  const vendor = window.vendorMap[vendorId];
+  setListAssignedLoading(itemId, true);
+  try {
+    const vendorResponse = await fetch(`/api/vendors/${vendorId}`);
+    const vendorDetails = vendorResponse.ok ? await vendorResponse.json() : vendor;
+    const vendorIsInvited = Array.isArray(vendorDetails?.assignedProjects)
+      && vendorDetails.assignedProjects.some((entry) => entry.projectId?.toString() === projectId);
+    if (!vendorIsInvited) {
+      const inviteResponse = await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emails: [vendor.email || ''], role: 'vendor', projectId })
+      });
+      if (!inviteResponse.ok) throw new Error('Failed to invite vendor to this project.');
+    }
+
+    const item = buildVendorAssignmentItem(card, vendorId);
+    const response = await fetch('/api/assign-items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vendorId, projectId, estimateId, items: [item] })
+    });
+    if (!response.ok) {
+      const result = await response.json().catch(() => ({}));
+      throw new Error(result.message || 'Failed to assign line item.');
+    }
+
+    card.setAttribute('data-assigned-to', vendorId);
+    const vendorEl = card.querySelector('.vendor-name');
+    if (vendorEl) {
+      if (vendorEl instanceof HTMLInputElement) {
+        vendorEl.value = vendor.name || 'Assigned';
+      } else {
+        vendorEl.textContent = getVendorInitials(vendorId);
+      }
+      vendorEl.setAttribute('data-fullname', vendor.name || 'Assigned');
+    }
+    syncVendorTriggerState(card);
+    if (!card.querySelector('.unassign-item')) {
+      const unassignButton = document.createElement('button');
+      unassignButton.className = 'btn unassign-item';
+      unassignButton.textContent = 'Unassign';
+      unassignButton.addEventListener('click', () => unassignItem(card));
+      card.querySelector('.card-header')?.appendChild(unassignButton);
+    }
+    try { populateFilterOptions(); } catch (_) {}
+    scheduleListViewRebuild(80);
+    showToast(`Assigned to ${vendor.name}.`, { variant: 'success' });
+    return true;
+  } catch (error) {
+    console.error('Single line item assignment failed:', error);
+    showToast(error.message || 'Failed to assign line item.', { variant: 'error' });
+    return false;
+  } finally {
+    setListAssignedLoading(itemId, false);
+  }
+}
+
+try { window.__estimateEditAssignSingleLineItemToVendor = assignSingleLineItemToVendor; } catch (_) {}
+
   
 
 async function assignItemsToVendor() {
@@ -4291,8 +4424,13 @@ function unassignItem(card) {
 
   // Clear the "Assigned to" field in the UI
   card.setAttribute("data-assigned-to", "");
-  card.querySelector(".vendor-name").textContent = "Unassigned";
-  card.querySelector(".vendor-name").setAttribute('data-fullname', 'Unassigned');
+  const vendorNameEl = card.querySelector(".vendor-name");
+  if (vendorNameEl instanceof HTMLInputElement) {
+    vendorNameEl.value = '';
+  } else if (vendorNameEl) {
+    vendorNameEl.textContent = "Unassigned";
+  }
+  vendorNameEl?.setAttribute('data-fullname', 'Unassigned');
   syncVendorTriggerState(card);
 
   // Re-enable the checkbox for the item
@@ -4624,11 +4762,19 @@ body: JSON.stringify({
         }
 
         if (serverEstimate && Array.isArray(serverEstimate.lineItems)) {
+          const persistentCardIds = new Set(
+            Array.from(document.querySelectorAll('.line-item-card'))
+              .map((card) => card.getAttribute('data-item-id') || '')
+              .filter((itemId) => itemId && !itemId.startsWith('item-'))
+          );
           const serverPool = [];
           serverEstimate.lineItems.forEach(cat => {
             const cn = cat?.category || '';
             (cat?.items || []).forEach(it => {
-              serverPool.push({ _id: String(it._id), sig: buildServerItemSignature(cn, it) });
+              const serverItemId = String(it._id);
+              if (!persistentCardIds.has(serverItemId)) {
+                serverPool.push({ _id: serverItemId, sig: buildServerItemSignature(cn, it) });
+              }
             });
           });
           const used = new Set();
@@ -5564,12 +5710,10 @@ function createFilterUI() {
         <button id="toggle-all-categories-btn-card" class="topbar-category-collapse-toggle estimate-disclosure-btn" type="button" aria-pressed="false" title="Collapse all categories" style="display:inline-flex; align-items:center; justify-content:center; margin-top:11px;">${getDisclosureIconSvg()}</button>
         <button id="show-gantt-view-btn" title="Show gantt view" aria-pressed="false" aria-label="Gantt View" style="display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid #e2e8f0; border-radius:8px; background:#ffffff; cursor:pointer; color:#0f172a; margin-top:11px; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.04); transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease; width:34px; height:34px; padding:0; justify-content:center;">
           <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true">
-            <path d="M3 5h18"></path>
-            <path d="M3 12h18"></path>
-            <path d="M3 19h18"></path>
-            <rect x="4" y="4" width="6" height="2.5" rx="1.25" fill="#93c5fd" stroke="none"></rect>
-            <rect x="10" y="11" width="8" height="2.5" rx="1.25" fill="#60a5fa" stroke="none"></rect>
-            <rect x="7" y="18" width="11" height="2.5" rx="1.25" fill="#2563eb" stroke="none"></rect>
+            <rect x="3" y="4" width="18" height="17" rx="2"></rect>
+            <path d="M8 2v4M16 2v4M3 9h18"></path>
+            <path d="M6 13h5M10 17h8" stroke-width="2.5"></path>
+            <circle cx="16.5" cy="13" r="1" fill="#2563eb" stroke="none"></circle>
           </svg>
         </button>
          <button id="toggle-view-btn" title="Toggle list/card view" aria-pressed="false" style="display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid #e2e8f0; border-radius:8px; background:#ffffff; cursor:pointer; color:#0f172a; margin-top:11px; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,0.04); transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease; width:34px; height:34px; padding:0; justify-content:center;">
@@ -5999,6 +6143,10 @@ function createFilterUI() {
           : clampProjectPhaseProgress(percentCompleteInput.value, nextStatus);
         percentCompleteInput.value = String(nextPercentComplete);
         card.dataset.percentComplete = String(nextPercentComplete);
+      }
+      if (result.completionDate) {
+        const endDateInput = card.querySelector('.item-end-date');
+        if (endDateInput) endDateInput.value = result.completionDate;
       }
       return result;
     }));
@@ -6708,7 +6856,7 @@ function ensureListViewContainer() {
         display: none;
         position: absolute;
         top: 50%;
-        right: 12px;
+        right: 30px;
         transform: translateY(-50%);
         align-items: center;
         justify-content: flex-end;
@@ -6772,6 +6920,76 @@ function ensureListViewContainer() {
         border-color: #93c5fd; /* blue-300 */
         box-shadow: 0 0 0 3px rgba(59,130,246,0.15); /* blue ring */
       }
+      #line-items-table-container .lv-vendor-combobox {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+      }
+      #line-items-table-container .lv-assigned:focus-within {
+        position: relative;
+        z-index: 130;
+      }
+      #line-items-table-container .lv-vendor-input {
+        width: 100%;
+        min-width: 0;
+        height: 30px;
+        padding: 5px 8px;
+        font-size: 12px;
+        background: #ffffff;
+      }
+      #line-items-table-container .lv-vendor-input.vendor-assignment-trigger[readonly] {
+        color: #1d4ed8;
+        font-weight: 700;
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        cursor: pointer;
+      }
+      #line-items-table-container .lv-vendor-input.vendor-assignment-trigger[readonly]:hover {
+        background: #dbeafe;
+        border-color: #93c5fd;
+      }
+      #line-items-table-container .lv-vendor-menu {
+        position: absolute;
+        top: calc(100% + 5px);
+        left: 0;
+        z-index: 120;
+        width: max(220px, 100%);
+        max-height: 240px;
+        overflow-y: auto;
+        padding: 5px;
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        background: #ffffff;
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
+      }
+      #line-items-table-container .lv-vendor-menu[hidden] {
+        display: none;
+      }
+      #line-items-table-container .lv-vendor-option {
+        display: block;
+        width: 100%;
+        padding: 8px 9px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: #0f172a;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+      }
+      #line-items-table-container .lv-vendor-option:hover,
+      #line-items-table-container .lv-vendor-option.is-active {
+        background: #eff6ff;
+        color: #1d4ed8;
+      }
+      #line-items-table-container .lv-vendor-empty {
+        padding: 9px;
+        color: #64748b;
+        font-size: 12px;
+      }
       /* Delete button styles */
       #line-items-table-container .lv-delete-btn {
         background: #ffffffff; /* red-100 */
@@ -6824,6 +7042,80 @@ function ensureListViewContainer() {
         background: #eff6ff;
         box-shadow: inset 0 -1px 0 #dbeafe;
       }
+      #list-sticky-category-overlay {
+        position: fixed;
+        z-index: 59;
+        display: none;
+        overflow: hidden;
+        pointer-events: none;
+        background: #eff6ff;
+        border-bottom: 1px solid #bfdbfe;
+        box-shadow: 0 5px 8px rgba(15, 23, 42, 0.1);
+      }
+      #list-sticky-category-overlay .lv-overlay-add-item {
+        position: absolute;
+        top: 50%;
+        right: 10px;
+        z-index: 2;
+        transform: translateY(-50%);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 30px;
+        padding: 5px 10px;
+        border: 1px solid #93c5fd;
+        border-radius: 7px;
+        background: #ffffff;
+        color: #1d4ed8;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1;
+        box-shadow: 0 2px 6px rgba(37, 99, 235, 0.14);
+        pointer-events: auto;
+        cursor: pointer;
+      }
+      #list-sticky-category-overlay .lv-overlay-add-item:hover {
+        background: #dbeafe;
+        border-color: #60a5fa;
+      }
+      #list-sticky-category-overlay .lv-overlay-add-item svg {
+        width: 14px;
+        height: 14px;
+        flex: 0 0 auto;
+      }
+      #list-sticky-category-overlay tbody .lv-add-btn {
+        visibility: hidden;
+      }
+      #list-sticky-category-overlay .lv-category-select-toggle,
+      #list-sticky-category-overlay .lv-category-collapse-btn,
+      #list-sticky-category-overlay .lv-drag-handle {
+        pointer-events: auto;
+      }
+      #list-sticky-category-overlay .lv-drag-handle {
+        cursor: grab;
+      }
+      #list-sticky-category-overlay .lv-drag-handle:active {
+        cursor: grabbing;
+      }
+      #list-sticky-category-overlay.is-drop-target {
+        box-shadow: inset 0 0 0 2px #2563eb, 0 5px 8px rgba(15, 23, 42, 0.14);
+      }
+      #list-sticky-category-overlay table {
+        border-collapse: separate;
+        border-spacing: 0;
+        table-layout: fixed;
+        pointer-events: auto;
+      }
+      #list-sticky-category-overlay .lv-category-group-row td {
+        padding: 8px 6px;
+        border-bottom: 1px solid #dbeafe;
+        background: #eff6ff;
+        box-shadow: inset 0 -1px 0 #dbeafe;
+      }
+      #line-items-table-container .lv-category-group-row:hover td {
+        background: #e8f1ff;
+      }
       #line-items-table-container .lv-category-group-row td:first-child {
         border-left: 4px solid #2563eb;
       }
@@ -6831,7 +7123,7 @@ function ensureListViewContainer() {
         display: flex;
         align-items: center;
         gap: 10px;
-        min-width: 0;
+        min-width: 150px;
       }
       #line-items-table-container .lv-category-group-kicker {
         font-size: 12px;
@@ -6985,8 +7277,8 @@ function ensureListViewContainer() {
         gap: 18px;
       }
       #line-items-table-container .lv-photo-panel {
-        flex: 1 1 320px;
-        max-width: 350px;
+        flex: 1 1 220px;
+        max-width: 200px;
         min-width: 0;
         background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
         border: 1px solid #e5e7eb;
@@ -7140,11 +7432,11 @@ function ensureListViewContainer() {
       #line-items-table-container .lv-photo-nav {
         position: absolute;
         top: calc(50% - 18px);
-        width: 36px;
-        height: 36px;
+        width: 26px;
+        height: 26px;
         border: 0;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.92);
+        background: rgb(255 255 255 / 10%);
         color: #0f172a;
         box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
         cursor: pointer;
@@ -7208,10 +7500,7 @@ function ensureListViewContainer() {
           min-width: 0;
           flex-wrap: wrap;
         }
-        #line-items-table-container .lv-photo-panel {
-          min-width: min(100%, 320px);
-          max-width: 100%;
-        }
+
       }
       @media (max-width: 760px) {
         #line-items-table-container .lv-photo-card {
@@ -7465,6 +7754,10 @@ function syncSeparatedListHeader() {
   header.style.width = `${availableWidth}px`;
   header.style.maxWidth = `${availableWidth}px`;
   header.style.minWidth = '0';
+  const listHeaderHeight = Math.ceil(header.getBoundingClientRect().height);
+  if (listHeaderHeight > 0) {
+    document.documentElement.style.setProperty('--list-view-header-height', `${listHeaderHeight}px`);
+  }
   if (footer) {
     const rect = tableContainer.getBoundingClientRect();
     footer.style.left = `${Math.max(0, rect.left)}px`;
@@ -7487,6 +7780,145 @@ function syncSeparatedListHeader() {
   }
 }
 
+let __stickyListCategoryTicking = false;
+
+function ensureStickyListCategoryOverlay(tableContainer) {
+  let overlay = document.getElementById('list-sticky-category-overlay');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.id = 'list-sticky-category-overlay';
+  overlay.innerHTML = `
+    <button type="button" class="lv-overlay-add-item" aria-label="Add line item to this category">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+      <span>Line Item</span>
+    </button>
+    <table class="estimate-table"><tbody></tbody></table>
+  `;
+  const getSourceRow = () => {
+    const categoryKey = overlay.dataset.categoryKey || '';
+    const sourceRows = tableContainer.querySelectorAll('.table-scroll .lv-category-group-row');
+    return Array.from(sourceRows).find((row) => row.getAttribute('data-category-key') === categoryKey) || null;
+  };
+  overlay.querySelector('.lv-overlay-add-item')?.addEventListener('click', () => {
+    getSourceRow()?.querySelector('.lv-add-btn')?.click();
+  });
+  overlay.addEventListener('click', (event) => {
+    if (event.target.closest('.lv-overlay-add-item')) return;
+    const collapseButton = event.target.closest('.lv-category-collapse-btn');
+    if (!collapseButton) return;
+    event.preventDefault();
+    event.stopPropagation();
+    getSourceRow()?.querySelector('.lv-category-collapse-btn')?.click();
+  });
+  overlay.addEventListener('change', (event) => {
+    const overlayCheckbox = event.target.closest('.lv-category-select-toggle');
+    if (!overlayCheckbox) return;
+    const sourceCheckbox = getSourceRow()?.querySelector('.lv-category-select-toggle');
+    if (!sourceCheckbox) return;
+    sourceCheckbox.checked = overlayCheckbox.checked;
+    sourceCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  overlay.addEventListener('dragstart', (event) => {
+    if (!event.target.closest('.lv-drag-handle')) return;
+    const categoryKey = overlay.dataset.categoryKey || '';
+    window.__estimateEditBeginEstimateDrag?.({ type: 'category', categoryKey });
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+  });
+  overlay.addEventListener('dragend', (event) => {
+    if (!event.target.closest('.lv-drag-handle')) return;
+    overlay.classList.remove('is-drop-target');
+    window.__estimateEditEndEstimateDrag?.();
+  });
+  overlay.addEventListener('dragover', (event) => {
+    if (!window.__estimateEditGetEstimateDragPayload?.()) return;
+    event.preventDefault();
+    overlay.classList.add('is-drop-target');
+  });
+  overlay.addEventListener('dragleave', (event) => {
+    if (overlay.contains(event.relatedTarget)) return;
+    overlay.classList.remove('is-drop-target');
+  });
+  overlay.addEventListener('drop', (event) => {
+    event.preventDefault();
+    overlay.classList.remove('is-drop-target');
+    const sourceRow = getSourceRow();
+    if (!sourceRow) return;
+    sourceRow.dispatchEvent(new Event('drop', { bubbles: false, cancelable: true }));
+  });
+  tableContainer.appendChild(overlay);
+  return overlay;
+}
+
+function updateStickyListCategoryHeader() {
+  __stickyListCategoryTicking = false;
+  const tableContainer = document.getElementById('line-items-table-container');
+  const listHeader = document.getElementById('list-view-header');
+  const sourceBody = tableContainer?.querySelector('.table-scroll .estimate-table tbody');
+  const rows = Array.from(sourceBody?.querySelectorAll(':scope > .lv-category-group-row') || []);
+  const existingOverlay = document.getElementById('list-sticky-category-overlay');
+  if (!tableContainer || tableContainer.style.display === 'none' || !rows.length || !listHeader) {
+    if (existingOverlay) existingOverlay.style.display = 'none';
+    return;
+  }
+
+  const stickyTop = Math.round(Math.max(0, listHeader?.getBoundingClientRect().bottom || 0));
+  const tableRect = tableContainer.getBoundingClientRect();
+  const rowMetrics = rows.map((row) => ({ row, rect: row.getBoundingClientRect() }));
+  let activeIndex = -1;
+  rowMetrics.forEach((metric, index) => {
+    if (metric.rect.top <= stickyTop) activeIndex = index;
+  });
+  const overlay = ensureStickyListCategoryOverlay(tableContainer);
+  if (activeIndex < 0 || tableRect.bottom <= stickyTop) {
+    overlay.style.display = 'none';
+    return;
+  }
+
+  const activeRow = rowMetrics[activeIndex].row;
+  const categoryKey = activeRow.getAttribute('data-category-key') || '';
+  const sourceTable = tableContainer.querySelector('.estimate-table');
+  const overlayTable = overlay.querySelector('table');
+  const overlayBody = overlay.querySelector('tbody');
+  if (overlay.dataset.categoryKey !== categoryKey || !overlayBody?.children.length) {
+    overlay.dataset.categoryKey = categoryKey;
+    if (overlayBody) {
+      const clonedRow = activeRow.cloneNode(true);
+      clonedRow.querySelectorAll('button, input, [contenteditable], [tabindex]').forEach((element) => {
+        const isOverlayAction = element.matches('.lv-category-select-toggle, .lv-category-collapse-btn, .lv-drag-handle');
+        element.setAttribute('tabindex', isOverlayAction ? '0' : '-1');
+        if (element.hasAttribute('contenteditable')) {
+          element.setAttribute('contenteditable', 'false');
+          element.setAttribute('aria-hidden', 'true');
+        }
+      });
+      overlayBody.replaceChildren(clonedRow);
+    }
+    const sourceColgroup = sourceTable?.querySelector('colgroup');
+    overlayTable?.querySelector('colgroup')?.remove();
+    if (sourceColgroup && overlayTable) {
+      overlayTable.insertBefore(sourceColgroup.cloneNode(true), overlayTable.firstChild);
+    }
+  }
+
+  const scroller = tableContainer.querySelector('.table-scroll');
+  const tableWidth = sourceTable?.getBoundingClientRect().width || tableRect.width;
+  overlay.style.display = 'block';
+  overlay.style.top = `${stickyTop}px`;
+  overlay.style.left = `${Math.round(tableRect.left)}px`;
+  overlay.style.width = `${Math.round(tableRect.width)}px`;
+  overlay.style.height = `${Math.ceil(activeRow.getBoundingClientRect().height)}px`;
+  if (overlayTable) {
+    overlayTable.style.width = `${Math.ceil(tableWidth)}px`;
+    overlayTable.style.transform = `translateX(${-Math.round(scroller?.scrollLeft || 0)}px)`;
+  }
+}
+
+function scheduleStickyListCategoryHeader() {
+  if (__stickyListCategoryTicking) return;
+  __stickyListCategoryTicking = true;
+  window.requestAnimationFrame(updateStickyListCategoryHeader);
+}
+
 function initSeparatedListHeader() {
   const header = document.getElementById('list-view-header');
   const footer = document.getElementById('list-view-footer');
@@ -7494,6 +7926,12 @@ function initSeparatedListHeader() {
   if (!header || !scroller || !footer) return;
 
   syncSeparatedListHeader();
+  if (!window.__stickyListCategoryHeaderBound) {
+    window.addEventListener('scroll', scheduleStickyListCategoryHeader, { passive: true });
+    window.addEventListener('resize', scheduleStickyListCategoryHeader, { passive: true });
+    window.__stickyListCategoryHeaderBound = true;
+  }
+  scheduleStickyListCategoryHeader();
   if (!scroller.__lvhSyncBound) {
     const syncFromScroller = () => {
       const headerEl = document.getElementById('list-view-header');
@@ -7505,6 +7943,7 @@ function initSeparatedListHeader() {
       if (footerInner) {
         footerInner.style.transform = `translateX(${-scroller.scrollLeft}px)`;
       }
+      scheduleStickyListCategoryHeader();
     };
 
     scroller.addEventListener('scroll', syncFromScroller, { passive: true });
@@ -7622,6 +8061,16 @@ function setCardSaving(card, isSaving) {
 // Update one card's temporary ID to the real server ID without rebuilding the page
 function rewireCardItemId(card, oldId, newId) {
   if (!card || !oldId || !newId || oldId === newId) return;
+  const photoCache = window.__estimateEditPhotoCache;
+  const getCacheKey = window.__estimateEditGetPhotoCacheKey;
+  ['before', 'after'].forEach((type) => {
+    if (!photoCache || typeof getCacheKey !== 'function') return;
+    const oldKey = getCacheKey(oldId, type);
+    if (photoCache.has(oldKey)) {
+      photoCache.set(getCacheKey(newId, type), photoCache.get(oldKey));
+      photoCache.delete(oldKey);
+    }
+  });
   card.setAttribute('data-item-id', newId);
   // Update any element IDs containing the old id
   card.querySelectorAll('[id]').forEach(el => {
@@ -7826,6 +8275,7 @@ function showCardView() {
       updateTableFooterTotals(shouldUseFilteredTotalsForMobileFooter());
     }
   } catch (_) {}
+  scheduleStickyListCategoryHeader();
   syncEstimateViewButtons('card');
   try { updateSelectedLaborCost(); } catch (_) {}
 }
@@ -9475,7 +9925,7 @@ function buildListViewFromCards() {
 
   // Category label toggles details
   const tdCat = document.createElement('td');
-  tdCat.style.cssText = 'padding:4px 0px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:130px;';
+  tdCat.style.cssText = 'padding:4px 0px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:80px;';
   const catWrap = document.createElement('div');
   catWrap.className = 'lv-cat-wrap';
   const catLabel = document.createElement('span');
@@ -10021,9 +10471,9 @@ function buildListViewFromCards() {
 
         // Status select
   const tdStatus = document.createElement('td');
-  tdStatus.style.cssText = 'padding:4px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:160px; width:160px;';
+  tdStatus.style.cssText = ' font-size:15px; border-bottom:1px solid #f1f5f9; min-width:105px; width:115px;';
   const statusSelect = document.createElement('select');
-        statusSelect.style.width = '80%';
+        statusSelect.style.width = '100%';
         statusSelect.style.boxSizing = 'border-box';
   statusSelect.style.padding = '4px 6px';
   statusSelect.style.fontSize = '13px';
@@ -10072,17 +10522,130 @@ function buildListViewFromCards() {
   const tdAssigned = document.createElement('td');
   tdAssigned.className = 'lv-assigned';
   tdAssigned.style.cssText = 'padding:3px 6px; font-size:15px; border-bottom:1px solid #f1f5f9; min-width:140px;';
-        if (card.getAttribute('data-assigned-to')) {
+        {
+          const currentVendorId = card.getAttribute('data-assigned-to') || '';
           const wrap = document.createElement('div');
-          wrap.style.display = 'flex';
-          wrap.style.alignItems = 'center';
-          wrap.style.gap = '6px';
-          const nameSpan = document.createElement('button');
-          nameSpan.type = 'button';
-          nameSpan.className = 'vendor-assignment-trigger';
-          nameSpan.textContent = assigned;
-          nameSpan.setAttribute('data-vendor-id', card.getAttribute('data-assigned-to') || '');
-          nameSpan.setAttribute('data-fullname', assigned);
+          wrap.className = 'lv-vendor-combobox';
+          const vendorInput = document.createElement('input');
+          vendorInput.type = 'text';
+          vendorInput.className = 'lv-vendor-input';
+          vendorInput.value = currentVendorId ? assigned : '';
+          vendorInput.placeholder = 'Assign vendor';
+          vendorInput.autocomplete = 'off';
+          vendorInput.setAttribute('role', 'combobox');
+          vendorInput.setAttribute('aria-autocomplete', 'list');
+          vendorInput.setAttribute('aria-expanded', 'false');
+          if (currentVendorId) {
+            vendorInput.readOnly = true;
+            vendorInput.classList.add('vendor-assignment-trigger');
+            vendorInput.setAttribute('data-vendor-id', currentVendorId);
+            vendorInput.setAttribute('data-fullname', assigned);
+            vendorInput.setAttribute('aria-haspopup', 'dialog');
+            vendorInput.removeAttribute('role');
+            vendorInput.removeAttribute('aria-autocomplete');
+            vendorInput.removeAttribute('aria-expanded');
+            vendorInput.title = `View ${assigned} assignment details`;
+          }
+          const vendorMenu = document.createElement('div');
+          vendorMenu.className = 'lv-vendor-menu';
+          vendorMenu.hidden = true;
+          vendorMenu.setAttribute('role', 'listbox');
+          let filteredVendors = [];
+          let activeVendorIndex = -1;
+
+          const closeVendorMenu = (restoreValue = false) => {
+            vendorMenu.hidden = true;
+            vendorInput.setAttribute('aria-expanded', 'false');
+            activeVendorIndex = -1;
+            if (restoreValue) {
+              const assignedVendorId = card.getAttribute('data-assigned-to') || '';
+              vendorInput.value = assignedVendorId
+                ? (window.vendorMap?.[assignedVendorId]?.name || assigned)
+                : '';
+            }
+          };
+          const setActiveVendorOption = (index) => {
+            const options = Array.from(vendorMenu.querySelectorAll('.lv-vendor-option'));
+            activeVendorIndex = options.length ? Math.max(0, Math.min(index, options.length - 1)) : -1;
+            options.forEach((option, optionIndex) => option.classList.toggle('is-active', optionIndex === activeVendorIndex));
+            options[activeVendorIndex]?.scrollIntoView({ block: 'nearest' });
+          };
+          const selectVendor = async (vendor) => {
+            if (!vendor?._id) return;
+            const assignedVendorId = card.getAttribute('data-assigned-to') || '';
+            if (assignedVendorId === String(vendor._id)) {
+              vendorInput.value = vendor.name || assigned;
+              closeVendorMenu();
+              return;
+            }
+            vendorInput.disabled = true;
+            closeVendorMenu();
+            const assignedSuccessfully = await window.__estimateEditAssignSingleLineItemToVendor?.(card, String(vendor._id));
+            vendorInput.disabled = false;
+            vendorInput.value = assignedSuccessfully ? (vendor.name || '') : (assignedVendorId ? assigned : '');
+          };
+          const renderVendorMenu = (searchTerm = '') => {
+            const normalizedSearch = String(searchTerm || '').trim().toLowerCase();
+            filteredVendors = Object.values(window.vendorMap || {})
+              .filter((vendor) => !normalizedSearch || String(vendor.name || '').toLowerCase().includes(normalizedSearch))
+              .sort((left, right) => String(left.name || '').localeCompare(String(right.name || ''), undefined, { sensitivity: 'base' }));
+            vendorMenu.replaceChildren();
+            if (!filteredVendors.length) {
+              const empty = document.createElement('div');
+              empty.className = 'lv-vendor-empty';
+              empty.textContent = 'No matching vendors';
+              vendorMenu.appendChild(empty);
+            } else {
+              filteredVendors.forEach((vendor) => {
+                const option = document.createElement('button');
+                option.type = 'button';
+                option.className = 'lv-vendor-option';
+                option.setAttribute('role', 'option');
+                option.textContent = vendor.name || 'Unnamed Vendor';
+                option.addEventListener('mousedown', (event) => event.preventDefault());
+                option.addEventListener('click', () => selectVendor(vendor));
+                vendorMenu.appendChild(option);
+              });
+            }
+            vendorMenu.hidden = false;
+            vendorInput.setAttribute('aria-expanded', 'true');
+            activeVendorIndex = -1;
+          };
+
+          vendorInput.addEventListener('focus', () => {
+            if (currentVendorId) return;
+            vendorInput.select();
+            renderVendorMenu('');
+          });
+          vendorInput.addEventListener('input', () => {
+            if (!currentVendorId) renderVendorMenu(vendorInput.value);
+          });
+          vendorInput.addEventListener('keydown', (event) => {
+            if (currentVendorId && (event.key === 'Enter' || event.key === ' ')) {
+              event.preventDefault();
+              vendorInput.click();
+              return;
+            }
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+              event.preventDefault();
+              if (vendorMenu.hidden) renderVendorMenu(vendorInput.value);
+              setActiveVendorOption(activeVendorIndex + (event.key === 'ArrowDown' ? 1 : -1));
+            } else if (event.key === 'Enter' && activeVendorIndex >= 0) {
+              event.preventDefault();
+              selectVendor(filteredVendors[activeVendorIndex]);
+            } else if (event.key === 'Escape') {
+              event.preventDefault();
+              closeVendorMenu(true);
+              vendorInput.blur();
+            }
+          });
+          vendorInput.addEventListener('blur', () => {
+            if (!currentVendorId) window.setTimeout(() => closeVendorMenu(true), 100);
+          });
+          wrap.appendChild(vendorInput);
+          wrap.appendChild(vendorMenu);
+
+          if (currentVendorId) {
           const unassignBtn = document.createElement('button');
           unassignBtn.className = 'lv-unassign-btn';
           unassignBtn.title = 'Unassign';
@@ -10104,11 +10667,9 @@ function buildListViewFromCards() {
               if (typeof window.updateSelectedLaborCost === 'function') window.updateSelectedLaborCost();
             }, 150);
           });
-          wrap.appendChild(nameSpan);
           wrap.appendChild(unassignBtn);
+          }
           tdAssigned.appendChild(wrap);
-        } else {
-          tdAssigned.textContent = 'Unassigned';
         }
         tr.appendChild(tdAssigned);
 
@@ -10148,13 +10709,20 @@ function buildListViewFromCards() {
         // Row-level collapse toggle: show description and photos horizontally beneath
         const itemId = card.getAttribute('data-item-id');
         const thCount = tableColCount;
-        function removeExistingDetailRow() {
-          const next = tr.nextElementSibling;
-          if (next && next.classList && next.classList.contains('lv-detail-row') && next.getAttribute('data-for-id') === itemId) {
-            next.remove();
-            return true;
+        function findExistingDetailRow() {
+          let candidate = tr.nextElementSibling;
+          while (candidate && candidate.classList?.contains('lv-detail-row')) {
+            if (candidate.getAttribute('data-for-id') === itemId) return candidate;
+            candidate = candidate.nextElementSibling;
           }
-          return false;
+          return Array.from(tr.parentNode?.querySelectorAll?.('.lv-detail-row') || [])
+            .find((row) => row.getAttribute('data-for-id') === itemId) || null;
+        }
+        function removeExistingDetailRow() {
+          const detailRow = findExistingDetailRow();
+          if (!detailRow) return false;
+          detailRow.remove();
+          return true;
         }
         function renderPhotoSlider(imgUrls, type) {
           if (!Array.isArray(imgUrls) || imgUrls.length === 0) {
@@ -10182,6 +10750,14 @@ function buildListViewFromCards() {
           `;
         }
         function getCardPhotos(type) {
+          const photoCache = window.__estimateEditPhotoCache;
+          const getCacheKey = window.__estimateEditGetPhotoCacheKey;
+          const cachedPhotos = photoCache && typeof getCacheKey === 'function'
+            ? photoCache.get(getCacheKey(itemId, type))
+            : null;
+          if (Array.isArray(cachedPhotos)) {
+            return [...cachedPhotos];
+          }
           try {
             const sel = `#${type}-photos-${itemId} img`;
             const imgs = Array.from(card.querySelectorAll(sel));
@@ -10190,9 +10766,11 @@ function buildListViewFromCards() {
         }
         async function loadDetailPhotosIntoCard() {
           try {
+            const refreshPhotoSection = window.__estimateEditUpdatePhotoSection;
+            if (typeof refreshPhotoSection !== 'function') return;
             await Promise.all([
-              updatePhotoSection(itemId, 'before'),
-              updatePhotoSection(itemId, 'after')
+              refreshPhotoSection(itemId, 'before'),
+              refreshPhotoSection(itemId, 'after')
             ]);
           } catch (_) {}
         }
@@ -10448,17 +11026,15 @@ function buildListViewFromCards() {
         }
         async function refreshExpandedDetailRowPhotos() {
           await loadDetailPhotosIntoCard();
-          const current = tr.nextElementSibling;
-          if (!current || !current.classList || !current.classList.contains('lv-detail-row') || current.getAttribute('data-for-id') !== itemId) {
-            return;
-          }
+          const current = findExistingDetailRow();
+          if (!current) return;
           const replacement = createDetailRow();
           current.replaceWith(replacement);
         }
         async function toggleDetailRow(event) {
           event?.stopPropagation?.();
-          const expanded = catLabel.getAttribute('aria-expanded') === 'true';
-          if (expanded) {
+          const existingDetailRow = findExistingDetailRow();
+          if (existingDetailRow) {
             removeExistingDetailRow();
             catLabel.setAttribute('aria-expanded', 'false');
             catLabel.title = 'Show details';
@@ -10579,6 +11155,9 @@ function buildListViewFromCards() {
 
   // Commit rows to the DOM in a single operation
   tbody.appendChild(frag);
+  const stickyOverlay = document.getElementById('list-sticky-category-overlay');
+  if (stickyOverlay) stickyOverlay.dataset.categoryKey = '';
+  scheduleStickyListCategoryHeader();
     try { syncSeparatedListHeader(); } catch(_) {}
 }
 

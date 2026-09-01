@@ -68,10 +68,16 @@ app.use(express.static(path.join(__dirname, "dist")));
 console.log("📂 Serving static files from:", path.join(__dirname, "public"));
 console.log("📂 Serving static files from:", path.join(__dirname, "dist"));
 
-// Ensure the uploads directory exists
-const uploadDir = '/mnt/data/uploads';
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+// Prefer persistent storage in production, with a writable local fallback.
+const persistentUploadDir = process.env.UPLOAD_DIR || '/mnt/data/uploads';
+let uploadDir = persistentUploadDir;
+try {
+  fs.mkdirSync(uploadDir, { recursive: true });
+  fs.accessSync(uploadDir, fs.constants.W_OK);
+} catch (error) {
+  uploadDir = path.join(__dirname, 'uploads');
+  fs.mkdirSync(uploadDir, { recursive: true });
+  console.warn(`Upload directory ${persistentUploadDir} is not writable; using ${uploadDir}.`);
 }
 
 function resolveStoredUploadPath(storedPath) {
@@ -155,7 +161,7 @@ app.use(logger);
 
 
 // Serve uploaded files
-app.use('/uploads', express.static('/mnt/data/uploads'));
+app.use('/uploads', express.static(uploadDir));
 
 
 
@@ -192,7 +198,7 @@ connectToDatabase();
 
 
 app.get('/api/list-uploads', (req, res) => {
-    const directoryPath = '/mnt/data/uploads';
+  const directoryPath = uploadDir;
 
     fs.readdir(directoryPath, (err, files) => {
         if (err) {
@@ -489,6 +495,8 @@ const estimateSchema = new mongoose.Schema({
           laborCost: { type: Number, default: 0 },
           materialCost: { type: Number, default: 0 },
           total: { type: Number, required: true },
+          splitPercentage: { type: Number, min: 1, max: 100 },
+          splitGroupId: { type: String, default: null },
 
           // ✅ Expanded here too
           status: { 
@@ -2197,6 +2205,8 @@ app.post('/api/estimates', async (req, res) => {
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             total: item.total || item.quantity * item.unitPrice,
+            splitPercentage: item.splitPercentage,
+            splitGroupId: item.splitGroupId || null,
             status: normalizeStatus(item.status),
             phase: normalizePhase(item.phase),
             percentComplete: normalizePercentComplete(item.percentComplete, item.status),
@@ -4249,17 +4259,19 @@ app.post("/api/assign-items", async (req, res) => {
           console.warn(`⚠️ File not found on server: ${decodedPhotoUrl}`);
       }
 
-      // ✅ Remove photo from Vendor's assignedItems
-      const vendor = await Vendor.findOneAndUpdate(
-          { _id: vendorId, "assignedItems.itemId": itemId },
-          { 
-              $pull: { 
-                  "assignedItems.$[].photos.before": decodedPhotoUrl,
-                  "assignedItems.$[].photos.after": decodedPhotoUrl 
-              } 
-          },
-          { new: true }
-      );
+      // Unassigned estimate items use a placeholder vendor ID.
+      const vendor = mongoose.Types.ObjectId.isValid(vendorId)
+        ? await Vendor.findOneAndUpdate(
+            { _id: vendorId, "assignedItems.itemId": itemId },
+            {
+              $pull: {
+                "assignedItems.$[].photos.before": decodedPhotoUrl,
+                "assignedItems.$[].photos.after": decodedPhotoUrl
+              }
+            },
+            { new: true }
+          )
+        : null;
 
       // ✅ Remove photo from Estimate's lineItems
       const estimate = await Estimate.findOneAndUpdate(
@@ -9418,15 +9430,22 @@ app.patch('/api/estimates/line-items/:lineItemId/status', async (req, res) => {
     };
 
     const normalizedPercentComplete = normalizePercentComplete(percentComplete, status);
+    const completionDate = status === 'completed'
+      ? new Date().toISOString().slice(0, 10)
+      : null;
+    const statusUpdates = {
+      'lineItems.$[].items.$[item].status': status,
+      'lineItems.$[].items.$[item].percentComplete': normalizedPercentComplete
+    };
+    if (completionDate) {
+      statusUpdates['lineItems.$[].items.$[item].endDate'] = completionDate;
+    }
 
     // Update line item status in Estimate
     const estimate = await Estimate.findOneAndUpdate(
       { 'lineItems.items._id': lineItemId },
       {
-        $set: {
-          'lineItems.$[].items.$[item].status': status,
-          'lineItems.$[].items.$[item].percentComplete': normalizedPercentComplete
-        }
+        $set: statusUpdates
       },
       { arrayFilters: [{ 'item._id': lineItemId }], new: true }
     );
@@ -9528,7 +9547,7 @@ if (status === "completed" && itemName && projectId) {
       }
     }  
 
-    res.json({ success: true, status, estimate });
+    res.json({ success: true, status, completionDate, estimate });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
   }

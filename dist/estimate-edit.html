@@ -450,17 +450,14 @@
     width: 100%;
     height: auto;
     object-fit: cover;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 10 / 4;
     border-radius: 5px;
     transition: transform 0.3s ease-in-out, box-shadow 0.3s;
     user-select: none; /* Prevents accidental long-press selection */
 }
 
 /* ✅ Hover Effect on Images */
-.photo-slide img:hover {
-    transform: scale(1.05);
-    box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.3);
-}
+
 
 /* ✅ Navigation Buttons */
 .nav-button {
@@ -1099,6 +1096,7 @@
 }
 
 .line-item-card {
+  position: relative;
   background: #ffffff;
   padding: 10px;
   border-radius: 10px;
@@ -1107,6 +1105,12 @@
   flex-direction: column;
   gap: 5px;
   transition: box-shadow 0.2s ease;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 620px;
+}
+
+.line-item-card:focus-within {
+  z-index: 220;
 }
 
 .line-item-card:hover {
@@ -1180,11 +1184,11 @@
 .line-item-card .card-details {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 5px;
 }
 
 .line-item-card .card-details .detail {
-  flex: 1;
+  flex: auto;
   display: flex;
   flex-direction: column;
 }
@@ -1217,7 +1221,7 @@
   justify-content: space-between;
   align-items: center;
   font-weight: bold;
-  font-size: 1rem;
+  font-size: 0.75rem;
 }
 
 
@@ -1691,7 +1695,7 @@ button:disabled {
 }
 
 
-    input[type="text"], input[type="number"], textarea, select {
+    input[type="text"], input[type="number"], textarea {
       width: 100%;
       padding: 8px;
       border: 1px solid #ccc;
@@ -1896,7 +1900,7 @@ button:disabled {
 #button-action.topbar-compact {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 3px;
 }
 
 .topbar-compact .topbar-row {
@@ -2408,17 +2412,13 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
         align-items: flex-start;
       }
 
-      .card-phase-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        width: 100%;
-        gap: 6px;
-      }
 
       .card-phase-field,
       .phase-status-cluster {
         min-width: 0;
       }
+
+
 
       .phase-status-cluster {
         grid-column: 1 / -1;
@@ -2744,7 +2744,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
       .card-phase-field select,
       .item-status-dropdown,
       .phase-percent-input-wrap {
-        min-height: 32px;
+        min-height: 26px;
         padding: 6px 7px;
         font-size: 0.72rem;
       }
@@ -3001,47 +3001,49 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
 
 /* Modern Photo Section Styles */
 .photo-toggle-section-modern {
-  background: #f9fbfd;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-  margin: 15px 0 15px 0;
-  padding: 18px 18px 0 18px;
-  transition: box-shadow 0.2s;
+  position: relative;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: none;
+  margin: 10px 0;
+  padding: 10px;
 }
 
 .toggle-photos-btn-modern {
-  background: linear-gradient(90deg, #0ea5e9 60%, #2563eb 100%);
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 5px 10px;
-  font-size: 1rem;
-  font-weight: 500;
+  min-height: 34px;
+  background: #ffffff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 7px;
+  padding: 6px 10px;
+  font-size: 0.86rem;
+  font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(14,165,233,0.08);
-  transition: background 0.2s, box-shadow 0.2s;
-  margin-bottom: 0px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  transition: background 0.16s ease, border-color 0.16s ease;
+  margin-bottom: 0;
 }
 .toggle-photos-btn-modern:hover {
-  background: linear-gradient(90deg, #2563eb 60%, #0ea5e9 100%);
-  box-shadow: 0 4px 16px rgba(14,165,233,0.13);
+  background: #eff6ff;
+  border-color: #60a5fa;
 }
 
 .photo-section-modern {
   margin-top: 10px;
-  display: flex;
-  gap: 32px;
+  gap: 12px;
   flex-wrap: wrap;
-  transition: max-height 0.3s;
 }
 
 .photo-preview-modern {
-  flex: 1 1 220px;
+  flex: 1 1 280px;
+  min-width: 0;
   background: #fff;
   border-radius: 8px;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
-  padding: 16px;
-  margin-bottom: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: none;
+  padding: 12px;
+  margin-bottom: 0;
 }
 
 .photo-preview-modern h5 {
@@ -3049,6 +3051,35 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   font-size: 1rem;
   color: #2563eb;
   font-weight: 600;
+}
+
+.photo-preview-modern > div[id^="before-photos-"],
+.photo-preview-modern > div[id^="after-photos-"] {
+  min-height: 150px;
+}
+
+.photo-preview-modern .placeholder {
+  display: grid;
+  place-items: center;
+  min-height: 150px;
+  margin: 0;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  background: #f8fafc;
+  font-size: 0.82rem;
+}
+
+.photo-is-loading {
+  opacity: 0.58;
+  pointer-events: none;
+}
+
+.photo-container {
+  aspect-ratio: 8 / 4;
+  max-width: none;
+  box-shadow: none;
+  border: 1px solid #e2e8f0;
 }
 
 .upload-btn-modern {
@@ -3142,6 +3173,14 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   box-shadow: 0 24px 80px rgba(15, 23, 42, 0.18);
   padding: 24px;
 }
+
+  .line-item-card select{
+
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+
+  }
 
 .vendor-stats-modal-close {
   position: absolute;
@@ -4228,6 +4267,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 16px;
     width: 100%;
+    max-width: 770px;
   }
   .card-phase-field {
     display: flex;
@@ -4289,6 +4329,71 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
     background: #eff6ff;
     color: #1d4ed8;
     font-weight: 700;
+  }
+  .card-vendor-combobox {
+    position: relative;
+    display: inline-flex;
+    min-width: 150px;
+  }
+  .line-item-card[data-assigned-to] .card-footer .card-vendor-input,
+  .line-item-card .card-footer .card-vendor-input {
+    display: block;
+    width: 100%;
+    min-height: 32px;
+    padding: 5px 9px;
+    border: 1px solid #bfdbfe;
+    border-bottom: 1px solid #bfdbfe;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #1d4ed8;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+  .line-item-card[data-assigned-to] .card-footer .card-vendor-input[readonly] {
+    background: #dbeafe;
+    color: #1d4ed8;
+    cursor: pointer;
+  }
+  .card-vendor-menu {
+    position: absolute;
+    top: auto;
+    bottom: calc(100% + 6px);
+    right: 0;
+    z-index: 240;
+    width: max(240px, 100%);
+    max-height: 260px;
+    overflow-y: auto;
+    padding: 6px;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18);
+  }
+  .card-vendor-menu[hidden] {
+    display: none;
+  }
+  .card-vendor-option {
+    display: block;
+    width: 100%;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #0f172a;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-align: left;
+  }
+  .card-vendor-option:hover,
+  .card-vendor-option.is-active {
+    background: #eff6ff;
+    color: #1d4ed8;
+  }
+  .card-vendor-empty {
+    padding: 9px 10px;
+    color: #64748b;
+    font-size: 0.8rem;
   }
   @media (max-width: 768px) {
     .project-phase-path {
@@ -4438,7 +4543,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
             <th style="padding:2px 0; border-bottom:1px solid #e5e7eb; width:76px; min-width:76px; text-align:center;">
               <input id="list-view-select-all" type="checkbox" aria-label="Select all line items" title="Select all line items" style="display:block; margin:0 auto; width:15px; height:15px;">
             </th>
-            <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:130px;">
+            <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:80px;">
               <span style="display:inline-flex; align-items:center; gap:8px; justify-content:flex-start; width:100%;">
                 <button id="toggle-all-categories-btn" class="topbar-category-collapse-toggle estimate-disclosure-btn" type="button" aria-pressed="false" title="Collapse all categories" style="display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto;"></button>
                 <span>Category</span>
@@ -4453,7 +4558,7 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
             <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:90px;">Amount</th>
             <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:100px;">Phase</th>
             <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:85px;">% Complete</th>
-            <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:150px; width:160px;">Status</th>
+            <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:105px; width:115px;">Status</th>
             <th style="text-align:center; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:140px;">Assigned</th>
             <th style="text-align:right; padding:3px 6px; border-bottom:1px solid #e5e7eb; min-width:85px; width:85px;">Actions</th>
           </tr>
