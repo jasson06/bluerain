@@ -7149,7 +7149,7 @@ function ensureListViewContainer() {
         justify-content: flex-end;
       }
       #line-items-table-container .lv-category-group-item .lv-category-group-meta {
-        justify-content: center;
+        justify-content: end;
       }
       #line-items-table-container .lv-category-group-count {
         font-size: 14px;

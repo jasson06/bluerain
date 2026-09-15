@@ -1222,6 +1222,7 @@ window.onload = async () => {
     let vendorName = 'Vendor';
     let invoiceHistoryCache = [];
     let historyCurrentPage = 1;
+    const projectHistoryDetailsCache = new Map();
 
     function formatProjectAddress(address = {}) {
       return [address.addressLine1, address.city, address.state, address.zip]
@@ -1232,6 +1233,83 @@ window.onload = async () => {
     function getProjectById(projectId) {
       const normalizedId = projectId && typeof projectId === 'object' ? String(projectId._id || projectId.id || '') : String(projectId || '');
       return assignedProjects.find(project => String(project._id) === normalizedId) || null;
+    }
+
+        async function getHistoryProjectDetails(projectId) {
+      const normalizedProjectId = projectId && typeof projectId === 'object'
+        ? String(projectId._id || projectId.id || '')
+        : String(projectId || '');
+
+      if (!normalizedProjectId) {
+        return { name: '', addressLabel: 'N/A' };
+      }
+
+      if (projectHistoryDetailsCache.has(normalizedProjectId)) {
+        return projectHistoryDetailsCache.get(normalizedProjectId);
+      }
+
+      const assignedProject = getProjectById(normalizedProjectId);
+      if (assignedProject) {
+        const details = {
+          name: assignedProject.name || '',
+          addressLabel: assignedProject.addressLabel || formatProjectAddress(assignedProject.address || {})
+        };
+        projectHistoryDetailsCache.set(normalizedProjectId, details);
+        return details;
+      }
+
+      try {
+        const projectRes = await fetch(`/api/projects/${normalizedProjectId}`);
+        if (projectRes.ok) {
+          const { project } = await projectRes.json();
+          const details = {
+            name: project?.name || '',
+            addressLabel: formatProjectAddress(project?.address || {})
+          };
+          projectHistoryDetailsCache.set(normalizedProjectId, details);
+          return details;
+        }
+      } catch (err) {
+        console.error('❌ Failed to load history project details:', err);
+      }
+
+      const fallbackDetails = { name: '', addressLabel: 'N/A' };
+      projectHistoryDetailsCache.set(normalizedProjectId, fallbackDetails);
+      return fallbackDetails;
+    }
+
+    async function hydrateInvoiceHistoryLineItems(items = []) {
+      return Promise.all((Array.isArray(items) ? items : []).map(async item => {
+        const projectId = typeof item?.projectId === 'object'
+          ? String(item.projectId._id || item.projectId.id || '')
+          : String(item?.projectId || '');
+
+        if ((!projectId && item?.projectName && item?.projectAddress) || (!projectId && item?.projectName)) {
+          return {
+            ...item,
+            projectId,
+            projectName: item.projectName || '',
+            projectAddress: item.projectAddress || 'N/A'
+          };
+        }
+
+        if (!projectId) {
+          return {
+            ...item,
+            projectId: '',
+            projectName: item?.projectName || '',
+            projectAddress: item?.projectAddress || 'N/A'
+          };
+        }
+
+        const projectDetails = await getHistoryProjectDetails(projectId);
+        return {
+          ...item,
+          projectId,
+          projectName: item?.projectName || projectDetails.name || '',
+          projectAddress: item?.projectAddress || projectDetails.addressLabel || 'N/A'
+        };
+      }));
     }
 
     function buildProjectOptionsHtml(selectedProjectId = '') {
@@ -2352,6 +2430,7 @@ function getInvoiceHistoryTimestamp(invoice) {
 
 async function enrichInvoiceHistoryInvoice(invoice) {
   const clonedInvoice = { ...invoice };
+  clonedInvoice.lineItems = await hydrateInvoiceHistoryLineItems(clonedInvoice.lineItems || []);
   const itemProjectAddresses = [...new Set((clonedInvoice.lineItems || []).map(item => item.projectAddress).filter(Boolean))];
   const itemProjectNames = [...new Set((clonedInvoice.lineItems || []).map(item => item.projectName).filter(Boolean))];
 
@@ -2576,6 +2655,7 @@ async function openSavedInvoiceModal(invoiceNumber) {
     const res = await fetch(`/api/invoices/by-number/${invoiceNumber}`);
     if (!res.ok) throw new Error("Failed to fetch invoice");
     const { invoice } = await res.json();
+     invoice.lineItems = await hydrateInvoiceHistoryLineItems(invoice.lineItems || []);
 
     const itemProjectNames = [...new Set((invoice.lineItems || []).map(item => item.projectName).filter(Boolean))];
     const itemProjectAddresses = [...new Set((invoice.lineItems || []).map(item => item.projectAddress).filter(Boolean))];
