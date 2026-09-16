@@ -8,6 +8,8 @@
    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+<script src="./vendor/marked/marked.umd.js"></script>
+<script src="./description-editor.js"></script>
 
   <style>
 /* General Styles */
@@ -641,6 +643,35 @@ button:hover,
   padding: 12px 14px;
   border-radius: 10px;
   background: #f8fafc;
+}
+
+.maintenance-description strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.maintenance-description-body {
+  display: grid;
+  gap: 8px;
+  color: #475569;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.maintenance-description-body > :first-child {
+  margin-top: 0;
+}
+
+.maintenance-description-body > :last-child {
+  margin-bottom: 0;
+}
+
+.maintenance-description-body p,
+.maintenance-description-body ul,
+.maintenance-description-body ol,
+.maintenance-description-body blockquote {
+  margin: 0;
 }
 
 .maintenance-description ul {
@@ -1576,15 +1607,21 @@ function formatProjectAddress(address = {}) {
     .join(", ") || "N/A";
 }
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
 function formatMaintenanceDescription(desc) {
-  if (!desc) return "<p>No description provided.</p>";
-
-  const tasks = desc.split(/\s*\d+\.\s*\/\s*/).filter(task => task.trim() !== "");
-  if (!tasks.length) {
-    return `<p>${desc}</p>`;
-  }
-
-  return `<ul>${tasks.map(task => `<li>${task.trim()}</li>`).join("")}</ul>`;
+  const rendered = typeof DescriptionEditor?.render === "function"
+    ? DescriptionEditor.render(desc)
+    : escapeHtml(desc || "").replace(/\n/g, "<br>");
+  return `<div class="maintenance-description-body">${rendered || "<p>No description provided.</p>"}</div>`;
 }
 
 function hasMaintenanceRequestId(item) {

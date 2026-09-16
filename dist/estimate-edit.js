@@ -2083,7 +2083,7 @@ function openVendorStatsModal(vendorId, vendorName) {
                     <div class="vendor-stats-modal-table-description">${escapeVendorModalHtml(item.category)}</div>
                   </td>
                   <td data-label="Description">
-                    <div class="vendor-stats-modal-table-description ${isVendorModalDescriptionExpandable(item.description) ? 'is-collapsed' : ''}" data-role="description">${escapeVendorModalHtml(item.description)}</div>
+                    <div class="vendor-stats-modal-table-description ${isVendorModalDescriptionExpandable(item.description) ? 'is-collapsed' : ''}" data-role="description">${DescriptionEditor.render(item.description)}</div>
                     ${isVendorModalDescriptionExpandable(item.description) ? '<span class="vendor-stats-modal-table-description-hint" data-role="description-hint">Tap item to show more</span>' : ''}
                   </td>
                   <td data-label="Status">
@@ -3066,7 +3066,7 @@ card.innerHTML = `
     </div>
     <div class="detail">
       <label>Description</label>
-      <textarea class="item-description" placeholder="Description" style="min-width:350px; overflow:hidden;">${item.description || ""}</textarea>
+      <textarea class="item-description" placeholder="Description" style="min-width:350px; overflow:hidden;">${DescriptionEditor.escape(item.description || "")}</textarea>
     </div>
     <div class="detail">
       <label>Project Phase</label>
@@ -3358,7 +3358,7 @@ itemNameInput.addEventListener("input", () => {
     const recTotal = typeof match.totalCost !== 'undefined' ? parseFloat(match.totalCost) : rateVal;
     option.innerHTML = `
     <div style="font-weight:600;">${match.name}</div>
-    <div style="font-size: 11px; color: #555; margin-top: 2px;">${match.description || "No description"}</div>
+    <div style="font-size: 11px; color: #555; margin-top: 2px;">${DescriptionEditor.render(match.description || "No description")}</div>
     <div style="display:flex; gap:10px; align-items:center; margin-top:6px;">
       
       <div style="font-size:11px; color:#065f46;">Labor: $${laborVal.toFixed(2)}</div>
@@ -4913,7 +4913,7 @@ function updatePage() {
             Phase: getProjectPhaseLabel(item.phase || DEFAULT_PROJECT_PHASE),
             costCode: item.costCode,
             Name: item.name,
-            Description: item.description,
+            Description: DescriptionEditor.plain(item.description),
             Quantity: item.quantity,
             UnitPrice: item.unitPrice,
             Total: item.quantity * item.unitPrice,
@@ -9972,7 +9972,7 @@ function buildListViewFromCards() {
             const recTotal = typeof match.totalCost !== 'undefined' ? parseFloat(match.totalCost) : rateVal;
             row.innerHTML = `
               <div style="font-weight:600;">${match.name || ''}</div>
-              <div style="font-size:12px; color:#6b7280;">${match.description || 'No description'}</div>
+              <div style="font-size:12px; color:#6b7280;">${DescriptionEditor.render(match.description || 'No description')}</div>
               <div style="display:flex; gap:12px; margin-top:6px; font-size:12px;">
                 <span style="color:#065f46;">Labor: $${(laborVal||0).toFixed(2)}</span>
                 <span style="color:#92400e;">Material: $${(materialVal||0).toFixed(2)}</span>

@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project View</title>
+    <script src="./vendor/marked/marked.umd.js"></script>
+    <script src="./description-editor.js"></script>
     
 <style>
         /* General Styling */
@@ -441,7 +443,7 @@ button, .upload-btn {
         width: 100%;
         display: block;
         overflow-x: auto;
-        
+        white-space: nowrap;
     }
 
     th, td {
@@ -473,8 +475,10 @@ button, .upload-btn {
     /* ✅ Adjust Photo Upload Section */
     .photo-preview {
         display: flex;
-        
-        align-items: center;
+        flex-direction: row;
+        gap: 24px;
+        align-items: flex-start;
+        justify-content: flex-start;
     }
 
     .photo-section {
@@ -571,8 +575,6 @@ button, .upload-btn {
   box-shadow: 0 1px 4px rgba(0,123,255,0.10);
   transform: scale(0.98);
 }
-    
-/* ✅ Mobile-Specific Adjustments (Phones < 768px) */
 @media (max-width: 768px) {
     /* ✅ Stack Table Rows for Better Mobile View */
     table {
@@ -612,7 +614,11 @@ h2{
 
     /* ✅ Photo Preview for Smaller Screens */
     .photo-preview {
-        flex-direction: inline;
+        display: flex;
+        flex-direction: row;
+        gap: 100px;
+        align-items: flex-start;
+        justify-content: flex-start;
     }
 
     .photo-container {
@@ -787,7 +793,30 @@ td {
   padding: 10px;
   background-color: #f8f9fa;
   border-radius: 8px;
-  margin: 10px 0;
+  margin: 10px 20px;
+}
+.item-description h2 {
+    margin: 0 0 10px;
+}
+.item-description-body {
+    display: grid;
+    gap: 8px;
+    color: #334155;
+    line-height: 1.5;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+.item-description-body > :first-child {
+    margin-top: 0;
+}
+.item-description-body > :last-child {
+    margin-bottom: 0;
+}
+.item-description-body p,
+.item-description-body ul,
+.item-description-body ol,
+.item-description-body blockquote {
+    margin: 0;
 }
 .item-description ul {
   padding-left: 20px;
@@ -896,7 +925,8 @@ td {
   color: #fff;
 }
 
-    .rework-badge-estimate {
+
+.rework-badge-estimate {
     background-color: #dc2626;
     color: white;
     padding: 4px 12px;
@@ -1174,6 +1204,21 @@ function hideLoader() {
   document.getElementById('loader').style.display = 'none';
 }
 
+function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, char => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;"
+        }[char]));
+}
+
+function isActiveAssignedItem(item) {
+    const status = String(item?.status || "new").toLowerCase();
+    return status === "new" || status === "in-progress" || status === "rework";
+}
+
 
 // ✅ Fix Dot Indicators (Now Correctly Updates)
 function updateDots(wrapperId, activeIndex) {
@@ -1254,6 +1299,9 @@ async function fetchProjectEstimates(projectId) {
       const assignedItems = assignedMap.get(est._id);
       if (!assignedItems) return;
 
+            const hasActiveItems = assignedItems.some(isActiveAssignedItem);
+            if (!hasActiveItems) return;
+
       validEstimateFound = true;
 
       const hasNewItem = assignedItems.some(item =>
@@ -1303,7 +1351,7 @@ async function fetchProjectEstimates(projectId) {
     });
 
     if (!validEstimateFound) {
-      tabsContainer.innerHTML = `<p style="padding: 12px; color: gray;">No assigned estimates found for this project.</p>`;
+            tabsContainer.innerHTML = `<p style="padding: 12px; color: gray;">No active estimates found for this project.</p>`;
     }
 
   } catch (error) {
@@ -1549,6 +1597,7 @@ async function toggleItemStatus(vendorId, itemId, currentStatus) {
 
 
 
+
 // ✅ Generate Photo Preview (Click to Open Fullscreen)
 function generatePhotoPreview(photos, itemId, type) {
     if (!photos || photos.length === 0) {
@@ -1569,8 +1618,8 @@ function generatePhotoPreview(photos, itemId, type) {
                     </div>
                 `).join("")}
             </div>
+            <div class="photo-dots" id="dots-${type}-${itemId}">${dots}</div>
         </div>
-        <div class="photo-dots" id="dots-${type}-${itemId}">${dots}</div>
     `;
 }
 
@@ -1814,15 +1863,11 @@ async function deletePhoto(itemId, photoUrl, type) {
 
 
 function formatDescription(desc) {
-  if (!desc) return "N/A";
+    const rendered = typeof DescriptionEditor?.render === "function"
+        ? DescriptionEditor.render(desc)
+        : escapeHtml(desc || "").replace(/\n/g, "<br>");
 
-  const tasks = desc.split(/\s*\d+\.\s*\/\s*/).filter(t => t.trim() !== "");
-
-  return `
-    <ul>
-      ${tasks.map(task => `<li>${task.trim()}</li>`).join("")}
-    </ul>
-  `;
+    return `<div class="item-description-body">${rendered || "<p>No description provided.</p>"}</div>`;
 }
 
 
@@ -1900,11 +1945,18 @@ function displayAssignedItems(items) {
         if (currentStatus === "completed") statusClass = "completed";
         if (currentStatus === "approved") statusClass = "approved";
 
-        const reworkNotes = item.qualityControl?.status === "rework"
-            ? `<div class="rework-notes">
-                   <strong>Rework Notes:</strong> ${item.qualityControl.notes || "No notes provided"}
-               </div>`
-            : "";
+        // Always display rework notes/photos if present, regardless of status
+        let reworkSection = "";
+        const reworkNote = item.qualityControl?.rework?.note;
+        const reworkPhotos = item.qualityControl?.rework?.photos || [];
+        if (reworkNote || (Array.isArray(reworkPhotos) && reworkPhotos.length > 0)) {
+            reworkSection = `<div class="rework-notes">`
+                + `<div><strong>Rework Notes:</strong> ${reworkNote ? reworkNote : "No notes provided"}</div>`
+                + (reworkPhotos.length > 0
+                    ? `<div style="margin-top:8px;"><strong>Rework Photos:</strong> ${generatePhotoPreview(reworkPhotos, item.itemId, "rework")}</div>`
+                    : "")
+                + `</div>`;
+        }
 
         const row = document.createElement("tr");
         row.innerHTML = `
@@ -1913,8 +1965,7 @@ function displayAssignedItems(items) {
                  ${currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)}
               </span> 
             </h6>
-            <div class="item-description"><h2>Description</h2>${formatDescription(item.description)}</div>
-              ${reworkNotes}
+            <div class="item-description"><h2>Description</h2>${formatDescription(item.description)}${reworkSection}</div>
             <td style="display:none">Qty: ${item.quantity || "0"} <h4>Unit Price: $${(item.unitPrice || 0).toFixed(2)}</h4></td>
             <td>
                 <div class="photo-preview">
