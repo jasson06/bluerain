@@ -9814,7 +9814,7 @@ async function sendOverdueScheduleAlert(schedule) {
 
   await transporter.sendMail({
     from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-    to: ['besfllc@gmail.com'],
+    to: [''],
     subject: `Overdue Maintenance Alert: ${schedule.title}`,
     html: getOverdueMaintenanceEmailHtml({
       recipientName: 'Team',
