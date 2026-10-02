@@ -1,0 +1,10 @@
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@media (max-width: 760px) {
+    .payments-table th, .payments-table td,
+    .maintenance-table th, .maintenance-table td { white-space:normal; }
+    .maintenance-description-cell .maintenance-description-inner {width: 200px;}
+}

@@ -1,0 +1,68 @@
+
+/* Match the portfolio's bounded records area without changing card or table styling. */
+#propertyDashboard .property-record-scroll {
+    max-height: min(65dvh, 635px);
+    min-height: 0;
+    overflow: auto;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    overscroll-behavior: contain;
+    align-content: start;
+}
+#propertyDashboard .property-record-scroll > .maintenance-scroll-table,
+#propertyDashboard .property-record-scroll > .documents-table-wrapper,
+#propertyDashboard #applicationsList > div,
+#propertyDashboard #invitesList > div,
+#propertyDashboard #scheduleList > div:has(> table) {
+    overflow: visible !important;
+    max-height: none;
+}
+#propertyDashboard .property-record-scroll table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--property-record-heading, #e0f2fe);
+}
+body.dark-theme #propertyDashboard { --property-record-heading: #1e293b; }
+#propertyDashboard #evictionsList tbody tr { cursor: pointer; }
+#propertyDashboard #evictionsList tbody tr:hover td,
+#propertyDashboard #evictionsList tbody tr:focus td { background: #e0f7ff; }
+body.dark-theme #propertyDashboard #evictionsList tbody tr:hover td,
+body.dark-theme #propertyDashboard #evictionsList tbody tr:focus td { background: #1e3a4a; }
+#propertyDashboard .property-record-pagination,
+#propertyDashboard .payment-record-pagination,
+#portfolioOverviewSection .portfolio-comparison-pagination {
+    position: sticky;
+    bottom: 0;
+    z-index: 12;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 52px;
+    flex-shrink: 0;
+    padding: 8px 10px max(1px, env(safe-area-inset-bottom));
+    border-top: 1px solid rgba(56, 189, 248, .28);
+    background: rgba(248, 252, 255, .97);
+    box-shadow: 0 -8px 20px rgba(8, 79, 119, .1);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+body.dark-theme #propertyDashboard .property-record-pagination,
+body.dark-theme #propertyDashboard .payment-record-pagination,
+body.dark-theme #portfolioOverviewSection .portfolio-comparison-pagination {
+    background: rgba(10, 38, 57, .97);
+    border-top-color: rgba(56, 189, 248, .22);
+}
+#propertyDashboard .property-record-pagination[hidden],
+#propertyDashboard .property-record-scroll[style*="display: none"] + .property-record-pagination,
+#propertyDashboard .property-record-scroll[style*="display:none"] + .property-record-pagination { display: none !important; }
+#propertyDashboard #payments .payments-list > .table-responsive {
+    height: auto;
+    min-height: 470px;
+    max-height: min(58dvh, 475px);
+    overflow: auto;
+    scrollbar-gutter: stable;
+}
+@media (max-width: 760px) {
+    #propertyDashboard .property-record-scroll,
+    #propertyDashboard #payments .payments-list > .table-responsive { max-height: 60dvh; }
+}

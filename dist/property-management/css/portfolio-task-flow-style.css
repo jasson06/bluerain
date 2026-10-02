@@ -1,0 +1,36 @@
+
+#portfolioTasksSidebar .task-add-trigger{display:flex;align-items:center;gap:8px;width:100%;border:0;background:transparent;box-shadow:none;color:#147fa8;text-align:left;padding:13px 6px;font-size:14px;font-weight:600;cursor:pointer;border-radius:8px}
+#portfolioTasksSidebar .task-add-trigger:hover,#portfolioTasksSidebar .task-add-trigger[aria-expanded=true]{background:rgba(78,166,205,.10)}
+#portfolioTasksSidebar .task-add-trigger>span{font-size:22px;font-weight:400;line-height:1}
+#portfolioTasksSidebar .task-composer-actions{display:flex;gap:8px;margin-top:12px}
+#portfolioTasksSidebar .task-composer-actions button{padding:8px 13px;border-radius:7px;font-size:13px}
+#portfolioTasksSidebar #portfolioTaskCancelButton{background:transparent;color:var(--task-muted);box-shadow:none;border:1px solid var(--task-line)}
+body.dark-theme #portfolioTasksSidebar .task-add-trigger{color:#91ddfa}
+
+#portfolioTasksSidebar{--task-ink:#244456;--task-muted:#607e8d;--task-line:rgba(95,149,178,.22);--task-surface:rgba(255,255,255,.72)}
+body.dark-theme #portfolioTasksSidebar{--task-ink:#e0f1fa;--task-muted:#adcad8;--task-line:#416070;--task-surface:#19394b}
+#portfolioTasksSidebar .portfolio-tasks-new{display:block;padding:10px 0;border-bottom:1px solid var(--task-line);margin:0}
+
+#portfolioTasksSidebar #portfolioTaskTitleInput{flex:1;min-width:0;width:100%;box-sizing:border-box;font-size:14px;background:var(--task-surface);color:var(--task-ink);border:1px solid var(--task-line);padding:10px;border-radius:8px}
+
+
+#portfolioTasksSidebar label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--task-muted);margin:10px 0}
+#portfolioTasksSidebar label input,#portfolioTasksSidebar label select,#portfolioTasksSidebar textarea{width:100%;box-sizing:border-box;min-width:0;border:1px solid var(--task-line);border-radius:7px;padding:8px;background:var(--task-surface);color:var(--task-ink);font:inherit;font-size:13px}
+#portfolioTasksSidebar textarea{resize:vertical;min-height:60px}
+#portfolioTasksSidebar .task-flow-item{border-bottom:1px solid var(--task-line);padding:12px 0}
+#portfolioTasksSidebar .task-flow-row{display:flex;align-items:flex-start;gap:7px}
+#portfolioTasksSidebar .task-flow-copy{flex:1;min-width:0}
+#portfolioTasksSidebar .task-title-button{border:0;background:transparent;color:var(--task-ink);text-align:left;font-size:14px;line-height:1.45;padding:2px 0;width:100%;overflow-wrap:anywhere;cursor:pointer}
+#portfolioTasksSidebar .is-completed .task-title-button{text-decoration:line-through;color:var(--task-muted)}
+#portfolioTasksSidebar .task-icon-button{display:grid;place-items:center;border:0;background:transparent;color:var(--task-muted);width:28px;height:28px;padding:5px;flex-shrink:0;cursor:pointer;border-radius:50%}
+#portfolioTasksSidebar .task-icon-button:hover{background:rgba(92,174,205,.16)}
+#portfolioTasksSidebar .task-check{color:#1689b0}#portfolioTasksSidebar .is-starred{color:#bf8612}
+#portfolioTasksSidebar svg.br-outline{width:17px;height:17px;display:inline-block;vertical-align:middle}
+#portfolioTasksSidebar .task-flow-description{font-size:12px;line-height:1.45;color:var(--task-muted);margin:3px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+#portfolioTasksSidebar .task-flow-meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+#portfolioTasksSidebar .task-date,#portfolioTasksSidebar .task-property-link{font-size:11px;padding:3px 6px;border:1px solid var(--task-line);border-radius:6px;background:var(--task-surface);color:var(--task-muted);max-width:100%;overflow-wrap:anywhere}
+#portfolioTasksSidebar .task-date.overdue{color:#b34232}
+#portfolioTasksSidebar .task-property-link{display:flex;align-items:center;gap:4px;cursor:pointer;text-align:left}#portfolioTasksSidebar .task-property-link svg{width:12px;height:12px;flex-shrink:0}
+#portfolioTasksSidebar .task-editor-actions{display:flex;align-items:center;gap:8px}#portfolioTasksSidebar .task-editor-actions>button{padding:7px 10px;border:1px solid var(--task-line);border-radius:6px;background:var(--task-surface);color:var(--task-ink);cursor:pointer;font-size:12px}#portfolioTasksSidebar .task-editor-actions>button[type=submit]{background:#137fa5;color:#fff}#portfolioTasksSidebar .task-editor-actions>.task-icon-button{margin-left:auto}
+#portfolioTasksSidebar .task-flow-empty{padding:24px 8px;font-size:13px;color:var(--task-muted);text-align:center}#portfolioTasksSidebar [hidden]{display:none!important}
+

@@ -1,0 +1,4 @@
+
+#propertyDashboard.property-combined-headings #propertyName { display:none; }
+#propertyDashboard.property-combined-headings .dashboard-header-top { display:none; }
+#propertyDashboard .property-context-heading { min-width:0; overflow-wrap:anywhere; }

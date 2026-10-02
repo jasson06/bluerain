@@ -1,0 +1,3 @@
+
+.portfolio-graphics-title-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.portfolio-graphics-title-row .portfolio-period-control[hidden]{display:none!important}.portfolio-graphics-title-row h3{margin:0}
+.portfolio-graphics-title-row .portfolio-period-control{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:inherit}.portfolio-graphics-title-row .portfolio-period-control select{min-width:125px;border:1px solid rgba(56,189,248,.3);border-radius:9px;padding:8px 10px;background:var(--background-color,#fff);color:var(--text-color,#244456);font:inherit;cursor:pointer}.portfolio-period-control select:focus-visible{outline:2px solid #179dc1;outline-offset:2px}

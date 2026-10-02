@@ -1,0 +1,5 @@
+
+#tenantDetailsModal > .tenant-details-modal.tenant-drawer { width:min(780px,calc(100vw - 28px))!important; max-width:780px!important; padding:0!important; display:flex; flex-direction:column; overflow:hidden!important; }
+#tenantDetailsModal .portfolio-record-drawer-header { flex-shrink:0; }
+#tenantDetailsModal .portfolio-record-drawer-body { height:auto; min-height:0; flex:1; overflow:auto; }
+@media(max-width:600px){#tenantDetailsModal > .tenant-details-modal.tenant-drawer {width:calc(100vw - 16px)!important;}}

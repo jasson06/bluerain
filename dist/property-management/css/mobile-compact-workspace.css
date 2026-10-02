@@ -1,0 +1,87 @@
+
+/* Compact phone/tablet workspace. Desktop sizing remains unchanged. */
+@media (max-width:900px) {
+  body.workspace-hover-layout .main-content { min-width:0; max-width:100%; box-sizing:border-box; }
+  #propertyDashboard,.tab-content,.tab-pane,#portfolioOverviewSection,.portfolio-persistent-main,
+  .portfolio-comparison-panel,.portfolio-comparison-tools,.property-panel { min-width:0; max-width:100%; box-sizing:border-box; }
+  .portfolio-maintenance-cards { grid-template-columns:minmax(0,1fr)!important; }
+  .units-grid,.tenant-card-layout,.portfolio-tenant-card-grid,.portfolio-tenant-card-columns,
+  .compact-maintenance-grid { grid-template-columns:minmax(0,1fr)!important; }
+  .portfolio-comparison-table,.property-record-scroll,.table-responsive { max-width:100%; overflow:auto; -webkit-overflow-scrolling:touch; }
+  #propertyDashboard .dashboard-header .tabs { display:flex; flex-wrap:nowrap; overflow-x:auto; max-width:100%; scrollbar-width:thin; }
+  #propertyDashboard .dashboard-header .tab-btn { flex:0 0 auto; }
+  .form-row { flex-wrap:wrap; }
+  .form-row > .form-group { min-width:0; flex:1 1 220px; }
+}
+@media (max-width:600px) {
+  body.workspace-hover-layout .main-content { padding:0 8px 20px!important; }
+  .top-tools-bar { padding:7px 8px!important; gap:6px!important; flex-wrap:wrap; }
+  .top-tools-right { min-width:0; gap:6px!important; margin-left:auto; flex-wrap:wrap; max-width:100%; }
+  .top-tools-search { min-width:0!important; max-width:100%; flex:1 1 150px; }
+  .top-tools-search input { width:100%!important; min-width:0!important; box-sizing:border-box; }
+  .portfolio-welcome-text { font-size:.85rem!important; overflow-wrap:anywhere; }
+  #managerAvatarBtn { width:36px!important; height:36px!important; min-width:36px; font-size:.8rem!important; }
+  #managerAccountMenu { max-width:calc(100vw - 24px); }
+  .main-content :is(.btn-primary,.btn-secondary,.overview-row-action,.panel-link),
+  .modal :is(.btn-primary,.btn-secondary,.overview-row-action),
+  .portfolio-record-drawer :is(.btn-primary,.btn-secondary,.overview-row-action) {
+    padding:6px 9px!important; min-height:36px; font-size:.78rem!important; line-height:1.25; border-radius:8px!important;
+    display:inline-flex; align-items:center; justify-content:center; gap:5px; white-space:normal;
+  }
+  :is(.btn-primary,.btn-secondary,.overview-row-action,.tab-btn,.portfolio-workspace-tabs button) > i { font-size:.82rem!important; }
+  #portfolioWorkspaceTabs,.dashboard-header { padding:6px 2px!important; margin:4px 0 8px!important; border-radius:10px!important; }
+  .portfolio-workspace-tabs { gap:4px!important; }
+  .portfolio-workspace-tabs button,#propertyDashboard .dashboard-header .tab-btn,
+  .tenant-tab-btn,.maintenance-tab-btn,.applications-tab-btn,.payment-workspace-tab {
+    min-height:36px!important; padding:7px 9px!important; font-size:.77rem!important; border-radius:8px!important;
+  }
+  .pm-section-heading,.units-header,.tenants-header,.maintenance-header,.documents-header,.payments-header,
+  .portfolio-overview-header,.portfolio-comparison-heading { padding:8px!important; gap:8px!important; flex-wrap:wrap; margin-bottom:8px!important; }
+  .property-context-heading,.pm-section-heading h2,.portfolio-overview-header h2 { font-size:1rem!important; line-height:1.35; overflow-wrap:anywhere; }
+  .pm-section-heading>div:last-child,.units-header>div:last-child,.tenants-header>div:last-child,
+  .maintenance-header>div:last-child,.documents-header>div:last-child,.payments-header>div:last-child { gap:5px!important; min-width:0; }
+  .portfolio-comparison-panel,.property-panel,.property-info-card,.unit-card,.unit-card-modern,.tenant-card,
+  .portfolio-visual-card,.portfolio-drawer-section { padding:10px!important; border-radius:11px!important; margin-bottom:8px; }
+  .portfolio-comparison-heading h3 { font-size:.95rem; }
+  .portfolio-comparison-tools { gap:6px; }
+  .portfolio-comparison-tools > * { flex:1 1 120px; max-width:100%; box-sizing:border-box; }
+  .portfolio-comparison-tools input { min-width:0!important; }
+  .overview-control-bar,.portfolio-command-bar { gap:6px!important; flex-wrap:wrap; }
+  .overview-control-bar > div,.portfolio-command-bar label { min-width:0; flex:1 1 130px; }
+  .interactive-overview-grid,.property-overview-grid,.portfolio-graphics-dashboard { gap:8px!important; }
+  .interactive-overview-grid > *,.portfolio-graphics-dashboard > * { grid-column:1 / -1!important; min-width:0; }
+  .portfolio-graphic-stat-row { grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+  .portfolio-executive-card { padding:10px!important; min-width:0!important; flex-basis:140px!important; }
+  .portfolio-tenant-card-grid,.tenant-card-layout,.compact-maintenance-grid { gap:8px!important; }
+  .maintenance-content { padding:8px!important; }
+  .portfolio-maintenance-cards .compact-maintenance-grid { height:auto!important; }
+  .maintenance-thread-messages { max-height:240px!important; overflow:auto; }
+  #portfolioOverviewSection:not(.portfolio-tasks-only) #portfolioTasksSidebar { height:auto!important; max-height:340px!important; overflow:auto; }
+    .portfolio-comparison-table { height:55dvh!important; max-height:55dvh!important; }
+    #propertyDashboard .property-record-scroll { max-height:55dvh!important; }
+  .portfolio-performance-table th,.portfolio-performance-table td { padding:8px 7px!important; font-size:.76rem!important; }
+  .portfolio-comparison-pagination { gap:5px!important; margin-top:6px!important; padding-top:6px!important; }
+  .portfolio-comparison-pagination button { min-width:36px; min-height:36px; padding:5px!important; }
+  .portfolio-comparison-pagination .task-meta,.portfolio-page-size { font-size:.73rem!important; }
+  .portfolio-comparison-pagination .portfolio-page-size { display:inline-flex; align-items:center; gap:5px; }
+  input:not([type=checkbox]):not([type=radio]):not([type=file]),textarea,select { font-size:16px!important; box-sizing:border-box; max-width:100%; }
+  .form-row { display:flex!important; flex-direction:column; gap:8px!important; }
+  .form-row > .form-group { flex:initial; width:100%; margin-bottom:6px; }
+  .portfolio-record-drawer,.portfolio-record-drawer.tenant-drawer { left:8px!important; right:8px!important; top:max(8px,env(safe-area-inset-top))!important; bottom:max(8px,env(safe-area-inset-bottom))!important; width:auto!important; max-width:none!important; }
+  .portfolio-record-drawer-header { padding:10px 12px!important; min-height:52px; box-sizing:border-box; }
+  .portfolio-record-drawer-body { padding:9px!important; }
+  .portfolio-tenant-drawer-header { grid-template-columns:auto minmax(0,1fr)!important; padding:10px!important; gap:9px!important; }
+  .portfolio-tenant-drawer-badges { grid-column:1 / -1; justify-content:flex-start; }
+  .portfolio-tenant-drawer-avatar { width:42px; height:42px; font-size:.9rem; border-radius:12px; }
+  .portfolio-tenant-drawer-heading h4 { font-size:1.05rem; }
+  .portfolio-tenant-drawer-grid { grid-template-columns:minmax(0,1fr)!important; gap:8px!important; }
+  .portfolio-tenant-detail-paragraphs { font-size:.84rem; overflow-wrap:anywhere; }
+  .notes-drawer-panel { width:calc(100vw - 16px)!important; max-width:calc(100vw - 16px)!important; box-sizing:border-box; }
+  .modal > .modal-content { max-height:calc(100dvh - 16px)!important; margin:8px!important; border-radius:12px!important; }
+  .modal-footer,.modal-buttons,.portfolio-tenant-actions { flex-wrap:wrap; gap:6px!important; }
+  #applicationsFilterBar > div,#invitesFilterBar > div { min-width:0!important; max-width:100%; box-sizing:border-box; }
+}
+@media (max-width:380px) {
+  .portfolio-comparison-tools > * { flex-basis:100%; }
+  .portfolio-graphic-stat-row { grid-template-columns:minmax(0,1fr); }
+}

@@ -1,0 +1,56 @@
+
+/* Portfolio Overview keeps its existing global tasks and notes in the right column. */
+#portfolioOverviewSection:not(.portfolio-tasks-only) .portfolio-persistent-layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;align-items:start;gap:16px}
+.portfolio-persistent-main{min-width:0}
+#portfolioOverviewSection:not(.portfolio-tasks-only) #portfolioTasksSidebar{position:sticky!important;top:67px!important;left:auto!important;right:auto!important;bottom:auto!important;z-index:1;width:100%!important;max-width:none!important;height:auto!important;max-height:calc(100dvh - 100px)!important;box-sizing:border-box;transform:none!important;opacity:1!important;pointer-events:auto!important;transition:none;overflow:auto;box-shadow:0 8px 24px rgba(8,79,119,.10)!important}
+#portfolioOverviewSection:not(.portfolio-tasks-only) .portfolio-task-close{display:none}
+#portfolioOverviewSection:not(.portfolio-tasks-only) .portfolio-tasks-list{flex:none;max-height:none;overflow:visible}
+#portfolioOverviewSection:not(.portfolio-tasks-only) .portfolio-notes-sidebar{flex:none}
+#portfolioOverviewSection.portfolio-tasks-only .portfolio-persistent-main{display:none}
+#portfolioOverviewSection.portfolio-tasks-only .portfolio-persistent-layout{display:block}
+@media(max-width:1100px){#portfolioOverviewSection:not(.portfolio-tasks-only) .portfolio-persistent-layout{grid-template-columns:minmax(0,1fr) 240px;gap:12px}}
+@media(max-width:900px){
+#portfolioOverviewSection:not(.portfolio-tasks-only) .portfolio-persistent-layout{grid-template-columns:minmax(0,1fr)}
+#portfolioOverviewSection:not(.portfolio-tasks-only) #portfolioTasksSidebar{position:fixed!important;inset:auto 12px 82px!important;z-index:145;width:auto!important;max-width:none!important;height:min(72dvh,680px)!important;max-height:min(72dvh,680px)!important;margin:0!important;transform:translateY(calc(100% + 32px))!important;opacity:0!important;pointer-events:none!important;transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .22s ease!important;overflow:auto;box-shadow:0 24px 70px rgba(15,23,42,.28)!important}
+#portfolioOverviewSection:not(.portfolio-tasks-only) #portfolioTasksSidebar.mobile-open{transform:translateY(0)!important;opacity:1!important;pointer-events:auto!important}
+#portfolioOverviewSection:not(.portfolio-tasks-only) .portfolio-task-close{display:inline-grid!important;place-items:center}
+#globalOverviewModal{z-index:140!important;align-items:flex-end!important;justify-content:center!important;background:rgba(15,23,42,.34)!important;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#globalOverviewModal>.modal-content{position:fixed!important;inset:auto 10px 78px!important;width:auto!important;max-width:none!important;height:min(76dvh,700px)!important;max-height:min(76dvh,700px)!important;margin:0!important;border-radius:16px!important;padding:10px!important;display:flex;flex-direction:column;transform:translateY(calc(100% + 32px))!important;opacity:0!important;transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .22s ease!important}
+#globalOverviewModal.property-drawer-open>.modal-content{transform:translateY(0)!important;opacity:1!important}
+#globalOverviewModal>.modal-content>.modal-header{position:relative!important;top:auto!important;flex:0 0 auto;min-height:36px;margin:0 0 8px!important;padding:0 0 8px!important;border-bottom:1px solid #dbe5ec;border-radius:0!important}
+#globalOverviewModal #globalOverviewTitle{min-width:0;margin:0!important;font-size:1rem!important;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#globalOverviewModal .global-overview-close{display:inline-grid!important;place-items:center;width:34px;height:34px;min-width:34px;padding:0!important;border-radius:8px!important;font-size:.9rem!important}
+#globalOverviewModal #globalOverviewBody{flex:1;min-height:0;max-height:none!important;padding:0 2px 4px!important;overflow:auto!important;overscroll-behavior:contain}
+#globalOverviewModal .mobile-overview-table,#globalOverviewModal .mobile-overview-table tbody{display:block;width:100%}
+#globalOverviewModal .mobile-overview-table thead{display:none}
+#globalOverviewModal .mobile-overview-table tbody{display:grid;gap:8px}
+#globalOverviewModal .mobile-overview-table tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 10px;padding:9px;border:1px solid #dbe5ec;border-radius:8px;background:rgba(255,255,255,.9);box-shadow:0 2px 8px rgba(15,23,42,.06);font-size:.78rem}
+#globalOverviewModal .mobile-overview-table td{display:grid;align-content:start;gap:2px;min-width:0;padding:0!important;border:0!important;white-space:normal!important;overflow-wrap:anywhere}
+#globalOverviewModal .mobile-overview-table td::before{content:attr(data-label);color:#64748b;font-size:.6rem;font-weight:700;text-transform:uppercase}
+#globalOverviewModal .mobile-overview-table td.mobile-card-wide{grid-column:1/-1}
+#globalOverviewModal .mobile-overview-table :is(select,input,button,a){max-width:100%;font-size:.76rem}
+#globalOverviewModal .mobile-overview-table :is(select,input){min-height:32px;padding:5px 7px!important}
+#globalOverviewModal .mobile-overview-table :is(button.btn-secondary,.icon-copy-btn,.portfolio-notes-link){min-width:32px;min-height:32px;padding:5px 7px!important}
+#globalOverviewModal .mobile-overview-table .maintenance-description-inner{max-height:62px;overflow:auto}
+#globalOverviewModal .table-responsive{overflow:visible!important}
+#globalOverviewModal [data-maintenance-overview-tabs]{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:5px!important}
+#globalOverviewModal [data-maintenance-overview-tab]{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:32px;padding:6px 9px!important;border-radius:7px!important;font-size:.76rem!important;box-shadow:none!important}
+#globalOverviewModal [data-maintenance-overview-tab] i{margin-right:6px!important}
+#globalOverviewModal [data-global-maintenance-content]{gap:8px!important}
+#globalOverviewModal [data-maintenance-overview-filters]{display:grid!important;grid-template-columns:1fr;gap:5px!important;align-items:stretch!important}
+#globalOverviewModal [data-maintenance-overview-filters]>div{min-width:0}
+#globalOverviewModal [data-maintenance-overview-filter]{box-sizing:border-box;width:100%;height:32px!important;min-width:0;min-height:32px!important;padding:5px 8px!important;font-size:.76rem}
+#globalOverviewModal .global-overview-clear{display:flex;align-items:center;justify-content:center;width:100%;min-height:32px;padding:5px 8px!important;font-size:.76rem!important}
+#globalOverviewModal #portfolioDetailsFilterBar{display:grid!important;grid-template-columns:1fr;gap:5px!important;margin-bottom:7px!important}
+#globalOverviewModal #portfolioDetailsFilterBar>div:first-child{display:grid!important;grid-template-columns:18px minmax(0,1fr) 34px;gap:5px!important;min-width:0!important;width:100%}
+#globalOverviewModal #portfolioDetailsSearchBar{width:100%!important;max-width:none!important;min-width:0;min-height:32px;padding:5px 8px!important;font-size:.76rem!important}
+#globalOverviewModal #clearPortfolioDetailsFiltersBtn{display:inline-grid;place-items:center;width:34px;height:32px;margin:0!important;padding:0!important;font-size:.76rem!important}
+#globalOverviewModal [data-portfolio-apps-header]{display:grid!important;grid-template-columns:1fr;gap:5px!important;align-items:stretch!important;margin-bottom:7px!important;font-size:.76rem!important}
+#globalOverviewModal #portfolioAppsTypeTags{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:5px!important;width:100%;padding:3px!important;border-radius:8px!important}
+#globalOverviewModal #portfolioAppsTypeTags::before{display:none!important}
+#globalOverviewModal .portfolio-apps-tag-btn{width:100%;min-height:32px;padding:5px 8px!important;border-radius:6px!important;font-size:.76rem!important;text-align:left}
+#globalOverviewModal .portfolio-apps-tag-btn i{width:14px;margin-right:5px;text-align:center}
+#globalOverviewModal section>div:has(>h3){align-items:center!important;margin-bottom:7px!important}
+#globalOverviewModal section h3{font-size:.9rem!important;line-height:1.2}
+#globalOverviewModal section h3+span{font-size:.72rem!important;white-space:nowrap}
+}

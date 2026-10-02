@@ -1,0 +1,11 @@
+/* One page scroll context keeps the workspace navigation under the toolbar. */
+:root{--portfolio-toolbar-height:68px}
+html,body.workspace-hover-layout{overflow-x:clip!important;overflow-y:visible!important}
+#portfolioOverviewSection:not(.portfolio-tasks-only){height:auto!important;min-height:calc(100dvh - 88px + var(--portfolio-tabs-scroll-reserve,0px))!important;max-height:none!important;overflow:visible!important;z-index:auto!important}
+#portfolioOverviewSection:not(.portfolio-tasks-only) .portfolio-overview-header{position:relative;top:auto;z-index:auto}
+#portfolioOverviewSection:not(.portfolio-tasks-only) .portfolio-persistent-main,
+#portfolioOverviewSection:not(.portfolio-tasks-only) .portfolio-comparison-panel{overflow:visible}
+#portfolioWorkspaceTabs,.dashboard-header{position:sticky;top:var(--portfolio-toolbar-height);z-index:60;box-sizing:border-box;padding:10px 2px;margin-top:0;margin-bottom:6px;background:linear-gradient(145deg,rgba(247,252,255,.97),rgba(233,246,253,.96));border-bottom:1px solid rgba(93,162,195,.25);box-shadow:0 5px 12px rgba(10,68,100,.08);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);scroll-margin-top:var(--portfolio-toolbar-height);isolation:isolate}
+body.dark-theme #portfolioWorkspaceTabs{background:linear-gradient(145deg,rgba(12,40,61,.98),rgba(8,29,46,.97));border-bottom-color:rgba(105,196,231,.25)}
+#portfolioOverviewSection .portfolio-comparison-panel{scroll-margin-top:var(--portfolio-toolbar-height)}
+@media(prefers-reduced-motion:reduce){#portfolioWorkspaceTabs{scroll-behavior:auto}}

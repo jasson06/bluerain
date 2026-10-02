@@ -1,0 +1,31 @@
+
+@media(max-width:900px){
+ #announcements .announcements-workspace{grid-template-columns:minmax(0,1fr)!important;gap:12px!important;}
+ #announcements .tenant-announcements-manager,#announcements .announcements-workspace>div{min-width:0;max-width:100%;box-sizing:border-box;}
+ #announcements :is(input,select,textarea){box-sizing:border-box;max-width:100%;min-width:0!important;}
+ #announcements .announcements-workspace>div:last-child>div:has(>#announcementsList){grid-template-rows:auto auto auto minmax(0,1fr) auto!important;max-height:none!important;overflow:visible!important;}
+ #announcements #announcementsList{max-height:55dvh!important;overflow:auto!important;}
+}
+@media(max-width:600px){
+ #announcements .tenant-announcements-manager{padding:10px!important;gap:10px!important;border-radius:12px!important;}
+ #announcements .announcements-workspace>div:first-child,
+ #announcements .announcements-workspace>div:last-child>div:has(>#announcementsList){padding:10px!important;gap:10px!important;border-radius:10px!important;}
+ #announcements :is(div,form,label,span){min-width:0;overflow-wrap:anywhere;}
+ #announcements #announcementForm .form-row{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important;}
+ #announcements #announcementForm :is(input:not([type=checkbox]),select,textarea){width:100%;padding:8px 10px!important;font-size:16px!important;}
+ #announcements #announcementMessage{min-height:110px!important;}
+ #announcements #announcementTargets{max-height:180px!important;padding:6px!important;}
+ #announcements #announcementTargets label{min-height:40px;box-sizing:border-box;}
+ #announcements #announcementTargets input{flex-shrink:0;}
+ #announcements #announcementsSummaryCards{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important;}
+ #announcements #announcementsSearchInput{flex:1 1 140px!important;width:100%;min-width:0!important;}
+ #announcements #announcementsFilterChips{gap:5px!important;}
+ #announcements #announcementsFilterChips button{flex:1 1 75px;}
+ #announcements #announcementsList{padding-right:2px!important;gap:8px!important;}
+ #announcements #announcementsList>div{padding:10px!important;gap:8px!important;border-radius:10px!important;}
+ #announcements #announcementsList>div>div:last-child{grid-template-columns:minmax(0,1fr)!important;gap:6px!important;}
+ #announcements #announcementsList .btn-icon{min-width:36px;min-height:36px;padding:6px!important;}
+ #announcements #announcementsListPagination{flex-wrap:wrap;padding-bottom:4px;}
+ #announcements #announcementsResultsMeta{gap:5px!important;font-size:.75rem!important;}
+}
+@media(max-width:360px){#announcements #announcementsSummaryCards{grid-template-columns:minmax(0,1fr)!important;}}

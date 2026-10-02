@@ -1,49 +1,605 @@
+// SERVER FLOW MAP
+// Search SECTION for setup areas or [FLOW: name] for a business flow.
+// 01 Shared dependency context       02 Flow module loading
+// 03 Shared helper bindings          04 Configuration and service clients
+// 05 Middleware and database         06 Schemas and model registration
+// 07 API routes and flow setup       08 Fallback and server startup
+// Main business flows: quickbooks, tenants, tenant-portal, maintenance,
+// maintenance-schedules, properties, units, payments, invoices, expenses.
+// Implementations: server/flows/<flow-name>.js
+// Some flows appear in multiple blocks to preserve Express registration order.
+// Server bootstrap: configuration, models, middleware, ordered route registration, and jobs.
+
+// ============================================================================
+// [SECTION 01] SHARED DEPENDENCY CONTEXT
+// ============================================================================
+// Live getters preserve initialization timing and cross-flow dependencies.
+const serverContext = {
+  get uploadDir() { return uploadDir; },
+  get resolveStoredUploadPath() { return resolveStoredUploadPath; },
+  get sanitizeHeaderFilename() { return sanitizeHeaderFilename; },
+  get encodeRFC5987Value() { return encodeRFC5987Value; },
+  get getContentDispositionHeader() { return getContentDispositionHeader; },
+  get sanitizeFilename() { return sanitizeFilename; },
+  get ATTACHMENTS_DIR() { return ATTACHMENTS_DIR; },
+  set ATTACHMENTS_DIR(value) { ATTACHMENTS_DIR = value; },
+  get Announcement() { return Announcement; },
+  set Announcement(value) { Announcement = value; },
+  get Application() { return Application; },
+  set Application(value) { Application = value; },
+  get ApplicationInvite() { return ApplicationInvite; },
+  set ApplicationInvite(value) { ApplicationInvite = value; },
+  get CalorieUser() { return CalorieUser; },
+  set CalorieUser(value) { CalorieUser = value; },
+  get Client() { return Client; },
+  set Client(value) { Client = value; },
+  get Comment() { return Comment; },
+  set Comment(value) { Comment = value; },
+  get DailyUpdate() { return DailyUpdate; },
+  set DailyUpdate(value) { DailyUpdate = value; },
+  get Document() { return Document; },
+  set Document(value) { Document = value; },
+  get Estimate() { return Estimate; },
+  set Estimate(value) { Estimate = value; },
+  get Expense() { return Expense; },
+  set Expense(value) { Expense = value; },
+  get FileSystem() { return FileSystem; },
+  set FileSystem(value) { FileSystem = value; },
+  get Imap() { return Imap; },
+  set Imap(value) { Imap = value; },
+  get Invitation() { return Invitation; },
+  set Invitation(value) { Invitation = value; },
+  get Invoice() { return Invoice; },
+  set Invoice(value) { Invoice = value; },
+  get JWT_SECRET() { return JWT_SECRET; },
+  set JWT_SECRET(value) { JWT_SECRET = value; },
+  get LaborCost() { return LaborCost; },
+  set LaborCost(value) { LaborCost = value; },
+  get MAINTENANCE_WORKFLOW_STAGES() { return MAINTENANCE_WORKFLOW_STAGES; },
+  set MAINTENANCE_WORKFLOW_STAGES(value) { MAINTENANCE_WORKFLOW_STAGES = value; },
+  get MaintenanceRequest() { return MaintenanceRequest; },
+  set MaintenanceRequest(value) { MaintenanceRequest = value; },
+  get MaintenanceSchedule() { return MaintenanceSchedule; },
+  set MaintenanceSchedule(value) { MaintenanceSchedule = value; },
+  get Manager() { return Manager; },
+  set Manager(value) { Manager = value; },
+  get PORT() { return PORT; },
+  set PORT(value) { PORT = value; },
+  get Payment() { return Payment; },
+  set Payment(value) { Payment = value; },
+  get PortfolioTask() { return PortfolioTask; },
+  set PortfolioTask(value) { PortfolioTask = value; },
+  get Product() { return Product; },
+  set Product(value) { Product = value; },
+  get Project() { return Project; },
+  set Project(value) { Project = value; },
+  get Property() { return Property; },
+  set Property(value) { Property = value; },
+  get QB_CLIENT_ID() { return QB_CLIENT_ID; },
+  set QB_CLIENT_ID(value) { QB_CLIENT_ID = value; },
+  get QB_CLIENT_SECRET() { return QB_CLIENT_SECRET; },
+  set QB_CLIENT_SECRET(value) { QB_CLIENT_SECRET = value; },
+  get QB_ENVIRONMENT() { return QB_ENVIRONMENT; },
+  set QB_ENVIRONMENT(value) { QB_ENVIRONMENT = value; },
+  get QB_REDIRECT_URI() { return QB_REDIRECT_URI; },
+  set QB_REDIRECT_URI(value) { QB_REDIRECT_URI = value; },
+  get QB_SCOPE() { return QB_SCOPE; },
+  set QB_SCOPE(value) { QB_SCOPE = value; },
+  get QB_TOKEN_ENCRYPTION_CONFIGURED() { return QB_TOKEN_ENCRYPTION_CONFIGURED; },
+  set QB_TOKEN_ENCRYPTION_CONFIGURED(value) { QB_TOKEN_ENCRYPTION_CONFIGURED = value; },
+  get QB_TOKEN_KEY() { return QB_TOKEN_KEY; },
+  set QB_TOKEN_KEY(value) { QB_TOKEN_KEY = value; },
+  get QuickBooksConnection() { return QuickBooksConnection; },
+  set QuickBooksConnection(value) { QuickBooksConnection = value; },
+  get QuickBooksSyncLog() { return QuickBooksSyncLog; },
+  set QuickBooksSyncLog(value) { QuickBooksSyncLog = value; },
+  get Quote() { return Quote; },
+  set Quote(value) { Quote = value; },
+  get RoomPackage() { return RoomPackage; },
+  set RoomPackage(value) { RoomPackage = value; },
+  get SYSTEM_FOLDER_IDS() { return SYSTEM_FOLDER_IDS; },
+  set SYSTEM_FOLDER_IDS(value) { SYSTEM_FOLDER_IDS = value; },
+  get SelectionBoard() { return SelectionBoard; },
+  set SelectionBoard(value) { SelectionBoard = value; },
+  get Task() { return Task; },
+  set Task(value) { Task = value; },
+  get Tenant() { return Tenant; },
+  set Tenant(value) { Tenant = value; },
+  get Todo() { return Todo; },
+  set Todo(value) { Todo = value; },
+  get Unit() { return Unit; },
+  set Unit(value) { Unit = value; },
+  get Vendor() { return Vendor; },
+  set Vendor(value) { Vendor = value; },
+  get __dirname() { return __dirname; },
+  set __dirname(value) { __dirname = value; },
+  get app() { return app; },
+  set app(value) { app = value; },
+  get appendMaintenanceSystemUpdate() { return appendMaintenanceSystemUpdate; },
+  set appendMaintenanceSystemUpdate(value) { appendMaintenanceSystemUpdate = value; },
+  get applyDefaultAddressValues() { return applyDefaultAddressValues; },
+  set applyDefaultAddressValues(value) { applyDefaultAddressValues = value; },
+  get attachQuickBooksPaymentMatches() { return attachQuickBooksPaymentMatches; },
+  set attachQuickBooksPaymentMatches(value) { attachQuickBooksPaymentMatches = value; },
+  get authCalorie() { return authCalorie; },
+  set authCalorie(value) { authCalorie = value; },
+  get authTenantPortal() { return authTenantPortal; },
+  set authTenantPortal(value) { authTenantPortal = value; },
+  get authenticateManagerProfile() { return authenticateManagerProfile; },
+  set authenticateManagerProfile(value) { authenticateManagerProfile = value; },
+  get autoResolveQuickBooksPaymentsForProperty() { return autoResolveQuickBooksPaymentsForProperty; },
+  set autoResolveQuickBooksPaymentsForProperty(value) { autoResolveQuickBooksPaymentsForProperty = value; },
+  get axios() { return axios; },
+  set axios(value) { axios = value; },
+  get bcrypt() { return bcrypt; },
+  set bcrypt(value) { bcrypt = value; },
+  get buildAllPropertyDocumentsFolder() { return buildAllPropertyDocumentsFolder; },
+  set buildAllPropertyDocumentsFolder(value) { buildAllPropertyDocumentsFolder = value; },
+  get buildExpenseFromInvoice() { return buildExpenseFromInvoice; },
+  set buildExpenseFromInvoice(value) { buildExpenseFromInvoice = value; },
+  get buildExpenseLineItemFromInvoiceItem() { return buildExpenseLineItemFromInvoiceItem; },
+  set buildExpenseLineItemFromInvoiceItem(value) { buildExpenseLineItemFromInvoiceItem = value; },
+  get buildInvoiceFromExpense() { return buildInvoiceFromExpense; },
+  set buildInvoiceFromExpense(value) { buildInvoiceFromExpense = value; },
+  get buildInvoiceLineItemFromExpenseItem() { return buildInvoiceLineItemFromExpenseItem; },
+  set buildInvoiceLineItemFromExpenseItem(value) { buildInvoiceLineItemFromExpenseItem = value; },
+  get buildQuickBooksImportNote() { return buildQuickBooksImportNote; },
+  set buildQuickBooksImportNote(value) { buildQuickBooksImportNote = value; },
+  get buildQuickBooksPaymentRecord() { return buildQuickBooksPaymentRecord; },
+  set buildQuickBooksPaymentRecord(value) { buildQuickBooksPaymentRecord = value; },
+  get buildTenantPortalPayload() { return buildTenantPortalPayload; },
+  set buildTenantPortalPayload(value) { buildTenantPortalPayload = value; },
+  get buildTenantPortalPaymentLedger() { return buildTenantPortalPaymentLedger; },
+  set buildTenantPortalPaymentLedger(value) { buildTenantPortalPaymentLedger = value; },
+  get buildUnifiedQuickBooksPaymentEntries() { return buildUnifiedQuickBooksPaymentEntries; },
+  set buildUnifiedQuickBooksPaymentEntries(value) { buildUnifiedQuickBooksPaymentEntries = value; },
+  get calculateEstimateTotal() { return calculateEstimateTotal; },
+  set calculateEstimateTotal(value) { calculateEstimateTotal = value; },
+  get computeExpectedRentForMonth() { return computeExpectedRentForMonth; },
+  set computeExpectedRentForMonth(value) { computeExpectedRentForMonth = value; },
+  get computeFirstMonthProratedBaseRent() { return computeFirstMonthProratedBaseRent; },
+  set computeFirstMonthProratedBaseRent(value) { computeFirstMonthProratedBaseRent = value; },
+  get computeTenantPostedMonthlyRent() { return computeTenantPostedMonthlyRent; },
+  set computeTenantPostedMonthlyRent(value) { computeTenantPostedMonthlyRent = value; },
+  get createQbState() { return createQbState; },
+  set createQbState(value) { createQbState = value; },
+  get crypto() { return crypto; },
+  set crypto(value) { crypto = value; },
+  get daysInMonth() { return daysInMonth; },
+  set daysInMonth(value) { daysInMonth = value; },
+  get decryptQbSecret() { return decryptQbSecret; },
+  set decryptQbSecret(value) { decryptQbSecret = value; },
+  get deriveExpenseLineItemAmount() { return deriveExpenseLineItemAmount; },
+  set deriveExpenseLineItemAmount(value) { deriveExpenseLineItemAmount = value; },
+  get deriveExpenseTotals() { return deriveExpenseTotals; },
+  set deriveExpenseTotals(value) { deriveExpenseTotals = value; },
+  get deriveInvoiceLineItemTotal() { return deriveInvoiceLineItemTotal; },
+  set deriveInvoiceLineItemTotal(value) { deriveInvoiceLineItemTotal = value; },
+  get deriveMaintenanceStatusFromStage() { return deriveMaintenanceStatusFromStage; },
+  set deriveMaintenanceStatusFromStage(value) { deriveMaintenanceStatusFromStage = value; },
+  get encryptQbSecret() { return encryptQbSecret; },
+  set encryptQbSecret(value) { encryptQbSecret = value; },
+  get ensureQbCustomer() { return ensureQbCustomer; },
+  set ensureQbCustomer(value) { ensureQbCustomer = value; },
+  get ensureScheduleActivatedForDate() { return ensureScheduleActivatedForDate; },
+  set ensureScheduleActivatedForDate(value) { ensureScheduleActivatedForDate = value; },
+  get ensureVendorProjectAssignment() { return ensureVendorProjectAssignment; },
+  set ensureVendorProjectAssignment(value) { ensureVendorProjectAssignment = value; },
+  get escapeQbQuery() { return escapeQbQuery; },
+  set escapeQbQuery(value) { escapeQbQuery = value; },
+  get escapeRegexForMaintenanceLink() { return escapeRegexForMaintenanceLink; },
+  set escapeRegexForMaintenanceLink(value) { escapeRegexForMaintenanceLink = value; },
+  get fetch() { return fetch; },
+  set fetch(value) { fetch = value; },
+  get fetchQuickBooksPaymentRecords() { return fetchQuickBooksPaymentRecords; },
+  set fetchQuickBooksPaymentRecords(value) { fetchQuickBooksPaymentRecords = value; },
+  get formatMaintenanceTimelineDate() { return formatMaintenanceTimelineDate; },
+  set formatMaintenanceTimelineDate(value) { formatMaintenanceTimelineDate = value; },
+  get formatProjectDocumentLabel() { return formatProjectDocumentLabel; },
+  set formatProjectDocumentLabel(value) { formatProjectDocumentLabel = value; },
+  get fs() { return fs; },
+  set fs(value) { fs = value; },
+  get getEstimateItemStatusFromMaintenanceStatus() { return getEstimateItemStatusFromMaintenanceStatus; },
+  set getEstimateItemStatusFromMaintenanceStatus(value) { getEstimateItemStatusFromMaintenanceStatus = value; },
+  get getMaintenanceEmailHtml() { return getMaintenanceEmailHtml; },
+  set getMaintenanceEmailHtml(value) { getMaintenanceEmailHtml = value; },
+  get getMaintenanceStatusFromEstimateItemStatus() { return getMaintenanceStatusFromEstimateItemStatus; },
+  set getMaintenanceStatusFromEstimateItemStatus(value) { getMaintenanceStatusFromEstimateItemStatus = value; },
+  get getOverdueMaintenanceEmailHtml() { return getOverdueMaintenanceEmailHtml; },
+  set getOverdueMaintenanceEmailHtml(value) { getOverdueMaintenanceEmailHtml = value; },
+  get getQbConnection() { return getQbConnection; },
+  set getQbConnection(value) { getQbConnection = value; },
+  get getRecurringMaintenanceEstimateTitle() { return getRecurringMaintenanceEstimateTitle; },
+  set getRecurringMaintenanceEstimateTitle(value) { getRecurringMaintenanceEstimateTitle = value; },
+  get getRecurringMaintenanceUnitLabel() { return getRecurringMaintenanceUnitLabel; },
+  set getRecurringMaintenanceUnitLabel(value) { getRecurringMaintenanceUnitLabel = value; },
+  get getStartOfToday() { return getStartOfToday; },
+  set getStartOfToday(value) { getStartOfToday = value; },
+  get getTaskAssignmentEmailHtml() { return getTaskAssignmentEmailHtml; },
+  set getTaskAssignmentEmailHtml(value) { getTaskAssignmentEmailHtml = value; },
+  get inferApplyToFromQuickBooksPaymentRecord() { return inferApplyToFromQuickBooksPaymentRecord; },
+  set inferApplyToFromQuickBooksPaymentRecord(value) { inferApplyToFromQuickBooksPaymentRecord = value; },
+  get inferMethodFromQuickBooksPaymentRecord() { return inferMethodFromQuickBooksPaymentRecord; },
+  set inferMethodFromQuickBooksPaymentRecord(value) { inferMethodFromQuickBooksPaymentRecord = value; },
+  get inferPeriodMonthFromQuickBooksPaymentRecord() { return inferPeriodMonthFromQuickBooksPaymentRecord; },
+  set inferPeriodMonthFromQuickBooksPaymentRecord(value) { inferPeriodMonthFromQuickBooksPaymentRecord = value; },
+  get inferTypeFromQuickBooksPaymentRecord() { return inferTypeFromQuickBooksPaymentRecord; },
+  set inferTypeFromQuickBooksPaymentRecord(value) { inferTypeFromQuickBooksPaymentRecord = value; },
+  get invoiceLineItemsReadyForApproval() { return invoiceLineItemsReadyForApproval; },
+  set invoiceLineItemsReadyForApproval(value) { invoiceLineItemsReadyForApproval = value; },
+  get jwt() { return jwt; },
+  set jwt(value) { jwt = value; },
+  get logDailyUpdate() { return logDailyUpdate; },
+  set logDailyUpdate(value) { logDailyUpdate = value; },
+  get maintenancePhotoUpload() { return maintenancePhotoUpload; },
+  set maintenancePhotoUpload(value) { maintenancePhotoUpload = value; },
+  get maintenanceQC() { return maintenanceQC; },
+  set maintenanceQC(value) { maintenanceQC = value; },
+  get maintenanceQCError() { return maintenanceQCError; },
+  set maintenanceQCError(value) { maintenanceQCError = value; },
+  get maintenanceTempUpload() { return maintenanceTempUpload; },
+  set maintenanceTempUpload(value) { maintenanceTempUpload = value; },
+  get mapExpenseStatusToInvoiceStatus() { return mapExpenseStatusToInvoiceStatus; },
+  set mapExpenseStatusToInvoiceStatus(value) { mapExpenseStatusToInvoiceStatus = value; },
+  get mapInvoiceStatusToExpenseStatus() { return mapInvoiceStatusToExpenseStatus; },
+  set mapInvoiceStatusToExpenseStatus(value) { mapInvoiceStatusToExpenseStatus = value; },
+  get matchQuickBooksRecordForLocalPayment() { return matchQuickBooksRecordForLocalPayment; },
+  set matchQuickBooksRecordForLocalPayment(value) { matchQuickBooksRecordForLocalPayment = value; },
+  get matchTenantForQuickBooksPaymentRecord() { return matchTenantForQuickBooksPaymentRecord; },
+  set matchTenantForQuickBooksPaymentRecord(value) { matchTenantForQuickBooksPaymentRecord = value; },
+  get memoryUpload() { return memoryUpload; },
+  set memoryUpload(value) { memoryUpload = value; },
+  get mongoose() { return mongoose; },
+  set mongoose(value) { mongoose = value; },
+  get nodemailer() { return nodemailer; },
+  set nodemailer(value) { nodemailer = value; },
+  get normalizeAddressForTenantPortal() { return normalizeAddressForTenantPortal; },
+  set normalizeAddressForTenantPortal(value) { normalizeAddressForTenantPortal = value; },
+  get normalizeCalcMode() { return normalizeCalcMode; },
+  set normalizeCalcMode(value) { normalizeCalcMode = value; },
+  get normalizeExpenseLineItems() { return normalizeExpenseLineItems; },
+  set normalizeExpenseLineItems(value) { normalizeExpenseLineItems = value; },
+  get normalizeInvoiceLineItems() { return normalizeInvoiceLineItems; },
+  set normalizeInvoiceLineItems(value) { normalizeInvoiceLineItems = value; },
+  get normalizeMaintenanceWorkflowStage() { return normalizeMaintenanceWorkflowStage; },
+  set normalizeMaintenanceWorkflowStage(value) { normalizeMaintenanceWorkflowStage = value; },
+  get normalizeOptionalObjectId() { return normalizeOptionalObjectId; },
+  set normalizeOptionalObjectId(value) { normalizeOptionalObjectId = value; },
+  get normalizePaymentTypeServer() { return normalizePaymentTypeServer; },
+  set normalizePaymentTypeServer(value) { normalizePaymentTypeServer = value; },
+  get normalizePhoneDigits() { return normalizePhoneDigits; },
+  set normalizePhoneDigits(value) { normalizePhoneDigits = value; },
+  get normalizeQbPaymentAmount() { return normalizeQbPaymentAmount; },
+  set normalizeQbPaymentAmount(value) { normalizeQbPaymentAmount = value; },
+  get normalizeQbPaymentDate() { return normalizeQbPaymentDate; },
+  set normalizeQbPaymentDate(value) { normalizeQbPaymentDate = value; },
+  get normalizeQbPaymentText() { return normalizeQbPaymentText; },
+  set normalizeQbPaymentText(value) { normalizeQbPaymentText = value; },
+  get parseAddress() { return parseAddress; },
+  set parseAddress(value) { parseAddress = value; },
+  get parseAnnouncementCalendarDate() { return parseAnnouncementCalendarDate; },
+  set parseAnnouncementCalendarDate(value) { parseAnnouncementCalendarDate = value; },
+  get parseMaintenanceCost() { return parseMaintenanceCost; },
+  set parseMaintenanceCost(value) { parseMaintenanceCost = value; },
+  get parseMaintenanceDate() { return parseMaintenanceDate; },
+  set parseMaintenanceDate(value) { parseMaintenanceDate = value; },
+  get path() { return path; },
+  set path(value) { path = value; },
+  get qbBaseUrl() { return qbBaseUrl; },
+  set qbBaseUrl(value) { qbBaseUrl = value; },
+  get qbRequest() { return qbRequest; },
+  set qbRequest(value) { qbRequest = value; },
+  get qcReworkUpload() { return qcReworkUpload; },
+  set qcReworkUpload(value) { qcReworkUpload = value; },
+  get refreshQbConnection() { return refreshQbConnection; },
+  set refreshQbConnection(value) { refreshQbConnection = value; },
+  get resolveInvoiceAttachmentPath() { return resolveInvoiceAttachmentPath; },
+  set resolveInvoiceAttachmentPath(value) { resolveInvoiceAttachmentPath = value; },
+  get resolveInvoiceVendorName() { return resolveInvoiceVendorName; },
+  set resolveInvoiceVendorName(value) { resolveInvoiceVendorName = value; },
+  get resolveWorkspaceQbRecord() { return resolveWorkspaceQbRecord; },
+  set resolveWorkspaceQbRecord(value) { resolveWorkspaceQbRecord = value; },
+  get scheduleAutomaticQuickBooksPaymentSync() { return scheduleAutomaticQuickBooksPaymentSync; },
+  set scheduleAutomaticQuickBooksPaymentSync(value) { scheduleAutomaticQuickBooksPaymentSync = value; },
+  get sendExistingUserEmail() { return sendExistingUserEmail; },
+  set sendExistingUserEmail(value) { sendExistingUserEmail = value; },
+  get sendNewUserInviteEmail() { return sendNewUserInviteEmail; },
+  set sendNewUserInviteEmail(value) { sendNewUserInviteEmail = value; },
+  get sendOverdueScheduleAlert() { return sendOverdueScheduleAlert; },
+  set sendOverdueScheduleAlert(value) { sendOverdueScheduleAlert = value; },
+  get sendTenantPortalDocument() { return sendTenantPortalDocument; },
+  set sendTenantPortalDocument(value) { sendTenantPortalDocument = value; },
+  get sendTodayMaintenanceReminder() { return sendTodayMaintenanceReminder; },
+  set sendTodayMaintenanceReminder(value) { sendTodayMaintenanceReminder = value; },
+  get simpleParser() { return simpleParser; },
+  set simpleParser(value) { simpleParser = value; },
+  get syncExpenseToQuickBooks() { return syncExpenseToQuickBooks; },
+  set syncExpenseToQuickBooks(value) { syncExpenseToQuickBooks = value; },
+  get syncLinkedMaintenanceRecordsFromEstimateItem() { return syncLinkedMaintenanceRecordsFromEstimateItem; },
+  set syncLinkedMaintenanceRecordsFromEstimateItem(value) { syncLinkedMaintenanceRecordsFromEstimateItem = value; },
+  get syncMaintenanceRequestFromEstimateItem() { return syncMaintenanceRequestFromEstimateItem; },
+  set syncMaintenanceRequestFromEstimateItem(value) { syncMaintenanceRequestFromEstimateItem = value; },
+  get syncMaintenanceRequestToEstimate() { return syncMaintenanceRequestToEstimate; },
+  set syncMaintenanceRequestToEstimate(value) { syncMaintenanceRequestToEstimate = value; },
+  get syncMaintenanceScheduleFromEstimateItem() { return syncMaintenanceScheduleFromEstimateItem; },
+  set syncMaintenanceScheduleFromEstimateItem(value) { syncMaintenanceScheduleFromEstimateItem = value; },
+  get syncMaintenanceScheduleToEstimate() { return syncMaintenanceScheduleToEstimate; },
+  set syncMaintenanceScheduleToEstimate(value) { syncMaintenanceScheduleToEstimate = value; },
+  get syncPaymentToQuickBooks() { return syncPaymentToQuickBooks; },
+  set syncPaymentToQuickBooks(value) { syncPaymentToQuickBooks = value; },
+  get syncVendorAssignedEstimateItem() { return syncVendorAssignedEstimateItem; },
+  set syncVendorAssignedEstimateItem(value) { syncVendorAssignedEstimateItem = value; },
+  get transporter() { return transporter; },
+  set transporter(value) { transporter = value; },
+  get updateNextScheduledDates() { return updateNextScheduledDates; },
+  set updateNextScheduledDates(value) { updateNextScheduledDates = value; },
+  get upload() { return upload; },
+  set upload(value) { upload = value; },
+  get verifyQbState() { return verifyQbState; },
+  set verifyQbState(value) { verifyQbState = value; },
+  get visionClient() { return visionClient; },
+  set visionClient(value) { visionClient = value; },
+  get w9Upload() { return w9Upload; },
+  set w9Upload(value) { w9Upload = value; }
+};
+
+
+// ============================================================================
+// [SECTION 02] FLOW MODULE LOADING
+// ============================================================================
+const serverFlows = {
+  "email": require('./server/flows/email')(serverContext),
+  "projects": require('./server/flows/projects')(serverContext),
+  "shared": require('./server/flows/shared')(serverContext),
+  "uploads": require('./server/flows/uploads')(serverContext),
+  "vendors": require('./server/flows/vendors')(serverContext),
+  "maintenance": require('./server/flows/maintenance')(serverContext),
+  "announcements": require('./server/flows/announcements')(serverContext),
+  "invoices": require('./server/flows/invoices')(serverContext),
+  "documents": require('./server/flows/documents')(serverContext),
+  "applications": require('./server/flows/applications')(serverContext),
+  "clients": require('./server/flows/clients')(serverContext),
+  "estimates": require('./server/flows/estimates')(serverContext),
+  "auth": require('./server/flows/auth')(serverContext),
+  "tasks": require('./server/flows/tasks')(serverContext),
+  "catalog": require('./server/flows/catalog')(serverContext),
+  "quotes": require('./server/flows/quotes')(serverContext),
+  "labor-costs": require('./server/flows/labor-costs')(serverContext),
+  "quality-control": require('./server/flows/quality-control')(serverContext),
+  "maintenance-schedules": require('./server/flows/maintenance-schedules')(serverContext),
+  "properties": require('./server/flows/properties')(serverContext),
+  "units": require('./server/flows/units')(serverContext),
+  "tenants": require('./server/flows/tenants')(serverContext),
+  "payments": require('./server/flows/payments')(serverContext),
+  "expenses": require('./server/flows/expenses')(serverContext),
+  "maintenance-estimates": require('./server/flows/maintenance-estimates')(serverContext),
+  "quickbooks": require('./server/flows/quickbooks')(serverContext),
+  "tenant-portal": require('./server/flows/tenant-portal')(serverContext),
+  "system": require('./server/flows/system')(serverContext),
+  "calorie-tracker": require('./server/flows/calorie-tracker')(serverContext)
+};
+
+
+// ============================================================================
+// [SECTION 03] SHARED HELPER BINDINGS
+// ============================================================================
+
+// Helpers | Email and notifications
+let checkEmailInbox = serverFlows["email"].checkEmailInbox;
+
+// Helpers | Projects, utilities and daily updates
+let logDailyUpdate = serverFlows["projects"].logDailyUpdate;
+
+// Helpers | Shared utilities
+let logger = serverFlows["shared"].logger;
+
+// Helpers | Maintenance requests
+let deriveMaintenanceStatusFromStage = serverFlows["maintenance"].deriveMaintenanceStatusFromStage;
+let normalizeMaintenanceWorkflowStage = serverFlows["maintenance"].normalizeMaintenanceWorkflowStage;
+let appendMaintenanceSystemUpdate = serverFlows["maintenance"].appendMaintenanceSystemUpdate;
+let parseMaintenanceDate = serverFlows["maintenance"].parseMaintenanceDate;
+let parseMaintenanceCost = serverFlows["maintenance"].parseMaintenanceCost;
+let formatMaintenanceCost = serverFlows["maintenance"].formatMaintenanceCost;
+let formatMaintenanceTimelineDate = serverFlows["maintenance"].formatMaintenanceTimelineDate;
+
+// Helpers | Property announcements
+let parseAnnouncementCalendarDate = serverFlows["announcements"].parseAnnouncementCalendarDate;
+let getStartOfToday = serverFlows["announcements"].getStartOfToday;
+
+// Helpers | Shared utilities
+let normalizeOptionalObjectId = serverFlows["shared"].normalizeOptionalObjectId;
+
+// Helpers | Invoices and expense conversion
+let normalizeInvoiceLineItems = serverFlows["invoices"].normalizeInvoiceLineItems;
+
+// Helpers | Shared utilities
+let invoiceLineItemsReadyForApproval = serverFlows["shared"].invoiceLineItemsReadyForApproval;
+
+// Helpers | Invoices and expense conversion
+let deriveInvoiceLineItemTotal = serverFlows["invoices"].deriveInvoiceLineItemTotal;
+let deriveExpenseLineItemAmount = serverFlows["invoices"].deriveExpenseLineItemAmount;
+let normalizeExpenseLineItems = serverFlows["invoices"].normalizeExpenseLineItems;
+let buildExpenseLineItemFromInvoiceItem = serverFlows["invoices"].buildExpenseLineItemFromInvoiceItem;
+let buildInvoiceLineItemFromExpenseItem = serverFlows["invoices"].buildInvoiceLineItemFromExpenseItem;
+let deriveExpenseTotals = serverFlows["invoices"].deriveExpenseTotals;
+let resolveInvoiceAttachmentPath = serverFlows["invoices"].resolveInvoiceAttachmentPath;
+let mapInvoiceStatusToExpenseStatus = serverFlows["invoices"].mapInvoiceStatusToExpenseStatus;
+let mapExpenseStatusToInvoiceStatus = serverFlows["invoices"].mapExpenseStatusToInvoiceStatus;
+let resolveInvoiceVendorName = serverFlows["invoices"].resolveInvoiceVendorName;
+let buildExpenseFromInvoice = serverFlows["invoices"].buildExpenseFromInvoice;
+let buildInvoiceFromExpense = serverFlows["invoices"].buildInvoiceFromExpense;
+
+// Helpers | Documents, folders and files
+let formatProjectDocumentLabel = serverFlows["documents"].formatProjectDocumentLabel;
+let buildAllPropertyDocumentsFolder = serverFlows["documents"].buildAllPropertyDocumentsFolder;
+
+// Helpers | Invoices and expense conversion
+let ensureExpenseReceiptIndexAllowsLineItems = serverFlows["invoices"].ensureExpenseReceiptIndexAllowsLineItems;
+
+// Helpers | Maintenance requests
+let maintenanceQCError = serverFlows["maintenance"].maintenanceQCError;
+
+// Helpers | Authentication and manager accounts
+let authenticateManagerProfile = serverFlows["auth"].authenticateManagerProfile;
+
+// Helpers | Email and notifications
+let sendExistingUserEmail = serverFlows["email"].sendExistingUserEmail;
+let sendNewUserInviteEmail = serverFlows["email"].sendNewUserInviteEmail;
+let getTaskAssignmentEmailHtml = serverFlows["email"].getTaskAssignmentEmailHtml;
+
+// Helpers | Projects, utilities and daily updates
+let parseAddress = serverFlows["projects"].parseAddress;
+let applyDefaultAddressValues = serverFlows["projects"].applyDefaultAddressValues;
+
+// Helpers | Labor costs
+let normalizeCalcMode = serverFlows["labor-costs"].normalizeCalcMode;
+
+// Helpers | Rent payments and monthly charges
+let normalizePaymentTypeServer = serverFlows["payments"].normalizePaymentTypeServer;
+let daysInMonth = serverFlows["payments"].daysInMonth;
+let computeFirstMonthProratedBaseRent = serverFlows["payments"].computeFirstMonthProratedBaseRent;
+let computeExpectedRentForMonth = serverFlows["payments"].computeExpectedRentForMonth;
+let computeTenantPostedMonthlyRent = serverFlows["payments"].computeTenantPostedMonthlyRent;
+
+// Helpers | Recurring maintenance and reminders
+let getOverdueMaintenanceEmailHtml = serverFlows["maintenance-schedules"].getOverdueMaintenanceEmailHtml;
+let sendTodayMaintenanceReminder = serverFlows["maintenance-schedules"].sendTodayMaintenanceReminder;
+let ensureScheduleActivatedForDate = serverFlows["maintenance-schedules"].ensureScheduleActivatedForDate;
+let sendOverdueScheduleAlert = serverFlows["maintenance-schedules"].sendOverdueScheduleAlert;
+
+// Helpers | Maintenance / estimate synchronization
+let getEstimateItemStatusFromMaintenanceStatus = serverFlows["maintenance-estimates"].getEstimateItemStatusFromMaintenanceStatus;
+let getMaintenanceStatusFromEstimateItemStatus = serverFlows["maintenance-estimates"].getMaintenanceStatusFromEstimateItemStatus;
+let calculateEstimateTotal = serverFlows["maintenance-estimates"].calculateEstimateTotal;
+
+// Helpers | Recurring maintenance and reminders
+let escapeRegexForMaintenanceLink = serverFlows["maintenance-schedules"].escapeRegexForMaintenanceLink;
+
+// Helpers | Maintenance / estimate synchronization
+let getRecurringMaintenanceEstimateTitle = serverFlows["maintenance-estimates"].getRecurringMaintenanceEstimateTitle;
+
+// Helpers | Recurring maintenance and reminders
+let getRecurringMaintenanceUnitLabel = serverFlows["maintenance-schedules"].getRecurringMaintenanceUnitLabel;
+let getNextScheduledDateForCompletion = serverFlows["maintenance-schedules"].getNextScheduledDateForCompletion;
+
+// Helpers | Maintenance / estimate synchronization
+let ensureVendorProjectAssignment = serverFlows["maintenance-estimates"].ensureVendorProjectAssignment;
+let syncVendorAssignedEstimateItem = serverFlows["maintenance-estimates"].syncVendorAssignedEstimateItem;
+let syncMaintenanceScheduleFromEstimateItem = serverFlows["maintenance-estimates"].syncMaintenanceScheduleFromEstimateItem;
+let syncLinkedMaintenanceRecordsFromEstimateItem = serverFlows["maintenance-estimates"].syncLinkedMaintenanceRecordsFromEstimateItem;
+let syncMaintenanceRequestFromEstimateItem = serverFlows["maintenance-estimates"].syncMaintenanceRequestFromEstimateItem;
+let syncMaintenanceScheduleToEstimate = serverFlows["maintenance-estimates"].syncMaintenanceScheduleToEstimate;
+let syncMaintenanceRequestToEstimate = serverFlows["maintenance-estimates"].syncMaintenanceRequestToEstimate;
+
+// Helpers | Recurring maintenance and reminders
+let updateNextScheduledDates = serverFlows["maintenance-schedules"].updateNextScheduledDates;
+let scheduleDailyUpdateNextScheduledDates = serverFlows["maintenance-schedules"].scheduleDailyUpdateNextScheduledDates;
+let getMaintenanceEmailHtml = serverFlows["maintenance-schedules"].getMaintenanceEmailHtml;
+let sendMaintenanceReminders = serverFlows["maintenance-schedules"].sendMaintenanceReminders;
+
+// Helpers | QuickBooks connections and synchronization
+let encryptQbSecret = serverFlows["quickbooks"].encryptQbSecret;
+let decryptQbSecret = serverFlows["quickbooks"].decryptQbSecret;
+let createQbState = serverFlows["quickbooks"].createQbState;
+let verifyQbState = serverFlows["quickbooks"].verifyQbState;
+let qbBaseUrl = serverFlows["quickbooks"].qbBaseUrl;
+let refreshQbConnection = serverFlows["quickbooks"].refreshQbConnection;
+let getQbConnection = serverFlows["quickbooks"].getQbConnection;
+let qbRequest = serverFlows["quickbooks"].qbRequest;
+let normalizeQbPaymentDate = serverFlows["quickbooks"].normalizeQbPaymentDate;
+let buildQuickBooksPaymentRecord = serverFlows["quickbooks"].buildQuickBooksPaymentRecord;
+let inferApplyToFromQuickBooksPaymentRecord = serverFlows["quickbooks"].inferApplyToFromQuickBooksPaymentRecord;
+let inferMethodFromQuickBooksPaymentRecord = serverFlows["quickbooks"].inferMethodFromQuickBooksPaymentRecord;
+let inferTypeFromQuickBooksPaymentRecord = serverFlows["quickbooks"].inferTypeFromQuickBooksPaymentRecord;
+let inferPeriodMonthFromQuickBooksPaymentRecord = serverFlows["quickbooks"].inferPeriodMonthFromQuickBooksPaymentRecord;
+let matchTenantForQuickBooksPaymentRecord = serverFlows["quickbooks"].matchTenantForQuickBooksPaymentRecord;
+let buildQuickBooksImportNote = serverFlows["quickbooks"].buildQuickBooksImportNote;
+let autoResolveQuickBooksPaymentsForProperty = serverFlows["quickbooks"].autoResolveQuickBooksPaymentsForProperty;
+let buildUnifiedQuickBooksPaymentEntries = serverFlows["quickbooks"].buildUnifiedQuickBooksPaymentEntries;
+let fetchQuickBooksPaymentRecords = serverFlows["quickbooks"].fetchQuickBooksPaymentRecords;
+let matchQuickBooksRecordForLocalPayment = serverFlows["quickbooks"].matchQuickBooksRecordForLocalPayment;
+let attachQuickBooksPaymentMatches = serverFlows["quickbooks"].attachQuickBooksPaymentMatches;
+let ensureQbCustomer = serverFlows["quickbooks"].ensureQbCustomer;
+let scheduleAutomaticQuickBooksPaymentSync = serverFlows["quickbooks"].scheduleAutomaticQuickBooksPaymentSync;
+let syncPaymentToQuickBooks = serverFlows["quickbooks"].syncPaymentToQuickBooks;
+let syncExpenseToQuickBooks = serverFlows["quickbooks"].syncExpenseToQuickBooks;
+let resolveWorkspaceQbRecord = serverFlows["quickbooks"].resolveWorkspaceQbRecord;
+
+// Helpers | Tenant portal
+let authTenantPortal = serverFlows["tenant-portal"].authTenantPortal;
+let normalizePhoneDigits = serverFlows["tenant-portal"].normalizePhoneDigits;
+let normalizeAddressForTenantPortal = serverFlows["tenant-portal"].normalizeAddressForTenantPortal;
+let buildTenantPortalPaymentLedger = serverFlows["tenant-portal"].buildTenantPortalPaymentLedger;
+let buildTenantPortalPayload = serverFlows["tenant-portal"].buildTenantPortalPayload;
+let sendTenantPortalDocument = serverFlows["tenant-portal"].sendTenantPortalDocument;
+
+// Helpers | Calorie tracker
+let authCalorie = serverFlows["calorie-tracker"].authCalorie;
+
+
+
+
+// ============================================================================
+// [SECTION 04] CONFIGURATION AND SERVICE CLIENTS
+// ============================================================================
+
+
 // Load environment variables from .env file
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const vision = require("@google-cloud/vision");
 require('dotenv').config();
 
+// [SECTION] Production storage: existing mount, environment override, and fallback.
+const { uploadDir, resolveStoredUploadPath, sanitizeHeaderFilename, encodeRFC5987Value, getContentDispositionHeader, sanitizeFilename } = require('./server/production-storage')({ fs, path, rootDir: __dirname, env: process.env });
 
 const mongoose = require('mongoose');
+
 const cors = require('cors');
 const morgan = require('morgan');
 const multer = require('multer');
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const router = express.Router();
 const nodemailer = require('nodemailer');
-
-const vision = require("@google-cloud/vision");
-
-const visionClient = new vision.ImageAnnotatorClient();
+const fetch = require('node-fetch');
+const { zonedTimeToUtc, utcToZonedTime } = require('date-fns-tz');
+// Set your business time zone
+const BUSINESS_TZ = 'America/Chicago';
+const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 5500;
 const JWT_SECRET = process.env.JWT_SECRET;
 
+const visionClient = new vision.ImageAnnotatorClient();
 
+const Imap = require('imap');
+const { simpleParser } = require('mailparser');
 
+// QuickBooks config (use your real keys and companyId)
+const QB_CLIENT_ID = process.env.QB_CLIENT_ID;
+const QB_CLIENT_SECRET = process.env.QB_CLIENT_SECRET;
+const QB_REDIRECT_URI = process.env.QB_REDIRECT_URI;
+const QB_ENVIRONMENT = process.env.QB_ENVIRONMENT || 'sandbox'; // or 'production'
+// QuickBooks connections are stored per property. Legacy global company/token
+// variables are intentionally not used because every property has separate books.
 
-async function logDailyUpdate(projectId, text, author = "System") {
-  try {
-    const project = await Project.findById(projectId).select("name"); // Fetch actual project name
-    
-    const logUpdate = new DailyUpdate({
-      projectId,
-      projectName: project ? project.name : "Unknown Project", // ✅ Use actual name or fallback
-      author,
-      text,
-      timestamp: new Date(),
-    });
+// Directory for saving attachments
+const ATTACHMENTS_DIR = path.join(uploadDir, 'email-receipts');
+if (!fs.existsSync(ATTACHMENTS_DIR)) fs.mkdirSync(ATTACHMENTS_DIR, { recursive: true });
 
-    await logUpdate.save(); // ✅ Save the update log
-    console.log("✅ Daily Update Logged:", logUpdate);
-  } catch (error) {
-    console.error("❌ Error logging daily update:", error);
-  }
+// Check every 60 minutes
+// New inbox ingestion is opt-in; the supplied live server did not run this job.
+if (process.env.ENABLE_EMAIL_RECEIPT_INGESTION === 'true') {
+  setInterval(checkEmailInbox, 1 * 60 * 1000);
 }
+
+
+// ============================================================================
+// [SECTION 05] MIDDLEWARE, STATIC FILES AND DATABASE
+// ============================================================================
 
 
 // Middleware
@@ -52,11 +608,10 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan('dev'));
 
-
 // Serve static files
 const buildPath = path.join(__dirname, "dist");
 app.use(express.static(buildPath));
-
+// Production keeps dist before public in the static lookup order.
 
 // Debugging: Log the static directory being served
 console.log("Serving static files from:", buildPath);
@@ -68,66 +623,7 @@ app.use(express.static(path.join(__dirname, "dist")));
 console.log("📂 Serving static files from:", path.join(__dirname, "public"));
 console.log("📂 Serving static files from:", path.join(__dirname, "dist"));
 
-// Prefer persistent storage in production, with a writable local fallback.
-const persistentUploadDir = process.env.UPLOAD_DIR || '/mnt/data/uploads';
-let uploadDir = persistentUploadDir;
-try {
-  fs.mkdirSync(uploadDir, { recursive: true });
-  fs.accessSync(uploadDir, fs.constants.W_OK);
-} catch (error) {
-  uploadDir = path.join(__dirname, 'uploads');
-  fs.mkdirSync(uploadDir, { recursive: true });
-  console.warn(`Upload directory ${persistentUploadDir} is not writable; using ${uploadDir}.`);
-}
-
-function resolveStoredUploadPath(storedPath) {
-  const value = String(storedPath || '').trim();
-  if (!value) return '';
-
-  const normalized = value.replace(/\\/g, '/');
-  if (normalized.startsWith('/uploads/') || normalized.startsWith('uploads/')) {
-    const relativePath = normalized.replace(/^\/?uploads\//, '');
-    return path.join(uploadDir, relativePath);
-  }
-
-  return path.isAbsolute(value) ? value : path.join(__dirname, value);
-}
-
-function sanitizeHeaderFilename(filename) {
-  const fallback = path.basename(String(filename || 'document')) || 'document';
-  return fallback
-    .replace(/[\r\n\0]/g, ' ')
-    .replace(/["\\]/g, '_')
-    .replace(/[^\x20-\x7E]/g, '_')
-    .trim() || 'document';
-}
-
-function encodeRFC5987Value(value) {
-  return Array.from(Buffer.from(String(value || 'document'), 'utf8'))
-    .map(byte => `%${byte.toString(16).toUpperCase().padStart(2, '0')}`)
-    .join('');
-}
-
-function getContentDispositionHeader(disposition, filename) {
-  const safeDisposition = disposition === 'attachment' ? 'attachment' : 'inline';
-  const safeFilename = sanitizeHeaderFilename(filename);
-  const encodedFilename = encodeRFC5987Value(String(filename || safeFilename).replace(/[\r\n\0]/g, ' '));
-  return `${safeDisposition}; filename="${safeFilename}"; filename*=UTF-8''${encodedFilename}`;
-}
-
-// ✅ Configure multer for file storage on Render Persistent Disk
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir); // Save files to persistent disk
-    },
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`);
-    }
-});
-
-const upload = multer({ storage });
-
-
+// [FLOW: production] Existing CORS and HTTPS redirect policies.
 app.use(
   cors({
     origin: ["http://localhost:5500", "https://bluerain.onrender.com"],
@@ -136,41 +632,22 @@ app.use(
   })
 );
 
-
-
 app.use((req, res, next) => {
   if (req.headers["x-forwarded-proto"] !== "https" && process.env.NODE_ENV === "production") {
     return res.redirect(`https://${req.headers.host}${req.url}`);
   }
   next();
 });
-
-
-
-
-// Logger Middleware
-function logger(req, res, next) {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  next();
-}
 app.use(logger);
 
-
-
-
-
-
-// Serve uploaded files
 app.use('/uploads', express.static(uploadDir));
 
 
-
-
-// Serve `details-projects.html` for project details page
-app.get("/details/projects/:id", (req, res) => {
-  res.sendFile(path.join(__dirname, "dist", "details-projects.html"));
-});
-
+// ============================================================================
+// [FLOW: projects] Projects, utilities and daily updates
+// ============================================================================
+// Implementation: server/flows/projects.js
+serverFlows["projects"].get_details_projects_id();
 
 // MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI;
@@ -195,212 +672,52 @@ const connectToDatabase = async () => {
 
 connectToDatabase();
 
+// [FLOW: production] Upload diagnostics and health check.
+const productionRoutes = require('./server/production-routes')(serverContext);
+productionRoutes.registerUploadListing();
+productionRoutes.registerHealthCheck();
 
-
-app.get('/api/list-uploads', (req, res) => {
-  const directoryPath = uploadDir;
-
-    fs.readdir(directoryPath, (err, files) => {
-        if (err) {
-            return res.status(500).json({ message: "Unable to read upload directory.", error: err });
-        }
-        res.json({ uploadedFiles: files });
-    });
+// Configure multer
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadDir); // Save files to persistent disk
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    }
 });
+
+const upload = multer({ storage: storage });
 
 // ✅ For email attachments (e.g., PDFs) — in-memory buffer
 const memoryUpload = multer({ storage: multer.memoryStorage() });
 
 
-
-// Update photo upload handler to associate photos with a specific task
-
-// Photo Upload Route
-app.post("/api/upload-photos", upload.array("photos", 10), async (req, res) => {
-  try {
-    const { itemId, taskId, type, estimateId, vendorId } = req.body;
-
-    // 🚨 Validate Required Fields
-    if (!req.files || req.files.length === 0 || (!itemId && !taskId && !estimateId) || !type) {
-      return res.status(400).json({ message: "Missing required fields (photos, itemId/taskId/estimateId, or type)." });
-    }
-
-    // ✅ Generate File Paths for Uploaded Photos
-    const photoUrls = req.files.map(file => `/uploads/${file.filename}`);
-    let updateSuccess = false;
-
-    // ✅ Handle Task Photos (Stored in Task Collection)
-    if (taskId) {
-      const task = await Task.findById(taskId);
-      if (!task) return res.status(404).json({ message: "Task not found." });
-
-      if (!task.photos) task.photos = { before: [], after: [] };
-      task.photos[type].push(...photoUrls);
-
-      await task.save();
-      console.log(`✅ ${photoUrls.length} Photo(s) saved for Task: ${taskId} (${type})`);
-      return res.status(200).json({ message: "Photos uploaded successfully!", photoUrls });
-    }
-
-    // ✅ Handle Photos in Estimate (Always Present in Vendor Side)
-    let estimate = null;
-    let estimateItem = null;
-    let assignedToVendorId = vendorId && vendorId !== "null" && vendorId !== "undefined" ? vendorId : null;
-    if (estimateId) {
-      estimate = await Estimate.findById(estimateId);
-      if (!estimate) return res.status(404).json({ message: "Estimate not found." });
-
-      estimateItem = estimate.lineItems.flatMap(category => category.items)
-        .find(item => item._id.toString() === itemId);
-
-      if (estimateItem) {
-        if (!estimateItem.photos) estimateItem.photos = { before: [], after: [] };
-        photoUrls.forEach(photoUrl => {
-          if (!estimateItem.photos[type].includes(photoUrl)) {
-            estimateItem.photos[type].push(photoUrl);
-          }
-        });
-        updateSuccess = true;
-        // If not provided, try to get assigned vendor from estimate item
-        if (!assignedToVendorId && estimateItem.assignedTo) {
-          assignedToVendorId = estimateItem.assignedTo.toString();
-        }
-        console.log(`✅ ${photoUrls.length} Photo(s) saved for Estimate: ${estimateId}, Item: ${itemId} (${type})`);
-      } else {
-        console.warn(`⚠️ Item not found in estimate: ${estimateId}`);
-      }
-    }
-
-    // ✅ If item is assigned, also update vendor's assignedItems
-    if (assignedToVendorId) {
-      const vendor = await Vendor.findById(assignedToVendorId);
-      if (vendor) {
-        const vendorItem = vendor.assignedItems.find(item => item.itemId.toString() === itemId);
-        if (vendorItem) {
-          if (!vendorItem.photos) vendorItem.photos = { before: [], after: [] };
-          photoUrls.forEach(photoUrl => {
-            if (!vendorItem.photos[type].includes(photoUrl)) {
-              vendorItem.photos[type].push(photoUrl);
-            }
-          });
-          await vendor.save();
-          updateSuccess = true;
-          console.log(`✅ ${photoUrls.length} Photo(s) also saved for Vendor: ${assignedToVendorId}, Item: ${itemId} (${type})`);
-        } else {
-          console.warn(`⚠️ Item not found in vendor's assigned list. Keeping photos in estimate only.`);
-        }
-      } else {
-        console.warn(`⚠️ Vendor not found for ID: ${assignedToVendorId}. Keeping photos in estimate only.`);
-      }
-    }
-
-    // ✅ Save Estimate Changes After Vendor Upload
-    if (updateSuccess && estimate) {
-      await estimate.save();
-      if (estimateItem?.maintenanceRequestId) {
-      await syncMaintenanceRequestFromEstimateItem(estimate, estimateItem);
-      }
-      return res.status(200).json({ message: "Photos uploaded successfully!", photoUrls });
-    }
-
-    return res.status(400).json({ message: "Item not found in estimate or vendor." });
-
-  } catch (error) {
-    console.error("❌ Error uploading photos:", error);
-    res.status(500).json({ message: "Failed to upload photos." });
-  }
-});
+// ============================================================================
+// [FLOW: uploads] Uploads and OCR
+// ============================================================================
+// Implementation: server/flows/uploads.js
+serverFlows["uploads"].post_api_ocr();
+serverFlows["uploads"].post_api_upload_photos();
 
 
-app.post("/api/assign-vendor", async (req, res) => {
-  const { estimateId, vendorId } = req.body;
-
-  if (!estimateId || !vendorId) {
-      return res.status(400).json({ message: "Estimate ID and Vendor ID are required." });
-  }
-
-  try {
-      const estimate = await Estimate.findById(estimateId);
-      if (!estimate) return res.status(404).json({ message: "Estimate not found." });
-
-      const vendor = await Vendor.findById(vendorId);
-      if (!vendor) return res.status(404).json({ message: "Vendor not found." });
-
-      // Loop through all estimate items and transfer photos to vendor
-      estimate.lineItems.forEach(category => {
-          category.items.forEach(item => {
-              const existingItem = vendor.assignedItems.find(vItem => vItem.itemId.toString() === item._id.toString());
-
-              if (existingItem) {
-                  existingItem.photos.before = item.photos.before; // Transfer before photos
-                  existingItem.photos.after = item.photos.after; // Transfer after photos
-              } else {
-                  vendor.assignedItems.push({
-                      itemId: item._id,
-                      projectId: estimate.projectId,
-                      name: item.name,
-                      description: item.description,
-                      quantity: item.quantity,
-                      unitPrice: item.unitPrice,
-                      total: item.total,
-                      status: "new",
-                      photos: {
-                          before: item.photos.before, // Transfer before photos
-                          after: item.photos.after,   // Transfer after photos
-                      }
-                  });
-              }
-          });
-      });
-
-      await vendor.save();
-      console.log(`✅ Photos transferred from Estimate ${estimateId} to Vendor ${vendorId}.`);
-      return res.status(200).json({ message: "Vendor assigned and photos transferred successfully!" });
-
-  } catch (error) {
-      console.error("❌ Error assigning vendor:", error);
-      res.status(500).json({ message: "Failed to assign vendor." });
-  }
-});
-
-// Photo Deletion Route
-app.delete('/api/delete-photo/:id', async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    // Find the task containing the photo and remove it from the respective array
-    const task = await Task.findOneAndUpdate(
-      {
-        $or: [{ 'photos.before': `/uploads/${id}` }, { 'photos.after': `/uploads/${id}` }],
-      },
-      {
-        $pull: { 'photos.before': `/uploads/${id}`, 'photos.after': `/uploads/${id}` },
-      },
-      { new: true } // Return the updated task
-    );
-
-    if (!task) {
-      return res.status(404).json({ success: false, message: 'Photo not found in any task.' });
-    }
-
-    // Delete the photo file from the file system
-    const filePath = path.join(__dirname, 'uploads', id);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath); // Delete the file
-    } else {
-      console.warn(`File not found on disk: ${filePath}`);
-    }
-
-    res.status(200).json({ success: true, message: 'Photo deleted successfully.', task });
-  } catch (error) {
-    console.error('Error deleting photo:', error);
-    res.status(500).json({ success: false, message: 'Failed to delete photo.' });
-  }
-});
+// ============================================================================
+// [FLOW: vendors] Vendors and assignments
+// ============================================================================
+// Implementation: server/flows/vendors.js
+serverFlows["vendors"].post_api_assign_vendor();
 
 
+// ============================================================================
+// [FLOW: uploads] Uploads and OCR (continued)
+// ============================================================================
+serverFlows["uploads"].delete_api_delete_photo_id();
 
-// Schemas and Models
+
+// ============================================================================
+// [SECTION 06] SCHEMAS AND MODEL REGISTRATION
+// ============================================================================
+
 const taskSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String },
@@ -429,9 +746,15 @@ const taskSchema = new mongoose.Schema({
 
 // Portfolio-level lightweight tasks for property management overview
 const portfolioTaskSchema = new mongoose.Schema({
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', default: null, index: true },
   title: { type: String, required: true, trim: true },
   description: { type: String, default: '' },
   status: { type: String, enum: ['new', 'in-progress', 'completed'], default: 'new' },
+  priority: { type: String, enum: ['low', 'medium', 'high', 'urgent'], default: 'medium' },
+  category: { type: String, default: 'general' },
+  relatedType: { type: String, default: '' },
+  relatedId: { type: String, default: '' },
+  assignedTo: { type: String, default: '' },
   dueDate: { type: Date },
   pinned: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
@@ -443,13 +766,60 @@ portfolioTaskSchema.pre('save', function(next) {
   next();
 });
 
+const quickBooksConnectionSchema = new mongoose.Schema({
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true, unique: true, index: true },
+  realmId: { type: String, required: true, unique: true, index: true },
+  companyName: { type: String, default: '' },
+  environment: { type: String, enum: ['sandbox', 'production'], default: 'sandbox' },
+  encryptedAccessToken: { type: String, required: true, select: false },
+  encryptedRefreshToken: { type: String, required: true, select: false },
+  accessTokenExpiresAt: Date,
+  refreshTokenExpiresAt: Date,
+  scopes: [{ type: String }],
+  status: { type: String, enum: ['connected', 'attention', 'disconnected'], default: 'connected' },
+  connectedBy: { type: String, default: '' },
+  connectedAt: { type: Date, default: Date.now },
+  lastSuccessfulSyncAt: Date,
+  lastRefreshAt: Date,
+  lastError: { type: String, default: '' },
+  disconnectedAt: Date,
+  mappings: {
+    incomeItems: { type: mongoose.Schema.Types.Mixed, default: {} },
+    depositAccounts: { type: mongoose.Schema.Types.Mixed, default: {} },
+    paymentMethods: { type: mongoose.Schema.Types.Mixed, default: {} },
+    expenseAccounts: { type: mongoose.Schema.Types.Mixed, default: {} },
+    defaultExpensePaymentAccount: { type: mongoose.Schema.Types.Mixed, default: {} }
+  },
+  settings: {
+    paymentSyncMode: { type: String, enum: ['manual', 'automatic'], default: 'manual' },
+    expenseSyncMode: { type: String, enum: ['manual', 'automatic'], default: 'manual' }
+  }
+}, { timestamps: true });
+
+const quickBooksSyncLogSchema = new mongoose.Schema({
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
+  connectionId: { type: mongoose.Schema.Types.ObjectId, ref: 'QuickBooksConnection', required: true },
+  localEntityType: { type: String, enum: ['Payment', 'Expense', 'Tenant', 'Vendor'], required: true },
+  localEntityId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+  operation: { type: String, default: 'create' },
+  quickBooksEntityType: { type: String, default: '' },
+  quickBooksEntityId: { type: String, default: '' },
+  externalKey: { type: String, required: true, index: true },
+  requestHash: { type: String, default: '' },
+  status: { type: String, enum: ['queued', 'syncing', 'synced', 'failed', 'conflict'], default: 'queued' },
+  attempts: { type: Number, default: 0 },
+  lastError: { type: String, default: '' },
+  responseSummary: { type: mongoose.Schema.Types.Mixed, default: {} },
+  syncedAt: Date
+}, { timestamps: true });
+quickBooksSyncLogSchema.index({ connectionId: 1, externalKey: 1 }, { unique: true });
+
 const commentSchema = new mongoose.Schema({
   taskId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Task' },
   text: { type: String, required: true },
   managerName: { type: String, required: true },
   timestamp: { type: Date, required: true },
 });
-
 
 const clientSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
@@ -489,14 +859,13 @@ const estimateSchema = new mongoose.Schema({
           costCode: { type: String, default: 'Uncategorized' }, // ✅ Added Cost Code
           quantity: { type: Number, required: true, min: 1 },
           unitPrice: { type: Number, required: true },
-           calcMode: { type: String, enum: ['each', 'sqft', 'lnft'], default: 'each' }, // <-- Add this line
-           area: Number,    // <-- Add this line
-           length: Number,  // <-- Add this line
+          calcMode: { type: String, enum: ['each', 'sqft', 'lnft'], default: 'each' }, // <-- Add this line
+              area: Number,    // <-- Add this line
+              length: Number,  // <-- Add this line
           laborCost: { type: Number, default: 0 },
           materialCost: { type: Number, default: 0 },
+           billed: { type: Number, default: 0 },
           total: { type: Number, required: true },
-          splitPercentage: { type: Number, min: 1, max: 100 },
-          splitGroupId: { type: String, default: null },
 
           // ✅ Expanded here too
           status: { 
@@ -504,24 +873,28 @@ const estimateSchema = new mongoose.Schema({
             enum: ['new', 'in-progress', 'completed', 'approved', 'rework'], 
             default: 'new' 
           },
-             phase: {
+          phase: {
             type: String,
             enum: ['pre-construction', 'permits', 'demo', 'structure', 'rough-in', 'inspections', 'finishes', 'exterior', 'punch'],
             default: 'pre-construction'
           },
           percentComplete: { type: Number, min: 0, max: 100, default: 0 },
-          maintenanceRequestId: { type: mongoose.Schema.Types.ObjectId, ref: 'MaintenanceRequest', default: null },
-          maintenanceScheduleId: { type: mongoose.Schema.Types.ObjectId, ref: 'MaintenanceSchedule', default: null },
-          qualityControl: {
-            status: {
-              type: String,
-              enum: ["pending", "approved", "rework"],
-              default: "pending"
-            },
-            notes: String,
-            reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Manager" },
-            reviewedAt: Date
-          },
+maintenanceRequestId: { type: mongoose.Schema.Types.ObjectId, ref: 'MaintenanceRequest', default: null },
+maintenanceScheduleId: { type: mongoose.Schema.Types.ObjectId, ref: 'MaintenanceSchedule', default: null },
+          splitPercentage: { type: Number, min: 1, max: 100, default: null },
+          splitGroupId: { type: String, default: null },
+qualityControl: {
+  status: { type: String, enum: ["pending", "approved", "rework"], default: "pending" },
+  notes: { type: String },
+  reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Manager" },
+  reviewedAt: { type: Date },
+  rework: {
+    note: { type: String },
+    managerId: { type: mongoose.Schema.Types.ObjectId, ref: "Manager" },
+    photos: [{ type: String }],
+    requestedAt: { type: Date }
+  }
+},
 
           assignedTo: {
             type: mongoose.Schema.Types.ObjectId,
@@ -546,10 +919,7 @@ const estimateSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-
-
-
-// Schemas and Models
+// Additional domain schemas
 const vendorSchema = new mongoose.Schema({
   name: { type: String, required: false, trim: true },  // Name is now optional
   email: { type: String, required: false, trim: true },
@@ -626,13 +996,11 @@ assignedItems: [
 },
 { timestamps: true });
 
-
 // ✅ Indexing for Faster Queries
 vendorSchema.index({ "assignedItems.itemId": 1 });
 vendorSchema.index({ "assignedItems.projectId": 1 });
 // Unique sparse index on email allows multiple docs without email, enforces uniqueness when present
 vendorSchema.index({ email: 1 }, { unique: true, sparse: true });
-
 
 // Hash the password before saving the vendor
 vendorSchema.pre('save', async function (next) {
@@ -652,8 +1020,6 @@ vendorSchema.pre('save', async function (next) {
   }
 });
 
-
-
 // Project schema
 const projectSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -669,6 +1035,10 @@ const projectSchema = new mongoose.Schema({
     zip: { type: String },
   },
   description: { type: String },
+  // Rental-property information used by the property-management workspace.
+  // Mixed keeps this backward compatible for existing construction projects.
+  propertyProfile: { type: mongoose.Schema.Types.Mixed, default: {} },
+  buildingEquipment: { type: [mongoose.Schema.Types.Mixed], default: [] },
   utilityAccounts: { // <-- Add this block
     water: {
       accountNumber: { type: String, default: "" },
@@ -702,8 +1072,7 @@ const projectSchema = new mongoose.Schema({
   }],
 });
 
-
-
+// Invitation Schema and Model
 const invitationSchema = new mongoose.Schema({
   email: { type: String, required: true },
   role: { type: String, required: true, enum: ["vendor", "project-manager"] },
@@ -716,8 +1085,6 @@ const invitationSchema = new mongoose.Schema({
   declinedAt: { type: Date }, // Tracks when the invitation was declined
   deleted: { type: Boolean, default: false }, // For soft deletion
 });
-
-
 
 // Project Manager Schema and Model
 const managerSchema = new mongoose.Schema({
@@ -742,7 +1109,6 @@ managerSchema.pre('save', async function (next) {
   next();
 });
 
-
 const selectionBoardSchema = new mongoose.Schema({
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
   room: { type: String, required: true },
@@ -765,7 +1131,6 @@ const productSchema = new mongoose.Schema({
   photo: { type: String }  // Stores the extracted photo URL.
 }, { timestamps: true });
 
-
 // ✅ Ensure DailyUpdate model is defined
 const DailyUpdateSchema = new mongoose.Schema({
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project", required: true },
@@ -776,9 +1141,12 @@ const DailyUpdateSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now }
 });
 
+//invoice schema
 const invoiceSchema = new mongoose.Schema({
   projectId: String,
   vendorId: String,
+  attachmentPath: { type: String, default: '' },
+  tax: { type: Number, default: 0 },
   email: String,
   header: {
     companyName: String,
@@ -798,8 +1166,8 @@ const invoiceSchema = new mongoose.Schema({
   lineItems: [
     {
       projectId: String,
-      projectName: String,
-      projectAddress: String,
+        projectName: String,
+        projectAddress: String,
       name: String,
       description: String,
       quantity: Number,
@@ -814,8 +1182,8 @@ const invoiceSchema = new mongoose.Schema({
   total: Number,
   status: {
     type: String,
-    enum: ['Pending', 'Paid', 'Overdue'],
-    default: 'Pending'
+    enum: ['Draft', 'Pending', 'Approved', 'Rejected', 'Paid', 'Overdue'],
+    default: 'Draft'
   },
   createdAt: { type: Date, default: Date.now }
 });
@@ -834,7 +1202,8 @@ const quoteSchema = new mongoose.Schema({
     email: String,
     phone: String
   },
-    signature: {
+  // Optional client signature captured from public signing link
+  signature: {
     name: String,                    // Client name as signed
     type: { type: String, enum: ['typed', 'drawn', ''], default: '' },
     imageData: String,               // Data URL for drawn signatures
@@ -899,7 +1268,7 @@ const quoteSchema = new mongoose.Schema({
   ]
 }, { timestamps: true });
 
-
+// Labor and Material Cost Schema
 
 const laborCostSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -961,8 +1330,8 @@ laborCostSchema.pre('save', function (next) {
   const hasMaterial = typeof this.materialRate === 'number' && this.materialRate !== 0;
 
   // Default laborHours/materialQty to 1 if a corresponding rate is provided but qty is falsy
-  const lh = hasLabor ? (this.laborHours || 1) : (this.laborHours || 0);
-  const mq = hasMaterial ? (this.materialQty || 1) : (this.materialQty || 0);
+  const lh = hasLabor ? (this.laborHours ?? 1) : (this.laborHours || 0);
+  const mq = hasMaterial ? (this.materialQty ?? 1) : (this.materialQty || 0);
 
   if (hasLabor || hasMaterial) {
     this.laborCost = (this.laborRate || 0) * lh;
@@ -983,7 +1352,11 @@ laborCostSchema.pre('save', function (next) {
   next();
 });
 
-
+const TodoSchema = new mongoose.Schema({
+  text: { type: String, required: true },
+  completed: { type: Boolean, default: false },
+  priority: { type: String, enum: ['low', 'medium', 'high'], default: 'low' },
+}, { timestamps: true });
 
 const fileSchema = new mongoose.Schema({
   name: String,
@@ -1001,19 +1374,91 @@ const folderSchema = new mongoose.Schema({
 });
 
 const expenseSchema = new mongoose.Schema({
-  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: false }, // can be missing for OCR
   item: {
-    itemId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    itemId: { type: mongoose.Schema.Types.ObjectId, required: false }, // can be string "unknown" for OCR
+    estimateId: { type: mongoose.Schema.Types.ObjectId, ref: 'Estimate', required: false },
     name: String,
     costCode: String
   },
+  lineItems: [{
+    projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: false },
+    itemId: { type: mongoose.Schema.Types.ObjectId, required: false },
+    estimateId: { type: mongoose.Schema.Types.ObjectId, ref: 'Estimate', required: false },
+    name: String,
+    costCode: String,
+    description: String,
+    amount: Number
+  }],
+  salesTax: { type: Number, default: 0 },
   vendor: String,
   category: String,
   description: String,
-  amount: { type: Number, required: true },
-  date: { type: String, required: true }
+  amount: { type: Number, required: false },
+  receiptTotal: { type: Number, required: false },
+  date: { type: String, required: false },
+  ref: { type: String },
+  invoiceNumber: { type: String, default: "" },
+  duplicateWarning: { type: Boolean, default: false },
+  duplicateCandidates: [{
+    expenseId: String,
+    vendor: String,
+    date: String,
+    amount: Number,
+    ref: String,
+    reason: String
+  }],
+  status: {
+    type: String,
+    enum: ['missing info', 'pending_review', 'archived', 'submitted', 'approved', 'rejected'],
+    default: 'missing info'
+  },
+  receiptPath: { type: String, default: "" }, // Path to uploaded/scanned receipt image or PDF
+  receiptType: { type: String, default: "" }, // Optional: 'pdf', 'image', etc.
+  receiptName: { type: String, default: "" }, // Optional: original filename
+  linkedItemId: { type: mongoose.Schema.Types.ObjectId, ref: 'Estimate.lineItems.items', required: false },
+  jobName: String,
+  source: { type: String, default: "" }, // e.g. 'manual', 'imap'
+  receiptHash: { type: String, default: "" }, // For deduplication of OCR/email receipts
+  quickBooks: { type: mongoose.Schema.Types.Mixed, default: {} },
+  createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
+// Index receipt captures for lookup; receipt details now live in Expense.lineItems.
+expenseSchema.index({ receiptPath: 1, source: 1 });
+
+// Add these new schemas to your existing schemas section
+const propertySchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  type: { type: String, default: 'Multifamily' },
+  address: {
+    line1: { type: String, required: true },
+    line2: { type: String },
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    zip: { type: String, required: true }
+  },
+  units: [{
+    number: { type: String, required: true },
+    floor: { type: Number },
+    bedrooms: { type: Number, required: true },
+    bathrooms: { type: Number, required: true },
+    sqft: { type: Number },
+    status: { 
+      type: String, 
+      enum: ['vacant', 'occupied', 'maintenance'],
+      default: 'vacant'
+    },
+    tenant: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant'
+    },
+    lease: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Lease'
+    }
+  }]
+}, { timestamps: true });
 
 const utilityAccountSchema = new mongoose.Schema({
     accountNumber: String,
@@ -1030,6 +1475,27 @@ const utilityBillSchema = new mongoose.Schema({
     paidBy: { type: String, enum: ['tenant', 'landlord', ''], default: '' }
 }, { _id: false });
 
+const equipmentSchema = new mongoose.Schema({
+    category: { type: String, default: '' },
+    name: { type: String, default: '' },
+    brand: { type: String, default: '' },
+    model: { type: String, default: '' },
+    serialNumber: { type: String, default: '' },
+    powerType: { type: String, default: '' },
+    capacity: { type: String, default: '' },
+    location: { type: String, default: '' },
+    installedDate: Date,
+    manufacturedYear: Number,
+    condition: { type: String, enum: ['', 'excellent', 'good', 'fair', 'poor', 'replace'], default: '' },
+    warrantyExpires: Date,
+    lastServiceDate: Date,
+    nextServiceDate: Date,
+    expectedReplacementDate: Date,
+    estimatedReplacementCost: { type: Number, default: 0 },
+    serviceProvider: { type: String, default: '' },
+    notes: { type: String, default: '' }
+}, { timestamps: true });
+
 const unitSchema = new mongoose.Schema({
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Property', required: true },
     number: { type: String, required: true },
@@ -1037,7 +1503,8 @@ const unitSchema = new mongoose.Schema({
     bedrooms: { type: Number, default: 1 },
     bathrooms: { type: Number, default: 1 },
     sqft: { type: Number },
-    rent: { type: Number, default: 0 },
+  // Market rent for this unit (used especially when vacant)
+  rent: { type: Number, default: 0 },
     status: { type: String, enum: ['vacant', 'occupied', 'maintenance'], default: 'vacant' },
     tenant: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant' },
 
@@ -1051,12 +1518,16 @@ const unitSchema = new mongoose.Schema({
     // Utility bills history
     utilityBills: { type: [utilityBillSchema], default: [] },
 
-        // Amenities/features checklist
+    // Amenities/features checklist
     amenities: [{ type: String }],
+
+    profile: { type: mongoose.Schema.Types.Mixed, default: {} },
+    equipment: { type: [equipmentSchema], default: [] },
+    conditionDetails: { type: mongoose.Schema.Types.Mixed, default: {} },
+    turnover: { type: mongoose.Schema.Types.Mixed, default: {} },
 
     // Add any other fields as needed
 }, { timestamps: true });
-
 
 const tenantSchema = new mongoose.Schema({
   projectId: {
@@ -1081,6 +1552,7 @@ const tenantSchema = new mongoose.Schema({
     address: String
 },
 authorizedOccupants: [String],
+  quickBooks: { type: mongoose.Schema.Types.Mixed, default: {} },
   pets: {
     hasPets: { type: Boolean, default: false },
     count: { type: Number, default: 0 },
@@ -1174,132 +1646,6 @@ const MAINTENANCE_WORKFLOW_STAGES = [
   'completed',
   'closed'
 ];
-
-function deriveMaintenanceStatusFromStage(stage, fallback = 'pending') {
-  if (stage === 'completed' || stage === 'closed') return 'completed';
-  if (['scheduled', 'waiting', 'in-progress'].includes(stage)) {
-    return 'in-progress';
-  }
-  if (stage === 'new') return 'pending';
-  return ['pending', 'in-progress', 'completed'].includes(fallback) ? fallback : 'pending';
-}
-
-function normalizeMaintenanceWorkflowStage(workflowStage, legacyStatus, hasAssignedVendor = false, hasScheduledFor = false, fallback = 'new') {
-  const normalizedInput = String(workflowStage || '').trim().toLowerCase();
-  const legacyStageMap = {
-    submitted: 'new',
-    acknowledged: 'new',
-    triaged: 'new',
-    assigned: 'scheduled',
-    'waiting-on-vendor': 'waiting',
-    'waiting-on-tenant': 'waiting'
-  };
-  const collapsedStage = legacyStageMap[normalizedInput] || normalizedInput;
-
-  if (MAINTENANCE_WORKFLOW_STAGES.includes(collapsedStage)) {
-    if (collapsedStage === 'scheduled' && !hasScheduledFor && !hasAssignedVendor) return 'new';
-    return collapsedStage;
-  }
-
-  if (legacyStatus === 'completed') return 'completed';
-  if (legacyStatus === 'pending') return 'new';
-  if (hasScheduledFor) return 'scheduled';
-  if (hasAssignedVendor) return 'scheduled';
-  if (legacyStatus === 'in-progress') return 'in-progress';
-  return MAINTENANCE_WORKFLOW_STAGES.includes(fallback) ? fallback : 'new';
-}
- 
-function appendMaintenanceSystemUpdate(request, text) {
-  const message = String(text || '').trim();
-  if (!message) return;
-  request.updates = request.updates || [];
-  request.updates.push({
-    authorRole: 'system',
-    authorName: 'System',
-    text: message,
-    createdAt: new Date()
-  });
-}
-
-function parseMaintenanceDate(value) {
-  if (value === null || typeof value === 'undefined') return undefined;
-  const raw = String(value).trim();
-  if (!raw) return null;
-  const localMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
-  if (localMatch) {
-    const [, year, month, day, hours, minutes, seconds] = localMatch;
-    const parsed = new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day),
-      Number(hours),
-      Number(minutes),
-      Number(seconds || 0),
-      0
-    );
-    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
-  }
-  const parsed = new Date(raw);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
-}
-
-function parseMaintenanceCost(value) {
-  if (value === null || typeof value === 'undefined') return undefined;
-  const raw = String(value).trim();
-  if (!raw) return null;
-  const normalized = raw.replace(/[$,\s]/g, '');
-  const parsed = Number(normalized);
-  if (!Number.isFinite(parsed) || parsed < 0) return undefined;
-  return Math.round(parsed * 100) / 100;
-}
-
-function formatMaintenanceCost(value) {
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) return '';
-  return amount.toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
-}
-
-function formatMaintenanceTimelineDate(value) {
-  if (!value) return '';
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZone: 'America/Chicago'
-  });
-}
-
-function parseAnnouncementCalendarDate(value) {
-  if (!value) return null;
-  if (value instanceof Date) {
-    if (Number.isNaN(value.getTime())) return null;
-    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
-  }
-
-  const raw = String(value).trim();
-  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (match) {
-    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-  }
-
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
-}
-
-function getStartOfToday() {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
 
 const maintenanceRequestSchema = new mongoose.Schema({
   projectId: {
@@ -1402,8 +1748,12 @@ const paymentSchema = new mongoose.Schema({
   method: { type: String, enum: ['cash', 'check', 'bank', 'online'], required: true },
   date: { type: Date, required: true },
   lateFee: { type: Number, default: 0 },
-  balance: { type: Number, default: 0 }
+  balance: { type: Number, default: 0 },
+  source: { type: String, enum: ['local', 'quickbooks'], default: 'local', index: true },
+  postingStatus: { type: String, enum: ['posted', 'pending', 'conflict'], default: 'posted', index: true },
+  quickBooks: { type: mongoose.Schema.Types.Mixed, default: {} }
 }, { timestamps: true });
+paymentSchema.index({ projectId: 1, 'quickBooks.entityType': 1, 'quickBooks.entityId': 1 }, { unique: true, partialFilterExpression: { 'quickBooks.entityId': { $type: 'string' } } });
 
 const roomPackageSchema = new mongoose.Schema({
   key: { type: String, required: true, unique: true }, // e.g., 'kitchen'
@@ -1439,10 +1789,25 @@ const maintenanceScheduleSchema = new mongoose.Schema({
     completedAt: Date,
     completedBy: String, 
     notes: String,
-    cost: { type: Number, default: 0 }
+    cost: { type: Number, default: 0 },
+    scheduledFor: Date,
+    submittedAt: Date,
+    estimateId: { type: mongoose.Schema.Types.ObjectId, ref: 'Estimate', default: null },
+    estimateItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', default: null },
+    photos: { before: [String], after: [String] },
+    qcStatus: { type: String, enum: ['legacy', 'awaiting-qc', 'approved', 'rework'], default: 'legacy' },
+    reworkPhotos: [String],
+    reviews: [{
+      status: { type: String, enum: ['submitted', 'approved', 'rework', 'resubmitted'] },
+      notes: String, reviewedAt: Date,
+      reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Manager' },
+      reviewerName: String,
+      photos: { before: [String], after: [String] }
+    }]
   }],
   createdAt: { type: Date, default: Date.now }
-});
+}, { optimisticConcurrency: true });
 
 const announcementSchema = new mongoose.Schema({
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
@@ -1477,6 +1842,8 @@ const applicationSchema = new mongoose.Schema({
 
 const Task = mongoose.model('Task', taskSchema);
 const PortfolioTask = mongoose.model('PortfolioTask', portfolioTaskSchema);
+const QuickBooksConnection = mongoose.model('QuickBooksConnection', quickBooksConnectionSchema);
+const QuickBooksSyncLog = mongoose.model('QuickBooksSyncLog', quickBooksSyncLogSchema);
 const Comment = mongoose.model("Comment", commentSchema);
 const Client = mongoose.model('Client', clientSchema);
 const Estimate = mongoose.model("Estimate", estimateSchema);
@@ -1488,8 +1855,10 @@ const SelectionBoard = mongoose.model('SelectionBoard', selectionBoardSchema);
 const Product = mongoose.model('Product', productSchema);
 const DailyUpdate = mongoose.model("DailyUpdate", DailyUpdateSchema);
 const Invoice = mongoose.model('Invoice', invoiceSchema);
+
 const Quote = mongoose.model('Quote', quoteSchema);
 const LaborCost = mongoose.model('LaborCost', laborCostSchema);
+const Todo = mongoose.model('Todo', TodoSchema);
 const FileSystem = mongoose.model('FileSystem', folderSchema);
 const Folder = mongoose.model('Folder', folderSchema); // ✅ Add this line
 
@@ -1497,49 +1866,14 @@ const SYSTEM_FOLDER_IDS = Object.freeze({
   allPropertyDocuments: 'system-all-property-documents'
 });
 
-function formatProjectDocumentLabel(project) {
-  if (!project) return 'Unknown Property';
-
-  const addressLine = [project.address?.addressLine1, project.address?.city, project.address?.state]
-    .filter(Boolean)
-    .join(', ');
-
-  return [project.name, addressLine].filter(Boolean).join(' - ') || 'Unknown Property';
-}
-
-async function buildAllPropertyDocumentsFolder() {
-  const [documents, projects] = await Promise.all([
-    Document.find({}).sort({ createdAt: -1 }).lean(),
-    Project.find({}, 'name address').lean()
-  ]);
-
-  const projectLabels = new Map(
-    projects.map(project => [String(project._id), formatProjectDocumentLabel(project)])
-  );
-
-  return {
-    _id: SYSTEM_FOLDER_IDS.allPropertyDocuments,
-    name: 'All Property Documents',
-    position: -1,
-    parentId: null,
-    isSystem: true,
-    files: documents.map(doc => ({
-      _id: String(doc._id),
-      name: doc.name,
-      size: doc.type ? doc.type.charAt(0).toUpperCase() + doc.type.slice(1) : 'Document',
-      type: doc.type || 'other',
-      displayType: projectLabels.get(String(doc.projectId)) || 'Unknown Property',
-      propertyLabel: projectLabels.get(String(doc.projectId)) || 'Unknown Property',
-      modified: new Date(doc.createdAt).toLocaleString(),
-      url: `/api/properties/${doc.projectId}/documents/${doc._id}/view`,
-      downloadUrl: `/api/properties/${doc.projectId}/documents/${doc._id}/download`,
-      projectId: String(doc.projectId),
-      sourceDocumentId: String(doc._id),
-      uploadedBy: doc.uploadedBy || 'System'
-    }))
-  };
-}
 const Expense = mongoose.model('Expense', expenseSchema);
+
+if (mongoose.connection.readyState === 1) {
+  ensureExpenseReceiptIndexAllowsLineItems();
+} else {
+  mongoose.connection.once('open', ensureExpenseReceiptIndexAllowsLineItems);
+}
+const Property = mongoose.model('Property', propertySchema);
 const Unit = mongoose.model('Unit', unitSchema);
 const Tenant = mongoose.model('Tenant', tenantSchema);
 const MaintenanceRequest = mongoose.model('MaintenanceRequest', maintenanceRequestSchema);
@@ -1547,6 +1881,14 @@ const Document = mongoose.model('Document', documentSchema);
 const Payment = mongoose.model('Payment', paymentSchema);
 const RoomPackage = mongoose.model('RoomPackage', roomPackageSchema);
 const MaintenanceSchedule = mongoose.model('MaintenanceSchedule', maintenanceScheduleSchema);
+const maintenanceQC = require('./maintenance-qc')({ MaintenanceSchedule, Estimate, Manager, jwt,
+  secret: JWT_SECRET, nextDate: getNextScheduledDateForCompletion, syncVendor: syncVendorAssignedEstimateItem,
+  syncVendorQC: async (estimate, item, qualityControl) => {
+    await Vendor.updateMany({ 'assignedItems.itemId': item._id, 'assignedItems.projectId': estimate.projectId }, {
+      $set: { 'assignedItems.$[qcItem].qualityControl': qualityControl }
+    }, { arrayFilters: [{ 'qcItem.itemId': item._id, 'qcItem.projectId': estimate.projectId }], runValidators: true });
+  } });
+
 const Announcement = mongoose.model('Announcement', announcementSchema);
 const Application = mongoose.model('Application', applicationSchema);
 const ApplicationInvite = mongoose.model('ApplicationInvite', new mongoose.Schema({
@@ -1564,10 +1906,10 @@ const ApplicationInvite = mongoose.model('ApplicationInvite', new mongoose.Schem
   status: { type: String, enum: ['sent','opened','delivered','bounced'], default: 'sent' },
   // Chat-style internal notes timeline for invites
   notesHistory: [
-    {
+   {
       text: { type: String, required: true },
       createdAt: { type: Date, default: Date.now }
-    }
+    } 
   ]
 }));
 
@@ -1598,7 +1940,6 @@ calorieUserSchema.pre('save', async function(next) {
 
 const CalorieUser = mongoose.model('CalorieUser', calorieUserSchema);
 
-
 module.exports = {
   Task,
   Comment,
@@ -1614,1191 +1955,106 @@ module.exports = {
 };
 
 
-// Serve Blue Rain rental application page (if not covered by static)
-app.get('/applications/new', (req, res) => {
-    // Track invite opens when accessed via ?inviteId=
-  try {
-    const inviteId = req.query.inviteId;
-    if (inviteId && mongoose.Types.ObjectId.isValid(inviteId)) {
-      ApplicationInvite.findByIdAndUpdate(inviteId, {
-        $set: { openedAt: new Date(), status: 'opened' },
-        $inc: { openCount: 1 }
-      }).catch(err => console.warn('Invite open track error:', err?.message || err));
-    }
-  } catch (e) {
-    console.warn('Invite tracking error:', e?.message || e);
-  }
-  const htmlPathPublic = path.join(__dirname, 'public', 'blue-rain-rental-application.html');
-  const htmlPathDist = path.join(__dirname, 'dist', 'blue-rain-rental-application.html');
-  if (fs.existsSync(htmlPathPublic)) {
-    return res.sendFile(htmlPathPublic);
-  } else if (fs.existsSync(htmlPathDist)) {
-    return res.sendFile(htmlPathDist);
-  }
-  return res.status(404).send('blue-rain-rental-application.html not found');
-});
-
-// Serve Blue Rain rental application page in review mode
-app.get('/applications/review/:id', (req, res) => {
-  const htmlPathPublic = path.join(__dirname, 'public', 'blue-rain-rental-application.html');
-  const htmlPathDist = path.join(__dirname, 'dist', 'blue-rain-rental-application.html');
-  if (fs.existsSync(htmlPathPublic)) {
-    return res.sendFile(htmlPathPublic);
-  } else if (fs.existsSync(htmlPathDist)) {
-    return res.sendFile(htmlPathDist);
-  }
-  return res.status(404).send('blue-rain-rental-application.html not found');
-});
-
-// Rental Applications API
-// POST: create a rental application, save to MongoDB, send summary email
-app.post('/api/rental-applications', async (req, res) => {
-  try {
-    // Basic validation; rely on schema defaults beyond this
-    const { name, email, phone, unit, moveIn, notes } = req.body;
-    if (!name || !email) {
-      return res.status(400).json({ message: 'Missing required fields: name, email' });
-    }
-
-    const doc = new Application({
-      name,
-      email,
-      phone: phone || '',
-      unit: unit || '',
-      moveIn: moveIn ? new Date(moveIn) : undefined,
-      notes: notes || ''
-    });
-    const saved = await doc.save();
-
-    // Prepare email summary
-    const isProd = process.env.NODE_ENV === 'production';
-    const baseUrl = process.env.APP_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://bluerainrealestate.com' : `http://localhost:${PORT}`);
-    const viewLink = `${baseUrl}/applications/review/${saved._id}`;
-    const toEmail = process.env.DEFAULT_NOTIFICATION_EMAIL || process.env.EMAIL_USER;
-
-    // Common strings
-    const submittedStr = saved.submitted ? new Date(saved.submitted).toLocaleString('en-US') : new Date().toLocaleString('en-US');
-    const moveInStr = saved.moveIn ? new Date(saved.moveIn).toLocaleDateString('en-US') : 'N/A';
-
-    // Try to extract property address and unit from notes JSON
-    let propertyAddress = '';
-    let unitNumber = saved.unit || '';
-    try {
-      if (saved.notes) {
-        const parsed = JSON.parse(saved.notes);
-        propertyAddress = parsed.propertyAddress || '';
-        unitNumber = parsed.unitNumber || unitNumber;
-      }
-    } catch {}
-
-    const subject = `New Rental Application — ${saved.name}`;
-    const textSummary = [
-      `Blue Rain MF LLC — Rental Application`,
-      `Submitted: ${submittedStr}`,
-      ``,
-      `Applicant: ${saved.name}`,
-      `Email: ${saved.email}`,
-      `Phone: ${saved.phone || 'N/A'}`,
-      `Property Address: ${propertyAddress || 'N/A'}`,
-      `Unit: ${unitNumber || 'N/A'}`,
-      `Move-In: ${moveInStr}`,
-      `Status: ${saved.status}`,
-      ``,
-      `View: ${viewLink}`
-    ].join('\n');
-
-    const htmlSummary = `
-      <div style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:#f5f7fb; padding:24px;">
-        <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e6ebf5;border-radius:14px;overflow:hidden;color:#1a1f2b;box-shadow:0 8px 24px rgba(0,0,0,.06);">
-          <div style="padding:16px 18px;border-bottom:1px solid #eef2fb;background:#f8fafc;">
-            <div style="font-size:14px;color:#5b6b88;">Blue Rain MF LLC</div>
-            <div style="font-size:18px;font-weight:700;color:#1a1f2b;">New Rental Application</div>
-          </div>
-          <div style="padding:18px;">
-            <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;color:#1a1f2b;">
-              <tr>
-                <td style="padding:8px 0;width:160px;color:#5b6b88;">Submitted</td>
-                <td style="padding:8px 0;">${submittedStr}</td>
-              </tr>
-              <tr>
-                <td style="padding:8px 0;width:160px;color:#5b6b88;">Applicant</td>
-                <td style="padding:8px 0;">${saved.name}</td>
-              </tr>
-              <tr>
-                <td style="padding:8px 0;width:160px;color:#5b6b88;">Email</td>
-                <td style="padding:8px 0;">${saved.email}</td>
-              </tr>
-              <tr>
-                <td style="padding:8px 0;width:160px;color:#5b6b88;">Phone</td>
-                <td style="padding:8px 0;">${saved.phone || 'N/A'}</td>
-              </tr>
-              <tr>
-                <td style="padding:8px 0;width:160px;color:#5b6b88;">Property Address</td>
-                <td style="padding:8px 0;">${propertyAddress || 'N/A'}</td>
-              </tr>
-              <tr>
-                <td style="padding:8px 0;width:160px;color:#5b6b88;">Unit</td>
-                <td style="padding:8px 0;">${unitNumber || 'N/A'}</td>
-              </tr>
-              <tr>
-                <td style="padding:8px 0;width:160px;color:#5b6b88;">Move-In</td>
-                <td style="padding:8px 0;">${moveInStr}</td>
-              </tr>
-              <tr>
-                <td style="padding:8px 0;width:160px;color:#5b6b88;">Status</td>
-                <td style="padding:8px 0;">${saved.status}</td>
-              </tr>
-            </table>
-            <div style="margin-top:18px;">
-              <a href="${viewLink}" style="display:inline-block;padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#3b82f6,#7c4dff);color:#ffffff;text-decoration:none;font-weight:600;">View Application</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    // Send email if at least one recipient is configured
-    const recipients = [toEmail, 'bluerainrealestate@gmail.com'].filter(Boolean);
-    if (recipients.length > 0) {
-      try {
-        await transporter.sendMail({
-          from: `"BlueRain Team" <${process.env.EMAIL_USER}>`,
-          to: recipients,
-          subject,
-          text: textSummary,
-          html: htmlSummary
-        });
-      } catch (mailErr) {
-        console.error('Email send error:', mailErr);
-        // Continue even if email fails
-      }
-    }
-
-    // Respond with saved application
-    return res.json({ id: saved._id, application: saved });
-  } catch (err) {
-    console.error('Create rental application error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// Simple health check for Render
-app.get('/healthz', (req, res) => {
-  res.status(200).send('ok');
-});
-
-// POST: send a rental application link (invite) with optional property/unit context
-app.post('/api/rental-applications/send-link', async (req, res) => {
-  try {
-    const { name = 'Applicant', email, propertyId, propertyName, unitId, unitNumber, context } = req.body;
-    if (!email) return res.status(400).json({ message: 'Email is required' });
-
-    const baseUrl = process.env.APP_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://bluerainrealestate.com' : `http://localhost:${PORT}`);
-    // Create invite first to embed inviteId in the URL
-    const invite = await ApplicationInvite.create({
-      name: name || 'Applicant',
-      email,
-      propertyId: propertyId || undefined,
-      propertyName: propertyName || undefined,
-      unitId: unitId || undefined,
-      unitNumber: unitNumber || undefined,
-      context: context || undefined,
-      applicationUrl: '',
-      status: 'sent'
-    });
-
-
-    const subjBits = [];
-    if (propertyName) subjBits.push(propertyName);
-    if (unitNumber) subjBits.push(`Unit ${unitNumber}`);
-    const subject = `Rental Application Link${subjBits.length ? '  ' + subjBits.join('  ') : ''}`;
-
-    // Build a human-friendly property address if propertyId provided (outside of template)
-    let propertyAddressText = '';
-    try {
-      if (propertyId && mongoose.Types.ObjectId.isValid(propertyId)) {
-        const proj = await Project.findById(propertyId).select('address name').lean();
-        const addr = proj?.address || {};
-        const parts = [];
-        if (addr.addressLine1) parts.push(addr.addressLine1);
-        if (addr.addressLine2 && String(addr.addressLine2).trim()) parts.push(addr.addressLine2);
-        const cityState = [addr.city, addr.state].filter(Boolean).join(', ');
-        if (cityState) parts.push(cityState);
-        if (addr.zip) parts.push(addr.zip);
-        propertyAddressText = parts.filter(Boolean).join('  ');
-      }
-    } catch (e) {
-      // Non-fatal: leave propertyAddressText empty on failures
-      console.warn('Unable to build property address for invite:', e?.message || e);
-    }
-
-   // Build application URL including property address / unit in query so the form can auto-fill
-    let propertyForUrl = propertyAddressText || propertyName || '';
-    let qs = `inviteId=${invite._id}`;
-    if (propertyForUrl && String(propertyForUrl).trim()) {
-      qs += `&propertyAddress=${encodeURIComponent(propertyForUrl)}`;
-    }
-    if (unitNumber && String(unitNumber).trim()) {
-      qs += `&unitNumber=${encodeURIComponent(String(unitNumber))}`;
-    }
-    const applicationUrl = `${baseUrl}/applications/new?${qs}`;
-    
-    const html = `
-      <div style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:#f5f7fb; padding:24px;">
-        <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e6ebf5;border-radius:14px;overflow:hidden;color:#1a1f2b;box-shadow:0 8px 24px rgba(0,0,0,.06);">
-          <div style="padding:16px 18px;border-bottom:1px solid #eef2fb;background:#f8fafc;">
-            <div style="font-size:14px;color:#5b6b88;">Blue Rain MF LLC</div>
-            <div style="font-size:18px;font-weight:700;color:#1a1f2b;">Rental Application Invitation</div>
-          </div>
-          <div style="padding:18px;">
-            <p style="margin:0 0 12px;">Hi ${name || 'Applicant'},</p>
-            <p style="margin:0 0 16px; line-height:1.6;">Start your rental application using the link below.</p>
-            ${(propertyName || unitNumber || context) ? `
-            <div style="margin:10px 0 18px; padding:10px 12px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px;">
-              ${propertyAddressText ? `<div style=\"font-size:13px; color:#1f2937;\"><strong>Address:</strong> ${propertyAddressText}</div>` : (propertyName ? `<div style=\"font-size:13px; color:#1f2937;\"><strong>Property:</strong> ${propertyName}</div>` : '')}
-              ${unitNumber ? `<div style=\"font-size:13px; color:#1f2937;\"><strong>Unit:</strong> ${unitNumber}</div>` : ''}
-              ${context ? `<div style=\"font-size:12px; color:#6b7280; margin-top:6px;\">${context}</div>` : ''}
-            </div>` : ''}
-            <div style="margin:16px 0 24px;">
-              <a href="${applicationUrl}" style="display:inline-block;padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#3b82f6,#7c4dff);color:#ffffff;text-decoration:none;font-weight:600;">Start Application</a>
-            </div>
-            <p style="margin:0 0 8px; font-size:13px; color:#64748b;">If the button doesn’t work, copy and paste this URL:</p>
-            <code style="display:block; background:#f8fafc; border:1px solid #e5e7eb; padding:10px; border-radius:8px; font-size:12px; color:#0f172a;">${applicationUrl}</code>
-          </div>
-        </div>
-      </div>`;
-
-    // Configure SMTP properly (fallback to Gmail if env not set)
-    const smtpPort = Number(process.env.SMTP_PORT) || 465;
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: smtpPort,
-      secure: smtpPort === 465, // true for 465, false for 587
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-      tls: { rejectUnauthorized: false }
-    });
-
-    const mailOptions = {
-      from: `"BlueRain Team" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject,
-      html
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-
-    // Update invite record with the final URL
-    await ApplicationInvite.findByIdAndUpdate(invite._id, { $set: { applicationUrl } });
-
-    return res.json({ ok: true, message: 'Application link sent', applicationUrl, messageId: info?.messageId });
-  } catch (err) {
-    console.error('Send application link error:', err);
-    return res.status(500).json({ message: 'Failed to send application link' });
-  }
-});
-
-// GET: list rental applications (optional ?limit=, default 100, max 500)
-app.get('/api/rental-applications', async (req, res) => {
-  try {
-    const limit = Math.min(parseInt(req.query.limit || '100', 10) || 100, 500);
-    const apps = await Application.find({})
-      .sort({ submitted: -1 })
-      .limit(limit)
-      .lean();
-    return res.json(apps);
-  } catch (err) {
-    console.error('List rental applications error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// GET: list application invites (optional ?limit=, default 100, max 500)
-app.get('/api/application-invites', async (req, res) => {
-  try {
-    const limit = Math.min(parseInt(req.query.limit || '100', 10) || 100, 500);
-    const invites = await ApplicationInvite.find({})
-      .sort({ sentAt: -1 })
-      .limit(limit)
-      .lean();
-    return res.json(invites);
-  } catch (err) {
-    console.error('List application invites error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// PUT: update an application invite by id
-app.put('/api/application-invites/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, email, propertyName, unitNumber, status, applicationUrl } = req.body || {};
-
-    const update = {};
-    if (typeof name === 'string') update.name = name;
-    if (typeof email === 'string') update.email = email;
-    if (typeof propertyName === 'string') update.propertyName = propertyName;
-    if (typeof unitNumber === 'string') update.unitNumber = unitNumber;
-    if (typeof status === 'string') update.status = status;
-    if (typeof applicationUrl === 'string') update.applicationUrl = applicationUrl;
-
-    const updated = await ApplicationInvite.findByIdAndUpdate(id, { $set: update }, { new: true }).lean();
-    if (!updated) {
-      return res.status(404).json({ message: 'Invite not found' });
-    }
-    return res.json({ invite: updated });
-  } catch (err) {
-    console.error('Update application invite error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// DELETE: remove an application invite by id
-app.delete('/api/application-invites/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const deleted = await ApplicationInvite.findByIdAndDelete(id).lean();
-    if (!deleted) {
-      return res.status(404).json({ message: 'Invite not found' });
-    }
-    return res.json({ message: 'Invite deleted' });
-  } catch (err) {
-    console.error('Delete application invite error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// POST: append a note to an application invite
-app.post('/api/application-invites/:id/notes', async (req, res) => {
-  try {
-    const { id } = req.params;
-    let { text } = req.body || {};
-    text = (text || '').trim();
-    if (!text) {
-      return res.status(400).json({ message: 'Note text is required' });
-    }
-
-    const updated = await ApplicationInvite.findByIdAndUpdate(
-      id,
-      { $push: { notesHistory: { text, createdAt: new Date() } } },
-      { new: true }
-    ).select('notesHistory').lean();
-
-    if (!updated) {
-      return res.status(404).json({ message: 'Invite not found' });
-    }
-
-    return res.json({ notes: updated.notesHistory || [] });
-  } catch (err) {
-    console.error('Append invite note error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// DELETE: remove a single note from an application invite
-app.delete('/api/application-invites/:id/notes/:noteId', async (req, res) => {
-  try {
-    const { id, noteId } = req.params;
-    const updated = await ApplicationInvite.findByIdAndUpdate(
-      id,
-      { $pull: { notesHistory: { _id: noteId } } },
-      { new: true }
-    ).select('notesHistory').lean();
-
-    if (!updated) {
-      return res.status(404).json({ message: 'Invite not found' });
-    }
-
-    return res.json({ notes: updated.notesHistory || [] });
-  } catch (err) {
-    console.error('Delete invite note error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// GET: fetch a rental application by id
-app.get('/api/rental-applications/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const doc = await Application.findById(id);
-    if (!doc) return res.status(404).json({ message: 'Application not found' });
-    return res.json(doc);
-  } catch (err) {
-    console.error('Get rental application error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// PUT: update a rental application by id
-app.put('/api/rental-applications/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, email, phone, unit, moveIn, notes, status } = req.body;
-
-    const update = {};
-    if (typeof name === 'string') update.name = name;
-    if (typeof email === 'string') update.email = email;
-    if (typeof phone === 'string') update.phone = phone;
-    if (typeof unit === 'string') update.unit = unit;
-    if (typeof notes === 'string') update.notes = notes;
-    if (typeof status === 'string') update.status = status;
-    if (moveIn) {
-      const d = new Date(moveIn);
-      if (!isNaN(d.getTime())) update.moveIn = d;
-    }
-
-    const updated = await Application.findByIdAndUpdate(id, { $set: update }, { new: true });
-    if (!updated) return res.status(404).json({ message: 'Application not found' });
-    return res.json({ message: 'Application updated', application: updated });
-  } catch (err) {
-    console.error('Update rental application error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-
-// POST: append a note to a rental application
-app.post('/api/rental-applications/:id/notes', async (req, res) => {
-  try {
-    const { id } = req.params;
-    let { text } = req.body || {};
-    text = (text || '').trim();
-    if (!text) {
-      return res.status(400).json({ message: 'Note text is required' });
-    }
-
-    const updated = await Application.findByIdAndUpdate(
-      id,
-      { $push: { notesHistory: { text, createdAt: new Date() } } },
-      { new: true }
-    ).select('notesHistory').lean();
-
-    if (!updated) {
-      return res.status(404).json({ message: 'Application not found' });
-    }
-
-    return res.json({ notes: updated.notesHistory || [] });
-  } catch (err) {
-    console.error('Append application note error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// DELETE: remove a single note from a rental application
-app.delete('/api/rental-applications/:id/notes/:noteId', async (req, res) => {
-  try {
-    const { id, noteId } = req.params;
-    const updated = await Application.findByIdAndUpdate(
-      id,
-      { $pull: { notesHistory: { _id: noteId } } },
-      { new: true }
-    ).select('notesHistory').lean();
-
-    if (!updated) {
-      return res.status(404).json({ message: 'Application not found' });
-    }
-
-    return res.json({ notes: updated.notesHistory || [] });
-  } catch (err) {
-    console.error('Delete application note error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// DELETE: remove a rental application by id
-app.delete('/api/rental-applications/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const deleted = await Application.findByIdAndDelete(id).lean();
-    if (!deleted) {
-      return res.status(404).json({ message: 'Application not found' });
-    }
-    return res.json({ message: 'Application deleted' });
-  } catch (err) {
-    console.error('Delete rental application error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// Add Client
-app.post('/api/add-client', async (req, res) => {
-  try {
-    const newClient = new Client(req.body);
-    await newClient.save();
-    res.status(201).json({ success: true, message: 'Client added successfully', client: newClient });
-  } catch (error) {
-    console.error('Error adding client:', error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// GET /api/clients - Get all clients
-app.get('/api/clients', async (req, res) => {
-  try {
-    const clients = await Client.find().sort({ name: 1 }); // optional sort by name
-    res.json(clients);
-  } catch (err) {
-    console.error('Error fetching clients:', err);
-    res.status(500).json({ error: 'Server error while fetching clients' });
-  }
-});
-
-// Add Estimate
-// Add a new estimate to a project
-app.post('/api/estimates', async (req, res) => { 
-  try {
-    console.log('Request Body:', JSON.stringify(req.body, null, 2));
-
-    const { projectId, lineItems, tax, title } = req.body;
-
-    const normalizeStatus = (status) => {
-      if (typeof status !== 'string' || !status.trim()) return 'new';
-      if (status.trim().toLowerCase() === 'not started') return 'in-progress';
-      return status.trim().toLowerCase().replace(/\s+/g, '-');
-    };
-
-    const normalizePhase = (phase) => {
-      const phaseAliases = new Map([
-        ['planning', 'pre-construction'],
-        ['permits-approvals', 'permits'],
-        ['site-preparation', 'demo'],
-        ['rough-construction', 'structure'],
-        ['finish-work', 'finishes'],
-        ['final-completion', 'punch'],
-        ['completed', 'punch']
-      ]);
-      const allowedPhases = new Set(['pre-construction', 'permits', 'demo', 'structure', 'rough-in', 'inspections', 'finishes', 'exterior', 'punch']);
-      const normalizedPhase = phaseAliases.get(phase) || phase;
-      return allowedPhases.has(normalizedPhase) ? normalizedPhase : 'pre-construction';
-    };
-
-    const normalizePercentComplete = (value, status = 'new') => {
-      const numericValue = Number.parseFloat(value);
-      if (Number.isFinite(numericValue)) {
-        return Math.min(100, Math.max(0, Math.round(numericValue)));
-      }
-      return normalizeStatus(status) === 'completed' ? 100 : 0;
-    };
-
-    // Validate Input
-    if (!projectId || !lineItems || lineItems.length === 0) {
-      return res.status(400).json({ success: false, message: 'Invalid input: Missing required fields.' });
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({ success: false, message: 'Invalid Project ID.' });
-    }
-
-    // Organize Line Items into Categories and PRESERVE photos field
-    const structuredLineItems = lineItems.map((category, categoryIndex) => {
-      if (category.type === 'category') {
-        if (!category.category) {
-          throw new Error("Category name is required.");
-        }
-
-        const items = category.items.map((item, itemIndex) => {
-          if (!item.name || item.quantity === undefined || item.unitPrice === undefined) {
-            throw new Error("Each line item must include a name, quantity, and unit price.");
-          }
-
-          return {
-            type: 'item',
-            name: item.name,
-            sortOrder: Number.isFinite(item.sortOrder) ? item.sortOrder : itemIndex,
-            description: item.description || '',
-            costCode: item.costCode || 'Uncategorized',
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            total: item.total || item.quantity * item.unitPrice,
-            splitPercentage: item.splitPercentage,
-            splitGroupId: item.splitGroupId || null,
-            status: normalizeStatus(item.status),
-            phase: normalizePhase(item.phase),
-            percentComplete: normalizePercentComplete(item.percentComplete, item.status),
-            assignedTo: item.assignedTo || null,
-            maintenanceRequestId: item.maintenanceRequestId,
-            maintenanceScheduleId: item.maintenanceScheduleId,
-            photos: item.photos && typeof item.photos === 'object'
-              ? {
-                  before: Array.isArray(item.photos.before) ? item.photos.before : [],
-                  after: Array.isArray(item.photos.after) ? item.photos.after : []
-                }
-              : { before: [], after: [] }
-          };
-        });
-
-        return {
-          type: 'category',
-          category: category.category,
-          sortOrder: Number.isFinite(category.sortOrder) ? category.sortOrder : categoryIndex,
-          status: 'in-progress',
-          items: items
-        };
-      } else {
-        throw new Error("Unexpected structure. All entries should be categories containing items.");
-      }
-    });
-
-    // Calculate Total Estimate
-    const total = structuredLineItems.reduce((sum, category) => {
-      return sum + category.items.reduce((catSum, item) => catSum + item.total, 0);
-    }, 0);
-
-    // Create Estimate Document
-    const invoiceNumber = `INV-${Date.now()}`;
-    const newEstimate = new Estimate({
-      projectId,
-      invoiceNumber,
-      title: title || '', 
-      lineItems: structuredLineItems,
-      total,
-      tax
-    });
-
-    await newEstimate.save();
-
-    // ✅ Log the estimate creation in daily logs
-    await logDailyUpdate(
-      projectId,
-      `A new estimate (${invoiceNumber}) was created${title ? `: "${title}"` : ""}.`
-    );
-
-    res.status(201).json({ success: true, estimate: newEstimate });
-
-  } catch (error) {
-    console.error('Error saving estimate:', error.message);
-    res.status(500).json({ success: false, message: 'Failed to save estimate.' });
-  }
-});
-
-
-// Route to Get a Single Estimate by ID
-app.get('/api/estimates/:id', async (req, res) => {
-  const { id } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ success: false, message: 'Invalid estimate ID.' });
-  }
-
-  try {
-    const estimate = await Estimate.findById(id)
-      .populate('projectId', 'name address')
-      .populate('lineItems.items.assignedTo', 'name'); // Ensure 'assignedTo' is populated
-
-    if (!estimate) {
-      return res.status(404).json({ success: false, message: 'Estimate not found.' });
-    }
-
-    const sortedEstimate = estimate.toObject();
-    sortedEstimate.lineItems = (sortedEstimate.lineItems || [])
-      .map((category, categoryIndex) => ({
-        ...category,
-        items: (category.items || []).slice().sort((left, right) => {
-          const leftOrder = Number.isFinite(left?.sortOrder) ? left.sortOrder : Number.MAX_SAFE_INTEGER;
-          const rightOrder = Number.isFinite(right?.sortOrder) ? right.sortOrder : Number.MAX_SAFE_INTEGER;
-          if (leftOrder !== rightOrder) return leftOrder - rightOrder;
-          return 0;
-        })
-      }))
-      .sort((left, right) => {
-        const leftOrder = Number.isFinite(left?.sortOrder) ? left.sortOrder : Number.MAX_SAFE_INTEGER;
-        const rightOrder = Number.isFinite(right?.sortOrder) ? right.sortOrder : Number.MAX_SAFE_INTEGER;
-        if (leftOrder !== rightOrder) return leftOrder - rightOrder;
-        return 0;
-      });
-
-    res.status(200).json({ success: true, estimate: sortedEstimate });
-  } catch (error) {
-    console.error('❌ Error fetching estimate:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch estimate.' });
-  }
-});
-
-
-// Route to Get All Estimates for a Specific Project
-app.get('/api/estimates', async (req, res) => {
-  const { projectId } = req.query;
-
-  try {
-    let estimates;
-    if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
-      // Return estimates for a specific project
-      estimates = await Estimate.find({ projectId }).populate('projectId', 'name address');
-    } else {
-      // Return all estimates
-      estimates = await Estimate.find().populate('projectId', 'name address');
-    }
-
-    res.status(200).json({ success: true, estimates });
-  } catch (error) {
-    console.error('Error fetching estimates:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch estimates.' });
-  }
-});
-
-
-
-
-
-// Route to Get Estimates for a Specific Project
-app.delete('/api/estimates/:id', async (req, res) => {
-  const { id } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ success: false, message: 'Invalid Estimate ID.' });
-  }
-
-  const estimateObjectId = new mongoose.Types.ObjectId(id);  // Convert id to ObjectId
-
-  try {
-    // Delete the estimate
-    const deletedEstimate = await Estimate.findByIdAndDelete(estimateObjectId);
-    if (!deletedEstimate) {
-      return res.status(404).json({ success: false, message: 'Estimate not found.' });
-    }
-
-    // Debugging: Check vendors with assigned items linked to this estimate
-    const vendorsWithItems = await Vendor.find({ "assignedItems.estimateId": estimateObjectId });
-    console.log("Vendors with assigned items for this estimate:", vendorsWithItems);
-
-    // Remove assigned items linked to the estimate
-    const updatedVendors = await Vendor.updateMany(
-      { "assignedItems.estimateId": estimateObjectId },
-      { $pull: { assignedItems: { estimateId: estimateObjectId } } }
-    );
-
-    console.log("Vendors updated:", updatedVendors.modifiedCount);
-
-    res.status(200).json({
-      success: true,
-      message: 'Estimate and associated line items removed from vendors successfully.',
-      vendorsUpdated: updatedVendors.modifiedCount
-    });
-  } catch (error) {
-    console.error('Error deleting estimate and assigned items:', error);
-    res.status(500).json({ success: false, message: 'Failed to delete estimate and assigned items.' });
-  }
-});
-
-
-// Backend route to update the estimate
-app.put("/api/estimates/:id", async (req, res) => {
-  try {
-    const estimateId = req.params.id;
-    const updatesPayload = req.body;
-
-    // Defensive: Ensure title is a string
-    if (typeof updatesPayload.title !== "string") {
-      updatesPayload.title = "";
-    }
-
-    // Defensive: If lineItems is present, ensure it's an array
-    if ("lineItems" in updatesPayload && !Array.isArray(updatesPayload.lineItems)) {
-      return res.status(400).json({ message: "Missing or invalid lineItems array in request body." });
-    }
-
-    // Normalize status helper
-    function normalizeStatus(status) {
-      if (typeof status !== "string") return status;
-      status = status.trim();
-      if (status.toLowerCase() === "not started") return "in-progress";
-      return status.toLowerCase().replace(/\s+/g, "-");
-    }
-
-    function normalizePhase(phase) {
-      const phaseAliases = new Map([
-        ["planning", "pre-construction"],
-        ["permits-approvals", "permits"],
-        ["site-preparation", "demo"],
-        ["rough-construction", "structure"],
-        ["finish-work", "finishes"],
-        ["final-completion", "punch"],
-        ["completed", "punch"]
-      ]);
-      const allowedPhases = new Set(["pre-construction", "permits", "demo", "structure", "rough-in", "inspections", "finishes", "exterior", "punch"]);
-      const normalizedPhase = phaseAliases.get(phase) || phase;
-      return allowedPhases.has(normalizedPhase) ? normalizedPhase : "pre-construction";
-    }
-
-    function normalizePercentComplete(value, status = "new") {
-      const numericValue = Number.parseFloat(value);
-      if (Number.isFinite(numericValue)) {
-        return Math.min(100, Math.max(0, Math.round(numericValue)));
-      }
-      return normalizeStatus(status) === "completed" ? 100 : 0;
-    }
-
-    // Fetch the existing document
-    const existingEstimate = await Estimate.findById(estimateId);
-    if (!existingEstimate) {
-      return res.status(404).json({ message: "Estimate not found" });
-    }
-
-    // Only process lineItems if present and is an array
-    if (Array.isArray(updatesPayload.lineItems)) {
-      // Create a map of existing items by their _id
-      const existingItemsMap = new Map();
-      existingEstimate.lineItems.forEach((lineItem) => {
-        lineItem.items.forEach((item) => {
-          existingItemsMap.set(item._id.toString(), item);
-        });
-      });
-
-      // Merge new items with existing data
-      updatesPayload.lineItems.forEach((lineItem, categoryIndex) => {
-        lineItem.sortOrder = Number.isFinite(lineItem.sortOrder) ? lineItem.sortOrder : categoryIndex;
-        lineItem.items.forEach((item, itemIndex) => {
-          item.sortOrder = Number.isFinite(item.sortOrder) ? item.sortOrder : itemIndex;
-          if (item.status && item.status.trim() !== "") {
-            item.status = normalizeStatus(item.status);
-          }
-          item.phase = normalizePhase(item.phase);
-          item.percentComplete = normalizePercentComplete(item.percentComplete, item.status);
-
-          if (item._id && existingItemsMap.has(item._id.toString())) {
-            const existingItem = existingItemsMap.get(item._id.toString());
-
-            // Preserve fields
-            item.photos = existingItem.photos ?? { before: [], after: [] };
-            item.assignedTo = existingItem.assignedTo ?? null;
-            item.startDate = item.startDate ?? existingItem.startDate;
-            item.endDate = item.endDate ?? existingItem.endDate;
-            item.status = item.status || normalizeStatus(existingItem.status);
-            item.phase = item.phase || existingItem.phase || "pre-construction";
-            item.percentComplete = item.percentComplete ?? existingItem.percentComplete ?? normalizePercentComplete(undefined, item.status);
-            item.costCode = item.costCode || existingItem.costCode || "Uncategorized";
-            item.maintenanceRequestId = item.maintenanceRequestId || existingItem.maintenanceRequestId || null;
-            item.maintenanceScheduleId = item.maintenanceScheduleId || existingItem.maintenanceScheduleId || null;
-          } else {
-            // For new items
-            if (!item.status || item.status.trim() === "") {
-              item.status = "in-progress";
-            }
-            item.phase = normalizePhase(item.phase);
-            item.percentComplete = normalizePercentComplete(item.percentComplete, item.status);
-            item.costCode = item.costCode || "Uncategorized";
-            item.maintenanceRequestId = item.maintenanceRequestId || null;
-            item.maintenanceScheduleId = item.maintenanceScheduleId || null;
-          }
-        });
-      });
-
-      // Recalculate the estimate total
-      let newTotal = 0;
-      updatesPayload.lineItems.forEach((lineItem) => {
-        lineItem.items.forEach((item) => {
-          newTotal += (item.quantity || 1) * (item.unitPrice || 0);
-        });
-      });
-      updatesPayload.total = newTotal;
-    }
-
-    // If no lineItems, preserve the existing total
-    if (!Array.isArray(updatesPayload.lineItems)) {
-      updatesPayload.total = existingEstimate.total || 0;
-    }
-
-    // Update the document
-    const updatedEstimate = await Estimate.findByIdAndUpdate(
-      estimateId,
-      {
-        $set: updatesPayload
-      },
-      { new: true, runValidators: true }
-    );
-
-    const linkedMaintenanceItems = updatedEstimate.lineItems.flatMap(category =>
-    (category.items || []).filter(item => item.maintenanceRequestId || item.maintenanceScheduleId)
-    );
-    for (const item of linkedMaintenanceItems) {
-      await syncLinkedMaintenanceRecordsFromEstimateItem(updatedEstimate, item);
-    }
-
-    // Log the update
-    await logDailyUpdate(
-      updatedEstimate.projectId,
-      `Estimate ${updatedEstimate.invoiceNumber} was updated${updatedEstimate.title ? `: "${updatedEstimate.title}"` : ""}.`
-    );
-
-    res.status(200).json(updatedEstimate);
-  } catch (error) {
-    console.error("Update error:", error);
-    res.status(500).json({ message: "Server error", error });
-  }
-});
-
-
-app.patch('/api/estimates/:id/update-photo', async (req, res) => {
-  const { id } = req.params;
-  const { itemId, type, photos } = req.body; // ✅ Only extract the needed fields
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ success: false, message: 'Invalid Estimate ID.' });
-  }
-
-  try {
-    let estimate = await Estimate.findById(id);
-    if (!estimate) {
-      return res.status(404).json({ success: false, message: 'Estimate not found.' });
-    }
-
-    let itemFound = false;
-    
-    estimate.lineItems.forEach(category => {
-        category.items.forEach(item => {
-            if (item._id.toString() === itemId) {
-                item.photos[type] = photos; // ✅ Only update photos, nothing else
-                itemFound = true;
-            }
-        });
-    });
-
-    if (!itemFound) {
-      return res.status(404).json({ success: false, message: 'Item not found in estimate.' });
-    }
-
-    const updatedEstimate = await estimate.save();
-    res.status(200).json({ success: true, estimate: updatedEstimate });
-  } catch (error) {
-    console.error('❌ Error updating estimate photo data:', error);
-    res.status(500).json({ success: false, message: 'Failed to update estimate photo data.' });
-  }
-});
-
-
-
-// Serve the estimate-view.html file
-app.get('/estimate-view.html', (req, res) => {
-  const filePath = path.join(__dirname, 'dist', 'estimate-view.html');
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      console.error('Error serving estimate-view.html:', err);
-      res.status(500).send('Failed to load the page.');
-    }
-  });
-});
-
-
-
-
-
-// Add Vendor
-app.post('/api/add-vendor', async (req, res) => {
-  try {
-    const { name, email, phone, title } = req.body;
-
-    if (!name) {
-      return res.status(400).json({ success: false, message: "Name is required." });
-    }
-
-    if (email) {
-      const existing = await Vendor.findOne({ email });
-      if (existing) {
-        return res.status(400).json({ success: false, message: "Vendor already exists with this email." });
-      }
-    }
-
-    const newVendor = new Vendor({ name, email, phone, title, status: 'inactive', isInvited: false, isActive: false });
-    await newVendor.save();
-
-    // Do NOT auto-invite here; invitation happens explicitly via /api/invite
-    res.status(201).json({
-      success: true,
-      message: 'Vendor added successfully',
-      vendor: newVendor
-    });
-  } catch (error) {
-    console.error('Error adding vendor:', error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// API Endpoint to Get All Vendors
-app.get('/api/vendors', async (req, res) => {
-  try {
-    const vendors = await Vendor.find();
-    const estimates = await Estimate.find({}, { lineItems: 1 });
-
-    const laborCostMap = new Map();
-    estimates.forEach(estimate => {
-      (estimate.lineItems || []).forEach(category => {
-        (category.items || []).forEach(item => {
-          if (item && item._id && typeof item.laborCost !== 'undefined') {
-            laborCostMap.set(item._id.toString(), item.laborCost);
-          }
-        });
-      });
-    });
-
-    const syncedVendors = vendors.map(vendor => {
-      const vendorObj = vendor.toObject();
-      vendorObj.assignedItems = (vendorObj.assignedItems || []).map(item => {
-        const itemId = item && item.itemId ? item.itemId.toString() : '';
-        const syncedLaborCost = laborCostMap.get(itemId);
-        return {
-          ...item,
-          laborCost: typeof syncedLaborCost !== 'undefined' ? syncedLaborCost : (item.laborCost || 0),
-          photos: item.photos || { before: [], after: [] }
-        };
-      });
-      return vendorObj;
-    });
-
-    res.status(200).json(syncedVendors);
-  } catch (error) {
-    console.error('Error fetching vendors:', error.message);
-    res.status(500).json({ success: false, error: 'Failed to fetch vendors' });
-  }
-});
-
-app.get('/api/vendors/:id', async (req, res) => {
-  const { id } = req.params;
-
-  // Validate ObjectId
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ error: 'Invalid vendor ID.' });
-  }
-
-  try {
-    const vendor = await Vendor.findById(id);
-    if (!vendor) {
-      return res.status(404).json({ error: 'Vendor not found.' });
-    }
-
-    res.status(200).json(vendor);
-  } catch (error) {
-    console.error('Error fetching vendor:', error.message);
-    res.status(500).json({ error: 'Failed to fetch vendor.' });
-  }
-});
-
-
-
-// API Endpoint to delete a vendor by ID
-app.delete("/api/vendors/:id", async (req, res) => {
-  const { id } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ success: false, message: "Invalid vendor ID." });
-  }
-
-  try {
-    const deletedVendor = await Vendor.findByIdAndDelete(id);
-
-    if (!deletedVendor) {
-      return res.status(404).json({ success: false, message: "Vendor not found." });
-    }
-
-    console.log(`✅ Vendor with ID ${id} deleted`);
-    res.status(200).json({ success: true, message: "Vendor deleted successfully." });
-  } catch (error) {
-    console.error("❌ Error deleting vendor:", error.message);
-    res.status(500).json({ success: false, message: "Failed to delete vendor." });
-  }
-});
-
-
-
-app.get('/api/managers', async (req, res) => {
-  try {
-    const managers = await Manager.find(); // Fetch all managers from the database
-    res.status(200).json(managers); // Send managers as a response
-  } catch (error) {
-    console.error('Error fetching managers:', error.message);
-    res.status(500).json({ success: false, error: 'Failed to fetch managers' });
-  }
-});
-
-
-
-
-app.get('/api/managers/:id', async (req, res) => {
-  const { id } = req.params;
-
-  // Validate ObjectId
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ error: 'Invalid manager ID.' });
-  }
-
-  try {
-    const manager = await Manager.findById(id);
-    if (!manager) {
-      return res.status(404).json({ error: 'Manager not found.' });
-    }
-
-    res.status(200).json(manager);
-  } catch (error) {
-    console.error('Error fetching manager:', error.message);
-    res.status(500).json({ error: 'Failed to fetch manager.' });
-  }
-});
-
-
-// ✅ Edit Vendor Information
-
-app.put("/api/vendors/:id", async (req, res) => {
-  try {
-    const { id } = req.params; // Get vendor ID from URL
-    const updateData = req.body; // Get updated fields from request body
-
-    if (!id) {
-      return res.status(400).json({ success: false, message: "Vendor ID is required." });
-    }
-
-    if (!updateData || Object.keys(updateData).length === 0) {
-      return res.status(400).json({ success: false, message: "No update data provided." });
-    }
-
-    // If using MongoDB (Database)
-    if (typeof Vendor !== "undefined") {
-      const updatedVendor = await Vendor.findByIdAndUpdate(id, updateData, { 
-        new: true, 
-        runValidators: true 
-      });
-
-      if (!updatedVendor) {
-        return res.status(404).json({ success: false, message: "Vendor not found." });
-      }
-
-      console.log(`✅ Vendor with ID ${id} updated in DB`);
-      return res.status(200).json({ success: true, message: "Vendor updated successfully!", vendor: updatedVendor });
-    }
-
-    // If using in-memory array (`vendors`)
-    if (typeof vendors !== "undefined" && Array.isArray(vendors)) {
-      const vendorIndex = vendors.findIndex((v) => v.id === id);
-      if (vendorIndex === -1) {
-        return res.status(404).json({ success: false, message: "Vendor not found." });
-      }
-
-      // Update the vendor object in memory
-      vendors[vendorIndex] = { ...vendors[vendorIndex], ...updateData };
-
-      console.log(`✅ Vendor with ID ${id} updated in memory`);
-      return res.status(200).json({ success: true, message: "Vendor updated successfully!", vendor: vendors[vendorIndex] });
-    }
-
-    return res.status(500).json({ success: false, message: "Vendor storage method not recognized." });
-
-  } catch (error) {
-    console.error("❌ Error updating vendor:", error);
-    res.status(500).json({ success: false, message: "Failed to update vendor. Please try again." });
-  }
-});
 
+// ============================================================================
+// [SECTION 07] API ROUTES AND FLOW-SPECIFIC SETUP
+// ============================================================================
+// ============================================================================
+// [FLOW: applications] Rental applications and invitations
+// ============================================================================
+// Implementation: server/flows/applications.js
+serverFlows["applications"].get_applications_new();
+
+serverFlows["applications"].get_applications_review_id();
+
+serverFlows["applications"].post_api_rental_applications();
+
+serverFlows["applications"].post_api_rental_applications_send_link();
+
+serverFlows["applications"].get_api_rental_applications();
+
+serverFlows["applications"].get_api_application_invites();
+
+serverFlows["applications"].put_api_application_invites_id();
+
+serverFlows["applications"].delete_api_application_invites_id();
+
+serverFlows["applications"].post_api_application_invites_id_notes();
+
+serverFlows["applications"].delete_api_application_invites_id_notes_noteId();
+
+serverFlows["applications"].get_api_rental_applications_id();
+
+serverFlows["applications"].put_api_rental_applications_id();
+
+serverFlows["applications"].post_api_rental_applications_id_notes();
+
+serverFlows["applications"].delete_api_rental_applications_id_notes_noteId();
+
+serverFlows["applications"].delete_api_rental_applications_id();
+
+
+// ============================================================================
+// [FLOW: clients] Clients
+// ============================================================================
+// Implementation: server/flows/clients.js
+serverFlows["clients"].post_api_add_client();
+
+serverFlows["clients"].get_api_clients();
+
+serverFlows["clients"].put_api_clients_id();
+
+serverFlows["clients"].delete_api_clients_id();
+
+
+// ============================================================================
+// [FLOW: estimates] Estimates and line items
+// ============================================================================
+// Implementation: server/flows/estimates.js
+serverFlows["estimates"].post_api_estimates();
+
+serverFlows["estimates"].get_api_estimates_id();
+
+serverFlows["estimates"].get_api_estimates();
+
+serverFlows["estimates"].delete_api_estimates_id();
+
+serverFlows["estimates"].put_api_estimates_id();
+
+serverFlows["estimates"].patch_api_estimates_id_update_photo();
+
+serverFlows["estimates"].get_estimate_view_html();
+
+
+// ============================================================================
+// [FLOW: vendors] Vendors and assignments (continued)
+// ============================================================================
+serverFlows["vendors"].post_api_add_vendor();
+
+serverFlows["vendors"].get_api_vendors();
+
+serverFlows["vendors"].get_api_vendors_id();
+
+serverFlows["vendors"].delete_api_vendors_id();
+
+
+// ============================================================================
+// [FLOW: auth] Authentication and manager accounts
+// ============================================================================
+// Implementation: server/flows/auth.js
+serverFlows["auth"].get_api_managers();
+
+
+// ============================================================================
+// [FLOW: vendors] Vendors and assignments (continued)
+// ============================================================================
+serverFlows["vendors"].put_api_vendors_id();
 
 // Upload W9 for a vendor
+// Ensure the uploads/vendors/w9 directory exists
 const w9Dir = path.join(uploadDir, 'vendors', 'w9');
 if (!fs.existsSync(w9Dir)) {
   fs.mkdirSync(w9Dir, { recursive: true });
-}
-
-function sanitizeFilename(name) {
-  return name
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9._-]+/g, '_')
-    .replace(/_+/g, '_')
-    .replace(/^_|_$/g, '');
 }
 
 const w9Storage = multer.diskStorage({
@@ -2814,1943 +2070,138 @@ const w9Storage = multer.diskStorage({
 });
 const w9Upload = multer({ storage: w9Storage });
 
-// POST /api/vendors/:id/upload-w9
-app.post('/api/vendors/:id/upload-w9', w9Upload.single('w9'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, message: 'Invalid vendor ID.' });
-    }
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded.' });
-    }
-
-    const vendor = await Vendor.findById(id);
-    if (!vendor) {
-      return res.status(404).json({ success: false, message: 'Vendor not found.' });
-    }
-
-   const publicPath = `/uploads/vendors/w9/${req.file.filename}`;
-    vendor.documents = vendor.documents || {};
-    vendor.documents.w9Path = publicPath;
-    vendor.documents.w9UploadedAt = new Date();
-    await vendor.save();
-
-    res.status(200).json({ success: true, w9Url: publicPath, message: 'W9 uploaded successfully.' });
-  } catch (error) {
-    console.error('❌ Error uploading W9:', error);
-    res.status(500).json({ success: false, message: 'Failed to upload W9.' });
-  }
-});
-
-// DELETE /api/vendors/:id/w9 — remove W9 file and clear reference
-app.delete('/api/vendors/:id/w9', async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, message: 'Invalid vendor ID.' });
-    }
-
-    const vendor = await Vendor.findById(id);
-    if (!vendor) {
-      return res.status(404).json({ success: false, message: 'Vendor not found.' });
-    }
-
-    const w9Path = vendor.documents && vendor.documents.w9Path ? vendor.documents.w9Path : '';
-    if (w9Path) {
-      const rel = w9Path.startsWith('/') ? w9Path.slice(1) : w9Path;
-      const normalizedRel = rel.startsWith('uploads/') ? rel.replace('uploads/', '') : rel;
-      const filePath = path.join(uploadDir, normalizedRel);
-      try {
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      } catch (e) {
-        console.warn('⚠️ Failed to delete W9 file from disk:', e.message);
-      }
-    }
-
-    vendor.documents = vendor.documents || {};
-    vendor.documents.w9Path = '';
-    vendor.documents.w9UploadedAt = undefined;
-    await vendor.save();
-
-    res.status(200).json({ success: true, message: 'W9 removed.' });
-  } catch (error) {
-    console.error('❌ Error deleting W9:', error);
-    res.status(500).json({ success: false, message: 'Failed to delete W9.' });
-  }
-});
-
- 
-
-
-///==================///
-      // Add Project
-app.post('/api/add-project', async (req, res) => {
-  try {
-    const payload = req.body;
-
-    // ✅ Default status if not provided
-    if (!payload.status) {
-      payload.status = "Upcoming";
-    }
-
-    // ✅ Create and save the new project
-    const newProject = new Project(payload);
-    const savedProject = await newProject.save();
-
-    // ✅ Log the project creation in daily logs
-    await logDailyUpdate(savedProject._id, `Project "${savedProject.name}" was created.`);
-
-    res.json({ success: true, project: savedProject });
-  } catch (error) {
-    console.error('Error adding project:', error);
-    res.status(500).json({ success: false, error: 'Failed to add project' });
-  }
-});
-
-
-
-// Get All Projects
-// Get All Projects (Exclude "open" and "on-hold")
-app.get('/api/projects', async (req, res) => {
-  try {
-    // ✅ Fetch only projects that are NOT "open" or "on-hold"
-    const projects = await Project.find({
-      status: { $nin: ["Upcoming", "On Market", "completed"] } // $nin = Not In
-    });
-
-    res.json({ success: true, projects });
-  } catch (error) {
-    console.error('Error fetching projects:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch projects' });
-  }
-});
-
-
-
-//Route for Editing a Project
-app.put('/api/projects/:id', async (req, res) => {
-  const { id } = req.params;
-  const { name, status, color, type, code, address, description } = req.body;
-
-  // Validate Project ID
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ success: false, message: 'Invalid Project ID.' });
-  }
-
-  // Validate required fields
-  if (!name || !status || !type || !code || !address || !address.city || !address.state) {
-    return res.status(400).json({
-      success: false,
-      message: 'Name, status, type, code, city, and state are required.',
-    });
-  }
-
-  try {
-    // Update project
-    const updatedProject = await Project.findByIdAndUpdate(
-      id,
-      {
-        name,
-        status,
-        color,
-        type,
-        code,
-        address: {
-          addressLine1: address.addressLine1 || '', // Default to empty if not provided
-          addressLine2: address.addressLine2 || '',
-          city: address.city,
-          state: address.state,
-          zip: address.zip || '',
-        },
-        description,
-      },
-      { new: true, runValidators: true } // Return updated project and enforce schema validation
-    );
-
-    if (!updatedProject) {
-      return res.status(404).json({ success: false, message: 'Project not found.' });
-    }
-
-        // ✅ Log the project update in daily logs
-        await logDailyUpdate(id, `Project "${name}" was updated.`);
-      
-    res.status(200).json({
-      success: true,
-      message: 'Project updated successfully.',
-      project: updatedProject,
-    });
-  } catch (error) {
-    console.error('Error updating project:', error);
-    res.status(500).json({ success: false, message: 'Failed to update project.' });
-  }
-});
-
-
-
-// Serve the details-project.html file
-app.get('/details/projects/:id', (req, res) => {
-  const filePath = path.join(__dirname, 'dist', 'details-projects.html');
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      console.error('Error serving details-projects.html:', err);
-      res.status(500).send('Failed to load the page.');
-    }
-  });
-});
-
-
-
-
-// Get Project Details by ID
-app.get('/api/details/projects/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    const project = await Project.findById(id);
-    if (!project) {
-      return res.status(404).json({ success: false, error: 'Project not found' });
-    }
-    res.json({ success: true, project });
-  } catch (error) {
-    console.error('Error fetching project details:', error.message);
-    res.status(500).json({ success: false, error: 'Failed to fetch project details' });
-  }
-});
-
-
-
-app.delete("/api/projects/:projectId", async (req, res) => {
-  try {
-    const { projectId } = req.params;
-
-    // Check if project exists
-    const project = await Project.findByIdAndDelete(projectId);
-    if (!project) {
-      return res.status(404).json({ success: false, message: "Project not found." });
-    }
-
-    res.status(200).json({ success: true, message: "Project deleted successfully." });
-  } catch (error) {
-    console.error("❌ Error deleting project:", error);
-    res.status(500).json({ success: false, message: "Failed to delete project." });
-  }
-});
-
-
-
-// --- GET /api/tasks: Return all tasks with project name ---
-app.get('/api/tasks', async (req, res) => {
-  try {
-    const { projectId } = req.query;
-
-    // Branch: project-specific tasks with assignedTo population
-    if (projectId) {
-      let tasks = await Task.find({ projectId }).lean();
-
-      // Populate assignedTo name based on assignedToModel
-      tasks = await Promise.all(
-        tasks.map(async (t) => {
-          if (!t.assignedTo) return t;
-
-          try {
-            if (t.assignedToModel === 'Vendor') {
-              const v = await Vendor.findById(t.assignedTo).select('name').lean();
-              return { ...t, assignedTo: v ? { _id: v._id, name: v.name } : null };
-            } else if (t.assignedToModel === 'Manager') {
-              const m = await Manager.findById(t.assignedTo).select('name').lean();
-              return { ...t, assignedTo: m ? { _id: m._id, name: m.name } : null };
-            }
-          } catch {
-            // ignore population errors per item
-          }
-          return t;
-        })
-      );
-
-      
-      return res.json({ success: true, tasks });
-    }
-
-    // Branch: all tasks with projectName mapping
-    const tasks = await Task.find({})
-      .select('title description dueDate completed assignedTo assignedToModel comments projectId createdAt updatedAt')
-      .populate({ path: 'projectId', select: 'name' })
-      .populate({ path: 'assignedTo', select: 'name' }) // uses refPath: 'assignedToModel'
-      .lean();
-
-    const tasksWithProject = tasks.map((task) => ({
-      _id: task._id,
-      title: task.title,
-      description: task.description,
-      dueDate: task.dueDate,
-      completed: task.completed,
-      comments: task.comments || [],
-      assignedTo: task.assignedTo
-        ? { _id: task.assignedTo._id, name: task.assignedTo.name }
-        : null,
-      assignedToModel: task.assignedToModel || null,
-      projectId: task.projectId?._id || task.projectId,
-      projectName: task.projectId?.name || String(task.projectId),
-      createdAt: task.createdAt,
-      updatedAt: task.updatedAt
-    }));
-
-    return res.json({ tasks: tasksWithProject });
-  } catch (err) {
-    console.error('Error fetching tasks:', err.message || err);
-    return res.status(500).json({ error: 'Failed to fetch tasks' });
-  }
-});
-
-
-// Get Task Details Endpoint
-app.get('/api/task/:id', async (req, res) => {
-  const { id } = req.params;
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ success: false, message: 'Invalid Task ID.' });
-  }
-
-  try {
-    let task = await Task.findById(id).select('title description dueDate completed assignedTo photos comments assignedToModel projectId createdAt updatedAt');
-
-    if (!task) {
-      return res.status(404).json({ success: false, message: 'Task not found' });
-    }
-
-    // ✅ Populate assignedTo with Email
-    if (task.assignedTo) {
-      if (task.assignedToModel === 'Vendor') {
-        task.assignedTo = await Vendor.findById(task.assignedTo).select('name email');
-      } else if (task.assignedToModel === 'Manager') {
-        task.assignedTo = await Manager.findById(task.assignedTo).select('name email');
-      }
-    }
-
-    
-
-    res.status(200).json({
-      success: true,
-      task: {
-        id: task._id,
-        title: task.title,
-        description: task.description,
-        dueDate: task.dueDate,
-        completed: task.completed,
-        assignedTo: task.assignedTo, // ✅ Ensures email is included
-        assignedToModel: task.assignedToModel,               
-        photos: task.photos,
-        comments: task.comments || [], // Include comments in the response
-        projectId: task.projectId,
-        createdAt: task.createdAt,
-        updatedAt: task.updatedAt
-      },
-    });
-  } catch (error) {
-    console.error('❌ Error fetching task:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch task details' });
-  }
-});
-
-
-app.put('/api/task/:id/assign', async (req, res) => {
-  const { id } = req.params;
-  const { assignedTo } = req.body;
-
-  try {
-    const task = await Task.findByIdAndUpdate(id, { assignedTo }, { new: true });
-
-    // Ensure that the assigned user exists and has an email
-    let assignedUser = null;
-    if (task.assignedToModel === 'Vendor') {
-      assignedUser = await Vendor.findById(assignedTo).select('email');
-    } else if (task.assignedToModel === 'Manager') {
-      assignedUser = await Manager.findById(assignedTo).select('email');
-    }
-
-    if (!assignedUser || !assignedUser.email) {
-      return res.status(400).json({ success: false, message: "Invalid assignee or missing email." });
-    }
-
-    await sendTaskAssignmentEmail(id);
-    res.json({ success: true, message: 'Task assigned and notification sent.', task });
-  } catch (error) {
-    console.error("❌ Error assigning task:", error);
-    res.status(500).json({ success: false, message: 'Failed to assign task.' });
-  }
-});
-
-
-// ===== Portfolio Tasks (Dashboard-level) =====
-
-// GET /api/portfolio-tasks
-app.get('/api/portfolio-tasks', async (req, res) => {
-  try {
-    const tasks = await PortfolioTask.find({})
-      .sort({ pinned: -1, createdAt: -1 })
-      .lean();
-    return res.json({ tasks });
-  } catch (err) {
-    console.error('Error fetching portfolio tasks:', err.message || err);
-    return res.status(500).json({ error: 'Failed to fetch portfolio tasks' });
-  }
-});
-
-// POST /api/portfolio-tasks
-app.post('/api/portfolio-tasks', async (req, res) => {
-  try {
-    const { title, description, status, dueDate, pinned } = req.body || {};
-    if (!title || !title.trim()) {
-      return res.status(400).json({ error: 'Title is required' });
-    }
-    const task = new PortfolioTask({
-      title: title.trim(),
-      description: description || '',
-      status: status && ['new','in-progress','completed'].includes(status) ? status : 'new',
-      dueDate: dueDate ? new Date(dueDate) : undefined,
-      pinned: !!pinned
-    });
-    await task.save();
-    return res.status(201).json({ task });
-  } catch (err) {
-    console.error('Error creating portfolio task:', err.message || err);
-    return res.status(500).json({ error: 'Failed to create portfolio task' });
-  }
-});
-
-// PUT /api/portfolio-tasks/:id
-app.put('/api/portfolio-tasks/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid task id' });
-    }
-    const updates = {};
-    const { title, description, status, dueDate, pinned, completed } = req.body || {};
-    if (title !== undefined) updates.title = String(title).trim();
-    if (description !== undefined) updates.description = description;
-    if (status && ['new','in-progress','completed'].includes(status)) updates.status = status;
-    if (typeof pinned === 'boolean') updates.pinned = pinned;
-    if (typeof completed === 'boolean') updates.status = completed ? 'completed' : 'new';
-    if (dueDate !== undefined) updates.dueDate = dueDate ? new Date(dueDate) : null;
-    updates.updatedAt = new Date();
-
-    const task = await PortfolioTask.findByIdAndUpdate(id, updates, { new: true }).lean();
-    if (!task) {
-      return res.status(404).json({ error: 'Task not found' });
-    }
-    return res.json({ task });
-  } catch (err) {
-    console.error('Error updating portfolio task:', err.message || err);
-    return res.status(500).json({ error: 'Failed to update portfolio task' });
-  }
-});
-
-// DELETE /api/portfolio-tasks/:id
-app.delete('/api/portfolio-tasks/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid task id' });
-    }
-    const deleted = await PortfolioTask.findByIdAndDelete(id).lean();
-    if (!deleted) {
-      return res.status(404).json({ error: 'Task not found' });
-    }
-    return res.json({ success: true });
-  } catch (err) {
-    console.error('Error deleting portfolio task:', err.message || err);
-    return res.status(500).json({ error: 'Failed to delete portfolio task' });
-  }
-});
-
-
-
-
-// Create Task (Backend)
-app.post('/api/tasks', async (req, res) => {
-  try {
-    const { title, description, dueDate, completed, assignedTo, projectId } = req.body;
-
-    // Validate required fields
-    if (!title || !projectId) {
-      return res.status(400).json({ success: false, error: 'Title and Project ID are required.' });
-    }
-
-    let assignedToModel = null;
-
-    // Only set assignedToModel if assignedTo is provided
-    if (assignedTo) {
-      const vendor = await Vendor.findById(assignedTo);
-      if (vendor) {
-        assignedToModel = 'Vendor';
-      } else {
-        const manager = await Manager.findById(assignedTo);
-        if (manager) {
-          assignedToModel = 'Manager';
-        }
-      }
-
-      // If assignedTo is provided but does not match a valid user, return an error
-      if (!assignedToModel) {
-        return res.status(400).json({ success: false, error: 'Invalid assignee ID' });
-      }
-    }
-
-    // Create new task (assignedTo & assignedToModel are optional)
-    const newTask = new Task({
-      title,
-      description,
-      dueDate,
-      completed: completed || false,
-      assignedTo: assignedTo || null, // Will remain null if not provided
-      assignedToModel: assignedToModel || null, // Will remain null if not provided
-      projectId,
-      photos: { before: [], after: [] },
-      comments: [],
-    });
-
-    // Save task to database
-    await newTask.save();
-
-        // ✅ Log the new task creation in daily logs
-    await logDailyUpdate(projectId, `New task "${title}" was created.`);
-
-    
-    res.status(201).json({ success: true, task: newTask });
-
-  } catch (error) {
-    console.error('Error adding task:', error.message);
-    res.status(500).json({ success: false, error: 'Failed to add task' });
-  }
-});
-
-// Delete Task Endpoint
-app.delete('/api/task/:id', async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    // Check if task exists before attempting deletion
-    const task = await Task.findById(id);
-    if (!task) {
-      return res.status(404).json({ success: false, error: 'Task not found.' });
-    }
-
-    // Delete task
-    await Task.findByIdAndDelete(id);
-   
-    // ✅ Log the deletion in daily updates
-    await logDailyUpdate(task.projectId, `Task "${task.title}" was deleted.`, "System");
-
-
-    
-    res.json({ success: true, message: 'Task deleted successfully.' });
-
-  } catch (error) {
-    console.error('Error deleting task:', error.message);
-    res.status(500).json({ success: false, error: 'Failed to delete task.' });
-  }
-});
-
-// Get comments for a specific task
-app.get('/api/comments', async (req, res) => {
-  const { taskId } = req.query;
-
-  if (!taskId || !mongoose.Types.ObjectId.isValid(taskId)) {
-    return res.status(400).json({ success: false, message: 'Invalid Task ID.' });
-  }
-
-  try {
-    const comments = await Comment.find({ taskId }).sort({ timestamp: -1 }); // Fetch from Comment collection
-if (!comments.length) {
-  return res.status(200).json({ success: true, comments: [] }); // No comments yet
-}
-
-res.status(200).json({ success: true, comments });
-  } catch (error) {
-    console.error('Error fetching comments:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch comments.' });
-  }
-});
-
-
-
-// ✅ Add a new comment to a task and log it
-app.post('/api/comments', async (req, res) => {
-  const { taskId, comment, managerName, timestamp } = req.body;
-
-  if (!taskId || !comment || !managerName || !timestamp) {
-    return res.status(400).json({ message: 'All fields are required.' });
-  }
-
-  try {
-    // ✅ Fetch the task to get project details
-    const task = await Task.findById(taskId).select("title projectId");
-    if (!task) {
-      return res.status(404).json({ message: "Task not found." });
-    }
-
-    // ✅ Save the new comment
-    const newComment = new Comment({
-      taskId,
-      text: comment,
-      managerName,
-      timestamp,
-    });
-
-    await newComment.save();
-
-    // ✅ Log the comment in daily updates
-    await logDailyUpdate(task.projectId, `New comment on task "${task.title}": "${comment}"`, managerName);
-
-    
-    res.status(201).json({ message: "Comment added successfully.", comment: newComment });
-
-  } catch (error) {
-    console.error("❌ Error saving comment:", error);
-    res.status(500).json({ message: "Failed to save comment." });
-  }
-});
-
-
-
-
-// Update Task Endpoint with Strict Role Detection
-app.put('/api/task/:id', async (req, res) => {
-  const { id } = req.params;
-  const { title, description, dueDate, completed, assignedTo, projectId } = req.body;
-
-  try {
-    const updateFields = {};
-
-    // Dynamically add fields to update if provided
-    if (title) updateFields.title = title;
-    if (description) updateFields.description = description;
-    if (dueDate) updateFields.dueDate = dueDate;
-    if (projectId) updateFields.projectId = projectId;
-    if (typeof completed !== 'undefined') updateFields.completed = completed;
-    
-    let assignedToModel = null;
-
-    // Check if assignedTo exists
-    if (assignedTo) {
-      console.log("Checking Vendor First...");
-      const vendor = await Vendor.findById(assignedTo);
-      
-      if (vendor) {
-        assignedToModel = 'Vendor';
-        
-      } else {
-        console.log("Checking Manager...");
-        const manager = await Manager.findById(assignedTo);
-        
-        if (manager) {
-          assignedToModel = 'Manager';
-          
-        }
-      }
-
-      if (!assignedToModel) {
-        console.log("❌ Invalid Assignee ID:", assignedTo);
-        return res.status(400).json({ success: false, error: 'Invalid assignee ID' });
-      }
-
-      // Add assignedTo and assignedToModel to updateFields
-      updateFields.assignedTo = assignedTo;
-      updateFields.assignedToModel = assignedToModel;
-    }
-
-    
-
-    // Update task and enforce correct role
-    const task = await Task.findByIdAndUpdate(
-      id, 
-      { $set: updateFields },  // Explicitly setting the update fields
-      { new: true }
-    );
-
-    if (!task) {
-      return res.status(404).json({ success: false, error: 'Task not found' });
-    }
-
-    
-
-        // ✅ Log the Update in Daily Updates
-        await logDailyUpdate(task.projectId, `Task "${task.title}" was updated.`);
-
-
-    res.json({ success: true, task });
-
-  } catch (error) {
-    console.error('Error updating task:', error);
-    res.status(500).json({ success: false, error: 'Failed to update task' });
-  }
-});
-
-
-
-// Vendor Sign-Up
-app.post("/api/signup", async (req, res) => {
-  const { name, email, phone, password } = req.body;
-
-  if (!name || !email || !password) {
-    return res.status(400).json({ success: false, message: "All fields are required." });
-  }
-
-  try {
-    const existingVendor = await Vendor.findOne({ email });
-    if (existingVendor) {
-      return res.status(400).json({ success: false, message: "Vendor already exists." });
-    }
-
-    // Create the new vendor
-    const newVendor = new Vendor({ name, email, phone, password });
-    await newVendor.save();
-
-    // Assign projects based on pending invitations
-    const pendingInvitations = await Invitation.find({ email, role: "vendor", status: "pending" });
-
-    for (const invitation of pendingInvitations) {
-      newVendor.assignedProjects.push({ projectId: invitation.projectId, status: "new" });
-      invitation.status = "accepted";
-      await invitation.save();
-    }
-
-    await newVendor.save();
-
-    res.status(201).json({
-      success: true,
-      message: "Vendor registered successfully and projects assigned.",
-      vendor: newVendor,
-    });
-  } catch (error) {
-    console.error("Error registering vendor:", error);
-    res.status(500).json({ success: false, message: "Failed to register vendor." });
-  }
-});
-
-
-// Vendor Sign-In
-app.post('/api/signin', async (req, res) => {
-  const { email, password } = req.body;
-
-  // Validate request body
-  if (!email || !password) {
-    return res.status(400).json({ success: false, message: 'Email and password are required.' });
-  }
-
-  try {
-    console.log('Incoming sign-in request:', { email });
-
-    // Find vendor by email
-    const vendor = await Vendor.findOne({ email });
-    if (!vendor) {
-      console.warn('Vendor not found:', email);
-      return res.status(404).json({ success: false, message: 'Vendor not found.' });
-    }
-
-    // Compare password
-    const isMatch = await bcrypt.compare(password, vendor.password);
-    if (!isMatch) {
-      console.warn('Invalid credentials for vendor:', email);
-      return res.status(401).json({ success: false, message: 'Invalid credentials.' });
-    }
-
-    // Generate JWT token
-    const token = jwt.sign({ vendorId: vendor._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    console.log('Vendor authenticated successfully:', email);
-
-    // Respond with token and vendorId
-    return res.status(200).json({ success: true, token, vendorId: vendor._id });
-  } catch (error) {
-    console.error('Error during vendor sign-in:', error);
-    return res.status(500).json({ success: false, message: 'An internal error occurred. Please try again later.' });
-  }
-});
-
-
-
-
-// Password Reset Request
-app.post('/api/password-reset/request', async (req, res) => {
-  const { email } = req.body;
-
-  if (!email) {
-    return res.status(400).json({ success: false, message: 'Email is required.' });
-  }
-
-  try {
-    const vendor = await Vendor.findOne({ email });
-    if (!vendor) {
-      return res.status(404).json({ success: false, message: 'Vendor not found.' });
-    }
-
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenHash = await bcrypt.hash(resetToken, 10);
-
-    vendor.passwordResetToken = resetTokenHash;
-    vendor.passwordResetExpires = Date.now() + 3600000; // 1 hour expiry
-    await vendor.save();
-
-    // Construct the reset link
-    const baseUrl = process.env.BASE_URL || 'http://localhost:5500';
-    const resetLink = `${baseUrl}/sign-inpage.html?email=${encodeURIComponent(email)}&token=${encodeURIComponent(resetToken)}`;
-
-    // Send the reset token and link via email
-    await transporter.sendMail({
-      from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-      to: vendor.email,
-      subject: 'Password Reset Request',
-      text: `Your password reset token is: ${resetToken}\n\nOr click the link below to reset your password:\n${resetLink}`,
-      html: `
-        <p>Your password reset token is: <b>${resetToken}</b></p>
-        <p>Or click the link below to reset your password:</p>
-        <a href="${resetLink}">${resetLink}</a>
-      `
-    });
-
-    res.status(200).json({ success: true, message: 'Password reset token sent to email.' });
-  } catch (error) {
-    console.error('Error generating password reset token:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate password reset token.' });
-  }
-});
-
-// Password Reset
-app.post('/api/password-reset', async (req, res) => {
-  const { email, token, newPassword } = req.body;
-
-  if (!email || !token || !newPassword) {
-    return res.status(400).json({ success: false, message: 'All fields are required.' });
-  }
-
-  try {
-    const vendor = await Vendor.findOne({ email });
-    if (!vendor) {
-      return res.status(404).json({ success: false, message: 'Vendor not found.' });
-    }
-
-    if (!vendor.passwordResetToken || vendor.passwordResetExpires < Date.now()) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired reset token.' });
-    }
-
-    const isTokenValid = await bcrypt.compare(token, vendor.passwordResetToken);
-    if (!isTokenValid) {
-      return res.status(400).json({ success: false, message: 'Invalid reset token.' });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    vendor.password = await bcrypt.hash(newPassword, salt);
-    vendor.passwordResetToken = undefined;
-    vendor.passwordResetExpires = undefined;
-    await vendor.save();
-
-    res.status(200).json({ success: true, message: 'Password updated successfully.' });
-  } catch (error) {
-    console.error('Error resetting password:', error);
-    res.status(500).json({ success: false, message: 'Failed to reset password.' });
-  }
-});
-
-
-
-
-// Add this near your other API endpoints
-app.get("/api/vendors/:vendorId/debug-items", async (req, res) => {
-  try {
-    const { vendorId } = req.params;
-    
-    const vendor = await Vendor.findById(vendorId);
-    if (!vendor) {
-      return res.status(404).json({ message: "Vendor not found" });
-    }
-    
-    // Return all items regardless of status for debugging
-    return res.status(200).json({
-      totalItems: vendor.assignedItems.length,
-      activeItems: vendor.assignedItems.filter(i => i.status !== "completed" && i.status !== "approved").length,
-      completedItems: vendor.assignedItems.filter(i => i.status === "completed" || i.status === "approved").length,
-      allStatuses: vendor.assignedItems.map(i => i.status)
-    });
-  } catch (error) {
-    console.error("Debug endpoint error:", error);
-    return res.status(500).json({ message: "Server error" });
-  }
-});
-
-
-
-app.put('/api/vendors/:vendorId/update-item-status', async (req, res) => {
-  const { vendorId } = req.params;
-  const { itemId, status } = req.body;
-
-  console.log("📌 Incoming Status Update:", { vendorId, itemId, status });
-
-  if (!itemId || !status) {
-    return res.status(400).json({ message: "Missing itemId or status." });
-  }
-
-  try {
-    // ✅ Find Vendor
-    const vendor = await Vendor.findById(vendorId);
-    if (!vendor) {
-      return res.status(404).json({ message: "Vendor not found." });
-    }
-
-    // ✅ Find the assigned item
-    const item = vendor.assignedItems.find(item => item.itemId.toString() === itemId);
-    if (!item) {
-      return res.status(404).json({ message: "Item not found." });
-    }
-
-    // ✅ Find the project
-    const project = await Project.findById(item.projectId).select("name");
-    if (!project) {
-      return res.status(404).json({ message: "Project not found." });
-    }
-
-    // --- Set Dates Based on Status ---
-    const now = new Date();
-    if (status === "in-progress" && !item.startDate) {
-      item.startDate = now;
-    }
-    if (status === "completed" && !item.endDate) {
-      item.endDate = now;
-    }
-    // If reverting to "in-progress", clear endDate
-    if (status === "in-progress" && item.endDate) {
-      item.endDate = null;
-    }
-    // If reverting to "new", clear both dates
-    if (status === "new") {
-      item.startDate = null;
-      item.endDate = null;
-    }
-
-    // ✅ Update status in Vendor assignedItems
-    item.status = status;
-    await vendor.save();
-    console.log("✅ Vendor Item Status & Dates Updated Successfully:", item);
-
-    // --- If status is completed, also update the maintenance schedule with the same flow ---
-    if (status === "completed") {
-      // Try to find the matching maintenance schedule by project, title, and startDate
-      let schedule = await MaintenanceSchedule.findOne({
-        projectId: item.projectId,
-        title: item.name,
-        startDate: { $lte: item.startDate || new Date() },
-        status: { $ne: "completed" }
-      }).sort({ startDate: -1 });
-
-      // Fallback: try by project and title only if not found
-      if (!schedule) {
-        schedule = await MaintenanceSchedule.findOne({
-          projectId: item.projectId,
-          title: item.name,
-          status: { $ne: "completed" }
-        });
-      }
-
-if (schedule) {
-    // Only push if not already logged for today by this vendor 
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const alreadyLogged = schedule.history?.some(
-      h => h.completedBy === (vendor.name || "Vendor") && h.completedAt?.toISOString().slice(0, 10) === todayStr
-    );
-    if (!alreadyLogged) {
-      schedule.history = schedule.history || [];
-      schedule.history.push({
-        completedAt: new Date(),
-        completedBy: vendor.name || "Vendor",
-        notes: "Marked as completed by vendor"
-      });
-    }
-
-        // --- Determine base date for next schedule (use today if overdue) ---
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        let baseDate = schedule.nextScheduledDate < today ? today : schedule.nextScheduledDate;
-
-        // Advance nextScheduledDate based on frequency, using baseDate
-        let nextDate = new Date(baseDate);
-        switch (schedule.frequency) {
-          case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
-          case 'weekly': nextDate.setDate(nextDate.getDate() + 7); break;
-          case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
-          case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
-          case 'custom':
-            if (schedule.intervalDays && schedule.intervalDays > 0) {
-              nextDate.setDate(nextDate.getDate() + schedule.intervalDays);
-            }
-            break;
-        }
-
-        // Reset status and completedAt for the next cycle
-        schedule.status = 'pending';
-        schedule.completedAt = null;
-        schedule.nextScheduledDate = nextDate;
-
-        await schedule.save();
-        console.log(`✅ Maintenance schedule "${schedule.title}" marked as completed and rescheduled.`);
-      }
-    }
-
-    // ✅ Update the corresponding item status and dates in the Estimate
-    const estimateUpdate = {};
-    estimateUpdate["lineItems.$[].items.$[elem].status"] = status;
-    if (status === "in-progress") {
-      estimateUpdate["lineItems.$[].items.$[elem].startDate"] = item.startDate || now;
-      estimateUpdate["lineItems.$[].items.$[elem].endDate"] = null;
-    }
-    if (status === "completed") {
-      estimateUpdate["lineItems.$[].items.$[elem].endDate"] = item.endDate || now;
-    }
-    if (status === "new") {
-      estimateUpdate["lineItems.$[].items.$[elem].startDate"] = null;
-      estimateUpdate["lineItems.$[].items.$[elem].endDate"] = null;
-    }
-
-    const estimateUpdateResult = await Estimate.updateOne(
-      { "lineItems.items._id": itemId },
-      { $set: estimateUpdate },
-      {
-        arrayFilters: [{ "elem._id": new mongoose.Types.ObjectId(itemId) }]
-      }
-    );
-
-    console.log("📊 Estimate Update Result:", estimateUpdateResult);
-
-    // ✅ Log the status update in Daily Updates
-    await logDailyUpdate(
-      item.projectId,
-      `Item "${item.name}" status updated to "${status}" by Vendor "${vendor.name}" for Project "${project.name}".`
-    );
-
-    res.status(200).json({ message: "Item status and dates updated successfully in both vendor and estimate.", item });
-
-  } catch (error) {
-    console.error("❌ Error updating item status:", error);
-    res.status(500).json({ message: "Failed to update item status." });
-  }
-});
-
-
-
-
-app.put('/api/vendor/start-project', async (req, res) => {
-  try {
-      const { vendorId, projectId } = req.body;
-      if (!vendorId || !projectId) {
-          return res.status(400).json({ success: false, message: 'Vendor ID and Project ID are required' });
-      }
-
-      const vendor = await Vendor.findById(vendorId);
-      if (!vendor) {
-          return res.status(404).json({ success: false, message: 'Vendor not found' });
-      }
-
-      const projectIndex = vendor.assignedProjects.findIndex(p => p.projectId.toString() === projectId);
-      if (projectIndex === -1) {
-          return res.status(404).json({ success: false, message: 'Project not assigned to vendor' });
-      }
-
-      vendor.assignedProjects[projectIndex].status = "in-progress";
-      await vendor.save();
-
-      res.status(200).json({ success: true, message: 'Project status updated to In Progress' });
-  } catch (error) {
-      console.error('Error updating project status:', error);
-      res.status(500).json({ success: false, message: 'Failed to update project status' });
-  }
-});
-
-
-// ✅ API: Fetch Assigned Tasks (Line Items) for a Subcontractor
-app.get("/api/subcontractor/tasks", async (req, res) => {
-  try {
-      const { vendorId } = req.query;
-      if (!vendorId) {
-          return res.status(400).json({ error: "Vendor ID is required." });
-      }
-
-      const vendor = await Vendor.findById(vendorId);
-      if (!vendor) {
-          return res.status(404).json({ error: "Vendor not found." });
-      }
-
-      res.status(200).json({ tasks: vendor.assignedItems || [] });
-  } catch (error) {
-      console.error("Error fetching tasks:", error);
-      res.status(500).json({ error: "Failed to fetch tasks." });
-  }
-});
-
-
-
-app.get('/api/vendors/:vendorId/assigned-projects', async (req, res) => {
-  const { vendorId } = req.params;
-
-  try {
-    // Ensure population of project details
-    const vendor = await Vendor.findById(vendorId).populate({
-      path: 'assignedProjects.projectId',
-      model: 'Project',
-      select: 'name status type address' // Ensure these fields are populated
-    });
-
-    if (!vendor) {
-      return res.status(404).json({ message: 'Vendor not found' });
-    }
-
-    const newJobs = vendor.assignedProjects.filter(proj => proj.status === 'new');
-    const inProgress = vendor.assignedProjects.filter(proj => proj.status === 'in-progress');
-    const rework = vendor.assignedProjects.filter(proj => proj.status === 'rework');
-    const completed = vendor.assignedProjects.filter(proj => proj.status === 'completed');
-
-    res.status(200).json({ success: true, newJobs, inProgress, rework, completed });
-  } catch (error) {
-    console.error('Error fetching assigned projects:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch assigned projects.' });
-  }
-});
-
-
-
-
-
-
-app.get('/api/subcontractor/projects', async (req, res) => {
-  try {
-      const { vendorId } = req.query;
-      if (!vendorId) {
-          return res.status(400).json({ success: false, message: 'Vendor ID is required' });
-      }
-
-      const vendor = await Vendor.findById(vendorId).populate({
-          path: 'assignedProjects.projectId',
-          model: 'Project'
-      });
-
-      if (!vendor) {
-          return res.status(404).json({ success: false, message: 'Vendor not found' });
-      }
-
-      res.status(200).json({ success: true, projects: vendor.assignedProjects });
-  } catch (error) {
-      console.error('Error fetching assigned projects:', error);
-      res.status(500).json({ success: false, message: 'Failed to fetch projects' });
-  }
-});
-
-
-app.put('/api/vendor/update-project-status', async (req, res) => {
-  try {
-      const { vendorId, projectId, status } = req.body;
-      if (!vendorId || !projectId || !status) {
-          return res.status(400).json({ error: "Vendor ID, Project ID, and Status are required." });
-      }
-
-      // ✅ Find vendor
-      const vendor = await Vendor.findById(vendorId);
-      if (!vendor) {
-          return res.status(404).json({ error: "Vendor not found." });
-      }
-
-      // ✅ Check if project is assigned to vendor
-      const projectIndex = vendor.assignedProjects.findIndex(p => p.projectId.toString() === projectId);
-      if (projectIndex === -1) {
-          return res.status(404).json({ error: "Project not assigned to vendor." });
-      }
-
-      // ✅ Update status
-      vendor.assignedProjects[projectIndex].status = status;
-
-      await vendor.save();
-
-      // ✅ Fetch project name for logging
-      const project = await Project.findById(projectId).select("name");
-      const projectName = project ? project.name : "Unknown Project";
-
-      // ✅ Log project status update in daily updates
-      await logDailyUpdate(
-          projectId,
-          `Vendor "${vendor.name}" updated project status to "${status}".`
-      );
-
-      console.log(`🔄 Vendor "${vendor.name}" updated status for project "${projectName}" to "${status}".`);
-      
-      res.status(200).json({ success: true, message: "Project status updated successfully." });
-
-  } catch (error) {
-      console.error("❌ Error updating project status:", error);
-      res.status(500).json({ error: "Failed to update project status." });
-  }
-});
-
-
-app.post('/api/vendors/:vendorId/assign-item', async (req, res) => {
-  const { vendorId } = req.params;
-  const { projectId, itemId, name, description, quantity, unitPrice, total } = req.body;
-
-  try {
-    // ✅ Find Vendor
-    const vendor = await Vendor.findById(vendorId);
-    if (!vendor) {
-      return res.status(404).json({ message: 'Vendor not found.' });
-    }
-
-    // ✅ Find Project for Logging
-    const project = await Project.findById(projectId).select("name");
-    if (!project) {
-      return res.status(404).json({ message: 'Project not found.' });
-    }
-
-    // ✅ Check if item is already assigned (prevent duplicates)
-    let existingItem = vendor.assignedItems.find(i => i.itemId.toString() === itemId.toString());
-    if (existingItem) {
-      return res.status(400).json({ message: 'Item already assigned to this vendor.' });
-    }
-
-    // ✅ Assign the item to a specific project, always set createdAt
-    vendor.assignedItems.push({
-      itemId,
-      projectId, // ✅ Ensure projectId is stored
-      name,
-      description,
-      quantity,
-      unitPrice,
-      total,
-      status: 'new',
-      createdAt: new Date(), // <-- Always set date requested
-      updatedAt: new Date()
-    });
-
-    await vendor.save();
-
-    // ✅ Log the assignment in Daily Updates
-    await logDailyUpdate(
-      projectId,
-      `Item "${name}" assigned to vendor "${vendor.name}".`
-    );
-
-    console.log(`📦 Item "${name}" assigned to Vendor "${vendor.name}" for Project "${project.name}".`);
-
-    res.status(201).json({ message: 'Item assigned successfully.', vendor });
-
-  } catch (error) {
-    console.error('❌ Error assigning item:', error);
-    res.status(500).json({ message: 'Failed to assign item.' });
-  }
-});
- 
-
-app.patch("/api/vendors/:vendorId/assigned-items/update", async (req, res) => {
-  const { vendorId } = req.params;
-  const { projectId, estimateId, item } = req.body;
-
-  if (!vendorId || !projectId || !item || !item.itemId) {
-    return res.status(400).json({ message: "Missing required fields." });
-  }
-
-  // Convert all IDs to strings for reliable matching
-  const itemIdStr = item.itemId.toString();
-  const projectIdStr = projectId.toString();
-  const estimateIdStr = estimateId ? estimateId.toString() : undefined;
-
-  try {
-    // Find the vendor
-    const vendor = await Vendor.findById(vendorId);
-    if (!vendor) {
-      return res.status(404).json({ message: "Vendor not found." });
-    }
-
-    // Find the correct assigned item (match all IDs as strings)
-    let assignedItem = vendor.assignedItems.find(ai =>
-      ai.itemId.toString() === itemIdStr &&
-      ai.projectId?.toString() === projectIdStr &&
-      (!estimateIdStr || ai.estimateId?.toString() === estimateIdStr)
-    );
-
-    // If not found, try without estimateId (for backward compatibility)
-    if (!assignedItem && estimateIdStr) {
-      assignedItem = vendor.assignedItems.find(ai =>
-        ai.itemId.toString() === itemIdStr &&
-        ai.projectId?.toString() === projectIdStr
-      );
-    }
-
-    if (!assignedItem) {
-      console.warn("Assigned item not found for update:", { vendorId, projectIdStr, estimateIdStr, itemIdStr });
-      return res.status(404).json({ message: "Assigned item not found." });
-    }
-
-    // Update all relevant fields
-    assignedItem.name = item.name || assignedItem.name || "Unnamed";
-    assignedItem.description = item.description || assignedItem.description || "";
-    assignedItem.quantity = typeof item.quantity === "number" ? item.quantity : assignedItem.quantity || 1;
-    assignedItem.unitPrice = typeof item.unitPrice === "number" ? item.unitPrice : assignedItem.unitPrice || 0;
-    assignedItem.laborCost = typeof item.laborCost === "number" ? item.laborCost : assignedItem.laborCost || 0;
-    assignedItem.materialCost = typeof item.materialCost === "number" ? item.materialCost : assignedItem.materialCost || 0;
-    assignedItem.total = typeof item.total === "number" ? item.total : assignedItem.laborCost || 0; // Use laborCost as total if not provided
-    assignedItem.costCode = item.costCode || assignedItem.costCode || "Uncategorized";
-        assignedItem.status = item.status || assignedItem.status || "new";
-    if (Object.prototype.hasOwnProperty.call(item, 'startDate')) {
-      assignedItem.startDate = item.startDate ? new Date(item.startDate) : null;
-    }
-    if (Object.prototype.hasOwnProperty.call(item, 'endDate')) {
-      assignedItem.endDate = item.endDate ? new Date(item.endDate) : null;
-    }
-    
-    assignedItem.photos = item.photos || assignedItem.photos || { before: [], after: [] };
-    assignedItem.qualityControl = item.qualityControl || assignedItem.qualityControl || { status: "pending" };
-    assignedItem.updatedAt = new Date();
-    assignedItem.estimateId = estimateIdStr || assignedItem.estimateId;
-
-    await vendor.save();
-
-    res.json({ message: "Assigned item updated", assignedItem });
-  } catch (error) {
-    console.error("Error updating assigned item:", error);
-    res.status(500).json({ message: "Failed to update assigned item." });
-  }
-});
-
-
-
-app.post("/api/assign-items", async (req, res) => {
-  const { vendorId, projectId, estimateId, items } = req.body;
-
-  if (!vendorId || !projectId || !estimateId || !items || items.length === 0) {
-    return res.status(400).json({ message: "Missing required fields." });
-  }
-
-  try {
-    // ✅ Find Vendor, Estimate, Project
-    const vendor = await Vendor.findById(vendorId);
-    const estimate = await Estimate.findById(estimateId);
-    const project = await Project.findById(projectId).select("name");
-
-    if (!vendor) return res.status(404).json({ message: "Vendor not found." });
-    if (!estimate) return res.status(404).json({ message: "Estimate not found." });
-    if (!project) return res.status(404).json({ message: "Project not found." });
-
-    let updatedAssignedItems = [];
-
-    for (const item of items) {
-      // 🔎 Find the item inside the estimate
-      const foundCategory = estimate.lineItems.find(cat => 
-        cat.items.some(i => i._id.toString() === item.itemId)
-      );
-      const estimateItem = foundCategory?.items.find(i => i._id.toString() === item.itemId);
-
-      if (!estimateItem) {
-        console.warn(`⚠️ Item ${item.itemId} not found in estimate.`);
-        continue;
-      }
-
-   // ✅ Instead of category name, use the item's own costCode field
-   const costCode = estimateItem.costCode || "Uncategorized";
-
-      // ✅ Check if item is already assigned
-      let vendorItem = vendor.assignedItems.find(i => i.itemId.toString() === item.itemId);
-
-      if (!vendorItem) {
-        // ➡️ Create new assigned item
-        vendorItem = {
-          itemId: item.itemId,
-          projectId,
-          estimateId,
-          name: item.name,
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          total: item.total,
-          laborCost: estimateItem.laborCost,
-          status: "new",
-          costCode, // ✅ Add the costCode
-          photos: {
-            before: [...(estimateItem.photos?.before || [])],
-            after: [...(estimateItem.photos?.after || [])]
-          }
-        };
-        vendor.assignedItems.push(vendorItem);
-      } else {
-        // ➡️ Update existing assigned item
-        vendorItem.name = item.name;
-        vendorItem.description = item.description;
-        vendorItem.quantity = item.quantity;
-        vendorItem.unitPrice = item.unitPrice;
-        vendorItem.total = item.total;
-        vendorItem.laborCost = estimateItem.laborCost; // <-- Add this line
-        vendorItem.costCode = costCode; // ✅ Update costCode too
-        vendorItem.photos.before = [...(estimateItem.photos?.before || [])];
-        vendorItem.photos.after = [...(estimateItem.photos?.after || [])];
-      }
-
-      updatedAssignedItems.push(vendorItem);
-
-      // ✅ Log the assignment
-      await logDailyUpdate(
-        projectId,
-        `Item "${item.name}" was assigned to Vendor "${vendor.name}" for Project "${project.name}".`
-      );
-    }
-
-    // ✅ Save Vendor with updated assigned items
-    await vendor.save();
-
-    // ✅ Update assignedTo field in the estimate items
-    const updateOperations = items.map(item => ({
-      updateOne: {
-        filter: { 
-          _id: new mongoose.Types.ObjectId(estimateId), 
-          'lineItems.items._id': new mongoose.Types.ObjectId(item.itemId) 
-        },
-        update: { 
-          $set: { 'lineItems.$[category].items.$[item].assignedTo': new mongoose.Types.ObjectId(vendorId) }
-        },
-        arrayFilters: [
-          { 'category.items._id': new mongoose.Types.ObjectId(item.itemId) },
-          { 'item._id': new mongoose.Types.ObjectId(item.itemId) }
-        ]
-      }
-    }));
-
-    if (updateOperations.length > 0) {
-      await Estimate.bulkWrite(updateOperations);
-    }
-
-        const refreshedEstimate = await Estimate.findById(estimateId);
-    if (refreshedEstimate) {
-      for (const assignedItem of items) {
-        const refreshedEstimateItem = refreshedEstimate.lineItems
-          .flatMap(category => category.items || [])
-          .find(entry => entry._id?.toString() === String(assignedItem.itemId));
-        if (refreshedEstimateItem?.maintenanceRequestId || refreshedEstimateItem?.maintenanceScheduleId) {
-          await syncLinkedMaintenanceRecordsFromEstimateItem(refreshedEstimate, refreshedEstimateItem);
-        }
-      }
-    }
-
-    console.log("✅ Items assigned successfully ");
-
-    // ✅ Send updated assignedItems back to frontend
-    res.status(200).json({
-      message: "Items assigned successfully!",
-      assignedItems: vendor.assignedItems
-    });
-
-  } catch (error) {
-    console.error("❌ Error assigning items:", error);
-    res.status(500).json({ message: "Failed to assign items." });
-  }
-});
-
-  /* ==========
-     📌 Delete Photo
-     ========== */
- app.delete("/api/delete-photo/:vendorId/:itemId/:photoUrl", async (req, res) => {
-  try {
-      const { vendorId, itemId, photoUrl } = req.params;
-      const decodedPhotoUrl = decodeURIComponent(photoUrl); // Decode the URL to match stored DB paths
-
-      console.log(`🗑️ Deleting Photo: ${decodedPhotoUrl} for Item: ${itemId} under Vendor: ${vendorId}`);
-
-      // ✅ Remove file from server
-      const filePath = `./public${decodedPhotoUrl}`;
-      if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-          console.log(`✅ Deleted file from server: ${decodedPhotoUrl}`);
-      } else {
-          console.warn(`⚠️ File not found on server: ${decodedPhotoUrl}`);
-      }
-
-      // Unassigned estimate items use a placeholder vendor ID.
-      const vendor = mongoose.Types.ObjectId.isValid(vendorId)
-        ? await Vendor.findOneAndUpdate(
-            { _id: vendorId, "assignedItems.itemId": itemId },
-            {
-              $pull: {
-                "assignedItems.$[].photos.before": decodedPhotoUrl,
-                "assignedItems.$[].photos.after": decodedPhotoUrl
-              }
-            },
-            { new: true }
-          )
-        : null;
-
-      // ✅ Remove photo from Estimate's lineItems
-      const estimate = await Estimate.findOneAndUpdate(
-          { "lineItems.items._id": itemId },
-          { 
-              $pull: { 
-                  "lineItems.$[].items.$[].photos.before": decodedPhotoUrl,
-                  "lineItems.$[].items.$[].photos.after": decodedPhotoUrl 
-              } 
-          },
-          { new: true }
-      );
-
-      // ✅ Check if deletion was successful
-      const updateSuccess = vendor || estimate;
-      if (updateSuccess) {
-                  if (estimate) {
-            const estimateItem = estimate.lineItems
-              .flatMap(category => category.items || [])
-              .find(entry => entry._id?.toString() === itemId);
-            if (estimateItem?.maintenanceRequestId) {
-              await syncMaintenanceRequestFromEstimateItem(estimate, estimateItem);
-            }
-          }
-          console.log(`✅ Photo deleted from database successfully.`);
-          return res.status(200).json({ message: "Photo deleted successfully!" });
-      } else {
-          console.warn(`⚠️ Photo was not found in database.`);
-          return res.status(404).json({ message: "Photo not found in database." });
-      }
-
-  } catch (error) {
-      console.error("❌ Error deleting photo:", error);
-      res.status(500).json({ message: "Failed to delete photo." });
-  }
-});
-
-
-  
-
-
-
-  
-
-  /* ==========
-     📌 Fetch Photos for an Item
-     ========== */
-     app.get("/api/photos/:itemId", async (req, res) => {
-      const { itemId } = req.params;
-  
-      try {
-          console.log(`📸 Fetching photos for item: ${itemId}`);
-  
-          let photos = { before: [], after: [] };
-  
-          // 🔍 First, Check if the Item is Assigned to a Vendor
-          const vendor = await Vendor.findOne({ "assignedItems.itemId": itemId });
-          if (vendor) {
-              const item = vendor.assignedItems.find(i => i.itemId.toString() === itemId);
-              if (item && item.photos) {
-                  console.log(`✅ Found item in vendor: ${vendor._id}`);
-                  photos.before = [...new Set([...photos.before, ...(item.photos.before || [])])];
-                  photos.after = [...new Set([...photos.after, ...(item.photos.after || [])])];
-              }
-          }
-  
-          // 🔍 Also Fetch from Estimates (Even if Assigned to Vendor)
-          const estimate = await Estimate.findOne({ "lineItems.items._id": itemId });
-          if (estimate) {
-              const item = estimate.lineItems.flatMap(cat => cat.items).find(i => i._id.toString() === itemId);
-              if (item && item.photos) {
-                  console.log(`✅ Found item in estimate: ${estimate._id}`);
-                  photos.before = [...new Set([...photos.before, ...(item.photos.before || [])])];
-                  photos.after = [...new Set([...photos.after, ...(item.photos.after || [])])];
-              }
-          }
-  
-          // 🚨 If No Photos Found in Both Sources
-          if (photos.before.length === 0 && photos.after.length === 0) {
-              console.warn(`⚠️ No photos found for item: ${itemId}`);
-              return res.status(404).json({ success: false, message: "No photos found for item." });
-          }
-  
-          // ✅ Return Merged Photos from Both Sources
-          return res.status(200).json({ success: true, photos });
-  
-      } catch (error) {
-          console.error("❌ Error fetching photos:", error);
-          res.status(500).json({ success: false, message: "Failed to fetch photos" });
-      }
-  });
-  
-
-
-
-// COMBINED: Fetch Assigned Items for a Vendor by Project
-app.get('/api/vendors/:vendorId/assigned-items/:projectId', async (req, res) => {
-  try {
-    const { vendorId, projectId } = req.params;
-    const { estimateId } = req.query; // Extract estimateId from query parameters
-    
-    console.log(`📌 Fetching assigned items for Vendor: ${vendorId}, Project: ${projectId}${estimateId ? `, Estimate: ${estimateId}` : ''}`);
-
-    // Fetch vendor data
-    const vendor = await Vendor.findById(vendorId);
-    if (!vendor) {
-      console.error("❌ Vendor not found:", vendorId);
-      return res.status(404).json({ message: "Vendor not found." });
-    }
-
-    // Ensure assigned items exist
-    if (!vendor.assignedItems || vendor.assignedItems.length === 0) {
-      console.warn("⚠️ No assigned items found for vendor:", vendorId);
-      return res.status(200).json({ items: [] });
-    }
-
-    // Filter assigned items for the specific project and estimate
-    let assignedItems = vendor.assignedItems.filter((item) => {
-      const isProjectMatch = item.projectId?.toString() === projectId;
-      const isEstimateMatch = estimateId ? item.estimateId?.toString() === estimateId : true;
-      return isProjectMatch && isEstimateMatch;
-    });
-
-    if (assignedItems.length === 0) {
-      console.warn("⚠️ No items found for this project and estimate:", projectId, estimateId);
-      return res.status(200).json({ items: [] });
-    }
-
-    // Fetch all relevant estimates for this project to sync labor costs
-    const estimates = await Estimate.find({ projectId });
-
-    // Build a map of itemId -> laborCost from all estimates
-    const laborCostMap = {};
-    estimates.forEach(est => {
-      est.lineItems.forEach(cat => {
-        cat.items.forEach(item => {
-          if (item._id && typeof item.laborCost !== "undefined") {
-            laborCostMap[item._id.toString()] = item.laborCost;
-          }
-        });
-      });
-    });
-
-    // Ensure Photos Exist and Sync laborCost from Estimate
-    assignedItems = assignedItems.map(item => {
-      // Ensure photos object exists
-      if (!item.photos) {
-        item.photos = { before: [], after: [] };
-      }
-      
-      // Always sync laborCost from estimate if available
-      const laborCost = laborCostMap[item.itemId?.toString()];
-      if (typeof laborCost !== "undefined") {
-        item.laborCost = laborCost;
-      }
-      
-      return item;
-    });
-
-    console.log(`✅ Found ${assignedItems.length} assigned items for Vendor ${vendorId} in Project ${projectId}`);
-    
-    res.status(200).json({ items: assignedItems });
-  } catch (error) {
-    console.error("❌ Error fetching assigned items:", error);
-    res.status(500).json({ message: "Failed to fetch assigned items." });
-  }
-});
-
-
-
-// Route to clear vendor assignment
-app.patch('/api/clear-vendor-assignment/:itemId', async (req, res) => {
-  const { itemId } = req.params;
-
-  console.log(`Attempting to clear vendor assignment for item ID: ${itemId}`);
-
-  if (!mongoose.Types.ObjectId.isValid(itemId)) {
-    console.log('Invalid Item ID format:', itemId);
-    return res.status(400).json({ message: 'Invalid Item ID format.' });
-  }
-
-  try {
-    // Step 1: Find the estimate and clear the assignment from nested lineItems.items
-    const estimate = await Estimate.findOneAndUpdate(
-      { 'lineItems.items._id': itemId },  // Find item in nested structure
-      { $set: { 'lineItems.$[].items.$[elem].assignedTo': null } },  // Clear the assignedTo field
-      {
-        arrayFilters: [{ 'elem._id': new mongoose.Types.ObjectId(itemId) }],  // Filter to match the specific item
-        new: true  // Return the updated estimate
-      }
-    );
-
-    if (!estimate) {
-      console.log(`Item ID ${itemId} not found in any estimate.`);
-      return res.status(404).json({ message: 'Item not found in any estimate.' });
-    }
-
-      const estimateItem = estimate.lineItems
-      .flatMap(category => category.items || [])
-      .find(entry => entry._id?.toString() === itemId);
-
-
-    // Step 2: Remove the item from the vendor's assignedItems array
-    const vendorUpdate = await Vendor.updateOne(
-      { 'assignedItems.itemId': itemId },
-      { $pull: { assignedItems: { itemId: new mongoose.Types.ObjectId(itemId) } } }
-    );
-
-    console.log(`Vendor update result:`, vendorUpdate);
-
-    if (vendorUpdate.modifiedCount === 0) {
-      console.log(`Item ID ${itemId} not found in vendor's assignedItems.`);
-      return res.status(404).json({ message: 'Item not found in vendor data.' });
-    }
-
-    if (estimateItem?.maintenanceRequestId || estimateItem?.maintenanceScheduleId) {
-      await syncLinkedMaintenanceRecordsFromEstimateItem(estimate, estimateItem);
-    }
-
-    res.status(200).json({ message: 'Vendor assignment cleared successfully.' });
-  } catch (error) {
-    console.error('Error clearing vendor assignment:', error);
-    res.status(500).json({ message: 'Internal server error.' });
-  }
-});
-
-// API to upload files to a specific project
-app.post('/api/projects/:projectId/files', upload.array('files'), async (req, res) => {
-  try {
-    const projectId = req.params.projectId;
-    const project = await Project.findById(projectId);
-
-    if (!project) {
-      return res.status(404).send('Project not found');
-    }
-
-    const files = req.files.map(file => ({
-      filename: file.originalname,
-      path: file.path,
-      mimetype: file.mimetype,
-    }));
-
-    project.files.push(...files);
-    await project.save();
-
-  // ✅ Log the file upload in daily updates
-  const fileNames = files.map(f => f.filename).join(", ");
-  await logDailyUpdate(projectId, `Files uploaded: ${fileNames}`);
-
-    res.status(200).json({ message: 'Files uploaded successfully', files });
-  } catch (error) {
-    console.error('Error uploading files:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
-
-// API to get files for a specific project
-app.get('/api/projects/:projectId/files', async (req, res) => {
-  try {
-    const projectId = req.params.projectId;
-    console.log(`Fetching files for project ID: ${projectId}`);  // Debug log
-
-    const project = await Project.findById(projectId);
-    console.log('Project fetched:', project);  // Check if project is found
-
-    if (!project) {
-      console.log('Project not found!');
-      return res.status(404).send('Project not found');
-    }
-
-    console.log('Files:', project.files);  // Check if files exist
-    res.status(200).json(project.files);
-  } catch (error) {
-    console.error('Error fetching files:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
-
-
-// DELETE Route for File Deletion (Local Environment)
-app.delete('/api/projects/:projectId/files/:fileId', async (req, res) => {
-  const { projectId, fileId } = req.params;
-
-  try {
-    const project = await Project.findById(projectId);
-
-    if (!project) {
-      console.warn(`Project not found: ${projectId}`);
-      return res.status(404).json({ error: 'Project not found' });
-    }
-
-    const file = project.files.find(f => f._id.toString() === fileId);
-    if (!file) {
-      console.warn(`File ID not found in project: ${fileId}`);
-      return res.status(404).json({ error: 'File not found in project' });
-    }
-
-    // Normalize the file path for Windows compatibility
-    let filePath = file.path.replace(/\\/g, '/'); // Convert backslashes to forward slashes
-
-    // Construct the absolute path for the local server
-    const absolutePath = path.join(__dirname, filePath);
-
-    console.log(`Resolved file path for deletion: ${absolutePath}`);
-
-    // Attempt to delete the file from the filesystem
-    try {
-      if (fs.existsSync(absolutePath)) {
-        fs.unlinkSync(absolutePath);
-        console.log(`File deleted from server: ${absolutePath}`);
-      } else {
-        console.warn(`File not found on server: ${absolutePath}`);
-      }
-    } catch (fsError) {
-      console.error('Error deleting file from filesystem:', fsError);
-      return res.status(500).json({ error: 'Error deleting file from server' });
-    }
-
-    // Remove the file entry from the project document
-    await Project.findByIdAndUpdate(
-      projectId,
-      { $pull: { files: { _id: fileId } } },
-      { new: true }
-    );
-
-    return res.status(200).json({ message: 'File deleted successfully' });
-
-  } catch (err) {
-    console.error('Server error during file deletion:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-
-
-
-
-
-// Project Manager Sign-Up
-app.post('/api/manager/signup', async (req, res) => {
-  const { name, email, password } = req.body;
-
-  if (!name || !email || !password) {
-    return res.status(400).json({ success: false, message: 'All fields are required.' });
-  }
-
-  try {
-    const existingManager = await Manager.findOne({ email });
-    if (existingManager) {
-      return res.status(400).json({ success: false, message: 'Project Manager already exists.' });
-    }
-
-    const newManager = new Manager({ name, email, password });
-    await newManager.save();
-
-    res.status(201).json({ success: true, message: 'Project Manager registered successfully.' });
-  } catch (error) {
-    console.error('Error registering project manager:', error);
-    res.status(500).json({ success: false, message: 'Failed to register project manager.' });
-  }
-});
-
-// Project Manager Sign-In
-app.post('/api/manager/signin', async (req, res) => {
-  const { email, password } = req.body;
-
-  // Input validation
-  if (!email || !password) {
-    console.log('Missing email or password');
-    return res.status(400).json({ success: false, message: 'Email and password are required.' });
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    console.log('Invalid email format:', email);
-    return res.status(400).json({ success: false, message: 'Invalid email format.' });
-  }
-
-  try {
-    // Check database connection
-    if (!mongoose.connection.readyState) {
-      console.error('Database not connected');
-      return res.status(500).json({ success: false, message: 'Database connection error.' });
-    }
-
-    console.log('Email Received:', email);
-
-    // Find manager by email
-    const manager = await Manager.findOne({ email: email.toLowerCase() });
-    console.log('Manager Found:', manager);
-
-    if (!manager) {
-      console.log('No manager found for email:', email);
-      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
-    }
-
-    // Check password
-    const isMatch = await bcrypt.compare(password, manager.password);
-    console.log('Password Match:', isMatch);
-
-    if (!isMatch) {
-      console.log('Password mismatch for manager:', email);
-      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
-    }
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { managerId: manager._id }, 
-      JWT_SECRET, 
-      { expiresIn: '1h' } // Token valid for 1 hour
-    );
-
-    // Send successful response
-    console.log('Sign-in successful for manager:', manager.email);
-    res.status(200).json({
-      success: true,
-      token,
-      managerId: manager._id,
-      managerName: manager.name,
-    });
-  } catch (error) {
-    console.error('Error signing in project manager:', error.message);
-    res.status(500).json({ success: false, message: 'Failed to sign in.' });
-  }
-});
-
-
-// Password Reset Request
-app.post('/api/manager/reset-password', async (req, res) => {
-  const { email } = req.body;
-
-  if (!email) {
-    return res.status(400).json({ success: false, message: 'Email is required.' });
-  }
-
-  try {
-    const manager = await Manager.findOne({ email });
-    if (!manager) {
-      return res.status(404).json({ success: false, message: 'Project Manager not found.' });
-    }
-
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenHash = await bcrypt.hash(resetToken, 10);
-
-    manager.passwordResetToken = resetTokenHash;
-    manager.passwordResetExpires = Date.now() + 3600000; // 1 hour expiry
-    await manager.save();
-
-    // Construct the reset link
-    const baseUrl = process.env.BASE_URL || 'http://localhost:5500';
-    const resetLink = `${baseUrl}/project-manager-auth.html?role=manager&email=${encodeURIComponent(email)}&token=${encodeURIComponent(resetToken)}`;
-
-    await transporter.sendMail({
-      from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-      to: manager.email,
-      subject: 'Password Reset Request',
-      text: `Your password reset token is: ${resetToken}\n\nOr click the link below to reset your password:\n${resetLink}`,
-      html: `
-        <p>Your password reset token is: <b>${resetToken}</b></p>
-        <p>Or click the link below to reset your password:</p>
-        <a href="${resetLink}">${resetLink}</a>
-      `
-    });
-
-    res.status(200).json({ success: true, message: 'Password reset token sent to email.' });
-  } catch (error) {
-    console.error('Error generating password reset token:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate password reset token.' });
-  }
-});
+serverFlows["vendors"].post_api_vendors_id_upload_w9();
 
+serverFlows["vendors"].delete_api_vendors_id_w9();
 
+
+// ============================================================================
+// [FLOW: auth] Authentication and manager accounts (continued)
+// ============================================================================
+serverFlows["auth"].get_api_manager_profile();
+serverFlows["auth"].put_api_manager_profile();
+
+serverFlows["auth"].put_api_manager_password();
+
+serverFlows["auth"].get_api_managers_id();
+
+
+// ============================================================================
+// [FLOW: projects] Projects, utilities and daily updates (continued)
+// ============================================================================
+serverFlows["projects"].post_api_add_project();
+
+serverFlows["projects"].get_api_projects();
+
+serverFlows["projects"].put_api_projects_id();
+
+serverFlows["projects"].get_details_projects_id_2();
+
+serverFlows["projects"].get_api_details_projects_id();
+
+serverFlows["projects"].delete_api_projects_projectId();
+
+
+// ============================================================================
+// [FLOW: tasks] Tasks, to-dos and comments
+// ============================================================================
+// Implementation: server/flows/tasks.js
+serverFlows["tasks"].get_api_tasks();
+
+serverFlows["tasks"].get_api_task_id();
+
+serverFlows["tasks"].put_api_task_id_assign();
+
+serverFlows["tasks"].get_api_portfolio_tasks();
+
+serverFlows["tasks"].post_api_portfolio_tasks();
+
+serverFlows["tasks"].put_api_portfolio_tasks_id();
+
+serverFlows["tasks"].delete_api_portfolio_tasks_id();
+
+serverFlows["tasks"].post_api_tasks();
+
+serverFlows["tasks"].put_api_task_id();
+
+serverFlows["tasks"].delete_api_task_id();
+
+serverFlows["tasks"].get_api_comments();
+
+serverFlows["tasks"].post_api_comments();
+
+
+// ============================================================================
+// [FLOW: auth] Authentication and manager accounts (continued)
+// ============================================================================
+serverFlows["auth"].post_api_signup();
+
+serverFlows["auth"].post_api_signin();
+
+serverFlows["auth"].post_api_password_reset_request();
+
+serverFlows["auth"].post_api_password_reset();
+
+
+// ============================================================================
+// [FLOW: vendors] Vendors and assignments (continued)
+// ============================================================================
+serverFlows["vendors"].get_api_vendors_vendorId_debug_items();
+
+serverFlows["vendors"].put_api_vendors_vendorId_update_item_status();
+
+serverFlows["vendors"].put_api_vendor_start_project();
+
+serverFlows["vendors"].get_api_subcontractor_tasks();
+
+serverFlows["vendors"].get_api_vendors_vendorId_assigned_projects();
+
+serverFlows["vendors"].get_api_subcontractor_projects();
+
+serverFlows["vendors"].put_api_vendor_update_project_status();
+
+serverFlows["vendors"].post_api_vendors_vendorId_assign_item();
+
+serverFlows["vendors"].patch_api_vendors_vendorId_assigned_items_update();
+
+serverFlows["vendors"].post_api_assign_items();
+
+serverFlows["vendors"].delete_api_delete_photo_vendorId_itemId_photoUrl();
+
+
+// ============================================================================
+// [FLOW: uploads] Uploads and OCR (continued)
+// ============================================================================
+serverFlows["uploads"].get_api_photos_itemId();
+
+
+// ============================================================================
+// [FLOW: vendors] Vendors and assignments (continued)
+// ============================================================================
+serverFlows["vendors"].get_api_vendors_vendorId_assigned_items_projectId();
+
+serverFlows["vendors"].patch_api_clear_vendor_assignment_itemId();
+
+
+// ============================================================================
+// [FLOW: documents] Documents, folders and files
+// ============================================================================
+// Implementation: server/flows/documents.js
+serverFlows["documents"].post_api_projects_projectId_files();
+
+serverFlows["documents"].get_api_projects_projectId_files();
+
+serverFlows["documents"].delete_api_projects_projectId_files_fileId();
+
+
+// ============================================================================
+// [FLOW: auth] Authentication and manager accounts (continued)
+// ============================================================================
+serverFlows["auth"].post_api_manager_signup();
+
+serverFlows["auth"].post_api_manager_signin();
+
+serverFlows["auth"].post_api_manager_reset_password();
 
 // 📌 Configure Email Transporter
 // Setup Nodemailer Transporter
@@ -4767,1370 +2218,92 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// 📌 API: Invite Team Members (Vendors or Project Managers)
-app.post("/api/invite", async (req, res) => {
-  try {
-    const { emails, role, projectId } = req.body;
-
-    if (!Array.isArray(emails) || emails.length === 0 || !role) {
-      return res.status(400).json({
-        success: false,
-        message: "Emails and role are required."
-      });
-    }
-
-    const invitedUsers = [];
-
-    for (const rawEmail of emails) {
-      const email = (rawEmail || '').toLowerCase();
-      if (!email) continue;
-
-      if (role === 'vendor') {
-        let vendor = await Vendor.findOne({ email });
-        if (vendor) {
-          // Existing vendor: if inactive -> treat as new invite
-          if (vendor.status === 'inactive') {
-            const token = crypto.randomBytes(32).toString('hex');
-            const invitation = new Invitation({ email, role, projectId, token });
-            await invitation.save();
-            vendor.isInvited = true;
-            await vendor.save();
-            invitedUsers.push({ email, status: 'invited-inactive' });
-            await sendNewUserInviteEmail(email, role, projectId, token);
-          } else {
-            // Active vendor
-            if (projectId) {
-              const alreadyAssigned = vendor.assignedProjects?.some(p => p.projectId.toString() === projectId);
-              if (!alreadyAssigned) {
-                vendor.assignedProjects = vendor.assignedProjects || [];
-                vendor.assignedProjects.push({ projectId, status: 'new' });
-                await vendor.save();
-              }
-            }
-            invitedUsers.push({ email, status: 'existing-active' });
-            await sendExistingUserEmail(email, role, projectId);
-          }
-        } else {
-          // No vendor: create invitation only
-            const token = crypto.randomBytes(32).toString('hex');
-            const invitation = new Invitation({ email, role, projectId, token });
-            await invitation.save();
-            invitedUsers.push({ email, status: 'invited-new' });
-            await sendNewUserInviteEmail(email, role, projectId, token);
-        }
-      } else {
-        // Manager flow unchanged but annotate status
-        let manager = await Manager.findOne({ email });
-        if (manager) {
-          if (projectId) {
-            const alreadyAssigned = manager.assignedProjects?.some(p => p.projectId.toString() === projectId);
-            if (!alreadyAssigned) {
-              manager.assignedProjects = manager.assignedProjects || [];
-              manager.assignedProjects.push({ projectId });
-              await manager.save();
-            }
-          }
-          invitedUsers.push({ email, status: 'existing-manager' });
-          await sendExistingUserEmail(email, role, projectId);
-        } else {
-          const token = crypto.randomBytes(32).toString('hex');
-          const invitation = new Invitation({ email, role, projectId, token });
-          await invitation.save();
-          invitedUsers.push({ email, status: 'invited-manager' });
-          await sendNewUserInviteEmail(email, role, projectId, token);
-        }
-      }
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Invitations processed successfully.",
-      invitedUsers
-    });
-  } catch (error) {
-    console.error("Error inviting team members:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to invite team members."
-    });
-  }
-});
-
-
-// 📩 Send Email for Existing Users
-async function sendExistingUserEmail(email, role, projectId) {
-  const signInURL =
-    role === "project-manager"
-      ? `${process.env.BASE_URL}/project-manager-auth.html`
-      : `${process.env.BASE_URL}/sign-inpage.html`;
-
-  const mailOptions = {
-    from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: "Project Assignment Notification",
-    html: `
-      <h3>You've Been Invited</h3>
-      <p>Hello,</p>
-      <p>You have been invited as a <strong>${role}</strong>${
-        projectId ? ` for project <strong>${projectId}</strong>` : ""
-      }.</p>
-      <p>You can sign in to access your dashboard:</p>
-      <a href="${signInURL}" style="padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px;">Sign In</a>
-      <p>Best Regards,<br/><strong>BESF Team</strong></p>
-    `
-  };
-
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Notification email sent to ${email} (existing user). ID: ${info.messageId}`);
-    return true;
-  } catch (error) {
-    console.error(`❌ Error sending existing user email:`, error);
-    return false;
-  }
-}
-
-
-// 📩 Send Invitation Email for New Users
-async function sendNewUserInviteEmail(email, role, projectId, token) {
-  const activationURL = `${process.env.BASE_URL}/sign-inpage.html?email=${encodeURIComponent(
-    email
-  )}&role=${encodeURIComponent(role)}&token=${encodeURIComponent(token)}${
-    projectId ? `&projectId=${encodeURIComponent(projectId)}` : ""
-  }`;
-
-  const mailOptions = {
-    from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: "You're Invited to Join BESF",
-    html: `
-      <h3>Welcome to BESF</h3>
-      <p>Hello,</p>
-      <p>You have been invited as a <strong>${role}</strong>${
-        projectId ? ` for project <strong>${projectId}</strong>` : ""
-      }.</p>
-      <p>Click the button below to activate your account:</p>
-      <a href="${activationURL}" style="padding: 10px 20px; background: #28a745; color: white; text-decoration: none; border-radius: 5px;">Activate Account</a>
-      <p>If you didn’t request this, please ignore the email.</p>
-      <p>Best Regards,<br/><strong>BESF Team</strong></p>
-    `
-  };
-
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Invitation email sent to new user ${email}. ID: ${info.messageId}`);
-    return true;
-  } catch (error) {
-    console.error(`❌ Error sending invitation email:`, error);
-    return false;
-  }
-}
-
-
-// Serve the activation page
-app.get('/sign-inpage.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'sign-inpage.html'), (err) => {
-    if (err) {
-      console.error('Error serving sign-inpage.html:', err);
-      res.status(500).send('Failed to load the activation page.');
-    }
-  });
-});
-
-
-
-// POST /api/invite/accept
-
-app.post("/api/invite/accept", async (req, res) => {
-  console.log("Request body:", req.body);
-
-  const { token, name, password } = req.body;
-
-  if (!token || !name || !password) {
-    console.log("Missing required fields:", { token, name, password });
-    return res.status(400).json({ success: false, message: "All fields are required." });
-  }
-
-  try {
-    // Find invitation
-    const invitation = await Invitation.findOne({ token });
-    if (!invitation) {
-      console.log("Invalid or expired token:", token);
-      return res.status(404).json({ success: false, message: "Invalid or expired token." });
-    }
-
-    // Hash the password once
-    const hashedPassword = await bcrypt.hash(password, 10);
-    console.log("Hashed password:", hashedPassword);
-
-    const userEmail = invitation.email.toLowerCase();
-
-    // Check if user already exists
-    if (invitation.role === "vendor") {
-      let existingVendor = await Vendor.findOne({ email: userEmail });
-
-      if (existingVendor) {
-        // Update existing vendor's password and name if missing
-        if (!existingVendor.password) {
-          existingVendor.password = hashedPassword;
-          existingVendor.name = name;
-        }
-
-        // Add assigned project only if it exists and is not already assigned
-        if (invitation.projectId) {
-          const alreadyAssigned = existingVendor.assignedProjects?.some(
-            p => p.projectId.toString() === invitation.projectId.toString()
-          );
-          if (!alreadyAssigned) {
-            existingVendor.assignedProjects.push({ projectId: invitation.projectId, status: "new" });
-          }
-        }
-
-        existingVendor.isActive = true;
-        existingVendor.status = 'active';
-        existingVendor.isInvited = false;
-        await existingVendor.save();
-      } else {
-        // New vendor
-        const newVendor = new Vendor({
-          name,
-          email: userEmail,
-          password: hashedPassword,
-          assignedProjects: invitation.projectId ? [{ projectId: invitation.projectId, status: "new" }] : []
-        });
-        newVendor.isActive = true;
-        newVendor.status = 'active';
-        newVendor.isInvited = false;
-        await newVendor.save();
-      }
-    } else if (invitation.role === "project-manager") {
-      let existingManager = await Manager.findOne({ email: userEmail });
-
-      if (existingManager) {
-        if (!existingManager.password) {
-          existingManager.password = hashedPassword;
-          existingManager.name = name;
-        }
-        if (invitation.projectId) {
-          const alreadyAssigned = existingManager.assignedProjects?.some(
-            p => p.projectId.toString() === invitation.projectId.toString()
-          );
-          if (!alreadyAssigned) {
-            existingManager.assignedProjects.push({ projectId: invitation.projectId });
-          }
-        }
-        await existingManager.save();
-      } else {
-        const newManager = new Manager({
-          name,
-          email: userEmail,
-          password: hashedPassword,
-          assignedProjects: invitation.projectId ? [{ projectId: invitation.projectId }] : []
-        });
-        await newManager.save();
-      }
-    } else {
-      console.log("Invalid role:", invitation.role);
-      return res.status(400).json({ success: false, message: "Invalid role specified." });
-    }
-
-    // Remove invitation
-    await Invitation.deleteOne({ token });
-
-    console.log("Account activated successfully:", { role: invitation.role });
-    res.status(200).json({ success: true, message: "Account activated successfully.", role: invitation.role });
-  } catch (error) {
-    console.error("Error in /api/invite/accept:", error);
-    res.status(500).json({ success: false, message: "Failed to activate account." });
-  }
-});
-
-
-function getTaskAssignmentEmailHtml({ assigneeName, projectName, projectAddress, taskTitle, dueDate, description, signInLink }) {
-  return `
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;">
-      <tr>
-        <td align="center">
-          <table width="540" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;box-shadow:0 4px 24px #2563eb22;margin:32px 0;">
-            <tr>
-              <td style="padding:32px;">
-                <h2 style="color:#2563eb;font-size:2em;margin-bottom:18px;">New Task Assigned</h2>
-                <p style="font-size:1.08em;color:#334155;margin:0 0 18px 0;">
-                  <b>Hello ${assigneeName},</b>
-                </p>
-                <p style="margin:0 0 18px 0;font-size:1.05em;">
-                  You have been assigned a new task in the project:<br>
-                  <b style="color:#2563eb;">${projectName}</b>
-                </p>
-                <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
-                  <tr>
-                    <td style="color:#64748b;padding:8px 0;width:120px;">Task:</td>
-                    <td style="padding:8px 0;"><b>${taskTitle}</b></td>
-                  </tr>
-                  <tr>
-                    <td style="color:#64748b;padding:8px 0;">Project Address:</td>
-                    <td style="padding:8px 0;">${projectAddress}</td>
-                  </tr>
-                  <tr>
-                    <td style="color:#64748b;padding:8px 0;">Due Date:</td>
-                    <td style="padding:8px 0;">${dueDate}</td>
-                  </tr>
-                  <tr>
-                    <td style="color:#64748b;padding:8px 0;">Description:</td>
-                    <td style="padding:8px 0;">${description}</td>
-                  </tr>
-                </table>
-                <p style="margin:24px 0;">
-                  <a href="${signInLink}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:600;font-size:1.08em;">
-                    Sign In to View Task
-                  </a>
-                </p>
-                <hr style="border-top:1px solid #e5e7eb;margin:32px 0 18px 0;">
-                <p style="color:#64748b;font-size:0.98em;margin:0;">
-                  If you have any questions, please contact your manager.<br>
-                  <span style="color:#2563eb;">Thank you!</span>
-                </p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  `;
-}
-
-
-
-
-// ✅ API to Send Task Assignment Email
-app.post('/api/send-email', async (req, res) => {
-  const { to, subject, text, html, taskData } = req.body;
-
-  // If taskData is provided, generate improved HTML email
-  let emailHtml = html;
-  if (taskData) {
-    emailHtml = getTaskAssignmentEmailHtml({
-      assigneeName: taskData.assigneeName,
-      projectName: taskData.projectName,
-      projectAddress: taskData.projectAddress,
-      taskTitle: taskData.taskTitle,
-      dueDate: taskData.dueDate,
-      description: taskData.description,
-      signInLink: taskData.signInLink
-    });
-  }
-
-  if (!to || !subject || (!text && !emailHtml)) {
-    return res.status(400).json({ success: false, message: "Missing email parameters" });
-  }
-
-  try {
-    await transporter.sendMail({
-      from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      text,
-      html: emailHtml || undefined,
-    });
-
-    res.json({ success: true, message: "Email sent successfully" });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to send email" });
-  }
-});
-
-// ✅ Get Assigned Vendors for a Project
-app.get("/api/projects/:projectId/vendors", async (req, res) => {
-  try {
-    const { projectId } = req.params;
-
-    // Ensure projectId is a valid ObjectId if using MongoDB
-    if (!projectId) {
-      return res.status(400).json({ success: false, message: "Project ID is required." });
-    }
-
-    // Find vendors assigned to this project
-    const vendors = await Vendor.find({ "assignedProjects.projectId": projectId })
-      .select("name email phone assignedProjects")
-      .lean(); // Optimize query
-
-    res.status(200).json({ success: true, vendors: vendors || [] }); // Always return 200 with an array
-  } catch (error) {
-    console.error("❌ Error fetching vendors:", error);
-    res.status(500).json({ success: false, message: "Failed to fetch vendors. Please try again." });
-  }
-});
-
-
-// ✅ Remove Vendor from a Project
-app.delete("/api/projects/:projectId/vendors/:vendorId", async (req, res) => {
-  try {
-    const { projectId, vendorId } = req.params;
-    
-    // Remove project from vendor's assignedProjects
-    const vendor = await Vendor.findByIdAndUpdate(
-      vendorId,
-      { $pull: { assignedProjects: { projectId } } },
-      { new: true }
-    );
-
-    if (!vendor) {
-      return res.status(404).json({ success: false, message: "Vendor not found." });
-    }
-
-    res.status(200).json({ success: true, message: "Vendor removed from project." });
-  } catch (error) {
-    console.error("Error removing vendor:", error);
-    res.status(500).json({ message: "Failed to remove vendor." });
-  }
-});
-
-// ✅ Edit Vendor Information
-
-app.put("/api/vendors/:id", async (req, res) => {
-  try {
-    const { id } = req.params; // Get vendor ID from URL
-    const updateData = req.body; // Get updated fields from request body
-
-    if (!id) {
-      return res.status(400).json({ success: false, message: "Vendor ID is required." });
-    }
-
-    if (!updateData || Object.keys(updateData).length === 0) {
-      return res.status(400).json({ success: false, message: "No update data provided." });
-    }
-
-    // If using MongoDB (Database)
-    if (typeof Vendor !== "undefined") {
-      const updatedVendor = await Vendor.findByIdAndUpdate(id, updateData, { 
-        new: true, 
-        runValidators: true 
-      });
-
-      if (!updatedVendor) {
-        return res.status(404).json({ success: false, message: "Vendor not found." });
-      }
-
-      console.log(`✅ Vendor with ID ${id} updated in DB`);
-      return res.status(200).json({ success: true, message: "Vendor updated successfully!", vendor: updatedVendor });
-    }
-
-    // If using in-memory array (`vendors`)
-    if (typeof vendors !== "undefined" && Array.isArray(vendors)) {
-      const vendorIndex = vendors.findIndex((v) => v.id === id);
-      if (vendorIndex === -1) {
-        return res.status(404).json({ success: false, message: "Vendor not found." });
-      }
-
-      // Update the vendor object in memory
-      vendors[vendorIndex] = { ...vendors[vendorIndex], ...updateData };
-
-      console.log(`✅ Vendor with ID ${id} updated in memory`);
-      return res.status(200).json({ success: true, message: "Vendor updated successfully!", vendor: vendors[vendorIndex] });
-    }
-
-    return res.status(500).json({ success: false, message: "Vendor storage method not recognized." });
-
-  } catch (error) {
-    console.error("❌ Error updating vendor:", error);
-    res.status(500).json({ success: false, message: "Failed to update vendor. Please try again." });
-  }
-});
-
-
-
-
-// Endpoint to get the current project ID
-app.get('/api/projects/current', async (req, res) => { 
-  try {
-      // Dynamically determine project ID based on user session or database query
-      const projectId = req.session.currentProjectId || req.query.projectId; 
-
-      if (!projectId) {
-          return res.status(404).json({ message: "No active project found." });
-      }
-
-      res.status(200).json({ projectId });
-  } catch (error) {
-      console.error("Error fetching current project:", error);
-      res.status(500).json({ message: "Failed to fetch project." });
-  }
-});
-
-
-
-// Endpoint to fetch line items by project ID
-app.get('/api/estimates/:projectId/line-items', async (req, res) => {
-  try {
-    const { projectId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({ message: 'Invalid project ID' });
-    }
-
-    const estimates = await Estimate.find({ projectId }).populate('lineItems.items.assignedTo');
-
-    if (!estimates || estimates.length === 0) {
-      return res.status(404).json({ message: 'No estimates found for this project' });
-    }
-
-    // ✅ Return the full array of estimates (each includes title and lineItems)
-    res.json(estimates);
-  } catch (error) {
-    console.error('Error fetching estimates:', error);
-    res.status(500).json({ message: 'Server error', error });
-  }
-});
-
-// Endpoint to update a line item
-app.put('/api/estimates/line-items/:lineItemId', async (req, res) => {
-  try {
-    const { lineItemId } = req.params;
-    const updates = req.body;
-    const updateObj = {}; // Build an update object dynamically
-
-    if (updates.status !== undefined) {
-      updateObj['lineItems.$[].items.$[item].status'] = updates.status;
-    }
-    if (updates.startDate !== undefined) {
-      updateObj['lineItems.$[].items.$[item].startDate'] = updates.startDate;
-    }
-    if (updates.endDate !== undefined) {
-      updateObj['lineItems.$[].items.$[item].endDate'] = updates.endDate;
-    }
-    if (updates.description !== undefined) {
-      updateObj['lineItems.$[].items.$[item].description'] = updates.description;
-    }
-
-    // ✅ Find and update the estimate
-    const estimate = await Estimate.findOneAndUpdate(
-      { 'lineItems.items._id': lineItemId },
-      { $set: updateObj },
-      {
-        arrayFilters: [{ 'item._id': lineItemId }],
-        new: true
-      }
-    );
-
-    if (!estimate) {
-      return res.status(404).json({ message: 'Line item not found' });
-    }
-
-    // ✅ Extract projectId for logging
-    const projectId = estimate.projectId;
-    const lineItem = estimate.lineItems.find(li =>
-      li.items.some(item => item._id.toString() === lineItemId)
-    );
-
-    const item = lineItem.items.find(item => item._id.toString() === lineItemId);
-    const updatedField = Object.keys(updates).map(key => `${key}: ${updates[key]}`).join(', ');
-
-       if (item?.maintenanceRequestId) {
-      await syncMaintenanceRequestFromEstimateItem(estimate, item);
-    }
-
-    // ✅ Log line item update in daily updates
-    await logDailyUpdate(
-      projectId,
-      `Line item "${item?.description || 'Unknown'}" was updated (${updatedField}).`
-    );
-
-    console.log(`✏️ Line item "${item?.description || 'Unknown'}" updated successfully.`);
-    
-    res.json({ message: 'Line item updated successfully', estimate });
-
-  } catch (error) {
-    console.error('❌ Error updating line item:', error);
-    res.status(500).json({ message: 'Server error', error });
-  }
-});
-
-
-// ──────────────────────────────────────────────
-// Products API Endpoints
-// ──────────────────────────────────────────────
-
-// DELETE /api/selection-boards?projectId=...&room=...
-app.delete("/api/selection-boards", async (req, res) => {
-  const { projectId, room } = req.query;
-
-  if (!projectId || !room) {
-    return res.status(400).json({ message: "Missing projectId or room" });
-  }
-
-  try {
-    const normalizedRoom = decodeURIComponent(room).trim().toLowerCase();
-
-    // Log all rooms for debug
-    const boards = await SelectionBoard.find({ projectId });
-    console.log("📋 Rooms in DB:", boards.map(b => `"${b.room}"`));
-
-    const deleted = await SelectionBoard.findOneAndDelete({
-      projectId,
-      room: { $regex: new RegExp(`^${normalizedRoom}$`, 'i') } // Case-insensitive exact match
-    });
-
-    if (!deleted) {
-      return res.status(404).json({ message: `No board found for room "${normalizedRoom}" in this project.` });
-    }
-
-    res.json({ message: `Room "${normalizedRoom}" deleted successfully.` });
-  } catch (err) {
-    console.error("❌ Error deleting room:", err);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
-
-
-
-// GET /api/products - Return all products
-app.get('/api/products', async (req, res) => {
-  try {
-    const products = await Product.find().sort({ createdAt: -1 });
-    res.json(products);
-  } catch (error) {
-    console.error("Error fetching products:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// POST /api/products - Add a new product
-app.post('/api/products', async (req, res) => {
-  try {
-    const { name, description, price, link, photo } = req.body;
-    if (!name || !description || !price || !link) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-    const newProduct = new Product({ name, description, price, link, photo });
-    await newProduct.save();
-    res.status(201).json(newProduct);
-  } catch (error) {
-    console.error("Error saving product:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-
-
-
-
-// Endpoint to create or update a selection board
-app.post('/api/selection-board', async (req, res) => {
-  try {
-    const { projectId, room, selections } = req.body;
-    if (!projectId || !room || !selections || !Array.isArray(selections)) {
-      return res.status(400).json({ message: "projectId, room, and selections (as an array) are required." });
-    }
-    
-    // Ensure each selection object has a photo property.
-    const sanitizedSelections = selections.map(s => ({
-      name: s.name,
-      description: s.description,
-      price: s.price,
-      link: s.link,
-      photo: s.photo || ""
-    }));
-    
-    // Check if a selection board already exists for this project and room.
-    let board = await SelectionBoard.findOne({ projectId, room });
-    if (board) {
-      board.selections = sanitizedSelections;
-      // If you're using Mongoose timestamps, updatedAt is handled automatically.
-      await board.save();
-      return res.status(200).json({  board });
-    } else {
-      board = new SelectionBoard({ projectId, room, selections: sanitizedSelections });
-      await board.save();
-      return res.status(201).json({ message: "Selection board created successfully", board });
-    }
-  } catch (error) {
-    console.error("Error saving selection board:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
-
-
-// GET /api/selection-boards?projectId=...
-app.get('/api/selection-boards', async (req, res) => {
-  try {
-    const { projectId } = req.query;
-    if (!projectId) {
-      return res.status(400).json({ message: "Project ID is required" });
-    }
-    const boards = await SelectionBoard.find({ projectId });
-    // Instead of a 404, return an empty array if none found:
-    res.status(200).json(boards);
-  } catch (error) {
-    console.error("Error fetching selection boards:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
-
-
-
-
-
-// --------------------- Endpoint: Proxy for External URL --------------------- //
-app.get('/api/product-details', async (req, res) => {
-  const { url } = req.query;
-  if (!url) {
-    return res.status(400).json({ error: 'Missing url parameter' });
-  }
-  try {
-    // Replace 'YOUR_API_KEY' with your actual Microlink API key or set it in an environment variable.
-    const apiKey = process.env.MICROLINK_API_KEY || 'YOUR_API_KEY';
-    const apiUrl = `https://api.microlink.io/?url=${encodeURIComponent(url)}&api_key=${apiKey}`;
-    const response = await fetch(apiUrl);
-    if (!response.ok) {
-      return res.status(500).json({ error: 'Error fetching data from Microlink' });
-    }
-    const data = await response.json();
-    // Microlink returns data under a "data" key
-    res.json(data.data);
-  } catch (error) {
-    console.error("Error fetching product details:", error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// DELETE /api/products/:id – Delete a product by ID.
-app.delete('/api/products/:id', async (req, res) => {
-  try {
-    const productId = req.params.id;
-    const deletedProduct = await Product.findByIdAndDelete(productId);
-    if (!deletedProduct) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-    res.status(200).json({ message: "Product deleted successfully", product: deletedProduct });
-  } catch (error) {
-    console.error("Error deleting product:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
-
-// ✅ Get all upcoming and on-hold projects
-app.get("/api/upcoming-projects", async (req, res) => {
-  try {
-    // ✅ Fetch projects that have "upcoming" or "on hold" status
-    const projects = await Project.find({
-      status: { $in: ["Upcoming", "on-hold", "Open"] } // Matches either "upcoming" or "on hold"
-    });
-
-    res.status(200).json({ success: true, projects }); // ✅ Corrected variable name
-  } catch (error) {
-    console.error("Error fetching upcoming projects:", error);
-    res.status(500).json({ success: false, message: "Failed to fetch upcoming projects." });
-  }
-});
-
-
-// ✅ Get all "On Market" projects
-app.get("/api/on-market-projects", async (req, res) => {
-  try {
-    const projects = await Project.find({ status: "On Market" });
-
-    res.status(200).json({ success: true, projects });
-  } catch (error) {
-    console.error("Error fetching 'On Market' projects:", error);
-    res.status(500).json({ success: false, message: "Failed to fetch 'On Market' projects." });
-  }
-});
-
-
-// ✅ API Endpoint to Fetch Completed Projects
-app.get('/api/completed-projects', async (req, res) => {
-  try {
-      // Fetch only projects with status "completed"
-      const completedProjects = await Project.find({ status: "completed" });
-
-      res.status(200).json({ success: true, projects: completedProjects });
-  } catch (error) {
-      console.error('❌ Error fetching completed projects:', error);
-      res.status(500).json({ success: false, message: 'Failed to fetch completed projects.' });
-  }
-});
-
-
-// ✅ GET /api/daily-updates → Fetch all daily updates (Filtered by Date)
-app.get("/api/daily-updates", async (req, res) => {
-  try {
-      let { date } = req.query;
-
-      if (!date) {
-          return res.status(400).json({ success: false, message: "Date is required." });
-      }
-
-      // ✅ Convert to Date Object & Extract YYYY-MM-DD
-      let selectedDate = new Date(date);
-      let selectedDateISO = selectedDate.toISOString().split("T")[0]; // Extract YYYY-MM-DD
-
-      console.log(`📅 Fetching updates for strict date: ${selectedDateISO}`);
-
-      // ✅ Query for documents where the timestamp's date matches selectedDateISO
-      const updates = await DailyUpdate.find({
-          timestamp: { 
-              $gte: new Date(`${selectedDateISO}T00:00:00.000Z`), 
-              $lte: new Date(`${selectedDateISO}T23:59:59.999Z`)
-          }
-      }).sort({ timestamp: -1 });
-
-      if (updates.length === 0) {
-          return res.json({ success: true, message: "No updates found for this date.", updates: [] });
-      }
-
-      res.json({ success: true, updates });
-
-  } catch (error) {
-      console.error("❌ Error fetching daily updates:", error);
-      res.status(500).json({ success: false, message: "Failed to fetch daily updates." });
-  }
-});
-
-// ✅ POST /api/daily-updates → Add a new update (WITH Manager ID)
-app.post("/api/daily-updates", async (req, res) => {
-  try {
-      const { projectId, text, images, managerId } = req.body;
-
-      // ✅ Ensure required fields exist
-      if (!projectId || !text || !managerId) {
-          return res.status(400).json({ success: false, message: "Missing required fields (Project ID, Text, Manager ID)." });
-      }
-
-      // ✅ Validate Manager ID
-      const manager = await Manager.findById(managerId).select("name");
-      if (!manager) {
-          return res.status(404).json({ success: false, message: "Invalid Manager ID." });
-      }
-
-      // ✅ Fetch Project Name from Database
-      const project = await Project.findById(projectId).select("name"); // Only fetch name field
-      if (!project) {
-          return res.status(404).json({ success: false, message: "Project not found." });
-      }
-
-      // ✅ Create New Daily Update Entry
-      const newUpdate = new DailyUpdate({
-          projectId,
-          projectName: project.name,  // ✅ Store project name directly
-          author: manager.name,  // ✅ Store the actual Manager's name
-          text,
-          images: images || [],
-          timestamp: new Date(),
-      });
-
-      await newUpdate.save();
-
-      console.log(`✅ New daily update added by Manager: ${manager.name}`);
-
-      res.json({ success: true, message: "Update added successfully!", update: newUpdate });
-
-  } catch (error) {
-      console.error("❌ Error adding daily update:", error);
-      res.status(500).json({ success: false, message: "Failed to add daily update." });
-  }
-});
-
-// Create a new invoice
-app.post('/api/create', async (req, res) => {
-  try {
-    const {
-      projectId,
-      email,
-      invoiceNumber,
-      date,
-      lineItems,
-      total,
-      from,
-      to,
-      vendorId
-    } = req.body;
-
-    if (!invoiceNumber || !lineItems?.length) {
-      return res.status(400).json({ message: 'Missing required invoice fields.' });
-    }
-
-    const normalizeProjectId = value => {
-      if (!value) return '';
-      if (typeof value === 'object') {
-        return String(value._id || value.id || '').trim();
-      }
-      return String(value).trim();
-    };
-
-    const primaryProjectId = normalizeProjectId(projectId) || normalizeProjectId(lineItems.find(item => item.projectId)?.projectId);
-
-    if (!primaryProjectId) {
-      return res.status(400).json({ message: 'Each invoice must include at least one project.' });
-    }
-
-    // Ensure each line item has a total and includes estimateId and itemId if present
-    const lineItemsWithIds = lineItems.map(item => ({
-      ...item,
-      projectId: normalizeProjectId(item.projectId) || primaryProjectId,
-      projectName: item.projectName || '',
-      projectAddress: item.projectAddress || '',
-      total: typeof item.total !== "undefined"
-        ? Number(item.total)
-        : (typeof item.laborCost !== "undefined"
-            ? Number(item.laborCost)
-            : (Number(item.quantity) * (parseFloat(item.unitPrice) || 0))),
-      estimateId: item.estimateId ? item.estimateId : undefined,
-      itemId: item.itemId ? item.itemId : undefined
-    }));
-
-    if (lineItemsWithIds.some(item => !item.projectId)) {
-      return res.status(400).json({ message: 'Each line item must include a projectId.' });
-    }
-
-    const invoice = new Invoice({
-      vendorId: vendorId ? new mongoose.Types.ObjectId(vendorId) : undefined,
-      projectId: primaryProjectId,
-      email,
-      invoiceNumber,
-      date,
-      from,
-      to,
-      lineItems: lineItemsWithIds,
-      total: lineItemsWithIds.reduce((sum, i) => sum + (parseFloat(i.total) || 0), 0)
-    });
-
-    const savedInvoice = await invoice.save();
-    res.status(201).json(savedInvoice);
-  } catch (err) {
-    console.error('❌ Error saving invoice:', err);
-    res.status(500).json({ message: 'Failed to create invoice', error: err.message });
-  }
-});
-
-// ✅ GET invoices filtered by projectId WITH project name
-app.get('/api/invoices', async (req, res) => {
-  const { projectId } = req.query;
-
-  try {
-    if (!projectId) {
-      return res.status(400).json({ message: "Missing projectId" });
-    }
-
-    const invoices = await Invoice.find({ projectId })
-      .populate('projectId', 'name'); // 👈 Include project name
-
-    res.json({ invoices });
-  } catch (err) {
-    console.error("❌ Error fetching invoices by projectId:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-
-// PATCH /api/invoices/:id
-app.patch('/api/invoices/:id', async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-
-  try {
-    const updated = await Invoice.findByIdAndUpdate(id, { status }, { new: true });
-    if (!updated) return res.status(404).json({ message: "Invoice not found" });
-
-    res.json({ success: true, invoice: updated });
-  } catch (err) {
-    console.error("Error updating invoice status:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// DELETE invoice by ID
-app.delete('/api/invoices/:id', async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const deletedInvoice = await Invoice.findByIdAndDelete(id);
-    if (!deletedInvoice) {
-      return res.status(404).json({ message: 'Invoice not found' });
-    }
-
-    res.json({ message: 'Invoice deleted successfully', deletedInvoice });
-  } catch (err) {
-    console.error('❌ Error deleting invoice:', err);
-    res.status(500).json({ message: 'Failed to delete invoice', error: err.message });
-  }
-});
-
-
-// ✅ Get a single invoice by ID
-app.get('/api/invoices/by-number/:invoiceNumber', async (req, res) => {
-  try {
-    const invoice = await Invoice.findOne({ invoiceNumber: req.params.invoiceNumber })
-      .populate('projectId'); // populate project if needed
-
-    if (!invoice) {
-      return res.status(404).json({ message: 'Invoice not found' });
-    }
-
-    res.json({ invoice });
-  } catch (err) {
-    console.error('❌ Error fetching invoice:', err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.get('/api/projects/:projectId', async (req, res) => {
-  try {
-    const project = await Project.findById(req.params.projectId);
-    if (!project) return res.status(404).json({ message: "Project not found" });
-    res.json({ project });
-  } catch (err) {
-    console.error("❌ Error fetching project:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-
-
-
-// Get invoice history
-app.get('/history', async (req, res) => {
-  const { vendorId } = req.query;
-
-  try {
-    const query = vendorId ? { vendorId } : {}; // Filter if vendorId is passed
-    const invoices = await Invoice.find(query).sort({ createdAt: -1 });
-    res.json(invoices);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch invoice history', error: err });
-  }
-});
-
-
-// ✅ Send invoice via email (PDF attached)
-app.post('/api/send', memoryUpload.single('pdf'), async (req, res) => {
-  const { invoiceId } = req.body;
-  const pdfFile = req.file;
-
-  // 🛡 Validation
-  if (!invoiceId) {
-    console.warn("⚠️ Missing invoiceId");
-    return res.status(400).json({ message: "Missing invoiceId" });
-  }
-
-  if (!pdfFile || !pdfFile.buffer) {
-    console.warn("⚠️ Missing or invalid PDF file");
-    return res.status(400).json({ message: "Missing PDF attachment" });
-  }
-
-  try {
-    const invoice = await Invoice.findById(invoiceId);
-    if (!invoice) {
-      console.warn(`❌ Invoice not found for ID: ${invoiceId}`);
-      return res.status(404).json({ message: 'Invoice not found' });
-    }
-
-    // ✅ Default recipients (hardcoded)
-    const recipients = [
-      "besf.jasson@gmail.com",
-      "VonleoInc@adaptive.build"
-    ];
-
-    const mailOptions = {
-      from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-      to: recipients,
-      subject: `Invoice #${invoice.invoiceNumber}`,
-      html: `
-        <p>Hello,</p>
-        <p>Please find attached invoice <strong>${invoice.invoiceNumber}</strong>.</p>
-        <p>Thank you,<br><strong>BESF Team</strong></p>
-      `,
-      attachments: [
-        {
-          filename: `Invoice-${invoice.invoiceNumber}.pdf`,
-          content: pdfFile.buffer,
-          contentType: 'application/pdf'
-        }
-      ]
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Invoice sent to: ${recipients.join(', ')} | ID: ${info.messageId}`);
-
-    res.status(200).json({ message: `Invoice sent to: ${recipients.join(', ')}` });
-  } catch (err) {
-    console.error('❌ Failed to send invoice email:', err);
-    res.status(500).json({ message: 'Failed to send invoice', error: err.message });
-  }
-});
-
-
-
-// ✅ GET /api/notifications → Fetch recent notifications
-app.get("/api/notifications", async (req, res) => {
-  try {
-      const notifications = await Notification.find()
-          .sort({ timestamp: -1 })
-          .limit(20);
-      res.json({ success: true, notifications });
-  } catch (error) {
-      console.error("❌ Error fetching notifications:", error);
-      res.status(500).json({ success: false, message: "Failed to fetch notifications." });
-  }
-});
-
-// Create a new quote
-app.post('/api/quotes', async (req, res) => {
-  try {
-    // Ensure laborCost and materialCost are set for each line item (preserve markup)
-    if (Array.isArray(req.body.lineItems)) {
-      req.body.lineItems = req.body.lineItems.map(item => {
-        let laborCost = item.laborCost;
-        let materialCost = item.materialCost;
-        const markup = typeof item.markup !== 'undefined' ? Number(item.markup) : 0;
-        if (typeof laborCost === 'undefined' && typeof item.laborRate !== 'undefined' && typeof item.laborHours !== 'undefined') {
-          laborCost = (item.laborRate || 0) * (item.laborHours || 0);
-        }
-        if (typeof materialCost === 'undefined' && typeof item.materialRate !== 'undefined' && typeof item.materialQty !== 'undefined') {
-          materialCost = (item.materialRate || 0) * (item.materialQty || 0);
-        }
-        return { ...item, markup, laborCost, materialCost };
-      });
-    }
-    // Ensure paymentTerms exists with percentages if provided by client
-    if (req.body.paymentTerms && Array.isArray(req.body.paymentTerms.percentages)) {
-      const cleaned = req.body.paymentTerms.percentages
-        .map(n => Number(n))
-        .filter(n => Number.isFinite(n))
-        .map(n => Math.max(0, Math.min(100, n)));
-      req.body.paymentTerms = { percentages: cleaned };
-    }
-    const newQuote = new Quote(req.body);
-    const savedQuote = await newQuote.save();
-    res.status(201).json(savedQuote);
-  } catch (err) {
-    console.error('Error saving quote:', err);
-    res.status(500).json({ error: 'Failed to save quote' });
-  }
-});
-
-// Get all quotes
-app.get('/api/quotes', async (req, res) => {
-  try {
-    const quotes = await Quote.find().sort({ createdAt: -1 });
-    res.json(quotes);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch quotes' });
-  }
-});
-
-// Get quote by ID
-app.get('/api/quotes/:id', async (req, res) => {
-  try {
-    const quote = await Quote.findById(req.params.id);
-    if (!quote) return res.status(404).json({ error: 'Quote not found' });
-
-    // If paymentSchedules is missing or empty, convert legacy payments
-    if ((!quote.paymentSchedules || quote.paymentSchedules.length === 0) && quote.payments && quote.payments.length > 0) {
-      quote.paymentSchedules = [
-        {
-          name: "Default Schedule",
-          description: "Imported from legacy payments",
-          payments: quote.payments
-        }
-      ];
-    }
-
-    res.json(quote);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch quote' });
-  }
-});
-
-// Save client signature for a quote (public link endpoint)
-app.post('/api/quotes/:id/signature', async (req, res) => {
-  try {
-    const { name, type, imageData } = req.body || {};
-
-    if (!name || typeof name !== 'string' || !name.trim()) {
-      return res.status(400).json({ error: 'Signature name is required.' });
-    }
-
-    const normalizedType = (type === 'drawn' || type === 'typed') ? type : 'typed';
-
-    // Optional basic size guard for data URL payloads
-    if (normalizedType === 'drawn' && imageData && imageData.length > 2_000_000) {
-      return res.status(400).json({ error: 'Signature image is too large.' });
-    }
-
-    const quote = await Quote.findById(req.params.id);
-    if (!quote) {
-      return res.status(404).json({ error: 'Quote not found' });
-    }
-
-    quote.signature = {
-      name: name.trim(),
-      type: normalizedType,
-      imageData: imageData || null,
-      signedAt: new Date()
-    };
-
-    // Optionally mark quote as approved when signed
-    if (quote.status !== 'Approved') {
-      quote.status = 'Approved';
-    }
-
-    await quote.save();
-
-    res.json({
-      message: 'Signature saved successfully.',
-      quoteId: quote._id,
-      status: quote.status
-    });
-  } catch (err) {
-    console.error('Error saving quote signature:', err);
-    res.status(500).json({ error: 'Failed to save signature' });
-  }
-});
-
-// Delete a quote by ID
-app.delete('/api/quotes/:id', async (req, res) => {
-  try {
-    const deletedQuote = await Quote.findByIdAndDelete(req.params.id);
-    if (!deletedQuote) {
-      return res.status(404).json({ error: 'Quote not found' });
-    }
-    res.status(200).json({ message: 'Quote deleted successfully' });
-  } catch (err) {
-    console.error('Error deleting quote:', err);
-    res.status(500).json({ error: 'Failed to delete quote' });
-  }
-});
-
-
-
-// Update a quote
-app.put('/api/quotes/:id', async (req, res) => {
-  try {
-    const quoteId = req.params.id;
-    const {
-      to, from, quoteNumber, date, validTill, notes, lineItems, status, totals, paymentSchedules, paymentTerms // 👈 include paymentTerms
-    } = req.body;
-
-    if (!to?.name || !Array.isArray(lineItems) || lineItems.length === 0) {
-      return res.status(400).json({ message: 'Missing required fields: client name or line items' });
-    }
-
-    // Ensure laborCost and materialCost are set for each line item (preserve markup)
-    let processedLineItems = Array.isArray(lineItems) ? lineItems.map(item => {
-      let laborCost = item.laborCost;
-      let materialCost = item.materialCost;
-      const markup = typeof item.markup !== 'undefined' ? Number(item.markup) : 0;
-      if ((laborCost === null || typeof laborCost === 'undefined') && typeof item.laborRate !== 'undefined' && typeof item.laborHours !== 'undefined') {
-        laborCost = (item.laborRate || 0) * (item.laborHours || 0);
-      }
-      if ((materialCost === null || typeof materialCost === 'undefined') && typeof item.materialRate !== 'undefined' && typeof item.materialQty !== 'undefined') {
-        materialCost = (item.materialRate || 0) * (item.materialQty || 0);
-      }
-      return { ...item, markup, laborCost, materialCost };
-    }) : [];
-
-    // ✅ Calculate totals using provided tax as percentage
-    const subtotal = processedLineItems.reduce((acc, item) => acc + (item.rate * item.qty), 0);
-    const discount = parseFloat(totals?.discount) || 0;
-    const taxRate = parseFloat(totals?.tax) || 0;
-    const taxAmount = (subtotal - discount) * (taxRate / 100);
-    const total = subtotal - discount + taxAmount;
-
-    const updateFields = {
-      to, from, quoteNumber, date, validTill, notes, lineItems: processedLineItems,
-      totals: { subtotal, discount, tax: taxRate, total }
-    };
-    if (status) updateFields.status = status;
-    if (paymentSchedules) updateFields.paymentSchedules = paymentSchedules; // 👈 add this
-    if (paymentTerms && Array.isArray(paymentTerms.percentages)) {
-      const cleaned = paymentTerms.percentages
-        .map(n => Number(n))
-        .filter(n => Number.isFinite(n))
-        .map(n => Math.max(0, Math.min(100, n)));
-      updateFields.paymentTerms = { percentages: cleaned };
-      // 🔁 Auto-regenerate base payments schedule (legacy payments array) ONLY if no payments are Paid yet
-      // and client did not explicitly send a payments array in this request.
-      // This keeps existing paid history intact but syncs future milestone amounts to new percentages.
-      if (!req.body.payments) {
-          const existing = await Quote.findById(quoteId).select('payments paymentTerms totals paymentSchedules').lean();
-          if (existing) {
-            const anyPaidLegacy = Array.isArray(existing.payments) && existing.payments.some(p => p.status === 'Paid');
-            const anyPaidSchedules = Array.isArray(existing.paymentSchedules) && existing.paymentSchedules.some(s => Array.isArray(s.payments) && s.payments.some(p => p.status === 'Paid'));
-            const anyPaid = anyPaidLegacy || anyPaidSchedules;
-            if (!anyPaid) {
-              const percsForSchedule = cleaned.slice(0, 4);
-              const totalForSchedule = Number(updateFields.totals?.total || existing.totals?.total || 0);
-              const stageSuffixes = [
-                'at project start',
-                'at 50% completion',
-                'at 75% completion',
-                'at final completion'
-              ];
-              const regeneratedPayments = percsForSchedule.map((pct, i) => ({
-                label: `${pct}% ${stageSuffixes[i] || 'milestone'}`,
-                amount: +(totalForSchedule * (pct / 100)).toFixed(2),
-                status: 'Pending',
-                date: ''
-              }));
-              updateFields.payments = regeneratedPayments;
-              updateFields.paymentSchedules = [
-                {
-                  name: 'Payment Schedule',
-                  description: 'Auto-generated from payment terms',
-                  payments: regeneratedPayments
-                }
-              ];
-            }
-          }
-      }
-    }
-
-    const updatedQuote = await Quote.findByIdAndUpdate(quoteId, updateFields, { new: true });
-
-    if (!updatedQuote) {
-      return res.status(404).json({ message: 'Quote not found' });
-    }
-
-    res.json(updatedQuote);
-  } catch (err) {
-    console.error('Error updating quote:', err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// Enhanced address parsing function to handle various address formats
-function parseAddress(addressString) {
-  const regex = /^(\d+\s+\w+(?:\s+\w+)*),?\s*(\w+(?:\s+\w+)*)?,?\s*([A-Z]{2})?\s*(\d{5})?$/;
-  const match = addressString.match(regex);
-
-  if (!match) {
-    console.warn("Address format not recognized. Using fallback parsing.");
-    const parts = addressString.split(',').map(part => part.trim());
-
-    return applyDefaultAddressValues({
-      street: parts[0] || '',
-      city: parts[1] || '',
-      state: parts[2]?.split(' ')[0] || 'TX',
-      zip: parts[2]?.split(' ')[1] || '78109'
-    });
-  }
-
-  const parsedAddress = {
-    street: match[1] || '',
-    city: match[2] || '',
-    state: match[3] || 'TX',
-    zip: match[4] || '78109'
-  };
-
-  return applyDefaultAddressValues(parsedAddress);
-}
-
-// Apply default values if state or zip are still undefined
-function applyDefaultAddressValues(address) {
-  address.state = address.state || 'TX';
-  address.zip = address.zip || '78109';
-  return address;
-}
+serverFlows["auth"].post_api_invite();
+
+serverFlows["auth"].get_sign_inpage_html();
+
+serverFlows["auth"].post_api_invite_accept();
+
+
+// ============================================================================
+// [FLOW: email] Email and notifications
+// ============================================================================
+// Implementation: server/flows/email.js
+serverFlows["email"].post_api_send_email();
+
+
+// ============================================================================
+// [FLOW: vendors] Vendors and assignments (continued)
+// ============================================================================
+serverFlows["vendors"].get_api_projects_projectId_vendors();
+
+serverFlows["vendors"].delete_api_projects_projectId_vendors_vendorId();
+
+
+// ============================================================================
+// [FLOW: projects] Projects, utilities and daily updates (continued)
+// ============================================================================
+serverFlows["projects"].get_api_projects_current();
+
+
+// ============================================================================
+// [FLOW: estimates] Estimates and line items (continued)
+// ============================================================================
+serverFlows["estimates"].get_api_estimates_projectId_line_items();
+
+serverFlows["estimates"].put_api_estimates_line_items_lineItemId();
+
+
+// ============================================================================
+// [FLOW: catalog] Products, selections and room packages
+// ============================================================================
+// Implementation: server/flows/catalog.js
+serverFlows["catalog"].delete_api_selection_boards();
+
+serverFlows["catalog"].get_api_products();
+
+serverFlows["catalog"].post_api_products();
+
+serverFlows["catalog"].post_api_selection_board();
+
+serverFlows["catalog"].get_api_selection_boards();
+
+serverFlows["catalog"].get_api_product_details();
+
+serverFlows["catalog"].delete_api_products_id();
+
+
+// ============================================================================
+// [FLOW: projects] Projects, utilities and daily updates (continued)
+// ============================================================================
+serverFlows["projects"].get_api_on_market_projects();
+
+serverFlows["projects"].get_api_upcoming_projects();
+
+serverFlows["projects"].get_api_completed_projects();
+
+serverFlows["projects"].get_api_daily_updates();
+
+serverFlows["projects"].post_api_daily_updates();
+
+serverFlows["projects"].get_api_notifications();
+
+
+// ============================================================================
+// [FLOW: quotes] Quotes and signatures
+// ============================================================================
+// Implementation: server/flows/quotes.js
+serverFlows["quotes"].post_api_quotes();
+
+serverFlows["quotes"].get_api_quotes();
+
+serverFlows["quotes"].get_api_quotes_id();
+
+serverFlows["quotes"].post_api_quotes_id_signature();
+
+serverFlows["quotes"].delete_api_quotes_id();
+
+serverFlows["quotes"].put_api_quotes_id();
 
 // Usage Example
 const address1 = "9150 Devils River Converse Texas, 78109";
@@ -6138,1504 +2311,171 @@ const address2 = "9150 Devils River, Converse, TX 78109";
 console.log(parseAddress(address1));
 console.log(parseAddress(address2));
 
+serverFlows["quotes"].post_api_quotes_id_convert_to_job();
 
-// Updated /convert-to-job endpoint to proceed with job creation even if address data is incomplete
-app.post("/api/quotes/:id/convert-to-job", async (req, res) => {
-  try {
-    // ✅ Get raw quote data with lean()
-    const quote = await Quote.findById(req.params.id).lean();
-    if (!quote) return res.status(404).json({ error: "Quote not found" });
-
-    const fullAddress = quote.to?.address || "";
-    const parsedAddress = parseAddress(fullAddress);
-
-    const projectName = `${parsedAddress.street.split(" ").slice(1).join(" ")} ${parsedAddress.street.split(" ")[0] || ""}`.trim() || "Unnamed Project";
-
-    // Proceed even with incomplete address data
-    const project = await Project.create({
-      name: projectName,
-      code: "1111",
-      type: "residential",
-      status: "in-progress",
-      address: {
-        addressLine1: parsedAddress.street,
-        addressLine2: '',
-        city: parsedAddress.city,
-        state: parsedAddress.state,
-        zip: parsedAddress.zip
-      },
-      client: {
-        name: quote.to?.name || "Client",
-        email: quote.to?.email || "",
-        phone: quote.to?.phone || "",
-      },
-      fromQuoteId: quote._id
-    });
-
-       // ✅ Helper to capitalize each word
-       function capitalizeWords(str) {
-        return str.replace(/\b\w/g, char => char.toUpperCase());
-      }
-  
-      // ✅ Group line items by extracted room name
-      const groupedByRoom = {};
-  
-      quote.lineItems.forEach(item => {
-        let category = "General"; // Default category if no room detected
-        let cleanedName = item.name.trim();
-  
-        if (item.name.includes("-")) {
-          const parts = item.name.split("-");
-          if (parts.length > 1) {
-            category = capitalizeWords(parts[1].trim().toLowerCase());
-            cleanedName = parts[0].trim(); // ✅ Remove room part from item name
-          }
-        }
-  
-        if (!groupedByRoom[category]) groupedByRoom[category] = [];
-  
-        groupedByRoom[category].push({
-          type: "item",
-          name: cleanedName, // ✅ Save cleaned name here
-          description: item.description || "",
-          costCode: item.costCode || "Uncategorized",
-          quantity: item.qty || 1,
-          unitPrice: item.rate || 0,
-          // ✅ Treat quote labor/material fields as RATES and convert to TOTALS for estimate (rate * qty)
-          laborCost: (typeof item.laborCost !== 'undefined' ? Number(item.laborCost) : 0) * (item.qty || 1),
-          materialCost: (typeof item.materialCost !== 'undefined' ? Number(item.materialCost) : 0) * (item.qty || 1),
-          total: (item.qty || 1) * (item.rate || 0),
-          status: "in-progress",
-          assignedTo: null,
-          photos: {},
-          startDate: null,
-          endDate: null
-        });
-      });
-  
-      // ✅ Format nicely to save to estimate
-      const formattedLineItems = Object.entries(groupedByRoom)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([category, items]) => ({
-          type: "category",
-          category, // Keep category as nicely formatted room name
-          status: "in-progress",
-          items
-        }));
-  
-
-
-    // ✅ Create Estimate
-    const estimate = await Estimate.create({
-      projectId: project._id,
-      invoiceNumber: `INV-${Date.now()}`,
-      title: `Estimate from Quote ${quote.quoteNumber || 'N/A'}`,
-      total: quote.totals?.total || 0,
-      tax: quote.totals?.tax || 0,
-      status: "draft",
-      lineItems: formattedLineItems,
-      createdFromQuote: quote._id
-    });
-
-    // ✅ Return success
-    res.status(200).json({
-      success: true,
-      message: "Quote converted to project and estimate",
-      projectId: project._id,
-      estimateId: estimate._id,
-      redirectUrl: `/details/projects/${project._id}`
-    });
-
-  } catch (err) {
-    console.error("Error converting quote:", err);
-    res.status(500).json({ error: "Failed to convert quote" });
-  }
-});
-
-
-// Update only the payments schedule for a quote
-app.put('/api/quotes/:id/payments', async (req, res) => {
-  try {
-    const { payments } = req.body;
-    if (!Array.isArray(payments)) {
-      return res.status(400).json({ message: "Payments must be an array." });
-    }
-    const updated = await Quote.findByIdAndUpdate(
-      req.params.id,
-      { payments },
-      { new: true }
-    );
-    if (!updated) return res.status(404).json({ message: "Quote not found" });
-    res.json({ success: true, payments: updated.payments });
-  } catch (err) {
-    console.error("Error updating payments:", err);
-    res.status(500).json({ message: "Failed to update payments" });
-  }
-});
-
-// Update only the payment terms percentages for a quote
-app.patch('/api/quotes/:id/payment-terms', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const percs = req.body?.percentages;
-    if (!Array.isArray(percs)) {
-      return res.status(400).json({ message: 'percentages array is required' });
-    }
-    const cleaned = percs
-      .map(n => Number(n))
-      .filter(n => Number.isFinite(n))
-      .map(n => Math.max(0, Math.min(100, n)));
-
-  // Retrieve existing to decide whether to regenerate payments and schedules
-  const existing = await Quote.findById(id).select('payments totals paymentTerms paymentSchedules').lean();
-    if (!existing) return res.status(404).json({ message: 'Quote not found' });
-    const anyPaidLegacy = Array.isArray(existing.payments) && existing.payments.some(p => p.status === 'Paid');
-    const anyPaidSchedules = Array.isArray(existing.paymentSchedules) && existing.paymentSchedules.some(s => Array.isArray(s.payments) && s.payments.some(p => p.status === 'Paid'));
-    const anyPaid = anyPaidLegacy || anyPaidSchedules;
-    const updateOps = { 'paymentTerms.percentages': cleaned };
-    if (!anyPaid) {
-      const totalForSchedule = Number(existing.totals?.total || 0);
-      const stageSuffixes = [
-        'at project start',
-        'at 50% completion',
-        'at 75% completion',
-        'at final completion'
-      ];
-      const regenerated = cleaned.slice(0, 4).map((pct, i) => ({
-        label: `${pct}% ${stageSuffixes[i] || 'milestone'}`,
-        amount: +(totalForSchedule * (pct / 100)).toFixed(2),
-        status: 'Pending',
-        date: ''
-      }));
-      updateOps['payments'] = regenerated;
-      updateOps['paymentSchedules'] = [{ name: 'Payment Schedule', description: 'Auto-generated from payment terms', payments: regenerated }];
-    }
-
-  const updated = await Quote.findByIdAndUpdate(id, { $set: updateOps }, { new: true });
-  if (!updated) return res.status(404).json({ message: 'Quote not found' });
-  res.json({ paymentTerms: updated.paymentTerms || { percentages: [] }, payments: updated.payments || [], paymentSchedules: updated.paymentSchedules || [] });
-  } catch (err) {
-    console.error('Error updating payment terms:', err);
-    res.status(500).json({ message: 'Failed to update payment terms' });
-  }
-});
-
-// Get all labor cost suggestions
-app.get('/api/labor-costs', async (req, res) => {
-  try {
-    const items = await LaborCost.find().sort({ createdAt: -1 });
-    res.json(items);
-  } catch (err) {
-    console.error('Error fetching labor costs:', err);
-    res.status(500).json({ error: 'Failed to fetch labor costs' });
-  }
-});
-
-// Create a new labor item
-// Small helper to normalize calcMode inputs coming from CSV/imports/UI
-function normalizeCalcMode(val) {
-  if (!val || typeof val !== 'string') return undefined;
-  const s = val.toString().trim().toLowerCase();
-  // Common synonyms
-  if (['each', 'ea', 'unit', 'count', 'per item'].includes(s)) return 'each';
-  if (['sqft', 'sf', 'sq ft', 'square foot', 'square feet'].includes(s)) return 'sqft';
-  if (['lnft', 'lf', 'ln ft', 'linear ft', 'linear foot', 'linear feet'].includes(s)) return 'lnft';
-  if (['hour', 'hr', 'hrs', 'hours'].includes(s)) return 'hour';
-  // Domain-specific fallbacks (treat certain descriptors as per-each by default)
-  if (['exhaust vent', 'vent', 'grille', 'register'].includes(s)) return 'each';
-  return undefined; // let schema default apply or validation catch truly invalid values
-}
-
-app.post('/api/labor-costs', async (req, res) => {
-  try {
-    const body = { ...req.body };
-    // Normalize calcMode if provided or salvage from description-like values
-    const normalized = normalizeCalcMode(body.calcMode || body.unit || body.name || body.description);
-    if (normalized) {
-      body.calcMode = normalized;
-    } else if (typeof body.calcMode !== 'undefined') {
-      // Remove invalid value so schema default can apply
-      delete body.calcMode;
-    }
-
-    const newItem = new LaborCost(body);
-    const saved = await newItem.save();
-    res.status(201).json(saved);
-  } catch (err) {
-    console.error('Error saving labor cost:', err);
-    if (err && err.name === 'ValidationError') {
-      return res.status(400).json({ error: 'Validation failed', details: err.errors || {} });
-    }
-    res.status(500).json({ error: 'Failed to save labor cost' });
-  }
-});
-
-// Update a labor item
-app.put('/api/labor-costs/:id', async (req, res) => {
-  try {
-    // Fetch existing doc so we can fall back to stored values when the request omits fields
-    const existing = await LaborCost.findById(req.params.id);
-    if (!existing) return res.status(404).json({ error: 'Labor item not found' });
-
-    const incoming = { ...(req.body || {}) };
-    // Normalize calcMode if present
-    if (typeof incoming.calcMode !== 'undefined') {
-      const normalized = normalizeCalcMode(incoming.calcMode);
-      if (normalized) incoming.calcMode = normalized;
-      else delete incoming.calcMode; // allow default
-    }
-    const laborRate = typeof incoming.laborRate !== 'undefined' ? Number(incoming.laborRate) : (existing.laborRate || 0);
-    const laborHoursRaw = typeof incoming.laborHours !== 'undefined' ? Number(incoming.laborHours) : (existing.laborHours || 0);
-    const materialRate = typeof incoming.materialRate !== 'undefined' ? Number(incoming.materialRate) : (existing.materialRate || 0);
-    const materialQtyRaw = typeof incoming.materialQty !== 'undefined' ? Number(incoming.materialQty) : (existing.materialQty || 0);
-    const markup = typeof incoming.markup !== 'undefined' ? Number(incoming.markup) : (existing.markup || 0);
-    const markupMode = typeof incoming.markupMode !== 'undefined' ? incoming.markupMode : (existing.markupMode || 'percent');
-    const baseRate = typeof incoming.baseRate !== 'undefined' ? Number(incoming.baseRate) : (existing.baseRate || 0);
-
-    const hasLabor = !!(laborRate && laborRate !== 0);
-    const hasMaterial = !!(materialRate && materialRate !== 0);
-    const laborHours = hasLabor ? (laborHoursRaw || 1) : laborHoursRaw || 0;
-    const materialQty = hasMaterial ? (materialQtyRaw || 1) : materialQtyRaw || 0;
-
-    let laborCost = 0;
-    let materialCost = 0;
-    let baseSubtotal = 0;
-    if (hasLabor || hasMaterial) {
-      laborCost = (laborRate || 0) * laborHours;
-      materialCost = (materialRate || 0) * materialQty;
-      baseSubtotal = laborCost + materialCost;
-    } else {
-      // Manual base rate path
-      baseSubtotal = baseRate || 0;
-      laborCost = baseSubtotal;
-      materialCost = 0;
-    }
-
-    const totalCost = (markupMode === 'amount')
-      ? baseSubtotal + (markup || 0)
-      : baseSubtotal * (1 + (markup || 0) / 100);
-
-    // Build update object merging incoming fields but ensuring derived fields are correct
-    const updateObj = Object.assign({}, incoming, {
-      laborRate,
-      laborHours,
-      materialRate,
-      materialQty,
-      markup,
-      markupMode,
-      baseRate,
-      laborCost,
-      materialCost,
-      totalCost
-    });
-
-    // Use findByIdAndUpdate with the merged update object and return the new doc
-    const updated = await LaborCost.findByIdAndUpdate(req.params.id, updateObj, { new: true });
-    res.json(updated);
-  } catch (err) {
-    console.error('Error updating labor cost:', err);
-    if (err && err.name === 'ValidationError') {
-      return res.status(400).json({ error: 'Validation failed', details: err.errors || {} });
-    }
-    res.status(500).json({ error: 'Failed to update labor cost' });
-  }
-});
-
-// Delete a labor item
-app.delete('/api/labor-costs/:id', async (req, res) => {
-  try {
-    const deleted = await LaborCost.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ error: 'Labor item not found' });
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Error deleting labor cost:', err);
-    res.status(500).json({ error: 'Failed to delete labor cost' });
-  }
-});
-
-
-app.get('/api/vendors/login-direct/:id', async (req, res) => {
-  try {
-    const vendor = await Vendor.findById(req.params.id);
-    if (!vendor) return res.status(404).json({ message: "Vendor not found" });
-
-    // Optional: set session/token here
-
-    res.json({ vendorId: vendor._id });
-  } catch (err) {
-    res.status(500).json({ message: "Internal error" });
-  }
-});
-
-
-
-// ✅ New route for items in Vendor.assignedItems
-app.get("/api/quality-review/items/:projectId", async (req, res) => {
-  try {
-    const { projectId } = req.params;
-    const { status } = req.query;
-
-    const vendors = await Vendor.find({ "assignedItems.projectId": projectId });
-    const estimates = await Estimate.find({ projectId });
-    const managers = await Manager.find({}, { _id: 1, name: 1 });
-
-    // 🔹 Create manager map for name lookup
-    const managerMap = {};
-    managers.forEach(mgr => {
-      managerMap[mgr._id.toString()] = mgr.name;
-    });
-
-    const qcItems = [];
-    const addedItemIds = new Set(); // 🛡️ Avoid duplicates using item._id.toString()
-
-    // 🔹 Vendor items
-    vendors.forEach(vendor => {
-      vendor.assignedItems.forEach(item => {
-        const itemId = item.itemId?.toString();
-        const qcStatus = item.qualityControl?.status || "pending";
-        const reviewedByName = item.qualityControl?.reviewedBy
-          ? managerMap[item.qualityControl.reviewedBy.toString()] || "Unknown"
-          : null;
-
-        if (
-          item.projectId.toString() === projectId &&
-          ["completed", "rework", "approved"].includes(item.status)
-        ) {
-          if (!status || qcStatus === status || status === "all") {
-            // 🔹 Lookup estimate title for vendor item
-            const matchingEstimate = estimates.find(est =>
-              est._id.toString() === item.estimateId?.toString()
-            );
-            const estimateTitle =
-              matchingEstimate?.title || matchingEstimate?.invoiceNumber || "Untitled Estimate";
-
-            const uniqueKey = itemId || item._id.toString();
-            if (!addedItemIds.has(uniqueKey)) {
-              qcItems.push({
-                ...item.toObject(),
-                vendorId: vendor._id,
-                vendorName: vendor.name || "Unknown Vendor",
-                estimateId: item.estimateId,
-                estimateTitle,
-                source: "vendor",
-                qualityControl: {
-                  ...item.qualityControl,
-                  reviewedByName
-                }
-              });
-              addedItemIds.add(uniqueKey);
-            }
-          }
-        }
-      });
-    });
-
-    // 🔹 Estimate items (in case some are not assigned to vendors)
-    estimates.forEach(estimate => {
-      const estimateTitle = estimate.title || estimate.invoiceNumber || "Untitled Estimate";
-
-      estimate.lineItems.forEach(section => {
-        section.items.forEach(item => {
-          const itemId = item._id.toString();
-          const qcStatus = item.qualityControl?.status || "pending";
-          const reviewedByName = item.qualityControl?.reviewedBy
-            ? managerMap[item.qualityControl.reviewedBy.toString()] || "Unknown"
-            : null;
-
-          if (["completed", "rework", "approved"].includes(item.status)) {
-            if (!status || qcStatus === status || status === "all") {
-              if (!addedItemIds.has(itemId)) {
-                qcItems.push({
-                  ...item.toObject(),
-                  estimateId: estimate._id,
-                  estimateTitle,
-                  vendorId: item.assignedTo || null,
-                  vendorName: "(from estimate)",
-                  source: "estimate",
-                  qualityControl: {
-                    ...item.qualityControl,
-                    reviewedByName
-                  }
-                });
-                addedItemIds.add(itemId);
-              }
-            }
-          }
-        });
-      });
-    });
-
-    res.json({ items: qcItems });
-  } catch (err) {
-    console.error("❌ Error fetching QC items:", err);
-    res.status(500).json({ error: "Failed to fetch items for review" });
-  }
-});
-
-
-
-
-
-
-
-
-// ✅ Unified PUT route for QC Approval or Rework (estimate or vendor)
-// ✅ PUT update QC status (estimate + vendor)
-// ✅ PUT update QC status on estimate AND vendor
-app.put("/api/items/:itemId/quality-review", async (req, res) => {
-  try {
-    const { itemId } = req.params;
-    let { status, notes, reviewedBy } = req.body;
-
-    // Normalize status to lowercase to prevent casing mismatch
-    status = String(status).trim().toLowerCase();
-
-    if (!["approved", "rework"].includes(status)) {
-      return res.status(400).json({ error: "Invalid status value." });
-    }
-
-    let source = null;
-    const reviewedAt = new Date();
-
-    // ✅ Try Estimate First
-    const estimate = await Estimate.findOne({ "lineItems.items._id": itemId });
-    if (estimate) {
-      for (const section of estimate.lineItems) {
-        const item = section.items.id(itemId);
-        if (item) {
-          // Update both status and qualityControl block
-          item.status = status;
-          item.qualityControl = {
-            status,
-            notes,
-            reviewedBy,
-            reviewedAt
-          };
-          await estimate.save();
-          return res.json({ success: true, source: "estimate" });
-        }
-      }
-    }
-
-    // ✅ Fallback to Vendor assignedItems
-    const vendor = await Vendor.findOne({ "assignedItems._id": itemId });
-    if (vendor) {
-      const item = vendor.assignedItems.id(itemId);
-      if (item) {
-        item.status = status;
-        item.qualityControl = {
-          status,
-          notes,
-          reviewedBy,
-          reviewedAt
-        };
-        await vendor.save();
-        return res.json({ success: true, source: "vendor" });
-      }
-    }
-
-    // ❌ Not found in either
-    res.status(404).json({ error: "Item not found in either estimate or vendor list." });
-
-  } catch (err) {
-    console.error("❌ Error updating QC status:", err);
-    res.status(500).json({ error: "Failed to update QC status" });
-  }
-});
-
-// GET all folders (no population to keep parentId as string)
-app.get("/api/folders", async (req, res) => {
-  try {
-    const [folders, leasesFolder] = await Promise.all([
-      FileSystem.find().lean(),
-      buildAllPropertyDocumentsFolder()
-    ]);
-    
-    // Normalize ObjectId to string for comparison in frontend
-    folders.forEach(f => {
-      if (f.parentId && f.parentId._id) {
-        f.parentId = f.parentId._id.toString();
-      } else if (f.parentId) {
-        f.parentId = f.parentId.toString();
-      }
-    });
-
-   res.json([leasesFolder, ...folders]);
-  } catch (err) {
-    console.error("❌ Failed to fetch folders:", err);
-    res.status(500).json({ message: "Error fetching folders." });
-  }
-});
-
-
-// CREATE a folder
-app.post("/api/folders", async (req, res) => {
-  const { name, parentId } = req.body;
-
-  const folder = new FileSystem({
-    name,
-    parentId: parentId || null, // ✅ Use parentId if provided
-    position: 0,
-    files: []
-  });
-
-  await folder.save();
-  res.json(folder);
-});
-
-
-
-// Reorder folders (static route must come before /:id)
-app.put("/api/folders/reorder", async (req, res) => {
-  const { order } = req.body; // [{_id, position}]
-  for (let item of order) {
-    await FileSystem.findByIdAndUpdate(item._id, { position: item.position });
-  }
-  res.json({ success: true });
-});
-
-// Rename folder
-app.put("/api/folders/:id", async (req, res) => {
-  const folder = await FileSystem.findByIdAndUpdate(
-    req.params.id,
-    { name: req.body.name },
-    { new: true }
-  );
-  res.json(folder);
-});
-
-
-// ADD file to folder
-app.post('/api/folders/:id/files', upload.single('file'), async (req, res) => {
-  const folder = await FileSystem.findById(req.params.id);
-  const fileData = {
-    name: req.file.originalname,
-    size: (req.file.size / 1024).toFixed(0) + ' KB',
-    type: req.file.mimetype,
-    modified: new Date().toLocaleString(),
-    url: `/uploads/${req.file.filename}` // accessible route
-  };
-  folder.files.push(fileData);
-  await folder.save();
-  res.json(fileData);
-});
-
-
-// RENAME a file in folder
-app.put("/api/folders/:folderId/files/:index", async (req, res) => {
-  const folder = await FileSystem.findById(req.params.folderId);
-  folder.files[req.params.index].name = req.body.name;
-  await folder.save();
-  res.json(folder);
-});
-
-// DELETE folder
-app.delete("/api/folders/:id", async (req, res) => {
-  await FileSystem.findByIdAndDelete(req.params.id);
-  res.json({ success: true });
-});
-
-// DELETE file from folder
-app.delete("/api/folders/:folderId/files/:index", async (req, res) => {
-  const { folderId, index } = req.params;
-  const folder = await FileSystem.findById(folderId);
-  if (!folder) return res.status(404).json({ error: "Folder not found" });
-
-  // Remove file by index directly
-  folder.files.splice(index, 1);
-  await FileSystem.updateOne(
-    { _id: folderId },
-    { $set: { files: folder.files } }
-  );
-
-  const updated = await FileSystem.findById(folderId);
-  res.json(updated);
-});
-
-// POST /api/folders/:folderId/delete-files
-app.post("/api/folders/:folderId/delete-files", async (req, res) => {
-  const { folderId } = req.params;
-  const { indexes } = req.body;
-
-  try {
-    const folder = await FileSystem.findById(folderId);
-    if (!folder) return res.status(404).json({ error: "Folder not found" });
-
-    // Remove files by index in descending order
-    indexes.sort((a, b) => b - a).forEach(i => folder.files.splice(i, 1));
-
-    await folder.save({ optimisticConcurrency: false });
-
-    res.json(folder);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to delete selected files" });
-  }
-});
-
-
-
-// POST /api/expenses
-app.post("/api/expenses", async (req, res) => {
-  try {
-    const { projectId, item, date, vendor, category, description, amount } = req.body;
-
-    if (!projectId || !item?.itemId || !item?.name || !date || !vendor || !amount) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    const expense = await Expense.create({
-      projectId,
-      item,
-      date,
-      vendor,
-      category,
-      description,
-      amount
-    });
-
-    res.status(201).json({ success: true, expense });
-  } catch (err) {
-    console.error("Error creating expense:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// GET /api/expenses?projectId=123
-app.get("/api/expenses", async (req, res) => {
-  try {
-    const { projectId } = req.query;
-    if (!projectId) return res.status(400).json({ message: "Missing projectId" });
-
-    const expenses = await Expense.find({ projectId }).sort({ date: -1 });
-    res.json({ expenses });
-  } catch (err) {
-    console.error("Error fetching expenses:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-app.get("/api/expenses/:id", async (req, res) => {
-  try {
-    const expense = await Expense.findById(req.params.id);
-    if (!expense) return res.status(404).json({ message: "Expense not found" });
-
-    res.json({ success: true, expense });
-  } catch (err) {
-    console.error("Error fetching expense:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-app.put("/api/expenses/:id", async (req, res) => {
-  try {
-    const { projectId, item, date, vendor, category, description, amount } = req.body;
-
-    if (!projectId || !item?.itemId || !item?.name || !date || !vendor || !amount) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    const updated = await Expense.findByIdAndUpdate(
-      req.params.id,
-      { projectId, item, date, vendor, category, description, amount },
-      { new: true }
-    );
-
-    if (!updated) return res.status(404).json({ message: "Expense not found" });
-
-    res.json({ success: true, expense: updated });
-  } catch (err) {
-    console.error("Error updating expense:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-app.delete("/api/expenses/:id", async (req, res) => {
-  try {
-    const deleted = await Expense.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ message: "Expense not found" });
-
-    res.json({ success: true, message: "Expense deleted" });
-  } catch (err) {
-    console.error("Error deleting expense:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// ✅ Download File Route
-app.get('/api/projects/:projectId/files/:fileId/download', async (req, res) => {
-  const { projectId, fileId } = req.params;
-
-  try {
-    const project = await Project.findById(projectId);
-
-    if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
-    }
-
-    // Locate the file object
-    const file = project.files.find(f => f._id.toString() === fileId);
-
-    if (!file) {
-      return res.status(404).json({ error: 'File not found in project' });
-    }
-
-    // Use the path directly as it is already the absolute path
-    const filePath = file.path;
-
-    console.log(`✅ Resolved file path for download: ${filePath}`);
-
-    // Verify the file exists
-    if (!fs.existsSync(filePath)) {
-      console.warn(`⚠️ File not found at path: ${filePath}`);
-      return res.status(404).json({ error: 'File not found on server' });
-    }
-
-    console.log(`📦 Downloading file: ${filePath}`);
-    return res.download(filePath, file.filename);
-
-  } catch (err) {
-    console.error('Download Error:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-
-// ✅ Get ALL maintenance requests for ALL properties
-app.get('/api/properties/maintenance', async (req, res) => {
-  try {
-    const { status } = req.query;
-    const filter = {};
-    if (status) {
-      const statuses = String(status)
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean);
-      if (statuses.length) {
-        filter.status = { $in: statuses };
-      }
-    }
-
-    const requests = await MaintenanceRequest.find(filter)
-      .populate('unitId')
-      .populate('projectId') // include project name + address so frontend can show property address
-      .sort({ createdAt: -1 });
-    res.json(requests);
-  } catch (error) {
-    console.error('Error fetching all maintenance requests:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.get('/api/properties/maintenance-schedules', async (req, res) => {
-  try {
-    const { status } = req.query;
-    const filter = {};
-
-    if (status) {
-      const statuses = String(status)
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean);
-      if (statuses.length) {
-        filter.status = { $in: statuses };
-      }
-    } else {
-      filter.status = { $ne: 'completed' };
-    }
-
-    const schedules = await MaintenanceSchedule.find(filter)
-      .populate('assignedVendor', 'name email')
-      .populate('unitId')
-      .populate('projectId')
-      .sort({ nextScheduledDate: 1, createdAt: -1 });
-
-    res.json(schedules);
-  } catch (error) {
-    console.error('Error fetching all maintenance schedules:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Property Management API Routes
-
-
-// Add new property
-app.post('/api/properties', async (req, res) => {
-  try {
-    const property = new Property(req.body);
-    await property.save();
-    res.status(201).json(property);
-  } catch (error) {
-    console.error('Error creating property:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Get property details
-app.get('/api/properties/:id', async (req, res) => {
-  try {
-    const property = await Property.findById(req.params.id)
-      .populate('units');
-    if (!property) {
-      return res.status(404).json({ message: 'Property not found' });
-    }
-    res.json(property);
-  } catch (error) {
-    console.error('Error fetching property:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Update the property routes
-app.get('/api/properties/multifamily', async (req, res) => {
-  try {
-    console.log('Fetching multifamily properties...');
-    
-    const properties = await Property.find({ type: 'Multifamily' })
-      .populate({
-        path: 'units',
-        populate: [
-          { path: 'tenant' },
-          { path: 'lease' }
-        ]
-      });
-
-    console.log(`Found ${properties.length} multifamily properties`);
-    res.json(properties);
-  } catch (error) {
-    console.error('Error fetching properties:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Update these routes to handle both Project and Property models
-
-// Get property/project units
-// Update the routes to handle units directly
-app.get('/api/properties/:id/units', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Find the project
-    const project = await Project.findById(id);
-    if (!project) {
-      return res.status(404).json({ message: 'Property not found' });
-    }
-
-    // Find all units for this project
-    const units = await Unit.find({ projectId: id });
-
-    res.json({ 
-      property: {
-        _id: project._id,
-        name: project.name,
-        type: "Multifamily",
-        address: {
-          line1: project.address?.addressLine1 || '',
-          line2: project.address?.addressLine2 || '',
-          city: project.address?.city || '',
-          state: project.address?.state || '',
-          zip: project.address?.zip || ''
-        },
-        units: units
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching property units:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.post('/api/properties/:id/units', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { number, floor, bedrooms, bathrooms, sqft, status, rent } = req.body;
-
-        // Validate required fields
-        if (!number || !bedrooms || !bathrooms) {
-            return res.status(400).json({ 
-                message: 'Missing required fields: number, bedrooms, and bathrooms are required' 
-            });
-        }
-
-        // Validate project exists
-        const project = await Project.findById(id);
-        if (!project) {
-            return res.status(404).json({ message: 'Property not found' });
-        }
-
-        // Create new unit with validated data
-        const unit = new Unit({
-            projectId: project._id,
-            number: number.trim(),
-            floor: parseInt(floor) || 1,
-            bedrooms: parseInt(bedrooms),
-            bathrooms: parseInt(bathrooms),
-            sqft: parseInt(sqft) || 0,
-            rent: typeof rent === 'number' ? rent : parseFloat(rent) || 0,
-            status: status || 'vacant'
-        });
-
-        await unit.save();
-
-        res.status(201).json({
-            message: 'Unit added successfully',
-            unit: unit
-        });
-    } catch (error) {
-        console.error('Error adding unit:', error);
-        res.status(500).json({ 
-            message: 'Error adding unit',
-            error: error.message 
-        });
-    }
-});
-
-// Add route for updating units
-app.put('/api/properties/:propertyId/units/:unitId', async (req, res) => {
-  try {
-    const { propertyId, unitId } = req.params;
-    const updateData = req.body;
-
-    const unit = await Unit.findOneAndUpdate(
-      { _id: unitId, projectId: propertyId },
-      updateData,
-      { new: true }
-    );
-
-    if (!unit) {
-      return res.status(404).json({ message: 'Unit not found' });
-    }
-
-    res.json({
-      message: 'Unit updated successfully',
-      unit: unit
-    });
-  } catch (error) {
-    console.error('Error updating unit:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Add DELETE endpoint for units
-app.delete('/api/properties/:propertyId/units/:unitId', async (req, res) => {
-    try {
-        const { propertyId, unitId } = req.params;
-
-        // Find and delete the unit
-        const deletedUnit = await Unit.findOneAndDelete({ 
-            _id: unitId, 
-            projectId: propertyId 
-        });
-
-        if (!deletedUnit) {
-            return res.status(404).json({ message: 'Unit not found' });
-        }
-
-        res.json({ message: 'Unit deleted successfully' });
-    } catch (error) {
-        console.error('Error deleting unit:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
-
-// Public availability endpoint for marketing site (Blue Rain)
-// Returns multifamily and single-family projects with their units and backend statuses/rents
-app.get('/api/public/availability', async (req, res) => {
-  try {
-    // Include both multifamily and single-family rental projects
-    const projects = await Project.find({
-      type: { $regex: /family/i }
-    }).lean();
-
-    if (!projects.length) {
-      return res.json({ projects: [] });
-    }
-
-    const projectIds = projects.map(p => p._id);
-    const units = await Unit.find({ projectId: { $in: projectIds } }).lean();
-
-    const unitsByProject = {};
-    for (const unit of units) {
-      const pid = String(unit.projectId);
-      if (!unitsByProject[pid]) unitsByProject[pid] = [];
-      unitsByProject[pid].push({
-        _id: unit._id,
-        number: unit.number,
-        floor: unit.floor,
-        bedrooms: unit.bedrooms,
-        bathrooms: unit.bathrooms,
-        sqft: unit.sqft,
-        rent: unit.rent,
-        status: unit.status
-      });
-    }
-
-    const payload = projects.map(p => ({
-      id: p._id,
-      name: p.name,
-      type: p.type,
-      address: p.address,
-      units: unitsByProject[String(p._id)] || []
-    }));
-
-    res.json({ projects: payload });
-  } catch (error) {
-    console.error('Error fetching public availability:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Add new property
-app.post('/api/properties', async (req, res) => {
-  try {
-    const property = new Property(req.body);
-    await property.save();
-    res.status(201).json(property);
-  } catch (error) {
-    console.error('Error creating property:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-
-
-// Get property details
-app.get('/api/properties/:id', async (req, res) => {
-  try {
-    const property = await Property.findById(req.params.id)
-      .populate('units');
-    if (!property) {
-      return res.status(404).json({ message: 'Property not found' });
-    }
-    res.json(property);
-  } catch (error) {
-    console.error('Error fetching property:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Update the property routes
-app.get('/api/properties/multifamily', async (req, res) => {
-  try {
-    console.log('Fetching multifamily properties...');
-    
-    const properties = await Property.find({ type: 'Multifamily' })
-      .populate({
-        path: 'units',
-        populate: [
-          { path: 'tenant' },
-          { path: 'lease' }
-        ]
-      });
-
-    console.log(`Found ${properties.length} multifamily properties`);
-    res.json(properties);
-  } catch (error) {
-    console.error('Error fetching properties:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Update these routes to handle both Project and Property models
-
-// Get property/project units
-// Update the routes to handle units directly
-app.get('/api/properties/:id/units', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Find the project
-    const project = await Project.findById(id);
-    if (!project) {
-      return res.status(404).json({ message: 'Property not found' });
-    }
-
-    // Find all units for this project
-    const units = await Unit.find({ projectId: id });
-
-    res.json({ 
-      property: {
-        _id: project._id,
-        name: project.name,
-        type: "Multifamily",
-        address: {
-          line1: project.address?.addressLine1 || '',
-          line2: project.address?.addressLine2 || '',
-          city: project.address?.city || '',
-          state: project.address?.state || '',
-          zip: project.address?.zip || ''
-        },
-        units: units
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching property units:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.post('/api/properties/:id/units', async (req, res) => {
-    try {
-        const { id } = req.params;
-    const { number, floor, bedrooms, bathrooms, sqft, status, rent } = req.body;
-
-        // Validate required fields
-        if (!number || !bedrooms || !bathrooms) {
-            return res.status(400).json({ 
-                message: 'Missing required fields: number, bedrooms, and bathrooms are required' 
-            });
-        }
-
-        // Validate project exists
-        const project = await Project.findById(id);
-        if (!project) {
-            return res.status(404).json({ message: 'Property not found' });
-        }
-
-        // Create new unit with validated data
-        const unit = new Unit({
-            projectId: project._id,
-            number: number.trim(),
-            floor: parseInt(floor) || 1,
-            bedrooms: parseInt(bedrooms),
-            bathrooms: parseInt(bathrooms),
-            sqft: parseInt(sqft) || 0,
-          rent: typeof rent === 'number' ? rent : parseFloat(rent) || 0,
-          status: status || 'vacant'
-        });
-
-        await unit.save();
-
-        res.status(201).json({
-            message: 'Unit added successfully',
-            unit: unit
-        });
-    } catch (error) {
-        console.error('Error adding unit:', error);
-        res.status(500).json({ 
-            message: 'Error adding unit',
-            error: error.message 
-        });
-    }
-});
-
-// Add route for updating units
-app.put('/api/properties/:propertyId/units/:unitId', async (req, res) => {
-  try {
-    const { propertyId, unitId } = req.params;
-    const updateData = req.body;
-
-    const unit = await Unit.findOneAndUpdate(
-      { _id: unitId, projectId: propertyId },
-      updateData,
-      { new: true }
-    );
-
-    if (!unit) {
-      return res.status(404).json({ message: 'Unit not found' });
-    }
-
-    res.json({
-      message: 'Unit updated successfully',
-      unit: unit
-    });
-  } catch (error) {
-    console.error('Error updating unit:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Add DELETE endpoint for units
-app.delete('/api/properties/:propertyId/units/:unitId', async (req, res) => {
-    try {
-        const { propertyId, unitId } = req.params;
-
-        // Find and delete the unit
-        const deletedUnit = await Unit.findOneAndDelete({ 
-            _id: unitId, 
-            projectId: propertyId 
-        });
-
-        if (!deletedUnit) {
-            return res.status(404).json({ message: 'Unit not found' });
-        }
-
-        res.json({ message: 'Unit deleted successfully' });
-    } catch (error) {
-        console.error('Error deleting unit:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
-// Public availability endpoint for marketing site (Blue Rain)
-// Returns multifamily and single-family projects with their units and backend statuses/rents
-app.get('/api/public/availability', async (req, res) => {
-  try {
-    // Include both multifamily and single-family rental projects
-    const projects = await Project.find({
-      type: { $regex: /family/i }
-    }).lean();
-
-    if (!projects.length) {
-      return res.json({ projects: [] });
-    }
-
-    const projectIds = projects.map(p => p._id);
-    const units = await Unit.find({ projectId: { $in: projectIds } }).lean();
-
-    const unitsByProject = {};
-    for (const unit of units) {
-      const pid = String(unit.projectId);
-      if (!unitsByProject[pid]) unitsByProject[pid] = [];
-      unitsByProject[pid].push({
-        _id: unit._id,
-        number: unit.number,
-        floor: unit.floor,
-        bedrooms: unit.bedrooms,
-        bathrooms: unit.bathrooms,
-        sqft: unit.sqft,
-        rent: unit.rent,
-        status: unit.status
-      });
-    }
-
-    const payload = projects.map(p => ({
-      id: p._id,
-      name: p.name,
-      type: p.type,
-      address: p.address,
-      units: unitsByProject[String(p._id)] || []
-    }));
-
-    res.json({ projects: payload });
-  } catch (error) {
-    console.error('Error fetching public availability:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-
-// Tenant Routes
-app.get('/api/properties/:propertyId/tenants', async (req, res) => {
-  try {
-    const tenants = await Tenant.find({ projectId: req.params.propertyId })
-      .populate('unitId');
-    res.json(tenants);
-  } catch (error) {
-    console.error('Error fetching tenants:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.post('/api/properties/:propertyId/tenants', async (req, res) => {
-  try {
-    // Ensure leaseHolders is always an array of objects
-    const leaseHolders = Array.isArray(req.body.leaseHolders)
-      ? req.body.leaseHolders.filter(h => h && h.name)
-      : [];
-
-    const tenant = new Tenant({
-      projectId: req.params.propertyId,
-      ...req.body,
-      leaseHolders // override with validated array
-    });
-    await tenant.save();
-
-    // Update unit's tenant reference if unitId is provided
-    if (req.body.unitId) {
-      await Unit.findByIdAndUpdate(req.body.unitId, {
-        status: 'occupied',
-        tenant: tenant._id
-      });
-    }
-
-    res.status(201).json(tenant);
-  } catch (error) {
-    console.error('Error creating tenant:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.put('/api/properties/:propertyId/tenants/:tenantId', async (req, res) => {
-  try {
-    // Ensure leaseHolders is always an array of objects
-    const leaseHolders = Array.isArray(req.body.leaseHolders)
-      ? req.body.leaseHolders.filter(h => h && h.name)
-      : [];
-
-    const tenant = await Tenant.findByIdAndUpdate(
-      req.params.tenantId,
-      { ...req.body, leaseHolders }, // override with validated array
-      { new: true }
-    );
-    if (!tenant) {
-      return res.status(404).json({ message: 'Tenant not found' });
-    }
-    res.json(tenant);
-  } catch (error) {
-    console.error('Error updating tenant:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Add this route with your other tenant routes
-app.delete('/api/properties/:propertyId/tenants/:tenantId', async (req, res) => {
-    try {
-        const { propertyId, tenantId } = req.params;
-
-        // Find tenant to get unitId before deletion
-        const tenant = await Tenant.findById(tenantId);
-        if (!tenant) {
-            return res.status(404).json({ message: 'Tenant not found' });
-        }
-
-        // Store unitId for updating unit status
-        const unitId = tenant.unitId;
-
-        // Delete the tenant
-        await Tenant.findByIdAndDelete(tenantId);
-
-        // If tenant was assigned to a unit, update unit status to vacant
-        if (unitId) {
-            await Unit.findByIdAndUpdate(unitId, {
-                status: 'vacant',
-                tenant: null // Remove tenant reference
-            });
-        }
-
-        res.json({ message: 'Tenant deleted successfully' });
-    } catch (error) {
-        console.error('Error deleting tenant:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
-// Tenant Notes Routes (portfolio-level, not scoped by property)
-app.post('/api/tenants/:id/notes', async (req, res) => {
-  try {
-    const { id } = req.params;
-    let { text } = req.body || {};
-    text = (text || '').trim();
-    if (!text) {
-      return res.status(400).json({ message: 'Note text is required' });
-    }
-
-    const updated = await Tenant.findByIdAndUpdate(
-      id,
-      { $push: { notesHistory: { text, createdAt: new Date() } } },
-      { new: true }
-    ).select('notesHistory').lean();
-
-    if (!updated) {
-      return res.status(404).json({ message: 'Tenant not found' });
-    }
-
-    return res.json({ notes: updated.notesHistory || [] });
-  } catch (err) {
-    console.error('Append tenant note error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-app.delete('/api/tenants/:id/notes/:noteId', async (req, res) => {
-  try {
-    const { id, noteId } = req.params;
-    const updated = await Tenant.findByIdAndUpdate(
-      id,
-      { $pull: { notesHistory: { _id: noteId } } },
-      { new: true }
-    ).select('notesHistory').lean();
-
-    if (!updated) {
-      return res.status(404).json({ message: 'Tenant not found' });
-    }
-
-    return res.json({ notes: updated.notesHistory || [] });
-  } catch (err) {
-    console.error('Delete tenant note error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// PUT: update move-in readiness checklist for a tenant
-app.put('/api/tenants/:id/move-in-checklist', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { completedIds, notes } = req.body || {};
-
-    const update = {};
-    if (Array.isArray(completedIds)) {
-      update.moveInChecklistCompleted = completedIds.filter(v => typeof v === 'string' && v.trim().length > 0);
-    }
-    if (notes && typeof notes === 'object') {
-      const cleanNotes = {};
-      for (const [key, val] of Object.entries(notes)) {
-        if (typeof val === 'string') {
-          const trimmed = val.trim();
-          if (trimmed) cleanNotes[key] = trimmed;
-        }
-      }
-      update.moveInChecklistNotes = cleanNotes;
-    }
-
-    const updated = await Tenant.findByIdAndUpdate(
-      id,
-      { $set: update },
-      { new: true }
-    ).select('moveInChecklistCompleted moveInChecklistNotes');
-
-    if (!updated) {
-      return res.status(404).json({ message: 'Tenant not found' });
-    }
-
-    return res.json({
-      message: 'Move-in checklist updated',
-      completedIds: updated.moveInChecklistCompleted || [],
-      notes: updated.moveInChecklistNotes || {}
-    });
-  } catch (err) {
-    console.error('Update tenant move-in checklist error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// Maintenance Request Routes
-app.get('/api/properties/:propertyId/maintenance', async (req, res) => {
-  try {
-    const requests = await MaintenanceRequest.find({ projectId: req.params.propertyId })
-      .populate('unitId')
-      .populate('assignedVendor', 'name email trade specialty')
-      .sort({ createdAt: -1 });
-    res.json(requests);
-  } catch (error) {
-    console.error('Error fetching maintenance requests:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+serverFlows["quotes"].put_api_quotes_id_payments();
+
+serverFlows["quotes"].patch_api_quotes_id_payment_terms();
+
+
+// ============================================================================
+// [FLOW: labor-costs] Labor costs
+// ============================================================================
+// Implementation: server/flows/labor-costs.js
+serverFlows["labor-costs"].get_api_labor_costs();
+
+serverFlows["labor-costs"].post_api_labor_costs();
+
+serverFlows["labor-costs"].put_api_labor_costs_id();
+
+serverFlows["labor-costs"].delete_api_labor_costs_id();
+
+
+// ============================================================================
+// [FLOW: tasks] Tasks, to-dos and comments (continued)
+// ============================================================================
+serverFlows["tasks"].get_api_todos();
+
+serverFlows["tasks"].post_api_todos();
+
+serverFlows["tasks"].put_api_todos_id();
+
+serverFlows["tasks"].delete_api_todos_id();
+
+
+// ============================================================================
+// [FLOW: vendors] Vendors and assignments (continued)
+// ============================================================================
+serverFlows["vendors"].get_api_vendors_login_direct_id();
+
+
+// ============================================================================
+// [FLOW: quality-control] Quality control and rework
+// ============================================================================
+// Implementation: server/flows/quality-control.js
+serverFlows["quality-control"].get_api_quality_review_items_projectId();
+
+serverFlows["quality-control"].put_api_items_itemId_quality_review();
+
+
+// ============================================================================
+// [FLOW: documents] Documents, folders and files (continued)
+// ============================================================================
+serverFlows["documents"].get_api_folders();
+
+serverFlows["documents"].post_api_folders();
+
+serverFlows["documents"].put_api_folders_reorder();
+
+serverFlows["documents"].put_api_folders_id();
+
+serverFlows["documents"].post_api_folders_id_files();
+
+serverFlows["documents"].put_api_folders_folderId_files_index();
+
+serverFlows["documents"].delete_api_folders_id();
+
+serverFlows["documents"].delete_api_folders_folderId_files_index();
+
+serverFlows["documents"].post_api_folders_folderId_delete_files();
+
+serverFlows["documents"].get_api_projects_projectId_files_fileId_download();
+
+
+// ============================================================================
+// [FLOW: maintenance] Maintenance requests
+// ============================================================================
+// Implementation: server/flows/maintenance.js
+serverFlows["maintenance"].get_api_properties_maintenance();
+
+
+// ============================================================================
+// [FLOW: maintenance-schedules] Recurring maintenance and reminders
+// ============================================================================
+// Implementation: server/flows/maintenance-schedules.js
+serverFlows["maintenance-schedules"].get_api_properties_maintenance_schedules();
+
+
+// ============================================================================
+// [FLOW: properties] Property profiles and overview
+// ============================================================================
+// Implementation: server/flows/properties.js
+serverFlows["properties"].post_api_properties();
+
+serverFlows["properties"].get_api_properties_id();
+
+serverFlows["properties"].get_api_properties_multifamily();
+
+
+// ============================================================================
+// [FLOW: units] Units and availability
+// ============================================================================
+// Implementation: server/flows/units.js
+serverFlows["units"].get_api_properties_id_units();
+
+
+// ============================================================================
+// [FLOW: properties] Property profiles and overview (continued)
+// ============================================================================
+serverFlows["properties"].put_api_properties_id_profile();
+
+serverFlows["properties"].get_api_properties_id_overview();
+
+
+// ============================================================================
+// [FLOW: units] Units and availability (continued)
+// ============================================================================
+serverFlows["units"].post_api_properties_id_units();
+
+serverFlows["units"].put_api_properties_propertyId_units_unitId();
+
+serverFlows["units"].delete_api_properties_propertyId_units_unitId();
+
+serverFlows["units"].get_api_public_availability();
+
+
+// ============================================================================
+// [FLOW: tenants] Tenant records and lease notes
+// ============================================================================
+// Implementation: server/flows/tenants.js
+serverFlows["tenants"].get_api_properties_propertyId_tenants();
+
+serverFlows["tenants"].post_api_properties_propertyId_tenants();
+
+serverFlows["tenants"].put_api_properties_propertyId_tenants_tenantId();
+
+serverFlows["tenants"].delete_api_properties_propertyId_tenants_tenantId();
+
+serverFlows["tenants"].post_api_tenants_id_notes();
+
+serverFlows["tenants"].delete_api_tenants_id_notes_noteId();
+
+serverFlows["tenants"].put_api_tenants_id_move_in_checklist();
+
+
+// ============================================================================
+// [FLOW: maintenance] Maintenance requests (continued)
+// ============================================================================
+serverFlows["maintenance"].get_api_properties_propertyId_maintenance();
 
 // Storage for maintenance photos
-
-// Storage for maintenance photos (Persistent Disk)
 const maintenancePhotoStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join('/mnt/data/uploads', 'maintenance');
+    const dir = path.join(uploadDir, 'maintenance');
     fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
-  filename: (req, file, cb) => {
+  filename: (req, file, cb) => {  
     const unique = Date.now() + '-' + Math.round(Math.random()*1e9) + path.extname(file.originalname);
     cb(null, unique);
   }
 });
 const maintenancePhotoUpload = multer({ storage: maintenancePhotoStorage });
 
-// Temp storage for pre-save uploads (Persistent Disk)
+// Temp storage for pre-save uploads
 const maintenanceTempStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join('/mnt/data/uploads', 'maintenance', 'temp');
+    const dir = path.join(uploadDir, 'maintenance', 'temp');
     fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
@@ -7646,2831 +2486,205 @@ const maintenanceTempStorage = multer.diskStorage({
 });
 const maintenanceTempUpload = multer({ storage: maintenanceTempStorage });
 
-// Create with optional photos (multipart or JSON)
-app.post('/api/properties/:propertyId/maintenance', maintenancePhotoUpload.array('photos', 10), async (req, res) => {
-  try {
-    let photos = (req.files || []).map(f => `/uploads/maintenance/${f.filename}`);
-    // Accept temp photo paths and move them to permanent
-    if (req.body.tempPhotosPaths) {
-      let tempPaths = [];
-      try {
-        tempPaths = JSON.parse(req.body.tempPhotosPaths);
-      } catch {
-        if (typeof req.body.tempPhotosPaths === 'string') {
-          tempPaths = req.body.tempPhotosPaths.split(',').map(s => s.trim()).filter(Boolean);
-        }
-      }
-      for (const tempUrl of tempPaths) {
-        // Remove leading slashes and "uploads/" prefix
-        const rel = tempUrl.replace(/^\/+/, '').replace(/^uploads\//, '');
-        const abs = path.join('/mnt/data/uploads', rel);
-        const permanentDir = path.join('/mnt/data/uploads', 'maintenance');
-        try {
-          if (fs.existsSync(abs)) {
-            const filename = path.basename(abs).replace(/^temp-/, '');
-            const dest = path.join(permanentDir, filename);
-            fs.renameSync(abs, dest);
-            photos.push(`/uploads/maintenance/${path.basename(dest)}`);
-          }
-        } catch {}
-      }
-    }
-    const assignedVendorId = typeof req.body.assignedVendor === 'string' && req.body.assignedVendor.trim()
-      ? req.body.assignedVendor.trim()
-      : null;
-    if (assignedVendorId && !mongoose.Types.ObjectId.isValid(assignedVendorId)) {
-      return res.status(400).json({ message: 'Invalid vendor assignment' });
-    }
+serverFlows["maintenance"].post_api_properties_propertyId_maintenance();
 
-    const scheduledFor = parseMaintenanceDate(req.body.scheduledFor);
-    if (typeof scheduledFor === 'undefined') {
-      return res.status(400).json({ message: 'Invalid scheduled date' });
-    }
+serverFlows["maintenance"].post_api_properties_propertyId_maintenance_temp_photos();
 
-    const cost = parseMaintenanceCost(req.body.cost);
-    if (typeof cost === 'undefined') {
-      return res.status(400).json({ message: 'Invalid maintenance cost' });
-    }
+serverFlows["maintenance"].patch_api_properties_propertyId_maintenance_requestId();
 
-    let assignedVendor = null;
-    let assignedTo = '';
-    if (assignedVendorId) {
-      assignedVendor = await Vendor.findById(assignedVendorId).select('name email');
-      if (!assignedVendor) {
-        return res.status(404).json({ message: 'Assigned vendor not found' });
-      }
-      assignedTo = assignedVendor.name || assignedVendor.email || '';
-    }
+serverFlows["maintenance"].put_api_properties_propertyId_maintenance_requestId();
 
-    const workflowStage = normalizeMaintenanceWorkflowStage(
-      req.body.workflowStage,
-      req.body.status || 'pending',
-      Boolean(assignedVendorId),
-      Boolean(scheduledFor),
-      'submitted'
-    );
+serverFlows["maintenance"].delete_api_properties_propertyId_maintenance_requestId_photos();
 
-    const request = new MaintenanceRequest({
-      projectId: req.params.propertyId,
-      title: req.body.title,
-      description: req.body.description,
-      priority: req.body.priority,
-      unitId: req.body.unitId || null,
-      status: deriveMaintenanceStatusFromStage(workflowStage, req.body.status || 'pending'),
-      workflowStage,
-      assignedTo,
-      assignedVendor: assignedVendorId,
-      cost,
-      scheduledFor,
-      accessNotes: String(req.body.accessNotes || '').trim(),
-      photos
-    });
-    appendMaintenanceSystemUpdate(request, `Request submitted`);
-    if (assignedTo) {
-      appendMaintenanceSystemUpdate(request, `Assigned to ${assignedTo}.`);
-    }
-    if (scheduledFor) {
-      appendMaintenanceSystemUpdate(request, `Scheduled for ${formatMaintenanceTimelineDate(scheduledFor)}.`);
-    }
-    await request.save();
-    await syncMaintenanceRequestToEstimate(request);
-    res.status(201).json(request);
-  } catch (error) {
-    console.error('Error creating maintenance request:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+serverFlows["maintenance"].delete_api_properties_propertyId_maintenance_requestId();
 
-// Upload temp photos before creating a request
-app.post('/api/properties/:propertyId/maintenance/temp-photos', maintenanceTempUpload.array('photos', 10), async (req, res) => {
-  try {
-    // Save temp photos to /mnt/data/uploads/maintenance/temp and return correct URLs
-    const photos = (req.files || []).map(f => `/uploads/maintenance/temp/${f.filename}`);
-    res.status(201).json({ photos });
-  } catch (error) {
-    console.error('Error uploading temp maintenance photos:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+serverFlows["maintenance"].post_api_properties_propertyId_maintenance_requestId_messages();
 
-// Legacy status-only patch retained for quick status updates
-app.patch('/api/properties/:propertyId/maintenance/:requestId', async (req, res) => {
-  try {
-    const request = await MaintenanceRequest.findById(req.params.requestId);
-    if (!request) return res.status(404).json({ message: 'Maintenance request not found' });
 
-    const nextWorkflowStage = normalizeMaintenanceWorkflowStage(
-      req.body.workflowStage,
-      req.body.status || request.status,
-      Boolean(request.assignedVendor),
-      Boolean(request.scheduledFor),
-      request.workflowStage || 'submitted'
-    );
-    const nextStatus = deriveMaintenanceStatusFromStage(nextWorkflowStage, req.body.status || request.status);
+// ============================================================================
+// [FLOW: announcements] Property announcements
+// ============================================================================
+// Implementation: server/flows/announcements.js
+serverFlows["announcements"].get_api_properties_propertyId_announcements();
 
-    if (request.status !== nextStatus || request.workflowStage !== nextWorkflowStage) {
-      request.status = nextStatus;
-      request.workflowStage = nextWorkflowStage;
-      appendMaintenanceSystemUpdate(request, `Workflow moved to ${nextWorkflowStage.replace(/-/g, ' ')}.`);
-    }
-    if (request.status === 'completed' && !request.completedAt) request.completedAt = new Date();
-    if (request.status !== 'completed') request.completedAt = null;
-    await request.save();
-    await syncMaintenanceRequestToEstimate(request);
-    res.json(request);
-  } catch (error) {
-    console.error('Error updating maintenance request status:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+serverFlows["announcements"].post_api_properties_propertyId_announcements();
 
-// Full edit (all fields + append/replace photos)
-app.put('/api/properties/:propertyId/maintenance/:requestId', maintenancePhotoUpload.array('photos', 10), async (req, res) => {
-  try {
-    const request = await MaintenanceRequest.findById(req.params.requestId);
-    if (!request) return res.status(404).json({ message: 'Maintenance request not found' });
+serverFlows["announcements"].put_api_properties_propertyId_announcements_announcementId();
 
-    const previousWorkflowStage = request.workflowStage || 'submitted';
-    const previousStatus = request.status || 'pending';
-    const previousAssignedVendorId = request.assignedVendor ? String(request.assignedVendor) : '';
-    const previousAssignedTo = request.assignedTo || '';
-    const previousCost = Number.isFinite(Number(request.cost)) ? Number(request.cost) : null;
-    const previousScheduledFor = request.scheduledFor ? new Date(request.scheduledFor).toISOString() : '';
-    const previousAccessNotes = request.accessNotes || '';
+serverFlows["announcements"].delete_api_properties_propertyId_announcements_announcementId();
 
-    // Update basic fields
-    ['title','description','priority','unitId','accessNotes'].forEach(f => {
-      if (typeof req.body[f] !== 'undefined' && req.body[f] !== '') {
-        request[f] = req.body[f];
-      }
-    });
-    if (typeof req.body.accessNotes !== 'undefined' && req.body.accessNotes === '') {
-      request.accessNotes = '';
-    }
 
-    if (typeof req.body.assignedVendor !== 'undefined') {
-      const assignedVendorId = String(req.body.assignedVendor || '').trim();
-      if (assignedVendorId && !mongoose.Types.ObjectId.isValid(assignedVendorId)) {
-        return res.status(400).json({ message: 'Invalid vendor assignment' });
-      }
-      if (!assignedVendorId) {
-        request.assignedVendor = null;
-        request.assignedTo = '';
-      } else {
-        const vendor = await Vendor.findById(assignedVendorId).select('name email');
-        if (!vendor) {
-          return res.status(404).json({ message: 'Assigned vendor not found' });
-        }
-        request.assignedVendor = vendor._id;
-        request.assignedTo = vendor.name || vendor.email || '';
-      }
-    }
+// ============================================================================
+// [FLOW: documents] Documents, folders and files (continued)
+// ============================================================================
+serverFlows["documents"].get_api_properties_propertyId_documents();
 
-    if (typeof req.body.scheduledFor !== 'undefined') {
-      const scheduledFor = parseMaintenanceDate(req.body.scheduledFor);
-      if (typeof scheduledFor === 'undefined') {
-        return res.status(400).json({ message: 'Invalid scheduled date' });
-      }
-      request.scheduledFor = scheduledFor;
-    }
+serverFlows["documents"].get_api_properties_propertyId_documents_documentId_view();
 
-    if (typeof req.body.cost !== 'undefined') {
-      const cost = parseMaintenanceCost(req.body.cost);
-      if (typeof cost === 'undefined') {
-        return res.status(400).json({ message: 'Invalid maintenance cost' });
-      }
-      request.cost = cost;
-    }
+serverFlows["documents"].post_api_properties_propertyId_documents();
 
-    request.workflowStage = normalizeMaintenanceWorkflowStage(
-      req.body.workflowStage,
-      typeof req.body.status !== 'undefined' ? req.body.status : request.status,
-      Boolean(request.assignedVendor),
-      Boolean(request.scheduledFor),
-      request.workflowStage || 'submitted'
-    );
-    request.status = deriveMaintenanceStatusFromStage(
-      request.workflowStage,
-      typeof req.body.status !== 'undefined' ? req.body.status : request.status
-    );
+serverFlows["documents"].put_api_properties_propertyId_documents_documentId();
 
-    // Completed timestamp handling
-    if (request.status === 'completed' && !request.completedAt) {
-      request.completedAt = new Date();
-    } else if (request.status !== 'completed') {
-      request.completedAt = null;
-    }
+serverFlows["documents"].delete_api_properties_propertyId_documents_documentId();
 
-    // Photos logic
-    const newPhotos = (req.files || []).map(f => `/uploads/maintenance/${f.filename}`);
-    // Also accept temp photos and move them to permanent
-    if (req.body.tempPhotosPaths) {
-      let tempPaths = [];
-      try {
-        tempPaths = JSON.parse(req.body.tempPhotosPaths);
-      } catch {
-        if (typeof req.body.tempPhotosPaths === 'string') {
-          tempPaths = req.body.tempPhotosPaths.split(',').map(s => s.trim()).filter(Boolean);
-        }
-      }
-      const permanentDir = path.join('/mnt/data/uploads', 'maintenance');
-      for (const tempUrl of tempPaths) {
-        try {
-          const rel = tempUrl.replace(/^\/+/, '').replace(/^uploads\//, '');
-          const abs = path.join('/mnt/data/uploads', rel);
-          if (fs.existsSync(abs)) {
-            const filename = path.basename(abs).replace(/^temp-/, '');
-            const dest = path.join(permanentDir, filename);
-            fs.renameSync(abs, dest);
-            newPhotos.push(`/uploads/maintenance/${path.basename(dest)}`);
-          }
-        } catch {}
-      }
-    }
-    // Parse removal list (supports JSON array, repeated fields, or comma-separated)
-    let removeList = [];
-    const raw = req.body.removePhotos;
-    const rawArr = req.body['removePhotos[]'];
-    if (Array.isArray(rawArr)) {
-      removeList = rawArr;
-    } else if (typeof raw === 'string' && raw.trim()) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) removeList = parsed;
-        else removeList = raw.split(',').map(s => s.trim()).filter(Boolean);
-      } catch {
-        removeList = raw.split(',').map(s => s.trim()).filter(Boolean);
-      }
-    }
+serverFlows["documents"].get_api_properties_propertyId_documents_documentId_download();
 
-    // Remove selected photos
-    if (removeList.length && Array.isArray(request.photos)) {
-      const baseDir = path.join('/mnt/data/uploads', 'maintenance');
-      request.photos = request.photos.filter(p => {
-        const keep = !removeList.includes(p);
-        if (!keep) {
-          // Best-effort file removal if within maintenance folder
-          try {
-            const rel = p.replace(/^\/+/, '');
-            const abs = path.join(__dirname, rel);
-            if (abs.startsWith(baseDir) && fs.existsSync(abs)) fs.unlinkSync(abs);
-          } catch {}
-        }
-        return keep;
-      });
-    }
 
-    if (newPhotos.length) {
-      if (req.body.replacePhotos === 'true') {
-        request.photos = newPhotos;
-      } else {
-        request.photos = [...(request.photos || []), ...newPhotos];
-      }
-    }
+// ============================================================================
+// [FLOW: payments] Rent payments and monthly charges
+// ============================================================================
+// Implementation: server/flows/payments.js
+serverFlows["payments"].get_api_properties_propertyId_payments();
 
-    if (previousWorkflowStage !== request.workflowStage) {
-      appendMaintenanceSystemUpdate(request, `Workflow moved to ${request.workflowStage.replace(/-/g, ' ')}.`);
-    } else if (previousStatus !== request.status) {
-      appendMaintenanceSystemUpdate(request, `Status updated to ${request.status.replace(/-/g, ' ')}.`);
-    }
+serverFlows["payments"].get_api_properties_propertyId_payments_paymentId();
 
-    const nextAssignedVendorId = request.assignedVendor ? String(request.assignedVendor) : '';
-    if (previousAssignedVendorId !== nextAssignedVendorId) {
-      if (request.assignedTo) {
-        appendMaintenanceSystemUpdate(request, `Assigned to ${request.assignedTo}.`);
-      } else if (previousAssignedTo) {
-        appendMaintenanceSystemUpdate(request, 'Vendor assignment cleared.');
-      }
-    }
+serverFlows["payments"].post_api_properties_propertyId_payments_paymentId_send_receipt();
 
-    const nextScheduledFor = request.scheduledFor ? new Date(request.scheduledFor).toISOString() : '';
-    if (previousScheduledFor !== nextScheduledFor) {
-      if (request.scheduledFor) {
-        appendMaintenanceSystemUpdate(request, `Scheduled for ${formatMaintenanceTimelineDate(request.scheduledFor)}.`);
-      } else if (previousScheduledFor) {
-        appendMaintenanceSystemUpdate(request, 'Scheduled time cleared.');
-      }
-    }
+serverFlows["payments"].delete_api_properties_propertyId_payments_paymentId();
 
-    if ((request.accessNotes || '') !== previousAccessNotes) {
-      appendMaintenanceSystemUpdate(request, request.accessNotes ? 'Access instructions updated.' : 'Access instructions cleared.');
-    }
+serverFlows["payments"].post_api_properties_propertyId_payments();
 
-    await request.save();
-    await syncMaintenanceRequestToEstimate(request);
-    res.json(request);
-  } catch (error) {
-    console.error('Error fully updating maintenance request:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+serverFlows["payments"].put_api_properties_propertyId_payments_paymentId();
 
-// Delete a specific photo from a maintenance request
-app.delete('/api/properties/:propertyId/maintenance/:requestId/photos', async (req, res) => {
-  try {
-    const { requestId } = req.params;
-    const { url } = req.body;
-    if (!url) return res.status(400).json({ message: 'Photo URL required' });
+serverFlows["payments"].get_api_tenants_tenantId_monthly_overrides();
 
-    const request = await MaintenanceRequest.findById(requestId);
-    if (!request) return res.status(404).json({ message: 'Maintenance request not found' });
+serverFlows["payments"].get_api_tenants_tenantId_monthly_overrides_period();
 
-    // Remove photo from DB
-    request.photos = (request.photos || []).filter(p => p !== url);
-    await request.save();
+serverFlows["payments"].put_api_tenants_tenantId_monthly_overrides_period();
 
-    // Attempt to delete file from /mnt/data/uploads/maintenance
-    try {
-      const rel = url.replace(/^\/+/, '').replace(/^uploads\//, '');
-      const abs = path.join('/mnt/data/uploads', rel);
-      const baseDir = path.join('/mnt/data/uploads', 'maintenance');
-      if (abs.startsWith(baseDir) && fs.existsSync(abs)) fs.unlinkSync(abs);
-    } catch (err) {
-      console.warn('Failed to delete maintenance photo file:', err.message);
-    }
+serverFlows["payments"].post_api_properties_propertyId_payments_creditPaymentId_apply_credit();
 
-    res.json({ message: 'Photo deleted', request });
-  } catch (error) {
-    console.error('Error deleting maintenance photo:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
 
-// Add this with your other maintenance request routes
-app.delete('/api/properties/:propertyId/maintenance/:requestId', async (req, res) => {
-    try {
-        const { propertyId, requestId } = req.params;
+// ============================================================================
+// [FLOW: catalog] Products, selections and room packages (continued)
+// ============================================================================
+serverFlows["catalog"].get_api_room_packages();
 
-        // Validate IDs
-        if (!mongoose.Types.ObjectId.isValid(propertyId) || !mongoose.Types.ObjectId.isValid(requestId)) {
-            return res.status(400).json({ message: 'Invalid property or request ID' });
-        }
+serverFlows["catalog"].get_api_room_packages_key();
 
-        // Find and delete the maintenance request
-        const deletedRequest = await MaintenanceRequest.findOneAndDelete({
-            _id: requestId,
-            projectId: propertyId
-        });
+serverFlows["catalog"].put_api_room_packages_key();
 
-        if (!deletedRequest) {
-            return res.status(404).json({ message: 'Maintenance request not found' });
-        }
 
-        // If the request was associated with a unit, update unit status if needed
-        if (deletedRequest.unitId) {
-            // Optional: Update unit status or handle any cleanup
-            await Unit.findByIdAndUpdate(deletedRequest.unitId, {
-                $set: { status: 'vacant' }
-            });
-        }
+// ============================================================================
+// [FLOW: vendors] Vendors and assignments (continued)
+// ============================================================================
+serverFlows["vendors"].get_api_vendors_vendorId_used_line_item_ids();
 
-        res.json({ message: 'Maintenance request deleted successfully' });
-    } catch (error) {
-        console.error('Error deleting maintenance request:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
-app.post('/api/properties/:propertyId/maintenance/:requestId/messages', async (req, res) => {
-  try {
-    const { propertyId, requestId } = req.params;
-    const text = String(req.body.text || '').trim();
-    const authorName = String(req.body.authorName || 'Management').trim() || 'Management';
-    if (!text) return res.status(400).json({ message: 'Message is required' });
-    if (text.length > 1200) return res.status(400).json({ message: 'Message is too long' });
-
-    const request = await MaintenanceRequest.findOne({ _id: requestId, projectId: propertyId });
-    if (!request) return res.status(404).json({ message: 'Maintenance request not found' });
-
-    request.updates = request.updates || [];
-    request.updates.push({
-      authorRole: 'manager',
-      authorName,
-      text,
-      createdAt: new Date()
-    });
-    await request.save();
-    res.status(201).json({ message: 'Message added', updates: request.updates, request });
-  } catch (error) {
-    console.error('Property maintenance message error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.get('/api/properties/:propertyId/announcements', async (req, res) => {
-  try {
-    const announcements = await Announcement.find({ projectId: req.params.propertyId })
-      .populate('targetTenantIds', 'name email unitId')
-      .sort({ pinned: -1, startsAt: -1, createdAt: -1 })
-      .lean();
-    res.json(announcements);
-  } catch (error) {
-    console.error('Error fetching announcements:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.post('/api/properties/:propertyId/announcements', async (req, res) => {
-  try {
-    const title = String(req.body.title || '').trim();
-    const message = String(req.body.message || '').trim();
-    if (!title || !message) return res.status(400).json({ message: 'Title and message are required' });
-    const targetTenantIds = Array.isArray(req.body.targetTenantIds)
-      ? req.body.targetTenantIds.filter(id => mongoose.Types.ObjectId.isValid(id))
-      : [];
-    const startsAt = req.body.startsAt ? parseAnnouncementCalendarDate(req.body.startsAt) : null;
-    const expiresAt = req.body.expiresAt ? parseAnnouncementCalendarDate(req.body.expiresAt) : null;
-    if (req.body.startsAt && !startsAt) {
-      return res.status(400).json({ message: 'Invalid publish date' });
-    }
-    if (req.body.expiresAt && !expiresAt) {
-      return res.status(400).json({ message: 'Invalid expiration date' });
-    }
-    if (startsAt && expiresAt && expiresAt < startsAt) {
-      return res.status(400).json({ message: 'Expiration date must be after the publish date' });
-    }
-
-    const announcement = await Announcement.create({
-      projectId: req.params.propertyId,
-      title,
-      message,
-      category: ['notice', 'inspection', 'utility', 'parking', 'general'].includes(req.body.category) ? req.body.category : 'general',
-      targetTenantIds,
-      pinned: Boolean(req.body.pinned),
-      startsAt,
-      expiresAt,
-      createdBy: String(req.body.createdBy || 'Management').trim() || 'Management'
-    });
-    res.status(201).json(announcement);
-  } catch (error) {
-    console.error('Error creating announcement:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.put('/api/properties/:propertyId/announcements/:announcementId', async (req, res) => {
-  try {
-    const title = String(req.body.title || '').trim();
-    const message = String(req.body.message || '').trim();
-    if (!title || !message) return res.status(400).json({ message: 'Title and message are required' });
-
-    const targetTenantIds = Array.isArray(req.body.targetTenantIds)
-      ? req.body.targetTenantIds.filter(id => mongoose.Types.ObjectId.isValid(id))
-      : [];
-    const startsAt = req.body.startsAt ? parseAnnouncementCalendarDate(req.body.startsAt) : null;
-    const expiresAt = req.body.expiresAt ? parseAnnouncementCalendarDate(req.body.expiresAt) : null;
-    if (req.body.startsAt && !startsAt) {
-      return res.status(400).json({ message: 'Invalid publish date' });
-    }
-    if (req.body.expiresAt && !expiresAt) {
-      return res.status(400).json({ message: 'Invalid expiration date' });
-    }
-    if (startsAt && expiresAt && expiresAt < startsAt) {
-      return res.status(400).json({ message: 'Expiration date must be after the publish date' });
-    }
-
-    const updated = await Announcement.findOneAndUpdate(
-      {
-        _id: req.params.announcementId,
-        projectId: req.params.propertyId
-      },
-      {
-        title,
-        message,
-        category: ['notice', 'inspection', 'utility', 'parking', 'general'].includes(req.body.category) ? req.body.category : 'general',
-        targetTenantIds,
-        pinned: Boolean(req.body.pinned),
-        startsAt,
-        expiresAt,
-        createdBy: String(req.body.createdBy || 'Management').trim() || 'Management'
-      },
-      { new: true }
-    ).populate('targetTenantIds', 'name email unitId');
-
-    if (!updated) return res.status(404).json({ message: 'Announcement not found' });
-    res.json(updated);
-  } catch (error) {
-    console.error('Error updating announcement:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.delete('/api/properties/:propertyId/announcements/:announcementId', async (req, res) => {
-  try {
-    const deleted = await Announcement.findOneAndDelete({
-      _id: req.params.announcementId,
-      projectId: req.params.propertyId
-    });
-    if (!deleted) return res.status(404).json({ message: 'Announcement not found' });
-    res.json({ message: 'Announcement deleted' });
-  } catch (error) {
-    console.error('Error deleting announcement:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Document Routes
-app.get('/api/properties/:propertyId/documents', async (req, res) => {
-  try {
-    const documents = await Document.find({ projectId: req.params.propertyId })
-      .populate('tenantId', 'name')
-      .sort({ createdAt: -1 });
-    res.json(documents);
-  } catch (error) {
-    console.error('Error fetching documents:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.get('/api/properties/:propertyId/documents/:documentId/view', async (req, res) => {
-    try {
-        const { propertyId, documentId } = req.params;
-        const doc = await Document.findOne({
-            _id: documentId,
-            projectId: propertyId
-        });
-
-        if (!doc) {
-            return res.status(404).json({ message: 'Document not found' });
-        }
-
-        const filePath = resolveStoredUploadPath(doc.filePath);
-        console.log('📄 Resolved document view path:', { storedPath: doc.filePath, filePath });
-
-        if (!filePath || !fs.existsSync(filePath)) {
-            return res.status(404).json({ message: 'File not found on server' });
-        }
-
-        const ext = path.extname(doc.name).toLowerCase();
-        const contentType = {
-            '.pdf': 'application/pdf',
-            '.doc': 'application/msword',
-            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            '.txt': 'text/plain',
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.png': 'image/png',
-            '.gif': 'image/gif'
-        }[ext] || 'application/octet-stream';
-
-        res.setHeader('Content-Type', contentType);
-        res.setHeader('Content-Disposition', getContentDispositionHeader('inline', doc.name));
-        res.setHeader('Cache-Control', 'public, max-age=0');
-
-        fs.createReadStream(filePath).pipe(res);
-    } catch (error) {
-        console.error('Error serving document:', error);
-        res.status(500).json({ message: 'Error serving document' });
-    }
-});
-
-app.post('/api/properties/:propertyId/documents', upload.single('file'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
-    }
-
-const tenantId = String(req.body.tenantId || '').trim();
-if (tenantId) {
-  const tenant = await Tenant.findOne({ _id: tenantId, projectId: req.params.propertyId }).select('_id');
-  if (!tenant) {
-    return res.status(400).json({ message: 'Selected tenant was not found for this property' });
-  }
+// Ensure the uploads/qc-rework directory exists
+const reworkDir = path.join(uploadDir, 'qc-rework');
+if (!fs.existsSync(reworkDir)) {
+  fs.mkdirSync(reworkDir, { recursive: true });
 }
 
-const originalName = req.file.originalname;
-const ext = path.extname(originalName);
-const baseName = req.body.name ? req.body.name.replace(ext, '') : path.basename(originalName, ext);
-const displayName = baseName + ext; // Always has extension
-
-const document = new Document({
-  projectId: req.params.propertyId,
-  tenantId: tenantId || null,
-  name: displayName,
-  type: req.body.type,
-  filePath: `/uploads/${req.file.filename}`,
-  uploadedBy: req.body.uploadedBy || 'System'
-});
-    await document.save();
-    res.status(201).json(document);
-  } catch (error) {
-    console.error('Error uploading document:', error);
-    res.status(500).json({ message: 'Server error' });
+const qcReworkStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, reworkDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname.replace(/\s+/g, '_'));
   }
 });
+const qcReworkUpload = multer({ storage: qcReworkStorage });
 
-app.put('/api/properties/:propertyId/documents/:documentId', async (req, res) => {
-  try {
-    const { propertyId, documentId } = req.params;
-    const nextName = String(req.body.name || '').trim();
-    const nextType = String(req.body.type || '').trim();
-    const tenantIdRaw = typeof req.body.tenantId === 'string' ? req.body.tenantId.trim() : req.body.tenantId;
 
-    const document = await Document.findOne({
-      _id: documentId,
-      projectId: propertyId
-    });
+// ============================================================================
+// [FLOW: quality-control] Quality control and rework (continued)
+// ============================================================================
+serverFlows["quality-control"].post_api_qc_rework_photos();
 
-    if (!document) {
-      return res.status(404).json({ message: 'Document not found' });
-    }
+serverFlows["quality-control"].post_api_quality_review_rework();
 
-    if (nextName) {
-      const currentExt = path.extname(document.name || '');
-      const requestedExt = path.extname(nextName);
-      const normalizedName = requestedExt
-        ? nextName
-        : `${nextName}${currentExt}`;
+serverFlows["quality-control"].post_api_qc_delete_photo();
 
-      document.name = normalizedName;
-    }
 
-    if (nextType) {
-      document.type = nextType;
-    }
+// ============================================================================
+// [FLOW: projects] Projects, utilities and daily updates (continued)
+// ============================================================================
+serverFlows["projects"].get_api_projects_projectId_utilities();
 
-    if (tenantIdRaw !== undefined) {
-      if (tenantIdRaw) {
-        const tenant = await Tenant.findOne({ _id: tenantIdRaw, projectId: propertyId }).select('_id');
-        if (!tenant) {
-          return res.status(400).json({ message: 'Selected tenant was not found for this property' });
-        }
-        document.tenantId = tenant._id;
-      } else {
-        document.tenantId = null;
-      }
-    }
+serverFlows["projects"].put_api_projects_projectId_utilities();
 
-    await document.save();
-    await document.populate('tenantId', 'name');
 
-    res.json(document);
-  } catch (error) {
-    console.error('Error renaming document:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+// ============================================================================
+// [FLOW: expenses] Expenses and receipts
+// ============================================================================
+// Implementation: server/flows/expenses.js
+serverFlows["expenses"].delete_api_expenses_delete_receipt_file();
 
-app.delete('/api/properties/:propertyId/documents/:documentId', async (req, res) => {
-  try {
-    const document = await Document.findOne({
-      _id: req.params.documentId,
-      projectId: req.params.propertyId
-    });
+serverFlows["expenses"].get_api_expenses_missing_info();
 
-    if (!document) {
-      return res.status(404).json({ message: 'Document not found' });
-    }
+serverFlows["expenses"].post_api_expenses();
 
-    // Delete file from filesystem
-    const filePath = resolveStoredUploadPath(document.filePath);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
+serverFlows["expenses"].get_api_expenses();
 
-    // Use deleteOne instead of remove
-    await Document.deleteOne({ _id: req.params.documentId });
+serverFlows["expenses"].get_api_expenses_duplicates();
+serverFlows["expenses"].get_api_expenses_id();
 
-    res.json({ message: 'Document deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting document:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+serverFlows["expenses"].put_api_expenses_id();
 
+serverFlows["expenses"].delete_api_expenses_id();
 
-app.get('/api/properties/:propertyId/documents/:documentId/download', async (req, res) => {
-    try {
-        const { propertyId, documentId } = req.params;
-        const doc = await Document.findOne({
-            _id: documentId,
-            projectId: propertyId
-        });
+serverFlows["expenses"].post_api_expenses_id_recategorize_bill();
 
-        if (!doc) {
-            return res.status(404).json({ message: 'Document not found' });
-        }
 
-        const filePath = resolveStoredUploadPath(doc.filePath);
-        console.log('📄 Resolved document download path:', { storedPath: doc.filePath, filePath });
+// ============================================================================
+// [FLOW: invoices] Invoices and expense conversion
+// ============================================================================
+// Implementation: server/flows/invoices.js
+serverFlows["invoices"].post_api_send();
 
-        if (!filePath || !fs.existsSync(filePath)) {
-            return res.status(404).json({ message: 'File not found on server' });
-        }
+serverFlows["invoices"].post_api_create();
 
-        res.setHeader('Content-Disposition', getContentDispositionHeader('attachment', doc.name));
-        fs.createReadStream(filePath).pipe(res);
-    } catch (error) {
-        console.error('Error serving document:', error);
-        res.status(500).json({ message: 'Error serving document' });
-    }
-});
+serverFlows["invoices"].get_api_invoices();
 
-// GET all payments for a property
-app.get('/api/properties/:propertyId/payments', async (req, res) => {
-  try {
-    const payments = await Payment.find({ projectId: req.params.propertyId }).sort({ date: -1 });
-    res.json(payments);
-  } catch (error) {
-    console.error('Error fetching payments:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+serverFlows["invoices"].patch_api_invoices_id();
 
+serverFlows["invoices"].delete_api_invoices_id();
 
-// GET a single payment (for exporting receipt)
-app.get('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
-  try {
-    const payment = await Payment.findOne({
-      _id: req.params.paymentId,
-      projectId: req.params.propertyId
-    });
-    if (!payment) return res.status(404).json({ message: 'Payment not found' });
-    res.json(payment);
-  } catch (error) {
-    console.error('Error fetching payment:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+serverFlows["invoices"].post_api_invoices_id_recategorize_expense();
 
-// Send a payment receipt via email to the tenant
-app.post('/api/properties/:propertyId/payments/:paymentId/send-receipt', async (req, res) => {
-  try {
-    const { propertyId, paymentId } = req.params;
+serverFlows["invoices"].get_api_invoices_by_number_invoiceNumber();
 
-    const payment = await Payment.findOne({ _id: paymentId, projectId: propertyId });
-    if (!payment) {
-      return res.status(404).json({ message: 'Payment not found' });
-    }
 
-    const tenant = await Tenant.findById(payment.tenantId).lean();
-    if (!tenant || !tenant.email) {
-      return res.status(400).json({ message: 'Tenant email not available for this payment' });
-    }
+// ============================================================================
+// [FLOW: projects] Projects, utilities and daily updates (continued)
+// ============================================================================
+serverFlows["projects"].get_api_projects_projectId();
 
-    // Prefer a Property document if it exists, otherwise fall back to Project.
-    // Use typeof guard so this route is safe even in environments where Property is not defined.
-    let propertyDoc = null;
-    try {
-      if (typeof Property !== 'undefined') {
-        propertyDoc = await Property.findById(propertyId).lean();
-      }
-    } catch (_) {
-      propertyDoc = null;
-    }
-    const projectDoc = propertyDoc ? null : await Project.findById(propertyId).lean().catch(() => null);
 
-    const name = tenant.name || 'Tenant';
+// ============================================================================
+// [FLOW: invoices] Invoices and expense conversion (continued)
+// ============================================================================
+serverFlows["invoices"].post_api_invoices();
 
-    // Helpers mirroring exportReceipt in property-management.html
-    const formatCurrency = (n) => `$${(Number(n) || 0).toFixed(2)}`;
-    const toTitle = (s) => {
-      if (!s) return '';
-      const str = String(s);
-      return str.charAt(0).toUpperCase() + str.slice(1);
-    };
+serverFlows["invoices"].get_history();
 
-    const formatDateDisplayServer = (value) => {
-      if (!value) return '';
-      try {
-        const s = String(value);
-        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (m) {
-          const y = Number(m[1]);
-          const mo = Number(m[2]);
-          const d = Number(m[3]);
-          return new Date(y, mo - 1, d).toLocaleDateString('en-US');
-        }
-        const d = new Date(value);
-        return d.toLocaleDateString('en-US');
-      } catch {
-        return String(value);
-      }
-    };
 
-    const formatAddressLines = (doc) => {
-      if (!doc) return [];
-      const a = doc.address || {};
-      const line1 = a.line1 || a.addressLine1 || a.street || doc.line1 || '';
-      const line2 = a.line2 || a.addressLine2 || a.suite || doc.line2 || '';
-      const city = a.city || doc.city || '';
-      const state = a.state || doc.state || '';
-      const zip = a.zip || a.postalCode || doc.zip || '';
-      const lines = [];
-      if (line1) lines.push(line1);
-      if (line2) lines.push(line2);
-      let last = '';
-      if (city) last += city;
-      if (state) last += (last ? ', ' : '') + state;
-      if (zip) last += (last ? ' ' : '') + zip;
-      if (last) lines.push(last);
-      return lines;
-    };
+// ============================================================================
+// [FLOW: expenses] Expenses and receipts (continued)
+// ============================================================================
+serverFlows["expenses"].post_api_expenses_id_auto_ocr();
 
-    const amount = Number(payment.amount) || 0;
-    const late = Number(payment.lateFee) || 0;
-    const totalPaid = amount + late;
-    const balance = Number(payment.balance) || 0;
-    const totalPaidLabel = totalPaid < 0 ? 'Credit Applied' : 'Total Paid';
+serverFlows["expenses"].post_api_expenses_upload_receipt();
 
-    const receiptNo = (payment._id || '').toString().slice(-8).toUpperCase();
-    const paymentIdShort = (payment._id || '').toString().substring(0, 12);
-    const dateStr = formatDateDisplayServer(payment.date || new Date());
 
-    const propDoc = propertyDoc || projectDoc;
-    const propName = propDoc?.name || '';
-    const addrLines = formatAddressLines(propDoc);
-
-    const unit = await Unit.findById(payment.unitId).lean().catch(() => null);
-
-    const displayType = payment.type === 'custom'
-      ? (payment.customType || 'Custom')
-      : toTitle(payment.type || '');
-
-    const paymentLines = [];
-    // Omit explicit "Type" label row per UI request, keep only method/apply-to and reference
-    paymentLines.push(`<tr><td style="padding:4px 0;color:#6b7280;">Method:</td><td style="padding:4px 0;text-align:right;color:#111827;">${toTitle(payment.method || '')}</td></tr>`);
-    paymentLines.push(`<tr><td style="padding:4px 0;color:#6b7280;">Applied To:</td><td style="padding:4px 0;text-align:right;color:#111827;">${toTitle(payment.applyTo || 'rent')}</td></tr>`);
-    if (payment.applyTo && ['water','electric','trash','admin','late','other'].includes(payment.applyTo)) {
-      paymentLines.push(`<tr><td style="padding:4px 0;color:#6b7280;">Category</td><td style="padding:4px 0;text-align:right;color:#111827;">${toTitle(payment.applyTo)}</td></tr>`);
-    }
-    if (payment.applyTo === 'fee' && payment.feeType) {
-      paymentLines.push(`<tr><td style="padding:4px 0;color:#6b7280;">Fee Type</td><td style="padding:4px 0;text-align:right;color:#111827;">${toTitle(payment.feeType)}</td></tr>`);
-    }
-    if (payment.applyTo === 'fee' && payment.feeLabel) {
-      paymentLines.push(`<tr><td style="padding:4px 0;color:#6b7280;">Fee Label</td><td style="padding:4px 0;text-align:right;color:#111827;">${payment.feeLabel}</td></tr>`);
-    }
-    if (payment.periodMonth) {
-      paymentLines.push(`<tr><td style="padding:4px 0;color:#6b7280;">Period</td><td style="padding:4px 0;text-align:right;color:#111827;">${payment.periodMonth}</td></tr>`);
-    }
-    paymentLines.push(`<tr><td style="padding:4px 0;color:#6b7280;">Reference</td><td style="padding:4px 0;text-align:right;color:#111827;">${receiptNo}</td></tr>`);
-
-    const subject = `Payment Receipt - ${formatCurrency(amount)}`;
-    const html = `
-      <div style="margin:0;padding:24px;background:#f0f4f9;font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #0f172a;">
-        <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 20px 40px rgba(15,23,42,0.18);">
-          <!-- Header -->
-          <div style="padding:20px 24px 18px 24px;background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#f9fafb;position:relative;">
-            <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;opacity:0.9;">Payment Receipt</div>
-            <div style="margin-top:4px;font-size:20px;font-weight:700;">Blue Rain MF LLC</div>
-            <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;">
-              <div>
-                <div style="font-size:11px;opacity:0.9;text-transform:uppercase;letter-spacing:0.08em;">${totalPaidLabel}</div>
-                <div style="margin-top:2px;font-size:26px;font-weight:700;">${formatCurrency(totalPaid)}</div>
-              </div>
-              <div style="text-align:right;min-width:150px;">
-                <div style="font-size:11px;opacity:0.85;">Receipt #</div>
-                <div style="font-size:13px;font-weight:600;letter-spacing:0.08em;">${receiptNo}</div>
-                <div style="margin-top:4px;font-size:11px;opacity:0.9;">${dateStr}</div>
-              </div>
-            </div>
-            <div style="position:absolute;right:24px;top:20px;background:#22c55e;color:#022c22;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;letter-spacing:0.08em;text-transform:uppercase;box-shadow:0 4px 12px rgba(22,163,74,0.4);">Paid</div>
-          </div>
-
-          <!-- Meta + Property -->
-          <div style="padding:18px 24px 8px 24px;border-bottom:1px solid #e5e7eb;display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between;">
-            <div style="flex:1;min-width:340px;">
-              <div style="font-size:11px;font-weight:600;color:#6b7280;letter-spacing:0.12em;text-transform:uppercase;">Receipt Details</div>
-              <div style="margin-top:6px;font-size:13px;color:#111827;line-height:1.5;">
-                <div><span style="color:#6b7280;">Payment ID:</span> ${paymentIdShort}...</div>
-                <div><span style="color:#6b7280;">Payment Date:</span> ${dateStr}</div>
-                
-              </div>
-            </div>
-            <div style="flex:1;min-width:210px;">
-              <div style="font-size:11px;font-weight:600;color:#6b7280;letter-spacing:0.12em;text-transform:uppercase;">Property</div>
-              <div style="margin-top:6px;font-size:13px;color:#111827;line-height:1.5;">
-                ${propName ? `<div style=\"font-weight:600;\">${propName}</div>` : ''}
-                ${addrLines.map(l => `<div style=\"color:#4b5563;\">${l}</div>`).join('')}
-              </div>
-            </div>
-          </div>
-
-          <!-- Payor & Payment columns -->
-          <div style="padding:16px 24px 8px 24px;display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-start;">
-            <div style="flex:1;min-width:340px;max-width:360px;">
-              <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:6px;">Payor Details</div>
-              <table style="width:100%;max-width:260px;border-collapse:collapse;font-size:13px;">
-                <tr><td style="padding:3px 0;color:#6b7280;">Tenant:</td><td style="padding:3px 0 3px 16px;color:#111827;white-space:nowrap;">${tenant.name || 'N/A'}</td></tr>
-                <tr><td style="padding:3px 0;color:#6b7280;">Unit:</td><td style="padding:3px 0 3px 16px;color:#111827;white-space:nowrap;">${unit?.number || 'N/A'}</td></tr>
-                ${tenant.email ? `<tr><td style=\"padding:3px 0;color:#6b7280;\">Email:</td><td style=\"padding:3px 0 3px 16px;color:#111827;white-space:nowrap;\">${tenant.email}</td></tr>` : ''}
-                ${tenant.phone ? `<tr><td style=\"padding:3px 0;color:#6b7280;\">Phone:</td><td style=\"padding:3px 0 3px 16px;color:#111827;white-space:nowrap;\">${tenant.phone}</td></tr>` : ''}
-              </table>
-            </div>
-            <div style="flex:1;min-width:140px;max-width:160px;">
-              <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:6px;">Payment Details</div>
-              <table style="width:100%;max-width:260px;border-collapse:collapse;font-size:13px;">
-                ${paymentLines.join('').replace(/text-align:right/g,'padding:3px 0 3px 16px;color:#111827;white-space:nowrap;')}
-              </table>
-            </div>
-          </div>
-
-          <!-- Note -->
-          ${payment.note ? `
-          <div style="padding:6px 24px 4px 24px;">
-            <div style="font-size:12px;font-weight:600;color:#111827;margin-bottom:4px;">Note</div>
-            <div style="font-size:13px;color:#4b5563;line-height:1.6;white-space:pre-line;">${payment.note}</div>
-          </div>` : ''}
-
-          <!-- Summary card -->
-          <div style="padding:16px 24px 20px 24px;">
-            <div style="border-radius:12px;border:1px solid #dbeafe;background:linear-gradient(135deg,#eff6ff,#ffffff);padding:10px 16px;position:relative;overflow:hidden;">
-              <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#1d4ed8,#38bdf8);"></div>
-              <div style="margin-left:10px;">
-                <div style="font-size:13px;font-weight:600;color:#0f172a;margin-bottom:6px;">Payment Summary</div>
-                <table style="width:100%;border-collapse:collapse;font-size:13px;">
-                  <!-- Amount row removed per UI request; total and optional late fee remain -->
-                  ${late ? `<tr><td style=\"padding:4px 0;color:#6b7280;\">Late Fee</td><td style=\"padding:4px 0;text-align:right;color:#111827;\">${formatCurrency(late)}</td></tr>` : ''}
-                  <tr>
-                    <td style="padding:6px 0;color:#111827;font-weight:600;border-top:1px dashed #cbd5f5;">${totalPaidLabel}</td>
-                    <td style="padding:6px 0;text-align:right;color:#111827;font-weight:700;border-top:1px dashed #cbd5f5;">${formatCurrency(totalPaid)}</td>
-                  </tr>
-                  <!-- Remaining Balance row removed per UI request -->
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- Footer -->
-          <div style="padding:10px 24px 18px 24px;border-top:1px solid #e5e7eb;">
-            <div style="margin-top:8px;font-size:13px;font-weight:600;color:#1d4ed8;text-align:center;">Thank you for your payment!</div>
-            <div style="margin-top:4px;font-size:11px;color:#6b7280;text-align:center;">Generated by Bluerain MF LLC (210) 981-9251</div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    await transporter.sendMail({
-      from: `BESF <${process.env.EMAIL_USER}>`,
-      to: tenant.email,
-      subject,
-      html
-    });
-
-    res.json({ success: true, message: 'Receipt emailed successfully' });
-  } catch (error) {
-    console.error('Error sending receipt email:', error);
-    res.status(500).json({ message: 'Failed to send receipt email' });
-  }
-});
-
-// DELETE a payment
-app.delete('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
-  try {
-    const payment = await Payment.findOne({ _id: req.params.paymentId, projectId: req.params.propertyId });
-    if (!payment) return res.status(404).json({ message: 'Payment not found' });
-
-    // If payment applied to deposit, roll back tenant.depositPaid
-    if (payment.applyTo === 'deposit') {
-      try {
-        const t = await Tenant.findById(payment.tenantId);
-        if (t) {
-          t.depositPaid = Math.max(0, (t.depositPaid || 0) - (payment.amount || 0));
-          await t.save();
-        }
-      } catch (err) {
-        console.error('Error rolling back tenant.depositPaid on payment delete:', err);
-      }
-    }
-
-  const wasCredit = (payment.amount || 0) < 0;
-  await payment.deleteOne();
-  res.json({ message: 'Payment deleted successfully', creditRemoved: wasCredit });
-  } catch (error) {
-    console.error('Error deleting payment:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-
-// POST a new payment (rent or HUB)
-// Helper to normalize incoming payment type to enum values
-function normalizePaymentTypeServer(raw) {
-  const t = String(raw || '').trim().toLowerCase();
-  if (t === 'rent') return 'rent';
-  if (['hub', 'section8', 'voucher', 'subsidy'].includes(t)) return 'hub';
-  if (['partial', 'adjustment', 'custom'].includes(t)) return t;
-  return null;
-}
-
-// Utility: days in a given month/year
-function daysInMonth(year, monthIndex) { // monthIndex: 0-11
-  return new Date(year, monthIndex + 1, 0).getDate();
-}
-
-// Compute prorated base rent for the first lease month (baseRent only)
-// Returns a number (rounded to 2 decimals) or null if not first month or data missing
-function computeFirstMonthProratedBaseRent(tenant, dateLike) {
-  try {
-    if (!tenant) return null;
-    const leaseStart = tenant.leaseStart ? new Date(tenant.leaseStart) : null;
-    if (!leaseStart || isNaN(leaseStart.getTime())) return null;
-    const d = new Date(dateLike);
-    if (!d || isNaN(d.getTime())) return null;
-    if (leaseStart.getFullYear() !== d.getFullYear() || leaseStart.getMonth() !== d.getMonth()) return null;
-    const base = Number(tenant.baseRent) || 0;
-    if (base <= 0) return 0;
-    const totalDays = daysInMonth(d.getFullYear(), d.getMonth());
-    const startDay = leaseStart.getDate();
-    const occupiedDays = Math.max(1, totalDays - (startDay - 1));
-    const daily = base / totalDays;
-    return Number((occupiedDays * daily).toFixed(2));
-  } catch {
-    return null;
-  }
-}
-
-// Compute expected rent amount for a given month
-// For the first lease month: prorate baseRent only per requirements
-// For subsequent months: full baseRent + recurring monthly fees
-function computeExpectedRentForMonth(tenant, dateLike, paymentType) {
-  const d = new Date(dateLike);
-  const period = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
-  // Check for manual expected rent override for this month
-  const mo = tenant?.monthlyOverrides;
-  let monthOverride = null;
-  if (mo) {
-    // Support both Map and plain object
-    monthOverride = typeof mo.get === 'function' ? mo.get(period) : mo[period];
-  }
-  if (monthOverride && paymentType === 'rent') {
-    const er = Number(monthOverride.expectedRent);
-    if (Number.isFinite(er) && er >= 0) return er;
-  }
-  const isRentType = (paymentType === 'rent');
-  if (isRentType) {
-    const prorated = computeFirstMonthProratedBaseRent(tenant, d);
-    if (prorated !== null) {
-      return prorated; // base rent prorated for first month; exclude add-ons
-    }
-  }
-  // Default full monthly charges
-  return (
-    (Number(tenant.baseRent) || 0) +
-    (Number(tenant.waterFee) || 0) +
-    (Number(tenant.trashFee) || 0) +
-    (Number(tenant.adminFee) || 0) +
-    (tenant.additionalFee?.amount || 0) +
-    (tenant.pets?.hasPets ? (Number(tenant.pets.monthlyRent) || 0) : 0)
-  );
-}
-
-app.post('/api/properties/:propertyId/payments', async (req, res) => {
-  try {
-    const { tenantId, unitId, amount, method, date, lateFee, note, customType, carryForward } = req.body;
-    const lateFeeMode = (req.body.lateFeeMode || 'amount').toLowerCase(); // 'amount' | 'percent'
-    const type = normalizePaymentTypeServer(req.body.type);
-    const applyTo = String(req.body.applyTo || 'rent').toLowerCase();
-    const feeType = req.body.feeType || '';
-    const feeLabel = req.body.feeLabel || '';
-    const periodMonth = req.body.periodMonth || '';
-
-    if (!type) {
-      return res.status(400).json({ message: 'Invalid payment type. Allowed: rent, hub' });
-    }
-    if (!tenantId || !type || !method || !date) {
-      return res.status(400).json({ message: 'Missing required fields' });
-    }
-    if (!['rent', 'deposit', 'fee', 'late', 'water', 'electric', 'trash', 'admin', 'other'].includes(applyTo)) {
-      return res.status(400).json({ message: 'Invalid applyTo value. Allowed: rent, deposit, fee, late, water, electric, trash, admin, other' });
-    }
-
-    // Fetch tenant data to get rental details
-    const tenant = await Tenant.findById(tenantId);
-    if (!tenant) {
-      return res.status(404).json({ message: 'Tenant not found' });
-    }
-
-    // Calculate expected payment amount based on tenant's rental details
-  let expectedAmount = 0;
-  let calculatedLateFee = 0;
-  let overrideLateApplied = false;
-
-  // Default: rent logic (compute expected amount before credits)
-  if (applyTo === 'rent' && type === 'rent') {
-      // Prorate base rent for the first month based on tenant.leaseStart; otherwise full monthly charges
-      expectedAmount = computeExpectedRentForMonth(tenant, date, 'rent');
-
-      // Monthly override late fee takes precedence; when present, roll it into expectedAmount (do not attach per-payment late fee)
-      const d = new Date(date);
-      const period = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-      const mo = tenant?.monthlyOverrides;
-      const ov = mo ? (typeof mo.get === 'function' ? mo.get(period) : mo[period]) : null;
-      let overrideMonthlyLate = 0;
-      if (ov && (ov.lateFee != null)) {
-        const mode = String(ov.lateFeeMode || 'amount').toLowerCase();
-        const lfVal = Number(ov.lateFee);
-        if (mode === 'percent' && Number.isFinite(lfVal)) {
-          overrideMonthlyLate = expectedAmount * (lfVal / 100);
-        } else if (Number.isFinite(lfVal)) {
-          overrideMonthlyLate = lfVal;
-        }
-      }
-      if (overrideMonthlyLate > 0) {
-        expectedAmount += overrideMonthlyLate;
-        calculatedLateFee = 0; // do not store per-payment late fee when override exists
-        overrideLateApplied = true;
-      } else if (lateFee && Number.isFinite(Number(lateFee)) && Number(lateFee) > 0) {
-        // Respect mode: amount (default) or percent (manual per-payment only when no override)
-        const lf = Number(lateFee);
-        if (lateFeeMode === 'percent') {
-          calculatedLateFee = expectedAmount * (lf / 100);
-        } else {
-          calculatedLateFee = lf; // absolute dollar amount
-        }
-      }
-    } else if (type === 'hub' && applyTo === 'rent') {
-      // For HUB payments, use the HUB contribution amount
-      expectedAmount = Number(tenant.hubContribution) || 0;
-    }
-    // Use provided amount if specified, otherwise use calculated amount (for rent/hub)
-    let finalAmount = (amount !== undefined && amount !== null && amount !== '') ? Number(amount) : expectedAmount;
-    let appliedCredit = 0;
-
-    // Apply prior month credits automatically if first rent payment of the month
-    if (applyTo === 'rent') {
-      const paymentDateObj = new Date(date);
-      const monthStart = new Date(paymentDateObj.getFullYear(), paymentDateObj.getMonth(), 1);
-      const monthEnd = new Date(paymentDateObj.getFullYear(), paymentDateObj.getMonth() + 1, 0, 23, 59, 59, 999);
-      const existingRentPaymentsThisMonth = await Payment.find({
-        tenantId,
-        applyTo: 'rent',
-        date: { $gte: monthStart, $lte: monthEnd }
-      });
-      if (existingRentPaymentsThisMonth.length === 0) {
-        // Gather prior credits marked carryForward
-        const priorCredits = await Payment.find({
-          tenantId,
-          applyTo: 'rent',
-          carryForward: true,
-          date: { $lt: monthStart }
-        });
-        const creditTotal = priorCredits.reduce((s, p) => {
-          if (p.amount < 0) return s + Math.abs(p.amount);
-          if (p.balance < 0) return s + Math.abs(p.balance);
-          return s;
-        }, 0);
-        if (creditTotal > 0) {
-          const originalExpected = expectedAmount;
-          expectedAmount = Math.max(0, expectedAmount - creditTotal);
-          appliedCredit = Math.min(creditTotal, originalExpected); // amount actually consumed
-          // Adjust default finalAmount if user left amount blank (auto-calc scenario)
-          if (amount === undefined || amount === null || amount === '') {
-            finalAmount = expectedAmount; // after credit application
-          }
-        }
-      }
-    }
-    const finalLateFee = calculatedLateFee;
-
-    // Handle different applyTo behaviors
-    if (applyTo === 'deposit') {
-      // For deposit payments, compute deposit remaining and update tenant.depositPaid
-      const expectedDeposit = Number(tenant.deposit) || 0;
-
-      // Sum previous deposit payments
-      const prevDepositPayments = await Payment.find({ tenantId, applyTo: 'deposit' });
-      const totalPrevDeposit = prevDepositPayments.reduce((s, p) => s + (p.amount || 0), 0);
-
-      // If amount not provided, assume remaining deposit
-      if (!amount) finalAmount = Math.max(0, expectedDeposit - totalPrevDeposit);
-
-      const depositBalance = expectedDeposit - (totalPrevDeposit + finalAmount);
-
-      const payment = new Payment({
-        projectId: req.params.propertyId,
-        tenantId,
-        unitId,
-        type,
-        applyTo: 'deposit',
-        amount: finalAmount,
-        method,
-        date,
-        lateFee: finalLateFee,
-        balance: depositBalance, // can be negative if overpaid (credit)
-        note: note || '',
-        customType: type === 'custom' ? (customType || '').substring(0,60) : '',
-        carryForward: Boolean(carryForward) && finalAmount < 0,
-        appliedCredit
-      });
-
-      await payment.save();
-
-      // Update tenant.depositPaid
-      tenant.depositPaid = (tenant.depositPaid || 0) + finalAmount;
-      await tenant.save();
-
-      return res.status(201).json({
-        payment,
-        calculationDetails: {
-          expectedDeposit,
-          totalPrevDeposit,
-          depositBalance
-        }
-      });
-    }
-
-    if (applyTo === 'fee') {
-      // One-off fee payment: record feeType/label, no monthly balance
-      const payment = new Payment({
-        projectId: req.params.propertyId,
-        tenantId,
-        unitId,
-        type,
-        applyTo: 'fee',
-        feeType,
-        feeLabel,
-        periodMonth,
-        amount: finalAmount,
-        method,
-        date,
-        lateFee: finalLateFee,
-        balance: 0,
-        note: note || '',
-        customType: type === 'custom' ? (customType || '').substring(0,60) : '',
-        carryForward: Boolean(carryForward) && finalAmount < 0,
-        appliedCredit
-      });
-      await payment.save();
-      return res.status(201).json({ payment });
-    }
-
-    // Default: rent/hub monthly logic
-    const paymentDate = new Date(date);
-    const monthStart = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), 1);
-    const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
-
-    // Get all payments for this tenant in the current month
-    const paymentsThisMonth = await Payment.find({
-      tenantId,
-      applyTo: 'rent',
-      date: { $gte: monthStart, $lte: monthEnd }
-    });
-
-    // Calculate total paid (excluding this payment)
-  const totalPaid = paymentsThisMonth.reduce((sum, p) => sum + Math.abs(p.amount || 0), 0); // count credits positively
-
-  // Calculate total late fees (excluding this payment)
-  const totalLateFees = paymentsThisMonth.reduce((sum, p) => sum + (p.lateFee || 0), 0);
-
-  // Calculate balance:
-  // If override late fee was rolled into expectedAmount above, avoid double-counting by ignoring per-payment late fees
-  const totalMonthlyCharges = overrideLateApplied ? expectedAmount : (expectedAmount + totalLateFees + finalLateFee);
-  const balance = totalMonthlyCharges - (totalPaid + Math.abs(finalAmount));
-
-    const payment = new Payment({
-      projectId: req.params.propertyId,
-      tenantId,
-      unitId,
-      type,
-      applyTo: 'rent',
-      amount: finalAmount,
-      method,
-      date,
-      lateFee: finalLateFee,
-      balance, // allow negative (credit forward)
-      note: note || '',
-      customType: type === 'custom' ? (customType || '').substring(0,60) : '',
-      carryForward: Boolean(carryForward) && finalAmount < 0,
-      appliedCredit
-    });
-
-    await payment.save();
-
-    res.status(201).json({
-      payment,
-      calculationDetails: {
-        expectedAmount,
-        calculatedLateFee: finalLateFee,
-        totalMonthlyCharges,
-        totalPaidPreviously: totalPaid,
-        balance,
-        appliedCredit
-      }
-    });
-  } catch (error) {
-    console.error('Error recording payment:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// --- Update PUT /api/properties/:propertyId/payments/:paymentId ---
-app.put('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
-  try {
-    const payment = await Payment.findById(req.params.paymentId);
-    if (!payment) return res.status(404).json({ message: 'Payment not found' });
-
-    // Normalize incoming fields
-    const amount = req.body.amount;
-    const method = req.body.method;
-    const date = req.body.date;
-  const lateFee = req.body.lateFee;
-  const note = req.body.note;
-  const customType = req.body.customType;
-  const carryForward = req.body.carryForward;
-    // Allow updating tenant and unit references
-    const incomingTenantId = req.body.tenantId || payment.tenantId;
-    const incomingUnitId = req.body.unitId !== undefined ? req.body.unitId : payment.unitId;
-    const oldTenantId = payment.tenantId?.toString();
-    const newTenantId = incomingTenantId?.toString();
-    const newUnitId = incomingUnitId || undefined;
-    const newType = normalizePaymentTypeServer(req.body.type) || payment.type;
-    const newApplyTo = String(req.body.applyTo || payment.applyTo || 'rent').toLowerCase();
-    const newFeeType = req.body.feeType || payment.feeType || '';
-    const newFeeLabel = req.body.feeLabel || payment.feeLabel || '';
-    const newPeriodMonth = req.body.periodMonth || payment.periodMonth || '';
-
-    // Adjust depositPaid on the correct tenant(s) if applyTo/amount/tenant changed
-    const oldApplyTo = payment.applyTo || 'rent';
-    const oldAmount = payment.amount || 0;
-    const newAmount = amount !== undefined ? Number(amount) : oldAmount;
-
-    // If tenant changed, revert effect on old tenant (if any) and apply on new tenant
-    if (oldTenantId !== newTenantId) {
-      if (oldTenantId) {
-        const oldTenant = await Tenant.findById(oldTenantId);
-        if (!oldTenant) return res.status(404).json({ message: 'Old tenant not found' });
-        if (oldApplyTo === 'deposit') {
-          oldTenant.depositPaid = Math.max(0, (oldTenant.depositPaid || 0) - oldAmount);
-          await oldTenant.save();
-        }
-      }
-      if (newTenantId) {
-        const newTenant = await Tenant.findById(newTenantId);
-        if (!newTenant) return res.status(404).json({ message: 'Tenant not found' });
-        if (newApplyTo === 'deposit') {
-          newTenant.depositPaid = (newTenant.depositPaid || 0) + newAmount;
-          await newTenant.save();
-        }
-      }
-    } else {
-      // Tenant not changed: adjust on same tenant if applyTo changed or amount changed
-      const tenant = await Tenant.findById(payment.tenantId);
-      if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
-      if (oldApplyTo === 'deposit') {
-        tenant.depositPaid = Math.max(0, (tenant.depositPaid || 0) - oldAmount);
-      }
-      if (newApplyTo === 'deposit') {
-        tenant.depositPaid = (tenant.depositPaid || 0) + newAmount;
-      }
-      await tenant.save();
-    }
-
-    // Update payment fields
-    if (newTenantId) payment.tenantId = newTenantId;
-    payment.unitId = newUnitId; // can be undefined/null
-    payment.type = newType;
-    payment.applyTo = newApplyTo;
-    payment.feeType = newFeeType;
-    payment.feeLabel = newFeeLabel;
-    payment.periodMonth = newPeriodMonth;
-    if (amount !== undefined) payment.amount = newAmount;
-    if (method) payment.method = method;
-    if (date) payment.date = date;
-  if (lateFee !== undefined) payment.lateFee = lateFee;
-  if (note !== undefined) payment.note = note;
-    if (payment.type === 'custom' && customType !== undefined) {
-      payment.customType = (customType || '').substring(0,60);
-    }
-    if (carryForward !== undefined) {
-      payment.carryForward = Boolean(carryForward) && payment.amount < 0;
-    }
-
-    // Recalculate balance for rent payments only
-    if (payment.applyTo === 'rent') {
-      const paymentDate = new Date(payment.date);
-      const monthStart = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), 1);
-      const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
-      const tenantData = await Tenant.findById(payment.tenantId);
-  let expectedAmount = 0;
-    let calculatedLateFee = 0;
-    let overrideLateApplied = false;
-  if (payment.type === 'rent') {
-        // Recompute with proration for first month; otherwise full monthly charges
-        expectedAmount = computeExpectedRentForMonth(tenantData, payment.date, 'rent');
-        // Monthly late fee override takes precedence; else allow manual payment lateFee, else 0
-        const period = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth()+1).padStart(2,'0')}`;
-        const mo = tenantData?.monthlyOverrides;
-        const ov = mo ? (typeof mo.get === 'function' ? mo.get(period) : mo[period]) : null;
-        if (ov && (ov.lateFee != null)) {
-          const mode = String(ov.lateFeeMode || 'amount').toLowerCase();
-          const lfVal = Number(ov.lateFee);
-          const overrideMonthlyLate = (mode === 'percent' && Number.isFinite(lfVal)) ? (expectedAmount * (lfVal/100)) : (Number.isFinite(lfVal) ? lfVal : 0);
-          expectedAmount += overrideMonthlyLate; // roll into expected
-          calculatedLateFee = 0;
-          overrideLateApplied = true;
-        } else if (lateFee !== undefined) {
-          calculatedLateFee = Number(lateFee) || 0;
-        } else if (payment.lateFee && payment.lateFee > 0) {
-          calculatedLateFee = payment.lateFee;
-        }
-      } else if (payment.type === 'hub') {
-        expectedAmount = Number(tenantData.hubContribution) || 0;
-        // Late fee override for month still applies to hub-type rent months; roll into expected
-        const period = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth()+1).padStart(2,'0')}`;
-        const mo = tenantData?.monthlyOverrides;
-        const ov = mo ? (typeof mo.get === 'function' ? mo.get(period) : mo[period]) : null;
-        if (ov && (ov.lateFee != null)) {
-          const mode = String(ov.lateFeeMode || 'amount').toLowerCase();
-          const lfVal = Number(ov.lateFee);
-          const overrideMonthlyLate = (mode === 'percent' && Number.isFinite(lfVal)) ? (expectedAmount * (lfVal/100)) : (Number.isFinite(lfVal) ? lfVal : 0);
-          expectedAmount += overrideMonthlyLate; // roll into expected
-          calculatedLateFee = 0;
-          overrideLateApplied = true;
-        } else if (lateFee !== undefined) {
-          calculatedLateFee = Number(lateFee) || 0;
-        } else if (payment.lateFee && payment.lateFee > 0) {
-          calculatedLateFee = payment.lateFee;
-        }
-      }
-      const paymentsThisMonth = await Payment.find({
-        tenantId: payment.tenantId,
-        applyTo: 'rent',
-        date: { $gte: monthStart, $lte: monthEnd },
-        _id: { $ne: payment._id }
-      });
-  const totalPaid = paymentsThisMonth.reduce((sum, p) => sum + Math.abs(p.amount || 0), 0);
-      const totalLateFees = paymentsThisMonth.reduce((sum, p) => sum + (p.lateFee || 0), 0);
-      const totalMonthlyCharges = overrideLateApplied ? expectedAmount : (expectedAmount + totalLateFees + calculatedLateFee);
-      if (overrideLateApplied) {
-        payment.lateFee = 0; // clear per-payment late fee when override controls month late fee
-      }
-  const balance = totalMonthlyCharges - (totalPaid + Math.abs(payment.amount));
-  payment.balance = balance; // allow negative credit
-    } else if (payment.applyTo === 'deposit') {
-      // Set balance to remaining deposit
-      const tenantData = await Tenant.findById(payment.tenantId);
-      const expectedDeposit = Number(tenantData.deposit) || 0;
-      // Sum all deposit payments excluding this one (we already updated amount above)
-      const otherDepositPayments = await Payment.find({ tenantId: payment.tenantId, applyTo: 'deposit', _id: { $ne: payment._id } });
-      const totalOther = otherDepositPayments.reduce((s, p) => s + (p.amount || 0), 0);
-      const depositBalance = expectedDeposit - (totalOther + payment.amount);
-  payment.balance = depositBalance; // can be negative if overpaid deposit
-    } else {
-      // Fee entries have no running balance
-      payment.balance = 0;
-    }
-
-    await payment.save();
-    return res.json({ payment });
-  } catch (error) {
-    console.error('Error updating payment:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// --- Monthly Overrides API ---
-// Get all overrides for a tenant
-app.get('/api/tenants/:tenantId/monthly-overrides', async (req, res) => {
-  try {
-    const t = await Tenant.findById(req.params.tenantId);
-    if (!t) return res.status(404).json({ message: 'Tenant not found' });
-    const mo = t.monthlyOverrides || {};
-    // Convert Map to plain object if needed
-    let data = {};
-    if (typeof mo.forEach === 'function') {
-      mo.forEach((v, k) => { data[k] = v; });
-    } else {
-      data = mo;
-    }
-    res.json({ overrides: data });
-  } catch (e) {
-    console.error('Error fetching monthly overrides:', e);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Get override for a specific period YYYY-MM
-app.get('/api/tenants/:tenantId/monthly-overrides/:period', async (req, res) => {
-  try {
-    const t = await Tenant.findById(req.params.tenantId);
-    if (!t) return res.status(404).json({ message: 'Tenant not found' });
-    const { period } = req.params;
-    const mo = t.monthlyOverrides || {};
-    const v = (typeof mo.get === 'function') ? mo.get(period) : mo[period];
-    res.json({ period, override: v || null });
-  } catch (e) {
-    console.error('Error fetching monthly override:', e);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Upsert override for a specific period; pass nulls to clear
-app.put('/api/tenants/:tenantId/monthly-overrides/:period', async (req, res) => {
-  try {
-    const t = await Tenant.findById(req.params.tenantId);
-    if (!t) return res.status(404).json({ message: 'Tenant not found' });
-    const { period } = req.params;
-    let { expectedRent, lateFee, lateFeeMode } = req.body;
-    // Normalize numbers or nulls
-    expectedRent = expectedRent === '' || expectedRent === undefined ? null : Number(expectedRent);
-    lateFee = lateFee === '' || lateFee === undefined ? null : Number(lateFee);
-    const mode = (lateFeeMode === 'percent' || lateFeeMode === 'amount') ? lateFeeMode : undefined;
-
-    if ((expectedRent === null || Number.isNaN(expectedRent)) && (lateFee === null || Number.isNaN(lateFee)) && (mode === undefined)) {
-      // remove override
-      if (typeof t.monthlyOverrides?.delete === 'function') t.monthlyOverrides.delete(period);
-      else if (t.monthlyOverrides) delete t.monthlyOverrides[period];
-    } else {
-      const val = {
-        expectedRent: Number.isFinite(expectedRent) ? expectedRent : null,
-        lateFee: Number.isFinite(lateFee) ? lateFee : null,
-        lateFeeMode: mode || 'amount'
-      };
-      if (typeof t.monthlyOverrides?.set === 'function') t.monthlyOverrides.set(period, val);
-      else {
-        t.monthlyOverrides = t.monthlyOverrides || {};
-        t.monthlyOverrides[period] = val;
-      }
-    }
-    await t.save();
-    res.json({ ok: true });
-  } catch (e) {
-    console.error('Error saving monthly override:', e);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Apply a credit to a target (rent/deposit/fees) by creating an adjustment payment and consuming credit
-app.post('/api/properties/:propertyId/payments/:creditPaymentId/apply-credit', async (req, res) => {
-  try {
-    const { propertyId, creditPaymentId } = req.params;
-    const { tenantId, unitId, amount, targetApplyTo, feeType, feeLabel, periodMonth, note } = req.body;
-    const applyTo = String(targetApplyTo || 'rent').toLowerCase();
-    if (!['rent','deposit','fee','late','water','electric','trash','admin','other'].includes(applyTo)) {
-      return res.status(400).json({ message: 'Invalid target applyTo' });
-    }
-    if (!tenantId) return res.status(400).json({ message: 'tenantId is required' });
-
-    const credit = await Payment.findOne({ _id: creditPaymentId, projectId: propertyId, tenantId });
-    if (!credit) return res.status(404).json({ message: 'Credit payment not found' });
-    const creditBase = (credit.amount || 0) < 0
-      ? Math.abs(credit.amount || 0)
-      : ((credit.balance || 0) < 0 ? Math.abs(credit.balance || 0) : 0);
-    const available = Math.max(0, creditBase - Math.abs(credit.appliedCredit || 0));
-    if (available <= 0) return res.status(400).json({ message: 'No available credit to apply' });
-
-    let applyAmount = Number(amount);
-    if (!Number.isFinite(applyAmount) || applyAmount <= 0) applyAmount = available;
-    if (applyAmount > available) applyAmount = available;
-
-    const tenant = await Tenant.findById(tenantId);
-    if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
-
-    const today = new Date();
-    // Determine unitId fallback: prefer provided, else credit.unitId, else tenant.unitId if stored
-    let resolvedUnitId = unitId;
-    if (!resolvedUnitId) {
-      if (credit.unitId) resolvedUnitId = credit.unitId;
-      else if (tenant.unitId) resolvedUnitId = tenant.unitId; // might be object or id
-    }
-    const commonFields = {
-      projectId: propertyId,
-      tenantId,
-      unitId: resolvedUnitId || undefined,
-      type: 'adjustment',
-      // Do NOT add to collected totals; represent credit allocation with amount=0
-      amount: 0,
-      method: 'online',
-      date: today,
-      lateFee: 0,
-      note: (note ? String(note) + ' ' : '') + `(Applied from credit ${credit._id.toString().slice(-6)})`,
-      customType: '',
-      carryForward: false,
-      // Track consumption of credit on this allocation entry
-      appliedCredit: applyAmount
-    };
-
-    let newPayment;
-
-    if (applyTo === 'deposit') {
-      const expectedDeposit = Number(tenant.deposit) || 0;
-      // Sum previous deposit payments
-      const prevDepositPayments = await Payment.find({ tenantId, applyTo: 'deposit' });
-      const totalPrevDeposit = prevDepositPayments.reduce((s, p) => s + (p.amount || 0), 0);
-      const depositBalance = expectedDeposit - (totalPrevDeposit + applyAmount);
-      newPayment = new Payment({
-        ...commonFields,
-        applyTo: 'deposit',
-        balance: depositBalance
-      });
-      await newPayment.save();
-      tenant.depositPaid = (tenant.depositPaid || 0) + applyAmount;
-      await tenant.save();
-    } else if (applyTo === 'fee' || ['late','water','electric','trash','admin','other'].includes(applyTo)) {
-      // Record fee category payment
-      newPayment = new Payment({
-        ...commonFields,
-        applyTo,
-        feeType: feeType || '',
-        feeLabel: feeLabel || '',
-        periodMonth: periodMonth || '',
-        balance: 0
-      });
-      await newPayment.save();
-    } else {
-      // applyTo === 'rent' : compute balance like POST /payments
-      let expectedAmount = 0;
-      // For adjustment toward rent, treat like rent components
-      expectedAmount =
-        (Number(tenant.baseRent) || 0) +
-        (Number(tenant.waterFee) || 0) +
-        (Number(tenant.trashFee) || 0) +
-        (Number(tenant.adminFee) || 0) +
-        (tenant.additionalFee?.amount || 0) +
-        (tenant.pets?.hasPets ? (Number(tenant.pets.monthlyRent) || 0) : 0);
-
-      const paymentDate = today;
-      const monthStart = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), 1);
-      const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
-      const paymentsThisMonth = await Payment.find({ tenantId, applyTo: 'rent', date: { $gte: monthStart, $lte: monthEnd } });
-      const totalPaid = paymentsThisMonth.reduce((sum, p) => sum + Math.abs(p.amount || 0), 0);
-      const totalLateFees = paymentsThisMonth.reduce((sum, p) => sum + (p.lateFee || 0), 0);
-      const totalMonthlyCharges = expectedAmount + totalLateFees;
-      const balance = totalMonthlyCharges - (totalPaid + Math.abs(applyAmount));
-
-      newPayment = new Payment({
-        ...commonFields,
-        applyTo: 'rent',
-        balance
-      });
-      await newPayment.save();
-    }
-
-    // Consume credit using the same base we used to compute availability
-    const newApplied = Math.min(creditBase, Math.abs(credit.appliedCredit || 0) + applyAmount);
-    credit.appliedCredit = newApplied;
-    // If the credit originated from an overpaid balance (negative balance), bring that balance toward zero
-    if ((credit.amount || 0) >= 0 && (credit.balance || 0) < 0) {
-      const remainingAfter = Math.max(0, creditBase - newApplied);
-      credit.balance = -remainingAfter; // 0 when fully consumed, still negative if partial
-    }
-    await credit.save();
-
-    return res.status(201).json({
-      applied: applyAmount,
-      fromCreditId: credit._id,
-      newPayment
-    });
-  } catch (error) {
-    console.error('Error applying credit:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-
-// Get all room packages
-app.get('/api/room-packages', async (req, res) => {
-  try {
-    const packages = await RoomPackage.find();
-    res.json(packages);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch room packages' });
-  }
-});
-
-// Get a single room package by key
-app.get('/api/room-packages/:key', async (req, res) => {
-  try {
-    const pkg = await RoomPackage.findOne({ key: req.params.key });
-    if (!pkg) return res.status(404).json({ error: 'Not found' });
-    res.json(pkg);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch room package' });
-  }
-});
-
-// Update or create a room package
-app.put('/api/room-packages/:key', async (req, res) => {
-  try {
-    const { name, items } = req.body;
-    const pkg = await RoomPackage.findOneAndUpdate(
-      { key: req.params.key },
-      { name, items },
-      { upsert: true, new: true }
-    );
-    res.json(pkg);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to save room package' });
-  }
-});
-
-// GET all previously submitted line item IDs for a vendor
-app.get('/api/vendors/:vendorId/used-line-item-ids', async (req, res) => {
-  try {
-    const { vendorId } = req.params;
-    if (!vendorId) {
-      return res.status(400).json({ message: "Missing vendorId" });
-    }
-
-    // Find all invoices for this vendor
-    const invoices = await Invoice.find({ vendorId });
-
-    // Collect all unique line item IDs (_id or itemId)
-    const usedIds = new Set();
-    invoices.forEach(inv => {
-      (inv.lineItems || []).forEach(item => {
-        // Support both _id (ObjectId) and itemId (string)
-        if (item._id) usedIds.add(item._id.toString());
-        if (item.itemId) usedIds.add(item.itemId.toString());
-      });
-    });
-
-    res.json({ usedIds: Array.from(usedIds) });
-  } catch (err) {
-    console.error("Error fetching used line item IDs:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-
-// GET utilities for a project
-app.get('/api/projects/:projectId/utilities', async (req, res) => {
-  try {
-    const project = await Project.findById(req.params.projectId).select('utilityAccounts');
-    if (!project) return res.status(404).json({ message: "Project not found" });
-    res.json({ utilityAccounts: project.utilityAccounts });
-  } catch (err) {
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// PUT update utilities for a project
-app.put('/api/projects/:projectId/utilities', async (req, res) => {
-  try {
-    const { projectId } = req.params;
-    const { utilityAccounts } = req.body;
-    if (!utilityAccounts) {
-      return res.status(400).json({ message: "Missing utilityAccounts in request body" });
-    }
-    const project = await Project.findByIdAndUpdate(
-      projectId,
-      { $set: { utilityAccounts } },
-      { new: true, runValidators: true }
-    );
-    if (!project) return res.status(404).json({ message: "Project not found" });
-    res.json({ success: true, utilityAccounts: project.utilityAccounts });
-  } catch (err) {
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-app.patch('/api/estimates/line-items/:lineItemId/status', async (req, res) => {
-  try {
-    const { lineItemId } = req.params;
-    const { status, percentComplete } = req.body;
-    const allowedStatuses = ['in-progress', 'completed', 'approved', 'rework'];
-    if (!allowedStatuses.includes(status)) {
-      return res.status(400).json({ message: 'Invalid status value.' });
-    }
-
-    const normalizePercentComplete = (value, itemStatus = 'new') => {
-      const normalizedStatus = String(itemStatus || '').toLowerCase();
-      if (normalizedStatus === 'in-progress') {
-        return 0;
-      }
-      const numericValue = Number.parseFloat(value);
-      if (Number.isFinite(numericValue)) {
-        return Math.min(100, Math.max(0, Math.round(numericValue)));
-      }
-      return ['completed', 'approved'].includes(normalizedStatus) ? 100 : 0;
-    };
-
-    const normalizedPercentComplete = normalizePercentComplete(percentComplete, status);
-    const completionDate = status === 'completed'
-      ? new Date().toISOString().slice(0, 10)
-      : null;
-    const statusUpdates = {
-      'lineItems.$[].items.$[item].status': status,
-      'lineItems.$[].items.$[item].percentComplete': normalizedPercentComplete
-    };
-    if (completionDate) {
-      statusUpdates['lineItems.$[].items.$[item].endDate'] = completionDate;
-    }
-
-    // Update line item status in Estimate
-    const estimate = await Estimate.findOneAndUpdate(
-      { 'lineItems.items._id': lineItemId },
-      {
-        $set: statusUpdates
-      },
-      { arrayFilters: [{ 'item._id': lineItemId }], new: true }
-    );
-
-    if (!estimate) {
-      return res.status(404).json({ message: 'Line item not found.' });
-    }
-
-    // Find the updated line item and get maintenance linkage
-    let updatedEstimateItem = null;
-    let itemName = null;
-    let itemStartDate = null;
-    let projectId = null;
-    for (const cat of estimate.lineItems) {
-      for (const item of cat.items) {
-        if (item._id.toString() === lineItemId) {
-          updatedEstimateItem = item;
-          itemName = item.name;
-          itemStartDate = item.startDate;
-          projectId = estimate.projectId;
-        }
-      }
-    }
-
-     // Sync linked maintenance status and metadata from the estimate item
-    if (updatedEstimateItem?.maintenanceRequestId || updatedEstimateItem?.maintenanceScheduleId) {
-      await syncLinkedMaintenanceRecordsFromEstimateItem(estimate, updatedEstimateItem, {
-        rescheduleOnComplete: status === 'completed',
-        completedBy: req.body?.completedBy,
-        notes: req.body?.notes
-      });
-    }
-
-    // --- If status is completed, also update the maintenance schedule with the same flow ---
-if (status === "completed" && itemName && projectId && !updatedEstimateItem?.maintenanceScheduleId) {
-  // Try to find the matching maintenance schedule by project, title, and startDate
-  let schedule = await MaintenanceSchedule.findOne({
-    projectId: projectId,
-    title: itemName,
-    startDate: { $lte: itemStartDate || new Date() },
-    status: { $ne: "completed" }
-  }).sort({ startDate: -1 });
-
-  // Fallback: try by project and title only if not found
-  if (!schedule) {
-    schedule = await MaintenanceSchedule.findOne({
-      projectId: projectId,
-      title: itemName,
-      status: { $ne: "completed" }
-    });
-  }
-
-  if (schedule) {
-    // Only push if no completion is already logged for today (by anyone)
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const alreadyLogged = (schedule.history || []).some(
-      h => h.completedAt && h.completedAt.toISOString().slice(0, 10) === todayStr
-    );
-    if (!alreadyLogged) {
-      schedule.history = schedule.history || [];
-      const completedBy = (typeof req.body?.completedBy === "string" && req.body.completedBy.trim())
-        ? req.body.completedBy.trim()
-        : "Estimate/Manager";
-      const notes = (typeof req.body?.notes === "string" && req.body.notes.trim())
-        ? req.body.notes.trim()
-        : "Marked as completed from estimate";
-      schedule.history.push({
-        completedAt: new Date(),
-        completedBy,
-        notes
-      });
-    } 
-
-        // --- Reschedule only if today's completion wasn't already processed ---
-        if (!alreadyLogged) {
-          // Determine base date for next schedule (use today if overdue)
-          const now = new Date();
-          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          let baseDate = schedule.nextScheduledDate < today ? today : schedule.nextScheduledDate;
-
-          // Advance nextScheduledDate based on frequency, using baseDate
-          let nextDate = new Date(baseDate);
-          switch (schedule.frequency) {
-            case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
-            case 'weekly': nextDate.setDate(nextDate.getDate() + 7); break;
-            case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
-            case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
-            case 'custom':
-              if (schedule.intervalDays && schedule.intervalDays > 0) {
-                nextDate.setDate(nextDate.getDate() + schedule.intervalDays);
-              }
-              break;
-          }
-
-          // Reset status and completedAt for the next cycle
-          schedule.status = 'pending';
-          schedule.completedAt = null;
-          schedule.nextScheduledDate = nextDate;
-
-          await schedule.save();
-          console.log(`✅ Maintenance schedule "${schedule.title}" marked as completed and rescheduled from estimate.`);
-        }
-      }
-    }  
-
-    res.json({ success: true, status, completionDate, estimate });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error });
-  }
-});
-
-
-app.patch('/api/properties/:propertyId/maintenance-schedules/:scheduleId/complete', async (req, res) => {
-  try {
-    const { propertyId, scheduleId } = req.params;
-    const { completedBy, notes } = req.body || {};
-    const completedAt = new Date();
-
-    // Find the schedule
-    const schedule = await MaintenanceSchedule.findOne({ _id: scheduleId, projectId: propertyId });
-    if (!schedule) return res.status(404).json({ message: 'Schedule not found.' });
-
-    // Record completion in history
-    schedule.history = schedule.history || [];
-    schedule.history.push({
-      completedAt,
-      completedBy: completedBy || 'System',
-      notes: notes || '',
-      cost: Number.isFinite(Number(schedule.cost)) ? Number(schedule.cost) : 0
-    });
-
-    // --- Determine base date for next schedule ---
-    const now = completedAt;
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    let baseDate = schedule.nextScheduledDate < today ? today : schedule.nextScheduledDate;
-
-    // Advance nextScheduledDate based on frequency, using baseDate
-    let nextDate = new Date(baseDate);
-    switch (schedule.frequency) {
-      case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
-      case 'weekly': nextDate.setDate(nextDate.getDate() + 7); break;
-      case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
-      case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
-      case 'custom':
-        if (schedule.intervalDays && schedule.intervalDays > 0) {
-          nextDate.setDate(nextDate.getDate() + schedule.intervalDays);
-        }
-        break;
-    } 
-
-    // Reset status and completedAt for the next cycle
-    schedule.status = 'pending';
-    schedule.completedAt = null;
-    schedule.startDate = completedAt;
-    schedule.nextScheduledDate = nextDate;
-
-    await schedule.save();
-
-    res.json({ success: true, schedule });
-  } catch (err) {
-    console.error('Error completing maintenance schedule:', err);
-    res.status(500).json({ message: 'Failed to complete and reset schedule.' });
-  }
-});
-
-
-
-// Helper for overdue email
-function getOverdueMaintenanceEmailHtml({ recipientName, schedule, isManager }) {
-  // Helper to format address
-  function formatAddress(address) {
-    if (!address) return '';
-    const line1 = address.addressLine1 || address.line1 || '';
-    const line2 = address.addressLine2 || address.line2 || '';
-    const city = address.city || '';
-    const state = address.state || '';
-    const zip = address.zip || '';
-    let addr = line1;
-    if (line2) addr += ', ' + line2;
-    if (city) addr += ', ' + city;
-    if (state) addr += ', ' + state;
-    if (zip) addr += ' ' + zip;
-    return addr.trim();
-  }
-
-  const propertyAddress = schedule.projectId?.address
-    ? formatAddress(schedule.projectId.address)
-    : '';
-
-  return `
-    <div style="font-family: Arial, sans-serif; background: #fffbe6; padding: 24px;">
-      <div style="max-width: 520px; margin: auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(44,62,80,0.07); padding: 24px;">
-        <h2 style="color: #d35400; margin-top: 0;">Overdue Maintenance Alert</h2>
-        <p style="font-size: 1.1em;">Hello ${recipientName},</p>
-        <p>
-          ${isManager
-            ? 'This is an alert that the following scheduled maintenance is overdue:'
-            : 'This is an alert that your assigned scheduled maintenance is overdue:'}
-          <br>
-          <strong style="color: #2c3e50;">${schedule.title}</strong>
-          at <strong style="color: #217dbb;">${propertyAddress || 'Property'}</strong>
-          <span style="color: #d35400;">(Original Due Date: ${new Date(schedule.nextScheduledDate).toLocaleDateString()})</span>.
-        </p>
-        <div style="margin: 18px 0; padding: 12px; background: #fff3cd; border-radius: 8px;">
-          <strong>Description:</strong> ${schedule.description || '<span style="color:#888;">No description provided.</span>'}
-        </div>
-        <div style="margin-top: 24px; text-align: right;">
-          <span style="font-size: 0.95em; color: #888;">Thank you,<br>BESF Team</span>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-
-async function sendTodayMaintenanceReminder(schedule) {
-  // Populate vendor and project if not already
-  if (!schedule.assignedVendor || !schedule.projectId) {
-    schedule = await MaintenanceSchedule.findById(schedule._id)
-      .populate('assignedVendor projectId');
-  }
-  // Vendor reminder
-  if (schedule.assignedVendor && schedule.assignedVendor.email) {
-    await transporter.sendMail({
-      from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-      to: schedule.assignedVendor.email,
-      subject: `Reminder: Maintenance Scheduled for Today`,
-      html: getMaintenanceEmailHtml({
-        recipientName: schedule.assignedVendor.name || 'Vendor',
-        schedule,
-        dayLabel: 'Today',
-        isManager: false
-      })
-    });
-  }
-  // Manager reminder
-  await transporter.sendMail({
-    from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-    to: ["jleonel3915@gmail.com"], // Add more emails as needed
-    subject: `Reminder: Maintenance Scheduled for Today`,
-    html: getMaintenanceEmailHtml({
-      recipientName: 'Team',
-      schedule,
-      dayLabel: 'Today',
-      isManager: true
-    })
-  });
-}
-
-async function ensureScheduleActivatedForDate(schedule) {
-  // 1. Mark the schedule active for today and send reminders
-  schedule.status = 'in-progress';
-  await schedule.save();
-  await sendTodayMaintenanceReminder(schedule);
-  console.log(`Auto-updated schedule "${schedule.title}" to in-progress for today.`);
-
-    await syncMaintenanceScheduleToEstimate(schedule, { createIfMissing: true });
-}
-
-async function sendOverdueScheduleAlert(schedule) {
-  // 2. Send overdue alerts for schedules that are already past due
-  if (schedule.assignedVendor && schedule.assignedVendor.email) {
-    await transporter.sendMail({
-      from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-      to: schedule.assignedVendor.email,
-      subject: `Overdue Maintenance Alert: ${schedule.title}`,
-      html: getOverdueMaintenanceEmailHtml({
-        recipientName: schedule.assignedVendor.name || 'Vendor',
-        schedule,
-        isManager: false
-      })
-    });
-  }
-
-  await transporter.sendMail({
-    from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-    to: [''],
-    subject: `Overdue Maintenance Alert: ${schedule.title}`,
-    html: getOverdueMaintenanceEmailHtml({
-      recipientName: 'Team',
-      schedule,
-      isManager: true
-    })
-  });
-  console.log(`Overdue maintenance alert sent for "${schedule.title}"`);
-}
-
-function getEstimateItemStatusFromMaintenanceStatus(status) {
-  if (status === 'completed') return 'completed';
-  if (status === 'in-progress') return 'in-progress';
-  return 'new';
-}
-
-function getMaintenanceStatusFromEstimateItemStatus(status) {
-  const normalized = String(status || 'new').trim().toLowerCase();
-  if (normalized === 'completed' || normalized === 'approved') return 'completed';
-  if (normalized === 'in-progress' || normalized === 'rework') return 'in-progress';
-  return 'pending';
-}
-
-function calculateEstimateTotal(lineItems = []) {
-  return lineItems.reduce((sum, category) => {
-    const categoryTotal = (category.items || []).reduce((itemSum, item) => {
-      const total = Number.isFinite(Number(item.total))
-        ? Number(item.total)
-        : (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0);
-      return itemSum + total;
-    }, 0);
-    return sum + categoryTotal;
-  }, 0);
-}
-
-function escapeRegexForMaintenanceLink(value) {
-  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function getRecurringMaintenanceEstimateTitle(schedule) {
-  return `Maintenance: ${String(schedule?.title || 'Recurring Maintenance').trim() || 'Recurring Maintenance'}`;
-}
-
-async function getRecurringMaintenanceUnitLabel(schedule) {
-  const rawUnitId = schedule?.unitId && (schedule.unitId._id || schedule.unitId);
-  let unitNumber = typeof schedule?.unitId?.number === 'string' ? schedule.unitId.number.trim() : '';
-  if (!unitNumber && rawUnitId) {
-    const linkedUnit = await Unit.findById(rawUnitId).select('number').lean().catch(() => null);
-    unitNumber = String(linkedUnit?.number || '').trim();
-  }
-  return unitNumber ? `Unit ${unitNumber}` : '';
-}
-
-function getNextScheduledDateForCompletion(schedule, completedAt = new Date()) {
-  const now = completedAt instanceof Date ? completedAt : new Date(completedAt);
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const currentNextDate = schedule?.nextScheduledDate ? new Date(schedule.nextScheduledDate) : today;
-  let baseDate = currentNextDate < today ? today : currentNextDate;
-  let nextDate = new Date(baseDate);
-  switch (schedule?.frequency) {
-    case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
-    case 'weekly': nextDate.setDate(nextDate.getDate() + 7); break;
-    case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
-    case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
-    case 'custom':
-      if (schedule?.intervalDays && schedule.intervalDays > 0) {
-        nextDate.setDate(nextDate.getDate() + schedule.intervalDays);
-      }
-      break;
-    default:
-      nextDate.setMonth(nextDate.getMonth() + 1);
-      break;
-  }
-  return nextDate;
-}
-
-async function ensureVendorProjectAssignment(vendorId, projectId) {
-  if (!vendorId || !projectId) return null;
-  let vendor = await Vendor.findById(vendorId);
-  if (!vendor) return null;
-
-  const projectIdStr = String(projectId);
-  const alreadyAssignedProject = (vendor.assignedProjects || []).some(
-    entry => entry.projectId && entry.projectId.toString() === projectIdStr
-  );
-  if (!alreadyAssignedProject) {
-    vendor.assignedProjects.push({ projectId: projectIdStr, status: 'new' });
-    await vendor.save();
-    vendor = await Vendor.findById(vendorId);
-  }
-
-  return vendor;
-}
-
-async function syncVendorAssignedEstimateItem(estimate, item, vendorId = null) {
-  const itemId = item?._id ? String(item._id) : '';
-  if (!itemId || !estimate?._id || !estimate?.projectId) return;
-
-  const normalizedVendorId = vendorId ? String(vendorId) : '';
-  const pullFilter = normalizedVendorId ? { _id: { $ne: normalizedVendorId } } : {};
-  await Vendor.updateMany(
-    { ...pullFilter, 'assignedItems.itemId': itemId },
-    { $pull: { assignedItems: { itemId } } }
-  );
-
-  if (!normalizedVendorId) return;
-
-  const vendor = await ensureVendorProjectAssignment(normalizedVendorId, estimate.projectId);
-  if (!vendor) return;
-
-  const payload = {
-    itemId,
-    projectId: estimate.projectId,
-    estimateId: estimate._id,
-    name: item.name,
-    description: item.description || 'No description provided',
-    quantity: Number(item.quantity) || 1,
-    unitPrice: Number(item.unitPrice) || 0,
-    total: Number.isFinite(Number(item.total)) ? Number(item.total) : (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0),
-    status: item.status || 'new',
-    costCode: item.costCode || 'Maintenance',
-    photos: item.photos || { before: [], after: [] },
-    updatedAt: new Date()
-  };
-
-  const assignedItem = (vendor.assignedItems || []).find(entry => entry.itemId?.toString() === itemId);
-  if (assignedItem) {
-    Object.assign(assignedItem, payload);
-  } else {
-    vendor.assignedItems.push({
-      ...payload,
-      createdAt: new Date()
-    });
-  }
-  await vendor.save();
-}
-
-async function syncMaintenanceScheduleFromEstimateItem(estimate, item, options = {}) {
-  if (!estimate?._id || !item?.maintenanceScheduleId) return null;
-
-  const schedule = await MaintenanceSchedule.findById(item.maintenanceScheduleId);
-  if (!schedule) return null;
-
-  const assignedVendorId = item.assignedTo ? String(item.assignedTo) : '';
-  const vendor = assignedVendorId
-    ? await Vendor.findById(assignedVendorId).select('name email')
-    : null;
-  const derivedStatus = getMaintenanceStatusFromEstimateItemStatus(item.status);
-  const itemTotal = Number.isFinite(Number(item.total))
-    ? Number(item.total)
-    : (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0);
-
-  schedule.linkedEstimateId = estimate._id;
-  schedule.title = item.name || schedule.title;
-  schedule.description = typeof item.description === 'string' ? item.description : schedule.description;
-  schedule.assignedVendor = vendor?._id || null;
-  schedule.cost = itemTotal;
-
-  const shouldReschedule = options.rescheduleOnComplete && derivedStatus === 'completed';
-  if (shouldReschedule) {
-    const completedAt = item.endDate || options.completedAt || new Date();
-    const completedDay = new Date(completedAt).toISOString().slice(0, 10);
-    schedule.history = Array.isArray(schedule.history) ? schedule.history : [];
-    const alreadyLogged = schedule.history.some(entry => entry?.completedAt && new Date(entry.completedAt).toISOString().slice(0, 10) === completedDay);
-    if (!alreadyLogged) {
-      schedule.history.push({
-        completedAt,
-        completedBy: options.completedBy || 'Estimate/Manager',
-        notes: options.notes || 'Marked as completed from estimate',
-        cost: itemTotal
-      });
-    }
-    schedule.status = 'pending';
-    schedule.completedAt = null;
-    schedule.startDate = completedAt;
-    schedule.nextScheduledDate = getNextScheduledDateForCompletion(schedule, completedAt);
-    schedule.linkedEstimateItemId = null;
-  } else {
-    schedule.linkedEstimateItemId = item._id;
-    schedule.status = derivedStatus;
-    schedule.startDate = item.startDate || schedule.startDate;
-    schedule.completedAt = derivedStatus === 'completed'
-      ? (item.endDate || schedule.completedAt || new Date())
-      : null;
-  }
-
-  await schedule.save();
-  await syncVendorAssignedEstimateItem(estimate, item, schedule.assignedVendor);
-  return schedule;
-}
-
-async function syncLinkedMaintenanceRecordsFromEstimateItem(estimate, item, options = {}) {
-  if (!estimate?._id || !item) return null;
-  const result = {};
-  if (item.maintenanceRequestId) {
-    result.request = await syncMaintenanceRequestFromEstimateItem(estimate, item);
-  }
-  if (item.maintenanceScheduleId) {
-    result.schedule = await syncMaintenanceScheduleFromEstimateItem(estimate, item, options);
-  }
-  return result;
-}
-
-async function syncMaintenanceRequestFromEstimateItem(estimate, item) {
-  if (!estimate?._id || !item?.maintenanceRequestId) return null;
-
-  const request = await MaintenanceRequest.findById(item.maintenanceRequestId);
-  if (!request) return null;
-
-  const assignedVendorId = item.assignedTo ? String(item.assignedTo) : '';
-  const vendor = assignedVendorId
-    ? await Vendor.findById(assignedVendorId).select('name email')
-    : null;
-
-  request.linkedEstimateId = estimate._id;
-  request.linkedEstimateItemId = item._id;
-  request.title = item.name || request.title;
-  request.description = typeof item.description === 'string' ? item.description : request.description;
-  request.assignedVendor = vendor?._id || null;
-  request.assignedTo = vendor ? (vendor.name || vendor.email || '') : '';
-  request.photos = Array.from(new Set(
-    Array.isArray(item.photos?.before) ? item.photos.before : []
-  ));
-  request.afterPhotos = Array.from(new Set(
-    Array.isArray(item.photos?.after) ? item.photos.after : []
-  ));
-  request.cost = Number.isFinite(Number(item.total))
-    ? Number(item.total)
-    : (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0);
-  request.scheduledFor = item.startDate || null;
-  request.status = getMaintenanceStatusFromEstimateItemStatus(item.status);
-  request.workflowStage = normalizeMaintenanceWorkflowStage(
-    request.workflowStage,
-    request.status,
-    Boolean(request.assignedVendor),
-    Boolean(request.scheduledFor),
-    request.workflowStage || 'submitted'
-  );
-
-  if (request.status === 'completed') {
-    request.completedAt = item.endDate || request.completedAt || new Date();
-  } else {
-    request.completedAt = null;
-  }
-
-  await request.save();
-  await syncVendorAssignedEstimateItem(estimate, item, request.assignedVendor);
-  return request;
-}
-
-async function syncMaintenanceScheduleToEstimate(schedule, options = {}) {
-  if (!schedule?._id || !schedule.projectId || !schedule.title) return null;
-
-  if (schedule.assignedVendor) {
-    await ensureVendorProjectAssignment(schedule.assignedVendor, schedule.projectId);
-  }
-
-  const estimateTitle = getRecurringMaintenanceEstimateTitle(schedule);
-  let estimate = schedule.linkedEstimateId ? await Estimate.findById(schedule.linkedEstimateId) : null;
-  if (!estimate) {
-    estimate = await Estimate.findOne({
-      projectId: schedule.projectId,
-      title: { $regex: new RegExp(`^${escapeRegexForMaintenanceLink(estimateTitle)}$`, 'i') }
-    });
-  }
-
-  if (!estimate && options.createIfMissing === false) {
-    return { schedule, estimate: null, item: null };
-  }
-
-  if (!estimate) {
-    estimate = new Estimate({
-      projectId: schedule.projectId,
-      invoiceNumber: `MS-${Date.now()}`,
-      title: estimateTitle,
-      lineItems: [],
-      total: 0,
-      tax: 0
-    });
-    await estimate.save();
-    estimate = await Estimate.findById(estimate._id);
-  } else if (estimate.title !== estimateTitle) {
-    estimate.title = estimateTitle;
-  }
-
-  const unitLabel = await getRecurringMaintenanceUnitLabel(schedule);
-  const unitCategoryName = unitLabel ? `Maintenance ${unitLabel}` : '';
-  const itemStatus = getEstimateItemStatusFromMaintenanceStatus(schedule.status);
-  const scheduleCost = Number.isFinite(Number(schedule.cost)) ? Number(schedule.cost) : 0;
-
-  let maintenanceCategory = estimate.lineItems.find(category => category.category === 'Maintenance');
-  if (!maintenanceCategory) {
-    estimate.lineItems.push({
-      type: 'category',
-      category: 'Maintenance',
-      status: itemStatus === 'completed' ? 'completed' : 'in-progress',
-      items: []
-    });
-    maintenanceCategory = estimate.lineItems.find(category => category.category === 'Maintenance');
-  }
-
-  let targetCategory = maintenanceCategory;
-  if (unitCategoryName) {
-    targetCategory = estimate.lineItems.find(category => String(category.category || '').trim().toLowerCase() === unitCategoryName.toLowerCase());
-    if (!targetCategory) {
-      estimate.lineItems.push({
-        type: 'category',
-        category: unitCategoryName,
-        status: itemStatus === 'completed' ? 'completed' : 'in-progress',
-        items: []
-      });
-      targetCategory = estimate.lineItems.find(category => String(category.category || '').trim().toLowerCase() === unitCategoryName.toLowerCase());
-    }
-  }
-
-  let estimateItem = estimate.lineItems
-    .flatMap(category => category.items || [])
-    .find(item => {
-      const matchesLink = schedule.linkedEstimateItemId && item._id?.toString() === schedule.linkedEstimateItemId.toString();
-      const matchesSchedule = item.maintenanceScheduleId && item.maintenanceScheduleId.toString() === schedule._id.toString();
-      return matchesLink || matchesSchedule;
-    });
-  const currentCategory = estimateItem
-    ? estimate.lineItems.find(category => (category.items || []).some(item => item._id?.toString() === estimateItem._id?.toString()))
-    : null;
-
-  if (!estimateItem && options.createIfMissing === false) {
-    return { schedule, estimate, item: null };
-  }
-
-  if (!estimateItem) {
-    estimateItem = {
-      type: 'item',
-      name: schedule.title,
-      description: schedule.description || '',
-      costCode: 'Maintenance',
-      quantity: 1,
-      unitPrice: scheduleCost,
-      laborCost: scheduleCost,
-      total: scheduleCost,
-      status: itemStatus,
-      maintenanceScheduleId: schedule._id,
-      assignedTo: schedule.assignedVendor || null,
-      photos: { before: [], after: [] },
-      startDate: schedule.startDate || schedule.nextScheduledDate || new Date(),
-      endDate: schedule.status === 'completed' ? (schedule.completedAt || new Date()) : null
-    };
-    targetCategory.items.push(estimateItem);
-  } else {
-    estimateItem.name = schedule.title;
-    estimateItem.description = schedule.description || '';
-    estimateItem.costCode = estimateItem.costCode || 'Maintenance';
-    estimateItem.quantity = 1;
-    estimateItem.unitPrice = scheduleCost;
-    estimateItem.laborCost = scheduleCost;
-    estimateItem.total = scheduleCost;
-    estimateItem.status = itemStatus;
-    estimateItem.maintenanceScheduleId = schedule._id;
-    estimateItem.assignedTo = schedule.assignedVendor || null;
-    estimateItem.startDate = schedule.startDate || schedule.nextScheduledDate || estimateItem.startDate || new Date();
-    estimateItem.endDate = schedule.status === 'completed' ? (schedule.completedAt || estimateItem.endDate || new Date()) : null;
-    estimateItem.photos = estimateItem.photos && typeof estimateItem.photos === 'object'
-      ? {
-          before: Array.isArray(estimateItem.photos.before) ? estimateItem.photos.before : [],
-          after: Array.isArray(estimateItem.photos.after) ? estimateItem.photos.after : []
-        }
-      : { before: [], after: [] };
-
-    if (currentCategory && targetCategory && currentCategory !== targetCategory) {
-      currentCategory.items = (currentCategory.items || []).filter(item => item._id?.toString() !== estimateItem._id?.toString());
-      targetCategory.items = targetCategory.items || [];
-      targetCategory.items.push(estimateItem);
-    }
-  }
-
-  for (const category of estimate.lineItems) {
-    const categoryItems = category.items || [];
-    category.status = categoryItems.length && categoryItems.every(item => ['completed', 'approved'].includes(String(item.status || '').toLowerCase()))
-      ? 'completed'
-      : 'in-progress';
-  }
-  estimate.markModified('lineItems');
-  estimate.total = calculateEstimateTotal(estimate.lineItems);
-  await estimate.save();
-
-  const savedEstimate = await Estimate.findById(estimate._id);
-  const savedItem = savedEstimate?.lineItems
-    .flatMap(category => category.items || [])
-    .find(item => item.maintenanceScheduleId && item.maintenanceScheduleId.toString() === schedule._id.toString());
-
-  if (savedItem && savedItem._id) {
-    let scheduleNeedsSave = false;
-    if (!schedule.linkedEstimateId || String(schedule.linkedEstimateId) !== String(savedEstimate._id)) {
-      schedule.linkedEstimateId = savedEstimate._id;
-      scheduleNeedsSave = true;
-    }
-    if (!schedule.linkedEstimateItemId || String(schedule.linkedEstimateItemId) !== String(savedItem._id)) {
-      schedule.linkedEstimateItemId = savedItem._id;
-      scheduleNeedsSave = true;
-    }
-    if (scheduleNeedsSave) {
-      await schedule.save();
-    }
-    await syncVendorAssignedEstimateItem(savedEstimate, savedItem, schedule.assignedVendor);
-  }
-
-  return { schedule, estimate: savedEstimate, item: savedItem || null };
-}
-
-async function syncMaintenanceRequestToEstimate(request) {
-  if (!request?._id || !request.projectId || !request.title) return;
-
-  const defaultMaintenanceEstimateTitle = 'Maintenance request';
-  const rawUnitId = request.unitId && (request.unitId._id || request.unitId);
-  let unitNumber = typeof request.unitId?.number === 'string' ? request.unitId.number.trim() : '';
-  if (!unitNumber && rawUnitId) {
-    const linkedUnit = await Unit.findById(rawUnitId).select('number').lean().catch(() => null);
-    unitNumber = String(linkedUnit?.number || '').trim();
-  }
-  const unitLabel = unitNumber ? `Unit ${unitNumber}` : '';
-  const unitCategoryName = unitLabel ? `Maintenance ${unitLabel}` : '';
-  const estimateItemName = unitLabel ? `${unitLabel} - ${request.title}` : request.title;
-
-  // 1. Ensure the assigned vendor is linked to the project when one exists
-  if (request.assignedVendor) {
-    await ensureVendorProjectAssignment(request.assignedVendor, request.projectId);
-  }
-
-  // 2. Find or create the default estimate shell for maintenance requests
-  let estimate = request.linkedEstimateId ? await Estimate.findById(request.linkedEstimateId) : null;
-  if (!estimate) {
-    estimate = await Estimate.findOne({
-      projectId: request.projectId,
-      title: { $regex: new RegExp(`^${defaultMaintenanceEstimateTitle}$`, 'i') }
-    });
-  }
-
-  if (!estimate) {
-    estimate = new Estimate({
-      projectId: request.projectId,
-      invoiceNumber: `MR-${Date.now()}`,
-      title: defaultMaintenanceEstimateTitle,
-      lineItems: [],
-      total: 0,
-      tax: 0
-    });
-    await estimate.save();
-    estimate = await Estimate.findById(estimate._id);
-  } else if (estimate.title !== defaultMaintenanceEstimateTitle) {
-    estimate.title = defaultMaintenanceEstimateTitle;
-  }
-
-  // 3. Add a linked line item for the maintenance request
-  const itemStatus = getEstimateItemStatusFromMaintenanceStatus(request.status);
-  const requestCost = Number.isFinite(Number(request.cost)) ? Number(request.cost) : 0;
-  let maintenanceCategory = estimate.lineItems.find(category => category.category === 'Maintenance');
-  if (!maintenanceCategory) {
-    estimate.lineItems.push({
-      type: 'category',
-      category: 'Maintenance',
-      status: itemStatus === 'completed' ? 'completed' : 'in-progress',
-      items: []
-    });
-    maintenanceCategory = estimate.lineItems.find(category => category.category === 'Maintenance');
-  }
-  let targetCategory = maintenanceCategory;
-  if (unitCategoryName) {
-    targetCategory = estimate.lineItems.find(
-      category => String(category.category || '').trim().toLowerCase() === unitCategoryName.toLowerCase()
-    );
-
-    if (!targetCategory) {
-      estimate.lineItems.push({
-        type: 'category',
-        category: unitCategoryName,
-        status: itemStatus === 'completed' ? 'completed' : 'in-progress',
-        items: []
-      });
-      targetCategory = estimate.lineItems.find(
-        category => String(category.category || '').trim().toLowerCase() === unitCategoryName.toLowerCase()
-      );
-    }
-  }
-
-  let estimateItem = estimate.lineItems
-    .flatMap(category => category.items || [])
-    .find(item => {
-      const matchesLink = request.linkedEstimateItemId && item._id?.toString() === request.linkedEstimateItemId.toString();
-      const matchesRequest = item.maintenanceRequestId && item.maintenanceRequestId.toString() === request._id.toString();
-      return matchesLink || matchesRequest;
-    });
-  const currentCategory = estimateItem
-    ? estimate.lineItems.find(category => (category.items || []).some(item => item._id?.toString() === estimateItem._id?.toString()))
-    : null;
-
-  if (!estimateItem) {
-    estimateItem = {
-      type: 'item',
-      name: estimateItemName,
-      description: request.description || '',
-      costCode: 'Maintenance',
-      quantity: 1,
-      unitPrice: requestCost,
-      laborCost: requestCost,
-      total: requestCost,
-      status: itemStatus,
-      maintenanceRequestId: request._id,
-      assignedTo: request.assignedVendor || null,
-      photos: {
-        before: Array.isArray(request.photos) ? [...request.photos] : [],
-        after: Array.isArray(request.afterPhotos) ? [...request.afterPhotos] : []
-      },
-      startDate: request.scheduledFor || request.createdAt || new Date(),
-      endDate: request.completedAt || null
-    };
-    targetCategory.items.push(estimateItem);
-  } else {
-    estimateItem.name = estimateItemName;
-    estimateItem.description = request.description || '';
-    estimateItem.costCode = estimateItem.costCode || 'Maintenance';
-    estimateItem.quantity = 1;
-    estimateItem.unitPrice = requestCost;
-    estimateItem.laborCost = requestCost;
-    estimateItem.total = requestCost;
-    estimateItem.status = itemStatus;
-    estimateItem.maintenanceRequestId = request._id;
-    estimateItem.assignedTo = request.assignedVendor || null;
-    estimateItem.photos = {
-      before: Array.isArray(request.photos) ? [...request.photos] : [],
-      after: Array.isArray(estimateItem.photos?.after)
-        ? estimateItem.photos.after
-        : (Array.isArray(request.afterPhotos) ? [...request.afterPhotos] : [])
-    };
-    estimateItem.startDate = request.scheduledFor || request.createdAt || estimateItem.startDate || new Date();
-    estimateItem.endDate = request.completedAt || null;
-
-    if (currentCategory && targetCategory && currentCategory !== targetCategory) {
-      currentCategory.items = (currentCategory.items || []).filter(item => item._id?.toString() !== estimateItem._id?.toString());
-      targetCategory.items = targetCategory.items || [];
-      targetCategory.items.push(estimateItem);
-    }
-  }
-
-  for (const category of estimate.lineItems) {
-    const categoryItems = category.items || [];
-    category.status = categoryItems.length && categoryItems.every(item => ['completed', 'approved'].includes(String(item.status || '').toLowerCase()))
-      ? 'completed'
-      : 'in-progress';
-  }
-  estimate.markModified('lineItems');
-  estimate.total = calculateEstimateTotal(estimate.lineItems);
-  await estimate.save();
-
-  // 4. Mirror the line item onto the vendor assignment list when assigned
-  const savedEstimate = await Estimate.findById(estimate._id);
-  const savedItem = savedEstimate.lineItems
-    .flatMap(category => category.items || [])
-    .find(item => item.maintenanceRequestId && item.maintenanceRequestId.toString() === request._id.toString());
-
-  if (savedItem && savedItem._id) {
-    let requestNeedsSave = false;
-    if (!request.linkedEstimateId || String(request.linkedEstimateId) !== String(savedEstimate._id)) {
-      request.linkedEstimateId = savedEstimate._id;
-      requestNeedsSave = true;
-    }
-    if (!request.linkedEstimateItemId || String(request.linkedEstimateItemId) !== String(savedItem._id)) {
-      request.linkedEstimateItemId = savedItem._id;
-      requestNeedsSave = true;
-    }
-    if (requestNeedsSave) {
-      await request.save();
-    }
-
-    await syncVendorAssignedEstimateItem(savedEstimate, savedItem, request.assignedVendor);
-  }
-}
+// ============================================================================
+// [FLOW: estimates] Estimates and line items (continued)
+// ============================================================================
+serverFlows["estimates"].patch_api_estimates_line_items_lineItemId_status();
  
-// --- auto schedule logic ---
-async function updateNextScheduledDates(scheduleId = null) {
-  try {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    // 0. Optionally scope processing to a single schedule when editing
-    const scheduleFilter = scheduleId ? { _id: scheduleId } : {};
 
-    // 1. Set status to "in-progress" if nextScheduledDate is today and not already in-progress
-    const schedulesToday = await MaintenanceSchedule.find({
-      ...scheduleFilter,
-      nextScheduledDate: {
-        $gte: today,
-        $lt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
-      },
-      status: { $ne: 'in-progress' }
-    }).populate('assignedVendor projectId');
+// ============================================================================
+// [FLOW: maintenance-schedules] Recurring maintenance and reminders (continued)
+// ============================================================================
+serverFlows["maintenance-schedules"].get_api_properties_propertyId_maintenance_schedules_scheduleId_history_historyId();
 
-    for (const schedule of schedulesToday) {
-      await ensureScheduleActivatedForDate(schedule);
-    }
+serverFlows["maintenance-schedules"].patch_api_properties_propertyId_maintenance_schedules_scheduleId_history_historyId_review();
 
-    // 2. Notify for overdue schedules (nextScheduledDate < today, not completed)
-    const overdueSchedules = await MaintenanceSchedule.find({
-      ...scheduleFilter,
-      nextScheduledDate: { $lt: today },
-      status: { $ne: 'completed' }
-    }).populate('assignedVendor projectId');
-
-    for (const schedule of overdueSchedules) { 
-      await sendOverdueScheduleAlert(schedule);
-    }
-  } catch (err) {
-    console.error('Error updating nextScheduledDates:', err);
-  }
-}
-// Run updateNextScheduledDates every day at 7am
-function scheduleDailyUpdateNextScheduledDates() {
-  const now = new Date();
-  const next11am = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 11, 0, 0, 0);
-  if (now > next11am) {
-    // If it's past 11am today, schedule for tomorrow
-    next11am.setDate(next11am.getDate() + 1);
-  }
-  const millisTill11am = next11am - now;
-  setTimeout(() => {
-    updateNextScheduledDates();
-    setInterval(updateNextScheduledDates, 24 * 60 * 60 * 1000); // every 24 hours
-  }, millisTill11am);
-}
+serverFlows["maintenance-schedules"].patch_api_properties_propertyId_maintenance_schedules_scheduleId_complete();
 
 scheduleDailyUpdateNextScheduledDates();
-
-
-// Replace the HTML in sendMaintenanceReminders with this improved style:
-function getMaintenanceEmailHtml({ recipientName, schedule, dayLabel, isManager }) {
-  // Helper to format address
-  function formatAddress(address) {
-    if (!address) return '';
-    const line1 = address.addressLine1 || address.line1 || '';
-    const line2 = address.addressLine2 || address.line2 || '';
-    const city = address.city || '';
-    const state = address.state || '';
-    const zip = address.zip || '';
-    let addr = line1;
-    if (line2) addr += ', ' + line2;
-    if (city) addr += ', ' + city;
-    if (state) addr += ', ' + state;
-    if (zip) addr += ' ' + zip;
-    return addr.trim();
-  }
-
-  const propertyAddress = schedule.projectId?.address
-    ? formatAddress(schedule.projectId.address)
-    : '';
- 
-  return `
-    <div style="font-family: Arial, sans-serif; background: #f6fafd; padding: 24px;">
-      <div style="max-width: 520px; margin: auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(44,62,80,0.07); padding: 24px;">
-        <h2 style="color: #217dbb; margin-top: 0;">${dayLabel} Maintenance Reminder</h2>
-        <p style="font-size: 1.1em;">Hello ${recipientName},</p>
-        <p>
-          ${isManager
-            ? 'This is a friendly reminder that we have a scheduled maintenance for'
-            : 'This is a friendly reminder that you have a scheduled maintenance for'}
-          <strong style="color: #2c3e50;">${schedule.title}</strong>
-          at <strong style="color: #217dbb;">${propertyAddress || 'Property'}</strong>
-          <span style="color: #217dbb;">${dayLabel === 'Today' ? 'today' : 'tomorrow'} (${new Date(schedule.nextScheduledDate).toLocaleDateString()})</span>.
-        </p>
-        <div style="margin: 18px 0; padding: 12px; background: #eaf6ff; border-radius: 8px;">
-          <strong>Description:</strong> ${schedule.description || '<span style="color:#888;">No description provided.</span>'}
-        </div>
-        <table style="width:100%;margin-bottom:18px;">
-          <tr>
-            <td style="padding:6px 0;"><strong>Frequency:</strong></td>
-            <td style="padding:6px 0;">${schedule.frequency.charAt(0).toUpperCase() + schedule.frequency.slice(1)}${schedule.frequency === 'custom' && schedule.intervalDays ? ` (Every ${schedule.intervalDays} days)` : ''}</td>
-          </tr>
-        </table>
-        <div style="margin-top: 24px; text-align: right;">
-          <span style="font-size: 0.95em; color: #888;">Thank you,<br>BESF Team</span>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-// In sendMaintenanceReminders, update the email sending logic:
-async function sendMaintenanceReminders() {
-  try {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Find schedules for tomorrow and today
-    const schedulesTomorrow = await MaintenanceSchedule.find({
-      nextScheduledDate: {
-        $gte: tomorrow,
-        $lt: new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000)
-      }
-    }).populate('assignedVendor projectId');
-
-    const schedulesToday = await MaintenanceSchedule.find({
-      nextScheduledDate: {
-        $gte: today,
-        $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
-      }
-    }).populate('assignedVendor projectId');
- 
-    // Send reminders for tomorrow
-    for (const schedule of schedulesTomorrow) {
-       // Vendor reminder
-      if (schedule.assignedVendor && schedule.assignedVendor.email) {
-        await transporter.sendMail({
-          from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-          to: schedule.assignedVendor.email,
-          subject: `Reminder: Upcoming Maintenance Scheduled for Tomorrow`,
-          html: getMaintenanceEmailHtml({
-            recipientName: schedule.assignedVendor.name || 'Vendor',
-            schedule,
-            dayLabel: 'Tomorrow',
-            isManager: false
-          })
-        });
-      }
-      // Send to default project manager email
-await transporter.sendMail({
-  from: `"BESF Team" <${process.env.EMAIL_USER}>`,
-  to: ["jleonel3915@gmail.com"], // <-- Add both emails here
-  subject: `Reminder: Maintenance Scheduled for Tomorrow`,
-  html: getMaintenanceEmailHtml({
-    recipientName: 'Team',
-    schedule,
-    dayLabel: 'Tomorrow',
-    isManager: true
-  })
-});
-    }
-  } catch (err) {
-    console.error('Error sending maintenance reminders:', err);
-  }
-}
 
 // --- Run this function every morning at 8am ---
 const now = new Date();
@@ -10480,775 +2694,117 @@ setTimeout(function() {
   setInterval(sendMaintenanceReminders, 24 * 60 * 60 * 1000); // every 24 hours
 }, millisTill11 > 0 ? millisTill11 : 0);
 
+serverFlows["maintenance-schedules"].post_api_properties_propertyId_maintenance_schedules();
 
+serverFlows["maintenance-schedules"].get_api_properties_propertyId_maintenance_schedules();
 
-// API to create a schedule
-app.post('/api/properties/:propertyId/maintenance-schedules', async (req, res) => {
-  try {
-    const { title, description, frequency, intervalDays, startDate, assignedVendor, unitId, status, cost } = req.body;
-    if (!title || !frequency || !startDate) {
-      return res.status(400).json({ message: 'Missing required fields.' });
-    }
-    let nextDate = new Date(startDate);
-    switch (frequency) {
-      case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
-      case 'weekly': nextDate.setDate(nextDate.getDate() + 7); break;
-      case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
-      case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
-      case 'custom':
-        if (!intervalDays || intervalDays < 1) return res.status(400).json({ message: 'Custom intervalDays required.' });
-        nextDate.setDate(nextDate.getDate() + intervalDays);
-        break;
-    }
-    const schedule = new MaintenanceSchedule({
-      projectId: req.params.propertyId,
-      title,
-      description,
-      frequency,
-      intervalDays: frequency === 'custom' ? intervalDays : null,
-      startDate,
-      nextScheduledDate: nextDate,
-      assignedVendor: assignedVendor || null,
-      unitId: unitId || null,
-      status: status || 'pending',
-      completedAt: status === 'completed' ? new Date() : null,
-      cost: cost || 0
-    });
-    await schedule.save();
-        let responseSchedule = schedule;
-    if (schedule.status === 'in-progress') {
-      const syncResult = await syncMaintenanceScheduleToEstimate(schedule, { createIfMissing: true });
-      responseSchedule = syncResult?.schedule || schedule;
-    }
-    res.status(201).json(responseSchedule);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to create schedule.' });
-  }
-});
+serverFlows["maintenance-schedules"].post_api_properties_propertyId_maintenance_schedules_scheduleId_estimate();
 
-// API to get schedules for a property
-app.get('/api/properties/:propertyId/maintenance-schedules', async (req, res) => {
-  try {
-    const schedules = await MaintenanceSchedule.find({ projectId: req.params.propertyId })
-      .populate('assignedVendor', 'name email'); 
-    res.json(schedules);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch maintenance schedules' });
-  }
-});
-
-app.post('/api/properties/:propertyId/maintenance-schedules/:scheduleId/estimate', async (req, res) => {
-  try {
-    const schedule = await MaintenanceSchedule.findOne({
-      _id: req.params.scheduleId,
-      projectId: req.params.propertyId
-    });
-    if (!schedule) return res.status(404).json({ message: 'Schedule not found.' });
-
-    const syncResult = await syncMaintenanceScheduleToEstimate(schedule, { createIfMissing: true });
-    const responseSchedule = syncResult?.schedule || schedule;
-
-    res.json({
-      success: true,
-      schedule: responseSchedule,
-      estimateId: syncResult?.estimate?._id || responseSchedule.linkedEstimateId || null,
-      lineItemId: syncResult?.item?._id || responseSchedule.linkedEstimateItemId || null
-    });
-  } catch (err) {
-    console.error('Failed to create or link recurring maintenance estimate:', err);
-    res.status(500).json({ message: 'Failed to create or link recurring maintenance estimate.' });
-  }
-});
-
-// --- Maintenance Schedule: Update (PUT) ---
-app.put('/api/properties/:propertyId/maintenance-schedules/:scheduleId', async (req, res) => {
-  try {
-    const { title, description, frequency, intervalDays, startDate, assignedVendor, unitId, status, cost } = req.body;
-    const existingSchedule = await MaintenanceSchedule.findOne({ _id: req.params.scheduleId, projectId: req.params.propertyId });
-    if (!existingSchedule) return res.status(404).json({ message: 'Schedule not found.' });
-    let nextDate = new Date(startDate);
-    switch (frequency) {
-      case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
-      case 'weekly': nextDate.setDate(nextDate.getDate() + 7); break;
-      case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
-      case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
-      case 'custom':
-        if (!intervalDays || intervalDays < 1) return res.status(400).json({ message: 'Custom intervalDays required.' });
-        nextDate.setDate(nextDate.getDate() + intervalDays);
-        break;
-    }
-    const updateObj = {
-      title,
-      description,
-      frequency,
-      intervalDays: frequency === 'custom' ? intervalDays : null,
-      startDate,
-      nextScheduledDate: nextDate,
-      assignedVendor: assignedVendor || null,
-      unitId: unitId || null,
-      cost: cost || 0
-    };
-    if (status) {
-      updateObj.status = status;
-      if (status === 'completed') {
-        const completedAt = new Date();
-        updateObj.completedAt = completedAt;
-        updateObj.startDate = completedAt;
-      } else {
-        updateObj.completedAt = null;
-      }
-    }
-    let updated = await MaintenanceSchedule.findOneAndUpdate(
-      { _id: req.params.scheduleId, projectId: req.params.propertyId },
-      updateObj,
-      { new: true }
-    );
-
-    const startDateChanged = Boolean(startDate) && new Date(existingSchedule.startDate).getTime() !== new Date(startDate).getTime();
-    if (startDateChanged && updated?._id) {
-      await updateNextScheduledDates(updated._id);
-       updated = await MaintenanceSchedule.findById(updated._id);
-    }
-
-    const shouldSyncEstimate = !!updated && (
-      updated.status === 'in-progress'
-      || !!updated.linkedEstimateId
-      || !!updated.linkedEstimateItemId
-      || String(existingSchedule.assignedVendor || '') !== String(updated.assignedVendor || '')
-      || String(existingSchedule.title || '') !== String(updated.title || '')
-      || String(existingSchedule.description || '') !== String(updated.description || '')
-      || String(existingSchedule.unitId || '') !== String(updated.unitId || '')
-      || Number(existingSchedule.cost || 0) !== Number(updated.cost || 0)
-    );
-    if (shouldSyncEstimate) {
-      const syncResult = await syncMaintenanceScheduleToEstimate(updated, {
-        createIfMissing: updated.status === 'in-progress' || !!updated.linkedEstimateId
-      });
-      updated = syncResult?.schedule || updated;
-    }
-
-    res.json(updated);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to update schedule.' });
-  }
-});
+serverFlows["maintenance-schedules"].put_api_properties_propertyId_maintenance_schedules_scheduleId();
  
-// --- Maintenance Schedule: Delete (DELETE) ---
-app.delete('/api/properties/:propertyId/maintenance-schedules/:scheduleId', async (req, res) => {
-  try {
-    const deleted = await MaintenanceSchedule.findOneAndDelete({
-      _id: req.params.scheduleId,
-      projectId: req.params.propertyId
-    });
-    if (!deleted) return res.status(404).json({ message: 'Schedule not found.' });
-    res.json({ message: 'Schedule deleted.' });
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to delete schedule.' });
-  }
-});
-
-
-// ===================== TENANT PORTAL API =====================
-
-function authTenantPortal(req, res, next) {
-  const header = req.headers.authorization || '';
-  if (!header.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Not authenticated' });
-  }
-
-  try {
-    const decoded = jwt.verify(header.split(' ')[1], JWT_SECRET);
-    if (!decoded.tenantPortalTenantId) {
-      return res.status(401).json({ message: 'Invalid token' });
-    }
-    req.tenantPortalTenantId = decoded.tenantPortalTenantId;
-    req.tenantPortalProjectId = decoded.projectId;
-    next();
-  } catch (error) {
-    return res.status(401).json({ message: 'Invalid token' });
-  }
-}
-
-function normalizePhoneDigits(value) {
-  return String(value || '').replace(/\D/g, '');
-}
-
-function normalizeAddressForTenantPortal(project) {
-  const address = project?.address || {};
-  const line1 = address.line1 || address.addressLine1 || address.street || '';
-  const line2 = address.line2 || address.addressLine2 || address.suite || '';
-  return {
-    line1,
-    line2,
-    city: address.city || '',
-    state: address.state || '',
-    zip: address.zip || address.postalCode || ''
-  };
-}
-
-async function buildTenantPortalPayload(tenantId) {
-  const tenant = await Tenant.findById(tenantId).populate('unitId').lean();
-  if (!tenant) return null;
-  const today = getStartOfToday();
-
-  const [project, payments, maintenance, documents, announcementRecords] = await Promise.all([
-    Project.findById(tenant.projectId).lean().catch(() => null),
-    Payment.find({ tenantId: tenant._id }).sort({ date: -1, createdAt: -1 }).lean(),
-    MaintenanceRequest.find({
-      projectId: tenant.projectId,
-      ...(tenant.unitId?._id ? { unitId: tenant.unitId._id } : {})
-    }).sort({ createdAt: -1 }).lean(),
-    Document.find({
-      projectId: tenant.projectId,
-      $or: [
-        { tenantId: tenant._id },
-        { tenantId: null, type: { $in: ['notice', 'other'] } }
-      ]
-    }).sort({ createdAt: -1 }).lean(),
-    Announcement.find({
-      projectId: tenant.projectId,
-      $or: [
-        { targetTenantIds: { $exists: false } },
-        { targetTenantIds: { $size: 0 } },
-        { targetTenantIds: tenant._id }
-      ],
-      $or: [{ expiresAt: null }, { expiresAt: { $gte: today } }]
-    }).sort({ pinned: -1, startsAt: 1, createdAt: -1 }).limit(10).lean()
-  ]);
-
-  const announcements = announcementRecords.filter(item => {
-    const startsAt = parseAnnouncementCalendarDate(item?.startsAt);
-    const expiresAt = parseAnnouncementCalendarDate(item?.expiresAt);
-    if (expiresAt && expiresAt < today) return false;
-    if (startsAt && !expiresAt && startsAt < today) return false;
-    return true;
-  });
-
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-  const expectedRent = computeExpectedRentForMonth(tenant, now, 'rent') || 0;
-  const currentRentPayments = payments.filter(payment => {
-    if (payment.applyTo !== 'rent' || !payment.date) return false;
-    const d = new Date(payment.date);
-    return d >= monthStart && d <= monthEnd;
-  });
-  const paidThisMonth = currentRentPayments.reduce((sum, payment) => sum + Math.abs(Number(payment.amount) || 0), 0);
-  const lateFeesThisMonth = currentRentPayments.reduce((sum, payment) => sum + (Number(payment.lateFee) || 0), 0);
-  const rentBalance = expectedRent + lateFeesThisMonth - paidThisMonth;
-  const depositRequired = Number(tenant.deposit) || 0;
-  const depositPaid = Number(tenant.depositPaid) || 0;
-
-  return {
-    tenant: {
-      id: tenant._id,
-      name: tenant.name,
-      email: tenant.email,
-      phone: tenant.phone,
-      leaseStart: tenant.leaseStart,
-      leaseEnd: tenant.leaseEnd,
-      leaseStatus: tenant.leaseStatus,
-      parking: tenant.parking,
-      accessCode: tenant.accessCode,
-      emergencyContact: tenant.emergencyContact || {},
-      cars: tenant.cars || {},
-      pets: tenant.pets || {}
-    },
-    property: {
-      id: project?._id || tenant.projectId,
-      name: project?.name || 'Your Property',
-      type: project?.type || '',
-      address: normalizeAddressForTenantPortal(project)
-    },
-    unit: tenant.unitId ? {
-      id: tenant.unitId._id,
-      number: tenant.unitId.number,
-      floor: tenant.unitId.floor,
-      bedrooms: tenant.unitId.bedrooms,
-      bathrooms: tenant.unitId.bathrooms,
-      sqft: tenant.unitId.sqft,
-      amenities: tenant.unitId.amenities || [],
-      utilityAccounts: tenant.unitId.utilityAccounts || {}
-    } : null,
-    balances: {
-      expectedRent,
-      paidThisMonth,
-      lateFeesThisMonth,
-      rentBalance,
-      depositRequired,
-      depositPaid,
-      depositBalance: Math.max(0, depositRequired - depositPaid)
-    },
-    payments,
-    maintenance,
-    documents: documents.map(doc => ({
-      _id: doc._id,
-      name: doc.name,
-      type: doc.type,
-      uploadedBy: doc.uploadedBy,
-      createdAt: doc.createdAt,
-      viewUrl: `/api/tenant-portal/documents/${doc._id}/view`,
-      downloadUrl: `/api/tenant-portal/documents/${doc._id}/download`
-    })),
-    announcements
-  };
-}
-
-app.post('/api/tenant-portal/login', async (req, res) => {
-  try {
-    const email = String(req.body.email || '').trim().toLowerCase();
-    const phoneLast4 = normalizePhoneDigits(req.body.phoneLast4).slice(-4);
-
-    if (!email || phoneLast4.length !== 4) {
-      return res.status(400).json({ message: 'Email and phone last four are required' });
-    }
-
-    const tenants = await Tenant.find({ email: new RegExp(`^${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') })
-      .sort({ leaseStatus: 1, updatedAt: -1 })
-      .lean();
-
-    const tenant = tenants.find(t => normalizePhoneDigits(t.phone).slice(-4) === phoneLast4);
-    if (!tenant) {
-      return res.status(401).json({ message: 'We could not match that tenant record' });
-    }
-
-    const token = jwt.sign(
-      { tenantPortalTenantId: tenant._id, projectId: tenant.projectId },
-      JWT_SECRET,
-      { expiresIn: '14d' }
-    );
-    const portal = await buildTenantPortalPayload(tenant._id);
-    res.json({ token, portal });
-  } catch (error) {
-    console.error('Tenant portal login error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.get('/api/tenant-portal/me', authTenantPortal, async (req, res) => {
-  try {
-    const portal = await buildTenantPortalPayload(req.tenantPortalTenantId);
-    if (!portal) return res.status(404).json({ message: 'Tenant not found' });
-    res.json({ portal });
-  } catch (error) {
-    console.error('Tenant portal me error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.put('/api/tenant-portal/profile', authTenantPortal, async (req, res) => {
-  try {
-    const update = {};
-    if (typeof req.body.phone === 'string') update.phone = req.body.phone.trim();
-    if (req.body.emergencyContact && typeof req.body.emergencyContact === 'object') {
-      update.emergencyContact = {
-        name: String(req.body.emergencyContact.name || '').trim(),
-        phone: String(req.body.emergencyContact.phone || '').trim(),
-        email: String(req.body.emergencyContact.email || '').trim(),
-        relation: String(req.body.emergencyContact.relation || '').trim(),
-        address: String(req.body.emergencyContact.address || '').trim()
-      };
-    }
-    if (req.body.cars && typeof req.body.cars === 'object') update.cars = req.body.cars;
-    if (req.body.pets && typeof req.body.pets === 'object') update.pets = req.body.pets;
-
-    await Tenant.findByIdAndUpdate(req.tenantPortalTenantId, { $set: update }, { new: true });
-    const portal = await buildTenantPortalPayload(req.tenantPortalTenantId);
-    res.json({ message: 'Profile updated', portal });
-  } catch (error) {
-    console.error('Tenant portal profile update error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.post('/api/tenant-portal/maintenance', authTenantPortal, maintenancePhotoUpload.array('photos', 10), async (req, res) => {
-  try {
-    const tenant = await Tenant.findById(req.tenantPortalTenantId).lean();
-    if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
-
-    const title = String(req.body.title || '').trim();
-    const description = String(req.body.description || '').trim();
-    if (!title || !description) {
-      return res.status(400).json({ message: 'Title and description are required' });
-    }
-
-    const details = [
-      description,
-      req.body.accessPermission ? `Access permission: ${req.body.accessPermission}` : '',
-      req.body.preferredTime ? `Preferred time: ${req.body.preferredTime}` : '',
-      req.body.contactPreference ? `Contact preference: ${req.body.contactPreference}` : ''
-    ].filter(Boolean).join('\n\n');
-
-    const request = await MaintenanceRequest.create({
-      projectId: tenant.projectId,
-      unitId: tenant.unitId || null,
-      title,
-      description: details,
-      priority: ['low', 'medium', 'high', 'urgent'].includes(req.body.priority) ? req.body.priority : 'medium',
-      status: 'pending',
-      photos: (req.files || []).map(file => `/uploads/maintenance/${file.filename}`),
-      updates: [{
-        authorRole: 'tenant',
-        authorName: tenant.name || 'Tenant',
-        text: 'Maintenance request submitted from the tenant portal.',
-        createdAt: new Date()
-      }]
-    });
-
-    await syncMaintenanceRequestToEstimate(request);
-
-    res.status(201).json({ message: 'Maintenance request submitted', request });
-  } catch (error) {
-    console.error('Tenant portal maintenance create error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.post('/api/tenant-portal/maintenance/:requestId/messages', authTenantPortal, async (req, res) => {
-  try {
-    const text = String(req.body.text || '').trim();
-    if (!text) return res.status(400).json({ message: 'Message is required' });
-    if (text.length > 1200) return res.status(400).json({ message: 'Message is too long' });
-
-    const tenant = await Tenant.findById(req.tenantPortalTenantId).lean();
-    if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
-
-    const request = await MaintenanceRequest.findOne({
-      _id: req.params.requestId,
-      projectId: tenant.projectId,
-      ...(tenant.unitId ? { unitId: tenant.unitId } : {})
-    });
-
-    if (!request) return res.status(404).json({ message: 'Maintenance request not found' });
-
-    request.updates = request.updates || [];
-    request.updates.push({
-      authorRole: 'tenant',
-      authorName: tenant.name || 'Tenant',
-      text,
-      createdAt: new Date()
-    });
-    await request.save();
-
-    res.status(201).json({ message: 'Message added', updates: request.updates });
-  } catch (error) {
-    console.error('Tenant portal maintenance message error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.post('/api/tenant-portal/payment-notice', authTenantPortal, async (req, res) => {
-  try {
-    const tenant = await Tenant.findById(req.tenantPortalTenantId).populate('unitId').lean();
-    if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
-    const amount = Number(req.body.amount) || 0;
-    const method = String(req.body.method || '').trim();
-    const reference = String(req.body.reference || '').trim();
-    const note = String(req.body.note || '').trim();
-    if (!amount || !method) return res.status(400).json({ message: 'Amount and method are required' });
-
-    await transporter.sendMail({
-      from: `Tenant Portal <${process.env.EMAIL_USER}>`,
-      to: process.env.EMAIL_USER,
-      subject: `Tenant payment notice - ${tenant.name}`,
-      html: `
-        <div style="font-family:Arial,sans-serif;line-height:1.5;">
-          <h2>Tenant Payment Notice</h2>
-          <p><strong>Tenant:</strong> ${tenant.name}</p>
-          <p><strong>Email:</strong> ${tenant.email}</p>
-          <p><strong>Unit:</strong> ${tenant.unitId?.number || 'N/A'}</p>
-          <p><strong>Amount:</strong> $${amount.toFixed(2)}</p>
-          <p><strong>Method:</strong> ${method}</p>
-          <p><strong>Reference:</strong> ${reference || 'N/A'}</p>
-          <p><strong>Note:</strong><br>${note || 'N/A'}</p>
-        </div>
-      `
-    });
-
-    res.json({ message: 'Payment notice sent' });
-  } catch (error) {
-    console.error('Tenant portal payment notice error:', error);
-    res.status(500).json({ message: 'Unable to send payment notice' });
-  }
-});
-
-async function sendTenantPortalDocument(req, res, disposition) {
-  try {
-    const tenant = await Tenant.findById(req.tenantPortalTenantId).select('_id projectId').lean();
-    if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
-    const doc = await Document.findOne({
-      _id: req.params.documentId,
-      projectId: tenant.projectId,
-      $or: [
-        { tenantId: tenant._id },
-        { tenantId: null, type: { $in: ['notice', 'other'] } }
-      ]
-    }).lean();
-    if (!doc) return res.status(404).json({ message: 'Document not found' });
-
-    const filePath = resolveStoredUploadPath(doc.filePath);
-    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on server' });
-
-    const ext = path.extname(doc.name).toLowerCase();
-    const contentType = {
-      '.pdf': 'application/pdf',
-      '.doc': 'application/msword',
-      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      '.txt': 'text/plain',
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.gif': 'image/gif'
-    }[ext] || 'application/octet-stream';
-
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', getContentDispositionHeader(disposition, doc.name));
-    fs.createReadStream(filePath).pipe(res);
-  } catch (error) {
-    console.error('Tenant portal document error:', error);
-    res.status(500).json({ message: 'Error serving document' });
-  }
-}
-
-app.get('/api/tenant-portal/documents/:documentId/view', authTenantPortal, (req, res) => {
-  sendTenantPortalDocument(req, res, 'inline');
-});
-
-app.get('/api/tenant-portal/documents/:documentId/download', authTenantPortal, (req, res) => {
-  sendTenantPortalDocument(req, res, 'attachment');
-});
-
-
-// Contact Form Submission Endpoint
-app.post('/api/contact', async (req, res) => {
-  const { name, email, phone, details } = req.body;
-  // Validate input with stricter checks
-  if (
-    !name || typeof name !== 'string' || name.length < 2 ||
-    !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
-    !phone || phone.length < 7 ||
-    !details || typeof details !== 'string' || details.length < 10
-  ) {
-    return res.status(400).json({
-      success: false,
-      message: 'Please fill out all fields with valid information.'
-    });
-  }
- 
-  // Compose a visually appealing HTML email
-  const htmlMsg = `
-    <div style="font-family:Inter,Arial,sans-serif;background:#f6fafd;padding:24px;">
-      <div style="max-width:520px;margin:auto;background:#fff;border-radius:18px;box-shadow:0 2px 8px #1a73e820;padding:24px;">
-        <h2 style="color:#1a73e8;margin-top:0;">New Contact Form Submission</h2>
-        <table style="width:100%;margin-bottom:18px;">
-          <tr><td style="font-weight:600;">Name:</td><td>${name}</td></tr>
-          <tr><td style="font-weight:600;">Email:</td><td>${email}</td></tr>
-          <tr><td style="font-weight:600;">Phone:</td><td>${phone}</td></tr>
-        </table>
-        <div style="margin:18px 0;padding:12px;background:#eaf6ff;border-radius:8px;">
-          <strong>Project Details:</strong><br>
-          <span style="font-size:1.08em;color:#222;">${details.replace(/\n/g, '<br>')}</span>
-        </div>
-        <div style="margin-top:24px;text-align:right;">
-          <span style="font-size:0.95em;color:#888;">Received via BluerainCO Website</span>
-        </div>
-      </div>
-    </div>
-  `;
-
-  try {
-    await transporter.sendMail({
-      from: `"Website Contact" <${process.env.EMAIL_USER}>`,
-      to: process.env.EMAIL_USER,
-      subject: 'New Contact Form Submission',
-      text: `Name: ${name}\nEmail: ${email}\nPhone: ${phone}\nDetails: ${details}`,
-      html: htmlMsg
-    });
-    res.status(200).json({ success: true, message: 'Message sent successfully!' });
-  } catch (err) {
-    console.error('Contact form email error:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to send message. Please try again later.'
-    });
-  }
-});
-
-
-// Debugging route to check server deployment status
-app.get('/api/debug', (req, res) => {
-  res.json({
-    success: true,
-    message: 'API is working on Render!',
-    environment: process.env.NODE_ENV,
-    port: process.env.PORT,
-  });
-});
-
-
-// ===================== CALORIE TRACKER API =====================
-
-// JWT auth middleware for calorie tracker
-function authCalorie(req, res, next) {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) return res.status(401).json({ message: 'Not authenticated' });
-  try {
-    const decoded = jwt.verify(header.split(' ')[1], JWT_SECRET);
-    req.calorieUserId = decoded.calorieUserId;
-    next();
-  } catch (e) {
-    return res.status(401).json({ message: 'Invalid token' });
-  }
-}
-
-// Register
-app.post('/api/calorie/register', async (req, res) => {
-  try {
-    const { email, password, name } = req.body;
-    if (!email || !password) return res.status(400).json({ message: 'Email and password required' });
-    if (password.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
-    const exists = await CalorieUser.findOne({ email: email.toLowerCase().trim() });
-    if (exists) return res.status(409).json({ message: 'Email already registered' });
-    const user = await CalorieUser.create({ email: email.toLowerCase().trim(), password, name: name || '' });
-    const token = jwt.sign({ calorieUserId: user._id }, JWT_SECRET, { expiresIn: '30d' });
-    res.status(201).json({ token, user: { id: user._id, email: user.email, name: user.name } });
-  } catch (e) {
-    console.error('Calorie register error:', e);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Login
-app.post('/api/calorie/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ message: 'Email and password required' });
-    const user = await CalorieUser.findOne({ email: email.toLowerCase().trim() });
-    if (!user) return res.status(401).json({ message: 'Invalid credentials' });
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(401).json({ message: 'Invalid credentials' });
-    const token = jwt.sign({ calorieUserId: user._id }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ token, user: { id: user._id, email: user.email, name: user.name } });
-  } catch (e) {
-    console.error('Calorie login error:', e);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Get profile (token check + load all user data)
-app.get('/api/calorie/me', authCalorie, async (req, res) => {
-  try {
-    const user = await CalorieUser.findById(req.calorieUserId).select('-password');
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user);
-  } catch (e) {
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Save tracker data (full sync)
-app.put('/api/calorie/data', authCalorie, async (req, res) => {
-  try {
-    const { trackerData, calorieGoal, proteinGoal, carbGoal, fatGoal, quickFoods, planData } = req.body;
-    const update = {};
-    if (trackerData !== undefined) update.trackerData = trackerData;
-    if (calorieGoal !== undefined) update.calorieGoal = calorieGoal;
-    if (proteinGoal !== undefined) update.proteinGoal = proteinGoal;
-    if (carbGoal !== undefined) update.carbGoal = carbGoal;
-    if (fatGoal !== undefined) update.fatGoal = fatGoal;
-    if (quickFoods !== undefined) update.quickFoods = quickFoods;
-    if (planData !== undefined) update.planData = planData;
-    if (req.body.savedMeals !== undefined) update.savedMeals = req.body.savedMeals;
-    const user = await CalorieUser.findByIdAndUpdate(req.calorieUserId, update, { new: true }).select('-password');
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json({ success: true });
-  } catch (e) {
-    console.error('Calorie data save error:', e);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// ── Calorie Tracker: Identify food from photo via Google Vision ──
-app.post('/api/calorie/identify-food', async (req, res) => {
-  try {
-    const { image } = req.body;
-    if (!image) {
-      console.log('identify-food: No image in request body, body keys:', Object.keys(req.body));
-      return res.status(400).json({ message: 'No image provided' });
-    }
-
-    console.log('identify-food: Received image, length:', image.length);
-
-    // Strip data URI prefix if present
-    const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
-    const imageBuffer = Buffer.from(base64Data, 'base64');
-    console.log('identify-food: Image buffer size:', imageBuffer.length, 'bytes');
-
-    // Run label detection and object localization in parallel
-    const [[labelResult], [objectResult]] = await Promise.all([
-      visionClient.labelDetection({ image: { content: imageBuffer } }),
-      visionClient.objectLocalization({ image: { content: imageBuffer } })
-    ]);
-
-    const labels = (labelResult.labelAnnotations || []).map(l => ({
-      name: l.description.toLowerCase(),
-      score: l.score
-    }));
-    const objects = (objectResult.localizedObjectAnnotations || []).map(o => ({
-      name: o.name.toLowerCase(),
-      score: o.score
-    }));
-
-    console.log('identify-food: Labels:', labels.map(l => l.name + '(' + Math.round(l.score*100) + ')').join(', '));
-    console.log('identify-food: Objects:', objects.map(o => o.name + '(' + Math.round(o.score*100) + ')').join(', '));
-
-    // Non-food labels to skip
-    const skipWords = new Set([
-      'tableware','table','plate','bowl','cup','fork','knife','spoon','chopsticks',
-      'serveware','dishware','drinkware','cutlery','kitchen utensil','platter',
-      'wood','hand','finger','person','human','room','indoor','outdoor',
-      'furniture','photograph','font','rectangle','circle','pattern','textile',
-      'plastic','metal','material','still life photography','close-up','macro photography',
-      'food','dish','meal','cuisine','recipe','ingredient','produce','comfort food',
-      'natural foods','superfood','whole food','staple food','fast food','junk food',
-      'side dish','garnish','condiment','snack','appetizer','dessert','breakfast',
-      'lunch','dinner','cooking','baking','animal source foods',
-      'plant','leaf','flower','grass','landscape','sky','water','liquid','container'
-    ]);
-
-    const allItems = [...objects, ...labels];
-    const seen = new Set();
-    const identified = [];
-
-    for (const item of allItems) {
-      const name = item.name;
-      if (seen.has(name)) continue;
-      seen.add(name);
-      if (skipWords.has(name)) continue;
-
-      // Require 65% confidence minimum
-      if (item.score >= 0.65) {
-        identified.push({ name, confidence: Math.round(item.score * 100) });
-      }
-    }
-
-    // Sort by confidence
-    identified.sort((a, b) => b.confidence - a.confidence);
-
-    console.log('identify-food: Returning', identified.length, 'items:', identified.map(i => i.name).join(', '));
-    res.json({ items: identified.slice(0, 8) });
-  } catch (e) {
-    console.error('Food identification error:', e);
-    res.status(500).json({ message: 'Failed to identify food', error: e.message });
-  }
-});
-
-
-// Root Route
-app.get('/', (req, res) => {
-  res.send('Server is running!');
-});
+serverFlows["maintenance-schedules"].delete_api_properties_propertyId_maintenance_schedules_scheduleId();
 
+// ===== Property-scoped QuickBooks Online integration =====
+const QB_SCOPE = 'com.intuit.quickbooks.accounting';
+const QB_TOKEN_ENCRYPTION_CONFIGURED = !!process.env.QB_TOKEN_ENCRYPTION_KEY;
+const QB_TOKEN_KEY = crypto.createHash('sha256').update(process.env.QB_TOKEN_ENCRYPTION_KEY || JWT_SECRET).digest();
+
+const escapeQbQuery=value=>String(value||'').replace(/'/g,"\\'");
+const normalizeQbPaymentText=value=>String(value||'').trim().replace(/\s+/g,' ').toLowerCase();
+const normalizeQbPaymentAmount=value=>Math.round((Number(value)||0)*100)/100;
+
+
+// ============================================================================
+// [FLOW: quickbooks] QuickBooks connections and synchronization
+// ============================================================================
+// Implementation: server/flows/quickbooks.js
+serverFlows["quickbooks"].get_api_properties_propertyId_quickbooks_connect();
+serverFlows["quickbooks"].get_api_qb_callback();
+serverFlows["quickbooks"].get_api_properties_propertyId_quickbooks_status();
+serverFlows["quickbooks"].delete_api_properties_propertyId_quickbooks_connection();
+serverFlows["quickbooks"].get_api_properties_propertyId_quickbooks_catalog();
+serverFlows["quickbooks"].put_api_properties_propertyId_quickbooks_mappings();
+
+serverFlows["quickbooks"].post_api_properties_propertyId_payments_paymentId_sync_quickbooks();
+
+serverFlows["quickbooks"].post_api_properties_propertyId_expenses_expenseId_sync_quickbooks();
+serverFlows["quickbooks"].get_api_properties_propertyId_quickbooks_sync_log();
+serverFlows["quickbooks"].get_api_properties_propertyId_quickbooks_payments();
+
+serverFlows["quickbooks"].get_api_properties_propertyId_quickbooks_payment_workspace();
+
+serverFlows["quickbooks"].put_api_properties_propertyId_quickbooks_customer_mapping_tenantId();
+
+serverFlows["quickbooks"].post_api_properties_propertyId_quickbooks_payment_workspace_link();
+
+serverFlows["quickbooks"].post_api_properties_propertyId_quickbooks_payment_workspace_import();
+
+
+// ============================================================================
+// [FLOW: tenant-portal] Tenant portal
+// ============================================================================
+// Implementation: server/flows/tenant-portal.js
+serverFlows["tenant-portal"].post_api_tenant_portal_login();
+
+serverFlows["tenant-portal"].get_api_tenant_portal_me();
+
+serverFlows["tenant-portal"].put_api_tenant_portal_profile();
+
+serverFlows["tenant-portal"].post_api_tenant_portal_maintenance();
+
+serverFlows["tenant-portal"].post_api_tenant_portal_maintenance_requestId_messages();
+
+serverFlows["tenant-portal"].post_api_tenant_portal_payment_notice();
+
+serverFlows["tenant-portal"].get_api_tenant_portal_documents_documentId_view();
+
+serverFlows["tenant-portal"].get_api_tenant_portal_documents_documentId_download();
+
+
+// ============================================================================
+// [FLOW: email] Email and notifications (continued)
+// ============================================================================
+serverFlows["email"].post_api_contact();
+
+
+// ============================================================================
+// [FLOW: system] System and root endpoints
+// ============================================================================
+// Implementation: server/flows/system.js
+serverFlows["system"].get_api_debug();
+
+
+// ============================================================================
+// [FLOW: calorie-tracker] Calorie tracker
+// ============================================================================
+// Implementation: server/flows/calorie-tracker.js
+serverFlows["calorie-tracker"].post_api_calorie_register();
+
+serverFlows["calorie-tracker"].post_api_calorie_login();
+
+serverFlows["calorie-tracker"].get_api_calorie_me();
+
+serverFlows["calorie-tracker"].put_api_calorie_data();
+
+serverFlows["calorie-tracker"].post_api_calorie_identify_food();
+
+
+// ============================================================================
+// [FLOW: system] System and root endpoints (continued)
+// ============================================================================
+serverFlows["system"].get_();
+
+
+// ============================================================================
+// [FLOW: eviction-cases] Eviction case integration
+// ============================================================================
+// Implementation: eviction-cases.js
+require('./eviction-cases')({app,mongoose,Tenant,Project,Expense,Manager,authenticateManagerProfile,multer});
+
+
+// ============================================================================
+// [SECTION 08] FALLBACK AND SERVER STARTUP
+// ============================================================================
 // 404 Fallback Route
 app.use((req, res) => {
   res.status(404).send('Page not found.');

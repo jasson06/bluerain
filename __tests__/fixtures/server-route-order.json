@@ -1,0 +1,1267 @@
+[
+  {
+    "method": "get",
+    "url": "/details/projects/:id",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/ocr",
+    "handlers": 2
+  },
+  {
+    "method": "post",
+    "url": "/api/upload-photos",
+    "handlers": 2
+  },
+  {
+    "method": "post",
+    "url": "/api/assign-vendor",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/delete-photo/:id",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/applications/new",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/applications/review/:id",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/rental-applications",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/rental-applications/send-link",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/rental-applications",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/application-invites",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/application-invites/:id",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/application-invites/:id",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/application-invites/:id/notes",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/application-invites/:id/notes/:noteId",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/rental-applications/:id",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/rental-applications/:id",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/rental-applications/:id/notes",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/rental-applications/:id/notes/:noteId",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/rental-applications/:id",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/add-client",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/clients",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/clients/:id",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/clients/:id",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/estimates",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/estimates/:id",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/estimates",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/estimates/:id",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/estimates/:id",
+    "handlers": 1
+  },
+  {
+    "method": "patch",
+    "url": "/api/estimates/:id/update-photo",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/estimate-view.html",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/add-vendor",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/vendors",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/vendors/:id",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/vendors/:id",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/managers",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/vendors/:id",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/vendors/:id/upload-w9",
+    "handlers": 2
+  },
+  {
+    "method": "delete",
+    "url": "/api/vendors/:id/w9",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/manager/profile",
+    "handlers": 2
+  },
+  {
+    "method": "put",
+    "url": "/api/manager/profile",
+    "handlers": 2
+  },
+  {
+    "method": "put",
+    "url": "/api/manager/password",
+    "handlers": 2
+  },
+  {
+    "method": "get",
+    "url": "/api/managers/:id",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/add-project",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/projects",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/projects/:id",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/details/projects/:id",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/details/projects/:id",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/projects/:projectId",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/tasks",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/task/:id",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/task/:id/assign",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/portfolio-tasks",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/portfolio-tasks",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/portfolio-tasks/:id",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/portfolio-tasks/:id",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/tasks",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/task/:id",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/task/:id",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/comments",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/comments",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/signup",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/signin",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/password-reset/request",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/password-reset",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/vendors/:vendorId/debug-items",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/vendors/:vendorId/update-item-status",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/vendor/start-project",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/subcontractor/tasks",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/vendors/:vendorId/assigned-projects",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/subcontractor/projects",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/vendor/update-project-status",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/vendors/:vendorId/assign-item",
+    "handlers": 1
+  },
+  {
+    "method": "patch",
+    "url": "/api/vendors/:vendorId/assigned-items/update",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/assign-items",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/delete-photo/:vendorId/:itemId/:photoUrl",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/photos/:itemId",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/vendors/:vendorId/assigned-items/:projectId",
+    "handlers": 1
+  },
+  {
+    "method": "patch",
+    "url": "/api/clear-vendor-assignment/:itemId",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/projects/:projectId/files",
+    "handlers": 2
+  },
+  {
+    "method": "get",
+    "url": "/api/projects/:projectId/files",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/projects/:projectId/files/:fileId",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/manager/signup",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/manager/signin",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/manager/reset-password",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/invite",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/sign-inpage.html",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/invite/accept",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/send-email",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/projects/:projectId/vendors",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/projects/:projectId/vendors/:vendorId",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/projects/current",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/estimates/:projectId/line-items",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/estimates/line-items/:lineItemId",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/selection-boards",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/products",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/products",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/selection-board",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/selection-boards",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/product-details",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/products/:id",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/on-market-projects",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/upcoming-projects",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/completed-projects",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/daily-updates",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/daily-updates",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/notifications",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/quotes",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/quotes",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/quotes/:id",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/quotes/:id/signature",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/quotes/:id",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/quotes/:id",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/quotes/:id/convert-to-job",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/quotes/:id/payments",
+    "handlers": 1
+  },
+  {
+    "method": "patch",
+    "url": "/api/quotes/:id/payment-terms",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/labor-costs",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/labor-costs",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/labor-costs/:id",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/labor-costs/:id",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/todos",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/todos",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/todos/:id",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/todos/:id",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/vendors/login-direct/:id",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/quality-review/items/:projectId",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/items/:itemId/quality-review",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/folders",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/folders",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/folders/reorder",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/folders/:id",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/folders/:id/files",
+    "handlers": 2
+  },
+  {
+    "method": "put",
+    "url": "/api/folders/:folderId/files/:index",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/folders/:id",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/folders/:folderId/files/:index",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/folders/:folderId/delete-files",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/projects/:projectId/files/:fileId/download",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/maintenance",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/maintenance-schedules",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/properties",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:id",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/multifamily",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:id/units",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/properties/:id/profile",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:id/overview",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/properties/:id/units",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/properties/:propertyId/units/:unitId",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/properties/:propertyId/units/:unitId",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/public/availability",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:propertyId/tenants",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/properties/:propertyId/tenants",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/properties/:propertyId/tenants/:tenantId",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/properties/:propertyId/tenants/:tenantId",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/tenants/:id/notes",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/tenants/:id/notes/:noteId",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/tenants/:id/move-in-checklist",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:propertyId/maintenance",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/properties/:propertyId/maintenance",
+    "handlers": 2
+  },
+  {
+    "method": "post",
+    "url": "/api/properties/:propertyId/maintenance/temp-photos",
+    "handlers": 2
+  },
+  {
+    "method": "patch",
+    "url": "/api/properties/:propertyId/maintenance/:requestId",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/properties/:propertyId/maintenance/:requestId",
+    "handlers": 2
+  },
+  {
+    "method": "delete",
+    "url": "/api/properties/:propertyId/maintenance/:requestId/photos",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/properties/:propertyId/maintenance/:requestId",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/properties/:propertyId/maintenance/:requestId/messages",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:propertyId/announcements",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/properties/:propertyId/announcements",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/properties/:propertyId/announcements/:announcementId",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/properties/:propertyId/announcements/:announcementId",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:propertyId/documents",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:propertyId/documents/:documentId/view",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/properties/:propertyId/documents",
+    "handlers": 2
+  },
+  {
+    "method": "put",
+    "url": "/api/properties/:propertyId/documents/:documentId",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/properties/:propertyId/documents/:documentId",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:propertyId/documents/:documentId/download",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:propertyId/payments",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:propertyId/payments/:paymentId",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/properties/:propertyId/payments/:paymentId/send-receipt",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/properties/:propertyId/payments/:paymentId",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/properties/:propertyId/payments",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/properties/:propertyId/payments/:paymentId",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/tenants/:tenantId/monthly-overrides",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/tenants/:tenantId/monthly-overrides/:period",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/tenants/:tenantId/monthly-overrides/:period",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/properties/:propertyId/payments/:creditPaymentId/apply-credit",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/room-packages",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/room-packages/:key",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/room-packages/:key",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/vendors/:vendorId/used-line-item-ids",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/qc/rework-photos",
+    "handlers": 2
+  },
+  {
+    "method": "post",
+    "url": "/api/quality-review/rework",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/qc/delete-photo",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/projects/:projectId/utilities",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/projects/:projectId/utilities",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/expenses/delete-receipt-file",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/expenses/missing-info",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/expenses",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/expenses",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/expenses/duplicates",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/expenses/:id",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/expenses/:id",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/expenses/:id",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/expenses/:id/recategorize-bill",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/send",
+    "handlers": 2
+  },
+  {
+    "method": "post",
+    "url": "/api/create",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/invoices",
+    "handlers": 1
+  },
+  {
+    "method": "patch",
+    "url": "/api/invoices/:id",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/invoices/:id",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/invoices/:id/recategorize-expense",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/invoices/by-number/:invoiceNumber",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/projects/:projectId",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/invoices",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/history",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/expenses/:id/auto-ocr",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/expenses/upload-receipt",
+    "handlers": 2
+  },
+  {
+    "method": "patch",
+    "url": "/api/estimates/line-items/:lineItemId/status",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:propertyId/maintenance-schedules/:scheduleId/history/:historyId",
+    "handlers": 1
+  },
+  {
+    "method": "patch",
+    "url": "/api/properties/:propertyId/maintenance-schedules/:scheduleId/history/:historyId/review",
+    "handlers": 1
+  },
+  {
+    "method": "patch",
+    "url": "/api/properties/:propertyId/maintenance-schedules/:scheduleId/complete",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/properties/:propertyId/maintenance-schedules",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:propertyId/maintenance-schedules",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/properties/:propertyId/maintenance-schedules/:scheduleId/estimate",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/properties/:propertyId/maintenance-schedules/:scheduleId",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/properties/:propertyId/maintenance-schedules/:scheduleId",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:propertyId/quickbooks/connect",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/qb/callback",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:propertyId/quickbooks/status",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/properties/:propertyId/quickbooks/connection",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:propertyId/quickbooks/catalog",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/properties/:propertyId/quickbooks/mappings",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/properties/:propertyId/payments/:paymentId/sync-quickbooks",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/properties/:propertyId/expenses/:expenseId/sync-quickbooks",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:propertyId/quickbooks/sync-log",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:propertyId/quickbooks/payments",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:propertyId/quickbooks/payment-workspace",
+    "handlers": 1
+  },
+  {
+    "method": "put",
+    "url": "/api/properties/:propertyId/quickbooks/customer-mapping/:tenantId",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/properties/:propertyId/quickbooks/payment-workspace/link",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/properties/:propertyId/quickbooks/payment-workspace/import",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/tenant-portal/login",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/tenant-portal/me",
+    "handlers": 2
+  },
+  {
+    "method": "put",
+    "url": "/api/tenant-portal/profile",
+    "handlers": 2
+  },
+  {
+    "method": "post",
+    "url": "/api/tenant-portal/maintenance",
+    "handlers": 3
+  },
+  {
+    "method": "post",
+    "url": "/api/tenant-portal/maintenance/:requestId/messages",
+    "handlers": 2
+  },
+  {
+    "method": "post",
+    "url": "/api/tenant-portal/payment-notice",
+    "handlers": 2
+  },
+  {
+    "method": "get",
+    "url": "/api/tenant-portal/documents/:documentId/view",
+    "handlers": 2
+  },
+  {
+    "method": "get",
+    "url": "/api/tenant-portal/documents/:documentId/download",
+    "handlers": 2
+  },
+  {
+    "method": "post",
+    "url": "/api/contact",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/debug",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/calorie/register",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/calorie/login",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/calorie/me",
+    "handlers": 2
+  },
+  {
+    "method": "put",
+    "url": "/api/calorie/data",
+    "handlers": 2
+  },
+  {
+    "method": "post",
+    "url": "/api/calorie/identify-food",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/",
+    "handlers": 1
+  }
+]

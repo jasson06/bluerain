@@ -1,0 +1,14 @@
+
+/* Smooth expand/collapse for maintenance descriptions in the global overview modal */
+.maintenance-description-cell .maintenance-description-inner {
+    max-height: 5.7em; /* ~one line */
+    overflow: hidden;
+    max-width: 175px;
+    text-overflow: ellipsis;
+    transition: max-height 0.25s ease;
+}
+
+.maintenance-description-cell.expanded .maintenance-description-inner {
+    max-height: 220px; /* enough for a few lines */
+    white-space: normal;
+}

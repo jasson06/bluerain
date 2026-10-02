@@ -1,0 +1,41 @@
+
+/* Shared row-action reveal across the portfolio tabs and detail tables. */
+#portfolioOverviewSection :is(#portfolioComparisonTable, #portfolioDetails) tbody tr > td:last-child {
+    overflow: visible;
+}
+#portfolioOverviewSection :is(#portfolioComparisonTable, #portfolioDetails) tbody tr > td:last-child :is(button, a.overview-row-action) {
+    transition: opacity 180ms ease, transform 180ms ease, background-color 180ms ease;
+}
+#portfolioOverviewSection :is(#portfolioComparisonTable, #portfolioDetails) .portfolio-rent-actions-cell {
+    overflow: visible;
+    padding-block: 6px;
+}
+/* Keep controls in the tab order and reserve their space to avoid layout jumps. */
+@media (hover: hover) and (pointer: fine) {
+    #portfolioOverviewSection :is(#portfolioComparisonTable, #portfolioDetails) tbody tr > td:last-child :is(button, a.overview-row-action) {
+        opacity: 0;
+        transform: translateY(4px);
+        pointer-events: none;
+        visibility: visible;
+    }
+    #portfolioOverviewSection :is(#portfolioComparisonTable, #portfolioDetails) tbody tr:is(:hover, :focus-within, .selected-portfolio-row) > td:last-child :is(button, a.overview-row-action),
+    #portfolioOverviewSection :is(#portfolioComparisonTable, #portfolioDetails) tbody tr > td:last-child :is(button, a.overview-row-action)[aria-expanded="true"] {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+}
+@media (hover: none), (pointer: coarse) {
+    #portfolioOverviewSection :is(#portfolioComparisonTable, #portfolioDetails) tbody tr > td:last-child :is(button, a.overview-row-action) {
+        opacity: 1;
+        transform: none;
+        visibility: visible;
+        pointer-events: auto;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    #portfolioOverviewSection :is(#portfolioComparisonTable, #portfolioDetails) tbody tr > td:last-child :is(button, a.overview-row-action) {
+        transition: none;
+        transform: none;
+    }
+}

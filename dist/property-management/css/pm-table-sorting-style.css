@@ -1,0 +1,10 @@
+
+/* Keep the label and its trailing sort icon together on one line. */
+th:has(> .pm-column-sort){white-space:nowrap!important}
+th > .pm-column-sort{float:none!important;position:static!important;flex-shrink:0;direction:ltr}
+th .pm-column-sort{display:inline-flex;align-items:center;justify-content:center;width:20px;min-width:20px!important;max-width:20px;height:20px;margin-left:4px;padding:0;border:0;border-radius:4px;background:transparent;color:inherit;box-shadow:none;font:inherit;font-size:12px;line-height:1;vertical-align:middle;cursor:pointer;opacity:0;pointer-events:none;transform:translateY(2px);transition:opacity 160ms ease,transform 160ms ease}
+th:hover .pm-column-sort,th:focus-within .pm-column-sort{opacity:1;pointer-events:auto;transform:translateY(0)}
+th .pm-column-sort:hover{background:rgba(56,189,248,.18)}
+th .pm-column-sort:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+@media(hover:none),(pointer:coarse){th .pm-column-sort{opacity:1;pointer-events:auto;transform:none;width:28px;min-width:28px!important;max-width:28px;height:28px}}
+@media(prefers-reduced-motion:reduce){th .pm-column-sort{transition:none;transform:none}}
