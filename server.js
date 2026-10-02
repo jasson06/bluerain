@@ -511,6 +511,7 @@ const estimateSchema = new mongoose.Schema({
           },
           percentComplete: { type: Number, min: 0, max: 100, default: 0 },
           maintenanceRequestId: { type: mongoose.Schema.Types.ObjectId, ref: 'MaintenanceRequest', default: null },
+          maintenanceScheduleId: { type: mongoose.Schema.Types.ObjectId, ref: 'MaintenanceSchedule', default: null },
           qualityControl: {
             status: {
               type: String,
@@ -1429,13 +1430,16 @@ const maintenanceScheduleSchema = new mongoose.Schema({
   assignedVendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', default: null },
   unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit', default: null },
   status: { type: String, enum: ['pending', 'in-progress', 'completed'], default: 'pending' },
+  linkedEstimateId: { type: mongoose.Schema.Types.ObjectId, ref: 'Estimate', default: null },
+  linkedEstimateItemId: { type: mongoose.Schema.Types.ObjectId, default: null },
   completedAt: { type: Date, default: null },
   cost: { type: Number, default: 0 },
   // --- Add history array ---
   history: [{
     completedAt: Date,
     completedBy: String, 
-    notes: String
+    notes: String,
+    cost: { type: Number, default: 0 }
   }],
   createdAt: { type: Date, default: Date.now }
 });
@@ -2212,6 +2216,7 @@ app.post('/api/estimates', async (req, res) => {
             percentComplete: normalizePercentComplete(item.percentComplete, item.status),
             assignedTo: item.assignedTo || null,
             maintenanceRequestId: item.maintenanceRequestId,
+            maintenanceScheduleId: item.maintenanceScheduleId,
             photos: item.photos && typeof item.photos === 'object'
               ? {
                   before: Array.isArray(item.photos.before) ? item.photos.before : [],
@@ -2462,6 +2467,7 @@ app.put("/api/estimates/:id", async (req, res) => {
             item.percentComplete = item.percentComplete ?? existingItem.percentComplete ?? normalizePercentComplete(undefined, item.status);
             item.costCode = item.costCode || existingItem.costCode || "Uncategorized";
             item.maintenanceRequestId = item.maintenanceRequestId || existingItem.maintenanceRequestId || null;
+            item.maintenanceScheduleId = item.maintenanceScheduleId || existingItem.maintenanceScheduleId || null;
           } else {
             // For new items
             if (!item.status || item.status.trim() === "") {
@@ -2471,6 +2477,7 @@ app.put("/api/estimates/:id", async (req, res) => {
             item.percentComplete = normalizePercentComplete(item.percentComplete, item.status);
             item.costCode = item.costCode || "Uncategorized";
             item.maintenanceRequestId = item.maintenanceRequestId || null;
+            item.maintenanceScheduleId = item.maintenanceScheduleId || null;
           }
         });
       });
@@ -2500,10 +2507,10 @@ app.put("/api/estimates/:id", async (req, res) => {
     );
 
     const linkedMaintenanceItems = updatedEstimate.lineItems.flatMap(category =>
-    (category.items || []).filter(item => item.maintenanceRequestId)
+    (category.items || []).filter(item => item.maintenanceRequestId || item.maintenanceScheduleId)
     );
     for (const item of linkedMaintenanceItems) {
-      await syncMaintenanceRequestFromEstimateItem(updatedEstimate, item);
+      await syncLinkedMaintenanceRecordsFromEstimateItem(updatedEstimate, item);
     }
 
     // Log the update
@@ -4220,8 +4227,8 @@ app.post("/api/assign-items", async (req, res) => {
         const refreshedEstimateItem = refreshedEstimate.lineItems
           .flatMap(category => category.items || [])
           .find(entry => entry._id?.toString() === String(assignedItem.itemId));
-        if (refreshedEstimateItem?.maintenanceRequestId) {
-          await syncMaintenanceRequestFromEstimateItem(refreshedEstimate, refreshedEstimateItem);
+        if (refreshedEstimateItem?.maintenanceRequestId || refreshedEstimateItem?.maintenanceScheduleId) {
+          await syncLinkedMaintenanceRecordsFromEstimateItem(refreshedEstimate, refreshedEstimateItem);
         }
       }
     }
@@ -4487,8 +4494,8 @@ app.patch('/api/clear-vendor-assignment/:itemId', async (req, res) => {
       return res.status(404).json({ message: 'Item not found in vendor data.' });
     }
 
-    if (estimateItem?.maintenanceRequestId) {
-      await syncMaintenanceRequestFromEstimateItem(estimate, estimateItem);
+    if (estimateItem?.maintenanceRequestId || estimateItem?.maintenanceScheduleId) {
+      await syncLinkedMaintenanceRecordsFromEstimateItem(estimate, estimateItem);
     }
 
     res.status(200).json({ message: 'Vendor assignment cleared successfully.' });
@@ -9470,13 +9477,17 @@ app.patch('/api/estimates/line-items/:lineItemId/status', async (req, res) => {
       }
     }
 
-    // Sync maintenance request status and metadata from the estimate item
-    if (updatedEstimateItem?.maintenanceRequestId) {
-      await syncMaintenanceRequestFromEstimateItem(estimate, updatedEstimateItem);
+     // Sync linked maintenance status and metadata from the estimate item
+    if (updatedEstimateItem?.maintenanceRequestId || updatedEstimateItem?.maintenanceScheduleId) {
+      await syncLinkedMaintenanceRecordsFromEstimateItem(estimate, updatedEstimateItem, {
+        rescheduleOnComplete: status === 'completed',
+        completedBy: req.body?.completedBy,
+        notes: req.body?.notes
+      });
     }
 
     // --- If status is completed, also update the maintenance schedule with the same flow ---
-if (status === "completed" && itemName && projectId) {
+if (status === "completed" && itemName && projectId && !updatedEstimateItem?.maintenanceScheduleId) {
   // Try to find the matching maintenance schedule by project, title, and startDate
   let schedule = await MaintenanceSchedule.findOne({
     projectId: projectId,
@@ -9569,7 +9580,8 @@ app.patch('/api/properties/:propertyId/maintenance-schedules/:scheduleId/complet
     schedule.history.push({
       completedAt,
       completedBy: completedBy || 'System',
-      notes: notes || ''
+      notes: notes || '',
+      cost: Number.isFinite(Number(schedule.cost)) ? Number(schedule.cost) : 0
     });
 
     // --- Determine base date for next schedule ---
@@ -9697,104 +9709,7 @@ async function ensureScheduleActivatedForDate(schedule) {
   await sendTodayMaintenanceReminder(schedule);
   console.log(`Auto-updated schedule "${schedule.title}" to in-progress for today.`);
 
-  // 2. Ensure the assigned vendor is linked to the project
-  let vendor = null;
-  const projectIdStr = (schedule.projectId._id || schedule.projectId).toString();
-  if (schedule.assignedVendor) {
-    vendor = await Vendor.findById(schedule.assignedVendor);
-    if (vendor) {
-      const alreadyAssignedProject = vendor.assignedProjects.some(
-        p => p.projectId && p.projectId.toString() === projectIdStr
-      );
-      if (!alreadyAssignedProject) {
-        vendor.assignedProjects.push({ projectId: projectIdStr, status: 'new' });
-        await vendor.save();
-        console.log(`Assigned project ${projectIdStr} to vendor "${vendor.name}"`);
-        vendor = await Vendor.findById(schedule.assignedVendor);
-      }
-    }
-  }
-
-  // 3. Find or create the estimate shell for this recurring maintenance
-  let estimate = await Estimate.findOne({
-    projectId: schedule.projectId._id || schedule.projectId,
-    title: { $regex: new RegExp(`^Maintenance: ${schedule.title}$`, 'i') }
-  });
-
-  if (!estimate) {
-    estimate = new Estimate({
-      projectId: schedule.projectId._id || schedule.projectId,
-      invoiceNumber: `MS-${Date.now()}`,
-      title: `Maintenance: ${schedule.title}`,
-      lineItems: [],
-      total: 0,
-      tax: 0
-    });
-    await estimate.save();
-    estimate = await Estimate.findById(estimate._id);
-  }
-
-  // 4. Add the current recurrence as an in-progress estimate line item
-  const newItem = {
-    type: 'item',
-    name: schedule.title,
-    description: schedule.description || '',
-    costCode: 'Maintenance',
-    quantity: 1,
-    unitPrice: schedule.cost || 0,
-    laborCost: schedule.cost || 0,
-    total: schedule.cost || 0,
-    status: 'in-progress',
-    assignedTo: schedule.assignedVendor?._id || schedule.assignedVendor || null,
-    photos: { before: [], after: [] },
-    startDate: new Date(),
-    endDate: null
-  };
-
-  let maintenanceCategory = estimate.lineItems.find(cat => cat.category === 'Maintenance');
-  if (!maintenanceCategory) {
-    estimate.lineItems.push({
-      type: 'category',
-      category: 'Maintenance',
-      status: 'in-progress',
-      items: []
-    });
-    maintenanceCategory = estimate.lineItems.find(cat => cat.category === 'Maintenance');
-  }
-  maintenanceCategory.items.push(newItem);
-  estimate.markModified('lineItems');
-  estimate.total += schedule.cost || 0;
-  await estimate.save();
-
-  // 5. Push the generated line item to the vendor assignment list
-  const savedEstimate = await Estimate.findById(estimate._id);
-  const savedCategory = savedEstimate.lineItems.find(cat => cat.category === 'Maintenance');
-  const savedItem = savedCategory.items[savedCategory.items.length - 1];
-
-  if (vendor && savedItem && savedItem._id) {
-    const alreadyAssigned = vendor.assignedItems.some(i =>
-      i.itemId?.toString() === savedItem._id.toString()
-    );
-    if (!alreadyAssigned) {
-      vendor.assignedItems.push({
-        itemId: savedItem._id.toString(),
-        projectId: estimate.projectId,
-        estimateId: estimate._id,
-        name: savedItem.name,
-        description: savedItem.description,
-        quantity: savedItem.quantity,
-        unitPrice: savedItem.unitPrice,
-        total: savedItem.total,
-        status: 'new',
-        costCode: savedItem.costCode || 'Maintenance',
-        photos: { before: [], after: [] },
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-      await vendor.save();
-      console.log(`Assigned maintenance line item "${savedItem.name}" to vendor "${vendor.name}"`);
-    }
-  }
+    await syncMaintenanceScheduleToEstimate(schedule, { createIfMissing: true });
 }
 
 async function sendOverdueScheduleAlert(schedule) {
@@ -9848,6 +9763,47 @@ function calculateEstimateTotal(lineItems = []) {
     }, 0);
     return sum + categoryTotal;
   }, 0);
+}
+
+function escapeRegexForMaintenanceLink(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function getRecurringMaintenanceEstimateTitle(schedule) {
+  return `Maintenance: ${String(schedule?.title || 'Recurring Maintenance').trim() || 'Recurring Maintenance'}`;
+}
+
+async function getRecurringMaintenanceUnitLabel(schedule) {
+  const rawUnitId = schedule?.unitId && (schedule.unitId._id || schedule.unitId);
+  let unitNumber = typeof schedule?.unitId?.number === 'string' ? schedule.unitId.number.trim() : '';
+  if (!unitNumber && rawUnitId) {
+    const linkedUnit = await Unit.findById(rawUnitId).select('number').lean().catch(() => null);
+    unitNumber = String(linkedUnit?.number || '').trim();
+  }
+  return unitNumber ? `Unit ${unitNumber}` : '';
+}
+
+function getNextScheduledDateForCompletion(schedule, completedAt = new Date()) {
+  const now = completedAt instanceof Date ? completedAt : new Date(completedAt);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const currentNextDate = schedule?.nextScheduledDate ? new Date(schedule.nextScheduledDate) : today;
+  let baseDate = currentNextDate < today ? today : currentNextDate;
+  let nextDate = new Date(baseDate);
+  switch (schedule?.frequency) {
+    case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
+    case 'weekly': nextDate.setDate(nextDate.getDate() + 7); break;
+    case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
+    case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
+    case 'custom':
+      if (schedule?.intervalDays && schedule.intervalDays > 0) {
+        nextDate.setDate(nextDate.getDate() + schedule.intervalDays);
+      }
+      break;
+    default:
+      nextDate.setMonth(nextDate.getMonth() + 1);
+      break;
+  }
+  return nextDate;
 }
 
 async function ensureVendorProjectAssignment(vendorId, projectId) {
@@ -9911,6 +9867,72 @@ async function syncVendorAssignedEstimateItem(estimate, item, vendorId = null) {
   await vendor.save();
 }
 
+async function syncMaintenanceScheduleFromEstimateItem(estimate, item, options = {}) {
+  if (!estimate?._id || !item?.maintenanceScheduleId) return null;
+
+  const schedule = await MaintenanceSchedule.findById(item.maintenanceScheduleId);
+  if (!schedule) return null;
+
+  const assignedVendorId = item.assignedTo ? String(item.assignedTo) : '';
+  const vendor = assignedVendorId
+    ? await Vendor.findById(assignedVendorId).select('name email')
+    : null;
+  const derivedStatus = getMaintenanceStatusFromEstimateItemStatus(item.status);
+  const itemTotal = Number.isFinite(Number(item.total))
+    ? Number(item.total)
+    : (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0);
+
+  schedule.linkedEstimateId = estimate._id;
+  schedule.title = item.name || schedule.title;
+  schedule.description = typeof item.description === 'string' ? item.description : schedule.description;
+  schedule.assignedVendor = vendor?._id || null;
+  schedule.cost = itemTotal;
+
+  const shouldReschedule = options.rescheduleOnComplete && derivedStatus === 'completed';
+  if (shouldReschedule) {
+    const completedAt = item.endDate || options.completedAt || new Date();
+    const completedDay = new Date(completedAt).toISOString().slice(0, 10);
+    schedule.history = Array.isArray(schedule.history) ? schedule.history : [];
+    const alreadyLogged = schedule.history.some(entry => entry?.completedAt && new Date(entry.completedAt).toISOString().slice(0, 10) === completedDay);
+    if (!alreadyLogged) {
+      schedule.history.push({
+        completedAt,
+        completedBy: options.completedBy || 'Estimate/Manager',
+        notes: options.notes || 'Marked as completed from estimate',
+        cost: itemTotal
+      });
+    }
+    schedule.status = 'pending';
+    schedule.completedAt = null;
+    schedule.startDate = completedAt;
+    schedule.nextScheduledDate = getNextScheduledDateForCompletion(schedule, completedAt);
+    schedule.linkedEstimateItemId = null;
+  } else {
+    schedule.linkedEstimateItemId = item._id;
+    schedule.status = derivedStatus;
+    schedule.startDate = item.startDate || schedule.startDate;
+    schedule.completedAt = derivedStatus === 'completed'
+      ? (item.endDate || schedule.completedAt || new Date())
+      : null;
+  }
+
+  await schedule.save();
+  await syncVendorAssignedEstimateItem(estimate, item, schedule.assignedVendor);
+  return schedule;
+}
+
+async function syncLinkedMaintenanceRecordsFromEstimateItem(estimate, item, options = {}) {
+  if (!estimate?._id || !item) return null;
+  const result = {};
+  if (item.maintenanceRequestId) {
+    result.request = await syncMaintenanceRequestFromEstimateItem(estimate, item);
+  }
+  if (item.maintenanceScheduleId) {
+    result.schedule = await syncMaintenanceScheduleFromEstimateItem(estimate, item, options);
+  }
+  return result;
+}
+
 async function syncMaintenanceRequestFromEstimateItem(estimate, item) {
   if (!estimate?._id || !item?.maintenanceRequestId) return null;
 
@@ -9956,6 +9978,165 @@ async function syncMaintenanceRequestFromEstimateItem(estimate, item) {
   await request.save();
   await syncVendorAssignedEstimateItem(estimate, item, request.assignedVendor);
   return request;
+}
+
+async function syncMaintenanceScheduleToEstimate(schedule, options = {}) {
+  if (!schedule?._id || !schedule.projectId || !schedule.title) return null;
+
+  if (schedule.assignedVendor) {
+    await ensureVendorProjectAssignment(schedule.assignedVendor, schedule.projectId);
+  }
+
+  const estimateTitle = getRecurringMaintenanceEstimateTitle(schedule);
+  let estimate = schedule.linkedEstimateId ? await Estimate.findById(schedule.linkedEstimateId) : null;
+  if (!estimate) {
+    estimate = await Estimate.findOne({
+      projectId: schedule.projectId,
+      title: { $regex: new RegExp(`^${escapeRegexForMaintenanceLink(estimateTitle)}$`, 'i') }
+    });
+  }
+
+  if (!estimate && options.createIfMissing === false) {
+    return { schedule, estimate: null, item: null };
+  }
+
+  if (!estimate) {
+    estimate = new Estimate({
+      projectId: schedule.projectId,
+      invoiceNumber: `MS-${Date.now()}`,
+      title: estimateTitle,
+      lineItems: [],
+      total: 0,
+      tax: 0
+    });
+    await estimate.save();
+    estimate = await Estimate.findById(estimate._id);
+  } else if (estimate.title !== estimateTitle) {
+    estimate.title = estimateTitle;
+  }
+
+  const unitLabel = await getRecurringMaintenanceUnitLabel(schedule);
+  const unitCategoryName = unitLabel ? `Maintenance ${unitLabel}` : '';
+  const itemStatus = getEstimateItemStatusFromMaintenanceStatus(schedule.status);
+  const scheduleCost = Number.isFinite(Number(schedule.cost)) ? Number(schedule.cost) : 0;
+
+  let maintenanceCategory = estimate.lineItems.find(category => category.category === 'Maintenance');
+  if (!maintenanceCategory) {
+    estimate.lineItems.push({
+      type: 'category',
+      category: 'Maintenance',
+      status: itemStatus === 'completed' ? 'completed' : 'in-progress',
+      items: []
+    });
+    maintenanceCategory = estimate.lineItems.find(category => category.category === 'Maintenance');
+  }
+
+  let targetCategory = maintenanceCategory;
+  if (unitCategoryName) {
+    targetCategory = estimate.lineItems.find(category => String(category.category || '').trim().toLowerCase() === unitCategoryName.toLowerCase());
+    if (!targetCategory) {
+      estimate.lineItems.push({
+        type: 'category',
+        category: unitCategoryName,
+        status: itemStatus === 'completed' ? 'completed' : 'in-progress',
+        items: []
+      });
+      targetCategory = estimate.lineItems.find(category => String(category.category || '').trim().toLowerCase() === unitCategoryName.toLowerCase());
+    }
+  }
+
+  let estimateItem = estimate.lineItems
+    .flatMap(category => category.items || [])
+    .find(item => {
+      const matchesLink = schedule.linkedEstimateItemId && item._id?.toString() === schedule.linkedEstimateItemId.toString();
+      const matchesSchedule = item.maintenanceScheduleId && item.maintenanceScheduleId.toString() === schedule._id.toString();
+      return matchesLink || matchesSchedule;
+    });
+  const currentCategory = estimateItem
+    ? estimate.lineItems.find(category => (category.items || []).some(item => item._id?.toString() === estimateItem._id?.toString()))
+    : null;
+
+  if (!estimateItem && options.createIfMissing === false) {
+    return { schedule, estimate, item: null };
+  }
+
+  if (!estimateItem) {
+    estimateItem = {
+      type: 'item',
+      name: schedule.title,
+      description: schedule.description || '',
+      costCode: 'Maintenance',
+      quantity: 1,
+      unitPrice: scheduleCost,
+      laborCost: scheduleCost,
+      total: scheduleCost,
+      status: itemStatus,
+      maintenanceScheduleId: schedule._id,
+      assignedTo: schedule.assignedVendor || null,
+      photos: { before: [], after: [] },
+      startDate: schedule.startDate || schedule.nextScheduledDate || new Date(),
+      endDate: schedule.status === 'completed' ? (schedule.completedAt || new Date()) : null
+    };
+    targetCategory.items.push(estimateItem);
+  } else {
+    estimateItem.name = schedule.title;
+    estimateItem.description = schedule.description || '';
+    estimateItem.costCode = estimateItem.costCode || 'Maintenance';
+    estimateItem.quantity = 1;
+    estimateItem.unitPrice = scheduleCost;
+    estimateItem.laborCost = scheduleCost;
+    estimateItem.total = scheduleCost;
+    estimateItem.status = itemStatus;
+    estimateItem.maintenanceScheduleId = schedule._id;
+    estimateItem.assignedTo = schedule.assignedVendor || null;
+    estimateItem.startDate = schedule.startDate || schedule.nextScheduledDate || estimateItem.startDate || new Date();
+    estimateItem.endDate = schedule.status === 'completed' ? (schedule.completedAt || estimateItem.endDate || new Date()) : null;
+    estimateItem.photos = estimateItem.photos && typeof estimateItem.photos === 'object'
+      ? {
+          before: Array.isArray(estimateItem.photos.before) ? estimateItem.photos.before : [],
+          after: Array.isArray(estimateItem.photos.after) ? estimateItem.photos.after : []
+        }
+      : { before: [], after: [] };
+
+    if (currentCategory && targetCategory && currentCategory !== targetCategory) {
+      currentCategory.items = (currentCategory.items || []).filter(item => item._id?.toString() !== estimateItem._id?.toString());
+      targetCategory.items = targetCategory.items || [];
+      targetCategory.items.push(estimateItem);
+    }
+  }
+
+  for (const category of estimate.lineItems) {
+    const categoryItems = category.items || [];
+    category.status = categoryItems.length && categoryItems.every(item => ['completed', 'approved'].includes(String(item.status || '').toLowerCase()))
+      ? 'completed'
+      : 'in-progress';
+  }
+  estimate.markModified('lineItems');
+  estimate.total = calculateEstimateTotal(estimate.lineItems);
+  await estimate.save();
+
+  const savedEstimate = await Estimate.findById(estimate._id);
+  const savedItem = savedEstimate?.lineItems
+    .flatMap(category => category.items || [])
+    .find(item => item.maintenanceScheduleId && item.maintenanceScheduleId.toString() === schedule._id.toString());
+
+  if (savedItem && savedItem._id) {
+    let scheduleNeedsSave = false;
+    if (!schedule.linkedEstimateId || String(schedule.linkedEstimateId) !== String(savedEstimate._id)) {
+      schedule.linkedEstimateId = savedEstimate._id;
+      scheduleNeedsSave = true;
+    }
+    if (!schedule.linkedEstimateItemId || String(schedule.linkedEstimateItemId) !== String(savedItem._id)) {
+      schedule.linkedEstimateItemId = savedItem._id;
+      scheduleNeedsSave = true;
+    }
+    if (scheduleNeedsSave) {
+      await schedule.save();
+    }
+    await syncVendorAssignedEstimateItem(savedEstimate, savedItem, schedule.assignedVendor);
+  }
+
+  return { schedule, estimate: savedEstimate, item: savedItem || null };
 }
 
 async function syncMaintenanceRequestToEstimate(request) {
@@ -10304,7 +10485,7 @@ setTimeout(function() {
 // API to create a schedule
 app.post('/api/properties/:propertyId/maintenance-schedules', async (req, res) => {
   try {
-    const { title, description, frequency, intervalDays, startDate, assignedVendor, unitId, cost } = req.body;
+    const { title, description, frequency, intervalDays, startDate, assignedVendor, unitId, status, cost } = req.body;
     if (!title || !frequency || !startDate) {
       return res.status(400).json({ message: 'Missing required fields.' });
     }
@@ -10329,10 +10510,17 @@ app.post('/api/properties/:propertyId/maintenance-schedules', async (req, res) =
       nextScheduledDate: nextDate,
       assignedVendor: assignedVendor || null,
       unitId: unitId || null,
+      status: status || 'pending',
+      completedAt: status === 'completed' ? new Date() : null,
       cost: cost || 0
     });
     await schedule.save();
-    res.status(201).json(schedule);
+        let responseSchedule = schedule;
+    if (schedule.status === 'in-progress') {
+      const syncResult = await syncMaintenanceScheduleToEstimate(schedule, { createIfMissing: true });
+      responseSchedule = syncResult?.schedule || schedule;
+    }
+    res.status(201).json(responseSchedule);
   } catch (err) {
     res.status(500).json({ message: 'Failed to create schedule.' });
   }
@@ -10346,6 +10534,29 @@ app.get('/api/properties/:propertyId/maintenance-schedules', async (req, res) =>
     res.json(schedules);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch maintenance schedules' });
+  }
+});
+
+app.post('/api/properties/:propertyId/maintenance-schedules/:scheduleId/estimate', async (req, res) => {
+  try {
+    const schedule = await MaintenanceSchedule.findOne({
+      _id: req.params.scheduleId,
+      projectId: req.params.propertyId
+    });
+    if (!schedule) return res.status(404).json({ message: 'Schedule not found.' });
+
+    const syncResult = await syncMaintenanceScheduleToEstimate(schedule, { createIfMissing: true });
+    const responseSchedule = syncResult?.schedule || schedule;
+
+    res.json({
+      success: true,
+      schedule: responseSchedule,
+      estimateId: syncResult?.estimate?._id || responseSchedule.linkedEstimateId || null,
+      lineItemId: syncResult?.item?._id || responseSchedule.linkedEstimateItemId || null
+    });
+  } catch (err) {
+    console.error('Failed to create or link recurring maintenance estimate:', err);
+    res.status(500).json({ message: 'Failed to create or link recurring maintenance estimate.' });
   }
 });
 
@@ -10380,10 +10591,14 @@ app.put('/api/properties/:propertyId/maintenance-schedules/:scheduleId', async (
     if (status) {
       updateObj.status = status;
       if (status === 'completed') {
-        updateObj.completedAt = new Date();
+        const completedAt = new Date();
+        updateObj.completedAt = completedAt;
+        updateObj.startDate = completedAt;
+      } else {
+        updateObj.completedAt = null;
       }
     }
-    const updated = await MaintenanceSchedule.findOneAndUpdate(
+    let updated = await MaintenanceSchedule.findOneAndUpdate(
       { _id: req.params.scheduleId, projectId: req.params.propertyId },
       updateObj,
       { new: true }
@@ -10392,6 +10607,24 @@ app.put('/api/properties/:propertyId/maintenance-schedules/:scheduleId', async (
     const startDateChanged = Boolean(startDate) && new Date(existingSchedule.startDate).getTime() !== new Date(startDate).getTime();
     if (startDateChanged && updated?._id) {
       await updateNextScheduledDates(updated._id);
+       updated = await MaintenanceSchedule.findById(updated._id);
+    }
+
+    const shouldSyncEstimate = !!updated && (
+      updated.status === 'in-progress'
+      || !!updated.linkedEstimateId
+      || !!updated.linkedEstimateItemId
+      || String(existingSchedule.assignedVendor || '') !== String(updated.assignedVendor || '')
+      || String(existingSchedule.title || '') !== String(updated.title || '')
+      || String(existingSchedule.description || '') !== String(updated.description || '')
+      || String(existingSchedule.unitId || '') !== String(updated.unitId || '')
+      || Number(existingSchedule.cost || 0) !== Number(updated.cost || 0)
+    );
+    if (shouldSyncEstimate) {
+      const syncResult = await syncMaintenanceScheduleToEstimate(updated, {
+        createIfMissing: updated.status === 'in-progress' || !!updated.linkedEstimateId
+      });
+      updated = syncResult?.schedule || updated;
     }
 
     res.json(updated);
