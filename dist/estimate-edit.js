@@ -149,6 +149,106 @@ const PROJECT_PHASE_MAP = new Map(PROJECT_PHASES.map((phase) => [phase.value, ph
 const DEFAULT_PROJECT_PHASE = PROJECT_PHASES[0].value;
 let __projectPhaseTooltip = null;
 let __projectPhaseTooltipActiveTarget = null;
+let __addRoomModalLastTrigger = null;
+
+function getAddRoomModalElements() {
+  return {
+    modal: document.getElementById('add-room-modal'),
+    form: document.getElementById('add-room-form'),
+    input: document.getElementById('add-room-name-input'),
+    error: document.getElementById('add-room-name-error'),
+    cancelButton: document.getElementById('add-room-cancel-btn')
+  };
+}
+
+function setAddRoomModalError(message = '') {
+  const { input, error } = getAddRoomModalElements();
+  if (!input || !error) return;
+
+  const hasMessage = !!message;
+  error.textContent = hasMessage ? message : '';
+  error.hidden = !hasMessage;
+  input.setAttribute('aria-invalid', hasMessage ? 'true' : 'false');
+}
+
+function closeAddRoomModal(options = {}) {
+  const { restoreFocus = true } = options;
+  const { modal, input } = getAddRoomModalElements();
+  if (!modal) return;
+
+  modal.hidden = true;
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('modal-open');
+  if (input) input.value = '';
+  setAddRoomModalError('');
+
+  if (restoreFocus && __addRoomModalLastTrigger && typeof __addRoomModalLastTrigger.focus === 'function') {
+    __addRoomModalLastTrigger.focus();
+  }
+}
+
+function openAddRoomModal(trigger = null) {
+  const { modal, input } = getAddRoomModalElements();
+  if (!modal || !input) return;
+
+  __addRoomModalLastTrigger = trigger || document.activeElement || null;
+  modal.hidden = false;
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('modal-open');
+  setAddRoomModalError('');
+
+  window.requestAnimationFrame(() => {
+    input.focus();
+    input.select();
+  });
+}
+
+function submitAddRoomModal() {
+  const { input } = getAddRoomModalElements();
+  const categoryName = input?.value?.trim() || '';
+  if (!categoryName) {
+    setAddRoomModalError('Enter a room or area name.');
+    input?.focus();
+    return;
+  }
+
+  const addRoomHandler = window.__estimateEditAddCategoryHeader;
+  if (typeof addRoomHandler !== 'function') {
+    setAddRoomModalError('Room creation is not ready yet. Try again.');
+    return;
+  }
+
+  addRoomHandler({ category: categoryName });
+  closeAddRoomModal();
+}
+
+function initializeAddRoomModal() {
+  const { modal, form, input, cancelButton } = getAddRoomModalElements();
+  if (!modal || !form || modal.dataset.bound === 'true') return;
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submitAddRoomModal();
+  });
+
+  modal.querySelectorAll('[data-add-room-close]').forEach((element) => {
+    element.addEventListener('click', () => closeAddRoomModal());
+  });
+
+  input?.addEventListener('input', () => {
+    if (input.value.trim()) setAddRoomModalError('');
+  });
+
+  modal.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeAddRoomModal();
+    }
+  });
+
+  cancelButton?.addEventListener('click', () => closeAddRoomModal());
+  modal.dataset.bound = 'true';
+}
 
 function clampProjectPhaseProgress(value, fallbackStatus = "new") {
   const numericValue = parseFloat(value);
@@ -706,6 +806,7 @@ function renderProjectPhaseBar() {
 
 document.addEventListener("DOMContentLoaded", async () => {
   ensureDisclosureStyles();
+  initializeAddRoomModal();
   const projectId = new URLSearchParams(window.location.search).get("projectId");
   let estimateId = new URLSearchParams(window.location.search).get("estimateId");
 
@@ -1770,6 +1871,8 @@ function focusRequestedEstimateLineItem() {
 
     return header;
   }
+
+  try { window.__estimateEditAddCategoryHeader = addCategoryHeader; } catch (_) {}
 
 
 // Add this near the top, after showToast/hideLoader etc.
@@ -5447,9 +5550,8 @@ function wireMobileExperience() {
   // Add Event Listeners
   document.getElementById("export-estimate-excel").addEventListener("click", exportEstimateToExcel);
   document.getElementById("add-line-item").addEventListener("click", () => addLineItemCard());
-  document.getElementById("add-category-header").addEventListener("click", () => {
-    const categoryName = prompt("Enter Room/Area Name:");
-    if (categoryName) addCategoryHeader({ category: categoryName });
+  document.getElementById("add-category-header").addEventListener("click", (event) => {
+    openAddRoomModal(event.currentTarget);
   });
   document.getElementById("assign-items-button").addEventListener("click", assignItemsToVendor);
   document.getElementById("selected-items-action-btn")?.addEventListener("click", () => window.__estimateEditOpenBatchActionDrawer?.());

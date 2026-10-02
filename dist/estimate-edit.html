@@ -3153,6 +3153,136 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
   display: none !important;
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
+.add-room-modal[hidden] {
+  display: none !important;
+}
+
+.add-room-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 12100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.add-room-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(5px);
+}
+
+.add-room-modal-dialog {
+  position: relative;
+  width: min(460px, calc(100vw - 32px));
+  padding: 24px;
+  border-radius: 22px;
+  border: 1px solid #dbe4f0;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 26px 64px rgba(15, 23, 42, 0.22);
+}
+
+.add-room-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #dbeafe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.add-room-modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #0f172a;
+}
+
+.add-room-modal-header p {
+  margin: 10px 0 0;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.add-room-modal-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.add-room-modal-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1e3a8a;
+}
+
+.add-room-modal-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  font: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.add-room-modal-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+
+.add-room-modal-error {
+  margin: 8px 0 0;
+  color: #b91c1c;
+  font-size: 0.83rem;
+  font-weight: 600;
+}
+
+.add-room-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.add-room-modal-actions .btn-secondary {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+@media (max-width: 640px) {
+  .add-room-modal {
+    padding: 10px;
+    align-items: end;
+  }
+
+  .add-room-modal-dialog {
+    width: min(100%, calc(100vw - 20px));
+    padding: 20px 18px 18px;
+    border-radius: 20px 20px 14px 14px;
+  }
+
+  .add-room-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .add-room-modal-actions button {
+    width: 100%;
+  }
+}
+
 .vendor-stats-modal {
   position: fixed;
   inset: 0;
@@ -4754,6 +4884,28 @@ input[type="text"]:focus, textarea:focus, input[type="number"]:focus {
     </div>
     <div id="mobile-room-list" class="mobile-room-sheet-list"></div>
     <p class="mobile-room-sheet-note">Choose a room to focus the estimate on that area only.</p>
+  </div>
+</div>
+
+<div id="add-room-modal" class="add-room-modal" hidden aria-hidden="true">
+  <div class="add-room-modal-backdrop" data-add-room-close></div>
+  <div class="add-room-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="add-room-modal-title">
+    <button type="button" class="add-room-modal-close" data-add-room-close aria-label="Close add room dialog">&times;</button>
+    <div class="add-room-modal-header">
+      <h3 id="add-room-modal-title">Add Room</h3>
+      <p>Create a new room or area for grouping estimate line items.</p>
+    </div>
+    <form id="add-room-form" class="add-room-modal-form">
+      <div class="add-room-modal-field">
+        <label for="add-room-name-input">Room or area name</label>
+        <input id="add-room-name-input" class="add-room-modal-input" type="text" placeholder="e.g., Kitchen, Unit 204, Exterior" autocomplete="off" maxlength="120">
+        <p id="add-room-name-error" class="add-room-modal-error" hidden></p>
+      </div>
+      <div class="add-room-modal-actions">
+        <button id="add-room-cancel-btn" type="button" class="btn-secondary">Cancel</button>
+        <button type="submit" class="btn-primary">Add Room</button>
+      </div>
+    </form>
   </div>
 </div>
 
