@@ -1,0 +1,59 @@
+.rm-history { display:grid; gap:10px; padding:0px; border:1px solid #dbe4ed; border-radius:10px; background:#f8fafc; min-width:0; font-size:.85rem;height: 100%; max-height: none !important;overflow: auto !important; }
+.rm-history p { margin:4px 0; }
+.rm-selector { display:grid; gap:5px; font-size:.8rem; }
+.rm-selector textarea,.rm-selector select { box-sizing:border-box; width:100%; min-width:0; padding:8px; border:1px solid #cbd5e1; border-radius:7px; background:white; color:#0f172a; font:inherit; }
+.rm-qc-controls { display:grid; gap:10px; min-width:0; margin:4px 0 0; padding:12px; border:1px solid #93c5fd; border-radius:8px; background:#eff6ff; }
+.rm-qc-controls legend { font-weight:700; font-size:.85rem; color:#1e40af; padding:0 5px; }
+.rm-details { display:grid; gap:10px; border-top:1px solid #dbe4ed; margin-top:14px; padding-top:14px; font-size:.85rem; white-space:normal; }
+.rm-visit-heading { font-size:.95rem; margin:0; color:#0f172a; }
+
+.rm-date-list { display:grid; gap:7px; list-style:none; margin:0; padding:0; max-height:520px; overflow-y:auto; }
+.rm-date { display:grid; gap:4px; text-align:left; width:100%; padding:10px; border:1px solid #dbe4ed; border-radius:8px; background:white; color:#334155; font:inherit; cursor:pointer; }
+.rm-date:hover { border-color:#217dbb; background:#eff6ff; }
+.rm-date[aria-pressed="true"] { border-color:#217dbb; background:#eaf4ff; box-shadow:inset 3px 0 #217dbb; }
+.rm-date:focus-visible { outline:2px solid #217dbb; outline-offset:2px; }
+.rm-date-title { font-weight:700; color:#166534; }
+.rm-date-status { font-size:.78rem; font-weight:600; }
+.rm-attention { display:block; font-size:.78rem; font-weight:600; color:#9a3412; white-space:normal; }
+.rm-qc-badge { display:inline-flex; align-items:center; justify-content:center; gap:4px; min-width:24px; height:22px; padding:0 7px; border:1px solid #fed7aa; border-radius:999px; background:#fff7ed; color:#c2410c; font-size:.72rem; font-weight:800; vertical-align:middle; box-shadow:0 2px 6px rgba(194,65,12,.1); }
+.rm-qc-badge i { font-size:.68rem; }
+.rm-status { display:flex; align-items:center; gap:8px; font-weight:700; color:#1e40af; }
+.rm-qc-status-control { display:flex; align-items:center; gap:8px; width:100%; }
+.rm-qc-status-control select { box-sizing:border-box; flex:1; min-width:0; padding:7px 9px; border:1px solid #93c5fd; border-radius:7px; background:#fff; color:#1e3a8a; font:inherit; font-weight:600; }
+.rm-galleries { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.rm-photos { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.rm-photo { padding:0; border:1px solid #cbd5e1; border-radius:6px; width:90px; height:80px; overflow:hidden; cursor:zoom-in; background:#e2e8f0; }
+.rm-photo img { width:100%; height:100%; object-fit:cover; }
+.rm-muted { color:#64748b; font-size:.8rem; }
+.rm-notes { white-space:pre-wrap; overflow-wrap:anywhere; }
+.rm-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.rm-error { color:#b91c1c; }
+.rm-expanded-row>td { padding:12px !important; background:#f1f5f9; white-space:normal; }
+.rm-expanded-row .maintenance-card { margin:0 !important; }
+.rm-expanded-row[hidden] { display:none !important; }
+.rm-open-history[aria-expanded="true"] { background:#eaf4ff; border-color:#217dbb; }
+.rm-expanded-maintenance-layout { grid-template-columns:minmax(0,1.18fr) minmax(300px,.82fr)!important; align-items:stretch!important; }
+.rm-expanded-maintenance-details { min-width:0; min-height:220px; }
+.rm-expanded-maintenance-history { min-width:0; min-height:220px; display:flex!important; flex-direction:column; }
+.rm-expanded-maintenance-history>.rm-history { flex:1; min-height:0; }
+.rm-photo-dialog { width:min(980px,94vw); max-width:none; max-height:90vh; padding:0; overflow:hidden; border:1px solid rgba(56,189,248,.32); border-radius:20px; background:linear-gradient(145deg,#ffffff,#effaff); color:#0f172a; box-shadow:0 28px 90px rgba(2,32,55,.35); }
+.rm-photo-dialog::backdrop { background:rgba(2,32,55,.7); backdrop-filter:blur(4px); }
+.rm-photo-dialog__header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 18px; border-bottom:1px solid rgba(56,189,248,.2); background:linear-gradient(135deg,#075f91,#14a9c3); color:#fff; }
+.rm-photo-dialog__eyebrow { display:block; margin-bottom:3px; font-size:.68rem; letter-spacing:.08em; text-transform:uppercase; opacity:.78; }
+.rm-photo-dialog__title { font-size:1rem; font-weight:800; }
+.rm-photo-dialog__close { width:34px; height:34px; padding:0; border:1px solid rgba(255,255,255,.32); border-radius:10px; background:rgba(255,255,255,.14); color:#fff; font-size:1.15rem; cursor:pointer; }
+.rm-photo-dialog__close:hover { background:rgba(255,255,255,.25); }
+.rm-photo-dialog__body { display:grid; place-items:center; min-height:360px; padding:18px; background:radial-gradient(circle at 50% 0,rgba(186,230,253,.28),transparent 58%),#f8fcff; }
+.rm-photo-dialog__image-frame { display:grid; place-items:center; width:100%; min-height:320px; border:1px solid rgba(148,163,184,.26); border-radius:14px; background:#e7f3f8; overflow:hidden; }
+.rm-photo-dialog__image-frame img { display:block; max-width:100%; max-height:66vh; object-fit:contain; }
+.rm-photo-dialog__footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 18px; border-top:1px solid rgba(56,189,248,.18); background:rgba(255,255,255,.8); }
+.rm-photo-dialog__counter { color:#52778b; font-size:.78rem; font-weight:700; }
+.rm-photo-dialog .rm-actions { justify-content:flex-end; }
+.rm-photo-dialog .rm-actions button { min-width:88px; }
+body.dark-theme .rm-photo-dialog { background:linear-gradient(145deg,#0c283d,#081d2e); color:#e0f7ff; border-color:rgba(56,189,248,.25); }
+body.dark-theme .rm-photo-dialog__body { background:#071c2c; }
+body.dark-theme .rm-photo-dialog__image-frame { background:#0c3047; border-color:rgba(56,189,248,.2); }
+body.dark-theme .rm-photo-dialog__footer { background:rgba(8,47,69,.78); border-color:rgba(56,189,248,.18); }
+body.dark-theme .rm-photo-dialog__counter { color:#9ec5d6; }
+.rm-history button:disabled,.rm-details button:disabled { opacity:.6; cursor:wait; }
+@media(max-width:480px) { .rm-galleries { grid-template-columns:1fr; } }
