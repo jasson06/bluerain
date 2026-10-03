@@ -158,7 +158,7 @@ const propertyProfileFields = [
  ['rentalLicense','Rental license'],['licenseExpires','License expires'],['certificateOfOccupancy','Certificate of occupancy'],['fireInspectionDate','Last fire inspection'],['buildingSystems','Shared building systems'],['safetyNotes','Safety & shutoffs'],['amenitiesParking','Amenities, parking & access'],['notes','Internal notes']
 ];
 
-window.addEventListener('message',event=>{if(event.origin!==window.location.origin||event.data?.type!=='quickbooks-connected')return;state.quickBooksStatus=null;loadQuickBooksStatus();openQuickBooksSettings();showNotification('QuickBooks connected','success');});
+window.addEventListener('message',event=>{if(event.origin!==window.location.origin||event.data?.type!=='quickbooks-connected')return;if(String(event.data.projectId)!==String(state.currentProperty?._id))return;state.quickBooksStatus=null;setQuickBooksProgress('setup','QuickBooks connected. Loading your mapping options…');openQuickBooksSettings();showNotification('QuickBooks connected. Finish your mappings to prepare payments.','success');});
 
 const overviewMoney=value=>`$${Number(value||0).toLocaleString(undefined,{maximumFractionDigits:0})}`;
 const overviewDate=value=>value?formatDateDisplay(value):'Not scheduled';

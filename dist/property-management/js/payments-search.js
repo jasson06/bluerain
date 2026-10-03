@@ -428,7 +428,7 @@ function renderPayments() {
                     const qbPayment = row.qbPayment;
                     const isPersistedMatch = payment.quickBooks?.syncStatus === 'synced' && payment.quickBooks?.entityId;
                     return `
-                        <tr class="payment-row" onclick="editPayment('${payment._id}')">
+                        <tr class="payment-row" onclick="${payment.quickBooks?.manualAllocation?'openPaymentAllocation':'editPayment'}('${payment._id}')">
                             <td>${row.tenantName ? `<button class=\"link-button\" title=\"View balance sheet\" onclick=\"event.stopPropagation();openTenantBalanceModal('${payment.tenantId}')\">${escapeHtml(row.tenantName)}</button>` : 'N/A'}</td>
                             <td>${escapeHtml(row.unitText || 'N/A')}</td>
                             <td>${escapeHtml(row.typeText || '')}</td>
@@ -463,7 +463,7 @@ function renderPayments() {
                                 ${payment.quickBooks?.syncStatus === 'failed'
                                     ? `<button class="overview-row-action" data-qb-sync-payment="${payment._id}" title="${escapeHtml(payment.quickBooks.lastError||'Retry QuickBooks sync')}" onclick="syncPaymentQuickBooks('${payment._id}')">Retry</button>`
                                     : (isPersistedMatch
-                                                                    ? `<span class="badge badge-success">Synced</span>`
+                                                                    ? `<span class="badge ${payment.quickBooks?.allocationReviewRequired&&!payment.quickBooks?.manualAllocation?'badge-warning':'badge-success'}">${payment.quickBooks?.manualAllocation?'Allocated':payment.quickBooks?.allocationReviewRequired?'Review allocation':'Synced'}</span><button class="overview-row-action" onclick="openPaymentAllocation('${payment._id}')">Allocate</button>`
                                         : qbPayment
                                             ? `<button class="overview-row-action" data-qb-sync-payment="${payment._id}" title="Match existing QuickBooks ${escapeHtml(getQuickBooksSourceLabel(qbPayment.sourceType))}" onclick="syncPaymentQuickBooks('${payment._id}')">Match</button>`
                                             : `<button class="overview-row-action" data-qb-sync-payment="${payment._id}" onclick="syncPaymentQuickBooks('${payment._id}')">Sync</button>`)}

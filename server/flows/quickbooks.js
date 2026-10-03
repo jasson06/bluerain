@@ -145,12 +145,16 @@ async function reconcileQuickBooksPaymentsForProperty(propertyId, connection = n
   for (const parentId of new Set(qbPayments.filter(r=>r.parentPaymentId).map(r=>r.parentPaymentId))) {
     const group=qbPayments.filter(r=>r.parentPaymentId===parentId);
     const keys=new Set(group.map(r=>r.id));
-    const stale=localPayments.some(p=>p.quickBooks?.parentPaymentId===parentId && !keys.has(String(p.quickBooks.entityId)));
+    const stale=localPayments.some(p=>!p.quickBooks?.manualAllocation && p.quickBooks?.parentPaymentId===parentId && !keys.has(String(p.quickBooks.entityId)));
     if(stale) for(const record of group) record.periodError='Invoice allocations changed after import. Review the existing split before importing again.';
   }
   for (const record of qbPayments) {
     const old = localPayments.find(p=>p.quickBooks?.entityType===record.sourceType && String(p.quickBooks?.entityId)===record.id);
     if (record.periodError) continue;
+    if(old?.quickBooks?.manualAllocation){
+      if(Math.round(record.totalAmt*100)!==Math.round(old.quickBooks.allocationTotal*100))record.periodError='QuickBooks amount changed after manual allocation. Review this payment before changing the split.';
+      continue;
+    }
     if (old && record.invoiceId) {
       const original = old.quickBooks?.originalInvoiceImport || {amount:old.amount,periodMonth:old.periodMonth||'',date:old.date};
       const changes = {amount:record.totalAmt,periodMonth:record.periodMonth};

@@ -2,6 +2,7 @@
 // Route registration is invoked by server.js in its original order.
 module.exports = function createFlow(serverContext) {
 const paymentBalances = require('../payment-balances')(serverContext);
+const paymentAllocations = require('../payment-allocations')(serverContext);
 
 // POST a new payment (rent or HUB)
 // Helper to normalize incoming payment type to enum values
@@ -113,6 +114,7 @@ serverContext.app.get('/api/properties/:propertyId/payments/:paymentId', async (
       projectId: req.params.propertyId
     });
     if (!payment) return res.status(404).json({ message: 'Payment not found' });
+    if(req.query?.allocationDetails==='1')return res.json(await paymentAllocations.details(payment));
     res.json(payment);
   } catch (error) {
     console.error('Error fetching payment:', error);
@@ -350,6 +352,7 @@ serverContext.app.delete('/api/properties/:propertyId/payments/:paymentId', asyn
   try {
     const payment = await serverContext.Payment.findOne({ _id: req.params.paymentId, projectId: req.params.propertyId });
     if (!payment) return res.status(404).json({ message: 'Payment not found' });
+    if(payment.quickBooks?.manualAllocation)return res.status(409).json({message:'Use Allocate to change this split payment. Individual allocations cannot be deleted separately.'});
 
     // If payment applied to deposit, roll back tenant.depositPaid
     if (payment.applyTo === 'deposit') {
@@ -625,8 +628,14 @@ function put_api_properties_propertyId_payments_paymentId() {
 // --- Update PUT /api/properties/:propertyId/payments/:paymentId ---
 serverContext.app.put('/api/properties/:propertyId/payments/:paymentId', async (req, res) => {
   try {
-    const payment = await serverContext.Payment.findById(req.params.paymentId);
+    const payment = await serverContext.Payment.findOne({_id:req.params.paymentId,projectId:req.params.propertyId});
     if (!payment) return res.status(404).json({ message: 'Payment not found' });
+    if(req.body.allocations!==undefined){
+      const result=await paymentAllocations.save(payment,req.body);
+      try{await paymentBalances.refreshTenant(result.tenantId);}catch(error){return res.json({success:true,rootId:result.rootId,warning:'Allocation saved. Refresh payments to finish recalculating balances.'});}
+      return res.json({success:true,rootId:result.rootId});
+    }
+    if(payment.quickBooks?.manualAllocation)return res.status(409).json({message:'Use Allocate to edit this split payment so the total stays unchanged'});
 
     // Normalize incoming fields
     const amount = req.body.amount;
@@ -711,7 +720,7 @@ serverContext.app.put('/api/properties/:propertyId/payments/:paymentId', async (
     return res.json({ payment });
   } catch (error) {
     console.error('Error updating payment:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(req.body.allocations!==undefined?400:500).json({ message: req.body.allocations!==undefined?error.message:'Server error' });
   }
 });
 }

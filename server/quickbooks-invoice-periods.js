@@ -40,14 +40,15 @@ module.exports = function invoicePeriods(context) {
         parts.push({...record, id: parts.length ? `${record.id}:invoice:${id}` : record.id,
           parentPaymentId: record.id, invoiceId: id, invoiceDate: date,
           invoiceNumber: String(invoice.DocNumber || id), periodMonth: date.slice(0,7),
-          totalAmt: cents/100, parentPaymentTotal: record.totalAmt});
+          totalAmt: cents/100, parentPaymentTotal: record.totalAmt,
+          allocationReviewRequired:(invoice.Line||[]).filter(l=>l.DetailType==='SalesItemLineDetail'&&Number(l.Amount)>0).length>1});
       }
       result.push(...(error ? [{...record, periodError: error}] : parts));
     }
     return result;
   }
   function metadata(record) {
-    return record.invoiceId ? {parentPaymentId:record.parentPaymentId,invoiceId:record.invoiceId,invoiceDate:record.invoiceDate,invoiceNumber:record.invoiceNumber,parentPaymentTotal:record.parentPaymentTotal,periodSource:'invoice-date',paymentCreatedAt:record.raw?.MetaData?.CreateTime || ''} : {};
+    return record.invoiceId ? {parentPaymentId:record.parentPaymentId,invoiceId:record.invoiceId,invoiceDate:record.invoiceDate,invoiceNumber:record.invoiceNumber,parentPaymentTotal:record.parentPaymentTotal,periodSource:'invoice-date',paymentCreatedAt:record.raw?.MetaData?.CreateTime || '',allocationReviewRequired:!!record.allocationReviewRequired} : {};
   }
   return {expand, metadata};
 };

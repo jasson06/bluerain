@@ -427,7 +427,30 @@ showLoader();
     }
 }
 
-async function loadPaymentWorkspace(propertyId,quiet=false){if(!propertyId)return;try{const response=await fetch(`${API_URL}/properties/${propertyId}/quickbooks/payment-workspace`),data=await response.json();if(!response.ok)throw new Error(data.message||'Unable to load payment workspace');state.paymentWorkspace=data;state.quickBooksPaymentsConnected=!!data.connected;if(Array.isArray(data.qbPayments)){state.quickBooksPayments=data.qbPayments;state.quickBooksPaymentsError='';}if(Array.isArray(data.localPayments)){state.payments=data.localPayments;renderPayments();renderTenants();updateTabCounts();state.propertyOverviewData=null;}renderPaymentWorkspace();return data;}catch(error){state.paymentWorkspace={connected:false,error:error.message,summary:{unmatched:0,conflicts:1,unmappedCustomers:0}};renderPaymentWorkspace();if(!quiet)showNotification(error.message,'error');}}
+let paymentWorkspaceLoadSequence=0;
+async function loadPaymentWorkspace(propertyId,quiet=false){
+ if(!propertyId)return;
+ const sequence=++paymentWorkspaceLoadSequence;
+ setQuickBooksProgress('payments','Loading QuickBooks payments and preparing balances. This may take a moment…');
+ try{
+  const response=await fetch(`${API_URL}/properties/${propertyId}/quickbooks/payment-workspace`),data=await response.json();
+  if(!response.ok)throw new Error(data.message||'Unable to load payment workspace');
+  if(sequence!==paymentWorkspaceLoadSequence||String(state.currentProperty?._id)!==String(propertyId))return;
+  state.paymentWorkspace=data;state.quickBooksPaymentsConnected=!!data.connected;
+  state.quickBooksPayments=Array.isArray(data.qbPayments)?data.qbPayments:[];state.quickBooksPaymentsError='';
+  if(Array.isArray(data.localPayments)){state.payments=data.localPayments;renderPayments();updateTabCounts();}
+  renderPaymentWorkspace();
+  const review=Number(data.summary?.unmatched||0)+Number(data.summary?.conflicts||0);
+  setQuickBooksProgress('payments',data.connected?`QuickBooks payments loaded. Balances are up to date.${review?' Some transactions need review in Unmatched or Conflicts.':''}`:'QuickBooks is not connected for this property.',data.connected?'success':'info');
+  return data;
+ }catch(error){
+  if(sequence!==paymentWorkspaceLoadSequence||String(state.currentProperty?._id)!==String(propertyId))return;
+  state.paymentWorkspace={connected:false,error:error.message,summary:{unmatched:0,conflicts:1,unmappedCustomers:0}};
+  renderPaymentWorkspace();setQuickBooksProgress('payments','Unable to refresh QuickBooks payments. Existing rows may be out of date. '+error.message,'error');
+  const banner=document.getElementById('qbPaymentsProgress');if(banner){const retry=document.createElement('button');retry.className='btn-secondary';retry.textContent='Retry';retry.onclick=()=>loadPaymentWorkspace(propertyId);banner.appendChild(retry);}
+  if(!quiet)showNotification(error.message,'error');
+ }
+}
 
 function selectPaymentWorkspace(tab){state.paymentWorkspaceTab=tab||'transactions';document.querySelectorAll('.payment-workspace-tab').forEach(b=>b.classList.toggle('active',b.dataset.paymentWorkspace===state.paymentWorkspaceTab));const t=document.getElementById('paymentWorkspaceTransactions'),o=document.getElementById('paymentWorkspaceOperational');if(t)t.style.display=state.paymentWorkspaceTab==='transactions'?'block':'none';if(o)o.style.display=state.paymentWorkspaceTab==='transactions'?'none':'block';renderPaymentWorkspace();}
 
@@ -462,7 +485,7 @@ else if(state.paymentWorkspaceTab==='customers'){
     const linked=x.customers|| (x.customerId?[{customerId:x.customerId,customerDisplayName:x.customerDisplayName}]:[]);
     const ids=new Set(linked.map(c=>String(c.customerId)));
     const choices=[...new Map([...linked.map(c=>({id:c.customerId,name:c.customerDisplayName||c.customerId})),...options].map(c=>[String(c.id),c])).values()];
-    return `<tr><td><strong>${escapeHtml(x.tenantName)}</strong></td><td>${escapeHtml(x.unitNumber||'—')}</td><td><div id="qbCustomers-${x.tenantId}" style="max-height:180px;overflow:auto">${choices.map(c=>`<label style="display:block"><input type="checkbox" value="${escapeHtml(c.id)}" ${ids.has(String(c.id))?'checked':''} onchange="updateWorkspaceCustomerDefault('${x.tenantId}')"> ${escapeHtml(c.name)}</label>`).join('')}</div></td><td><select id="qbCustomer-${x.tenantId}"><option value="">Not mapped</option>${choices.filter(c=>ids.has(String(c.id))).map(c=>`<option value="${escapeHtml(c.id)}" ${String(c.id)===String(x.customerId)?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}</select></td><td><button class="overview-row-action" onclick="saveWorkspaceCustomer('${x.tenantId}')">Save</button></td></tr>`;
+    return `<tr><td><strong>${escapeHtml(x.tenantName)}</strong></td><td>${escapeHtml(x.unitNumber||'—')}</td><td><div id="qbCustomers-${x.tenantId}" style="max-height:180px;overflow:auto">${choices.map(c=>`<label style="display:block"><input type="checkbox" value="${escapeHtml(c.id)}" ${ids.has(String(c.id))?'checked':''} onchange="updateWorkspaceCustomerDefault('${x.tenantId}')"> ${escapeHtml(c.name)}</label>`).join('')}</div></td><td><select id="qbCustomer-${x.tenantId}"><option value="">Not mapped</option>${choices.filter(c=>ids.has(String(c.id))).map(c=>`<option value="${escapeHtml(c.id)}" ${String(c.id)===String(x.customerId)?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}</select></td><td><button class="overview-row-action" id="qbSaveCustomer-${x.tenantId}" onclick="saveWorkspaceCustomer('${x.tenantId}')">Save</button></td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 else if(state.paymentWorkspaceTab==='mappings'){const groups=[['Income items',data.mappingHealth?.incomeItems||[]],['Accounts',data.mappingHealth?.accounts||[]]];root.innerHTML=`<div class="payments-header"><div><h3>Accounts &amp; items</h3><p class="task-meta">Review mapping health here. Use the mapping modal to make changes.</p></div><button class="btn-primary" onclick="openQuickBooksSettings()">Edit mappings</button></div><div class="overview-grid">${groups.map(([name,items])=>`<section class="property-panel overview-span-6"><h3>${name}</h3>${items.map(x=>`<div class="overview-row"><span>${escapeHtml(x.label)}</span><strong>${x.mapped?escapeHtml(x.name||'Mapped'):'Not mapped'}</strong></div>`).join('')}</section>`).join('')}</div>`;}
@@ -482,14 +505,22 @@ function updateWorkspaceCustomerDefault(tenantId){
 }
 
 async function saveWorkspaceCustomer(tenantId){
+  const propertyId=state.currentProperty?._id,button=document.getElementById(`qbSaveCustomer-${tenantId}`);if(button?.disabled)return;
+  if(button){button.disabled=true;button.textContent='Saving…';}
+  setQuickBooksProgress('payments','Saving customer mapping…');
   const customerId=document.getElementById(`qbCustomer-${tenantId}`)?.value||'';
   const customerIds=[...document.querySelectorAll(`#qbCustomers-${tenantId} input:checked`)].map(input=>input.value);
+  let mappingSaved=false;
   try{
-    const response=await fetch(`${API_URL}/properties/${state.currentProperty._id}/quickbooks/customer-mapping/${tenantId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerId,customerIds})}),data=await response.json();
-    if(!response.ok)throw new Error(data.message||'Unable to save customer mapping');
-    await loadPaymentWorkspace(state.currentProperty._id,true);
-    showNotification(customerIds.length?'Customers mapped':'Mapping removed','success');
-  }catch(error){showNotification(error.message,'error');}
+    const response=await fetch(`${API_URL}/properties/${propertyId}/quickbooks/customer-mapping/${tenantId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerId,customerIds})}),data=await response.json();
+    if(!response.ok)throw new Error(data.message||'Unable to save customer mapping');mappingSaved=true;
+    if(String(state.currentProperty?._id)!==String(propertyId))return;
+    if(button)button.textContent='Preparing payments…';
+    const workspace=await loadPaymentWorkspace(propertyId,true);
+    if(!workspace)throw new Error('Mapping saved, but payments could not refresh. Use Retry in the payment section.');
+    showNotification(customerIds.length?'Customers mapped. Payments updated.':'Mapping removed. Payments updated.','success');
+  }catch(error){if(!mappingSaved)setQuickBooksProgress('payments',error.message,'error');showNotification(error.message,'error');}
+  finally{if(button){button.disabled=false;button.textContent='Save';}}
 }
 
 async function retryWorkspacePayment(paymentId){await syncPaymentQuickBooks(paymentId);await loadPaymentWorkspace(state.currentProperty._id,true);}
