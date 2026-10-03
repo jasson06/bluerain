@@ -55,7 +55,7 @@ function computeExpectedRentForMonth(tenant, dateLike, paymentType) {
   }
   if (monthOverride && paymentType === 'rent') {
     const er = Number(monthOverride.expectedRent);
-    if (Number.isFinite(er) && er >= 0) return er;
+    if (monthOverride.expectedRent != null && monthOverride.expectedRent !== '' && Number.isFinite(er) && er >= 0) return er;
   }
   const isRentType = (paymentType === 'rent');
   if (isRentType) {
@@ -707,6 +707,7 @@ serverContext.app.put('/api/properties/:propertyId/payments/:paymentId', async (
     await paymentBalances.recalculate(payment, lateFee);
 
     await payment.save();
+    await paymentBalances.refreshTenant(payment.tenantId);
     return res.json({ payment });
   } catch (error) {
     console.error('Error updating payment:', error);

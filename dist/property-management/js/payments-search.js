@@ -270,7 +270,7 @@ function renderPayments() {
                     const [y, m] = period.split('-').map(Number);
                     const periodDate = (y && m) ? new Date(y, m - 1, 1) : new Date(payment.date);
                     let expectedForPeriod;
-                    if (Number.isFinite(Number(ov.expectedRent))) {
+                    if (ov.expectedRent != null && ov.expectedRent !== '' && Number.isFinite(Number(ov.expectedRent))) {
                         expectedForPeriod = Number(ov.expectedRent);
                     } else {
                         const base = computeExpectedBaseRentForMonth(tenant, periodDate);
@@ -292,7 +292,8 @@ function renderPayments() {
                         && (row.applyTo === 'rent' || !row.applyTo)
                         && ((row.periodMonth && row.periodMonth === period) || (!row.periodMonth && toYYYYMM(row.date) === period))
                     ).reduce((sum, row) => sum + Number(row.amount || 0), 0);
-                    displayBalance = expectedForPeriod - totalPaidForPeriod;
+                    // The server supplies the chronological balance after this payment.
+                    // Do not overwrite every row with the final monthly balance.
                     overrideActive = true;
                 }
             }

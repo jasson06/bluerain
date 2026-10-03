@@ -1,5 +1,12 @@
 // Shared with the manual payment Update action; preserves its charge rules.
 module.exports = function paymentBalances(serverContext) {
+  function comparePayments(a,b) {
+    const time = v => { const n = new Date(v || 0).getTime(); return Number.isFinite(n) ? n : 0; };
+    return time(a.date)-time(b.date)
+      || time(a.quickBooks?.paymentCreatedAt || a.createdAt)-time(b.quickBooks?.paymentCreatedAt || b.createdAt)
+      || String(a.quickBooks?.parentPaymentId || a.quickBooks?.entityId || a._id || '').localeCompare(String(b.quickBooks?.parentPaymentId || b.quickBooks?.entityId || b._id || ''),undefined,{numeric:true})
+      || String(a._id||'').localeCompare(String(b._id||''));
+  }
   async function recalculate(payment, lateFee) {
     // Recalculate balance for rent payments only
     if (payment.applyTo === 'rent') {
@@ -56,7 +63,7 @@ module.exports = function paymentBalances(serverContext) {
         _id: { $ne: payment._id }
       });
       const paymentsThisMonth = tenantPayments.filter(p => p.periodMonth ? p.periodMonth === period : new Date(p.date) >= monthStart && new Date(p.date) <= monthEnd);
-  const totalPaid = paymentsThisMonth.reduce((sum, p) => sum + Math.abs(p.amount || 0), 0);
+  const totalPaid = paymentsThisMonth.filter(p => comparePayments(p,payment) < 0).reduce((sum, p) => sum + Math.abs(p.amount || 0), 0);
       const totalLateFees = paymentsThisMonth.reduce((sum, p) => sum + (p.lateFee || 0), 0);
       const totalMonthlyCharges = overrideLateApplied ? expectedAmount : (expectedAmount + totalLateFees + calculatedLateFee);
       if (overrideLateApplied) {
@@ -70,7 +77,7 @@ module.exports = function paymentBalances(serverContext) {
       const expectedDeposit = Number(tenantData.deposit) || 0;
       // Sum all deposit payments excluding this one (we already updated amount above)
       const otherDepositPayments = await serverContext.Payment.find({ tenantId: payment.tenantId, applyTo: 'deposit', _id: { $ne: payment._id } });
-      const totalOther = otherDepositPayments.reduce((s, p) => s + (p.amount || 0), 0);
+      const totalOther = otherDepositPayments.filter(p => comparePayments(p,payment) < 0).reduce((s, p) => s + (p.amount || 0), 0);
       const depositBalance = expectedDeposit - (totalOther + payment.amount);
   payment.balance = depositBalance; // can be negative if overpaid deposit
     } else {
@@ -95,5 +102,5 @@ module.exports = function paymentBalances(serverContext) {
       }
     }
   }
-  return {recalculate, refreshTenant};
+  return {recalculate, refreshTenant, comparePayments};
 };

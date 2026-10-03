@@ -41,7 +41,7 @@ module.exports = function invoicePeriods(context) {
     return result;
   }
   function metadata(record) {
-    return record.invoiceId ? {parentPaymentId:record.parentPaymentId,invoiceId:record.invoiceId,invoiceDate:record.invoiceDate,invoiceNumber:record.invoiceNumber,parentPaymentTotal:record.parentPaymentTotal,periodSource:'invoice-date'} : {};
+    return record.invoiceId ? {parentPaymentId:record.parentPaymentId,invoiceId:record.invoiceId,invoiceDate:record.invoiceDate,invoiceNumber:record.invoiceNumber,parentPaymentTotal:record.parentPaymentTotal,periodSource:'invoice-date',paymentCreatedAt:record.raw?.MetaData?.CreateTime || ''} : {};
   }
   return {expand, metadata};
 };
