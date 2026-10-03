@@ -155,6 +155,7 @@ async function buildTenantPortalPayload(tenantId) {
       const quickBooksOnlyPayments = (0, serverContext.buildUnifiedQuickBooksPaymentEntries)({
         localPayments,
         qbRecords,
+        connectionId: connection._id,
         tenants: [tenant],
         unitById,
         projectId: tenant.projectId

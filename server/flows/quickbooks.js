@@ -79,26 +79,29 @@ function inferPeriodMonthFromQuickBooksPaymentRecord(record) {
   return directDate ? directDate.slice(0, 7) : '';
 }
 
-function matchTenantForQuickBooksPaymentRecord(record,tenants = [],unitById = new Map()) {
+function mappedQbCustomers(link = {}) {
+  const customers = Array.isArray(link.customers) ? link.customers : [];
+  const all = link.customerId ? [{customerId: link.customerId, customerDisplayName: link.customerDisplayName || ''}, ...customers] : customers;
+  return [...new Map(all.filter(c => c?.customerId).map(c => [String(c.customerId), {...c, customerId: String(c.customerId)}])).values()];
+}
+
+function matchTenantForQuickBooksPaymentRecord(record, tenants = [], unitById = new Map(), connectionId = '') {
   const customerId = String(record?.customerId || '');
   const customerName = (0, serverContext.normalizeQbPaymentText)(record?.customerName);
-  if (!customerId && !customerName) return null;
-  for (const tenant of (tenants || [])) {
-    const qbMap = tenant?.quickBooks && typeof tenant.quickBooks === 'object' ? tenant.quickBooks : {};
-    const mappedEntry = Object.values(qbMap).find(value => String(value?.customerId || '') === customerId);
-    if (customerId && mappedEntry) {
-      return tenant;
-    }
-    const tenantName = (0, serverContext.normalizeQbPaymentText)(tenant?.name || `${tenant?.firstName || ''} ${tenant?.lastName || ''}`.trim());
-    if (!tenantName) continue;
-    const tenantUnitId = tenant?.unitId?._id || tenant?.unitId || '';
-    const unit = unitById.get(String(tenantUnitId));
-    const quickBooksDisplayName = (0, serverContext.normalizeQbPaymentText)(`${tenantName} - ${unit?.number != null ? `Unit ${unit.number}` : 'Tenant'}`);
-    if (customerName === tenantName || customerName === quickBooksDisplayName || customerName.startsWith(`${tenantName} -`)) {
-      return tenant;
-    }
-  }
-  return null;
+  const links = tenant => connectionId ? [tenant.quickBooks?.[String(connectionId)] || {}] : Object.values(tenant.quickBooks || {});
+  const exact = tenants.filter(tenant => customerId && links(tenant).some(link => mappedQbCustomers(link).some(c => c.customerId === customerId)));
+  if (exact.length) return exact.length === 1 ? exact[0] : null;
+  if (!customerName) return null;
+  const candidates = tenants.filter(tenant => {
+    // An explicit mapping must not be expanded by a similar display name.
+    if (links(tenant).some(link => mappedQbCustomers(link).length)) return false;
+    const name = (0, serverContext.normalizeQbPaymentText)(tenant.name || `${tenant.firstName || ''} ${tenant.lastName || ''}`.trim());
+    if (!name) return false;
+    const unit = unitById.get(String(tenant.unitId?._id || tenant.unitId || ''));
+    const display = (0, serverContext.normalizeQbPaymentText)(`${name} - ${unit?.number != null ? `Unit ${unit.number}` : 'Tenant'}`);
+    return customerName === name || customerName === display || customerName.startsWith(`${name} -`);
+  });
+  return candidates.length === 1 ? candidates[0] : null;
 }
 
 function buildQuickBooksImportNote(record) {
@@ -131,7 +134,7 @@ async function autoResolveQuickBooksPaymentsForProperty(propertyId, connection =
   for (const record of records) {
     const recordKey = `${record.sourceType}:${record.id}`;
     if (!record?.id || record.localPaymentId || matchedIds.has(recordKey)) continue;
-    const tenant = (0, serverContext.matchTenantForQuickBooksPaymentRecord)(record, tenants, unitById);
+    const tenant = (0, serverContext.matchTenantForQuickBooksPaymentRecord)(record, tenants, unitById, key);
     if (!tenant) continue;
 
     const applyTo = (0, serverContext.inferApplyToFromQuickBooksPaymentRecord)(record);
@@ -241,7 +244,7 @@ async function autoResolveQuickBooksPaymentsForProperty(propertyId, connection =
   };
 }
 
-function buildUnifiedQuickBooksPaymentEntries({ localPayments = [], qbRecords = [], tenants = [], unitById = new Map(), projectId = '' }) {
+function buildUnifiedQuickBooksPaymentEntries({ localPayments = [], qbRecords = [], tenants = [], unitById = new Map(), projectId = '', connectionId = '' }) {
   const localPaymentsWithTenantNames = (localPayments || []).map(payment => ({
     ...payment,
     tenantName: (tenants || []).find(tenant => String(tenant?._id || '') === String(payment?.tenantId || ''))?.name || ''
@@ -250,7 +253,7 @@ function buildUnifiedQuickBooksPaymentEntries({ localPayments = [], qbRecords = 
   return matchedRecords
     .filter(record => !record?.localPaymentId)
     .map(record => {
-      const tenant = (0, serverContext.matchTenantForQuickBooksPaymentRecord)(record, tenants, unitById);
+      const tenant = (0, serverContext.matchTenantForQuickBooksPaymentRecord)(record, tenants, unitById, connectionId);
       return {
         _id: `quickbooks:${record.sourceType}:${record.id}`,
         projectId,
@@ -345,7 +348,7 @@ serverContext.app.get('/api/properties/:propertyId/quickbooks/payment-workspace'
   const records=resolved.qbPayments;
   const unmatched=records.filter(record=>!record.localPaymentId),failedLogs=logs.filter(log=>['failed','conflict'].includes(log.status));
   const failedPayments=localPayments.filter(payment=>['failed','conflict'].includes(payment.quickBooks?.syncStatus)).map(payment=>({_id:`payment:${payment._id}`,kind:'payment',status:payment.quickBooks.syncStatus,message:payment.quickBooks.lastError||'Payment synchronization failed',localEntityId:payment._id,updatedAt:payment.quickBooks.lastAttemptAt||payment.updatedAt}));
-  const key=String(live._id),qbCustomers=customerResponse.QueryResponse?.Customer||[],customers=tenants.map(tenant=>{const link=tenant.quickBooks?.[key]||{};return{tenantId:tenant._id,tenantName:tenant.name,unitNumber:tenant.unitId?.number||'',email:tenant.email||'',customerId:link.customerId||'',customerDisplayName:link.customerDisplayName||'',mapped:!!link.customerId};});
+  const key=String(live._id),qbCustomers=customerResponse.QueryResponse?.Customer||[],customers=tenants.map(tenant=>{const link=tenant.quickBooks?.[key]||{};return{tenantId:tenant._id,tenantName:tenant.name,unitNumber:tenant.unitId?.number||'',email:tenant.email||'',customerId:link.customerId||'',customerDisplayName:link.customerDisplayName||'',customers:mappedQbCustomers(link),mapped:!!link.customerId};});
   const mapping=live.mappings||{},mappingHealth={incomeItems:['rent','late','other','deposit'].map(k=>({key:k,label:`${k[0].toUpperCase()+k.slice(1)} item`,mapped:!!mapping.incomeItems?.[k]?.value,name:mapping.incomeItems?.[k]?.name||''})),accounts:[{key:'deposit',label:'Deposit account',mapped:!!mapping.depositAccounts?.default?.value,name:mapping.depositAccounts?.default?.name||''},{key:'expense',label:'Expense account',mapped:!!mapping.expenseAccounts?.default?.value,name:mapping.expenseAccounts?.default?.name||''},{key:'expense-payment',label:'Expense payment account',mapped:!!mapping.defaultExpensePaymentAccount?.value,name:mapping.defaultExpensePaymentAccount?.name||''}]};
   const conflicts=[...failedPayments,...failedLogs.map(log=>({_id:`log:${log._id}`,kind:'sync-log',status:log.status,message:log.lastError||'QuickBooks synchronization failed',localEntityId:log.localEntityId,operation:log.operation,updatedAt:log.updatedAt}))];
   res.json({connected:true,companyName:live.companyName||'',summary:{unmatched:unmatched.length,conflicts:conflicts.length,unmappedCustomers:customers.filter(x=>!x.mapped).length},unmatched,conflicts,customers,qbCustomers:qbCustomers.map(c=>({id:c.Id,name:c.DisplayName||c.FullyQualifiedName||c.Name||''})),activity:logs,mappingHealth});
@@ -355,8 +358,27 @@ serverContext.app.get('/api/properties/:propertyId/quickbooks/payment-workspace'
 function put_api_properties_propertyId_quickbooks_customer_mapping_tenantId() {
 serverContext.app.put('/api/properties/:propertyId/quickbooks/customer-mapping/:tenantId',async(req,res)=>{try{
   const connection=await (0, serverContext.getQbConnection)(req.params.propertyId),tenant=await serverContext.Tenant.findOne({_id:req.params.tenantId,projectId:req.params.propertyId});if(!tenant)return res.status(404).json({message:'Tenant not found'});
-  const customerId=String(req.body.customerId||'').trim();tenant.quickBooks=tenant.quickBooks||{};
-  if(!customerId)delete tenant.quickBooks[String(connection._id)];else{const existing=await serverContext.Tenant.findOne({projectId:req.params.propertyId,_id:{$ne:tenant._id},[`quickBooks.${String(connection._id)}.customerId`]:customerId}).select('name').lean();if(existing)return res.status(409).json({message:`This QuickBooks customer is already mapped to ${existing.name}`});const response=await (0, serverContext.qbRequest)(connection,'get',`query?query=${encodeURIComponent(`select * from Customer where Id = '${(0, serverContext.escapeQbQuery)(customerId)}' maxresults 1`)}`),customer=response.QueryResponse?.Customer?.[0];if(!customer)return res.status(404).json({message:'QuickBooks customer not found'});tenant.quickBooks[String(connection._id)]={...(tenant.quickBooks[String(connection._id)]||{}),customerId:customer.Id,customerDisplayName:customer.DisplayName||customer.FullyQualifiedName||'',verifiedAt:new Date(),matchMethod:'manual-payments-workspace'};}
+  const customerId=String(req.body.customerId||'').trim();
+  if (req.body.customerIds !== undefined && !Array.isArray(req.body.customerIds)) return res.status(400).json({message:'customerIds must be an array'});
+  const customerIds=[...new Set((req.body.customerIds === undefined ? (customerId ? [customerId] : []) : req.body.customerIds).map(id=>String(id).trim()).filter(Boolean))];
+  if (customerIds.length > 50) return res.status(400).json({message:'Select no more than 50 customers per tenant'});
+  if ((customerIds.length && !customerIds.includes(customerId)) || (!customerIds.length && customerId)) return res.status(400).json({message:'Select an outgoing default from the mapped customers'});
+  const key=String(connection._id);
+  tenant.quickBooks=tenant.quickBooks||{};
+  if(!customerIds.length) delete tenant.quickBooks[key];
+  else {
+    const existing=await serverContext.Tenant.findOne({projectId:req.params.propertyId,_id:{$ne:tenant._id},$or:[{[`quickBooks.${key}.customerId`]:{$in:customerIds}},{[`quickBooks.${key}.customers.customerId`]:{$in:customerIds}}]}).select('name').lean();
+    if(existing)return res.status(409).json({message:`A selected QuickBooks customer is already mapped to ${existing.name}`});
+    const customers=[];
+    for (const id of customerIds) {
+      const response=await (0, serverContext.qbRequest)(connection,'get',`query?query=${encodeURIComponent(`select * from Customer where Id = '${(0, serverContext.escapeQbQuery)(id)}' maxresults 1`)}`);
+      const customer=response.QueryResponse?.Customer?.[0];
+      if(!customer)return res.status(404).json({message:'QuickBooks customer not found'});
+      customers.push({customerId:String(customer.Id),customerDisplayName:customer.DisplayName||customer.FullyQualifiedName||''});
+    }
+    const primary=customers.find(c=>c.customerId===customerId);
+    tenant.quickBooks[key]={...(tenant.quickBooks[key]||{}),...primary,customers,verifiedAt:new Date(),matchMethod:'manual-payments-workspace'};
+  }
   tenant.markModified('quickBooks');await tenant.save();res.json({success:true});
 }catch(error){res.status(400).json({message:error.message||'Unable to save customer mapping'});}});
 }

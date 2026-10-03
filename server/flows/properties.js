@@ -133,6 +133,7 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
         quickBooksOnlyPaymentsToDate = (0, serverContext.buildUnifiedQuickBooksPaymentEntries)({
           localPayments: localPaymentsToDate,
           qbRecords,
+        connectionId: connection._id,
           tenants,
           unitById,
           projectId: id
