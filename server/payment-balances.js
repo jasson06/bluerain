@@ -3,7 +3,8 @@ module.exports = function paymentBalances(serverContext) {
   async function recalculate(payment, lateFee) {
     // Recalculate balance for rent payments only
     if (payment.applyTo === 'rent') {
-      const paymentDate = new Date(payment.date);
+      const periodMatch = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(payment.periodMonth || '');
+      const paymentDate = periodMatch ? new Date(Number(periodMatch[1]),Number(periodMatch[2])-1,1,12) : new Date(payment.date);
       const monthStart = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), 1);
       const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
       const tenantData = await serverContext.Tenant.findById(payment.tenantId);
@@ -12,7 +13,7 @@ module.exports = function paymentBalances(serverContext) {
     let overrideLateApplied = false;
   if (payment.type === 'rent') {
         // Recompute with proration for first month; otherwise full monthly charges
-        expectedAmount = (0, serverContext.computeExpectedRentForMonth)(tenantData, payment.date, 'rent');
+        expectedAmount = (0, serverContext.computeExpectedRentForMonth)(tenantData, paymentDate, 'rent');
         // Monthly late fee override takes precedence; else allow manual payment lateFee, else 0
         const period = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth()+1).padStart(2,'0')}`;
         const mo = tenantData?.monthlyOverrides;
@@ -48,12 +49,13 @@ module.exports = function paymentBalances(serverContext) {
           calculatedLateFee = payment.lateFee;
         }
       }
-      const paymentsThisMonth = await serverContext.Payment.find({
+      const period = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth()+1).padStart(2,'0')}`;
+      const tenantPayments = await serverContext.Payment.find({
         tenantId: payment.tenantId,
         applyTo: 'rent',
-        date: { $gte: monthStart, $lte: monthEnd },
         _id: { $ne: payment._id }
       });
+      const paymentsThisMonth = tenantPayments.filter(p => p.periodMonth ? p.periodMonth === period : new Date(p.date) >= monthStart && new Date(p.date) <= monthEnd);
   const totalPaid = paymentsThisMonth.reduce((sum, p) => sum + Math.abs(p.amount || 0), 0);
       const totalLateFees = paymentsThisMonth.reduce((sum, p) => sum + (p.lateFee || 0), 0);
       const totalMonthlyCharges = overrideLateApplied ? expectedAmount : (expectedAmount + totalLateFees + calculatedLateFee);

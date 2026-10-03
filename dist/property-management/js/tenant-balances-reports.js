@@ -127,7 +127,7 @@ function openTenantBalanceModal(tenantId) {
 
         const tbody = document.getElementById('tenantPaymentsTbody');
         tbody.innerHTML = '';
-        const allTenantPayments = getUnifiedCurrentPropertyPayments().filter(p => String(p.tenantId) === String(tenantId)).sort((a,b) => new Date(b.date) - new Date(a.date));
+        const allTenantPayments = getUnifiedCurrentPropertyPayments().filter(p => String(p.tenantId) === String(tenantId)).sort((a,b) => String(b.periodMonth||String(b.date).slice(0,7)).localeCompare(String(a.periodMonth||String(a.date).slice(0,7))) || new Date(b.date) - new Date(a.date));
 
         // Helper: compute monthly override late fee for a period (YYYY-MM)
         function computeMonthlyOverrideLateFee(tenantObj, periodKey) {
@@ -177,7 +177,7 @@ function openTenantBalanceModal(tenantId) {
         for (const p of allTenantPayments) {
             if (!p.date) continue;
             const d = new Date(p.date);
-            const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+            const key = p.periodMonth || `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
             if (!monthlyMap[key]) monthlyMap[key] = { rentBase:0, rentCollected:0, depositCash:0, depositCredit:0, feesCash:0, feesCredit:0, otherCash:0, otherCredit:0, rentCredit:0, credits:0, late:0 };
             const amt = Number(p.amount) || 0;
             const apply = p.applyTo || 'rent';
@@ -299,7 +299,7 @@ function openTenantBalanceModal(tenantId) {
             if (headerRow) colCount = headerRow.children.length || colCount;
         }
         for (const p of allTenantPayments) {
-            const monthKey = p.date ? (()=>{ const base = String(p.date).substring(0,10); const parts = base.split('-'); if(parts.length===3){return `${parts[0]}-${parts[1]}`;} const d=new Date(p.date); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; })() : 'Unknown';
+            const monthKey = p.periodMonth || (p.date ? (()=>{ const base = String(p.date).substring(0,10); const parts = base.split('-'); if(parts.length===3){return `${parts[0]}-${parts[1]}`;} const d=new Date(p.date); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; })() : 'Unknown');
             if (monthKey !== lastMonthKey) {
                 const groupTr = document.createElement('tr');
                 groupTr.className = 'month-group-row';
@@ -423,7 +423,7 @@ function exportTenantPaymentsReport(tenantId) {
     for (const p of payments) {
         if (!p.date) continue;
         const d = new Date(p.date);
-        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const key = p.periodMonth || `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
         if (!groups[key]) groups[key] = [];
         groups[key].push(p);
     }

@@ -169,6 +169,7 @@ async function buildTenantPortalPayload(tenantId) {
   const expectedRent = (0, serverContext.computeExpectedRentForMonth)(tenant, now, 'rent') || 0;
   const currentRentPayments = payments.filter(payment => {
     if ((payment.applyTo || 'rent') !== 'rent' || !payment.date) return false;
+    if (payment.periodMonth) return payment.periodMonth === `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
     const d = new Date(payment.date);
     return d >= monthStart && d <= monthEnd;
   });

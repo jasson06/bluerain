@@ -327,7 +327,7 @@ function renderTenants() {
         const now = new Date();
         const periodMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
         // Collect this month's rent payments (applyTo rent) for the tenant
-        const monthPayments = unifiedPropertyPayments.filter(p => p.tenantId === tenant._id && (!p.applyTo || p.applyTo === 'rent') && p.date && new Date(p.date).getMonth() === now.getMonth() && new Date(p.date).getFullYear() === now.getFullYear());
+        const monthPayments = unifiedPropertyPayments.filter(p => p.tenantId === tenant._id && (!p.applyTo || p.applyTo === 'rent') && (p.periodMonth ? p.periodMonth === periodMonth : p.date && new Date(p.date).getMonth() === now.getMonth() && new Date(p.date).getFullYear() === now.getFullYear()));
         // Only count positive amounts toward payment; credits (negative) should not increase paid
         const totalPaidThisMonth = monthPayments.reduce((sum,p)=>{
             const amt = Number(p.amount) || 0;

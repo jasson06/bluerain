@@ -55,7 +55,7 @@ function getQuickBooksPaymentMatch(payment, quickBooksPaymentsSource = null) {
     return quickBooksPayments.find(record =>
         (localPaymentId && String(record.localPaymentId || '') === localPaymentId)
         || (entityId && String(record.id || '') === entityId)
-        || (docNumber && String(record.docNumber || '') === docNumber)
+        || (!record.invoiceId && docNumber && String(record.docNumber || '') === docNumber)
     ) || null;
 }
 
@@ -68,7 +68,7 @@ function getLocalPaymentForQuickBooksRecord(record, paymentsSource = null) {
     return payments.find(payment =>
         (localPaymentId && String(payment._id) === localPaymentId)
         || (receiptId && String(payment.quickBooks?.entityId || '') === receiptId)
-        || (docNumber && String(payment.quickBooks?.docNumber || '') === docNumber)
+        || (!record.invoiceId && docNumber && String(payment.quickBooks?.docNumber || '') === docNumber)
     ) || null;
 }
 
@@ -306,7 +306,7 @@ function renderPayments() {
             tenantName: tenant?.name || '',
             unitText: unit?.number != null ? String(unit.number) : '',
             typeText: (payment.type || '').charAt(0).toUpperCase() + (payment.type || '').slice(1),
-            appliedText: payment.applyTo ? payment.applyTo.charAt(0).toUpperCase() + payment.applyTo.slice(1) : 'Rent',
+            appliedText: `${payment.applyTo ? payment.applyTo.charAt(0).toUpperCase() + payment.applyTo.slice(1) : 'Rent'}${payment.periodMonth ? ` · ${payment.periodMonth}` : ''}`,
             amountValue: Number(payment.amount) || 0,
             methodText: payment.method ? payment.method.charAt(0).toUpperCase() + payment.method.slice(1) : '',
             dateValue: payment.date,

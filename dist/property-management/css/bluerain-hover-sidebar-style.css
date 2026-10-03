@@ -44,3 +44,13 @@ body.workspace-hover-layout .main-content{margin-left:60px!important}
 @media(max-width:900px){body.workspace-hover-layout .main-content{margin-left:0!important;width:100%!important}.workspace-hover-sidebar .workspace-nav-item{min-height:44px}}
 @media(prefers-reduced-motion:reduce){body.workspace-hover-layout .main-content{transition:none!important}}
 
+@media (min-width:700px) and (min-height:600px) and (max-width:1280px) and (pointer:coarse) {
+  body.workspace-hover-layout{--workspace-sidebar-width:min(320px,40vw)}
+  .workspace-hover-sidebar.sidebar,
+  .workspace-hover-sidebar.sidebar.workspace-expanded{position:fixed;top:0;right:auto;bottom:0;left:0;width:var(--workspace-sidebar-width)!important;height:100vh!important;height:100dvh!important;max-height:none!important;border-radius:0!important;transform:none!important}
+  .workspace-hover-sidebar #propertyList{grid-template-columns:60px minmax(0,1fr)}
+  .workspace-hover-sidebar .br-panel{visibility:visible;opacity:1}
+  .workspace-hover-sidebar .br-pin{display:none!important}
+  body.workspace-hover-layout .main-content{margin-left:var(--workspace-sidebar-width)!important;width:calc(100% - var(--workspace-sidebar-width))!important;padding-bottom:0!important}
+  #mobileBottomNav,#sidebarOverlay,#mobilePanelOverlay{display:none!important}
+}

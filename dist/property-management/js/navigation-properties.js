@@ -232,17 +232,22 @@ function renderWorkspaceOutlineIcons(root) {
  });
 }
 
+function isPersistentTabletSidebar() {
+    return window.matchMedia('(min-width: 700px) and (min-height: 600px) and (max-width: 1280px) and (pointer: coarse)').matches;
+}
+
 function workspaceRailState() {
     return window.pmHoverRail || (window.pmHoverRail = { group: '', location: '', open: false, pinned: localStorage.getItem('pmSidebarPinned') === '1', hovering: false });
 }
 
 function setWorkspaceRailOpen(open) {
     const rail = workspaceRailState(), sidebar = document.querySelector('.sidebar');
+    const persistentTablet = isPersistentTabletSidebar();
     rail.open = open;
-    sidebar?.classList.toggle('workspace-expanded', open || rail.pinned);
-    document.body.classList.toggle('workspace-rail-expanded', window.innerWidth > 900 && (open || rail.pinned));
+    sidebar?.classList.toggle('workspace-expanded', open || rail.pinned || persistentTablet);
+    document.body.classList.toggle('workspace-rail-expanded', persistentTablet || (window.innerWidth > 900 && (open || rail.pinned)));
     const panel = document.getElementById('workspaceRailPanel');
-    const visible = window.innerWidth <= 900 || open || rail.pinned;
+    const visible = window.innerWidth <= 900 || persistentTablet || open || rail.pinned;
     if (panel) { panel.inert = !visible; panel.setAttribute('aria-hidden', String(!visible)); }
 }
 
@@ -261,7 +266,7 @@ function selectWorkspaceRailGroup(id) {
 }
 
 function toggleWorkspaceSidebar() {
-    if (window.innerWidth <= 900) { document.querySelector('.sidebar')?.classList.toggle('visible'); return; }
+    if (window.innerWidth <= 900 && !isPersistentTabletSidebar()) { document.querySelector('.sidebar')?.classList.toggle('visible'); return; }
     const rail = workspaceRailState(); rail.pinned = !rail.pinned;
     localStorage.setItem('pmSidebarPinned', rail.pinned ? '1' : '0');
     setWorkspaceRailOpen(rail.pinned || rail.hovering);
@@ -303,7 +308,7 @@ function renderWorkspaceSidebar() {
         sidebar.addEventListener('pointerleave', () => { rail.hovering = false; closeWorkspaceRailSoon(); });
         sidebar.addEventListener('focusin', e => { if (e.target.matches(':focus-visible')) setWorkspaceRailOpen(true); });
         sidebar.addEventListener('focusout', () => closeWorkspaceRailSoon());
-        sidebar.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); document.getElementById('workspacePropertyPicker')?.classList.remove('open'); document.getElementById('workspacePropertySwitch')?.setAttribute('aria-expanded', 'false'); if (window.innerWidth <= 900) sidebar.classList.remove('visible'); else { root.querySelector(`[data-rail-group="${rail.group}"]`)?.focus(); clearTimeout(rail.openTimer); setWorkspaceRailOpen(false); } } });
+        sidebar.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); document.getElementById('workspacePropertyPicker')?.classList.remove('open'); document.getElementById('workspacePropertySwitch')?.setAttribute('aria-expanded', 'false'); if (window.innerWidth <= 900 && !isPersistentTabletSidebar()) sidebar.classList.remove('visible'); else { root.querySelector(`[data-rail-group="${rail.group}"]`)?.focus(); clearTimeout(rail.openTimer); setWorkspaceRailOpen(false); } } });
         document.addEventListener('pointerdown', e => { if (!sidebar.contains(e.target)) { document.getElementById('workspacePropertyPicker')?.classList.remove('open'); document.getElementById('workspacePropertySwitch')?.setAttribute('aria-expanded', 'false'); if (!rail.pinned) setWorkspaceRailOpen(false); } });
         window.addEventListener('resize', () => setWorkspaceRailOpen(rail.open));
     }
@@ -481,7 +486,7 @@ async function selectProperty(propertyId, options = {}) {
         renderPropertyList();
 
                 const sidebar = document.querySelector('.sidebar');
-        if (window.innerWidth <= 900 && sidebar.classList.contains('visible')) {
+        if (window.innerWidth <= 900 && !isPersistentTabletSidebar() && sidebar.classList.contains('visible')) {
             sidebar.classList.remove('visible');
         }
         setMobileTasksDrawerOpen(false);
