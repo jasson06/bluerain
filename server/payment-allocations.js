@@ -27,7 +27,7 @@ module.exports = function paymentAllocations(context) {
       if(String(connection._id)!==String(root.quickBooks.connectionId))throw Error('The original QuickBooks connection is no longer active');
       invoice=(await context.qbRequest(connection,'get',`invoice/${encodeURIComponent(root.quickBooks.invoiceId)}`)).Invoice;
     }catch(error){invoiceError='Invoice details could not be loaded. You can allocate manually using your records.';}
-    return {payment:root,rootId,version:root.quickBooks?.allocationVersion||0,total:root.quickBooks?.allocationTotal??root.amount,rows,invoice:invoice?{number:invoice.DocNumber,date:invoice.TxnDate,lines:(invoice.Line||[]).filter(l=>l.DetailType==='SalesItemLineDetail').map(l=>({id:l.Id,description:l.Description||'',item:l.SalesItemLineDetail?.ItemRef?.name||'',amount:Number(l.Amount)||0}))}:null,invoiceError};
+    return {payment:root,rootId,version:root.quickBooks?.allocationVersion||0,total:root.quickBooks?.allocationTotal??root.amount,rows,invoice:invoice?{total:invoice.TotalAmt??null,balance:invoice.Balance??null,number:invoice.DocNumber,date:invoice.TxnDate,lines:(invoice.Line||[]).filter(l=>l.DetailType==='SalesItemLineDetail').map(l=>({id:l.Id,description:l.Description||'',item:l.SalesItemLineDetail?.ItemRef?.name||'',amount:Number(l.Amount)||0}))}:null,invoiceError};
   }
   async function save(payment,body) {
     if(!payment.quickBooks?.entityId)throw Error('This editor is for imported or linked QuickBooks payments');

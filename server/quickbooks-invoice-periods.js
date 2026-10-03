@@ -39,6 +39,8 @@ module.exports = function invoicePeriods(context) {
         if (String(invoice?.CustomerRef?.value || '') !== String(record.customerId)) { error = `Invoice ${id} belongs to a different customer. Review this payment.`; break; }
         parts.push({...record, id: parts.length ? `${record.id}:invoice:${id}` : record.id,
           parentPaymentId: record.id, invoiceId: id, invoiceDate: date,
+          invoiceTotal: invoice.TotalAmt!=null&&Number.isFinite(Number(invoice.TotalAmt))?Number(invoice.TotalAmt):null,
+          invoiceBalance: invoice.Balance!=null&&Number.isFinite(Number(invoice.Balance))?Number(invoice.Balance):null,
           invoiceNumber: String(invoice.DocNumber || id), periodMonth: date.slice(0,7),
           totalAmt: cents/100, parentPaymentTotal: record.totalAmt,
           allocationReviewRequired:(invoice.Line||[]).filter(l=>l.DetailType==='SalesItemLineDetail'&&Number(l.Amount)>0).length>1});
@@ -48,7 +50,7 @@ module.exports = function invoicePeriods(context) {
     return result;
   }
   function metadata(record) {
-    return record.invoiceId ? {parentPaymentId:record.parentPaymentId,invoiceId:record.invoiceId,invoiceDate:record.invoiceDate,invoiceNumber:record.invoiceNumber,parentPaymentTotal:record.parentPaymentTotal,periodSource:'invoice-date',paymentCreatedAt:record.raw?.MetaData?.CreateTime || '',allocationReviewRequired:!!record.allocationReviewRequired} : {};
+    return record.invoiceId ? {parentPaymentId:record.parentPaymentId,invoiceId:record.invoiceId,invoiceDate:record.invoiceDate,invoiceTotal:record.invoiceTotal??null,invoiceBalance:record.invoiceBalance??null,invoiceNumber:record.invoiceNumber,parentPaymentTotal:record.parentPaymentTotal,periodSource:'invoice-date',paymentCreatedAt:record.raw?.MetaData?.CreateTime || '',allocationReviewRequired:!!record.allocationReviewRequired} : {};
   }
   return {expand, metadata};
 };

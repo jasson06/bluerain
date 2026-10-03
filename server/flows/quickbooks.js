@@ -152,6 +152,15 @@ async function reconcileQuickBooksPaymentsForProperty(propertyId, connection = n
     const old = localPayments.find(p=>p.quickBooks?.entityType===record.sourceType && String(p.quickBooks?.entityId)===record.id);
     if (record.periodError) continue;
     if(old?.quickBooks?.manualAllocation){
+      // Refresh invoice debt while preserving the user's split of received money.
+      for(const part of localPayments.filter(p=>String(p._id)===String(old._id) || (old.quickBooks.allocationRootId && p.quickBooks?.allocationRootId===old.quickBooks.allocationRootId))){
+        const fields={invoiceTotal:record.invoiceTotal??null,invoiceBalance:record.invoiceBalance??null};
+        if(Object.entries(fields).some(([k,v])=>part.quickBooks?.[k]!==v)){
+          await serverContext.Payment.updateOne({_id:part._id},{$set:Object.fromEntries(Object.entries(fields).map(([k,v])=>[`quickBooks.${k}`,v]))});
+          Object.assign(part.quickBooks,fields);
+        }
+      }
+
       if(Math.round(record.totalAmt*100)!==Math.round(old.quickBooks.allocationTotal*100))record.periodError='QuickBooks amount changed after manual allocation. Review this payment before changing the split.';
       continue;
     }

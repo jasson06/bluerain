@@ -450,7 +450,7 @@ function renderPayments() {
                                                                      `</button>`
                                                             : (row.displayBalance !== undefined && row.displayBalance !== null ? `$${(Number(row.displayBalance).toFixed(2))}` : '')}
                                                         </td>
-                                                     <td class="note-cell">${row.noteText ? escapeHtml(row.noteText) : ''}</td>
+                                                     <td class="note-cell">${row.noteText ? escapeHtml(row.noteText) : ''}${payment.quickBooks?.invoiceId?`<div class="task-meta"><strong>Invoice ${escapeHtml(payment.quickBooks.invoiceNumber||payment.quickBooks.invoiceId)} outstanding: ${payment.quickBooks.invoiceBalance!=null&&Number.isFinite(Number(payment.quickBooks.invoiceBalance))?'$'+Number(payment.quickBooks.invoiceBalance).toFixed(2):'Unavailable'}</strong><br>Whole invoice balance, not an additional payment-row charge.</div>`:''}</td>
                                                         <td>
                                                              <button class="btn-icon download-btn" title="Download Receipt" onclick="event.stopPropagation();exportReceipt('${payment._id}')">
                                                                  <i class="fas fa-file-arrow-down"></i>
