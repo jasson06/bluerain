@@ -6,6 +6,12 @@ module.exports = function invoicePeriods(context) {
       if (!cache.has(id)) cache.set(id, context.qbRequest(connection, 'get', `invoice/${encodeURIComponent(id)}`).then(r => r.Invoice));
       return cache.get(id);
     };
+    // Cache is request-scoped: no stale invoice dates survive a refresh.
+    const ids=[...new Set(records.filter(r=>r.sourceType==='Payment').flatMap(r=>(r.raw?.Line||[]).flatMap(l=>(l.LinkedTxn||[]).filter(x=>x.TxnType==='Invoice'&&x.TxnId).map(x=>String(x.TxnId)))))];
+    let cursor=0;
+    await Promise.all(Array.from({length:Math.min(4,ids.length)},async()=>{
+      while(cursor<ids.length){const id=ids[cursor++];try{await readInvoice(id);}catch(_){/* expand supplies the review message */}}
+    }));
     const result = [];
     for (const record of records) {
       if (record.sourceType !== 'Payment') { result.push(record); continue; }

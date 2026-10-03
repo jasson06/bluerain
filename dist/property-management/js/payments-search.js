@@ -5,13 +5,14 @@
 async function loadPayments(propertyId, force = false) {
 
     try {
-        // QuickBooks reads can import payments. Finish them before fetching
-        // the final ledger; cached rows can otherwise retain old balances.
-        await loadQuickBooksPayments(propertyId);
-        await loadPaymentWorkspace(propertyId,true);
-        const response = await fetch(`${API_URL}/properties/${propertyId}/payments`);
-        if (!response.ok) throw new Error('Failed to fetch payments');
-        state.payments = await response.json();
+        const workspace = await loadPaymentWorkspace(propertyId,true);
+        if (Array.isArray(workspace?.localPayments)) {
+            state.payments = workspace.localPayments;
+        } else {
+            const response = await fetch(`${API_URL}/properties/${propertyId}/payments`);
+            if (!response.ok) throw new Error('Failed to fetch payments');
+            state.payments = await response.json();
+        }
         renderPayments();
         renderPaymentWorkspace();
         // After loading fresh payments for the selected property, recompute tenant rent status badges

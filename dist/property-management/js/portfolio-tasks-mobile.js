@@ -267,7 +267,7 @@ function initializeMobilePortfolioNavigation() {
 
     // Hide sidebar by default on mobile
     function setSidebarInitial() {
-        if (window.innerWidth <= 900 && !isPersistentTabletSidebar()) {
+        if (window.innerWidth <= 900) {
             sidebar.classList.remove('visible');
         } else {
             sidebar.classList.add('visible');

@@ -116,7 +116,15 @@ function buildQuickBooksImportNote(record) {
   return parts.filter(Boolean).join(' · ').slice(0, 1000);
 }
 
+const pendingReconciliations = new Map();
 async function autoResolveQuickBooksPaymentsForProperty(propertyId, connection = null) {
+  const key=String(propertyId);
+  if(pendingReconciliations.has(key))return pendingReconciliations.get(key);
+  const pending=reconcileQuickBooksPaymentsForProperty(propertyId,connection);
+  pendingReconciliations.set(key,pending);
+  try{return await pending;}finally{if(pendingReconciliations.get(key)===pending)pendingReconciliations.delete(key);}
+}
+async function reconcileQuickBooksPaymentsForProperty(propertyId, connection = null) {
   const existingConnection = connection || await serverContext.QuickBooksConnection.findOne({ projectId: propertyId, status: { $ne: 'disconnected' } }).lean();
   if (!existingConnection) {
     return { connection: null, localPayments: [], qbPayments: [], tenants: [], unitById: new Map() };
@@ -148,7 +156,8 @@ async function autoResolveQuickBooksPaymentsForProperty(propertyId, connection =
       const changes = {amount:record.totalAmt,periodMonth:record.periodMonth};
       for (const [key,value] of Object.entries(invoicePeriods.metadata(record))) changes[`quickBooks.${key}`]=value;
       changes['quickBooks.originalInvoiceImport']=original;
-      await serverContext.Payment.updateOne({_id:old._id},{$set:changes});
+      const changed=old.amount!==record.totalAmt || old.periodMonth!==record.periodMonth || Object.entries(invoicePeriods.metadata(record)).some(([k,v])=>old.quickBooks?.[k]!==v);
+      if(changed)await serverContext.Payment.updateOne({_id:old._id},{$set:changes});
       old.amount=record.totalAmt;old.periodMonth=record.periodMonth;
       old.quickBooks={...old.quickBooks,...invoicePeriods.metadata(record),originalInvoiceImport:original};
     }
@@ -388,7 +397,7 @@ serverContext.app.get('/api/properties/:propertyId/quickbooks/payment-workspace'
   const key=String(live._id),qbCustomers=customerResponse.QueryResponse?.Customer||[],customers=tenants.map(tenant=>{const link=tenant.quickBooks?.[key]||{};return{tenantId:tenant._id,tenantName:tenant.name,unitNumber:tenant.unitId?.number||'',email:tenant.email||'',customerId:link.customerId||'',customerDisplayName:link.customerDisplayName||'',customers:mappedQbCustomers(link),mapped:!!link.customerId};});
   const mapping=live.mappings||{},mappingHealth={incomeItems:['rent','late','other','deposit'].map(k=>({key:k,label:`${k[0].toUpperCase()+k.slice(1)} item`,mapped:!!mapping.incomeItems?.[k]?.value,name:mapping.incomeItems?.[k]?.name||''})),accounts:[{key:'deposit',label:'Deposit account',mapped:!!mapping.depositAccounts?.default?.value,name:mapping.depositAccounts?.default?.name||''},{key:'expense',label:'Expense account',mapped:!!mapping.expenseAccounts?.default?.value,name:mapping.expenseAccounts?.default?.name||''},{key:'expense-payment',label:'Expense payment account',mapped:!!mapping.defaultExpensePaymentAccount?.value,name:mapping.defaultExpensePaymentAccount?.name||''}]};
   const conflicts=[...failedPayments,...failedLogs.map(log=>({_id:`log:${log._id}`,kind:'sync-log',status:log.status,message:log.lastError||'QuickBooks synchronization failed',localEntityId:log.localEntityId,operation:log.operation,updatedAt:log.updatedAt}))];
-  res.json({connected:true,localPayments,companyName:live.companyName||'',summary:{unmatched:unmatched.length,conflicts:conflicts.length,unmappedCustomers:customers.filter(x=>!x.mapped).length},unmatched,conflicts,customers,qbCustomers:qbCustomers.map(c=>({id:c.Id,name:c.DisplayName||c.FullyQualifiedName||c.Name||''})),activity:logs,mappingHealth});
+  res.json({connected:true,localPayments,qbPayments:records,companyName:live.companyName||'',summary:{unmatched:unmatched.length,conflicts:conflicts.length,unmappedCustomers:customers.filter(x=>!x.mapped).length},unmatched,conflicts,customers,qbCustomers:qbCustomers.map(c=>({id:c.Id,name:c.DisplayName||c.FullyQualifiedName||c.Name||''})),activity:logs,mappingHealth});
 }catch(error){res.status(400).json({message:error.message||'Unable to load the payment workspace'});}});
 }
 

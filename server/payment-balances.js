@@ -7,14 +7,14 @@ module.exports = function paymentBalances(serverContext) {
       || String(a.quickBooks?.parentPaymentId || a.quickBooks?.entityId || a._id || '').localeCompare(String(b.quickBooks?.parentPaymentId || b.quickBooks?.entityId || b._id || ''),undefined,{numeric:true})
       || String(a._id||'').localeCompare(String(b._id||''));
   }
-  async function recalculate(payment, lateFee) {
+  async function recalculate(payment, lateFee, loaded) {
     // Recalculate balance for rent payments only
     if (payment.applyTo === 'rent') {
       const periodMatch = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(payment.periodMonth || '');
       const paymentDate = periodMatch ? new Date(Number(periodMatch[1]),Number(periodMatch[2])-1,1,12) : new Date(payment.date);
       const monthStart = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), 1);
       const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
-      const tenantData = await serverContext.Tenant.findById(payment.tenantId);
+      const tenantData = (loaded ? loaded.tenant : await serverContext.Tenant.findById(payment.tenantId));
   let expectedAmount = 0;
     let calculatedLateFee = 0;
     let overrideLateApplied = false;
@@ -57,7 +57,7 @@ module.exports = function paymentBalances(serverContext) {
         }
       }
       const period = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth()+1).padStart(2,'0')}`;
-      const tenantPayments = await serverContext.Payment.find({
+      const tenantPayments = loaded ? loaded.payments.filter(p=>p.applyTo==='rent' && String(p._id)!==String(payment._id)) : await serverContext.Payment.find({
         tenantId: payment.tenantId,
         applyTo: 'rent',
         _id: { $ne: payment._id }
@@ -73,10 +73,10 @@ module.exports = function paymentBalances(serverContext) {
   payment.balance = balance; // allow negative credit
     } else if (payment.applyTo === 'deposit') {
       // Set balance to remaining deposit
-      const tenantData = await serverContext.Tenant.findById(payment.tenantId);
+      const tenantData = (loaded ? loaded.tenant : await serverContext.Tenant.findById(payment.tenantId));
       const expectedDeposit = Number(tenantData.deposit) || 0;
       // Sum all deposit payments excluding this one (we already updated amount above)
-      const otherDepositPayments = await serverContext.Payment.find({ tenantId: payment.tenantId, applyTo: 'deposit', _id: { $ne: payment._id } });
+      const otherDepositPayments = loaded ? loaded.payments.filter(p=>p.applyTo==='deposit' && String(p._id)!==String(payment._id)) : await serverContext.Payment.find({ tenantId: payment.tenantId, applyTo: 'deposit', _id: { $ne: payment._id } });
       const totalOther = otherDepositPayments.filter(p => comparePayments(p,payment) < 0).reduce((s, p) => s + (p.amount || 0), 0);
       const depositBalance = expectedDeposit - (totalOther + payment.amount);
   payment.balance = depositBalance; // can be negative if overpaid deposit
@@ -89,17 +89,22 @@ module.exports = function paymentBalances(serverContext) {
   }
 
   async function refreshTenant(tenantId) {
-    const payments = await serverContext.Payment.find({tenantId});
+    const [payments,tenant] = await Promise.all([serverContext.Payment.find({tenantId}),serverContext.Tenant.findById(tenantId)]);
+    const writes = [];
     for (const payment of payments) {
       const previousBalance = payment.balance;
       const previousLateFee = payment.lateFee;
-      await recalculate(payment);
+      await recalculate(payment, undefined, {payments,tenant});
       const changes = {};
       if (payment.balance !== previousBalance) changes.balance = payment.balance;
       if (payment.lateFee !== previousLateFee) changes.lateFee = payment.lateFee;
       if (Object.keys(changes).length) {
-        await serverContext.Payment.updateOne({_id: payment._id}, {$set: changes});
+        writes.push({updateOne:{filter:{_id:payment._id},update:{$set:changes}}});
       }
+    }
+    if(writes.length) {
+      if(serverContext.Payment.bulkWrite) await serverContext.Payment.bulkWrite(writes,{ordered:true});
+      else for(const entry of writes) await serverContext.Payment.updateOne(entry.updateOne.filter,entry.updateOne.update);
     }
   }
   return {recalculate, refreshTenant, comparePayments};
