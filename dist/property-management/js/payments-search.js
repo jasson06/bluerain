@@ -5,18 +5,11 @@
 async function loadPayments(propertyId, force = false) {
 
     try {
-        if (!force && shouldUseCache('payments', propertyId)) {
-            await Promise.all([loadQuickBooksPayments(propertyId),loadPaymentWorkspace(propertyId,true)]);
-            renderPayments();
-            // Ensure tenant rent badges reflect cached payments for this property
-            renderTenants();
-            updateTabCounts();
-            return;
-        }
-        const [response] = await Promise.all([
-            fetch(`${API_URL}/properties/${propertyId}/payments`),
-            loadQuickBooksPayments(propertyId),loadPaymentWorkspace(propertyId,true)
-        ]);
+        // QuickBooks reads can import payments. Finish them before fetching
+        // the final ledger; cached rows can otherwise retain old balances.
+        await loadQuickBooksPayments(propertyId);
+        await loadPaymentWorkspace(propertyId,true);
+        const response = await fetch(`${API_URL}/properties/${propertyId}/payments`);
         if (!response.ok) throw new Error('Failed to fetch payments');
         state.payments = await response.json();
         renderPayments();
