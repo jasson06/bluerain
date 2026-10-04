@@ -61,21 +61,16 @@ function getOverviewRange() {
   return {from:from.toISOString(),to:to.toISOString()};
 }
 
-const quickBooksProgressTimers=new Map();
 function setQuickBooksProgress(area, message, kind='loading') {
   const anchor=document.getElementById(area==='payments'?'paymentsList':'quickBooksConnectionSummary');
   if(!anchor)return;
   const id=area==='payments'?'qbPaymentsProgress':'qbSetupProgress';
-  clearTimeout(quickBooksProgressTimers.get(id));
   let banner=document.getElementById(id);
   if(!banner){banner=document.createElement('div');banner.id=id;banner.setAttribute('role','status');banner.setAttribute('aria-live','polite');anchor.parentNode.insertBefore(banner,anchor);}
-  banner.hidden=false;
   banner.className=kind==='error'?'overview-alert':kind==='success'?'overview-ok':'empty-compact';
   banner.style.marginBottom='12px';
   banner.innerHTML=`<i aria-hidden="true" class="fas ${kind==='loading'?'fa-spinner fa-spin':kind==='error'?'fa-triangle-exclamation':'fa-circle-check'}"></i> ${escapeHtml(message)}`;
-  if(area==='payments'&&kind==='error'){banner.className='qb-payment-progress';banner.innerHTML=ledgerAttentionBadge('QuickBooks needs attention',message);}
   anchor.setAttribute('aria-busy',kind==='loading'?'true':'false');
-  if(area==='payments'&&['success','info'].includes(kind))quickBooksProgressTimers.set(id,setTimeout(()=>{banner.hidden=true;quickBooksProgressTimers.delete(id);},4000));
 }
 
 let paymentAllocationEditor=null;
@@ -89,7 +84,7 @@ async function openPaymentAllocation(paymentId){
   const response=await fetch(`${API_URL}/properties/${propertyId}/payments/${paymentId}?allocationDetails=1`),data=await response.json();if(!response.ok)throw Error(data.message||'Unable to load allocation details');
   if(String(state.currentProperty?._id)!==String(propertyId)){closeModal('paymentAllocationModal');return;}
   paymentAllocationEditor={...data,propertyId};
-  modal.innerHTML=`<div class="modal-content" style="max-width:1000px;max-height:90vh;overflow:auto"><div class="panel-heading"><h2>Allocate payment</h2><button class="btn-secondary" onclick="closeModal('paymentAllocationModal')">Close</button></div><p>Received <strong>$${Number(data.total).toFixed(2)}</strong> on ${escapeHtml(formatDateDisplay(data.payment.date))}. Assign each portion to a category and month. The received date and total stay unchanged.</p>${renderInvoiceOutstanding(data.invoice, data.total)}${data.ledgerWarning?`<p class="overview-alert">${escapeHtml(data.ledgerWarning)}</p>`:''}<p class="task-meta">These allocations update this app only. They do not create or change a QuickBooks payment. A late-fee allocation records money paid toward that fee; it does not add a new charge.</p>${data.invoice?`<details open><summary>Invoice ${escapeHtml(data.invoice.number||'')} · ${escapeHtml(data.invoice.date||'')}</summary><div class="overview-table-wrap"><table class="overview-table"><thead><tr><th>Item</th><th>Description</th><th>Invoice amount</th></tr></thead><tbody>${data.invoice.lines.map(l=>`<tr><td>${escapeHtml(l.item)}</td><td>${escapeHtml(l.description)}</td><td>$${Number(l.amount).toFixed(2)}</td></tr>`).join('')}</tbody></table></div><button class="btn-secondary" onclick="useInvoiceAllocationLines()">Use invoice lines as a draft</button><p class="task-meta">Invoice charges may exceed this payment. Review the categories and months, and reduce unpaid lines to $0 or remove them.</p></details>`:`<p class="overview-alert">${escapeHtml(data.invoiceError||'No invoice details are linked. Enter the allocation from your records.')}</p>`}<div class="overview-table-wrap"><table class="overview-table"><thead><tr><th>Charge</th><th>Category</th><th>Applied month</th><th>Amount paid</th><th>Description</th><th></th></tr></thead><tbody id="paymentAllocationRows"></tbody></table></div><button class="btn-secondary" onclick="addPaymentAllocationRow()">Add allocation</button><p id="paymentAllocationTotal" role="status" aria-live="polite"></p><p id="paymentAllocationMessage" role="status" aria-live="polite"></p><div class="modal-buttons"><button class="btn-secondary" onclick="closeModal('paymentAllocationModal')">Cancel</button><button type="button" id="paymentAllocationSave" class="btn-primary" onclick="savePaymentAllocation()">Save allocations</button></div></div>`;
+  modal.innerHTML=`<div class="modal-content" style="max-width:1000px;max-height:90vh;overflow:auto"><div class="panel-heading"><h2>Allocate payment</h2><button class="btn-secondary" onclick="closeModal('paymentAllocationModal')">Close</button></div><p>Received <strong>$${Number(data.total).toFixed(2)}</strong> on ${escapeHtml(formatDateDisplay(data.payment.date))}. Assign each portion to a category and month. The received date and total stay unchanged.</p>${renderInvoiceOutstanding(data.invoice, data.total)}<p class="task-meta">These allocations update this app only. They do not create or change a QuickBooks payment. A late-fee allocation records money paid toward that fee; it does not add a new charge.</p>${data.invoice?`<details open><summary>Invoice ${escapeHtml(data.invoice.number||'')} · ${escapeHtml(data.invoice.date||'')}</summary><div class="overview-table-wrap"><table class="overview-table"><thead><tr><th>Item</th><th>Description</th><th>Invoice amount</th></tr></thead><tbody>${data.invoice.lines.map(l=>`<tr><td>${escapeHtml(l.item)}</td><td>${escapeHtml(l.description)}</td><td>$${Number(l.amount).toFixed(2)}</td></tr>`).join('')}</tbody></table></div><button class="btn-secondary" onclick="useInvoiceAllocationLines()">Use invoice lines as a draft</button><p class="task-meta">Invoice charges may exceed this payment. Review the categories and months, and reduce unpaid lines to $0 or remove them.</p></details>`:`<p class="overview-alert">${escapeHtml(data.invoiceError||'No invoice details are linked. Enter the allocation from your records.')}</p>`}<div class="overview-table-wrap"><table class="overview-table"><thead><tr><th>Category</th><th>Applied month</th><th>Amount paid</th><th>Description</th><th></th></tr></thead><tbody id="paymentAllocationRows"></tbody></table></div><button class="btn-secondary" onclick="addPaymentAllocationRow()">Add allocation</button><p id="paymentAllocationTotal" role="status" aria-live="polite"></p><p id="paymentAllocationMessage" role="status" aria-live="polite"></p><div class="modal-buttons"><button class="btn-secondary" onclick="closeModal('paymentAllocationModal')">Cancel</button><button type="button" id="paymentAllocationSave" class="btn-primary" onclick="savePaymentAllocation()">Save allocations</button></div></div>`;
   for(const row of data.rows)addPaymentAllocationRow(row);
  }catch(error){modal.innerHTML=`<div class="modal-content"><p role="alert">${escapeHtml(error.message)}</p><button class="btn-secondary" onclick="closeModal('paymentAllocationModal')">Close</button></div>`;}
 }
@@ -97,13 +92,10 @@ function addPaymentAllocationRow(row={}){
  const root=document.getElementById('paymentAllocationRows');if(!root||root.children.length>=40)return;
  const tr=document.createElement('tr');const categories={rent:'Rent',deposit:'Security deposit',fee:'Fee (application / non-refundable)',late:'Late fee',water:'Water',electric:'Electric',trash:'Trash',admin:'Admin fee',other:'Other'};
  const period=row.periodMonth||paymentAllocationEditor?.payment?.periodMonth||String(paymentAllocationEditor?.invoice?.date||'').slice(0,7);
- const charges=(paymentAllocationEditor?.charges||[]).filter(c=>c.amount>0&&(!paymentAllocationEditor.payment.quickBooks?.invoiceId||String(c.invoiceId)===String(paymentAllocationEditor.payment.quickBooks.invoiceId)));
- const chargeId=row.chargeId||row.quickBooks?.ledgerChargeId||'';
- tr.innerHTML=`<td><select class="allocation-charge" aria-label="Charge"><option value="">Match category and month</option>${charges.map(c=>`<option value="${escapeHtml(c.id)}" ${c.id===chargeId?'selected':''}>${escapeHtml(c.description)} (${escapeHtml(c.periodMonth)})</option>`).join('')}</select></td><td><select class="allocation-category" aria-label="Category">${Object.entries(categories).map(([key,label])=>`<option value="${key}" ${key===(row.applyTo||'rent')?'selected':''}>${label}</option>`).join('')}</select></td><td><input class="allocation-period" aria-label="Applied month" type="month" value="${escapeHtml(period)}"></td><td><input class="allocation-amount" aria-label="Amount paid" type="number" min="0" step="0.01" value="${Number(row.amount||0).toFixed(2)}"></td><td><input class="allocation-label" aria-label="Description" maxlength="200" value="${escapeHtml(row.feeLabel||'')}"></td><td><button class="btn-secondary" type="button">Remove</button></td>`;
- tr.querySelector('.allocation-charge').onchange=()=>{const c=charges.find(c=>c.id===tr.querySelector('.allocation-charge').value);if(c){tr.querySelector('.allocation-category').value=c.category;tr.querySelector('.allocation-period').value=c.periodMonth;}updatePaymentAllocationTotal();};
+ tr.innerHTML=`<td><select class="allocation-category" aria-label="Category">${Object.entries(categories).map(([key,label])=>`<option value="${key}" ${key===(row.applyTo||'rent')?'selected':''}>${label}</option>`).join('')}</select></td><td><input class="allocation-period" aria-label="Applied month" type="month" value="${escapeHtml(period)}"></td><td><input class="allocation-amount" aria-label="Amount paid" type="number" min="0" step="0.01" value="${Number(row.amount||0).toFixed(2)}"></td><td><input class="allocation-label" aria-label="Description" maxlength="200" value="${escapeHtml(row.feeLabel||'')}"></td><td><button class="btn-secondary" type="button">Remove</button></td>`;
  tr.querySelector('button').onclick=()=>{tr.remove();updatePaymentAllocationTotal();};tr.oninput=updatePaymentAllocationTotal;tr.onchange=updatePaymentAllocationTotal;root.appendChild(tr);updatePaymentAllocationTotal();
 }
-function readPaymentAllocationRows(){return [...document.querySelectorAll('#paymentAllocationRows tr')].map(tr=>({chargeId:tr.querySelector('.allocation-charge')?.value||'',applyTo:tr.querySelector('.allocation-category').value,periodMonth:tr.querySelector('.allocation-period').value,amount:Number(tr.querySelector('.allocation-amount').value),feeLabel:tr.querySelector('.allocation-label').value}));}
+function readPaymentAllocationRows(){return [...document.querySelectorAll('#paymentAllocationRows tr')].map(tr=>({applyTo:tr.querySelector('.allocation-category').value,periodMonth:tr.querySelector('.allocation-period').value,amount:Number(tr.querySelector('.allocation-amount').value),feeLabel:tr.querySelector('.allocation-label').value}));}
 function updatePaymentAllocationTotal(){
  const rows=readPaymentAllocationRows(),total=Math.round(Number(paymentAllocationEditor?.total||0)*100),sum=rows.reduce((n,r)=>n+(Number.isFinite(r.amount)?Math.round(r.amount*100):0),0);
  let error='';
@@ -129,7 +121,7 @@ function useInvoiceAllocationLines(){
   const applyTo=/late/.test(text)?'late':/non.?refundable|application/.test(text)?'fee':/deposit/.test(text)?'deposit':/rent|prorat/.test(text)?'rent':'other';
   const month=months.findIndex(m=>new RegExp(`\\b${m}\\b`,'i').test(text));
   const year=(text.match(/\b20\d{2}\b/)||[])[0]||String(data.invoice.date).slice(0,4);
-  addPaymentAllocationRow({chargeId:data.payment?.quickBooks?.invoiceId&&line.id?`qb:${data.payment.quickBooks.invoiceId}:${line.id}`:null,applyTo,periodMonth:month<0?String(data.invoice.date).slice(0,7):`${year}-${String(month+1).padStart(2,'0')}`,amount:Math.max(0,line.amount),feeLabel:line.description||line.item});
+  addPaymentAllocationRow({applyTo,periodMonth:month<0?String(data.invoice.date).slice(0,7):`${year}-${String(month+1).padStart(2,'0')}`,amount:Math.max(0,line.amount),feeLabel:line.description||line.item});
  }
 }
 async function savePaymentAllocation(){
@@ -139,9 +131,9 @@ async function savePaymentAllocation(){
  let saved=false;
  try{
   const response=await fetch(`${API_URL}/properties/${data.propertyId}/payments/${data.rootId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({allocations,version:data.version})}),result=await response.json();if(!response.ok)throw Error(result.message||'Unable to save allocations');saved=true;
-  state.propertyOverviewData=null;state.tenantChargeLedgers={};message.textContent='Allocations saved. Refreshing payments…';
+  message.textContent='Allocations saved. Refreshing payments…';
   if(String(state.currentProperty?._id)===String(data.propertyId)){const refreshed=await loadPaymentWorkspace(data.propertyId,true);if(!refreshed)throw Error('Allocations saved, but payments could not refresh. Close this window and retry from Payments.');}
-  if(document.getElementById('propertyOverviewGrid')?.offsetParent&&typeof renderPropertyOverview==='function')renderPropertyOverview(true);closeModal('paymentAllocationModal');showNotification(result.warning||'Payment allocated. Periods and balances updated.','success');
+  closeModal('paymentAllocationModal');showNotification(result.warning||'Payment allocated. Periods and balances updated.','success');
  }catch(error){message.textContent=error.message;showNotification(error.message,'error');}
  finally{data.saving=false;if(saved){const button=document.getElementById('paymentAllocationSave');if(button)button.disabled=true;}else updatePaymentAllocationTotal();}
 }

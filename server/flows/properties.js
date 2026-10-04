@@ -289,10 +289,40 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
     const budgetVariance = operatingBudget === null ? null : operatingBudget - operatingExpenses;
 
     const asOf = new Date(Math.min(now.getTime(), to.getTime() - 1));
-    const chargeLedger = await require('../tenant-charge-ledger')(serverContext).overview(id, tenants, localPaymentsToDate, asOf);
-    const delinquencyRows = chargeLedger.tenants.filter(t=>t.balance>0).map(t=>({...t,unitNumber:unitById.get(String(t.unitId||''))?.number||''}));
-    const aging = chargeLedger.aging;
-    const delinquentTotal = chargeLedger.summary.totalOutstanding;
+    const delinquencyRows = [];
+    const aging = { current: 0, days31to60: 0, days61to90: 0, days90plus: 0 };
+    activeTenants.forEach(tenant => {
+      const leaseStart = tenant.leaseStart ? new Date(tenant.leaseStart) : new Date(asOf.getFullYear(), asOf.getMonth(), 1);
+      const leaseEnd = tenant.leaseEnd ? new Date(tenant.leaseEnd) : null;
+      if (Number.isNaN(leaseStart.getTime()) || leaseStart > asOf) return;
+      const tenantPayments = historicalRentPayments.filter(payment => String(payment.tenantId) === String(tenant._id));
+      const paidByPeriod = tenantPayments.reduce((map, payment) => {
+        const paymentDate = new Date(payment.date);
+        const period = payment.periodMonth || (!Number.isNaN(paymentDate.getTime()) ? `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}` : '');
+        if (period) map[period] = (map[period] || 0) + (Number(payment.amount) || 0) + (Number(payment.appliedCredit) || 0);
+        return map;
+      }, {});
+      let totalBalance = 0;
+      const tenantAging = { current: 0, days31to60: 0, days61to90: 0, days90plus: 0 };
+      let cursor = new Date(leaseStart.getFullYear(), leaseStart.getMonth(), 1);
+      while (cursor <= asOf && (!leaseEnd || cursor <= leaseEnd)) {
+        const period = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
+        const expected = (0, serverContext.computeExpectedRentForMonth)(tenant, cursor, 'rent') || 0;
+        const balance = Math.max(0, expected - (paidByPeriod[period] || 0));
+        if (balance > 0.005) {
+          const ageDays = Math.max(0, Math.floor((asOf - cursor) / 86400000));
+          const bucket = ageDays <= 30 ? 'current' : ageDays <= 60 ? 'days31to60' : ageDays <= 90 ? 'days61to90' : 'days90plus';
+          tenantAging[bucket] += balance; aging[bucket] += balance; totalBalance += balance;
+        }
+        cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+      }
+      if (totalBalance > 0.005) {
+        const unit = unitById.get(String(tenant.unitId || ''));
+        delinquencyRows.push({ tenantId: tenant._id, tenantName: tenant.name, unitId: tenant.unitId, unitNumber: unit?.number || '', balance: totalBalance, aging: tenantAging });
+      }
+    });
+    delinquencyRows.sort((a, b) => b.balance - a.balance);
+    const delinquentTotal = delinquencyRows.reduce((sum, row) => sum + row.balance, 0);
     const equipment = units.flatMap(unit => (unit.equipment || []).map(item => ({ ...item, unitId: unit._id, unitNumber: unit.number })));
     const openMaintenance = maintenance.filter(item => !['completed', 'closed', 'cancelled'].includes(String(item.status || '').toLowerCase()));
     const unitsRequiringAttention = units.map(unit => {
@@ -311,14 +341,14 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
     const quickBooksOnlyPaymentsInPeriod = quickBooksOnlyPaymentsToDate.filter(payment => isDateWithinPeriod(payment?.date));
 
     res.json({
-      chargeLedger, generatedAt: new Date(), range: { from, to }, property, expenseDetails,
+      generatedAt: new Date(), range: { from, to }, property, expenseDetails,
       summary: {
         totalUnits: units.length,
         occupied: units.filter(u => u.status === 'occupied').length,
         vacant: units.filter(u => u.status === 'vacant').length,
         maintenanceUnits: units.filter(u => u.status === 'maintenance').length,
         occupancyRate: units.length ? Math.round(units.filter(u => u.status === 'occupied').length / units.length * 100) : 0,
-        rentRoll, expectedRent, periodMonths, rentCollected, rentOutstanding: chargeLedger.summary.rentOwed,
+        rentRoll, expectedRent, periodMonths, rentCollected, rentOutstanding: Math.max(0, expectedRent - rentCollected),
         collectionRate: expectedRent ? Math.min(100, Math.round(rentCollected / expectedRent * 100)) : 0,
         openMaintenance: openMaintenance.length,
         urgentMaintenance: openMaintenance.filter(item => item.priority === 'urgent').length,

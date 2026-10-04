@@ -229,12 +229,6 @@ function computeExpectedBaseRentForMonth(tenant, dateLike) {
 }
 
 function computeExpectedRentForMonth(tenant, dateLike, paymentType = 'rent') {
-  if(String(tenant?.leaseStatus||'').trim().toLowerCase()==='terminated'){
-    const stopped=tenant.terminationDate||tenant.terminatedAt||tenant.moveOutDate||(tenant.leaseEnd&&new Date(tenant.leaseEnd)<=new Date()?tenant.leaseEnd:null);
-    const stop=stopped?new Date(stopped):null, requested=new Date(dateLike);
-    if(!stop||!Number.isFinite(stop.getTime())||new Date(requested.getFullYear(),requested.getMonth(),1)>stop)return 0;
-  }
-
     const ref = dateLike ? new Date(dateLike) : new Date();
     if (Number.isNaN(ref.getTime())) return 0;
 

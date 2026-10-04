@@ -15,23 +15,3 @@
       body.dark-theme #paymentWorkspaceTabs{background:#18232d;border-color:#334155!important}
       body.dark-theme #payments .payments-table thead th{background:#1e293b}body.dark-theme #payments .payments-table td:first-child{background:#111827}body.dark-theme #payments .payments-table thead th:first-child{background:#243447}
     
-/* Tenant ledger section and compact contextual attention badges. */
-.tenant-ledger-panel { width:100%; padding:20px; box-sizing:border-box; overflow:visible; }
-#tenantBalanceWorkspace { scroll-margin-top:100px; }
-#qbPaymentsProgress[hidden] { display:none!important; }
-.tenant-ledger-panel .panel-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; }
-.tenant-ledger-panel .panel-heading h2 { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
-.tenant-ledger-panel > details { margin-top:12px; padding:10px; border:1px solid #e2e8f0; border-radius:8px; }
-.tenant-ledger-panel input,.tenant-ledger-panel select { max-width:100%; }
-.ledger-month-heading th { background:#e0f2fe; color:#075985; padding:12px; border-top:2px solid #bae6fd; text-align:left; }
-.ledger-attention { display:inline-block; position:relative; vertical-align:middle; font-size:12px; font-weight:500; margin-left:6px; }
-.ledger-attention > summary { display:inline-flex; align-items:center; cursor:pointer; list-style:none; border-radius:999px; padding:3px 8px; color:#92400e; background:#fef3c7; border:1px solid #fcd34d; white-space:nowrap; }
-.ledger-attention > summary:focus-visible { outline:2px solid #2563eb; outline-offset:2px; }
-.ledger-attention-popup { position:absolute; z-index:20; top:calc(100% + 6px); left:0; width:min(320px,75vw); background:white; color:#334155; box-shadow:0 5px 20px #0002; border:1px solid #e2e8f0; border-radius:8px; padding:12px; white-space:pre-line; line-height:1.5; }
-.ledger-attention[open] { z-index:20; }
-.overview-table-wrap .ledger-attention-popup { position:static; max-width:240px; margin-top:6px; }
-.qb-match-resolution { display:flex; flex-direction:column; gap:8px; max-width:560px; }
-.qb-match-resolution select { width:100%; max-width:100%; }
-.qb-match-resolution button { align-self:flex-start; }
-.qb-match-resolution .task-meta:empty { display:none; }
-@media(max-width:640px){.tenant-ledger-panel{padding:10px}.tenant-ledger-panel .overview-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}}

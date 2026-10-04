@@ -45,12 +45,6 @@ function computeFirstMonthProratedBaseRent(tenant, dateLike) {
 // For the first lease month: prorate baseRent only per requirements
 // For subsequent months: full baseRent + recurring monthly fees
 function computeExpectedRentForMonth(tenant, dateLike, paymentType) {
-  if(String(tenant?.leaseStatus||'').trim().toLowerCase()==='terminated'){
-    const stopped=tenant.terminationDate||tenant.terminatedAt||tenant.moveOutDate||(tenant.leaseEnd&&new Date(tenant.leaseEnd)<=new Date()?tenant.leaseEnd:null);
-    const stop=stopped?new Date(stopped):null, requested=new Date(dateLike);
-    if(!stop||!Number.isFinite(stop.getTime())||new Date(requested.getFullYear(),requested.getMonth(),1)>stop)return 0;
-  }
-
   const d = new Date(dateLike);
   const period = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
   // Check for manual expected rent override for this month
@@ -96,14 +90,6 @@ function computeTenantPostedMonthlyRent(tenant) {
 }
 
 function get_api_properties_propertyId_payments() {
-serverContext.app.get('/api/properties/:propertyId/tenants/:tenantId/charge-ledger', async (req,res)=>{
- try {res.json(await require('../tenant-charge-ledger')(serverContext).read(req.params.propertyId,req.params.tenantId,req.query.refresh==='1'));}
- catch(error){res.status(400).json({message:error.message});}
-});
-serverContext.app.put('/api/properties/:propertyId/tenants/:tenantId/charge-ledger', async (req,res)=>{
- try {res.json(await require('../tenant-charge-ledger')(serverContext).change(req.params.propertyId,req.params.tenantId,req.body));}
- catch(error){res.status(400).json({message:error.message});}
-});
 // GET all payments for a property
 serverContext.app.get('/api/properties/:propertyId/payments', async (req, res) => {
   try {
@@ -128,11 +114,7 @@ serverContext.app.get('/api/properties/:propertyId/payments/:paymentId', async (
       projectId: req.params.propertyId
     });
     if (!payment) return res.status(404).json({ message: 'Payment not found' });
-    if(req.query?.allocationDetails==='1'){
-      const details=await paymentAllocations.details(payment);
-      const ledger=await require('../tenant-charge-ledger')(serverContext).read(payment.projectId,payment.tenantId,true);
-      return res.json({...details,charges:ledger.charges,ledgerWarning:ledger.warning});
-    }
+    if(req.query?.allocationDetails==='1')return res.json(await paymentAllocations.details(payment));
     res.json(payment);
   } catch (error) {
     console.error('Error fetching payment:', error);
