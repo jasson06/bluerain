@@ -67,10 +67,12 @@ function setQuickBooksProgress(area, message, kind='loading') {
   const id=area==='payments'?'qbPaymentsProgress':'qbSetupProgress';
   let banner=document.getElementById(id);
   if(!banner){banner=document.createElement('div');banner.id=id;banner.setAttribute('role','status');banner.setAttribute('aria-live','polite');anchor.parentNode.insertBefore(banner,anchor);}
+  if(banner.quickBooksProgressTimeout)clearTimeout(banner.quickBooksProgressTimeout);
   banner.className=kind==='error'?'overview-alert':kind==='success'?'overview-ok':'empty-compact';
   banner.style.marginBottom='12px';
   banner.innerHTML=`<i aria-hidden="true" class="fas ${kind==='loading'?'fa-spinner fa-spin':kind==='error'?'fa-triangle-exclamation':'fa-circle-check'}"></i> ${escapeHtml(message)}`;
   anchor.setAttribute('aria-busy',kind==='loading'?'true':'false');
+  if(kind==='success')banner.quickBooksProgressTimeout=setTimeout(()=>banner.remove(),4000);
 }
 
 let paymentAllocationEditor=null;

@@ -81,6 +81,27 @@ function normalizeQuickBooksPaymentText(value) {
     return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
+function getQuickBooksPaymentNote(record, note = record?.privateNote) {
+    return [note, ...(Array.isArray(record?.lineDescriptions) ? record.lineDescriptions : [])]
+        .map(value => String(value || '').trim())
+        .filter(Boolean)
+        .filter((value, index, values) => values.indexOf(value) === index)
+        .join(' · ');
+}
+
+function renderPaymentNote(note, payment) {
+    const importLabel = 'Imported from QuickBooks';
+    const rawNote = String(note || '').trim();
+    const imported = payment?.source === 'quickbooks' || rawNote.startsWith(importLabel);
+    const visibleNote = rawNote.startsWith(importLabel)
+        ? rawNote.slice(importLabel.length).replace(/^\s*·\s*/, '').trim()
+        : rawNote;
+    const icon = imported
+        ? '<i class="fa-brands fa-quickbooks" role="img" aria-label="From QuickBooks" title="From QuickBooks"></i>'
+        : '';
+    return `${icon}${icon && visibleNote ? ' ' : ''}${escapeHtml(visibleNote)}`;
+}
+
 function inferQuickBooksPaymentApplyTo(record) {
     const text = normalizeQuickBooksPaymentText([record?.privateNote, record?.docNumber].filter(Boolean).join(' '));
     if (!text) return 'rent';
@@ -315,7 +336,7 @@ function renderPayments() {
             lateFeeDisplay,
             displayBalance,
             overrideActive,
-            noteText: String(payment.note || qbPayment?.privateNote || ''),
+            noteText: getQuickBooksPaymentNote(qbPayment, payment.note || qbPayment?.privateNote || ''),
             quickBooksDoc: String(qbPayment?.docNumber || payment.quickBooks?.docNumber || ''),
             quickBooksType: getQuickBooksSourceLabel(qbPayment?.sourceType || payment.quickBooks?.entityType || '')
         };
@@ -336,7 +357,7 @@ function renderPayments() {
         lateFeeDisplay: null,
         displayBalance: null,
         overrideActive: false,
-        noteText: String(record.privateNote || ''),
+        noteText: getQuickBooksPaymentNote(record),
         quickBooksDoc: String(record.docNumber || ''),
         quickBooksType: getQuickBooksSourceLabel(record.sourceType)
     }));
@@ -406,7 +427,7 @@ function renderPayments() {
                 ${pageRows.map(row => {
                     if (row.rowKind === 'quickbooks') {
                         const qbPayment = row.qbPayment || {};
-                        const qbNoteRaw = String(qbPayment.privateNote || '');
+                        const qbNoteRaw = row.noteText;
                         return `
                         <tr>
                             <td>${escapeHtml(row.tenantName || '—')}</td>
@@ -450,7 +471,7 @@ function renderPayments() {
                                                                      `</button>`
                                                             : (row.displayBalance !== undefined && row.displayBalance !== null ? `$${(Number(row.displayBalance).toFixed(2))}` : '')}
                                                         </td>
-                                                     <td class="note-cell">${row.noteText ? escapeHtml(row.noteText) : ''}${payment.quickBooks?.invoiceId?`<div class="task-meta"><strong>Invoice ${escapeHtml(payment.quickBooks.invoiceNumber||payment.quickBooks.invoiceId)} outstanding: ${payment.quickBooks.invoiceBalance!=null&&Number.isFinite(Number(payment.quickBooks.invoiceBalance))?'$'+Number(payment.quickBooks.invoiceBalance).toFixed(2):'Unavailable'}</strong><br>Whole invoice balance, not an additional payment-row charge.</div>`:''}</td>
+                                                     <td class="note-cell">${renderPaymentNote(row.noteText, payment)}${payment.quickBooks?.invoiceId?`<div class="task-meta"><strong>Invoice ${escapeHtml(payment.quickBooks.invoiceNumber||payment.quickBooks.invoiceId)} outstanding: ${payment.quickBooks.invoiceBalance!=null&&Number.isFinite(Number(payment.quickBooks.invoiceBalance))?'$'+Number(payment.quickBooks.invoiceBalance).toFixed(2):'Unavailable'}</strong><br>Whole invoice balance, not an additional payment-row charge.</div>`:''}</td>
                                                         <td>
                                                              <button class="btn-icon download-btn" title="Download Receipt" onclick="event.stopPropagation();exportReceipt('${payment._id}')">
                                                                  <i class="fas fa-file-arrow-down"></i>

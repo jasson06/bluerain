@@ -112,3 +112,53 @@ test('QuickBooks token encryption still round-trips and rejects a changed authen
   parts[1] = tag.toString('base64url');
   expect(() => flow.decryptQbSecret(parts.join('.'))).toThrow();
 });
+
+test('QuickBooks workspace keeps an existing link attached when its record needs review', () => {
+  const context = {
+    normalizeQbPaymentDate: value => value || '',
+    normalizeQbPaymentAmount: value => Number(value) || 0,
+    normalizeQbPaymentText: value => String(value || '').toLowerCase()
+  };
+  const flow = require('../server/flows/quickbooks')(context);
+  Object.assign(context, flow);
+  const payment = { _id: 'local-linked', amount: 125, quickBooks: { entityType: 'SalesReceipt', entityId: 'qb-1' } };
+  const otherPayment = { _id: 'local-unlinked', amount: 125 };
+  const records = [{ sourceType: 'SalesReceipt', id: 'qb-1', totalAmt: 125, periodError: 'Review this transaction' }];
+
+  expect(flow.attachQuickBooksPaymentMatches([payment, otherPayment], records)[0].localPaymentId).toBe('local-linked');
+});
+
+test('QuickBooks payment expansion includes all invoice line descriptions', async () => {
+  const invoice = {
+    TxnDate: '2026-09-15',
+    CustomerRef: { value: 'customer-1' },
+    Line: [
+      { DetailType: 'SalesItemLineDetail', Amount: 100, Description: 'September rent' },
+      { DetailType: 'SalesItemLineDetail', Amount: 50, Description: 'Parking' }
+    ]
+  };
+  const expand = require('../server/quickbooks-invoice-periods')({
+    qbRequest: jest.fn().mockResolvedValue({ Invoice: invoice })
+  }).expand;
+  const [payment] = await expand([{
+    sourceType: 'Payment',
+    id: 'payment-1',
+    customerId: 'customer-1',
+    totalAmt: 150,
+    raw: { Line: [{ Amount: 150, LinkedTxn: [{ TxnType: 'Invoice', TxnId: 'invoice-1' }] }] }
+  }], {});
+
+  expect(payment.lineDescriptions).toEqual(['September rent', 'Parking']);
+});
+
+test('QuickBooks import notes no longer store the import label as note text', () => {
+  const flow = require('../server/flows/quickbooks')({});
+
+  expect(flow.buildQuickBooksImportNote({
+    invoiceId: 'invoice-1',
+    invoiceNumber: 'INV-100',
+    invoiceDate: '2026-09-15',
+    docNumber: 'PMT-100',
+    privateNote: 'September payment'
+  })).toBe('Invoice INV-100 dated 2026-09-15 · PMT-100 · September payment');
+});

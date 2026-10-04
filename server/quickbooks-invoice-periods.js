@@ -1,5 +1,15 @@
 // Expand a received payment into invoice allocations without changing its date.
 module.exports = function invoicePeriods(context) {
+  function lineDescriptions(lines = []) {
+    return lines.flatMap(line => {
+      const description = String(line?.Description || line?.SalesItemLineDetail?.ItemRef?.name || '').trim();
+      return [
+        ...(description ? [description] : []),
+        ...lineDescriptions(line?.GroupLineDetail?.Line || [])
+      ];
+    });
+  }
+
   async function expand(records, connection) {
     const cache = new Map();
     const readInvoice = async id => {
@@ -14,7 +24,10 @@ module.exports = function invoicePeriods(context) {
     }));
     const result = [];
     for (const record of records) {
-      if (record.sourceType !== 'Payment') { result.push(record); continue; }
+      if (record.sourceType !== 'Payment') {
+        result.push({...record, lineDescriptions:lineDescriptions(record.raw?.Line || [])});
+        continue;
+      }
       const allocations = new Map();
       let error = '';
       for (const line of record.raw?.Line || []) {
@@ -43,6 +56,7 @@ module.exports = function invoicePeriods(context) {
           invoiceBalance: invoice.Balance!=null&&Number.isFinite(Number(invoice.Balance))?Number(invoice.Balance):null,
           invoiceNumber: String(invoice.DocNumber || id), periodMonth: date.slice(0,7),
           totalAmt: cents/100, parentPaymentTotal: record.totalAmt,
+          lineDescriptions:lineDescriptions(invoice.Line || []),
           allocationReviewRequired:(invoice.Line||[]).filter(l=>l.DetailType==='SalesItemLineDetail'&&Number(l.Amount)>0).length>1});
       }
       result.push(...(error ? [{...record, periodError: error}] : parts));
