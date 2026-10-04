@@ -436,12 +436,12 @@ async function loadPaymentWorkspace(propertyId,quiet=false){
   const response=await fetch(`${API_URL}/properties/${propertyId}/quickbooks/payment-workspace`),data=await response.json();
   if(!response.ok)throw new Error(data.message||'Unable to load payment workspace');
   if(sequence!==paymentWorkspaceLoadSequence||String(state.currentProperty?._id)!==String(propertyId))return;
-  state.paymentWorkspace=data;state.quickBooksPaymentsConnected=!!data.connected;
+  state.propertyOverviewData=null;state.tenantChargeLedgers={};state.paymentWorkspace=data;state.quickBooksPaymentsConnected=!!data.connected;
   state.quickBooksPayments=Array.isArray(data.qbPayments)?data.qbPayments:[];state.quickBooksPaymentsError='';
   if(Array.isArray(data.localPayments)){state.payments=data.localPayments;renderPayments();updateTabCounts();}
   renderPaymentWorkspace();
   const review=Number(data.summary?.unmatched||0)+Number(data.summary?.conflicts||0);
-  setQuickBooksProgress('payments',data.connected?`QuickBooks payments loaded. Balances are up to date.${review?' Some transactions need review in Unmatched or Conflicts.':''}`:'QuickBooks is not connected for this property.',data.connected?'success':'info');
+  setQuickBooksProgress('payments',data.ledgerWarning|| (data.connected?`QuickBooks payments loaded. Balances are up to date.${review?' Some transactions need review in Unmatched or Conflicts.':''}`:'QuickBooks is not connected for this property.'),data.ledgerWarning?'error':data.connected?'success':'info');
   return data;
  }catch(error){
   if(sequence!==paymentWorkspaceLoadSequence||String(state.currentProperty?._id)!==String(propertyId))return;

@@ -286,6 +286,9 @@ async function reconcileQuickBooksPaymentsForProperty(propertyId, connection = n
     }
   }
 
+  let ledgerWarning='';
+  try { await require('../tenant-charge-ledger')(serverContext).refreshProperty(propertyId,liveConnection,tenants); }
+  catch(error){ledgerWarning='Invoice charges could not refresh. Tenant and Overview balances use saved charges; retry synchronization.';console.error('Charge ledger refresh failed:',error.message);}
   // Includes older imports whose balances were saved as zero, and runs after
   // the full import batch so each tenant's final totals include every payment.
   const linkedPayments = await serverContext.Payment.find({projectId: propertyId, 'quickBooks.connectionId': liveConnection._id}).select('tenantId').lean();
@@ -295,6 +298,7 @@ async function reconcileQuickBooksPaymentsForProperty(propertyId, connection = n
   const refreshedLocalPayments = await serverContext.Payment.find({ projectId: propertyId }).sort({ date: -1, createdAt: -1 }).lean();
   return {
     connection: liveConnection,
+    ledgerWarning,
     localPayments: refreshedLocalPayments,
     qbPayments: (0, serverContext.attachQuickBooksPaymentMatches)(refreshedLocalPayments, qbPayments),
     tenants,
@@ -410,7 +414,7 @@ serverContext.app.get('/api/properties/:propertyId/quickbooks/payment-workspace'
   const key=String(live._id),qbCustomers=customerResponse.QueryResponse?.Customer||[],customers=tenants.map(tenant=>{const link=tenant.quickBooks?.[key]||{};return{tenantId:tenant._id,tenantName:tenant.name,unitNumber:tenant.unitId?.number||'',email:tenant.email||'',customerId:link.customerId||'',customerDisplayName:link.customerDisplayName||'',customers:mappedQbCustomers(link),mapped:!!link.customerId};});
   const mapping=live.mappings||{},mappingHealth={incomeItems:['rent','late','other','deposit'].map(k=>({key:k,label:`${k[0].toUpperCase()+k.slice(1)} item`,mapped:!!mapping.incomeItems?.[k]?.value,name:mapping.incomeItems?.[k]?.name||''})),accounts:[{key:'deposit',label:'Deposit account',mapped:!!mapping.depositAccounts?.default?.value,name:mapping.depositAccounts?.default?.name||''},{key:'expense',label:'Expense account',mapped:!!mapping.expenseAccounts?.default?.value,name:mapping.expenseAccounts?.default?.name||''},{key:'expense-payment',label:'Expense payment account',mapped:!!mapping.defaultExpensePaymentAccount?.value,name:mapping.defaultExpensePaymentAccount?.name||''}]};
   const conflicts=[...failedPayments,...failedLogs.map(log=>({_id:`log:${log._id}`,kind:'sync-log',status:log.status,message:log.lastError||'QuickBooks synchronization failed',localEntityId:log.localEntityId,operation:log.operation,updatedAt:log.updatedAt}))];
-  res.json({connected:true,localPayments,qbPayments:records,companyName:live.companyName||'',summary:{unmatched:unmatched.length,conflicts:conflicts.length,unmappedCustomers:customers.filter(x=>!x.mapped).length},unmatched,conflicts,customers,qbCustomers:qbCustomers.map(c=>({id:c.Id,name:c.DisplayName||c.FullyQualifiedName||c.Name||''})),activity:logs,mappingHealth});
+  res.json({connected:true,ledgerWarning:resolved.ledgerWarning||'',localPayments,qbPayments:records,companyName:live.companyName||'',summary:{unmatched:unmatched.length,conflicts:conflicts.length,unmappedCustomers:customers.filter(x=>!x.mapped).length},unmatched,conflicts,customers,qbCustomers:qbCustomers.map(c=>({id:c.Id,name:c.DisplayName||c.FullyQualifiedName||c.Name||''})),activity:logs,mappingHealth});
 }catch(error){res.status(400).json({message:error.message||'Unable to load the payment workspace'});}});
 }
 

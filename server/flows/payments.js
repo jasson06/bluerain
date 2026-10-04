@@ -90,6 +90,14 @@ function computeTenantPostedMonthlyRent(tenant) {
 }
 
 function get_api_properties_propertyId_payments() {
+serverContext.app.get('/api/properties/:propertyId/tenants/:tenantId/charge-ledger', async (req,res)=>{
+ try {res.json(await require('../tenant-charge-ledger')(serverContext).read(req.params.propertyId,req.params.tenantId,req.query.refresh==='1'));}
+ catch(error){res.status(400).json({message:error.message});}
+});
+serverContext.app.put('/api/properties/:propertyId/tenants/:tenantId/charge-ledger', async (req,res)=>{
+ try {res.json(await require('../tenant-charge-ledger')(serverContext).change(req.params.propertyId,req.params.tenantId,req.body));}
+ catch(error){res.status(400).json({message:error.message});}
+});
 // GET all payments for a property
 serverContext.app.get('/api/properties/:propertyId/payments', async (req, res) => {
   try {
@@ -114,7 +122,11 @@ serverContext.app.get('/api/properties/:propertyId/payments/:paymentId', async (
       projectId: req.params.propertyId
     });
     if (!payment) return res.status(404).json({ message: 'Payment not found' });
-    if(req.query?.allocationDetails==='1')return res.json(await paymentAllocations.details(payment));
+    if(req.query?.allocationDetails==='1'){
+      const details=await paymentAllocations.details(payment);
+      const ledger=await require('../tenant-charge-ledger')(serverContext).read(payment.projectId,payment.tenantId,true);
+      return res.json({...details,charges:ledger.charges,ledgerWarning:ledger.warning});
+    }
     res.json(payment);
   } catch (error) {
     console.error('Error fetching payment:', error);

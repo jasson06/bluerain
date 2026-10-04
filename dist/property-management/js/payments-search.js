@@ -428,7 +428,7 @@ function renderPayments() {
                     const qbPayment = row.qbPayment;
                     const isPersistedMatch = payment.quickBooks?.syncStatus === 'synced' && payment.quickBooks?.entityId;
                     return `
-                        <tr class="payment-row" onclick="${payment.quickBooks?.manualAllocation?'openPaymentAllocation':'editPayment'}('${payment._id}')">
+                        <tr class="payment-row" onclick="${payment.quickBooks?.entityId?'openPaymentAllocation':'editPayment'}('${payment._id}')">
                             <td>${row.tenantName ? `<button class=\"link-button\" title=\"View balance sheet\" onclick=\"event.stopPropagation();openTenantBalanceModal('${payment.tenantId}')\">${escapeHtml(row.tenantName)}</button>` : 'N/A'}</td>
                             <td>${escapeHtml(row.unitText || 'N/A')}</td>
                             <td>${escapeHtml(row.typeText || '')}</td>

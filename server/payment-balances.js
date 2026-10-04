@@ -90,11 +90,22 @@ module.exports = function paymentBalances(serverContext) {
 
   async function refreshTenant(tenantId) {
     const [payments,tenant] = await Promise.all([serverContext.Payment.find({tenantId}),serverContext.Tenant.findById(tenantId)]);
+    // A single snapshot read and a single calculation for the entire tenant.
+    let ledgerBalances=null;
+    if(tenant?.projectId&&serverContext.Payment.db?.collection){
+      const service=require('./tenant-charge-ledger');
+      const snapshot=await service(serverContext).snapshot(tenant.projectId,tenantId);
+      if(snapshot.refreshedAt||(snapshot.manualCharges||[]).length||(snapshot.creditApplications||[]).length){
+        const charges=service.buildCharges(tenant,snapshot,serverContext.computeExpectedRentForMonth);
+        ledgerBalances=new Map(service.calculate(charges,payments,{depositPaid:tenant.depositPaid,creditApplications:snapshot.creditApplications}).payments.map(p=>[p.paymentId,p.balance]));
+      }
+    }
     const writes = [];
     for (const payment of payments) {
       const previousBalance = payment.balance;
       const previousLateFee = payment.lateFee;
-      await recalculate(payment, undefined, {payments,tenant});
+      if(ledgerBalances?.has(String(payment._id)))payment.balance=ledgerBalances.get(String(payment._id));
+      else await recalculate(payment, undefined, {payments,tenant});
       const changes = {};
       if (payment.balance !== previousBalance) changes.balance = payment.balance;
       if (payment.lateFee !== previousLateFee) changes.lateFee = payment.lateFee;
