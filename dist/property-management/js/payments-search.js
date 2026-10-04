@@ -89,17 +89,19 @@ function getQuickBooksPaymentNote(record, note = record?.privateNote) {
         .join(' · ');
 }
 
-function renderPaymentNote(note, payment) {
-    const importLabel = 'Imported from QuickBooks';
-    const rawNote = String(note || '').trim();
-    const imported = payment?.source === 'quickbooks' || rawNote.startsWith(importLabel);
-    const visibleNote = rawNote.startsWith(importLabel)
-        ? rawNote.slice(importLabel.length).replace(/^\s*·\s*/, '').trim()
-        : rawNote;
-    const icon = imported
-        ? '<i class="fa-brands fa-quickbooks" role="img" aria-label="From QuickBooks" title="From QuickBooks"></i>'
-        : '';
-    return `${icon}${icon && visibleNote ? ' ' : ''}${escapeHtml(visibleNote)}`;
+function renderPaymentNote(row) {
+    const payment = row?.localPayment;
+    const record = row?.qbPayment;
+    const fromQuickBooks = !!record || payment?.source === 'quickbooks' || !!payment?.quickBooks?.entityId;
+    if (!fromQuickBooks) return row?.noteText ? escapeHtml(row.noteText) : '';
+
+    const icon = '<i class="fa-brands fa-quickbooks" role="img" aria-label="From QuickBooks" title="From QuickBooks"></i>';
+    const descriptions = (Array.isArray(record?.lineDescriptions) ? record.lineDescriptions : [])
+        .map(description => String(description || '').trim())
+        .filter(Boolean)
+        .map(escapeHtml)
+        .join(' · ');
+    return `${icon}${descriptions ? ` ${descriptions}` : ''}`;
 }
 
 function inferQuickBooksPaymentApplyTo(record) {
@@ -427,7 +429,6 @@ function renderPayments() {
                 ${pageRows.map(row => {
                     if (row.rowKind === 'quickbooks') {
                         const qbPayment = row.qbPayment || {};
-                        const qbNoteRaw = row.noteText;
                         return `
                         <tr>
                             <td>${escapeHtml(row.tenantName || '—')}</td>
@@ -439,7 +440,7 @@ function renderPayments() {
                             <td>${row.dateValue ? formatDateDisplay(row.dateValue) : '—'}</td>
                             <td>—</td>
                             <td>—</td>
-                            <td class="note-cell">${qbNoteRaw ? escapeHtml(qbNoteRaw) : '—'}</td>
+                            <td class="note-cell">${renderPaymentNote(row)}</td>
                             <td><span class="task-meta">QuickBooks only</span></td>
                             <td onclick="event.stopPropagation()"><span class="badge badge-success">${escapeHtml(getQuickBooksSourceLabel(qbPayment.sourceType))}</span></td>
                             <td>—</td>
@@ -471,7 +472,7 @@ function renderPayments() {
                                                                      `</button>`
                                                             : (row.displayBalance !== undefined && row.displayBalance !== null ? `$${(Number(row.displayBalance).toFixed(2))}` : '')}
                                                         </td>
-                                                     <td class="note-cell">${renderPaymentNote(row.noteText, payment)}${payment.quickBooks?.invoiceId?`<div class="task-meta"><strong>Invoice ${escapeHtml(payment.quickBooks.invoiceNumber||payment.quickBooks.invoiceId)} outstanding: ${payment.quickBooks.invoiceBalance!=null&&Number.isFinite(Number(payment.quickBooks.invoiceBalance))?'$'+Number(payment.quickBooks.invoiceBalance).toFixed(2):'Unavailable'}</strong><br>Whole invoice balance, not an additional payment-row charge.</div>`:''}</td>
+                                                     <td class="note-cell">${renderPaymentNote(row)}</td>
                                                         <td>
                                                              <button class="btn-icon download-btn" title="Download Receipt" onclick="event.stopPropagation();exportReceipt('${payment._id}')">
                                                                  <i class="fas fa-file-arrow-down"></i>
