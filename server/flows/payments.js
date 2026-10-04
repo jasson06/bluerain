@@ -3,6 +3,7 @@
 module.exports = function createFlow(serverContext) {
 const paymentBalances = require('../payment-balances')(serverContext);
 const paymentAllocations = require('../payment-allocations')(serverContext);
+const tenantLifecycle = require('../tenant-lifecycle');
 
 // POST a new payment (rent or HUB)
 // Helper to normalize incoming payment type to enum values
@@ -45,6 +46,7 @@ function computeFirstMonthProratedBaseRent(tenant, dateLike) {
 // For the first lease month: prorate baseRent only per requirements
 // For subsequent months: full baseRent + recurring monthly fees
 function computeExpectedRentForMonth(tenant, dateLike, paymentType) {
+  if (!tenantLifecycle.isChargeableMonth(tenant, dateLike)) return 0;
   const d = new Date(dateLike);
   const period = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
   // Check for manual expected rent override for this month
@@ -387,6 +389,7 @@ serverContext.app.post('/api/properties/:propertyId/payments', async (req, res) 
     const feeType = req.body.feeType || '';
     const feeLabel = req.body.feeLabel || '';
     const periodMonth = req.body.periodMonth || '';
+    if (periodMonth && !/^\d{4}-(0[1-9]|1[0-2])$/.test(periodMonth)) return res.status(400).json({message:'Choose a valid rent period (YYYY-MM)'});
 
     if (!type) {
       return res.status(400).json({ message: 'Invalid payment type. Allowed: rent, hub' });
@@ -403,6 +406,9 @@ serverContext.app.post('/api/properties/:propertyId/payments', async (req, res) 
     if (!tenant) {
       return res.status(404).json({ message: 'Tenant not found' });
     }
+    const chargeDate = periodMonth ? new Date(`${periodMonth}-15T12:00:00`) : new Date(date);
+    if (Number.isNaN(chargeDate.getTime())) return res.status(400).json({message:'Choose a valid payment date'});
+    if (applyTo === 'rent' && tenantLifecycle.isFormerTenant(tenant) && !tenantLifecycle.isChargeableMonth(tenant,chargeDate)) return res.status(400).json({message:'Apply this former-tenant receipt to a rent period within the ended lease. Review missing lease dates first.'});
 
     // Calculate expected payment amount based on tenant's rental details
   let expectedAmount = 0;
@@ -412,10 +418,10 @@ serverContext.app.post('/api/properties/:propertyId/payments', async (req, res) 
   // Default: rent logic (compute expected amount before credits)
   if (applyTo === 'rent' && type === 'rent') {
       // Prorate base rent for the first month based on tenant.leaseStart; otherwise full monthly charges
-      expectedAmount = (0, serverContext.computeExpectedRentForMonth)(tenant, date, 'rent');
+      expectedAmount = (0, serverContext.computeExpectedRentForMonth)(tenant, chargeDate, 'rent');
 
       // Monthly override late fee takes precedence; when present, roll it into expectedAmount (do not attach per-payment late fee)
-      const d = new Date(date);
+      const d = chargeDate;
       const period = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
       const mo = tenant?.monthlyOverrides;
       const ov = mo ? (typeof mo.get === 'function' ? mo.get(period) : mo[period]) : null;
@@ -444,7 +450,7 @@ serverContext.app.post('/api/properties/:propertyId/payments', async (req, res) 
       }
     } else if (type === 'hub' && applyTo === 'rent') {
       // For HUB payments, use the HUB contribution amount
-      expectedAmount = Number(tenant.hubContribution) || 0;
+      expectedAmount = tenantLifecycle.isChargeableMonth(tenant, chargeDate) ? Number(tenant.hubContribution) || 0 : 0;
     }
     // Use provided amount if specified, otherwise use calculated amount (for rent/hub)
     let finalAmount = (amount !== undefined && amount !== null && amount !== '') ? Number(amount) : expectedAmount;
@@ -562,7 +568,7 @@ serverContext.app.post('/api/properties/:propertyId/payments', async (req, res) 
     }
 
     // Default: rent/hub monthly logic
-    const selectedRentPeriod = /^\d{4}-\d{2}$/.test(String(periodMonth || '')) ? String(periodMonth) : '';
+    const selectedRentPeriod = tenantLifecycle.paymentPeriod({periodMonth,date});
     const paymentDate = selectedRentPeriod ? new Date(Number(selectedRentPeriod.slice(0,4)), Number(selectedRentPeriod.slice(5,7))-1, 15) : new Date(date);
     const monthStart = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), 1);
     const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
@@ -768,37 +774,61 @@ serverContext.app.get('/api/tenants/:tenantId/monthly-overrides/:period', async 
 function put_api_tenants_tenantId_monthly_overrides_period() {
 // Upsert override for a specific period; pass nulls to clear
 serverContext.app.put('/api/tenants/:tenantId/monthly-overrides/:period', async (req, res) => {
+  let session;
   try {
     const t = await serverContext.Tenant.findById(req.params.tenantId);
     if (!t) return res.status(404).json({ message: 'Tenant not found' });
     const { period } = req.params;
-    let { expectedRent, lateFee, lateFeeMode } = req.body;
-    // Normalize numbers or nulls
-    expectedRent = expectedRent === '' || expectedRent === undefined ? null : Number(expectedRent);
-    lateFee = lateFee === '' || lateFee === undefined ? null : Number(lateFee);
-    const mode = (lateFeeMode === 'percent' || lateFeeMode === 'amount') ? lateFeeMode : undefined;
-
-    if ((expectedRent === null || Number.isNaN(expectedRent)) && (lateFee === null || Number.isNaN(lateFee)) && (mode === undefined)) {
-      // remove override
-      if (typeof t.monthlyOverrides?.delete === 'function') t.monthlyOverrides.delete(period);
-      else if (t.monthlyOverrides) delete t.monthlyOverrides[period];
-    } else {
-      const val = {
-        expectedRent: Number.isFinite(expectedRent) ? expectedRent : null,
-        lateFee: Number.isFinite(lateFee) ? lateFee : null,
-        lateFeeMode: mode || 'amount'
-      };
-      if (typeof t.monthlyOverrides?.set === 'function') t.monthlyOverrides.set(period, val);
-      else {
-        t.monthlyOverrides = t.monthlyOverrides || {};
-        t.monthlyOverrides[period] = val;
-      }
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) return res.status(400).json({message:'Choose a valid rent period (YYYY-MM)'});
+    const changes = {};
+    for (const key of ['expectedRent','lateFee']) {
+      if (req.body[key] === undefined) continue;
+      const raw = req.body[key];
+      const value = raw === null || raw === '' ? null : Number(raw);
+      if (value !== null && (!Number.isFinite(value) || value < 0 || !['number','string'].includes(typeof raw))) return res.status(400).json({message:`${key} must be a non-negative amount or null`});
+      changes[key] = value;
     }
-    await t.save();
-    res.json({ ok: true });
+    if (req.body.lateFeeMode !== undefined) {
+      if (!['amount','percent'].includes(req.body.lateFeeMode)) return res.status(400).json({message:'Choose amount or percent for late fees'});
+      changes.lateFeeMode = req.body.lateFeeMode;
+    }
+    if (!Object.keys(changes).length) return res.status(400).json({message:'Provide an expected rent or late-fee change'});
+    const date = new Date(`${period}-15T12:00:00`);
+    if (!tenantLifecycle.isChargeableMonth(t,date)) return res.status(400).json({message:'Expected rent can only be edited for a month within the lease'});
+    session = await serverContext.mongoose.startSession();
+    let override, termination;
+    await session.withTransaction(async () => {
+      const tenant = await serverContext.Tenant.findById(req.params.tenantId).session(session);
+      if (!tenant || !tenantLifecycle.isChargeableMonth(tenant,date)) throw new Error('The lease changed. Reload the tenant ledger before editing.');
+      const previous = typeof tenant.monthlyOverrides?.get === 'function' ? tenant.monthlyOverrides.get(period) : tenant.monthlyOverrides?.[period];
+      const val = {expectedRent:null,lateFee:null,lateFeeMode:'amount',...(previous?.toObject ? previous.toObject() : previous),...changes};
+      const cleared = val.expectedRent === null && val.lateFee === null && req.body.lateFeeMode === undefined;
+      if (cleared) {
+        if (typeof tenant.monthlyOverrides?.delete === 'function') tenant.monthlyOverrides.delete(period);
+        else if (tenant.monthlyOverrides) delete tenant.monthlyOverrides[period];
+        override = null;
+      } else {
+        if (typeof tenant.monthlyOverrides?.set === 'function') tenant.monthlyOverrides.set(period,val);
+        else {
+          tenant.monthlyOverrides = tenant.monthlyOverrides || {};
+          tenant.monthlyOverrides[period] = val;
+        }
+        override = val;
+      }
+      if (tenant.termination?.effectiveDate && tenantLifecycle.paymentPeriod({date:tenant.termination.effectiveDate}) === period && changes.expectedRent !== undefined) {
+        tenant.termination.finalRent = (0,serverContext.computeExpectedRentForMonth)(tenant,date,'rent');
+        tenant.termination.reviewedAt = new Date();
+      }
+      await tenant.save({session});
+      await paymentBalances.refreshTenant(tenant._id,session);
+      termination = tenant.termination;
+    });
+    res.json({ ok:true,override,termination });
   } catch (e) {
     console.error('Error saving monthly override:', e);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: e.message || 'Unable to save monthly charges' });
+  } finally {
+    if (session) await session.endSession();
   }
 });
 }
@@ -831,6 +861,10 @@ serverContext.app.post('/api/properties/:propertyId/payments/:creditPaymentId/ap
     if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
 
     const today = new Date();
+    if (periodMonth && !/^\d{4}-(0[1-9]|1[0-2])$/.test(periodMonth)) return res.status(400).json({message:'Choose a valid rent period (YYYY-MM)'});
+    const targetPeriod = tenantLifecycle.paymentPeriod({periodMonth,date:today});
+    const targetDate = new Date(`${targetPeriod}-15T12:00:00`);
+    if (applyTo === 'rent' && tenantLifecycle.isFormerTenant(tenant) && !tenantLifecycle.isChargeableMonth(tenant,targetDate)) return res.status(400).json({message:'Apply credit to a rent period within the ended lease'});
     // Determine unitId fallback: prefer provided, else credit.unitId, else tenant.unitId if stored
     let resolvedUnitId = unitId;
     if (!resolvedUnitId) {
@@ -883,28 +917,17 @@ serverContext.app.post('/api/properties/:propertyId/payments/:creditPaymentId/ap
       await newPayment.save();
     } else {
       // applyTo === 'rent' : compute balance like POST /payments
-      let expectedAmount = 0;
-      // For adjustment toward rent, treat like rent components
-      expectedAmount =
-        (Number(tenant.baseRent) || 0) +
-        (Number(tenant.waterFee) || 0) +
-        (Number(tenant.trashFee) || 0) +
-        (Number(tenant.adminFee) || 0) +
-        (tenant.additionalFee?.amount || 0) +
-        (tenant.pets?.hasPets ? (Number(tenant.pets.monthlyRent) || 0) : 0);
-
-      const paymentDate = today;
+      const paymentDate = targetDate;
       const monthStart = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), 1);
       const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
-      const paymentsThisMonth = await serverContext.Payment.find({ tenantId, applyTo: 'rent', date: { $gte: monthStart, $lte: monthEnd } });
-      const totalPaid = paymentsThisMonth.reduce((sum, p) => sum + Math.abs(p.amount || 0), 0);
-      const totalLateFees = paymentsThisMonth.reduce((sum, p) => sum + (p.lateFee || 0), 0);
-      const totalMonthlyCharges = expectedAmount + totalLateFees;
-      const balance = totalMonthlyCharges - (totalPaid + Math.abs(applyAmount));
+      const paymentsThisMonth = await serverContext.Payment.find({ tenantId, applyTo: 'rent', $or:[{periodMonth:targetPeriod},{periodMonth:{$in:['',null]},date:{$gte:monthStart,$lte:monthEnd}},{periodMonth:{$exists:false},date:{$gte:monthStart,$lte:monthEnd}}] });
+      const totals = tenantLifecycle.tenantMonthTotals(tenant,targetDate,paymentsThisMonth,serverContext.computeExpectedRentForMonth);
+      const balance = totals.outstanding - Math.abs(applyAmount);
 
       newPayment = new serverContext.Payment({
         ...commonFields,
         applyTo: 'rent',
+        periodMonth: targetPeriod,
         balance
       });
       await newPayment.save();

@@ -162,6 +162,12 @@ function dateInputToISOAtNoon(dateStr) {
     return dt.toISOString();
 }
 
+function formatDateForInput(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) throw new Error('Invalid date');
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 // Safer display formatter: prefer YYYY-MM-DD prefix if present; else render in UTC to avoid shift
 function formatDateDisplay(value, locale = 'en-US') {
     if (!value) return '';
@@ -190,7 +196,48 @@ function formatDateDisplay(value, locale = 'en-US') {
 
 // Returns the expected base rent for the given month for a tenant,
 // applying proration in the first lease month only. Does NOT include additional monthly fees.
+function tenantLeaseChargeEnd(tenant) {
+    const dates = [tenant?.leaseEnd, tenant?.termination?.effectiveDate].filter(Boolean).map(value => new Date(value));
+    return dates.length ? new Date(Math.min(...dates.map(date => date.getTime()))) : null;
+}
+
+function isTenantChargeableMonth(tenant, dateLike) {
+    const date = new Date(dateLike);
+    const start = tenant?.leaseStart ? new Date(tenant.leaseStart) : null;
+    const end = tenantLeaseChargeEnd(tenant);
+    if (Number.isNaN(date.getTime())) throw new Error('Invalid rent period');
+    if (['terminated', 'expired'].includes(tenant?.leaseStatus) && !end) return false;
+    const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+    const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+    return (!start || start < nextMonth) && (!end || end >= monthStart);
+}
+
+function tenantPaymentPeriod(payment) {
+    if (/^\d{4}-(0[1-9]|1[0-2])$/.test(payment.periodMonth || '')) return payment.periodMonth;
+    const date = new Date(payment.date);
+    if (Number.isNaN(date.getTime())) throw new Error('Payment has an invalid date');
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function computeTenantMonthTotals(tenant, date, payments) {
+    const period = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const rows = payments.filter(payment => String(payment.tenantId?._id || payment.tenantId) === String(tenant._id)
+        && (payment.applyTo || 'rent') === 'rent' && tenantPaymentPeriod(payment) === period);
+    const paid = rows.reduce((sum, payment) => sum + Math.max(0, Number(payment.amount) || 0)
+        + Math.max(0, Number(payment.appliedCredit) || 0), 0);
+    let expected = 0;
+    if (isTenantChargeableMonth(tenant, date)) {
+        expected = computeExpectedRentForMonth(tenant, date, 'rent');
+        const overrides = tenant.monthlyOverrides;
+        const override = overrides && (typeof overrides.get === 'function' ? overrides.get(period) : overrides[period]);
+        expected += override?.lateFee != null ? (override.lateFeeMode === 'percent' ? expected * Number(override.lateFee) / 100 : Number(override.lateFee))
+            : rows.reduce((sum, payment) => sum + Math.max(0, Number(payment.lateFee) || 0), 0);
+    }
+    return {expected, paid: Math.min(expected, paid), outstanding: Math.max(0, expected - paid)};
+}
+
 function computeExpectedBaseRentForMonth(tenant, dateLike) {
+    if (!isTenantChargeableMonth(tenant, dateLike || new Date())) return 0;
     const baseRent = Number(tenant?.baseRent) || 0;
     const ref = dateLike ? new Date(dateLike) : new Date();
     const leaseStart = tenant?.leaseStart ? new Date(tenant.leaseStart) : null;
@@ -231,6 +278,7 @@ function computeExpectedBaseRentForMonth(tenant, dateLike) {
 function computeExpectedRentForMonth(tenant, dateLike, paymentType = 'rent') {
     const ref = dateLike ? new Date(dateLike) : new Date();
     if (Number.isNaN(ref.getTime())) return 0;
+    if (!isTenantChargeableMonth(tenant, ref)) return 0;
 
     const period = `${ref.getFullYear()}-${String(ref.getMonth() + 1).padStart(2, '0')}`;
     let overrideMap = tenant?.monthlyOverrides || null;
@@ -243,12 +291,16 @@ function computeExpectedRentForMonth(tenant, dateLike, paymentType = 'rent') {
     const monthOverride = overrideMap ? overrideMap[period] : null;
     if (monthOverride && paymentType === 'rent') {
         const overrideExpectedRent = Number(monthOverride.expectedRent);
-        if (Number.isFinite(overrideExpectedRent) && overrideExpectedRent >= 0) {
+        if (monthOverride.expectedRent != null && monthOverride.expectedRent !== '' && Number.isFinite(overrideExpectedRent) && overrideExpectedRent >= 0) {
             return overrideExpectedRent;
         }
     }
 
     const isRentType = paymentType === 'rent';
+    const leaseStart = tenant?.leaseStart ? new Date(tenant.leaseStart) : null;
+    if (isRentType && leaseStart && leaseStart.getFullYear() === ref.getFullYear() && leaseStart.getMonth() === ref.getMonth()) {
+        return computeExpectedBaseRentForMonth(tenant, ref);
+    }
     const baseRent = isRentType
         ? computeExpectedBaseRentForMonth(tenant, ref)
         : (Number(tenant?.baseRent) || 0);

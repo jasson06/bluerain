@@ -1604,6 +1604,15 @@ fmrNotes: String,
 hubContribution: { type: Number, default: 0 },
 tenantContribution: { type: Number, default: 0 },
 leaseStatus: { type: String, enum: ['active', 'pending', 'expired', 'terminated'], default: 'active' },
+termination: {
+  effectiveDate: Date,
+  reason: String,
+  finalRent: Number,
+  possessionReturned: Boolean,
+  returnedAt: Date,
+  unitDisposition: { type: String, enum: ['vacant', 'maintenance', null] },
+  reviewedAt: Date
+},
 leaseHolders: {
   type: [{ name: String, phone: String, email: String }],
   default: []

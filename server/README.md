@@ -25,6 +25,41 @@ To edit a flow, change its module. To add an endpoint, export its registration f
 
 No endpoint was removed or renamed. Existing `maintenance-qc.js` and `eviction-cases.js` integrations retain their registration and setup locations.
 
+## Tenant termination and overview accounting
+
+`tenant-lifecycle.js` defines lease charge cutoffs and tenant/period payment
+allocation. Tenant updates accept a reviewed `termination` containing an
+effective date, reason, non-negative final rent, and possession confirmation.
+The final rent is saved as that month's expected-rent override; existing late
+fees remain separate. No final-month proration, write-off, or deposit refund is
+automatic. Subsequent months stop accruing recurring rent and fees.
+
+Termination, payment-balance recalculation, and possession release run in one
+MongoDB transaction (a replica set or transaction-capable deployment is required,
+as for payment allocations). A unit is released only when possession is
+confirmed and it is still assigned to the tenant. Expiration/status edits alone
+do not imply vacancy. Terminated lease history stays immutable through ordinary
+tenant edits; create a new tenant/lease record for a new lease.
+
+Overview expected rent and outstanding are calculated per tenant and applied
+rent month, including historical/final charges through the lease cutoff.
+`rentCollected` is capped payment/credit allocation against those charges,
+not cash received. `cashRentCollected` and `totalCashCollected` use receipt dates;
+the latter includes non-deposit income. Cash income still includes former-tenant
+receipts for NOI and management fees. `formerTenants` exposes cumulative former
+rent balances separately from active/pending delinquency. These totals overlap
+when the selected period includes former tenants' final charges; do not add them
+together. Deposits remain in their existing separate ledger.
+
+Existing former leases are not rewritten or assigned invented termination dates.
+Missing lease start/end information is flagged for review, not reported as settled.
+Tenants with former leases or payment history cannot be deleted.
+Former-tenant rent receipts and credit allocations must target a rent month
+within the ended lease. The stored receipt date remains the actual payment date.
+Monthly override updates validate the lease period and non-negative amounts,
+preserve omitted fields, and recalculate stored payment balances transactionally.
+Changing final-month expected rent also updates the reviewed termination charge.
+
 ## Checks
 
 Run `npm test -- --runInBand`. `__tests__/serverFlows.test.js` covers module initialization, the original 253 endpoint registrations (paths, methods, handler counts, and order), tenant handlers, payment calculations, maintenance normalization, and QuickBooks configuration/encryption. Tests use mocked dependencies and do not start the production server.

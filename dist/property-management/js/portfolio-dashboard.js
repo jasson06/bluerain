@@ -207,6 +207,8 @@ async function renderPortfolioOverview() {
 
         // Load portfolio-wide payments for current month rent comparisons
         const allPayments = await paymentsPromise;
+        const periodEnd = new Date(periodYear, periodMonthIndex + 1, 1);
+        const periodPayments = allPayments.filter(p => p.date && new Date(p.date) < periodEnd && new Date(p.date) <= now);
 
         let totalUnpaidRent = 0;
         let totalExpectedRent = 0;
@@ -218,7 +220,7 @@ async function renderPortfolioOverview() {
         let upcomingMoveInsCount = 0;
         let upcomingMoveInsWithin30 = 0;
 
-        activeTenants.forEach(tenant => {
+        allTenants.forEach(tenant => {
             // Lease expiry within 60 days (always relative to "now", not the selected rent month)
             if (tenant.leaseEnd) {
                 const leaseEndDate = new Date(tenant.leaseEnd);
@@ -242,20 +244,7 @@ async function renderPortfolioOverview() {
                 (tenant.additionalFee?.amount || 0) +
                 petFees;
 
-            // Determine if the selected month falls completely outside this tenant's lease range
-            const leaseStart = tenant.leaseStart ? new Date(tenant.leaseStart) : null;
-            const leaseEnd = tenant.leaseEnd ? new Date(tenant.leaseEnd) : null;
-            let outOfLeaseMonth = false;
-            if (leaseStart || leaseEnd) {
-                const monthStart = new Date(periodYear, periodMonthIndex, 1);
-                const monthEnd = new Date(periodYear, periodMonthIndex + 1, 0);
-                if (leaseStart && monthEnd < leaseStart) {
-                    outOfLeaseMonth = true;
-                }
-                if (leaseEnd && monthStart > leaseEnd) {
-                    outOfLeaseMonth = true;
-                }
-            }
+            const outOfLeaseMonth = tenant.leaseStatus === 'pending' || !isTenantChargeableMonth(tenant, periodDate);
 
             // For "Estimated monthly income", only count tenants whose lease covers the selected month
             // (no proration/overrides applied in this high-level metric)
@@ -264,47 +253,16 @@ async function renderPortfolioOverview() {
                 portfolioMonthlyIncome += contractualMonthly;
             }
 
-            let expectedMonthly = 0;
-            let monthOverride = null;
-            if (!outOfLeaseMonth) {
-                // For in-range months, still respect proration and overrides
-                const expectedBase = computeExpectedBaseRentForMonth(tenant, periodDate);
-                const overrideMap = tenant?.monthlyOverrides || null;
-                monthOverride = overrideMap
-                    ? (typeof overrideMap.get === 'function' ? overrideMap.get(periodMonth) : overrideMap[periodMonth])
-                    : null;
+            const totals = computeTenantMonthTotals(tenant, periodDate, periodPayments);
+            const expectedMonthly = outOfLeaseMonth ? 0 : totals.expected;
 
-                expectedMonthly = expectedBase + additionalFees;
-                if (monthOverride) {
-                    const ovExpected = Number(monthOverride.expectedRent);
-                    const ovLate = Number(monthOverride.lateFee);
-                    const ovMode = (monthOverride.lateFeeMode === 'percent') ? 'percent' : 'amount';
-                    const baseBeforeLate = Number.isFinite(ovExpected) ? ovExpected : (expectedBase + additionalFees);
-                    if (ovMode === 'percent' && Number.isFinite(ovLate)) {
-                        expectedMonthly = baseBeforeLate + (baseBeforeLate * (ovLate / 100));
-                    } else {
-                        expectedMonthly = baseBeforeLate + (Number.isFinite(ovLate) ? ovLate : 0);
-                    }
-                }
-            }
-
-            const monthPayments = allPayments.filter(p => {
-                if (!p.date || (p.applyTo || 'rent') !== 'rent') return false;
-                if (String(p.tenantId) !== String(tenant._id)) return false;
-                const d = new Date(p.date);
-                return d.getMonth() === periodMonthIndex && d.getFullYear() === periodYear;
-            });
-
-            const totalPaidThisMonth = monthPayments.reduce((sum, p) => {
-                const amt = Number(p.amount) || 0;
-                return sum + (amt > 0 ? amt : 0);
-            }, 0);
+            const totalPaidThisMonth = outOfLeaseMonth ? 0 : totals.paid;
 
             const remainingRent = Math.max(0, expectedMonthly - totalPaidThisMonth);
             totalExpectedRent += expectedMonthly;
             totalPaidThisMonthAll += totalPaidThisMonth;
-            // Always store a row so the rent details view can show all tenants
-            state.portfolioTenantsWithBalance.push({ tenant, remainingRent, expectedMonthly, paidThisMonth: totalPaidThisMonth, outOfLease: outOfLeaseMonth });
+            // Keep historical lease charges, but omit months after the lease ended.
+            if (!outOfLeaseMonth) state.portfolioTenantsWithBalance.push({ tenant, remainingRent, expectedMonthly, paidThisMonth: totalPaidThisMonth, outOfLease: outOfLeaseMonth });
             // But only count those with a positive remaining balance toward the "open rent" chip
             if (!outOfLeaseMonth && remainingRent > 0.01) {
                 tenantsWithBalance++;
@@ -491,18 +449,36 @@ async function renderPortfolioExecutiveDashboard(){
     document.getElementById('portfolioExecutiveMeta').textContent=`${properties.length} ${properties.length===1?'property':'properties'} · ${range.label} · Updated ${new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`;
     root.innerHTML=Array.from({length:8},()=>'<div class="portfolio-executive-card portfolio-skeleton">Loading</div>').join('');
     tableRoot.innerHTML='<div class="portfolio-table-loader"><i class="fas fa-circle-notch fa-spin"></i><span>Loading portfolio records…</span></div>';
-    const loadOverview=async(p,r)=>{try{const res=await fetch(`${API_URL}/properties/${p._id}/overview?from=${encodeURIComponent(r.from)}&to=${encodeURIComponent(r.to)}`);return res.ok?await res.json():null}catch{return null}};
+    const overviewByProperty=new Map();
+    const loadOverview=async(p,r)=>{try{const res=await fetch(`${API_URL}/properties/${p._id}/overview?from=${encodeURIComponent(r.from)}&to=${encodeURIComponent(r.to)}`);if(!res.ok)throw new Error(`Unable to load overview for ${p.name||p._id}`);const data=await res.json();if(r===range)overviewByProperty.set(String(p._id),data);return data;}catch(error){console.error('Portfolio overview error:',error);return null;}};
     const previousRange=getPortfolioExecutiveRange(undefined,true);
     const rows=await Promise.all(properties.map(async property=>{const [overview,previous,qb]=await Promise.all([loadOverview(property,range),compare?loadOverview(property,previousRange):Promise.resolve(null),fetch(`${API_URL}/properties/${property._id}/quickbooks/status`).then(r=>r.ok?r.json():null).catch(()=>null)]);const units=(state.allUnits||[]).filter(u=>portfolioPropertyId(u)===String(property._id)),tenants=(state.allTenants||[]).filter(t=>portfolioPropertyId(t)===String(property._id)&&!['terminated','expired','inactive'].includes(String(t.leaseStatus||t.status||'').toLowerCase())),maint=(state.portfolioMaintenance||[]).filter(m=>portfolioPropertyId(m)===String(property._id)&&!['completed','closed'].includes(String(m.status||'').toLowerCase()));const summary=overview?.summary||{},financials=overview?.financials||{},delinquency=overview?.delinquency||{},prev=previous?.summary||{},occupied=units.filter(u=>['occupied','leased','rented'].includes(String(u.status||'').toLowerCase())).length,total=units.length,occupancy=Number(summary.occupancyRate??(total?occupied/total*100:0)),expected=Number(summary.expectedRent??summary.rentRoll??0),collected=Number(summary.rentCollected??0),collection=expected?Math.min(100,collected/expected*100):100,outstanding=Number(summary.rentOutstanding??delinquency.total??Math.max(0,expected-collected)),expenses=Number(financials.operatingExpenses??0),noi=Number(financials.estimatedNOI??collected-expenses),delinquent=Number(delinquency.tenantCount??0),attention=(100-occupancy)/10+maint.length*2+delinquent*3+(qb?.connected?0:2);return{property,overviewAvailable:!!overview,units:total,occupied,vacant:Math.max(0,total-occupied),tenants:tenants.length,occupancy,expected,collected,collection,outstanding,expenses,noi,maintenance:maint.length,delinquent,qbConnected:!!qb?.connected,attention,previousCollection:Number(prev.expectedRent??prev.rentRoll??0)?Number(prev.rentCollected??0)/Number(prev.expectedRent??prev.rentRoll)*100:null};}));
     if(requestId!==state.portfolioExecutiveRequestId)return;
+    const extraTotals={cash:0,former:0,needsReview:0};
+    state.portfolioFormerTenantBalances=[];
+    rows.forEach(row=>{const overview=overviewByProperty.get(String(row.property._id));if(overview){extraTotals.cash+=Number(overview.summary?.totalCashCollected||0);extraTotals.former+=Number(overview.formerTenants?.total||0);extraTotals.needsReview+=Number(overview.formerTenants?.needsReview||0);state.portfolioFormerTenantBalances.push(...(overview.formerTenants?.tenants||[]).map(tenant=>({...tenant,propertyId:row.property._id,propertyName:row.property.name})));}});
     state.portfolioComparisonRows=rows;state.portfolioComparisonMasterRows=rows;state.portfolioComparisonPage=1;
     const totals=rows.reduce((a,r)=>{a.units+=r.units;a.occupied+=r.occupied;a.expected+=r.expected;a.collected+=r.collected;a.outstanding+=r.outstanding;a.expenses+=r.expenses;a.noi+=r.noi;a.maintenance+=r.maintenance;a.delinquent+=r.delinquent;return a},{units:0,occupied:0,expected:0,collected:0,outstanding:0,expenses:0,noi:0,maintenance:0,delinquent:0});
     const occupancy=totals.units?totals.occupied/totals.units*100:0,collection=totals.expected?totals.collected/totals.expected*100:100,pendingApps=(state.applications||[]).filter(a=>String(a.status||'pending').toLowerCase()==='pending').length;
     const cards=[['properties','fa-city','Properties',rows.length,`${rows.filter(r=>r.qbConnected).length} QuickBooks connected`,'good'],['occupancy','fa-building-user','Occupancy',`${occupancy.toFixed(1)}%`,`${totals.occupied} occupied · ${totals.units-totals.occupied} vacant`,occupancy>=95?'good':occupancy>=85?'warn':'danger'],['rent','fa-sack-dollar','Rent roll',portfolioMoney(totals.expected),range.label,''],['collection','fa-money-bill-trend-up','Collected',portfolioMoney(totals.collected),`${collection.toFixed(1)}% collection rate`,collection>=95?'good':collection>=85?'warn':'danger'],['delinquency','fa-triangle-exclamation','Outstanding',portfolioMoney(totals.outstanding),`${totals.delinquent} delinquent tenants`,totals.outstanding?'danger':'good'],['expenses','fa-receipt','Operating expenses',portfolioMoney(totals.expenses),range.label,''],['noi','fa-chart-line','Estimated NOI',portfolioMoney(totals.noi),'Income less operating expenses',totals.noi>=0?'good':'danger'],['maintenance','fa-screwdriver-wrench','Open maintenance',totals.maintenance,'Requests requiring action',totals.maintenance?'warn':'good'],['applications','fa-file-signature','Applications',pendingApps,'Pending portfolio applications',pendingApps?'warn':'good'],['leases','fa-file-contract','Lease events',(state.portfolioExpiringLeases||[]).length+(state.portfolioUpcomingMoveIns||[]).length,'Next 60 days',''],['units','fa-door-open','Total units',totals.units,`${totals.units-totals.occupied} currently vacant`,''],['quickbooks','fa-link','QuickBooks',`${rows.filter(r=>r.qbConnected).length}/${rows.length}`,`${rows.filter(r=>!r.qbConnected).length} need connection`,rows.every(r=>r.qbConnected)?'good':'warn']];
     root.innerHTML=cards.map(c=>`<article class="portfolio-executive-card" data-portfolio-drill="${c[0]}" tabindex="0"><span class="portfolio-executive-icon"><i class="fas ${c[1]}"></i></span><div class="portfolio-executive-label">${c[2]}</div><div class="portfolio-executive-value">${c[3]}</div><div class="portfolio-executive-trend ${c[5]}">${c[4]}</div></article>`).join('');
+    root.insertAdjacentHTML('beforeend',`<article class="portfolio-executive-card"><div class="portfolio-executive-label">Total cash collected</div><div class="portfolio-executive-value">${portfolioMoney(extraTotals.cash)}</div><div class="portfolio-executive-trend">Receipt dates · excludes deposits</div></article><article class="portfolio-executive-card" role="button" tabindex="0" onclick="showPortfolioFormerTenantBalances()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showPortfolioFormerTenantBalances();}"><div class="portfolio-executive-label">Former tenant rent balances</div><div class="portfolio-executive-value">${portfolioMoney(extraTotals.former)}</div><div class="portfolio-executive-trend">View former ledgers${extraTotals.needsReview?` · ${extraTotals.needsReview} need lease-date review`:''}</div></article>`);
+    if(overviewByProperty.size<properties.length)root.insertAdjacentHTML('beforeend',`<div class="overview-alert">Totals are incomplete: ${properties.length-overviewByProperty.size} property overviews could not be loaded.</div>`);
     root.insertAdjacentHTML('beforeend',`<article class="portfolio-executive-card" data-portfolio-drill="tenants" tabindex="0"><span class="portfolio-executive-icon"><i class="fas fa-users"></i></span><div class="portfolio-executive-label">Active tenants</div><div class="portfolio-executive-value">${(state.allTenants||[]).filter(t=>String(t.leaseStatus||t.status||'').trim().toLowerCase()==='active'&&getPortfolioFilteredProperties().some(p=>portfolioPropertyId(t)===String(p._id))).length}</div><div class="portfolio-executive-trend">Active tenants in selected properties</div></article>`);
     updatePortfolioUpcomingCard();
     renderUnifiedPortfolioWorkspace();
+}
+
+function showPortfolioFormerTenantBalances(){
+    const rows=state.portfolioFormerTenantBalances||[];
+    const content=rows.length?`<div class="overview-table-wrap"><table class="overview-table"><thead><tr><th>Property</th><th>Tenant</th><th>Unit</th><th>Rent balance</th><th>Action</th></tr></thead><tbody>${rows.map(row=>`<tr><td>${escapeHtml(row.propertyName||'Property')}</td><td>${escapeHtml(row.tenantName||'Tenant')}</td><td>${escapeHtml(row.unitNumber||'—')}</td><td>${row.needsReview?'Needs lease-date review':portfolioMoney(row.balance)}</td><td><button class="overview-row-action" onclick="openPortfolioFormerTenantLedger('${escapeHtml(row.propertyId)}','${escapeHtml(row.tenantId)}')">Open ledger</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty-compact">No former tenant accounts in the selected properties.</div>';
+    showPortfolioInlineWorkspace('Former tenant rent balances','Balances as of the overview period. Deposits are reviewed separately; current ledger balances may differ.',content,'tenants');
+}
+
+async function openPortfolioFormerTenantLedger(propertyId,tenantId){
+    await selectProperty(propertyId);
+    switchTab('payments');
+    openTenantBalanceModal(tenantId);
 }
 
 

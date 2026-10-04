@@ -2,4 +2,5 @@
 #tenantDetailsModal > .tenant-details-modal.tenant-drawer { width:min(780px,calc(100vw - 28px))!important; max-width:780px!important; padding:0!important; display:flex; flex-direction:column; overflow:hidden!important; }
 #tenantDetailsModal .portfolio-record-drawer-header { flex-shrink:0; }
 #tenantDetailsModal .portfolio-record-drawer-body { height:auto; min-height:0; flex:1; overflow:auto; }
+.tenant-lease-ledger{margin-top:16px}.tenant-ledger-charge-form{display:flex;align-items:center;gap:6px}.tenant-ledger-charge-form input{width:110px;padding:7px;border:1px solid #cbd5e1;border-radius:6px}.tenant-lease-ledger .overview-table{min-width:660px}.tenant-lease-ledger .overview-metrics{margin-bottom:16px}
 @media(max-width:600px){#tenantDetailsModal > .tenant-details-modal.tenant-drawer {width:calc(100vw - 16px)!important;}}

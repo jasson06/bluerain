@@ -21,6 +21,7 @@ function resetTenantForm() {
     const form = document.getElementById('addTenantForm');
     form.dataset.editMode = 'false';
     form.dataset.tenantId = '';
+    form.onsubmit = null;
 
     // Reset fallback property selector to current property (if any)
     const propSelect = document.getElementById('tenantProperty');
@@ -30,6 +31,86 @@ function resetTenantForm() {
         if (state.currentProperty?._id) {
             propSelect.value = state.currentProperty._id;
         }
+    }
+}
+
+function openTenantTermination(tenantId) {
+    const tenant = (state.tenants || []).find(t => String(t._id) === String(tenantId));
+    if (!tenant) { showNotification('Tenant not found', 'error'); return; }
+    let modal = document.getElementById('tenantTerminationModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'tenantTerminationModal';
+        modal.className = 'modal';
+        document.body.appendChild(modal);
+    }
+    modal.dataset.tenantId = tenantId;
+    const previous = tenant.termination || {};
+    const today = new Date();
+    const defaultDate = previous.effectiveDate || (tenant.leaseEnd && new Date(tenant.leaseEnd) < today ? tenant.leaseEnd : today);
+    const dateValue = formatDateForInput(defaultDate);
+    modal.innerHTML = `<div class="modal-content" style="max-width:650px">
+        <div class="modal-header"><h2>${escapeHtml(tenant.name)}: terminate lease / move-out</h2><button type="button" class="btn-icon" aria-label="Close" onclick="closeModal('tenantTerminationModal')"><i class="fas fa-times"></i></button></div>
+        <p>Keep the tenant, payments, receipts, and unpaid debt. Confirm the final rent charge; no automatic final-month proration or debt write-off is applied.</p>
+        <form onsubmit="saveTenantTermination(event)">
+            <div class="form-group"><label for="terminationDate">Effective termination date</label><input id="terminationDate" type="date" required max="${formatDateForInput(today)}" ${tenant.leaseStart ? `min="${formatDateForInput(tenant.leaseStart)}"` : ''} value="${dateValue}" ${previous.effectiveDate ? 'readonly' : ''} onchange="updateTerminationRentReview()"></div>
+            <div class="form-group"><label for="terminationReason">Reason</label><textarea id="terminationReason" required maxlength="1200">${escapeHtml(previous.reason || '')}</textarea></div>
+            <div class="form-group"><label for="terminationFinalRent">Final month's rent and recurring fees (excluding late fees)</label><input id="terminationFinalRent" type="number" min="0" step="0.01" required><p class="task-meta" id="terminationRentReview"></p></div>
+            <div class="form-group"><label><input id="terminationPossession" type="checkbox" ${previous.possessionReturned ? 'checked disabled' : ''} onchange="document.getElementById('terminationPossessionFields').hidden=!this.checked"> Possession has been returned</label><p class="task-meta">Unchecked: leave the unit's occupancy unchanged.</p></div>
+            <div id="terminationPossessionFields" ${previous.possessionReturned ? '' : 'hidden'}>
+                <div class="form-group"><label for="terminationReturnedAt">Possession return date</label><input id="terminationReturnedAt" type="date" max="${formatDateForInput(today)}" value="${formatDateForInput(previous.returnedAt || today)}"></div>
+                <div class="form-group"><label for="terminationUnitDisposition">Released unit status</label><select id="terminationUnitDisposition"><option value="maintenance" ${previous.unitDisposition !== 'vacant' ? 'selected' : ''}>Maintenance / turnover</option><option value="vacant" ${previous.unitDisposition === 'vacant' ? 'selected' : ''}>Vacant / ready</option></select></div>
+            </div>
+            <p>Security deposit: review the deposit ledger separately before settling the account. This action does not refund or apply a deposit.</p>
+            <div class="modal-actions"><button type="button" class="btn-secondary" onclick="closeModal('tenantTerminationModal')">Cancel</button><button type="submit" class="btn-primary">Confirm reviewed termination</button></div>
+        </form></div>`;
+    updateTerminationRentReview();
+    openModal('tenantTerminationModal');
+}
+
+function updateTerminationRentReview() {
+    const modal = document.getElementById('tenantTerminationModal');
+    const tenant = (state.tenants || []).find(t => String(t._id) === String(modal.dataset.tenantId));
+    const date = document.getElementById('terminationDate').value;
+    if (!date || !tenant) return;
+    const periodDate = new Date(`${date}T12:00:00`);
+    const amount = computeExpectedRentForMonth({...tenant,leaseStatus:'active'}, periodDate, 'rent');
+    document.getElementById('terminationFinalRent').value = Number(amount).toFixed(2);
+    document.getElementById('terminationRentReview').textContent = `Existing charge for ${date.slice(0,7)}: ${tenantCurrency(amount)}. Confirm it or enter an explicit override. Existing late-fee rules remain unchanged.`;
+}
+
+async function saveTenantTermination(event) {
+    event.preventDefault();
+    const modal = document.getElementById('tenantTerminationModal');
+    const tenantId = modal.dataset.tenantId;
+    const propertyId = state.currentProperty._id;
+    const button = event.target.querySelector('button[type="submit"]');
+    button.disabled = true;
+    try {
+        const response = await fetch(`${API_URL}/properties/${propertyId}/tenants/${tenantId}`, {
+            method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({termination:{
+                effectiveDate:dateInputToISOAtNoon(document.getElementById('terminationDate').value),
+                reason:document.getElementById('terminationReason').value.trim(),
+                finalRent:Number(document.getElementById('terminationFinalRent').value),
+                possessionReturned:document.getElementById('terminationPossession').checked,
+                returnedAt:dateInputToISOAtNoon(document.getElementById('terminationReturnedAt').value),
+                unitDisposition:document.getElementById('terminationUnitDisposition').value
+            }})
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Unable to terminate lease');
+        invalidateCache('tenants','units','payments');
+        state.propertyOverviewData = null;
+        await Promise.all([loadTenants(propertyId,true),loadUnits(propertyId,true),loadPayments(propertyId,true),loadAllUnitsAndTenants()]);
+        renderTenants();
+        closeModal('tenantTerminationModal');
+        showNotification('Termination saved. Tenant history and outstanding debt are preserved.', 'success');
+        if (state.currentTab === 'overview') await renderPropertyOverview(true);
+    } catch (error) {
+        console.error('Tenant termination error:',error);
+        showNotification(error.message,'error');
+    } finally {
+        button.disabled = false;
     }
 }
 
@@ -286,7 +367,7 @@ function renderTenants() {
         tenantsList.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-users"></i>
-                <p>No ${currentTenantTab === 'active' ? 'active' : 'inactive'} tenants found</p>
+                <p>No ${currentTenantTab === 'active' ? 'active' : 'former'} tenants found</p>
                 ${currentTenantTab === 'active' ? `<button onclick="openAddTenantModal()" class="btn-primary">Add Your First Tenant</button>` : ''}
             </div>`;
         return;
@@ -304,6 +385,8 @@ function renderTenants() {
         const assignedUnit = typeof tenant.unitId === 'object' ? tenant.unitId : 
             state.units.find(u => u._id === tenant.unitId || u._id?.toString() === tenant.unitId?.toString());
         const parkingAssignment = tenant.parking ? String(tenant.parking).trim() : '';
+        const isFormer = ['terminated','expired'].includes(tenant.leaseStatus);
+        const formerRentBalance = isFormer ? computeTenantRentBalance(tenant._id) : null;
 
         // Format lease dates
         const leaseStart = tenant.leaseStart ? formatDateDisplay(tenant.leaseStart, 'en-US') : 'Not set';
@@ -326,35 +409,13 @@ function renderTenants() {
         // --- Rent payment status for current month ---
         const now = new Date();
         const periodMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-        // Collect this month's rent payments (applyTo rent) for the tenant
-        const monthPayments = unifiedPropertyPayments.filter(p => p.tenantId === tenant._id && (!p.applyTo || p.applyTo === 'rent') && (p.periodMonth ? p.periodMonth === periodMonth : p.date && new Date(p.date).getMonth() === now.getMonth() && new Date(p.date).getFullYear() === now.getFullYear()));
-        // Only count positive amounts toward payment; credits (negative) should not increase paid
-        const totalPaidThisMonth = monthPayments.reduce((sum,p)=>{
-            const amt = Number(p.amount) || 0;
-            const appliedCred = Number(p.appliedCredit) || 0;
-            return sum + (amt > 0 ? amt : 0);
-        },0);
-    // Expected rent using same logic as server, but respect monthly overrides immediately
-    // First check for override on this month:
-    const overrideMap = tenant?.monthlyOverrides || null;
-    const monthOverride = overrideMap
-        ? (typeof overrideMap.get === 'function' ? overrideMap.get(periodMonth) : overrideMap[periodMonth])
-        : null;
-    // Apply first-month proration to BASE RENT only; add recurring monthly fees un-prorated
-    const expectedBase = computeExpectedBaseRentForMonth(tenant, now);
-    let expectedMonthly = expectedBase + additionalFees;
-    if (monthOverride) {
-        const ovExpected = Number(monthOverride.expectedRent);
-        const ovLate = Number(monthOverride.lateFee);
-        const ovMode = (monthOverride.lateFeeMode === 'percent') ? 'percent' : 'amount';
-        // Determine base amount before late fee
-        const baseBeforeLate = Number.isFinite(ovExpected) ? ovExpected : (expectedBase + additionalFees);
-        if (ovMode === 'percent' && Number.isFinite(ovLate)) {
-            expectedMonthly = baseBeforeLate + (baseBeforeLate * (ovLate / 100));
-        } else {
-            expectedMonthly = baseBeforeLate + (Number.isFinite(ovLate) ? ovLate : 0);
-        }
-    }
+        const monthTotals = computeTenantMonthTotals(tenant, now, unifiedPropertyPayments.filter(p => p.date && new Date(p.date) <= now));
+        const totalPaidThisMonth = monthTotals.paid;
+        const overrideMap = tenant?.monthlyOverrides || null;
+        const monthOverride = overrideMap
+            ? (typeof overrideMap.get === 'function' ? overrideMap.get(periodMonth) : overrideMap[periodMonth])
+            : null;
+        const expectedMonthly = monthTotals.expected;
         const remainingRent = Math.max(0, expectedMonthly - totalPaidThisMonth);
         // Assume due date = 1st of month (can be extended later with tenant.rentDueDay)
         const dueDate = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -481,6 +542,8 @@ function renderTenants() {
                             </div>
                         </div>
                         <div class="tenant-actions">
+                            <button type="button" class="btn-secondary" onclick="openTenantTermination('${tenant._id}')">${tenant.leaseStatus === 'terminated' ? 'Review termination / move-out' : 'Terminate lease'}</button>
+                            ${isFormer ? `<button type="button" class="btn-secondary" onclick="openTenantBalanceModal('${tenant._id}')">Former rent balance: ${formerRentBalance === null ? 'Needs lease-date review' : tenantCurrency(formerRentBalance)}</button><span class="task-meta">${tenant.termination?.effectiveDate ? `Terminated ${formatDateDisplay(tenant.termination.effectiveDate)} · ${tenant.termination.possessionReturned ? 'Possession returned' : 'Possession not confirmed'}` : 'Review lease end and possession'} · ${formerRentBalance === 0 ? 'Rent settled (deposit review separate)' : 'Ledger remains open'}</span>` : ''}
                             <button type="button" class="btn-secondary" data-eviction-tenant="${tenant._id}" onclick="openEvictionCases('${tenant._id}')">Eviction case</button>
                             <button onclick="viewTenantDetails('${tenant._id}')" class="btn-secondary">
                                 <i class="fas fa-eye"></i> Details
@@ -1026,31 +1089,10 @@ async function editTenant(tenantId) {
 
         // Remove the previous event listener and add new one
         form.onsubmit = null;
-        form.addEventListener('submit', async (e) => {
+        form.onsubmit = async (e) => {
             e.preventDefault();
             await handleUpdateTenant(tenantId);
-
-            // After update, handle unit status based on leaseStatus
-            const leaseStatus = document.getElementById('leaseStatus').value;
-            const unitId = document.getElementById('tenantUnit').value;
-            if (unitId) {
-                if (leaseStatus === 'terminated' || leaseStatus === 'expired') {
-                    await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${unitId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ status: 'vacant' })
-                    });
-                    await loadUnits(state.currentProperty._id);
-                } else if (leaseStatus === 'active') {
-                    await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${unitId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ status: 'occupied' })
-                    });
-                    await loadUnits(state.currentProperty._id);
-                }
-            }
-        }, { once: true }); // Use once: true to auto-remove after submission
+        };
     } catch (error) {
         console.error('Error editing tenant:', error);
         showNotification('Error editing tenant', 'error');
@@ -1065,7 +1107,6 @@ async function handleUpdateTenant(tenantId) {
     }
 
     const newUnitId = document.getElementById('tenantUnit').value;
-    const oldUnitId = tenant.unitId?._id || tenant.unitId;
 
     // Gather car info if "Has Car(s)" is checked
     let cars = [];
@@ -1150,6 +1191,10 @@ async function handleUpdateTenant(tenantId) {
         status: tenant.status || 'active'
     };
 
+    if (tenantData.leaseStatus === 'terminated' && tenant.leaseStatus !== 'terminated') {
+        showNotification('Use Terminate lease on the tenant card to review final rent and possession', 'error');
+        return;
+    }
     // Validate lease dates
     if (new Date(tenantData.leaseStart) > new Date(tenantData.leaseEnd)) {
         showNotification('Lease end date must be after start date', 'error');
@@ -1164,52 +1209,8 @@ async function handleUpdateTenant(tenantId) {
             body: JSON.stringify(tenantData)
         });
 
-        if (!response.ok) throw new Error('Failed to update tenant');
-
-        // Handle unit status changes
-        if (oldUnitId !== newUnitId) {
-            // Set old unit to vacant if exists
-            if (oldUnitId) {
-                await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${oldUnitId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: 'vacant' })
-                });
-            }
-
-            // Set new unit to occupied if selected
-            if (newUnitId) {
-                await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${newUnitId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: 'occupied' })
-                });
-            }
-        }
-
-        // If leaseStatus is 'terminated' or 'expired', set the unit to vacant
-        if (
-            (tenantData.leaseStatus === 'terminated' || tenantData.leaseStatus === 'expired') &&
-            newUnitId
-        ) {
-            await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${newUnitId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'vacant' })
-            });
-        }
-
-        // If leaseStatus is 'active', set the unit to occupied
-        if (
-            tenantData.leaseStatus === 'active' &&
-            newUnitId
-        ) {
-            await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${newUnitId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'occupied' })
-            });
-        }
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Failed to update tenant');
 
         invalidateCache('tenants','units');
         await Promise.all([
@@ -1222,6 +1223,7 @@ async function handleUpdateTenant(tenantId) {
         form.reset();
         form.dataset.editMode = 'false';
         form.dataset.tenantId = '';
+        form.onsubmit = null;
         
         // Reset the submit button text
         const submitButton = form.querySelector('button[type="submit"]');
@@ -1236,7 +1238,7 @@ async function handleUpdateTenant(tenantId) {
     runWhenIdle(() => loadAllUnitsAndTenants());
     } catch (error) {
         console.error('Error updating tenant:', error);
-        showNotification('Error updating tenant', 'error');
+        showNotification(error.message || 'Error updating tenant', 'error');
     } finally {
         hideLoader();
     }
@@ -1310,16 +1312,8 @@ async function deleteTenant(tenantId) {
             method: 'DELETE'
         });
 
-        if (!response.ok) throw new Error('Failed to delete tenant');
-
-        // If tenant was assigned to a unit, update unit status to vacant
-        if (tenant.unitId) {
-            await fetch(`${API_URL}/properties/${state.currentProperty._id}/units/${tenant.unitId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'vacant' })
-            });
-        }
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Failed to delete tenant');
 
         // Reload both tenants and units using universal refresh
         invalidateCache('tenants', 'units');
@@ -1331,7 +1325,7 @@ async function deleteTenant(tenantId) {
         showNotification('Tenant deleted successfully', 'success');
     } catch (error) {
         console.error('Error deleting tenant:', error);
-        showNotification('Error deleting tenant', 'error');
+        showNotification(error.message || 'Error deleting tenant', 'error');
            } finally {
         hideLoader(); 
     }

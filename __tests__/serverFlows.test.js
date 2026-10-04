@@ -60,7 +60,7 @@ test('creating a tenant keeps lease-holder filtering and occupied-unit updates',
 
 test('editing a missing tenant retains the 404 response', async () => {
   let handler;
-  const context = { app: { put(url, fn) { handler = fn; } }, Tenant: { findByIdAndUpdate: jest.fn().mockResolvedValue(null) } };
+  const context = { app: { put(url, fn) { handler = fn; } }, Tenant: { findOne: jest.fn().mockResolvedValue(null) } };
   require('../server/flows/tenants')(context).put_api_properties_propertyId_tenants_tenantId();
   const res = response();
   await handler({ params: { tenantId: 'missing' }, body: {} }, res);

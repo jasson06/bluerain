@@ -9,31 +9,180 @@ function tenantCurrency(value) {
     return `${sign}$${Math.abs(v).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
 }
 
+function tenantLeaseLedgerMonths(tenant, payments) {
+    const start = tenant.leaseStart ? new Date(tenant.leaseStart) : null;
+    const end = tenantLeaseChargeEnd(tenant);
+    if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+        throw new Error('Set valid lease start and end dates before viewing the monthly lease ledger.');
+    }
+    const months = [];
+    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+    const postedPayments = payments.filter(payment => payment.date && new Date(payment.date) <= new Date());
+    while (cursor <= end) {
+        const period = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
+        const totals = computeTenantMonthTotals(tenant, cursor, postedPayments);
+        const rent = computeExpectedRentForMonth(tenant, cursor, 'rent');
+        const overrides = tenant.monthlyOverrides;
+        const override = overrides && (typeof overrides.get === 'function' ? overrides.get(period) : overrides[period]);
+        months.push({period, rent, late: totals.expected - rent, ...totals, overridden: override?.expectedRent != null});
+        cursor.setMonth(cursor.getMonth() + 1);
+    }
+    return months;
+}
+
+let tenantLeaseLedgerSequence = 0;
+
+async function openTenantLeaseLedger(tenantId) {
+    const tenant = getWorkspaceTenantRecord(tenantId);
+    const propertyId = tenant && portfolioPropertyId(tenant);
+    if (!tenant || !propertyId) {
+        showNotification('Tenant or property not found', 'error');
+        return;
+    }
+    const sequence = ++tenantLeaseLedgerSequence;
+    const drawer = document.getElementById('portfolioRecordDrawer');
+    const previousContext = document.getElementById('tenantDetailsModal')?.leaseLedger;
+    const origin = previousContext?.tenantId === String(tenantId) ? previousContext.origin
+        : drawer?.classList.contains('open') ? 'portfolio' : 'details';
+    closePortfolioRecordDrawer();
+    let modal = document.getElementById('tenantDetailsModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'tenantDetailsModal';
+        modal.className = 'modal';
+        document.body.appendChild(modal);
+    }
+    modal.leaseLedger = {tenantId:String(tenantId),propertyId,origin,tenant,payments:[]};
+    renderTenantLeaseLedger(true);
+    openModal('tenantDetailsModal');
+    try {
+        const [tenantResponse,paymentResponse] = await Promise.all([
+            fetch(`${API_URL}/properties/${propertyId}/tenants`),
+            fetch(`${API_URL}/properties/${propertyId}/payments`)
+        ]);
+        if (!tenantResponse.ok || !paymentResponse.ok) throw new Error('Unable to load tenant ledger. Please try again.');
+        const [tenants,payments] = await Promise.all([tenantResponse.json(),paymentResponse.json()]);
+        if (!Array.isArray(tenants) || !Array.isArray(payments)) throw new Error('The tenant ledger response is invalid.');
+        const currentTenant = tenants.find(item => String(item._id) === String(tenantId));
+        if (!currentTenant) throw new Error('Tenant no longer exists in this property.');
+        if (sequence !== tenantLeaseLedgerSequence || modal.leaseLedger?.tenantId !== String(tenantId)) return;
+        modal.leaseLedger.tenant = currentTenant;
+        modal.leaseLedger.payments = payments.filter(payment => String(payment.tenantId?._id || payment.tenantId) === String(tenantId));
+        for (const list of [state.tenants,state.allTenants]) {
+            const index = (list||[]).findIndex(item=>String(item._id)===String(tenantId));
+            if (index >= 0) list[index] = currentTenant;
+        }
+        renderTenantLeaseLedger();
+    } catch (error) {
+        if (sequence !== tenantLeaseLedgerSequence) return;
+        console.error('Tenant lease ledger error:',error);
+        renderTenantLeaseLedger(false,error.message);
+        showNotification(error.message,'error');
+    }
+}
+
+function closeTenantLeaseLedger() {
+    ++tenantLeaseLedgerSequence;
+    const modal = document.getElementById('tenantDetailsModal');
+    if (modal) delete modal.leaseLedger;
+    closeModal('tenantDetailsModal');
+}
+
+function backToTenantDetailsFromLedger() {
+    const modal = document.getElementById('tenantDetailsModal');
+    const context = modal?.leaseLedger;
+    if (!context) return;
+    ++tenantLeaseLedgerSequence;
+    delete modal.leaseLedger;
+    if (context.origin === 'portfolio') {
+        closeModal('tenantDetailsModal');
+        openPortfolioRecordDrawer('tenant',context.tenantId);
+    } else viewTenantDetails(context.tenantId);
+}
+
+function renderTenantLeaseLedger(loading = false, error = '') {
+    const modal = document.getElementById('tenantDetailsModal');
+    const context = modal?.leaseLedger;
+    if (!context) return;
+    const {tenant,tenantId,payments} = context;
+    let content;
+    if (loading) content = '<p role="status">Loading tenant ledger...</p>';
+    else if (error) content = `<div class="overview-alert">${escapeHtml(error)} <button type="button" class="btn-secondary" onclick="openTenantLeaseLedger('${tenantId}')">Retry</button></div>`;
+    else {
+        try {
+            const months = tenantLeaseLedgerMonths(tenant,payments);
+            const totals = months.reduce((sum,month) => ({
+                expected:sum.expected+month.expected,paid:sum.paid+month.paid,outstanding:sum.outstanding+month.outstanding
+            }),{expected:0,paid:0,outstanding:0});
+            content = `<p class="task-meta">Lease: ${formatDateDisplay(tenant.leaseStart)} to ${formatDateDisplay(tenantLeaseChargeEnd(tenant))}. Future months are scheduled charges, not overdue debt. Expected rent excludes late fees; saving it overrides only that month's rent and recurring fees.</p>
+                <div class="overview-metrics"><div class="overview-mini-stat"><span>Lease expected</span><strong>${tenantCurrency(totals.expected)}</strong></div><div class="overview-mini-stat"><span>Applied payments / credits</span><strong>${tenantCurrency(totals.paid)}</strong></div><div class="overview-mini-stat"><span>Unpaid lease charges (includes future)</span><strong>${tenantCurrency(totals.outstanding)}</strong></div></div>
+                <div class="overview-table-wrap"><table class="overview-table"><thead><tr><th>Rent month</th><th>Expected rent / fees</th><th>Late fees</th><th>Total expected</th><th>Applied</th><th>Outstanding</th></tr></thead><tbody>${months.map(month=>`<tr><td>${escapeHtml(month.period)}${month.overridden?'<div class="task-meta">Override</div>':''}</td><td><form class="tenant-ledger-charge-form" onsubmit="saveTenantLeaseLedgerExpected(event,'${month.period}')"><input type="number" name="expectedRent" min="0" step="0.01" required value="${month.rent.toFixed(2)}" aria-label="Expected rent for ${month.period}"><button type="submit" class="overview-row-action">Save</button></form></td><td>${tenantCurrency(month.late)}</td><td>${tenantCurrency(month.expected)}</td><td>${tenantCurrency(month.paid)}</td><td>${tenantCurrency(month.outstanding)}</td></tr>`).join('')}</tbody></table></div>
+                <h3>Payment history</h3>${payments.length?`<div class="overview-table-wrap"><table class="overview-table"><thead><tr><th>Received</th><th>Applied month</th><th>Apply to</th><th>Amount</th><th>Applied credit</th></tr></thead><tbody>${[...payments].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(payment=>`<tr><td>${formatDateDisplay(payment.date)}</td><td>${escapeHtml(payment.periodMonth||tenantPaymentPeriod(payment))}</td><td>${escapeHtml(payment.applyTo||'rent')}</td><td>${tenantCurrency(payment.amount)}</td><td>${tenantCurrency(payment.appliedCredit)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="task-meta">No payments recorded.</p>'}`;
+        } catch (ledgerError) {
+            console.error('Tenant ledger calculation error:',ledgerError);
+            content = `<div class="overview-alert">${escapeHtml(ledgerError.message)}</div>`;
+        }
+    }
+    modal.innerHTML = `<div class="modal-content tenant-details-modal tenant-drawer"><div class="portfolio-record-drawer-header"><h3>${escapeHtml(tenant.name||'Tenant')} ledger</h3><button type="button" aria-label="Close tenant ledger" onclick="closeTenantLeaseLedger()"><i class="fas fa-times"></i></button></div><div class="portfolio-record-drawer-body"><button type="button" class="btn-secondary" onclick="backToTenantDetailsFromLedger()"><i class="fas fa-arrow-left"></i> Back to tenant details</button><section class="tenant-lease-ledger">${content}</section></div></div>`;
+}
+
+async function saveTenantLeaseLedgerExpected(event, period) {
+    event.preventDefault();
+    const form = event.target;
+    const input = form.elements.expectedRent;
+    const expectedRent = Number(input.value);
+    const modal = document.getElementById('tenantDetailsModal');
+    const context = modal?.leaseLedger;
+    if (!context || input.value === '' || !Number.isFinite(expectedRent) || expectedRent < 0) {
+        showNotification('Enter a non-negative expected rent amount','error');
+        return;
+    }
+    const sequence = tenantLeaseLedgerSequence;
+    const button = form.querySelector('button');
+    button.disabled = true;
+    try {
+        const response = await fetch(`${API_URL}/tenants/${context.tenantId}/monthly-overrides/${period}`,{
+            method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({expectedRent})
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message||'Unable to save expected rent');
+        if (!data.override || typeof data.override.expectedRent !== 'number') throw new Error('The saved expected rent response is invalid. Reload the ledger.');
+        upsertLocalTenantMonthlyOverride(context.tenantId,period,data.override);
+        upsertLocalAllTenantMonthlyOverride(context.tenantId,period,data.override);
+        context.tenant.monthlyOverrides = {...context.tenant.monthlyOverrides,[period]:data.override};
+        if (data.termination) {
+            context.tenant.termination = data.termination;
+            for (const list of [state.tenants,state.allTenants]) {
+                const tenant = (list||[]).find(item=>String(item._id)===context.tenantId);
+                if (tenant) tenant.termination = data.termination;
+            }
+        }
+        state.propertyOverviewData = null;
+        invalidateCache('tenants','payments');
+        if (sequence === tenantLeaseLedgerSequence && modal.leaseLedger === context) renderTenantLeaseLedger();
+        showNotification(`Expected rent for ${period} saved`,'success');
+    } catch (error) {
+        console.error('Tenant expected rent save error:',error);
+        showNotification(error.message,'error');
+    } finally {
+        button.disabled = false;
+    }
+}
+
 function computeTenantRentBalance(tenantId) {
     const tenant = (state.tenants || []).find(t => String(t._id) === String(tenantId));
     if (!tenant) return 0;
     const relevant = getUnifiedCurrentPropertyPayments().filter(p => String(p.tenantId) === String(tenantId) && (p.applyTo === 'rent' || p.applyTo === undefined));
     const asOf = new Date();
     const leaseStart = tenant.leaseStart ? new Date(tenant.leaseStart) : new Date(asOf.getFullYear(), asOf.getMonth(), 1);
-    const leaseEnd = tenant.leaseEnd ? new Date(tenant.leaseEnd) : null;
+    const leaseEnd = tenantLeaseChargeEnd(tenant);
+    if (['terminated', 'expired'].includes(tenant.leaseStatus) && (!leaseEnd || !tenant.leaseStart)) return null;
     if (Number.isNaN(leaseStart.getTime()) || leaseStart > asOf) return 0;
-
-    const paidByPeriod = relevant.reduce((map, payment) => {
-        const paymentDate = payment?.date ? new Date(payment.date) : null;
-        const period = payment.periodMonth || (paymentDate && !Number.isNaN(paymentDate.getTime())
-            ? `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}`
-            : '');
-        if (!period) return map;
-        map[period] = (map[period] || 0) + Math.max(0, Number(payment.amount) || 0) + Math.max(0, Number(payment.appliedCredit) || 0);
-        return map;
-    }, {});
 
     let totalBalance = 0;
     let cursor = new Date(leaseStart.getFullYear(), leaseStart.getMonth(), 1);
     while (cursor <= asOf && (!leaseEnd || cursor <= leaseEnd)) {
-        const period = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
-        const expected = computeExpectedRentForMonth(tenant, cursor, 'rent') || 0;
-        totalBalance += Math.max(0, expected - (paidByPeriod[period] || 0));
+        totalBalance += computeTenantMonthTotals(tenant, cursor, relevant.filter(payment => !payment.date || new Date(payment.date) <= asOf)).outstanding;
         cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
     }
 
@@ -87,7 +236,7 @@ function openTenantBalanceModal(tenantId) {
         const summary = document.getElementById('tenantBalanceSummary');
         summary.innerHTML = '';
         const cards = [
-            { key:'rent', label: 'Rent Balance', value: tenantCurrency(rentBal), accent: rentBal > 0 ? '#991b1b' : (rentBal < 0 ? '#065f46' : '#2563eb') },
+            { key:'rent', label: 'Rent Balance', value: rentBal === null ? 'Needs end-date review' : tenantCurrency(rentBal), accent: rentBal > 0 ? '#991b1b' : (rentBal < 0 ? '#065f46' : '#2563eb') },
             { key:'depositPaid', label: 'Deposit Paid', value: `${tenantCurrency(dep.paid)} / ${tenantCurrency(dep.required)}`, accent: '#2563eb' },
             { key:'depositRemaining', label: 'Deposit Remaining', value: tenantCurrency(dep.remaining), accent: dep.remaining > 0 ? '#92400e' : '#065f46' },
             { key:'creditRemaining', label: 'Credit Remaining', value: tenantCurrency(-creditRemaining), accent: creditRemaining > 0 ? '#065f46' : '#2563eb' }
@@ -141,10 +290,8 @@ function openTenantBalanceModal(tenantId) {
             // Determine base-before-late: override expectedRent if present; else base proration + recurring fees for that month
             const [yy, mm] = (periodKey || '').split('-').map(Number);
             const periodDate = (yy && mm) ? new Date(yy, mm-1, 1) : new Date();
-            const base = computeExpectedBaseRentForMonth(tenantObj, periodDate) || 0;
-            const petFees = (tenantObj.pets?.hasPets ? (Number(tenantObj.pets.monthlyRent) || 0) : 0);
-            const addl = (Number(tenantObj.waterFee) || 0) + (Number(tenantObj.trashFee) || 0) + (Number(tenantObj.adminFee) || 0) + (tenantObj.additionalFee?.amount || 0) + petFees;
-            const beforeLate = Number.isFinite(Number(ov?.expectedRent)) ? Number(ov.expectedRent) : (base + addl);
+            if (!isTenantChargeableMonth(tenantObj, periodDate)) return 0;
+            const beforeLate = computeExpectedRentForMonth(tenantObj, periodDate, 'rent');
             const lfVal = Number(ov.lateFee);
             const mode = (ov.lateFeeMode === 'percent') ? 'percent' : 'amount';
             if (!Number.isFinite(lfVal)) return 0;
@@ -156,19 +303,7 @@ function openTenantBalanceModal(tenantId) {
         function computeMonthlyExpectedTotal(tenantObj, periodKey) {
             const [yy, mm] = (periodKey || '').split('-').map(Number);
             const periodDate = (yy && mm) ? new Date(yy, mm-1, 1) : new Date();
-            const base = computeExpectedBaseRentForMonth(tenantObj, periodDate) || 0;
-            const petFees = (tenantObj.pets?.hasPets ? (Number(tenantObj.pets.monthlyRent) || 0) : 0);
-            const addl = (Number(tenantObj.waterFee) || 0) + (Number(tenantObj.trashFee) || 0) + (Number(tenantObj.adminFee) || 0) + (tenantObj.additionalFee?.amount || 0) + petFees;
-            // Prefer override expectedRent if present
-            let beforeLate = base + addl;
-            let overrideMap = tenantObj.monthlyOverrides || null;
-            if (overrideMap && typeof overrideMap.get === 'function') {
-                const obj = {}; overrideMap.forEach((v,k)=>obj[k]=v); overrideMap = obj;
-            }
-            const ov = overrideMap ? overrideMap[periodKey] : null;
-            if (ov && Number.isFinite(Number(ov.expectedRent))) beforeLate = Number(ov.expectedRent);
-            const late = computeMonthlyOverrideLateFee(tenantObj, periodKey);
-            return beforeLate + late;
+            return computeTenantMonthTotals(tenantObj, periodDate, allTenantPayments).expected;
         }
 
     // Build monthly aggregation map:
@@ -462,10 +597,8 @@ function exportTenantPaymentsReport(tenantId) {
         if (!ov || (ov.lateFee == null && ov.lateFeeMode == null)) return 0;
         const [yy, mm] = periodKey.split('-').map(Number);
         const periodDate = (yy && mm) ? new Date(yy, mm-1, 1) : new Date();
-        const base = computeExpectedBaseRentForMonth(tenantObj, periodDate) || 0;
-        const petFees = (tenantObj.pets?.hasPets ? (Number(tenantObj.pets.monthlyRent) || 0) : 0);
-        const addl = (Number(tenantObj.waterFee) || 0) + (Number(tenantObj.trashFee) || 0) + (Number(tenantObj.adminFee) || 0) + (tenantObj.additionalFee?.amount || 0) + petFees;
-        const beforeLate = Number.isFinite(Number(ov?.expectedRent)) ? Number(ov.expectedRent) : (base + addl);
+        if (!isTenantChargeableMonth(tenantObj, periodDate)) return 0;
+        const beforeLate = computeExpectedRentForMonth(tenantObj, periodDate, 'rent');
         const lfVal = Number(ov.lateFee);
         const mode = (ov.lateFeeMode === 'percent') ? 'percent' : 'amount';
         if (!Number.isFinite(lfVal)) return 0;
@@ -482,16 +615,7 @@ function exportTenantPaymentsReport(tenantId) {
         }
         const [yy, mm] = periodKey.split('-').map(Number);
         const periodDate = (yy && mm) ? new Date(yy, mm-1, 1) : new Date();
-        const base = computeExpectedBaseRentForMonth(tenantObj, periodDate) || 0;
-        const petFees = (tenantObj.pets?.hasPets ? (Number(tenantObj.pets.monthlyRent) || 0) : 0);
-        const addl = (Number(tenantObj.waterFee) || 0) + (Number(tenantObj.trashFee) || 0) + (Number(tenantObj.adminFee) || 0) + (tenantObj.additionalFee?.amount || 0) + petFees;
-        const ov = overrideMap ? overrideMap[periodKey] : null;
-        let beforeLate = Number.isFinite(Number(ov?.expectedRent)) ? Number(ov.expectedRent) : (base + addl);
-        // Late fee override
-        const lfVal = Number(ov?.lateFee);
-        const mode = (ov?.lateFeeMode === 'percent') ? 'percent' : 'amount';
-        if (Number.isFinite(lfVal)) beforeLate += (mode === 'percent') ? (beforeLate * (lfVal/100)) : lfVal;
-        return beforeLate;
+        return computeTenantMonthTotals(tenantObj, periodDate, payments).expected;
     }
 
     for (const mKey of monthKeys) {

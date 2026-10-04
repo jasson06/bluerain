@@ -337,7 +337,14 @@ function enterPortfolioTenantEditMode(row, tenant) {
             leaseStart: leaseStartVal ? dateInputToISOAtNoon(leaseStartVal) : tenant.leaseStart,
             leaseEnd: leaseEndVal ? dateInputToISOAtNoon(leaseEndVal) : tenant.leaseEnd
         };
-
+        if (payload.leaseStatus === 'terminated' && tenant.leaseStatus !== 'terminated') {
+            state.currentEditingPortfolioTenantId = null;
+            showNotification('Use the guided termination workflow to review final rent and possession', 'info');
+            await selectProperty(String(propertyId));
+            switchTab('tenants');
+            openTenantTermination(tenantIdStr);
+            return;
+        }
         
         try {
             const resp = await fetch(`${API_URL}/properties/${propertyId}/tenants/${tenantIdStr}`, {
@@ -345,7 +352,8 @@ function enterPortfolioTenantEditMode(row, tenant) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if (!resp.ok) throw new Error('Failed to update tenant');
+            const result = await resp.json();
+            if (!resp.ok) throw new Error(result.message || 'Failed to update tenant');
 
             const updatedTenant = { ...tenant, ...payload };
             if (Array.isArray(state.tenants)) {
@@ -360,7 +368,7 @@ function enterPortfolioTenantEditMode(row, tenant) {
         } catch (err) {
             console.error('Inline portfolio tenant update error:', err);
             state.currentEditingPortfolioTenantId = null;
-            showNotification('Could not update tenant', 'error');
+            showNotification(err.message || 'Could not update tenant', 'error');
             renderPortfolioDetails('tenants');
        
         }

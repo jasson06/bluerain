@@ -42,6 +42,33 @@ and closes on outside click, Escape, scrolling, resizing, or table re-render.
 - portfolio-details.js
 - application-ui.js
 
+## Tenant lifecycle
+
+Tenant cards include a guided Terminate lease / Review termination action.
+The Former Tenants tab preserves ledger access and shows rent balances separately.
+Possession confirmation, not lease status alone, controls unit release.
+`shared-utilities.js` supplies lease-cutoff and tenant/period allocation helpers
+used by tenant cards, portfolio rent details, and balance-sheet/PDF calculations;
+the server equivalents are regression-tested for parity. Overview collection
+totals apply to selected-period charges; cash receipts and former balances are
+displayed separately. Deposits require a separate ledger review before settlement.
+
+Open Ledger in the shared tenant details view replaces the detail content with a
+monthly lease ledger and a Back to tenant details action. It lists all months
+from lease start through the earlier lease end/termination date, including
+future scheduled charges. Expected rent is editable per month; late fees are
+displayed separately and preserved by rent-only updates. The payment history
+shows receipt dates separately from applied rent months.
+
 ## Validation
+
+The property overview Rent collection panel lists each tenant/month in the
+selected range with expected, applied, and outstanding amounts. Badges distinguish
+Paid, Partially paid, Unpaid, Scheduled future payments, and No charge.
+Tenant names open the editable lease ledger. The list uses the same server
+tenant/period calculations as the panel totals, not a separate browser estimate.
+Overview cache reuse requires the same property/date range and a payment
+breakdown that reconciles with all three rent totals. Missing or inconsistent
+details display a refresh error rather than a false empty-payment message.
 
 The initial split preserved all 561 function declarations exactly. A subsequent static audit removed seven unreferenced functions and three superseded duplicate declarations; retained function bodies are unchanged. All startup statements were preserved exactly in their original order. Every generated script parses successfully. Effective global function definitions match the original, including duplicate declarations. Live authenticated browser flows were not exercised.

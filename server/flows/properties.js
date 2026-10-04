@@ -1,6 +1,7 @@
 // properties flow. Shared dependencies remain live through serverContext.
 // Route registration is invoked by server.js in its original order.
 module.exports = function createFlow(serverContext) {
+const tenantLifecycle = require('../tenant-lifecycle');
 
 
 
@@ -97,6 +98,7 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
     const now = new Date();
     const from = req.query.from ? new Date(req.query.from) : new Date(now.getFullYear(), now.getMonth(), 1);
     const to = req.query.to ? new Date(req.query.to) : new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from >= to) return res.status(400).json({message:'Choose a valid overview date range'});
     const in90Days = new Date(now.getTime() + 90 * 86400000);
     const units = await serverContext.Unit.find({ projectId: id }).lean();
     const unitIds = units.map(unit => unit._id).filter(Boolean);
@@ -148,7 +150,7 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
     const payments = [...localPeriodPayments, ...quickBooksOnlyPaymentsToDate.filter(payment => isDateWithinPeriod(payment?.date))];
     const historicalRentPayments = [...localPaymentsToDate, ...quickBooksOnlyPaymentsToDate].filter(payment => {
       const paymentDate = payment?.date ? new Date(payment.date) : null;
-      if (!paymentDate || Number.isNaN(paymentDate.getTime()) || paymentDate >= to) return false;
+      if (!paymentDate || Number.isNaN(paymentDate.getTime()) || paymentDate >= to || paymentDate > now) return false;
       if (!String(payment?.tenantId || '')) return false;
       return (payment.applyTo || 'rent') === 'rent';
     });
@@ -158,11 +160,27 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
     const monthlyRentRoll = rentTenants.reduce((sum, tenant) => sum + (0, serverContext.computeTenantPostedMonthlyRent)(tenant), 0);
     const monthlyGrossPotentialRent = monthlyRentRoll + units.reduce((sum, unit) =>
       sum + (rentedUnitIds.has(String(unit._id)) ? 0 : amountOrZero(unit.rent)), 0);
-    let expectedRent = 0;
+    let expectedRent = 0, rentCollected = 0, rentOutstanding = 0;
+    const expectedPayments = [];
     let grossPotentialRent = 0;
     let cursor = new Date(from.getFullYear(), from.getMonth(), 1);
     while (cursor < to) {
-      expectedRent += monthlyRentRoll;
+      tenants.filter(tenant => tenant.leaseStatus !== 'pending').forEach(tenant => {
+        const totals = tenantLifecycle.tenantMonthTotals(tenant, cursor, historicalRentPayments, serverContext.computeExpectedRentForMonth);
+        expectedRent += totals.expected;
+        rentCollected += totals.paid;
+        rentOutstanding += totals.outstanding;
+        if (tenantLifecycle.isChargeableMonth(tenant,cursor)) {
+          const unitId = String(tenant.unitId?._id || tenant.unitId || '');
+          const status = totals.expected <= 0 ? 'no-charge' : totals.outstanding <= 0.005 ? 'paid'
+            : totals.paid > 0 ? 'partial' : cursor > now ? 'scheduled' : 'unpaid';
+          expectedPayments.push({
+            tenantId:tenant._id,tenantName:tenant.name,unitNumber:unitById.get(unitId)?.number ?? '',
+            period:`${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,'0')}`,
+            ...totals,status
+          });
+        }
+      });
       grossPotentialRent += monthlyGrossPotentialRent;
       cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
     }
@@ -170,8 +188,8 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
     const scheduledRent = monthlyRentRoll;
     const rentPayments = payments.filter(p => (p.applyTo || 'rent') === 'rent');
     const nonDepositPayments = payments.filter(p => (p.applyTo || 'rent') !== 'deposit');
-    const rentCollected = rentPayments.reduce((sum, payment) => sum + amountOrZero(payment.amount), 0);
-    const rentalIncome = rentCollected;
+    const cashRentCollected = rentPayments.reduce((sum, payment) => sum + amountOrZero(payment.amount), 0);
+    const rentalIncome = cashRentCollected;
     const otherIncome = nonDepositPayments
       .filter(payment => (payment.applyTo || 'rent') !== 'rent')
       .reduce((sum, payment) => sum + amountOrZero(payment.amount), 0);
@@ -290,35 +308,34 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
 
     const asOf = new Date(Math.min(now.getTime(), to.getTime() - 1));
     const delinquencyRows = [];
+    const formerTenantRows = [];
     const aging = { current: 0, days31to60: 0, days61to90: 0, days90plus: 0 };
-    activeTenants.forEach(tenant => {
+    tenants.forEach(tenant => {
       const leaseStart = tenant.leaseStart ? new Date(tenant.leaseStart) : new Date(asOf.getFullYear(), asOf.getMonth(), 1);
-      const leaseEnd = tenant.leaseEnd ? new Date(tenant.leaseEnd) : null;
+      const leaseEnd = tenantLifecycle.leaseEndForCharges(tenant);
+      const former = tenantLifecycle.isFormerTenant(tenant);
+      if (former && (!leaseEnd || !tenant.leaseStart)) {
+        formerTenantRows.push({tenantId:tenant._id,tenantName:tenant.name,balance:null,needsReview:true,message:'Record lease start and termination/end dates to calculate the final balance'});
+        return;
+      }
       if (Number.isNaN(leaseStart.getTime()) || leaseStart > asOf) return;
-      const tenantPayments = historicalRentPayments.filter(payment => String(payment.tenantId) === String(tenant._id));
-      const paidByPeriod = tenantPayments.reduce((map, payment) => {
-        const paymentDate = new Date(payment.date);
-        const period = payment.periodMonth || (!Number.isNaN(paymentDate.getTime()) ? `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}` : '');
-        if (period) map[period] = (map[period] || 0) + (Number(payment.amount) || 0) + (Number(payment.appliedCredit) || 0);
-        return map;
-      }, {});
+      const tenantPayments = historicalRentPayments.filter(payment => String(payment.tenantId?._id || payment.tenantId) === String(tenant._id) && new Date(payment.date) <= asOf);
       let totalBalance = 0;
       const tenantAging = { current: 0, days31to60: 0, days61to90: 0, days90plus: 0 };
       let cursor = new Date(leaseStart.getFullYear(), leaseStart.getMonth(), 1);
       while (cursor <= asOf && (!leaseEnd || cursor <= leaseEnd)) {
-        const period = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
-        const expected = (0, serverContext.computeExpectedRentForMonth)(tenant, cursor, 'rent') || 0;
-        const balance = Math.max(0, expected - (paidByPeriod[period] || 0));
+        const balance = tenantLifecycle.tenantMonthTotals(tenant, cursor, tenantPayments, serverContext.computeExpectedRentForMonth).outstanding;
         if (balance > 0.005) {
           const ageDays = Math.max(0, Math.floor((asOf - cursor) / 86400000));
           const bucket = ageDays <= 30 ? 'current' : ageDays <= 60 ? 'days31to60' : ageDays <= 90 ? 'days61to90' : 'days90plus';
-          tenantAging[bucket] += balance; aging[bucket] += balance; totalBalance += balance;
+          tenantAging[bucket] += balance; if (!former) aging[bucket] += balance; totalBalance += balance;
         }
         cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
       }
-      if (totalBalance > 0.005) {
+      if (former || totalBalance > 0.005) {
         const unit = unitById.get(String(tenant.unitId || ''));
-        delinquencyRows.push({ tenantId: tenant._id, tenantName: tenant.name, unitId: tenant.unitId, unitNumber: unit?.number || '', balance: totalBalance, aging: tenantAging });
+        const row = { tenantId: tenant._id, tenantName: tenant.name, unitId: tenant.unitId, unitNumber: unit?.number || '', balance: totalBalance, aging: tenantAging };
+        (former ? formerTenantRows : delinquencyRows).push(row);
       }
     });
     delinquencyRows.sort((a, b) => b.balance - a.balance);
@@ -341,14 +358,16 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
     const quickBooksOnlyPaymentsInPeriod = quickBooksOnlyPaymentsToDate.filter(payment => isDateWithinPeriod(payment?.date));
 
     res.json({
-      generatedAt: new Date(), range: { from, to }, property, expenseDetails,
+      generatedAt: new Date(), range: { from, to }, property, expenseDetails, expectedPayments,
       summary: {
         totalUnits: units.length,
         occupied: units.filter(u => u.status === 'occupied').length,
         vacant: units.filter(u => u.status === 'vacant').length,
         maintenanceUnits: units.filter(u => u.status === 'maintenance').length,
         occupancyRate: units.length ? Math.round(units.filter(u => u.status === 'occupied').length / units.length * 100) : 0,
-        rentRoll, expectedRent, periodMonths, rentCollected, rentOutstanding: Math.max(0, expectedRent - rentCollected),
+        rentRoll, expectedRent, periodMonths, rentCollected, rentOutstanding, cashRentCollected,
+        totalCashCollected: nonDepositPayments.reduce((sum, payment) => sum + amountOrZero(payment.amount), 0),
+        formerTenantBalance: formerTenantRows.reduce((sum, row) => sum + (row.balance || 0), 0),
         collectionRate: expectedRent ? Math.min(100, Math.round(rentCollected / expectedRent * 100)) : 0,
         openMaintenance: openMaintenance.length,
         urgentMaintenance: openMaintenance.filter(item => item.priority === 'urgent').length,
@@ -359,6 +378,7 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
       },
       financials: {
         rentalIncome,
+        cashRentCollected,
         otherIncome,
         depositCollections,
         operatingExpenses,
@@ -396,6 +416,7 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
         }
       },
       delinquency: { total: delinquentTotal, tenantCount: delinquencyRows.length, aging, tenants: delinquencyRows },
+      formerTenants: {total:formerTenantRows.reduce((sum,row)=>sum+(row.balance||0),0),tenantCount:formerTenantRows.filter(row=>row.balance>0.005).length,needsReview:formerTenantRows.filter(row=>row.needsReview).length,tenants:formerTenantRows},
       quickBooks: {
         connected: quickBooksConnection?.status === 'connected',
         status: quickBooksConnection?.status || 'not-connected',

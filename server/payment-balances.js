@@ -1,5 +1,6 @@
 // Shared with the manual payment Update action; preserves its charge rules.
 module.exports = function paymentBalances(serverContext) {
+  const tenantLifecycle = require('./tenant-lifecycle');
   function comparePayments(a,b) {
     const time = v => { const n = new Date(v || 0).getTime(); return Number.isFinite(n) ? n : 0; };
     return time(a.date)-time(b.date)
@@ -38,7 +39,7 @@ module.exports = function paymentBalances(serverContext) {
           calculatedLateFee = payment.lateFee;
         }
       } else if (payment.type === 'hub') {
-        expectedAmount = Number(tenantData.hubContribution) || 0;
+        expectedAmount = tenantLifecycle.isChargeableMonth(tenantData, paymentDate) ? Number(tenantData.hubContribution) || 0 : 0;
         // Late fee override for month still applies to hub-type rent months; roll into expected
         const period = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth()+1).padStart(2,'0')}`;
         const mo = tenantData?.monthlyOverrides;
@@ -55,6 +56,11 @@ module.exports = function paymentBalances(serverContext) {
         } else if (payment.lateFee && payment.lateFee > 0) {
           calculatedLateFee = payment.lateFee;
         }
+      }
+      if (!tenantLifecycle.isChargeableMonth(tenantData,paymentDate)) {
+        expectedAmount = 0;
+        calculatedLateFee = 0;
+        overrideLateApplied = true;
       }
       const period = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth()+1).padStart(2,'0')}`;
       const tenantPayments = loaded ? loaded.payments.filter(p=>p.applyTo==='rent' && String(p._id)!==String(payment._id)) : await serverContext.Payment.find({
@@ -88,8 +94,9 @@ module.exports = function paymentBalances(serverContext) {
     return payment;
   }
 
-  async function refreshTenant(tenantId) {
-    const [payments,tenant] = await Promise.all([serverContext.Payment.find({tenantId}),serverContext.Tenant.findById(tenantId)]);
+  async function refreshTenant(tenantId, session) {
+    const paymentsQuery = serverContext.Payment.find({tenantId}), tenantQuery = serverContext.Tenant.findById(tenantId);
+    const [payments,tenant] = await Promise.all([session ? paymentsQuery.session(session) : paymentsQuery, session ? tenantQuery.session(session) : tenantQuery]);
     const writes = [];
     for (const payment of payments) {
       const previousBalance = payment.balance;
@@ -103,8 +110,8 @@ module.exports = function paymentBalances(serverContext) {
       }
     }
     if(writes.length) {
-      if(serverContext.Payment.bulkWrite) await serverContext.Payment.bulkWrite(writes,{ordered:true});
-      else for(const entry of writes) await serverContext.Payment.updateOne(entry.updateOne.filter,entry.updateOne.update);
+      if(serverContext.Payment.bulkWrite) await serverContext.Payment.bulkWrite(writes,{ordered:true,...(session ? {session} : {})});
+      else for(const entry of writes) await serverContext.Payment.updateOne(entry.updateOne.filter,entry.updateOne.update,session ? {session} : {});
     }
   }
   return {recalculate, refreshTenant, comparePayments};

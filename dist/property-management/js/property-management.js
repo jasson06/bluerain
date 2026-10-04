@@ -1296,9 +1296,12 @@ document.getElementById('editMonthChargesForm')?.addEventListener('submit', asyn
             body: JSON.stringify(payload)
         });
         if (!resp.ok) throw new Error('Failed to save override');
+        const saved = await resp.json();
         showNotification('Monthly charges saved', 'success');
         // Instant UI reflection: update local state and re-render tenants now
-        upsertLocalTenantMonthlyOverride(tenantId, period, payload);
+        upsertLocalTenantMonthlyOverride(tenantId, period, saved.override);
+        upsertLocalAllTenantMonthlyOverride(tenantId, period, saved.override);
+        state.propertyOverviewData = null;
         renderTenants();
     renderPayments();
         // Refresh payments to reflect
@@ -1330,6 +1333,7 @@ document.getElementById('clearMonthChargesBtn')?.addEventListener('click', async
     const modeSel2 = document.getElementById('editChargesLateFeeMode');
     if (modeSel2) modeSel2.value = 'amount';
         showNotification('Override removed', 'success');
+        state.propertyOverviewData = null;
         // Instant UI reflection: remove locally and re-render
         upsertLocalTenantMonthlyOverride(tenantId, period, null);
         renderTenants();
@@ -1628,6 +1632,14 @@ renderPortfolioTenantGridCard=function(item){
     return `<div class="tenant-card" data-portfolio-tenant-card="${tenant._id}" style="min-width:0;"><div class="tenant-header"><div class="tenant-avatar-small">${initials}</div><div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;"><h3 style="margin:0;min-width:0;">${escapeHtml(name)}</h3><span class="lease-badge ${escapeHtml(String(leaseStatus).toLowerCase())}" style="flex:0 0 auto;"><i class="fas fa-circle"></i>${escapeHtml(leaseStatusText)}</span></div><div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;">${renderPortfolioTenantNotesBadge(tenant)}<button type="button" onclick="openPortfolioRecordDrawer('tenant','${tenant._id}')" class="btn-secondary"><i class="fas fa-eye"></i> Details</button><button type="button" onclick="editTenant('${tenant._id}')" class="btn-secondary"><i class="fas fa-pen"></i> Edit</button></div></div><div class="tenant-card-scroll" style="overflow:hidden;"><div class="tenant-card-layout portfolio-tenant-card-columns"><div class="tenant-card-main portfolio-tenant-card-details"><div class="tenant-info"><div class="tenant-section"><div class="tenant-section-title"><i class="fas fa-building"></i> Property</div><div class="tenant-detail-row"><span>${escapeHtml(item.propertyName||'—')}</span></div><div class="tenant-detail-row">${assignedUnit?`Unit ${escapeHtml(assignedUnit.number||'—')} (${escapeHtml(String(assignedUnit.bedrooms??'N/A'))} bed, ${escapeHtml(String(assignedUnit.bathrooms??'N/A'))} bath)`:`Unit ${escapeHtml(item.unitLabel||'—')}`}</div><div class="tenant-detail-row"><span>Parking:</span><span>${escapeHtml(parkingAssignment)}</span></div><div class="tenant-detail-row"><span>Access Code:</span><span>${escapeHtml(tenant.accessCode||'Not set')}</span></div></div><div class="tenant-section"><div class="tenant-section-title"><i class="fas fa-address-card"></i> Contact</div><div class="tenant-detail-row"><span><i class="fas fa-phone"></i> ${escapeHtml(item.phone||'—')}</span></div><div class="tenant-detail-row"><span><i class="fas fa-envelope"></i> ${escapeHtml(item.email||'—')}</span></div></div><div class="tenant-section"><div class="tenant-section-title"><i class="fas fa-calendar-alt"></i> Lease</div><div class="tenant-detail-row"><span>Lease:</span><span>${escapeHtml(leaseStart)} - ${escapeHtml(leaseEnd)}</span></div>${leaseCountdownHtml}${rentStatusBadge?`<div class="tenant-detail-row">${rentStatusBadge}</div>`:''}<div class="tenant-detail-row"><span>Deposit:</span><span>$${(Number(tenant.deposit)||0).toFixed(2)}</span></div><div class="tenant-detail-row"><span>Base Rent:</span><span>$${(Number(tenant.baseRent)||0).toFixed(2)}</span></div><div class="tenant-detail-row"><span>Total Fees:</span><span style="font-weight:600;color:#2980b9;">$${additionalFees.toFixed(2)}</span></div><div class="tenant-detail-row"><span>Total Rent:</span><span style="font-weight:700;color:#217dbb;font-size:1.08em;letter-spacing:0.5px;background:#eaf6ff;padding:3px 12px;border-radius:12px;">$${totalRent.toFixed(2)}</span></div><div class="tenant-detail-row"><span>Balance:</span><span>${portfolioMoney(item.balance?.remainingRent||0)}</span></div></div><div class="tenant-section"><div class="tenant-section-title"><i class="fas fa-user-shield"></i> Emergency</div>${emergency}</div></div></div><div class="maintenance-thread compact-maintenance-thread tenant-card-thread portfolio-tenant-card-notes"><div class="tenant-card-thread-header"><span><i class="fas fa-comments" style="color:#2563eb;margin-right:6px;"></i>Tenant Notes</span><span style="font-size:0.8rem;color:#64748b;">${item.notesCount}</span></div><div class="maintenance-thread-messages" style="display:grid;gap:6px;margin-bottom:6px;padding-right:4px;align-content:start;scrollbar-width:none;min-height:0;">${notesMarkup}</div><form onsubmit="sendTenantCardNote(event, '${tenant._id}')" class="tenant-card-thread-form"><input name="message" type="text" maxlength="1200" placeholder="Add tenant note or reply" style="border:1px solid #cbd5e1;border-radius:8px;padding:7px 9px;background:#fff;"><button type="submit" class="btn-secondary"><i class="fas fa-paper-plane"></i> Send</button></form></div></div></div></div>`;
 };
 
+const renderTenantDetailsWithLedgerBase=renderPortfolioTenantDrawerContent;
+renderPortfolioTenantDrawerContent=function(tenantId){
+    return renderTenantDetailsWithLedgerBase(tenantId).replaceAll(
+        `closePortfolioRecordDrawer();openPortfolioTenantLedger('${tenantId}')`,
+        `openTenantLeaseLedger('${tenantId}')`
+    );
+};
+
 const openPortfolioRecordDrawerBase=openPortfolioRecordDrawer;
 openPortfolioRecordDrawer=function(kind,id){
     const drawer=document.getElementById('portfolioRecordDrawer');if(drawer)drawer.classList.toggle('tenant-drawer',kind==='tenant');
@@ -1689,6 +1701,9 @@ openPortfolioRecordDrawer=function(kind,id){
 
 const viewTenantDetailsBase=viewTenantDetails;
 viewTenantDetails=async function(tenantId){
+    ++tenantLeaseLedgerSequence;
+    const existingModal=document.getElementById('tenantDetailsModal');
+    if(existingModal)delete existingModal.leaseLedger;
     const content = renderPortfolioTenantDrawerContent(tenantId);
     if (!content) return viewTenantDetailsBase(tenantId);
     let modal = document.getElementById('tenantDetailsModal');
@@ -1738,4 +1753,3 @@ window.deletePayment = deletePayment;
 window.openTenantBalanceModal = openTenantBalanceModal;
 // Export functions for reports
 window.exportTenantPaymentsReportFromModal = exportTenantPaymentsReportFromModal;
-
