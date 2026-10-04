@@ -9,10 +9,11 @@ module.exports = function paymentAllocations(context) {
     if(!Array.isArray(rows)||!rows.length||rows.length>40)throw Error('Enter between 1 and 40 allocations');
     const allowed=['rent','deposit','fee','late','water','electric','trash','admin','other'];
     const result=rows.map(row=>{
+      if(cents(row.amount)===0)return null;
       if(!allowed.includes(row.applyTo))throw Error('Choose a valid allocation category');
       if(!/^20\d{2}-(0[1-9]|1[0-2])$/.test(row.periodMonth||''))throw Error('Choose a month for every allocation');
       return {amount:cents(row.amount)/100,applyTo:row.applyTo,periodMonth:row.periodMonth,feeLabel:String(row.feeLabel||'').trim().slice(0,200),feeType:row.applyTo==='fee'?'other':''};
-    }).filter(row=>row.amount>0);
+    }).filter(Boolean);
     if(!result.length||result.reduce((sum,row)=>sum+cents(row.amount),0)!==cents(total))throw Error('Allocated amounts must equal the received payment amount exactly');
     return result;
   }
