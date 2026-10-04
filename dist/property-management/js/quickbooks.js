@@ -61,16 +61,21 @@ function getOverviewRange() {
   return {from:from.toISOString(),to:to.toISOString()};
 }
 
+const quickBooksProgressTimers=new Map();
 function setQuickBooksProgress(area, message, kind='loading') {
   const anchor=document.getElementById(area==='payments'?'paymentsList':'quickBooksConnectionSummary');
   if(!anchor)return;
   const id=area==='payments'?'qbPaymentsProgress':'qbSetupProgress';
+  clearTimeout(quickBooksProgressTimers.get(id));
   let banner=document.getElementById(id);
   if(!banner){banner=document.createElement('div');banner.id=id;banner.setAttribute('role','status');banner.setAttribute('aria-live','polite');anchor.parentNode.insertBefore(banner,anchor);}
+  banner.hidden=false;
   banner.className=kind==='error'?'overview-alert':kind==='success'?'overview-ok':'empty-compact';
   banner.style.marginBottom='12px';
   banner.innerHTML=`<i aria-hidden="true" class="fas ${kind==='loading'?'fa-spinner fa-spin':kind==='error'?'fa-triangle-exclamation':'fa-circle-check'}"></i> ${escapeHtml(message)}`;
+  if(area==='payments'&&kind==='error'){banner.className='qb-payment-progress';banner.innerHTML=ledgerAttentionBadge('QuickBooks needs attention',message);}
   anchor.setAttribute('aria-busy',kind==='loading'?'true':'false');
+  if(area==='payments'&&['success','info'].includes(kind))quickBooksProgressTimers.set(id,setTimeout(()=>{banner.hidden=true;quickBooksProgressTimers.delete(id);},4000));
 }
 
 let paymentAllocationEditor=null;

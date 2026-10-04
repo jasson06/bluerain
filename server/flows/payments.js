@@ -45,6 +45,12 @@ function computeFirstMonthProratedBaseRent(tenant, dateLike) {
 // For the first lease month: prorate baseRent only per requirements
 // For subsequent months: full baseRent + recurring monthly fees
 function computeExpectedRentForMonth(tenant, dateLike, paymentType) {
+  if(String(tenant?.leaseStatus||'').trim().toLowerCase()==='terminated'){
+    const stopped=tenant.terminationDate||tenant.terminatedAt||tenant.moveOutDate||(tenant.leaseEnd&&new Date(tenant.leaseEnd)<=new Date()?tenant.leaseEnd:null);
+    const stop=stopped?new Date(stopped):null, requested=new Date(dateLike);
+    if(!stop||!Number.isFinite(stop.getTime())||new Date(requested.getFullYear(),requested.getMonth(),1)>stop)return 0;
+  }
+
   const d = new Date(dateLike);
   const period = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
   // Check for manual expected rent override for this month

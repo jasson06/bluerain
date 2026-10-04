@@ -2,6 +2,7 @@
 const cents = value => Math.round((Number(value)||0)*100);
 const periodOf = p => /^\d{4}-(0[1-9]|1[0-2])$/.test(p.periodMonth||'') ? p.periodMonth : String(p.date instanceof Date?p.date.toISOString():p.date||'').slice(0,7);
 const categories=['rent','deposit','fee','late','water','electric','trash','admin','other'];
+function calendarDate(value){const date=value instanceof Date?value.toISOString():String(value||'');return /^\d{4}-\d{2}-\d{2}/.test(date)?new Date(date.slice(0,10)+'T12:00:00'):new Date(value);}
 function suggestLine(line,invoiceDate){
   const text=`${line.SalesItemLineDetail?.ItemRef?.name||''} ${line.Description||''}`.toLowerCase();
   const category=/non.?refundable|application/.test(text)?'fee':/late/.test(text)?'late':/deposit/.test(text)?'deposit':/rent|prorat/.test(text)?'rent':/water/.test(text)?'water':/electric/.test(text)?'electric':/trash/.test(text)?'trash':/admin/.test(text)?'admin':'other';
@@ -11,6 +12,7 @@ function suggestLine(line,invoiceDate){
   return {category,periodMonth:month<0?String(invoiceDate).slice(0,7):`${year}-${String(month+1).padStart(2,'0')}`};
 }
 function buildCharges(tenant,snapshot,expectedRent,asOf=new Date()){
+  tenant={...(typeof tenant.toObject==='function'?tenant.toObject():tenant),...(tenant.leaseStart?{leaseStart:calendarDate(tenant.leaseStart)}:{}),...(tenant.leaseEnd?{leaseEnd:calendarDate(tenant.leaseEnd)}:{})};
   const overrides=snapshot.overrides||{},charges=[];
   for(const invoice of snapshot.invoices||[]){
     if(Number(invoice.TotalAmt)===0)continue;
@@ -28,7 +30,11 @@ function buildCharges(tenant,snapshot,expectedRent,asOf=new Date()){
   // Classification remains visible for review; no duplicate lease charge is added.
   const covered=new Set(charges.filter(c=>!c.ignored).map(c=>`${c.category}:${c.periodMonth}`));
   const start=tenant.leaseStart?new Date(tenant.leaseStart):new Date(asOf.getFullYear(),asOf.getMonth(),1);
-  const end=tenant.leaseEnd?new Date(tenant.leaseEnd):asOf;
+  const terminated=String(tenant.leaseStatus||'').trim().toLowerCase()==='terminated';
+  // A future contractual leaseEnd does not authorize rent after termination.
+  // Without an actual end date, retain recorded charges but invent no history.
+  const termination=tenant.terminationDate||tenant.terminatedAt||tenant.moveOutDate;
+  const end=terminated?(termination?calendarDate(termination):tenant.leaseEnd&&calendarDate(tenant.leaseEnd)<=asOf?calendarDate(tenant.leaseEnd):new Date(0)):(tenant.leaseEnd?calendarDate(tenant.leaseEnd):asOf);
   if(Number.isFinite(start.getTime()))for(let d=new Date(start.getFullYear(),start.getMonth(),1),count=0;d<=asOf&&d<=end&&count<1200;d=new Date(d.getFullYear(),d.getMonth()+1,1),count++){
     const period=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     const local=(category,amount,description)=>{if(!covered.has(`${category}:${period}`)&&amount>0)charges.push({id:`lease:${category}:${period}`,source:'lease',category,periodMonth:period,description,amount,...(overrides[`lease:${category}:${period}`]||{}),needsReview:false});};
@@ -69,7 +75,7 @@ function calculate(charges,payments,options={}){
   let unapplied=0,issuedCredits=0,consumedCredits=0;
   for(const p of sorted){
     if(p.postingStatus==='conflict'||p.postingStatus==='pending')continue;
-    if(Number(p.amount)<0){issuedCredits+=Math.abs(cents(p.amount));paymentEntries.push({paymentId:String(p._id),amount:Number(p.amount),applied:0,unapplied:Math.abs(cents(p.amount))/100,balance:Number(p.amount),isCredit:true,allocations:[]});continue;}
+    if(Number(p.amount)<0){issuedCredits+=Math.abs(cents(p.amount));paymentEntries.push({paymentId:String(p._id),date:p.date,periodMonth:periodOf(p),amount:Number(p.amount),applied:0,unapplied:Math.abs(cents(p.amount))/100,balance:Number(p.amount),isCredit:true,allocations:[]});continue;}
     consumedCredits+=Math.max(0,cents(p.appliedCredit));
     let remaining=Math.max(0,cents(p.amount))+Math.max(0,cents(p.appliedCredit));
     const initial=remaining,assigned=[];
@@ -85,7 +91,7 @@ function calculate(charges,payments,options={}){
     unapplied+=remaining;
     if(explicit&&!entries.some(c=>c.id===explicit))issues.push(`Payment ${p._id} references a charge that is no longer present.`);
     const matching=entries.filter(c=>c.category===(p.applyTo||'rent')&&c.periodMonth===periodOf(p));
-    paymentEntries.push({paymentId:String(p._id),amount:initial/100,applied:(initial-remaining)/100,unapplied:remaining/100,balance:matching.reduce((s,c)=>s+Math.max(0,c.chargedCents-c.paidCents),0)/100,allocations:assigned});
+    paymentEntries.push({paymentId:String(p._id),date:p.date,periodMonth:periodOf(p),amount:initial/100,applied:(initial-remaining)/100,unapplied:remaining/100,balance:matching.reduce((s,c)=>s+Math.max(0,c.chargedCents-c.paidCents),0)/100,allocations:assigned});
   }
   unapplied+=Math.max(0,issuedCredits-consumedCredits);
   let legacyConsumed=consumedCredits;
@@ -139,7 +145,7 @@ module.exports=function tenantChargeLedger(context){
     const result=reconcileInvoices(calculate(charges,payments.filter(p=>new Date(p.date)<=new Date()),{depositPaid:tenant.depositPaid,creditApplications:doc.creditApplications}),doc);
     const invoices=(doc.invoices||[]).map(i=>({id:String(i.Id),number:i.DocNumber||i.Id,total:i.TotalAmt,balance:i.Balance}));
     if(!doc.refreshedAt&&Object.keys(tenant.quickBooks||{}).length)warning=warning||'Invoice charges have not been refreshed. Refresh QuickBooks charges before relying on these totals.';
-    return{...result,tenantName:tenant.name,version:doc.version||0,warning,invoices,refreshedAt:doc.refreshedAt||null,audit:(doc.audit||[]).slice(-50)};
+    return{...result,tenantName:tenant.name,leaseStatus:tenant.leaseStatus||'active',version:doc.version||0,warning,invoices,refreshedAt:doc.refreshedAt||null,audit:(doc.audit||[]).slice(-50)};
   }
   async function change(propertyId,tenantId,body){
     const tenant=await context.Tenant.findOne({_id:tenantId,projectId:propertyId}).lean();if(!tenant)throw Error('Tenant not found');
@@ -179,6 +185,7 @@ module.exports=function tenantChargeLedger(context){
     const byTenant=new Map();for(const p of payments){if(new Date(p.date)>asOf)continue;const id=String(p.tenantId);if(!byTenant.has(id))byTenant.set(id,[]);byTenant.get(id).push(p);}
     let missingSnapshots=0;
     for(const tenant of tenants){
+      if(String(tenant.leaseStatus||'').trim().toLowerCase()==='terminated')continue;
       const doc=snapshots.get(String(tenant._id))||{};
       if(!doc.refreshedAt&&Object.keys(tenant.quickBooks||{}).length)missingSnapshots++;
       const result=calculate(buildCharges(tenant,doc,context.computeExpectedRentForMonth,asOf),byTenant.get(String(tenant._id))||[],{depositPaid:asOf.toDateString()===new Date().toDateString()?tenant.depositPaid:0,creditApplications:(doc.creditApplications||[]).filter(a=>new Date(a.at)<=asOf)});

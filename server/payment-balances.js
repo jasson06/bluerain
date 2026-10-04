@@ -95,7 +95,7 @@ module.exports = function paymentBalances(serverContext) {
     if(tenant?.projectId&&serverContext.Payment.db?.collection){
       const service=require('./tenant-charge-ledger');
       const snapshot=await service(serverContext).snapshot(tenant.projectId,tenantId);
-      if(snapshot.refreshedAt||(snapshot.manualCharges||[]).length||(snapshot.creditApplications||[]).length){
+      if(String(tenant.leaseStatus||'').toLowerCase()==='terminated'||snapshot.refreshedAt||(snapshot.manualCharges||[]).length||(snapshot.creditApplications||[]).length){
         const charges=service.buildCharges(tenant,snapshot,serverContext.computeExpectedRentForMonth);
         ledgerBalances=new Map(service.calculate(charges,payments,{depositPaid:tenant.depositPaid,creditApplications:snapshot.creditApplications}).payments.map(p=>[p.paymentId,p.balance]));
       }
