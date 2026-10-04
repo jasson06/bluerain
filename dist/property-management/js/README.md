@@ -4,6 +4,11 @@ Feature files contain classic global function declarations. The HTML loads them 
 
 Existing account, toolbar, and sorting scripts retain their positions.
 
+Payment rows expose download receipt, email receipt, and delete through the
+vertical three-dot Actions menu in payments-search.js. The menu is mounted
+outside the scrolling table to avoid clipping, supports keyboard navigation,
+and closes on outside click, Escape, scrolling, resizing, or table re-render.
+
 ## Feature files
 
 - maintenance-workflow.js

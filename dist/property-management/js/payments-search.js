@@ -255,7 +255,88 @@ function matchesUnifiedPaymentQuery(row, query) {
 }
 
 // Render payments list
+let paymentActionsMenu = null;
+let paymentActionsTrigger = null;
+
+function closePaymentActionsMenu(restoreFocus = false) {
+    if (!paymentActionsMenu) return;
+    paymentActionsMenu.remove();
+    paymentActionsMenu = null;
+    const trigger = paymentActionsTrigger;
+    paymentActionsTrigger = null;
+    trigger?.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('click', dismissPaymentActionsMenu);
+    document.removeEventListener('keydown', handlePaymentActionsKeydown);
+    window.removeEventListener('scroll', dismissPaymentActionsMenu, true);
+    window.removeEventListener('resize', dismissPaymentActionsMenu);
+    if (restoreFocus && trigger?.isConnected) trigger.focus();
+}
+
+function dismissPaymentActionsMenu(event) {
+    if (event.type === 'click' && (paymentActionsMenu?.contains(event.target) || paymentActionsTrigger?.contains(event.target))) return;
+    closePaymentActionsMenu();
+}
+
+function handlePaymentActionsKeydown(event) {
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        closePaymentActionsMenu(true);
+        return;
+    }
+    if (event.key === 'Tab') {
+        closePaymentActionsMenu(true);
+        return;
+    }
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const items = Array.from(paymentActionsMenu.querySelectorAll('button'));
+    const index = items.indexOf(document.activeElement);
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1
+        : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+    items[next].focus();
+}
+
+function openPaymentActionsMenu(event, paymentId) {
+    event.stopPropagation();
+    const trigger = event.currentTarget;
+    const wasOpen = paymentActionsTrigger === trigger;
+    closePaymentActionsMenu();
+    if (wasOpen) return;
+    paymentActionsTrigger = trigger;
+    trigger.setAttribute('aria-expanded', 'true');
+    const menu = document.createElement('div');
+    paymentActionsMenu = menu;
+    menu.id = 'paymentActionsMenu';
+    menu.className = 'payment-actions-menu';
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', 'Payment actions');
+    menu.innerHTML = `
+        <button type="button" role="menuitem" data-action="download"><i class="fas fa-file-arrow-down" aria-hidden="true"></i> Download receipt</button>
+        <button type="button" role="menuitem" data-action="email"><i class="fas fa-paper-plane" aria-hidden="true"></i> Email receipt</button>
+        <button type="button" role="menuitem" data-action="delete" class="payment-action-delete"><i class="fas fa-trash" aria-hidden="true"></i> Delete</button>`;
+    menu.addEventListener('click', actionEvent => {
+        actionEvent.stopPropagation();
+        const action = actionEvent.target.closest('button[data-action]')?.dataset.action;
+        if (!action) return;
+        closePaymentActionsMenu(true);
+        if (action === 'download') exportReceipt(paymentId);
+        else if (action === 'email') emailReceipt(paymentId);
+        else if (action === 'delete') deletePayment(paymentId);
+    });
+    document.body.appendChild(menu);
+    const rect = trigger.getBoundingClientRect();
+    const width = menu.offsetWidth, height = menu.offsetHeight;
+    menu.style.left = `${Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8))}px`;
+    menu.style.top = `${Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - height - 8))}px`;
+    document.addEventListener('click', dismissPaymentActionsMenu);
+    document.addEventListener('keydown', handlePaymentActionsKeydown);
+    window.addEventListener('scroll', dismissPaymentActionsMenu, true);
+    window.addEventListener('resize', dismissPaymentActionsMenu);
+    menu.querySelector('button').focus();
+}
+
 function renderPayments() {
+    closePaymentActionsMenu();
     const paymentsList = document.getElementById('paymentsList');
     initializePaymentPeriodFilter();
     const localPayments = Array.isArray(state.payments) ? state.payments : [];
@@ -420,9 +501,8 @@ function renderPayments() {
                     <th>Late Fee</th>
                     <th>Balance</th>
                     <th>Note</th>
-                    <th>Receipt</th>
                     <th>QuickBooks</th>
-                    <th>Delete</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -441,7 +521,6 @@ function renderPayments() {
                             <td>—</td>
                             <td>—</td>
                             <td class="note-cell">${renderPaymentNote(row)}</td>
-                            <td><span class="task-meta">QuickBooks only</span></td>
                             <td onclick="event.stopPropagation()"><span class="badge badge-success">${escapeHtml(getQuickBooksSourceLabel(qbPayment.sourceType))}</span></td>
                             <td>—</td>
                         </tr>`;
@@ -473,14 +552,6 @@ function renderPayments() {
                                                             : (row.displayBalance !== undefined && row.displayBalance !== null ? `$${(Number(row.displayBalance).toFixed(2))}` : '')}
                                                         </td>
                                                      <td class="note-cell">${renderPaymentNote(row)}</td>
-                                                        <td>
-                                                             <button class="btn-icon download-btn" title="Download Receipt" onclick="event.stopPropagation();exportReceipt('${payment._id}')">
-                                                                 <i class="fas fa-file-arrow-down"></i>
-                                                             </button>
-                                                             <button class="btn-icon email-btn" title="Email Receipt" onclick="event.stopPropagation();emailReceipt('${payment._id}')">
-                                                                 <i class="fas fa-paper-plane"></i>
-                                                             </button>
-                                                        </td>
                             <td onclick="event.stopPropagation()">
                                 ${payment.quickBooks?.syncStatus === 'failed'
                                     ? `<button class="overview-row-action" data-qb-sync-payment="${payment._id}" title="${escapeHtml(payment.quickBooks.lastError||'Retry QuickBooks sync')}" onclick="syncPaymentQuickBooks('${payment._id}')">Retry</button>`
@@ -491,7 +562,7 @@ function renderPayments() {
                                             : `<button class="overview-row-action" data-qb-sync-payment="${payment._id}" onclick="syncPaymentQuickBooks('${payment._id}')">Sync</button>`)}
                             </td>
                             <td>
-                                <button class="btn-icon delete-btn" onclick="event.stopPropagation();deletePayment('${payment._id}')"><i class="fas fa-trash"></i></button>
+                                <button class="btn-icon payment-actions-trigger" type="button" aria-label="Payment actions" title="Payment actions" aria-haspopup="menu" aria-expanded="false" aria-controls="paymentActionsMenu" onclick="openPaymentActionsMenu(event, '${payment._id}')"><i class="fas fa-ellipsis-v" aria-hidden="true"></i></button>
                             </td>
                         </tr>
                     `;

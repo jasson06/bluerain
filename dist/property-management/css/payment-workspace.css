@@ -15,4 +15,10 @@
       #payments .payments-table tbody tr:hover td:first-child{background:#f8fbfc}
       body.dark-theme #paymentWorkspaceTabs{background:#18232d;border-color:#334155!important}
       body.dark-theme #payments .payments-table thead th{background:#1e293b}body.dark-theme #payments .payments-table td:first-child{background:#111827}body.dark-theme #payments .payments-table thead th:first-child{background:#243447}
+      .payment-actions-trigger{min-width:32px;min-height:32px}
+      .payment-actions-menu{position:fixed;z-index:6000;min-width:190px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;padding:5px;background:#fff;border:1px solid #dbe4ec;border-radius:10px;box-shadow:0 12px 32px rgba(15,23,42,.16)}
+      .payment-actions-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;border-radius:6px;background:transparent;color:#334155;text-align:left;cursor:pointer;font:inherit;white-space:nowrap}
+      .payment-actions-menu button:hover,.payment-actions-menu button:focus-visible{background:#edf4f7;outline:2px solid #176b87;outline-offset:-2px}
+      .payment-actions-menu button.payment-action-delete{color:#dc2626;border-top:1px solid #e5e7eb;border-radius:0;margin-top:4px}
+      body.dark-theme .payment-actions-menu{background:#1e293b;border-color:#334155}body.dark-theme .payment-actions-menu button{color:#e2e8f0}body.dark-theme .payment-actions-menu button:hover,body.dark-theme .payment-actions-menu button:focus-visible{background:#334155}body.dark-theme .payment-actions-menu button.payment-action-delete{color:#f87171;border-color:#334155}
     
