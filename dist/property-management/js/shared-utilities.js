@@ -1,6 +1,12 @@
 // Property management: shared utilities.
 // Classic script: declarations share the page scope; startup runs in property-management.js.
 
+function overviewRangeQuery(range) {
+    const query = new URLSearchParams({from:range.from,to:range.to});
+    if (range.timeZone) query.set('timeZone',range.timeZone);
+    return query.toString();
+}
+
 // Update the loadUnits function
 async function loadUnits(propertyId, force = false) {
     

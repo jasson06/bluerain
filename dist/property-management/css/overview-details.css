@@ -1,11 +1,25 @@
 #propertyOverview.overview-detail-active > :not(#overviewDetailPanel){display:none!important}#overviewDetailPanel{margin-top:0;scroll-margin-top:90px;min-height:350px}#overviewDetailPanel .overview-detail-heading{justify-content:flex-start;gap:18px;flex-wrap:wrap}#overviewDetailPanel[hidden]{display:none}#overviewDetailPanel .overview-detail-scroll{overflow:auto;max-height:65vh;margin-top:14px}#overviewDetailPanel table{min-width:850px;width:100%}#overviewDetailPanel thead th{position:sticky;top:0;z-index:1;background:var(--background-color,#fff)}#overviewDetailPanel td{vertical-align:top}#overviewDetailPanel tfoot{font-weight:700}
 .overview-expected-payments{max-height:380px;overflow:auto;overscroll-behavior:contain}
-.overview-expected-payment{padding:10px 0;border-bottom:1px solid #e5e7eb}
-.overview-expected-payment:last-child{border-bottom:0}
-.overview-expected-payment .overview-row{gap:8px;flex-wrap:wrap}
-.overview-expected-payment .badge{white-space:nowrap}
-.overview-expected-payment .link-button{display:inline-block;min-width:0;max-width:100%;padding:3px 6px;border:0;border-radius:5px;background:transparent;color:#176b87;font-size:.95rem;font-weight:700;line-height:1.4;text-align:left;white-space:normal;overflow-wrap:anywhere;cursor:pointer;text-decoration:none}
+.overview-payments-table{width:100%;min-width:330px;table-layout:fixed;border-collapse:separate;border-spacing:0}
+.overview-payment-status-column{width:88px}
+.overview-payment-money-column{width:65px}
+.overview-payments-table th{position:sticky;top:0;z-index:1;background:#f8fafc;color:#64748b;font-size:.65rem;font-weight:700;text-align:left;padding:8px 4px;border-bottom:1px solid #e5e7eb;white-space:nowrap}
+.overview-payments-table th:nth-last-child(-n+2){text-align:right}
+.overview-expected-payment{transition:background-color .15s ease}
+.overview-expected-payment td{padding:6px 4px;border-bottom:1px solid #e5e7eb;vertical-align:middle}
+.overview-expected-payment:last-child td{border-bottom:0}
+.overview-expected-payment:hover,.overview-expected-payment:focus-within{background:#e6f4f7}
+.overview-expected-payment .badge{white-space:nowrap;font-size:.65rem;padding:3px 5px}
+.overview-expected-payment .link-button{display:block;min-width:0;max-width:100%;padding:4px 2px;border:0;border-radius:5px;background:transparent;color:#176b87;font-size:.78rem;font-weight:700;line-height:1.4;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;text-decoration:none}
+.overview-payment-unit{font-size:.7rem;font-weight:400;color:#64748b}
+.overview-payment-amounts{text-align:right;white-space:nowrap;font-size:.68rem;color:#64748b;font-variant-numeric:tabular-nums}
+.overview-payment-amounts strong{color:#1e3a5f}
 .overview-expected-payment .link-button:hover{background:#e6f4f7;color:#155e75;text-decoration:underline;text-underline-offset:3px}
 .overview-expected-payment .link-button:focus-visible{outline:2px solid #176b87;outline-offset:2px;background:#e6f4f7}
+body.dark-theme .overview-payments-table th{background:#1e293b;color:#94a3b8;border-bottom-color:#334155}
+body.dark-theme .overview-expected-payment td{border-bottom-color:#334155}
+body.dark-theme .overview-expected-payment:hover,body.dark-theme .overview-expected-payment:focus-within{background:#243447}
+body.dark-theme .overview-payment-unit,body.dark-theme .overview-payment-amounts{color:#94a3b8}
+body.dark-theme .overview-payment-amounts strong{color:#e2e8f0}
 body.dark-theme .overview-expected-payment .link-button{color:#7dd3fc}
 body.dark-theme .overview-expected-payment .link-button:hover,body.dark-theme .overview-expected-payment .link-button:focus-visible{background:#243447;color:#bae6fd}

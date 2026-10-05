@@ -99,6 +99,30 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
     const from = req.query.from ? new Date(req.query.from) : new Date(now.getFullYear(), now.getMonth(), 1);
     const to = req.query.to ? new Date(req.query.to) : new Date(now.getFullYear(), now.getMonth() + 1, 1);
     if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from >= to) return res.status(400).json({message:'Choose a valid overview date range'});
+    const timeZone = req.query.timeZone;
+    let calendarFrom = from, calendarTo = to, calendarNow = now;
+    if (timeZone !== undefined) {
+      if (typeof timeZone !== 'string' || !timeZone) return res.status(400).json({message:'Choose a valid overview time zone'});
+      let formatter;
+      try {
+        formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone, year:'numeric', month:'numeric', day:'numeric',
+          hour:'numeric', minute:'numeric', second:'numeric', hourCycle:'h23'
+        });
+      } catch (error) {
+        if (!(error instanceof RangeError)) throw error;
+        return res.status(400).json({message:'Choose a valid overview time zone'});
+      }
+      const calendarDate = date => {
+        const parts = Object.fromEntries(formatter.formatToParts(date).map(part => [part.type, part.value]));
+        return new Date(Number(parts.year), Number(parts.month) - 1, Number(parts.day),
+          Number(parts.hour), Number(parts.minute), Number(parts.second), date.getUTCMilliseconds());
+      };
+      // Cash uses absolute timestamps; rent months use the calendar that selected the range.
+      calendarFrom = calendarDate(from);
+      calendarTo = calendarDate(to);
+      calendarNow = calendarDate(now);
+    }
     const in90Days = new Date(now.getTime() + 90 * 86400000);
     const units = await serverContext.Unit.find({ projectId: id }).lean();
     const unitIds = units.map(unit => unit._id).filter(Boolean);
@@ -154,7 +178,7 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
       if (!String(payment?.tenantId || '')) return false;
       return (payment.applyTo || 'rent') === 'rent';
     });
-    const periodMonths = Math.max(1, Math.round((to - from) / (30.4375 * 86400000)));
+    let periodMonths = 0;
     // Contract rent (base plus recurring fees) is the rent roll and expected rent.
     // A zero-rent tenant still occupies the unit: never substitute its asking rent.
     const monthlyRentRoll = rentTenants.reduce((sum, tenant) => sum + (0, serverContext.computeTenantPostedMonthlyRent)(tenant), 0);
@@ -163,8 +187,9 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
     let expectedRent = 0, rentCollected = 0, rentOutstanding = 0;
     const expectedPayments = [];
     let grossPotentialRent = 0;
-    let cursor = new Date(from.getFullYear(), from.getMonth(), 1);
-    while (cursor < to) {
+    let cursor = new Date(calendarFrom.getFullYear(), calendarFrom.getMonth(), 1);
+    while (cursor < calendarTo) {
+      periodMonths++;
       tenants.filter(tenant => tenant.leaseStatus !== 'pending').forEach(tenant => {
         const totals = tenantLifecycle.tenantMonthTotals(tenant, cursor, historicalRentPayments, serverContext.computeExpectedRentForMonth);
         expectedRent += totals.expected;
@@ -173,7 +198,7 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
         if (tenantLifecycle.isChargeableMonth(tenant,cursor)) {
           const unitId = String(tenant.unitId?._id || tenant.unitId || '');
           const status = totals.expected <= 0 ? 'no-charge' : totals.outstanding <= 0.005 ? 'paid'
-            : totals.paid > 0 ? 'partial' : cursor > now ? 'scheduled' : 'unpaid';
+            : totals.paid > 0 ? 'partial' : cursor > calendarNow ? 'scheduled' : 'unpaid';
           expectedPayments.push({
             tenantId:tenant._id,tenantName:tenant.name,unitNumber:unitById.get(unitId)?.number ?? '',
             period:`${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,'0')}`,
@@ -358,7 +383,7 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
     const quickBooksOnlyPaymentsInPeriod = quickBooksOnlyPaymentsToDate.filter(payment => isDateWithinPeriod(payment?.date));
 
     res.json({
-      generatedAt: new Date(), range: { from, to }, property, expenseDetails, expectedPayments,
+      generatedAt: new Date(), range: { from, to, timeZone }, property, expenseDetails, expectedPayments,
       summary: {
         totalUnits: units.length,
         occupied: units.filter(u => u.status === 'occupied').length,

@@ -191,7 +191,7 @@ describe('tenant termination endpoint', () => {
 });
 
 describe('property overview separates lease collections from cash', () => {
-  async function overview(from,to,extraTenants=[],extraPayments=[]) {
+  async function overview(from,to,extraTenants=[],extraPayments=[],timeZone,expectedStatus=200) {
     const active = baseTenant();
     const former = {...baseTenant(),_id:'former',leaseStatus:'terminated',termination:{effectiveDate:'2026-05-15'},monthlyOverrides:{'2026-05':{expectedRent:600}}};
     const payments = [
@@ -210,8 +210,8 @@ describe('property overview separates lease collections from cash', () => {
     for (const model of ['MaintenanceRequest','MaintenanceSchedule','PortfolioTask','Expense']) context[model]={find:()=>query([])};
     require('../server/flows/properties')(context).get_api_properties_id_overview();
     const res = response();
-    await context.app.get.mock.calls[0][1]({params:{id:'property-a'},query:{from,to}},res);
-    expect(res.code).toBe(200);
+    await context.app.get.mock.calls[0][1]({params:{id:'property-a'},query:{from,to,timeZone}},res);
+    expect(res.code).toBe(expectedStatus);
     return res.payload;
   }
   test('old-period former payments increase cash but do not reduce active outstanding', async () => {
@@ -260,6 +260,53 @@ describe('property overview separates lease collections from cash', () => {
     expect(data.expectedPayments.find(row=>row.tenantId==='zero').status).toBe('no-charge');
     expect(data.expectedPayments.reduce((sum,row)=>sum+row.expected,0)).toBe(data.summary.expectedRent);
     expect(data.expectedPayments.reduce((sum,row)=>sum+row.outstanding,0)).toBe(data.summary.rentOutstanding);
+  });
+  test.each([
+    ['America/Chicago','2026-10-01T05:00:00Z','2026-11-01T05:00:00Z',['2026-10']],
+    ['Asia/Tokyo','2026-09-30T15:00:00Z','2026-10-31T15:00:00Z',['2026-10']],
+    ['Pacific/Kiritimati','2026-09-30T10:00:00Z','2026-10-31T10:00:00Z',['2026-10']],
+    ['America/Chicago','2026-11-01T05:00:00Z','2026-12-01T06:00:00Z',['2026-11']],
+    ['America/Chicago','2026-03-01T06:00:00Z','2026-04-01T05:00:00Z',['2026-03']],
+    ['America/Chicago','2026-10-01T05:00:00Z','2027-01-01T06:00:00Z',['2026-10','2026-11','2026-12']],
+    ['Asia/Tokyo','2025-12-31T15:00:00Z','2026-12-31T15:00:00Z',Array.from({length:12},(_,i)=>`2026-${String(i+1).padStart(2,'0')}`)]
+  ])('rent periods respect %s calendar boundaries from %s to %s', async (timeZone,from,to,periods) => {
+    const data = await overview(from,to,[],[],timeZone);
+    expect(data.expectedPayments.filter(row=>row.tenantId==='tenant-a').map(row=>row.period)).toEqual(periods);
+    expect(data.expectedPayments.every(row=>periods.includes(row.period))).toBe(true);
+    expect(data.summary.periodMonths).toBe(periods.length);
+    expect(data.summary.expectedRent).toBe(data.expectedPayments.reduce((sum,row)=>sum+row.expected,0));
+    expect(data.summary.rentOutstanding).toBe(data.expectedPayments.reduce((sum,row)=>sum+row.outstanding,0));
+    if (periods.length===1) {
+      expect(data.expectedPayments.every(row=>row.expected===1030)).toBe(true);
+      expect(data.summary.expectedRent).toBe(1030*data.expectedPayments.length);
+      expect(data.financials.expenseBreakdown.grossPotentialRent).toBe(1030);
+    }
+  });
+  test('zoned rent periods preserve exclusive receipt timestamp filters', async () => {
+    const from='2026-06-01T05:00:00Z',to='2026-07-01T05:00:00Z';
+    const data = await overview(from,to,[],[
+      {tenantId:'tenant-a',date:'2026-06-01T04:59:59Z',periodMonth:'2026-06',amount:10},
+      {tenantId:'tenant-a',date:from,periodMonth:'2026-06',amount:20},
+      {tenantId:'tenant-a',date:'2026-07-01T04:59:59Z',periodMonth:'2026-06',amount:30},
+      {tenantId:'tenant-a',date:to,periodMonth:'2026-07',amount:40}
+    ],'America/Chicago');
+    expect(data.expectedPayments.map(row=>row.period)).toEqual(['2026-06']);
+    expect(data.summary.cashRentCollected).toBe(950);
+    expect(data.range).toMatchObject({timeZone:'America/Chicago'});
+  });
+  test('invalid overview time zones are rejected explicitly', async () => {
+    const data = await overview('2026-10-01','2026-11-01',[],[],'Invalid/Zone',400);
+    expect(data).toEqual({message:'Choose a valid overview time zone'});
+  });
+  test('a month that has started in the selected calendar is not scheduled', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-30T16:00:00Z'));
+    try {
+      const data = await overview('2026-09-30T15:00:00Z','2026-10-31T15:00:00Z',[],[],'Asia/Tokyo');
+      expect(data.expectedPayments).toHaveLength(1);
+      expect(data.expectedPayments[0]).toMatchObject({period:'2026-10',status:'unpaid'});
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 

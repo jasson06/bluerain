@@ -58,7 +58,7 @@ function getOverviewRange() {
   else if(value==='quarter'){const q=Math.floor(now.getMonth()/3)*3;from=new Date(now.getFullYear(),q,1);to=new Date(now.getFullYear(),q+3,1);}
   else if(value==='year'){from=new Date(now.getFullYear(),0,1);to=new Date(now.getFullYear()+1,0,1);}
   else {from=new Date(now.getFullYear(),now.getMonth(),1);to=new Date(now.getFullYear(),now.getMonth()+1,1);}
-  return {from:from.toISOString(),to:to.toISOString()};
+  return {from:from.toISOString(),to:to.toISOString(),timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone};
 }
 
 function setQuickBooksProgress(area, message, kind='loading') {

@@ -51,6 +51,19 @@ rent balances separately from active/pending delinquency. These totals overlap
 when the selected period includes former tenants' final charges; do not add them
 together. Deposits remain in their existing separate ledger.
 
+Overview clients send `from` and exclusive `to` timestamps plus the browser's
+IANA `timeZone`. Rent months and month-based expense counts use that calendar,
+so a UTC offset cannot include the previous or next month accidentally. Receipt
+and expense date filters retain the original absolute timestamp boundaries.
+Requests without `timeZone` retain the server-local calendar behavior.
+
+The overview expected-payment table uses compact single-line summaries with
+sticky Tenant / Unit, Status, Expected, and Due column headers inside its scroll
+container. Due is the outstanding rent balance. Hover reveals the
+full tenant, unit, rent month, and applied payment/credit details; the tenant
+button exposes the same details to assistive technology and opens the lease
+ledger as before.
+
 Existing former leases are not rewritten or assigned invented termination dates.
 Missing lease start/end information is flagged for review, not reported as settled.
 Tenants with former leases or payment history cannot be deleted.
