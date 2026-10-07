@@ -433,6 +433,7 @@ function openPaymentActionsMenu(event, paymentId) {
     menu.innerHTML = `
         <button type="button" role="menuitem" data-action="download"><i class="fas fa-file-arrow-down" aria-hidden="true"></i> Download receipt</button>
         ${isVoided ? '' : '<button type="button" role="menuitem" data-action="email"><i class="fas fa-paper-plane" aria-hidden="true"></i> Email receipt</button>'}
+        ${isVoided ? '<button type="button" role="menuitem" data-action="reinstate"><i class="fas fa-rotate-left" aria-hidden="true"></i> Reinstate payment</button>' : ''}
         ${isVoided || hasCreditHistory ? '' : `<button type="button" role="menuitem" data-action="void" class="payment-action-void"><i class="fas fa-ban" aria-hidden="true"></i> Void payment${payment?.quickBooks?.entityId ? ' locally' : ''}</button>`}
         ${isVoided || hasCreditHistory ? '' : '<button type="button" role="menuitem" data-action="delete" class="payment-action-delete"><i class="fas fa-trash" aria-hidden="true"></i> Delete</button>'}`;
     menu.addEventListener('click', actionEvent => {
@@ -443,6 +444,7 @@ function openPaymentActionsMenu(event, paymentId) {
         if (action === 'download') exportReceipt(paymentId);
         else if (action === 'email') emailReceipt(paymentId);
         else if (action === 'void') voidPayment(paymentId, !!payment?.quickBooks?.entityId);
+        else if (action === 'reinstate') reinstatePayment(paymentId, !!payment?.quickBooks?.entityId);
         else if (action === 'delete') deletePayment(paymentId);
     });
     document.body.appendChild(menu);

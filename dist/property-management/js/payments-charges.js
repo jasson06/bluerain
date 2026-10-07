@@ -571,3 +571,27 @@ async function voidPayment(paymentId, quickBooksLinked=false) {
         hideLoader();
     }
 }
+
+async function reinstatePayment(paymentId, quickBooksLinked=false) {
+    const externalNote=quickBooksLinked
+        ? '\n\nThis only reinstates the payment in Bluerain. Verify the linked transaction separately in QuickBooks. All split allocations will be reinstated together.'
+        : '';
+    if (!confirm(`Reinstate this payment? It will count toward collections and tenant balances again. The void reason will be retained for audit.${externalNote}`)) return;
+    showLoader();
+    try {
+        const response=await fetch(`${API_URL}/properties/${state.currentProperty._id}/payments/${paymentId}/reinstate`,{
+            method:'POST'
+        });
+        const result=await response.json();
+        if(!response.ok)throw new Error(result.message||'Unable to reinstate payment');
+        invalidateCache('payments','tenants');
+        state.propertyOverviewData=null;
+        await Promise.all([refreshContent('payments'),refreshContent('tenants')]);
+        showNotification('Payment reinstated. Tenant balances were recalculated.','success');
+    } catch(error) {
+        console.error('Error reinstating payment:',error);
+        showNotification(error.message||'Unable to reinstate payment','error');
+    } finally {
+        hideLoader();
+    }
+}

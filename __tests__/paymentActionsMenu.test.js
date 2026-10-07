@@ -3,7 +3,7 @@ const path = require('path');
 const vm = require('vm');
 
 function setup(payment) {
-    const items = ['download', 'email', 'void', 'delete'].map(action => ({
+    const items = (payment?.postingStatus === 'voided' ? ['download', 'reinstate'] : ['download', 'email', 'void', 'delete']).map(action => ({
         dataset: {action},
         focus: jest.fn(),
         closest() { return this; }
@@ -44,6 +44,7 @@ function setup(payment) {
         exportReceipt: jest.fn(),
         emailReceipt: jest.fn(),
         voidPayment: jest.fn(),
+        reinstatePayment: jest.fn(),
         deletePayment: jest.fn()
     });
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../dist/property-management/js/payments-search.js'), 'utf8'), context);
@@ -53,6 +54,17 @@ function setup(payment) {
 }
 
 describe('payment row actions menu', () => {
+    test.each([{}, {quickBooks: {entityId: 'qb-1'}}])('voided rows offer reinstatement and call its handler %j', details => {
+        const {context, menu, items} = setup({postingStatus: 'voided', ...details});
+        expect(menu.innerHTML).toContain('Reinstate payment');
+        expect(menu.innerHTML).not.toContain('Email receipt');
+        expect(menu.innerHTML).not.toContain('Void payment');
+        expect(menu.innerHTML).not.toContain('data-action="delete"');
+        const click = menu.addEventListener.mock.calls.find(([name]) => name === 'click')[1];
+        click({target: items[1], stopPropagation: jest.fn()});
+        expect(context.reinstatePayment).toHaveBeenCalledWith('payment-1', !!details.quickBooks);
+        expect(menu.remove).toHaveBeenCalled();
+    });
     test.each([{creditConsumed: 30}, {creditSourceId: 'source', appliedCredit: 30}])('locks destructive actions on payment credit history %j', payment => {
         const {menu} = setup(payment);
         expect(menu.innerHTML).not.toContain('Void payment');
@@ -67,6 +79,7 @@ describe('payment row actions menu', () => {
         expect(menu.innerHTML).toContain('Download receipt');
         expect(menu.innerHTML).toContain('Email receipt');
         expect(menu.innerHTML).toContain('Void payment');
+        expect(menu.innerHTML).not.toContain('Reinstate payment');
         expect(menu.innerHTML).toContain('Delete');
         expect(menu.style.left).toBe('810px');
         expect(menu.style.top).toBe('620px');

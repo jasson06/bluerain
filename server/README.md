@@ -92,6 +92,12 @@ Posting a replacement receipt also excludes voided receipts and their late
 fees from the prior-payment totals, so a returned payment cannot create credit.
 Payments linked to QuickBooks are voided locally; their QuickBooks transaction
 must be voided separately.
+Voided payments can be reinstated through the payment Actions menu. Reinstatement
+restores the pre-void posting status (posted for older voids), retains the void
+reason/date, and records a reinstatement timestamp. All rows of a split allocation
+are restored together in one transaction, including deposit-paid tracking and
+tenant balance recalculation. Duplicate reinstatements and partially voided
+allocation groups are rejected. This operation does not modify QuickBooks.
 Monthly override updates validate the lease period and non-negative amounts,
 preserve omitted fields, and recalculate stored payment balances transactionally.
 Changing final-month expected rent also updates the reviewed termination charge.

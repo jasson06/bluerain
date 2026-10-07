@@ -1765,6 +1765,8 @@ const paymentSchema = new mongoose.Schema({
   postingStatus: { type: String, enum: ['posted', 'pending', 'conflict', 'voided'], default: 'posted', index: true },
   voidedAt: { type: Date, default: null },
   voidReason: { type: String, default: '' },
+  preVoidPostingStatus: { type: String, enum: ['posted', 'pending', 'conflict'], default: 'posted' },
+  reinstatedAt: { type: Date, default: null },
   quickBooks: { type: mongoose.Schema.Types.Mixed, default: {} }
 }, { timestamps: true });
 paymentSchema.index({ projectId: 1, 'quickBooks.entityType': 1, 'quickBooks.entityId': 1 }, { unique: true, partialFilterExpression: { 'quickBooks.entityId': { $type: 'string' } } });
@@ -2558,6 +2560,7 @@ serverFlows["payments"].post_api_properties_propertyId_payments_paymentId_send_r
 serverFlows["payments"].delete_api_properties_propertyId_payments_paymentId();
 
 serverFlows["payments"].post_api_properties_propertyId_payments_paymentId_void();
+serverFlows["payments"].post_api_properties_propertyId_payments_paymentId_reinstate();
 
 serverFlows["payments"].post_api_properties_propertyId_payments();
 

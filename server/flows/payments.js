@@ -384,6 +384,16 @@ serverContext.app.delete('/api/properties/:propertyId/payments/:paymentId', asyn
 });
 }
 
+async function getPaymentActionGroup(payment, session) {
+  const rootId=String(payment.quickBooks?.allocationRootId||payment._id);
+  const isAllocation=!!(payment.quickBooks?.manualAllocation||payment.quickBooks?.allocationRootId);
+  const group=isAllocation
+    ?await serverContext.Payment.find({projectId:payment.projectId,'quickBooks.allocationRootId':rootId}).session(session)
+    :[payment];
+  if(!group.some(item=>String(item._id)===String(payment._id)))throw Object.assign(new Error('Payment allocation group not found'),{status:409});
+  return group;
+}
+
 function post_api_properties_propertyId_payments_paymentId_void() {
 serverContext.app.post('/api/properties/:propertyId/payments/:paymentId/void', async (req, res) => {
   const reason=String(req.body?.reason||'').trim();
@@ -397,21 +407,18 @@ serverContext.app.post('/api/properties/:propertyId/payments/:paymentId/void', a
       const payment=await serverContext.Payment.findOne({_id:req.params.paymentId,projectId:req.params.propertyId}).session(session);
       if(!payment)throw Object.assign(new Error('Payment not found'),{status:404});
       if(payment.postingStatus==='voided')throw Object.assign(new Error('Payment is already voided'),{status:409});
-      const rootId=String(payment.quickBooks?.allocationRootId||payment._id);
-      const isAllocation=!!(payment.quickBooks?.manualAllocation||payment.quickBooks?.allocationRootId);
-      const group=isAllocation
-        ?await serverContext.Payment.find({projectId:req.params.propertyId,'quickBooks.allocationRootId':rootId}).session(session)
-        :[payment];
-      if(!group.length)throw Object.assign(new Error('Payment allocation group not found'),{status:409});
+      const group=await getPaymentActionGroup(payment,session);
       if(group.some(item=>item.postingStatus==='voided'))throw Object.assign(new Error('Part of this allocation is already voided; review the payment before continuing'),{status:409});
       if(group.some(item=>Number(item.amount)<0||Number(item.appliedCredit)>0||creditValues.consumedCredit(item)>0)) {
         throw Object.assign(new Error('Resolve any credits already used by this payment before voiding it'),{status:409});
       }
       const depositAmount=group.filter(item=>item.applyTo==='deposit').reduce((sum,item)=>sum+Math.max(0,Number(item.amount)||0),0);
       for(const item of group){
+        item.preVoidPostingStatus=item.postingStatus||'posted';
         item.postingStatus='voided';
         item.voidedAt=new Date();
         item.voidReason=reason;
+        item.reinstatedAt=null;
         await item.save({session});
       }
       if(depositAmount){
@@ -429,6 +436,47 @@ serverContext.app.post('/api/properties/:propertyId/payments/:paymentId/void', a
     if(error.status)return res.status(error.status).json({message:error.message});
     console.error('Error voiding payment:',error);
     return res.status(500).json({message:'Unable to void payment'});
+  } finally {
+    if(session)await session.endSession();
+  }
+});
+}
+
+function post_api_properties_propertyId_payments_paymentId_reinstate() {
+serverContext.app.post('/api/properties/:propertyId/payments/:paymentId/reinstate', async (req, res) => {
+  let session;
+  try {
+    session=await serverContext.Payment.db.startSession();
+    let resultPayment=null;
+    let reinstatedCount=0;
+    await session.withTransaction(async()=>{
+      const payment=await serverContext.Payment.findOne({_id:req.params.paymentId,projectId:req.params.propertyId}).session(session);
+      if(!payment)throw Object.assign(new Error('Payment not found'),{status:404});
+      if(payment.postingStatus!=='voided')throw Object.assign(new Error('Only voided payments can be reinstated'),{status:409});
+      const group=await getPaymentActionGroup(payment,session);
+      if(group.some(item=>item.postingStatus!=='voided'))throw Object.assign(new Error('Part of this allocation is not voided; review the payment before continuing'),{status:409});
+      const depositAmount=group.filter(item=>item.applyTo==='deposit').reduce((sum,item)=>sum+Math.max(0,Number(item.amount)||0),0);
+      const reinstatedAt=new Date();
+      for(const item of group){
+        item.postingStatus=item.preVoidPostingStatus||'posted';
+        item.reinstatedAt=reinstatedAt;
+        await item.save({session});
+      }
+      if(depositAmount){
+        const tenant=await serverContext.Tenant.findById(payment.tenantId).session(session);
+        if(!tenant)throw Object.assign(new Error('Tenant not found for this deposit payment'),{status:404});
+        tenant.depositPaid=(Number(tenant.depositPaid)||0)+depositAmount;
+        await tenant.save({session});
+      }
+      await paymentBalances.refreshTenant(payment.tenantId,session);
+      resultPayment=(await serverContext.Payment.findOne({_id:payment._id,projectId:payment.projectId}).session(session)).toObject();
+      reinstatedCount=group.length;
+    });
+    return res.json({success:true,payment:resultPayment,reinstatedCount});
+  } catch(error) {
+    if(error.status)return res.status(error.status).json({message:error.message});
+    console.error('Error reinstating payment:',error);
+    return res.status(500).json({message:'Unable to reinstate payment'});
   } finally {
     if(session)await session.endSession();
   }
@@ -876,6 +924,7 @@ return {
   post_api_properties_propertyId_payments_paymentId_send_receipt,
   delete_api_properties_propertyId_payments_paymentId,
   post_api_properties_propertyId_payments_paymentId_void,
+  post_api_properties_propertyId_payments_paymentId_reinstate,
   normalizePaymentTypeServer,
   daysInMonth,
   computeFirstMonthProratedBaseRent,

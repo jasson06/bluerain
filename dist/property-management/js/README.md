@@ -4,10 +4,14 @@ Feature files contain classic global function declarations. The HTML loads them 
 
 Existing account, toolbar, and sorting scripts retain their positions.
 
-Payment rows expose download receipt, email receipt, and delete through the
+Payment rows expose download receipt, email receipt, void, and delete through the
 vertical three-dot Actions menu in payments-search.js. The menu is mounted
 outside the scrolling table to avoid clipping, supports keyboard navigation,
 and closes on outside click, Escape, scrolling, resizing, or table re-render.
+Voided rows offer Reinstate payment instead of email, void, or delete. After
+confirmation, reinstatement restores collections and tenant balances, refreshes
+payments/tenants and invalidates overview data. QuickBooks-linked payments show
+a local-only warning; split allocations are reinstated together.
 
 ## Feature files
 
