@@ -31,6 +31,7 @@ module.exports = function paymentAllocations(context) {
     return {payment:root,rootId,version:root.quickBooks?.allocationVersion||0,total:root.quickBooks?.allocationTotal??root.amount,rows,invoice:invoice?{total:invoice.TotalAmt??null,balance:invoice.Balance??null,number:invoice.DocNumber,date:invoice.TxnDate,lines:(invoice.Line||[]).filter(l=>l.DetailType==='SalesItemLineDetail').map(l=>({id:l.Id,description:l.Description||'',item:l.SalesItemLineDetail?.ItemRef?.name||'',amount:Number(l.Amount)||0}))}:null,invoiceError};
   }
   async function save(payment,body) {
+    if(payment.postingStatus==='voided')throw Error('Voided payments cannot be reallocated');
     if(!payment.quickBooks?.entityId)throw Error('This editor is for imported or linked QuickBooks payments');
     const rootId=payment.quickBooks.allocationRootId||String(payment._id);
     const session=await context.Payment.db.startSession();
@@ -38,11 +39,12 @@ module.exports = function paymentAllocations(context) {
     try { await session.withTransaction(async()=>{
       const root=await context.Payment.findOne({_id:rootId,projectId:payment.projectId}).session(session);
       if(!root)throw Error('Source payment no longer exists');
+      if(root.postingStatus==='voided')throw Error('Voided payments cannot be reallocated');
       if(Number(body.version)!==Number(root.quickBooks?.allocationVersion||0))throw Error('This allocation was changed. Reopen it before saving');
       const total=root.quickBooks?.allocationTotal??root.amount;
       const rows=validate(body.allocations,total);
       const existing=root.quickBooks?.manualAllocation?await context.Payment.find({projectId:root.projectId,'quickBooks.allocationRootId':rootId}).session(session):[root];
-      if(existing.some(p=>p.appliedCredit||p.carryForward||p.amount<0))throw Error('Resolve applied credits before splitting this payment');
+      if(existing.some(p=>p.appliedCredit||p.creditConsumed||p.creditSourceId||p.carryForward||p.amount<0))throw Error('Resolve applied credits before splitting this payment');
       const original=root.quickBooks?.allocationOriginal||{amount:root.amount,applyTo:root.applyTo,periodMonth:root.periodMonth,note:root.note,lateFee:root.lateFee};
       const base=root.toObject();delete base._id;delete base.__v;delete base.updatedAt;
       const qb={...root.quickBooks,manualAllocation:true,allocationRootId:rootId,allocationTotal:total,allocationVersion:Number(body.version)+1,allocationOriginal:original};

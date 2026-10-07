@@ -56,6 +56,11 @@ add them together. Deposits remain in their existing separate ledger.
 QuickBooks rent payments linked to invoices are assigned to the invoice's due
 month, not its creation or payment date. If an invoice has no due date, its
 invoice date remains the fallback rent month.
+Payment-workspace success and informational statuses dismiss after four
+seconds. Errors and in-progress loading statuses stay visible; a newer status
+cancels any pending dismissal.
+The payment table's informational QuickBooks connection reminder also dismisses
+after four seconds, including when no transactions match. Error notices remain.
 
 Overview clients send `from` and exclusive `to` timestamps plus the browser's
 IANA `timeZone`. Rent months and month-based expense counts use that calendar,
@@ -75,9 +80,50 @@ Missing lease start/end information is flagged for review, not reported as settl
 Tenants with former leases or payment history cannot be deleted.
 Former-tenant rent receipts and credit allocations must target a rent month
 within the ended lease. The stored receipt date remains the actual payment date.
+Voiding a payment keeps its ledger record and reason, excludes it from rent,
+cash, deposit, and balance calculations, and recalculates the tenant ledger.
+Posting a replacement receipt also excludes voided receipts and their late
+fees from the prior-payment totals, so a returned payment cannot create credit.
+Payments linked to QuickBooks are voided locally; their QuickBooks transaction
+must be voided separately.
 Monthly override updates validate the lease period and non-negative amounts,
 preserve omitted fields, and recalculate stored payment balances transactionally.
 Changing final-month expected rent also updates the reviewed termination charge.
+
+### Credit application
+
+Credits are applied explicitly through the shared allocation modal, one category
+and month at a time. Posting a receipt no longer automatically consumes legacy
+`carryForward` credits. Partial applications leave the unused amount available.
+The payment table displays applied months as `NOV-26`. Generated credit notes
+use the source credit's period, for example `(Credit applied from OCT-26)`,
+while `creditSourceId` retains the audit link. Older ID-based notes are formatted
+for display when their source is loaded, without rewriting historical records.
+
+The source stores `creditConsumed`; a zero-cash adjustment stores `appliedCredit`,
+`creditSourceId`, and an idempotency UUID (`creditApplicationKey`). Source
+consumption, the adjustment, deposit tracking, and balance recalculation commit
+in one MongoDB transaction. Retrying the same UUID returns the original
+adjustment; changing its destination or amount returns a conflict. Invalid or
+excessive amounts are rejected rather than silently replaced or capped.
+Rent and deposit applications cannot exceed the outstanding balance; any
+unused source credit remains available.
+
+Receipt amounts and dates remain unchanged. Transferring an overpayment reduces
+its source-category applied value and applies it to the selected destination;
+it does not create new cash or update QuickBooks. A source cannot be re-applied
+to its existing category and month, and allocation entries cannot become new
+credit sources. Used sources and their adjustments cannot be edited, deleted,
+voided, or split without a supported reconciliation flow.
+Clicking a voided or credit-linked payment row opens a compact anchored
+explanation box without an inline lock indicator. Focused locked rows also open
+the box with Enter or Space. Its close button, Escape, outside clicks, and
+viewport changes dismiss it. Ordinary payments remain editable.
+
+Legacy negative credits retain their previously consumed amount. Legacy
+positive payments with ambiguous `appliedCredit` history are rejected for
+further credit application and require reconciliation; no historical records
+are guessed or bulk-migrated.
 
 ## Checks
 

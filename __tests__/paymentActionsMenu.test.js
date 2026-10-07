@@ -2,8 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-function setup() {
-    const items = ['download', 'email', 'delete'].map(action => ({
+function setup(payment) {
+    const items = ['download', 'email', 'void', 'delete'].map(action => ({
         dataset: {action},
         focus: jest.fn(),
         closest() { return this; }
@@ -40,8 +40,10 @@ function setup() {
     };
     const context = vm.createContext({
         document, window,
+        state: {payments: payment ? [{_id: 'payment-1', ...payment}] : []},
         exportReceipt: jest.fn(),
         emailReceipt: jest.fn(),
+        voidPayment: jest.fn(),
         deletePayment: jest.fn()
     });
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../dist/property-management/js/payments-search.js'), 'utf8'), context);
@@ -51,6 +53,12 @@ function setup() {
 }
 
 describe('payment row actions menu', () => {
+    test.each([{creditConsumed: 30}, {creditSourceId: 'source', appliedCredit: 30}])('locks destructive actions on payment credit history %j', payment => {
+        const {menu} = setup(payment);
+        expect(menu.innerHTML).not.toContain('Void payment');
+        expect(menu.innerHTML).not.toContain('data-action="delete"');
+        expect(menu.innerHTML).toContain('Download receipt');
+    });
     test('opens without editing the row and remains inside the viewport', () => {
         const {event, menu, items, trigger, document} = setup();
         expect(event.stopPropagation).toHaveBeenCalled();
@@ -58,20 +66,21 @@ describe('payment row actions menu', () => {
         expect(document.body.appendChild).toHaveBeenCalledWith(menu);
         expect(menu.innerHTML).toContain('Download receipt');
         expect(menu.innerHTML).toContain('Email receipt');
+        expect(menu.innerHTML).toContain('Void payment');
         expect(menu.innerHTML).toContain('Delete');
         expect(menu.style.left).toBe('810px');
         expect(menu.style.top).toBe('620px');
         expect(items[0].focus).toHaveBeenCalled();
     });
 
-    test.each([['download', 'exportReceipt'], ['email', 'emailReceipt'], ['delete', 'deletePayment']])(
+    test.each([['download', 'exportReceipt'], ['email', 'emailReceipt'], ['void', 'voidPayment'], ['delete', 'deletePayment']])(
         '%s calls the existing handler with the payment ID and closes the menu',
         (action, handler) => {
             const {context, menu, items, trigger} = setup();
             const click = menu.addEventListener.mock.calls.find(([name]) => name === 'click')[1];
             const event = {target: items.find(item => item.dataset.action === action), stopPropagation: jest.fn()};
             click(event);
-            expect(context[handler]).toHaveBeenCalledWith('payment-1');
+            expect(context[handler]).toHaveBeenCalledWith('payment-1', ...(action==='void'?[false]:[]));
             expect(menu.remove).toHaveBeenCalled();
             expect(trigger.setAttribute).toHaveBeenLastCalledWith('aria-expanded', 'false');
             expect(trigger.focus).toHaveBeenCalled();
@@ -93,7 +102,7 @@ describe('payment row actions menu', () => {
         context.handlePaymentActionsKeydown({key: 'ArrowDown', preventDefault: jest.fn()});
         expect(items[1].focus).toHaveBeenCalled();
         context.handlePaymentActionsKeydown({key: 'ArrowUp', preventDefault: jest.fn()});
-        expect(items[2].focus).toHaveBeenCalled();
+        expect(items[3].focus).toHaveBeenCalled();
     });
 
     test.each(['click', 'scroll', 'resize'])('%s outside dismisses the menu', type => {

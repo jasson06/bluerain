@@ -198,22 +198,16 @@ function computeTenantDepositStatus(tenantId) {
     // Paid: prefer server-maintained depositPaid if present, else sum deposit payments
     let paid = Number(tenant?.depositPaid);
     if (!Number.isFinite(paid)) {
-        const deposits = getUnifiedCurrentPropertyPayments().filter(p => String(p.tenantId) === String(tenantId) && p.applyTo === 'deposit');
-        paid = deposits.reduce((s,p) => s + (Number(p.amount) || 0), 0);
+        const deposits = getUnifiedCurrentPropertyPayments().filter(p => p.postingStatus!=='voided' && String(p.tenantId) === String(tenantId) && p.applyTo === 'deposit');
+        paid = deposits.reduce((s,p) => s + paymentAppliedValue(p), 0);
     }
     const remaining = Math.max(0, required - paid);
     return { required, paid, remaining };
 }
 
 function computeTenantCreditRemaining(tenantId) {
-    const list = getUnifiedCurrentPropertyPayments().filter(p => String(p.tenantId) === String(tenantId));
-    let credits = 0, applied = 0;
-    for (const p of list) {
-        const amt = Number(p.amount) || 0;
-        if (amt < 0) credits += Math.abs(amt);
-        applied += Math.abs(Number(p.appliedCredit) || 0);
-    }
-    return Math.max(0, credits - applied);
+    const list = getUnifiedCurrentPropertyPayments().filter(p => p.postingStatus!=='voided' && String(p.tenantId) === String(tenantId));
+    return list.reduce((total, payment) => total + availablePaymentCredit(payment), 0);
 }
 
 function openTenantBalanceModal(tenantId) {
@@ -310,7 +304,8 @@ function openTenantBalanceModal(tenantId) {
     // { YYYY-MM: { rentBase, rentCollected, depositCash, depositCredit, feesCash, feesCredit, otherCash, otherCredit, rentCredit, credits, late, expected } }
     const monthlyMap = {};
         for (const p of allTenantPayments) {
-            if (!p.date) continue;
+        if (p.postingStatus==='voided') continue;
+        if (!p.date) continue;
             const d = new Date(p.date);
             const key = p.periodMonth || `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
             if (!monthlyMap[key]) monthlyMap[key] = { rentBase:0, rentCollected:0, depositCash:0, depositCredit:0, feesCash:0, feesCredit:0, otherCash:0, otherCredit:0, rentCredit:0, credits:0, late:0 };

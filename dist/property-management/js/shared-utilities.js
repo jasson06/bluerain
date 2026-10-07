@@ -225,12 +225,31 @@ function tenantPaymentPeriod(payment) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
+function consumedPaymentCredit(payment) {
+    if (payment.creditConsumed != null) return Math.max(0, Number(payment.creditConsumed) || 0);
+    return Number(payment.amount) < 0 ? Math.max(0, Number(payment.appliedCredit) || 0) : 0;
+}
+
+function paymentAppliedValue(payment) {
+    if (payment.postingStatus === 'voided') return 0;
+    const amount = Math.max(0, Number(payment.amount) || 0);
+    const allocated = Number(payment.amount) >= 0 ? Math.max(0, Number(payment.appliedCredit) || 0) : 0;
+    return Math.max(0, amount - consumedPaymentCredit(payment)) + allocated;
+}
+
+function availablePaymentCredit(payment) {
+    if (!payment || payment.postingStatus === 'voided' || payment.creditSourceId) return 0;
+    const amount = Number(payment.amount) || 0;
+    if (amount < 0) return Math.max(0, Math.abs(amount) - consumedPaymentCredit(payment));
+    return Math.max(0, Math.min(amount - consumedPaymentCredit(payment), -(Number(payment.balance) || 0)));
+}
+
 function computeTenantMonthTotals(tenant, date, payments) {
     const period = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     const rows = payments.filter(payment => String(payment.tenantId?._id || payment.tenantId) === String(tenant._id)
+        && payment.postingStatus !== 'voided'
         && (payment.applyTo || 'rent') === 'rent' && tenantPaymentPeriod(payment) === period);
-    const paid = rows.reduce((sum, payment) => sum + Math.max(0, Number(payment.amount) || 0)
-        + Math.max(0, Number(payment.appliedCredit) || 0), 0);
+    const paid = rows.reduce((sum, payment) => sum + paymentAppliedValue(payment), 0);
     let expected = 0;
     if (isTenantChargeableMonth(tenant, date)) {
         expected = computeExpectedRentForMonth(tenant, date, 'rent');

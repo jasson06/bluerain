@@ -149,7 +149,7 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
     const rentedUnitIds = new Set(rentTenants.filter(tenant => tenant.unitId)
       .map(tenant => String(tenant.unitId._id || tenant.unitId)));
     const unitById = new Map(units.map(unit => [String(unit._id), unit]));
-    const localPeriodPayments = (localPaymentsToDate || []).filter(payment => isDateWithinPeriod(payment?.date));
+    const localPeriodPayments = (localPaymentsToDate || []).filter(payment => payment.postingStatus !== 'voided' && isDateWithinPeriod(payment?.date));
     let quickBooksConnection = await serverContext.QuickBooksConnection.findOne({ projectId: id }).lean();
     let quickBooksOnlyPaymentsToDate = [];
     if (quickBooksConnection?.status === 'connected') {
@@ -173,6 +173,7 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
     }
     const payments = [...localPeriodPayments, ...quickBooksOnlyPaymentsToDate.filter(payment => isDateWithinPeriod(payment?.date))];
     const historicalRentPayments = [...localPaymentsToDate, ...quickBooksOnlyPaymentsToDate].filter(payment => {
+      if(payment.postingStatus==='voided') return false;
       const paymentDate = payment?.date ? new Date(payment.date) : null;
       if (!paymentDate || Number.isNaN(paymentDate.getTime()) || paymentDate >= to || paymentDate > now) return false;
       if (!String(payment?.tenantId || '')) return false;

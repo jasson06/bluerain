@@ -192,6 +192,8 @@ function openPaymentModalForTenantAndProperty(tenantId, propertyId, lockProperty
 function editPayment(paymentId) {
     const payment = state.payments.find(p => p._id === paymentId);
     if (!payment) return showNotification('Payment not found', 'error');
+    const editLockReason = getPaymentEditLockReason(payment);
+    if (editLockReason) return showNotification(editLockReason, 'info');
 
     // Populate selects before setting values
     const propertyId = payment.projectId || payment.propertyId || state.currentProperty?._id || '';
@@ -528,13 +530,44 @@ async function deletePayment(paymentId) {
             method: 'DELETE'
         });
         if (!response.ok) throw new Error('Failed to delete payment');
-    invalidateCache('payments');
-    await refreshContent('payments');
+        invalidateCache('payments','tenants');
+        state.propertyOverviewData=null;
+        await Promise.all([refreshContent('payments'),refreshContent('tenants')]);
         showNotification('Payment deleted successfully', 'success');
     } catch (error) {
         console.error('Error deleting payment:', error);
         showNotification('Error deleting payment', 'error');
             } finally {
+        hideLoader();
+    }
+}
+
+async function voidPayment(paymentId, quickBooksLinked=false) {
+    const externalNote=quickBooksLinked
+        ? '\n\nThis only voids the payment in Bluerain. Void or reverse the linked transaction separately in QuickBooks.'
+        : '';
+    if (!confirm(`Void this payment? It will remain in the ledger for audit and stop counting toward rent collected and tenant balances.${externalNote}`)) return;
+    const reason=window.prompt('Why are you voiding this payment?','Returned / insufficient funds (NSF)');
+    if(reason===null)return;
+    const trimmedReason=reason.trim();
+    if(!trimmedReason){showNotification('Enter a reason for voiding the payment.','error');return;}
+    showLoader();
+    try {
+        const response=await fetch(`${API_URL}/properties/${state.currentProperty._id}/payments/${paymentId}/void`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({reason:trimmedReason})
+        });
+        const result=await response.json();
+        if(!response.ok)throw new Error(result.message||'Unable to void payment');
+        invalidateCache('payments','tenants');
+        state.propertyOverviewData=null;
+        await Promise.all([refreshContent('payments'),refreshContent('tenants')]);
+        showNotification('Payment voided. Tenant balances were recalculated.','success');
+    } catch(error) {
+        console.error('Error voiding payment:',error);
+        showNotification(error.message||'Unable to void payment','error');
+    } finally {
         hideLoader();
     }
 }

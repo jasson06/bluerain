@@ -166,6 +166,11 @@ async function reconcileQuickBooksPaymentsForProperty(propertyId, connection = n
       continue;
     }
     if (old && record.invoiceId) {
+      if ((Number(old.creditConsumed)>0 || old.creditSourceId || Number(old.appliedCredit)>0)
+        && (old.amount!==record.totalAmt || old.periodMonth!==record.periodMonth)) {
+        record.periodError='QuickBooks changed a payment with credit allocations. Reconcile the credit history before changing its amount or period.';
+        continue;
+      }
       const original = old.quickBooks?.originalInvoiceImport || {amount:old.amount,periodMonth:old.periodMonth||'',date:old.date};
       const changes = {amount:record.totalAmt,periodMonth:record.periodMonth};
       for (const [key,value] of Object.entries(invoicePeriods.metadata(record))) changes[`quickBooks.${key}`]=value;
@@ -195,6 +200,7 @@ async function reconcileQuickBooksPaymentsForProperty(propertyId, connection = n
     if (!(amount > 0)) continue;
 
     const candidateLocalPayment = localPayments.find(payment => {
+      if(payment?.postingStatus==='voided')return false;
       if (payment?.quickBooks?.entityId) return false;
       if (String(payment.tenantId || '') !== String(tenant._id || '')) return false;
       if ((0, serverContext.normalizeQbPaymentAmount)(payment.amount) !== amount) return false;
@@ -378,7 +384,7 @@ serverContext.app.put('/api/properties/:propertyId/quickbooks/mappings',async(re
 }
 
 function post_api_properties_propertyId_payments_paymentId_sync_quickbooks() {
-serverContext.app.post('/api/properties/:propertyId/payments/:paymentId/sync-quickbooks',async(req,res)=>{try{const payment=await serverContext.Payment.findOne({_id:req.params.paymentId,projectId:req.params.propertyId});if(!payment)return res.status(404).json({message:'Payment not found for this property'});res.json({success:true,...await (0, serverContext.syncPaymentToQuickBooks)(payment._id)});}catch(error){res.status(400).json({message:error.message||'QuickBooks sync failed'});}});
+serverContext.app.post('/api/properties/:propertyId/payments/:paymentId/sync-quickbooks',async(req,res)=>{try{const payment=await serverContext.Payment.findOne({_id:req.params.paymentId,projectId:req.params.propertyId});if(!payment)return res.status(404).json({message:'Payment not found for this property'});if(payment.postingStatus==='voided')return res.status(409).json({message:'Voided payments cannot be synced to QuickBooks'});res.json({success:true,...await (0, serverContext.syncPaymentToQuickBooks)(payment._id)});}catch(error){res.status(400).json({message:error.message||'QuickBooks sync failed'});}});
 }
 
 function post_api_properties_propertyId_expenses_expenseId_sync_quickbooks() {

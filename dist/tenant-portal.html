@@ -2280,13 +2280,13 @@
     function renderPayments(payments) {
       $('paymentCount').textContent = `${payments.length} record${payments.length === 1 ? '' : 's'}`;
       $('paymentsTable').innerHTML = payments.length ? payments.map(payment => `
-        <tr>
+        <tr class="${payment.postingStatus==='voided'?'payment-voided':''}">
           <td>${date(payment.date)}</td>
-          <td>${safe(title(payment.applyTo || payment.type))}</td>
+          <td>${safe(title(payment.applyTo || payment.type))}${payment.postingStatus==='voided'?' · Voided':''}</td>
           <td>${safe(title(payment.method))}</td>
-          <td>${money(payment.amount)}</td>
-          <td>${money(payment.balance)}</td>
-          <td>${safe(payment.note || '')}</td>
+          <td>${payment.postingStatus==='voided'?`<del>${money(payment.amount)}</del>`:money(payment.amount)}</td>
+          <td>${payment.postingStatus==='voided'?'—':money(payment.balance)}</td>
+          <td>${safe(payment.postingStatus==='voided'?`Voided: ${payment.voidReason||''}`:payment.note || '')}</td>
         </tr>
       `).join('') : '<tr><td colspan="6"><div class="empty">No payments have been recorded yet.</div></td></tr>';
     }

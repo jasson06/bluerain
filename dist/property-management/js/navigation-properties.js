@@ -17,12 +17,14 @@ function updatePropertySectionHeadings() {
     const dashboard = document.getElementById('propertyDashboard');
     if (!dashboard) return;
     const name = String(state.currentProperty?.name || '').trim();
-    const labels = {'Property Overview':'Overview', 'Property Information':'Property', Units:'Units', Tenants:'Tenants', Evictions:'Evictions', Maintenance:'Maintenance', Documents:'Documents', Announcements:'Announcements', Payments:'Payments', Applications:'Applications', Invites:'Invites'};
+    const labels = {'Property Overview':'Overview', 'Property Information':'Property', Units:'Units', Tenants:'Tenants', Evictions:'Evictions', Maintenance:'Maintenance', Documents:'Documents', Announcements:'Announcements', Payments:'Payments', 'Payments Workspace':'Payments', Applications:'Applications', Invites:'Invites'};
     dashboard.querySelectorAll('.tab-pane h2').forEach(heading => {
         const original = heading.dataset.propertySectionLabel || heading.textContent.trim();
         if (!Object.prototype.hasOwnProperty.call(labels, original)) return;
         heading.dataset.propertySectionLabel = original;
-        heading.textContent = name ? name + ' – ' + labels[original] : original;
+        heading.textContent = name
+            ? (original === 'Payments Workspace' ? labels[original] + '-' + name : name + ' – ' + labels[original])
+            : original;
         heading.classList.add('property-context-heading');
     });
     dashboard.classList.toggle('property-combined-headings', !!name);

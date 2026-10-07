@@ -1,7 +1,7 @@
 
 /* Match the portfolio's bounded records area without changing card or table styling. */
 #propertyDashboard .property-record-scroll {
-    max-height: min(65dvh, 635px);
+    max-height: min(65dvh, 760px);
     min-height: 0;
     overflow: auto;
     scrollbar-gutter: stable;

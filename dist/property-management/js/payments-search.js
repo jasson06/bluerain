@@ -89,6 +89,29 @@ function getQuickBooksPaymentNote(record, note = record?.privateNote) {
         .join(' · ');
 }
 
+function formatPaymentPeriodLabel(period) {
+    const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(String(period || ''));
+    if (!match) return String(period || '');
+    return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1))
+        .toLocaleDateString('en-US', {month: 'short', year: '2-digit', timeZone: 'UTC'})
+        .replace(' ', '-').toUpperCase();
+}
+
+function getPaymentDisplayNote(payment, payments) {
+    return String(payment.note || '').replace(/\(Applied from credit ([a-zA-Z0-9-]+)\)/g, (original, sourceId) => {
+        const source = payments.find(item => String(item._id) === sourceId
+            && paymentReferenceId(item.tenantId) === paymentReferenceId(payment.tenantId));
+        if (!source) return original;
+        let period = source.periodMonth;
+        if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period || '')) {
+            const date = new Date(source.date);
+            if (Number.isNaN(date.getTime())) return original;
+            period = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        }
+        return `(Credit applied from ${formatPaymentPeriodLabel(period)})`;
+    });
+}
+
 function renderPaymentNote(row) {
     const payment = row?.localPayment;
     const record = row?.qbPayment;
@@ -102,6 +125,26 @@ function renderPaymentNote(row) {
         .map(escapeHtml)
         .join(' · ');
     return `${icon}${descriptions ? ` ${descriptions}` : ''}`;
+}
+
+function paymentReferenceId(reference) {
+    const id = reference && typeof reference === 'object' ? reference._id : reference;
+    return id == null ? '' : String(id);
+}
+
+function resolvePaymentTenant(payment) {
+    const reference = payment?.tenantId;
+    if (reference && typeof reference === 'object' && (reference.name || reference.firstName || reference.lastName)) return reference;
+    const id = paymentReferenceId(reference);
+    return [...(state.tenants || []), ...(state.allTenants || [])]
+        .find(tenant => paymentReferenceId(tenant?._id) === id) || null;
+}
+
+function resolvePaymentUnit(payment, tenant) {
+    const reference = payment?.unitId || tenant?.unitId;
+    if (reference && typeof reference === 'object' && reference.number != null) return reference;
+    const id = paymentReferenceId(reference);
+    return (state.units || []).find(unit => paymentReferenceId(unit?._id) === id) || null;
 }
 
 function inferQuickBooksPaymentApplyTo(record) {
@@ -205,6 +248,7 @@ function matchesUnifiedPaymentQuery(row, query) {
         row.typeText || '',
         row.methodText || '',
         row.appliedText || '',
+        row.localPayment?.periodMonth || '',
         row.quickBooksDoc || '',
         row.quickBooksType || ''
     ].join(' ').toLowerCase();
@@ -257,6 +301,78 @@ function matchesUnifiedPaymentQuery(row, query) {
 // Render payments list
 let paymentActionsMenu = null;
 let paymentActionsTrigger = null;
+let paymentEditLockPopover = null;
+let paymentEditLockTrigger = null;
+
+function closePaymentEditLockPopover(restoreFocus = false) {
+    if (!paymentEditLockPopover) return;
+    paymentEditLockPopover.remove();
+    paymentEditLockPopover = null;
+    const trigger = paymentEditLockTrigger;
+    paymentEditLockTrigger = null;
+    trigger?.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('click', dismissPaymentEditLockPopover);
+    document.removeEventListener('keydown', handlePaymentEditLockKeydown);
+    window.removeEventListener('scroll', dismissPaymentEditLockPopover, true);
+    window.removeEventListener('resize', dismissPaymentEditLockPopover);
+    if (restoreFocus && trigger?.isConnected) trigger.focus();
+}
+
+function dismissPaymentEditLockPopover(event) {
+    if (event.type === 'click' && (paymentEditLockPopover?.contains(event.target) || paymentEditLockTrigger?.contains(event.target))) return;
+    closePaymentEditLockPopover();
+}
+
+function handlePaymentEditLockKeydown(event) {
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        closePaymentEditLockPopover(true);
+    } else if (event.key === 'Tab') {
+        closePaymentEditLockPopover(true);
+    }
+}
+
+function handlePaymentEditLockRowKeydown(event, paymentId) {
+    if (event.target !== event.currentTarget || !['Enter', ' '].includes(event.key)) return;
+    event.preventDefault();
+    openPaymentEditLockPopover(event, paymentId);
+}
+
+function openPaymentEditLockPopover(event, paymentId) {
+    event.stopPropagation();
+    const payment = (state.payments || []).find(item => String(item._id) === String(paymentId));
+    if (!payment) return showNotification('Payment not found', 'error');
+    const reason = getPaymentEditLockReason(payment);
+    if (!reason) return editPayment(paymentId);
+    const trigger = event.currentTarget;
+    const wasOpen = paymentEditLockTrigger === trigger;
+    closePaymentEditLockPopover();
+    closePaymentActionsMenu();
+    if (wasOpen) return;
+    const popover = document.createElement('div');
+    paymentEditLockPopover = popover;
+    paymentEditLockTrigger = trigger;
+    trigger.setAttribute('aria-expanded', 'true');
+    popover.id = 'paymentEditLockPopover';
+    popover.className = 'payment-actions-menu payment-edit-lock-popover';
+    popover.setAttribute('role', 'dialog');
+    popover.setAttribute('aria-labelledby', 'paymentEditLockTitle');
+    popover.setAttribute('aria-describedby', 'paymentEditLockReason');
+    popover.innerHTML = `<div class="payment-edit-lock-header"><span class="payment-edit-lock-icon" aria-hidden="true"><i class="fas fa-lock"></i></span><strong id="paymentEditLockTitle">Read-only payment</strong><button type="button" aria-label="Close editing explanation"><i class="fas fa-times" aria-hidden="true"></i></button></div><p id="paymentEditLockReason">${escapeHtml(reason)}</p>`;
+    popover.addEventListener('click', clickEvent => clickEvent.stopPropagation());
+    const closeButton = popover.querySelector('button');
+    closeButton.addEventListener('click', () => closePaymentEditLockPopover(true));
+    document.body.appendChild(popover);
+    const rect = trigger.getBoundingClientRect();
+    const width = popover.offsetWidth, height = popover.offsetHeight;
+    popover.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))}px`;
+    popover.style.top = `${Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - height - 8))}px`;
+    document.addEventListener('click', dismissPaymentEditLockPopover);
+    document.addEventListener('keydown', handlePaymentEditLockKeydown);
+    window.addEventListener('scroll', dismissPaymentEditLockPopover, true);
+    window.addEventListener('resize', dismissPaymentEditLockPopover);
+    closeButton.focus();
+}
 
 function closePaymentActionsMenu(restoreFocus = false) {
     if (!paymentActionsMenu) return;
@@ -298,10 +414,14 @@ function handlePaymentActionsKeydown(event) {
 
 function openPaymentActionsMenu(event, paymentId) {
     event.stopPropagation();
+    closePaymentEditLockPopover();
     const trigger = event.currentTarget;
     const wasOpen = paymentActionsTrigger === trigger;
     closePaymentActionsMenu();
     if (wasOpen) return;
+    const payment = typeof state !== 'undefined' ? (state.payments || []).find(item => String(item._id) === String(paymentId)) : null;
+    const isVoided = payment?.postingStatus === 'voided';
+    const hasCreditHistory = !!payment?.creditSourceId || Number(payment?.creditConsumed)>0 || Number(payment?.appliedCredit)>0;
     paymentActionsTrigger = trigger;
     trigger.setAttribute('aria-expanded', 'true');
     const menu = document.createElement('div');
@@ -312,8 +432,9 @@ function openPaymentActionsMenu(event, paymentId) {
     menu.setAttribute('aria-label', 'Payment actions');
     menu.innerHTML = `
         <button type="button" role="menuitem" data-action="download"><i class="fas fa-file-arrow-down" aria-hidden="true"></i> Download receipt</button>
-        <button type="button" role="menuitem" data-action="email"><i class="fas fa-paper-plane" aria-hidden="true"></i> Email receipt</button>
-        <button type="button" role="menuitem" data-action="delete" class="payment-action-delete"><i class="fas fa-trash" aria-hidden="true"></i> Delete</button>`;
+        ${isVoided ? '' : '<button type="button" role="menuitem" data-action="email"><i class="fas fa-paper-plane" aria-hidden="true"></i> Email receipt</button>'}
+        ${isVoided || hasCreditHistory ? '' : `<button type="button" role="menuitem" data-action="void" class="payment-action-void"><i class="fas fa-ban" aria-hidden="true"></i> Void payment${payment?.quickBooks?.entityId ? ' locally' : ''}</button>`}
+        ${isVoided || hasCreditHistory ? '' : '<button type="button" role="menuitem" data-action="delete" class="payment-action-delete"><i class="fas fa-trash" aria-hidden="true"></i> Delete</button>'}`;
     menu.addEventListener('click', actionEvent => {
         actionEvent.stopPropagation();
         const action = actionEvent.target.closest('button[data-action]')?.dataset.action;
@@ -321,6 +442,7 @@ function openPaymentActionsMenu(event, paymentId) {
         closePaymentActionsMenu(true);
         if (action === 'download') exportReceipt(paymentId);
         else if (action === 'email') emailReceipt(paymentId);
+        else if (action === 'void') voidPayment(paymentId, !!payment?.quickBooks?.entityId);
         else if (action === 'delete') deletePayment(paymentId);
     });
     document.body.appendChild(menu);
@@ -335,9 +457,33 @@ function openPaymentActionsMenu(event, paymentId) {
     menu.querySelector('button').focus();
 }
 
+function getPaymentEditLockReason(payment) {
+    if (payment.postingStatus === 'voided') {
+        return 'This voided payment is kept for audit and excluded from balances.';
+    }
+    if (payment.creditSourceId || Number(payment.creditConsumed)>0 || Number(payment.appliedCredit)>0) {
+        return 'Editing is disabled to preserve linked credit allocations and accounting history.';
+    }
+    return '';
+}
+
+function schedulePaymentConnectionNoticeDismissal(root) {
+    const notice = root.querySelector('[data-qb-connection-notice]');
+    if (!notice) return;
+    root.quickBooksConnectionNoticeTimeout = setTimeout(() => {
+        root.quickBooksConnectionNoticeTimeout = null;
+        notice.remove();
+    }, 4000);
+}
+
 function renderPayments() {
     closePaymentActionsMenu();
+    closePaymentEditLockPopover();
     const paymentsList = document.getElementById('paymentsList');
+    if (paymentsList?.quickBooksConnectionNoticeTimeout) {
+        clearTimeout(paymentsList.quickBooksConnectionNoticeTimeout);
+        paymentsList.quickBooksConnectionNoticeTimeout = null;
+    }
     initializePaymentPeriodFilter();
     const localPayments = Array.isArray(state.payments) ? state.payments : [];
     const quickBooksPayments = Array.isArray(state.quickBooksPayments) ? state.quickBooksPayments : [];
@@ -355,8 +501,9 @@ function renderPayments() {
         return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
     };
     const unifiedRows = localPayments.map(payment => {
-        const tenant = state.tenants.find(t => t._id === payment.tenantId);
-        const unit = state.units.find(u => u._id === payment.unitId);
+        const tenant = resolvePaymentTenant(payment);
+        const unit = resolvePaymentUnit(payment, tenant);
+        const tenantId = paymentReferenceId(payment.tenantId);
         const qbPayment = getQuickBooksPaymentMatch(payment);
         let displayBalance = payment.balance;
         let overrideActive = false;
@@ -393,7 +540,8 @@ function renderPayments() {
                         lateFeeDisplay = 0;
                     }
                     const totalPaidForPeriod = localPayments.filter(row =>
-                        row.tenantId === payment.tenantId
+                        paymentReferenceId(row.tenantId) === tenantId
+                        && row.postingStatus !== 'voided'
                         && (row.applyTo === 'rent' || !row.applyTo)
                         && ((row.periodMonth && row.periodMonth === period) || (!row.periodMonth && toYYYYMM(row.date) === period))
                     ).reduce((sum, row) => sum + Number(row.amount || 0), 0);
@@ -408,18 +556,18 @@ function renderPayments() {
             rowKey: `local:${payment._id}`,
             localPayment: payment,
             qbPayment,
-            tenantId: payment.tenantId,
-            tenantName: tenant?.name || '',
+            tenantId,
+            tenantName: tenant?.name || `${tenant?.firstName || ''} ${tenant?.lastName || ''}`.trim() || payment.tenantName || '',
             unitText: unit?.number != null ? String(unit.number) : '',
             typeText: (payment.type || '').charAt(0).toUpperCase() + (payment.type || '').slice(1),
-            appliedText: `${payment.applyTo ? payment.applyTo.charAt(0).toUpperCase() + payment.applyTo.slice(1) : 'Rent'}${payment.periodMonth ? ` · ${payment.periodMonth}` : ''}`,
+            appliedText: `${payment.applyTo ? payment.applyTo.charAt(0).toUpperCase() + payment.applyTo.slice(1) : 'Rent'}${payment.periodMonth ? ` · ${formatPaymentPeriodLabel(payment.periodMonth)}` : ''}`,
             amountValue: Number(payment.amount) || 0,
             methodText: payment.method ? payment.method.charAt(0).toUpperCase() + payment.method.slice(1) : '',
             dateValue: payment.date,
             lateFeeDisplay,
             displayBalance,
             overrideActive,
-            noteText: getQuickBooksPaymentNote(qbPayment, payment.note || qbPayment?.privateNote || ''),
+            noteText: getQuickBooksPaymentNote(qbPayment, getPaymentDisplayNote(payment, localPayments) || qbPayment?.privateNote || ''),
             quickBooksDoc: String(qbPayment?.docNumber || payment.quickBooks?.docNumber || ''),
             quickBooksType: getQuickBooksSourceLabel(qbPayment?.sourceType || payment.quickBooks?.entityType || '')
         };
@@ -455,8 +603,9 @@ function renderPayments() {
     if (!filtered.length) {
         const qbMessage = state.quickBooksPaymentsError
             ? `<div class="overview-alert" style="margin-top:12px;">${escapeHtml(state.quickBooksPaymentsError)}</div>`
-            : (!state.quickBooksPaymentsConnected ? '<div class="empty-compact" style="margin-top:12px;">Connect this property to QuickBooks to match existing payments.</div>' : '');
+            : (!state.quickBooksPaymentsConnected ? '<div class="empty-compact" data-qb-connection-notice style="margin-top:12px;">Connect this property to QuickBooks to match existing payments.</div>' : '');
         paymentsList.innerHTML = `<div class="empty-state"><i class="fas fa-link"></i><p>No matched transactions found</p><span class="task-meta">Use Unmatched to link or import QuickBooks payments.</span></div>${qbMessage}`;
+        schedulePaymentConnectionNoticeDismissal(paymentsList);
         return;
     }
     // Apply sorting
@@ -484,7 +633,7 @@ function renderPayments() {
     const pageStart=(state.paymentPage-1)*state.paymentPageSize,pageRows=filtered.slice(pageStart,pageStart+state.paymentPageSize);
     const quickBooksStatusMessage = state.quickBooksPaymentsError
         ? `<div class="overview-alert" style="margin-bottom:12px;">${escapeHtml(state.quickBooksPaymentsError)}</div>`
-        : (!state.quickBooksPaymentsConnected ? '<div class="empty-compact" style="margin-bottom:12px;">Connect this property to QuickBooks to match existing QuickBooks payments.</div>' : '');
+        : (!state.quickBooksPaymentsConnected ? '<div class="empty-compact" data-qb-connection-notice style="margin-bottom:12px;">Connect this property to QuickBooks to match existing QuickBooks payments.</div>' : '');
     paymentsList.innerHTML = `
     ${quickBooksStatusMessage}
     <div class="table-responsive">
@@ -527,16 +676,24 @@ function renderPayments() {
                     }
                     const payment = row.localPayment;
                     const qbPayment = row.qbPayment;
+                    const isVoided = payment.postingStatus === 'voided';
+                    const editLockReason = getPaymentEditLockReason(payment);
                     const isPersistedMatch = payment.quickBooks?.syncStatus === 'synced' && payment.quickBooks?.entityId;
+                    const rowClick = editLockReason
+                        ? `openPaymentEditLockPopover(event, '${payment._id}')`
+                        : `${payment.quickBooks?.manualAllocation?'openPaymentAllocation':'editPayment'}('${payment._id}')`;
                     return `
-                        <tr class="payment-row" onclick="${payment.quickBooks?.manualAllocation?'openPaymentAllocation':'editPayment'}('${payment._id}')">
+                        <tr class="payment-row${isVoided?' payment-row-voided':''}" onclick="${rowClick}"${editLockReason?` tabindex="0" aria-haspopup="dialog" aria-expanded="false" aria-controls="paymentEditLockPopover" onkeydown="handlePaymentEditLockRowKeydown(event, '${payment._id}')"`:''}>
                             <td>${row.tenantName ? `<button class=\"link-button\" title=\"View balance sheet\" onclick=\"event.stopPropagation();openTenantBalanceModal('${payment.tenantId}')\">${escapeHtml(row.tenantName)}</button>` : 'N/A'}</td>
                             <td>${escapeHtml(row.unitText || 'N/A')}</td>
                             <td>${escapeHtml(row.typeText || '')}</td>
                             <td>${escapeHtml(row.appliedText || 'Rent')}</td>
                             <td>${(
+                                isVoided
+                                    ? `<del title="Voided payment">$${Number(payment.amount || 0).toFixed(2)}</del>`
+                                    :
                                 (Number(payment.amount) === 0 && Number(payment.appliedCredit) > 0)
-                                    ? `<span style="color:#065f46;font-weight:600" title="Applied credit">Applied credit $${Number(payment.appliedCredit).toFixed(2)}</span>`
+                                    ? `<span style="color:#065f46;" title="Applied credit">Applied credit $${Number(payment.appliedCredit).toFixed(2)}</span>`
                                     : (payment.amount < 0
                                         ? '<span style="color:#dc2626" title="Credit">-$' + Math.abs(payment.amount).toFixed(2) + '</span>'
                                         : '$' + Number(payment.amount).toFixed(2))
@@ -545,15 +702,17 @@ function renderPayments() {
                             <td>${formatDateDisplay(payment.date)}</td>
                                <td>$${Number(row.lateFeeDisplay).toFixed(2)}</td>
                                                         <td>
-                                                        ${row.displayBalance < 0 || payment.amount < 0
-                                                            ? `<button class="link-button" title="Apply credit${row.overrideActive ? ' • override active' : ''}" onclick="event.stopPropagation();openCreditMenu(event, '${payment.tenantId}', '${payment._id}')">` +
+                                                        ${isVoided ? '—' : row.displayBalance < 0 || payment.amount < 0
+                                                            ? `<button class="link-button" title="Apply credit${row.overrideActive ? ' • override active' : ''}" onclick="event.stopPropagation();openCreditAllocation(event, '${payment.tenantId}', '${payment._id}')">` +
                                                                 (row.displayBalance < 0 ? `<span style='color:#16a34a'>-$${Math.abs(row.displayBalance).toFixed(2)}</span>` : `$${(Number(row.displayBalance).toFixed(2))}`) +
                                                                      `</button>`
                                                             : (row.displayBalance !== undefined && row.displayBalance !== null ? `$${(Number(row.displayBalance).toFixed(2))}` : '')}
                                                         </td>
-                                                     <td class="note-cell">${renderPaymentNote(row)}</td>
+                                                     <td class="note-cell">${renderPaymentNote(row)}${isVoided?`<span class="payment-void-reason">${escapeHtml(payment.voidReason||'Voided')}</span>`:''}</td>
                             <td onclick="event.stopPropagation()">
-                                ${payment.quickBooks?.syncStatus === 'failed'
+                                ${isVoided
+                                    ? '<span class="badge badge-warning">Voided locally</span>'
+                                    : payment.quickBooks?.syncStatus === 'failed'
                                     ? `<button class="overview-row-action" data-qb-sync-payment="${payment._id}" title="${escapeHtml(payment.quickBooks.lastError||'Retry QuickBooks sync')}" onclick="syncPaymentQuickBooks('${payment._id}')">Retry</button>`
                                     : (isPersistedMatch
                                                                     ? `<span class="badge ${payment.quickBooks?.allocationReviewRequired&&!payment.quickBooks?.manualAllocation?'badge-warning':'badge-success'}">${payment.quickBooks?.manualAllocation?'Allocated':payment.quickBooks?.allocationReviewRequired?'Review':'Synced'}</span><button class="overview-row-action" onclick="openPaymentAllocation('${payment._id}')">Allocate</button>`
@@ -572,6 +731,7 @@ function renderPayments() {
     </div>
     <div class="payment-record-pagination" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><span class="task-meta">Showing ${filtered.length?`${pageStart+1}–${Math.min(pageStart+pageRows.length,filtered.length)}`:'0'} of ${filtered.length}</span><div style="display:flex;align-items:center;gap:8px"><label class="task-meta">Rows <select class="pm-page-size" aria-label="Rows per page" onchange="setPaymentPageSize(this.value)" style="padding:5px;border:1px solid #cbd5e1;border-radius:7px"><option value="25" ${state.paymentPageSize===25?'selected':''}>25</option><option value="50" ${state.paymentPageSize===50?'selected':''}>50</option><option value="100" ${state.paymentPageSize===100?'selected':''}>100</option></select></label><button class="btn-secondary" onclick="changePaymentPage(-1)" ${state.paymentPage<=1?'disabled':''}><i class="fas fa-chevron-left"></i></button><span class="task-meta">Page ${state.paymentPage} of ${totalPages}</span><button class="btn-secondary" onclick="changePaymentPage(1)" ${state.paymentPage>=totalPages?'disabled':''}><i class="fas fa-chevron-right"></i></button></div></div>
     `;
+    schedulePaymentConnectionNoticeDismissal(paymentsList);
     // Wire clickable header sort and update arrows
     wireClickableHeaderSort();
     updateSortArrows();
@@ -940,166 +1100,4 @@ function updateSortArrows() {
             el.textContent = '';
         }
     });
-}
-
-function ensureCreditMenu() {
-    if (creditMenuEl) return creditMenuEl;
-    creditMenuEl = document.createElement('div');
-    creditMenuEl.id = 'creditApplyMenu';
-        creditMenuEl.style.position = 'fixed';
-        creditMenuEl.style.background = '#fff';
-        creditMenuEl.style.border = '1px solid #e5e7eb';
-        creditMenuEl.style.borderRadius = '12px';
-        creditMenuEl.style.boxShadow = '0 12px 32px rgba(0,0,0,0.16)';
-        creditMenuEl.style.padding = '0';
-        creditMenuEl.style.zIndex = 6000;
-        creditMenuEl.style.display = 'none';
-        creditMenuEl.style.minWidth = '260px';
-        creditMenuEl.style.overflow = 'hidden';
-        creditMenuEl.style.transform = 'translateY(-6px)';
-        creditMenuEl.style.opacity = '0';
-        creditMenuEl.style.transition = 'opacity .12s ease, transform .12s ease';
-
-        creditMenuEl.innerHTML = `
-            <div style="display:flex;flex-direction:column;min-width:260px;">
-                <div id="creditMenuHeader" style="padding:10px 12px;background:#f8fafc;border-bottom:1px solid #eef2f7;display:flex;align-items:center;gap:8px;">
-                    <div style="width:28px;height:28px;border-radius:8px;background:#e8f3ff;display:flex;align-items:center;justify-content:center;color:#217dbb;font-weight:700;">$</div>
-                    <div>
-                        <div style="font-size:.82rem;color:#6b7280;">Available Credit</div>
-                        <div id="creditMenuRemaining" style="font-weight:700;color:#065f46;">$0.00</div>
-                    </div>
-                </div>
-                <div style="padding:6px;">
-                    <button class="menu-item" data-target="rent"><i class="fas fa-home"></i><span>Apply to Rent</span></button>
-                    <button class="menu-item" data-target="deposit"><i class="fas fa-piggy-bank"></i><span>Apply to Deposit</span></button>
-                    <div class="menu-divider"></div>
-                    <div class="menu-label">Apply to Fee</div>
-                    <div class="fee-grid">
-                        ${['late','water','electric','trash','admin','other'].map(k=>`<button class='menu-chip' data-target='${k}'>${k.charAt(0).toUpperCase()+k.slice(1)}</button>`).join('')}
-                    </div>
-                </div>
-            </div>`;
-
-        // Scoped styles for menu items
-        const style = document.createElement('style');
-        style.textContent = `
-            #creditApplyMenu .menu-item { display:flex; align-items:center; gap:8px; width:100%; padding:10px 10px; border-radius:10px; border:none; background:transparent; cursor:pointer; color:#1f2937; }
-            #creditApplyMenu .menu-item i { color:#217dbb; width:18px; text-align:center; }
-            #creditApplyMenu .menu-item:hover { background:#f1f5f9; }
-            #creditApplyMenu .menu-divider { height:1px; background:#eef2f7; margin:6px 2px; }
-            #creditApplyMenu .menu-label { color:#6b7280; font-size:.82rem; padding:4px 6px 6px; }
-            #creditApplyMenu .fee-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; padding:0 4px 6px; }
-            #creditApplyMenu .menu-chip { padding:8px 10px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:999px; cursor:pointer; color:#374151; }
-            #creditApplyMenu .menu-chip:hover { background:#eaf6ff; border-color:#cfe8ff; color:#0b5cab; }
-        `;
-        document.head.appendChild(style);
-    document.body.appendChild(creditMenuEl);
-    // Delegate clicks
-    creditMenuEl.addEventListener('click', (e) => {
-        const btn = e.target.closest('button[data-target]');
-        if (!btn) return;
-        const target = btn.getAttribute('data-target');
-        const creditPaymentId = creditMenuEl.getAttribute('data-credit-payment-id');
-        const tenantId = creditMenuEl.getAttribute('data-tenant-id');
-        closeCreditMenu();
-        promptAndApplyCredit(tenantId, creditPaymentId, target);
-    });
-    // Close when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!creditMenuEl || creditMenuEl.style.display === 'none') return;
-        if (!creditMenuEl.contains(e.target)) closeCreditMenu();
-    });
-    return creditMenuEl;
-}
-
-function openCreditMenu(event, tenantId, creditPaymentId) {
-    const menu = ensureCreditMenu();
-    // If this row isn't the credit payment, try to find a credit with remaining for this tenant
-    let sourceId = creditPaymentId;
-    const payments = (state.payments || []).filter(p => p.tenantId === tenantId);
-    const findRemaining = (p) => {
-        const amt = Number(p.amount) || 0;
-        const bal = Number(p.balance);
-        const base = amt < 0 ? Math.abs(amt) : (isNaN(bal) ? 0 : (bal < 0 ? Math.abs(bal) : 0));
-        return Math.max(0, base - Math.abs(Number(p.appliedCredit)||0));
-    };
-    let remaining = 0;
-    if (!payments.find(p => p._id === sourceId && (remaining = findRemaining(p)) > 0)) {
-        const candidate = payments.find(p => (Number(p.amount)||0) < 0 && findRemaining(p) > 0);
-        if (candidate) { sourceId = candidate._id; remaining = findRemaining(candidate); }
-    }
-    if (!sourceId || remaining <= 0) {
-        showNotification('No available credit to apply', 'info');
-        return;
-    }
-        menu.setAttribute('data-credit-payment-id', sourceId);
-    menu.setAttribute('data-tenant-id', tenantId);
-    menu.style.left = `${event.clientX + 6}px`;
-    menu.style.top = `${event.clientY + 6}px`;
-    const remainingEl = document.getElementById('creditMenuRemaining');
-    if (remainingEl) remainingEl.textContent = `$${remaining.toFixed(2)}`;
-        menu.style.display = 'block';
-        requestAnimationFrame(()=>{
-            menu.style.opacity = '1';
-            menu.style.transform = 'translateY(0)';
-        });
-}
-
-function closeCreditMenu() {
-        if (creditMenuEl) {
-            creditMenuEl.style.opacity = '0';
-            creditMenuEl.style.transform = 'translateY(-6px)';
-            setTimeout(()=>{ if (creditMenuEl) creditMenuEl.style.display = 'none'; }, 120);
-        }
-}
-
-async function promptAndApplyCredit(tenantId, creditPaymentId, target) {
-    try {
-        // Compute remaining
-        const credit = (state.payments || []).find(p => p._id === creditPaymentId);
-        let remaining = 0;
-        if (credit) {
-            const amt = Number(credit.amount) || 0;
-            const bal = Number(credit.balance);
-            const base = amt < 0 ? Math.abs(amt) : (isNaN(bal) ? 0 : (bal < 0 ? Math.abs(bal) : 0));
-            remaining = Math.max(0, base - Math.abs(Number(credit.appliedCredit)||0));
-        }
-        let amtStr = prompt(`Enter amount to apply (available $${remaining.toFixed(2)}):`, remaining.toFixed(2));
-        if (amtStr === null) return; // cancelled
-        const amount = Math.max(0, Number(amtStr) || 0);
-        if (amount <= 0) { showNotification('Amount must be greater than 0', 'error'); return; }
-        let feeType = '', feeLabel = '', periodMonth = '';
-        // Resolve unitId for posting (prefer source payment unitId, else tenant assigned)
-        let resolvedUnitId = credit?.unitId || (state.tenants.find(t => t._id === tenantId)?.unitId?._id || state.tenants.find(t => t._id === tenantId)?.unitId || undefined);
-        if (target === 'fee' || ['late','water','electric','trash','admin','other'].includes(target)) {
-            if (target === 'fee' || target === 'other') {
-                feeType = prompt('Enter fee type (e.g., other):', target === 'other' ? 'other' : '') || '';
-                feeLabel = prompt('Enter fee label (optional):', '') || '';
-            } else {
-                feeType = target;
-            }
-        }
-        if (target === 'rent') {
-            periodMonth = prompt('Apply to which period (YYYY-MM)? Leave blank for current month:', '') || '';
-        }
-        showLoader();
-        const resp = await fetch(`${API_URL}/properties/${state.currentProperty._id}/payments/${creditPaymentId}/apply-credit`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tenantId, unitId: resolvedUnitId, amount, targetApplyTo: target === 'fee' ? 'fee' : target, feeType, feeLabel, periodMonth })
-        });
-        if (!resp.ok) throw new Error('Failed to apply credit');
-        // Refresh both payments and tenants so deposit paid/summary updates
-        invalidateCache('payments','tenants');
-        await Promise.all([
-            refreshContent('payments'),
-            refreshContent('tenants')
-        ]);
-        showNotification('Credit applied successfully', 'success');
-    } catch (e) {
-        console.error('Error applying credit:', e);
-        showNotification('Error applying credit', 'error');
-    } finally {
-        hideLoader();
-    }
 }

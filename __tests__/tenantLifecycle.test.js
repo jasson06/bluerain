@@ -230,6 +230,14 @@ describe('property overview separates lease collections from cash', () => {
     expect(data.formerTenants.total).toBe(4290);
     expect(data.delinquency.tenants.every(row=>row.tenantId!=='former')).toBe(true);
   });
+  test('voided rent receipts remain stored but are excluded from collection totals', async () => {
+    const data=await overview('2026-06-01','2026-07-01',[],[
+      {tenantId:'tenant-a',date:'2026-06-04',periodMonth:'2026-06',amount:530,applyTo:'rent',postingStatus:'voided'}
+    ]);
+    expect(data.summary.rentCollected).toBe(500);
+    expect(data.summary.cashRentCollected).toBe(900);
+    expect(data.summary.totalCashCollected).toBe(950);
+  });
   test('operating rental income follows the selected rent month, not receipt date', async () => {
     const data = await overview('2026-06-01','2026-07-01',[],[
       {tenantId:'tenant-a',date:'2026-05-31',periodMonth:'2026-06',amount:530,applyTo:'rent'}

@@ -1,3 +1,5 @@
+const creditValues = require('./payment-credit-values');
+
 function leaseEndForCharges(tenant) {
   const dates = [tenant?.leaseEnd, tenant?.termination?.effectiveDate].filter(Boolean).map(value => new Date(value));
   return dates.length ? new Date(Math.min(...dates.map(date => date.getTime()))) : null;
@@ -28,9 +30,9 @@ function paymentPeriod(payment) {
 function tenantMonthTotals(tenant, date, payments, computeExpected) {
   const period = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   const rows = payments.filter(payment => String(payment.tenantId?._id || payment.tenantId) === String(tenant._id)
+    && payment.postingStatus !== 'voided'
     && (payment.applyTo || 'rent') === 'rent' && paymentPeriod(payment) === period);
-  const paid = rows.reduce((sum, payment) => sum + Math.max(0, Number(payment.amount) || 0)
-    + Math.max(0, Number(payment.appliedCredit) || 0), 0);
+  const paid = rows.reduce((sum, payment) => sum + creditValues.appliedValue(payment), 0);
   let expected = 0;
   if (isChargeableMonth(tenant, date)) {
     expected = computeExpected(tenant, date, 'rent');

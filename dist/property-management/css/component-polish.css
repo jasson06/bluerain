@@ -43,7 +43,7 @@
 .unit-card-modern:hover .unit-card-header::after {background-position:0 0,-90% 0}
 .unit-card-header h3 {display:flex;align-items:center;gap:10px;color:#fff!important;font-size:1.22rem!important;font-weight:850!important;text-shadow:0 2px 9px rgba(2,42,68,.34)!important}
 .unit-card-header h3>i {width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.22)}
-.unit-card-header .badge {color:#073b59!important;background:rgba(255,255,255,.9)!important;border:1px solid rgba(255,255,255,.7)!important;font-weight:800!important;box-shadow:0 5px 14px rgba(2,42,68,.17)!important}
+.unit-card-header .badge {color:#073b59!important;background:rgba(255,255,255,.9)!important;border:1px solid rgba(255,255,255,.7)!important;max-width: fit-content;font-weight:800!important;box-shadow:0 5px 14px rgba(2,42,68,.17)!important}
 .unit-info-row i,.equipment-summary>i,.unit-utilities-title i {color:#0788b5!important;width:28px;height:28px;display:inline-grid;place-items:center;border-radius:8px;background:rgba(56,189,248,.12);transition:transform .18s ease,background .18s ease}
 .unit-info-row span:hover i,.equipment-summary:hover>i,.unit-utilities-section:hover .unit-utilities-title i {transform:translateY(-1px) scale(1.08);background:rgba(34,211,238,.19)}
 .unit-card-actions .btn-secondary {transition:transform .18s ease,box-shadow .18s ease,background .18s ease!important}.unit-card-actions .btn-secondary:hover {transform:translateY(-2px);box-shadow:0 9px 20px rgba(8,120,170,.17)!important}.unit-card-actions .delete-btn:hover {transform:translateY(-2px) rotate(-3deg)}

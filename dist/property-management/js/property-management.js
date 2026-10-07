@@ -1246,9 +1246,6 @@ state.paymentWorkspaceTab=state.paymentWorkspaceTab||'transactions';state.paymen
 
 let paymentLedgerOriginalParent=null;
 
-// Floating credit apply menu
-let creditMenuEl;
-
 document.getElementById('editMonthChargesBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
     openEditMonthChargesModal();

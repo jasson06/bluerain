@@ -1753,16 +1753,22 @@ const paymentSchema = new mongoose.Schema({
   carryForward: { type: Boolean, default: false },
   // How much prior credit was applied to this month
   appliedCredit: { type: Number, default: 0 },
+  creditConsumed: { type: Number, default: null, min: 0 },
+  creditSourceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment', default: null },
+  creditApplicationKey: { type: String },
   amount: { type: Number, required: true },
   method: { type: String, enum: ['cash', 'check', 'bank', 'online'], required: true },
   date: { type: Date, required: true },
   lateFee: { type: Number, default: 0 },
   balance: { type: Number, default: 0 },
   source: { type: String, enum: ['local', 'quickbooks'], default: 'local', index: true },
-  postingStatus: { type: String, enum: ['posted', 'pending', 'conflict'], default: 'posted', index: true },
+  postingStatus: { type: String, enum: ['posted', 'pending', 'conflict', 'voided'], default: 'posted', index: true },
+  voidedAt: { type: Date, default: null },
+  voidReason: { type: String, default: '' },
   quickBooks: { type: mongoose.Schema.Types.Mixed, default: {} }
 }, { timestamps: true });
 paymentSchema.index({ projectId: 1, 'quickBooks.entityType': 1, 'quickBooks.entityId': 1 }, { unique: true, partialFilterExpression: { 'quickBooks.entityId': { $type: 'string' } } });
+paymentSchema.index({ projectId: 1, creditApplicationKey: 1 }, { unique: true, partialFilterExpression: { creditApplicationKey: { $type: 'string' } } });
 
 const roomPackageSchema = new mongoose.Schema({
   key: { type: String, required: true, unique: true }, // e.g., 'kitchen'
@@ -2550,6 +2556,8 @@ serverFlows["payments"].get_api_properties_propertyId_payments_paymentId();
 serverFlows["payments"].post_api_properties_propertyId_payments_paymentId_send_receipt();
 
 serverFlows["payments"].delete_api_properties_propertyId_payments_paymentId();
+
+serverFlows["payments"].post_api_properties_propertyId_payments_paymentId_void();
 
 serverFlows["payments"].post_api_properties_propertyId_payments();
 

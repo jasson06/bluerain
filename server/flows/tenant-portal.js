@@ -1,6 +1,7 @@
 // tenant portal flow. Shared dependencies remain live through serverContext.
 // Route registration is invoked by server.js in its original order.
 module.exports = function createFlow(serverContext) {
+const creditValues = require('../payment-credit-values');
 
 // ===================== TENANT PORTAL API =====================
 
@@ -49,7 +50,7 @@ function buildTenantPortalPaymentLedger(payments = [], tenant = null) {
   });
 
   const rentPeriodTotals = ordered.reduce((map, payment) => {
-    if ((payment?.applyTo || 'rent') !== 'rent') return map;
+    if (payment?.postingStatus==='voided' || (payment?.applyTo || 'rent') !== 'rent') return map;
     const paymentDate = payment?.date ? new Date(payment.date) : null;
     if (!paymentDate || Number.isNaN(paymentDate.getTime())) return map;
     const period = payment.periodMonth || `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}`;
@@ -69,6 +70,7 @@ function buildTenantPortalPaymentLedger(payments = [], tenant = null) {
 
   const ledger = ordered.map(payment => {
     const entry = { ...payment };
+    if(entry.postingStatus==='voided'){entry.balance=0;return entry;}
     const applyTo = entry.applyTo || 'rent';
 
     if (applyTo === 'rent') {
@@ -77,14 +79,14 @@ function buildTenantPortalPaymentLedger(payments = [], tenant = null) {
         const period = entry.periodMonth || `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}`;
         const periodState = rentPeriodTotals[period];
         if (periodState) {
-          periodState.applied += Math.abs(Number(entry.amount) || 0) + Math.abs(Number(entry.appliedCredit) || 0);
+          periodState.applied += creditValues.appliedValue(entry);
           if (!Number.isFinite(Number(entry.balance))) {
             entry.balance = Number((periodState.expected + periodState.lateFees - periodState.applied).toFixed(2));
           }
         }
       }
     } else if (applyTo === 'deposit') {
-      depositApplied += Math.max(0, Number(entry.amount) || 0);
+      depositApplied += creditValues.appliedValue(entry);
       if (!Number.isFinite(Number(entry.balance))) {
         entry.balance = Number((depositRequired - depositApplied).toFixed(2));
       }
@@ -168,7 +170,7 @@ async function buildTenantPortalPayload(tenantId) {
   payments = (0, serverContext.buildTenantPortalPaymentLedger)(payments, tenant);
   const expectedRent = (0, serverContext.computeExpectedRentForMonth)(tenant, now, 'rent') || 0;
   const currentRentPayments = payments.filter(payment => {
-    if ((payment.applyTo || 'rent') !== 'rent' || !payment.date) return false;
+    if (payment.postingStatus==='voided' || (payment.applyTo || 'rent') !== 'rent' || !payment.date) return false;
     if (payment.periodMonth) return payment.periodMonth === `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
     const d = new Date(payment.date);
     return d >= monthStart && d <= monthEnd;
@@ -178,7 +180,7 @@ async function buildTenantPortalPayload(tenantId) {
   const rentBalance = expectedRent + lateFeesThisMonth - paidThisMonth;
   const depositRequired = Number(tenant.deposit) || 0;
   const depositPaidFromPayments = payments
-    .filter(payment => (payment.applyTo || 'rent') === 'deposit')
+    .filter(payment => payment.postingStatus!=='voided' && (payment.applyTo || 'rent') === 'deposit')
     .reduce((sum, payment) => sum + Math.max(0, Number(payment.amount) || 0), 0);
   const savedDepositPaid = Number(tenant.depositPaid) || 0;
   const depositPaid = Math.max(savedDepositPaid, depositPaidFromPayments);

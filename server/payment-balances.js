@@ -1,6 +1,7 @@
 // Shared with the manual payment Update action; preserves its charge rules.
 module.exports = function paymentBalances(serverContext) {
   const tenantLifecycle = require('./tenant-lifecycle');
+  const credits = require('./payment-credit-values');
   function comparePayments(a,b) {
     const time = v => { const n = new Date(v || 0).getTime(); return Number.isFinite(n) ? n : 0; };
     return time(a.date)-time(b.date)
@@ -9,6 +10,14 @@ module.exports = function paymentBalances(serverContext) {
       || String(a._id||'').localeCompare(String(b._id||''));
   }
   async function recalculate(payment, lateFee, loaded) {
+    if(payment.postingStatus==='voided') {
+      payment.balance=0;
+      return payment;
+    }
+    if(Number(payment.amount)<0) {
+      payment.balance=-credits.availableCredit(payment);
+      return payment;
+    }
     // Recalculate balance for rent payments only
     if (payment.applyTo === 'rent') {
       const periodMatch = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(payment.periodMonth || '');
@@ -19,7 +28,7 @@ module.exports = function paymentBalances(serverContext) {
   let expectedAmount = 0;
     let calculatedLateFee = 0;
     let overrideLateApplied = false;
-  if (payment.type === 'rent') {
+  if (payment.type !== 'hub') {
         // Recompute with proration for first month; otherwise full monthly charges
         expectedAmount = (0, serverContext.computeExpectedRentForMonth)(tenantData, paymentDate, 'rent');
         // Monthly late fee override takes precedence; else allow manual payment lateFee, else 0
@@ -63,28 +72,28 @@ module.exports = function paymentBalances(serverContext) {
         overrideLateApplied = true;
       }
       const period = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth()+1).padStart(2,'0')}`;
-      const tenantPayments = loaded ? loaded.payments.filter(p=>p.applyTo==='rent' && String(p._id)!==String(payment._id)) : await serverContext.Payment.find({
+      const tenantPayments = loaded ? loaded.payments.filter(p=>p.postingStatus!=='voided' && p.applyTo==='rent' && String(p._id)!==String(payment._id)) : await serverContext.Payment.find({
         tenantId: payment.tenantId,
         applyTo: 'rent',
         _id: { $ne: payment._id }
       });
-      const paymentsThisMonth = tenantPayments.filter(p => p.periodMonth ? p.periodMonth === period : new Date(p.date) >= monthStart && new Date(p.date) <= monthEnd);
-  const totalPaid = paymentsThisMonth.filter(p => comparePayments(p,payment) < 0).reduce((sum, p) => sum + Math.abs(p.amount || 0), 0);
+      const paymentsThisMonth = tenantPayments.filter(p => p.postingStatus!=='voided' && (p.periodMonth ? p.periodMonth === period : new Date(p.date) >= monthStart && new Date(p.date) <= monthEnd));
+  const totalPaid = paymentsThisMonth.filter(p => comparePayments(p,payment) < 0).reduce((sum, p) => sum + credits.appliedValue(p), 0);
       const totalLateFees = paymentsThisMonth.reduce((sum, p) => sum + (p.lateFee || 0), 0);
       const totalMonthlyCharges = overrideLateApplied ? expectedAmount : (expectedAmount + totalLateFees + calculatedLateFee);
       if (overrideLateApplied) {
         payment.lateFee = 0; // clear per-payment late fee when override controls month late fee
       }
-  const balance = totalMonthlyCharges - (totalPaid + Math.abs(payment.amount));
+  const balance = totalMonthlyCharges - (totalPaid + credits.appliedValue(payment));
   payment.balance = balance; // allow negative credit
     } else if (payment.applyTo === 'deposit') {
       // Set balance to remaining deposit
       const tenantData = (loaded ? loaded.tenant : await serverContext.Tenant.findById(payment.tenantId));
       const expectedDeposit = Number(tenantData.deposit) || 0;
       // Sum all deposit payments excluding this one (we already updated amount above)
-      const otherDepositPayments = loaded ? loaded.payments.filter(p=>p.applyTo==='deposit' && String(p._id)!==String(payment._id)) : await serverContext.Payment.find({ tenantId: payment.tenantId, applyTo: 'deposit', _id: { $ne: payment._id } });
-      const totalOther = otherDepositPayments.filter(p => comparePayments(p,payment) < 0).reduce((s, p) => s + (p.amount || 0), 0);
-      const depositBalance = expectedDeposit - (totalOther + payment.amount);
+      const otherDepositPayments = loaded ? loaded.payments.filter(p=>p.postingStatus!=='voided' && p.applyTo==='deposit' && String(p._id)!==String(payment._id)) : await serverContext.Payment.find({ tenantId: payment.tenantId, applyTo: 'deposit', _id: { $ne: payment._id } });
+      const totalOther = otherDepositPayments.filter(p => p.postingStatus!=='voided' && comparePayments(p,payment) < 0).reduce((s, p) => s + credits.appliedValue(p), 0);
+      const depositBalance = expectedDeposit - (totalOther + credits.appliedValue(payment));
   payment.balance = depositBalance; // can be negative if overpaid deposit
     } else {
       // Fee entries have no running balance

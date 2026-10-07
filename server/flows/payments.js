@@ -4,6 +4,8 @@ module.exports = function createFlow(serverContext) {
 const paymentBalances = require('../payment-balances')(serverContext);
 const paymentAllocations = require('../payment-allocations')(serverContext);
 const tenantLifecycle = require('../tenant-lifecycle');
+const creditValues = require('../payment-credit-values');
+const paymentCredits = require('../payment-credits')(serverContext);
 
 // POST a new payment (rent or HUB)
 // Helper to normalize incoming payment type to enum values
@@ -135,6 +137,7 @@ serverContext.app.post('/api/properties/:propertyId/payments/:paymentId/send-rec
     if (!payment) {
       return res.status(404).json({ message: 'Payment not found' });
     }
+    if(payment.postingStatus==='voided')return res.status(409).json({message:'A voided payment receipt cannot be sent'});
 
     const tenant = await serverContext.Tenant.findById(payment.tenantId).lean();
     if (!tenant || !tenant.email) {
@@ -354,6 +357,8 @@ serverContext.app.delete('/api/properties/:propertyId/payments/:paymentId', asyn
   try {
     const payment = await serverContext.Payment.findOne({ _id: req.params.paymentId, projectId: req.params.propertyId });
     if (!payment) return res.status(404).json({ message: 'Payment not found' });
+    if(payment.postingStatus==='voided')return res.status(409).json({message:'Voided payments are retained for audit and cannot be deleted'});
+    if(payment.creditSourceId || creditValues.consumedCredit(payment)>0 || Number(payment.appliedCredit)>0)return res.status(409).json({message:'Payments with credit allocations are retained for audit and cannot be deleted'});
     if(payment.quickBooks?.manualAllocation)return res.status(409).json({message:'Use Allocate to change this split payment. Individual allocations cannot be deleted separately.'});
 
     // If payment applied to deposit, roll back tenant.depositPaid
@@ -375,6 +380,57 @@ serverContext.app.delete('/api/properties/:propertyId/payments/:paymentId', asyn
   } catch (error) {
     console.error('Error deleting payment:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+}
+
+function post_api_properties_propertyId_payments_paymentId_void() {
+serverContext.app.post('/api/properties/:propertyId/payments/:paymentId/void', async (req, res) => {
+  const reason=String(req.body?.reason||'').trim();
+  if(!reason||reason.length>500)return res.status(400).json({message:'Provide a void reason of up to 500 characters'});
+  let session;
+  try {
+    session=await serverContext.Payment.db.startSession();
+    let resultPayment=null;
+    let voidedCount=0;
+    await session.withTransaction(async()=>{
+      const payment=await serverContext.Payment.findOne({_id:req.params.paymentId,projectId:req.params.propertyId}).session(session);
+      if(!payment)throw Object.assign(new Error('Payment not found'),{status:404});
+      if(payment.postingStatus==='voided')throw Object.assign(new Error('Payment is already voided'),{status:409});
+      const rootId=String(payment.quickBooks?.allocationRootId||payment._id);
+      const isAllocation=!!(payment.quickBooks?.manualAllocation||payment.quickBooks?.allocationRootId);
+      const group=isAllocation
+        ?await serverContext.Payment.find({projectId:req.params.propertyId,'quickBooks.allocationRootId':rootId}).session(session)
+        :[payment];
+      if(!group.length)throw Object.assign(new Error('Payment allocation group not found'),{status:409});
+      if(group.some(item=>item.postingStatus==='voided'))throw Object.assign(new Error('Part of this allocation is already voided; review the payment before continuing'),{status:409});
+      if(group.some(item=>Number(item.amount)<0||Number(item.appliedCredit)>0||creditValues.consumedCredit(item)>0)) {
+        throw Object.assign(new Error('Resolve any credits already used by this payment before voiding it'),{status:409});
+      }
+      const depositAmount=group.filter(item=>item.applyTo==='deposit').reduce((sum,item)=>sum+Math.max(0,Number(item.amount)||0),0);
+      for(const item of group){
+        item.postingStatus='voided';
+        item.voidedAt=new Date();
+        item.voidReason=reason;
+        await item.save({session});
+      }
+      if(depositAmount){
+        const tenant=await serverContext.Tenant.findById(payment.tenantId).session(session);
+        if(!tenant)throw Object.assign(new Error('Tenant not found for this deposit payment'),{status:404});
+        tenant.depositPaid=Math.max(0,(Number(tenant.depositPaid)||0)-depositAmount);
+        await tenant.save({session});
+      }
+      await paymentBalances.refreshTenant(payment.tenantId,session);
+      resultPayment=payment.toObject();
+      voidedCount=group.length;
+    });
+    return res.json({success:true,payment:resultPayment,voidedCount});
+  } catch(error) {
+    if(error.status)return res.status(error.status).json({message:error.message});
+    console.error('Error voiding payment:',error);
+    return res.status(500).json({message:'Unable to void payment'});
+  } finally {
+    if(session)await session.endSession();
   }
 });
 }
@@ -456,41 +512,6 @@ serverContext.app.post('/api/properties/:propertyId/payments', async (req, res) 
     let finalAmount = (amount !== undefined && amount !== null && amount !== '') ? Number(amount) : expectedAmount;
     let appliedCredit = 0;
 
-    // Apply prior month credits automatically if first rent payment of the month
-    if (applyTo === 'rent') {
-      const selectedPeriod = /^\d{4}-\d{2}$/.test(String(periodMonth || '')) ? String(periodMonth) : '';
-      const paymentDateObj = selectedPeriod ? new Date(Number(selectedPeriod.slice(0,4)), Number(selectedPeriod.slice(5,7))-1, 15) : new Date(date);
-      const monthStart = new Date(paymentDateObj.getFullYear(), paymentDateObj.getMonth(), 1);
-      const monthEnd = new Date(paymentDateObj.getFullYear(), paymentDateObj.getMonth() + 1, 0, 23, 59, 59, 999);
-      const existingRentPaymentsThisMonth = await serverContext.Payment.find({
-        tenantId,
-        applyTo: 'rent',
-        $or: selectedPeriod ? [{ periodMonth: selectedPeriod }, { periodMonth: { $in: ['', null] }, date: { $gte: monthStart, $lte: monthEnd } }, { periodMonth: { $exists: false }, date: { $gte: monthStart, $lte: monthEnd } }] : [{ date: { $gte: monthStart, $lte: monthEnd } }]
-      });
-      if (existingRentPaymentsThisMonth.length === 0) {
-        // Gather prior credits marked carryForward
-        const priorCredits = await serverContext.Payment.find({
-          tenantId,
-          applyTo: 'rent',
-          carryForward: true,
-          date: { $lt: monthStart }
-        });
-        const creditTotal = priorCredits.reduce((s, p) => {
-          if (p.amount < 0) return s + Math.abs(p.amount);
-          if (p.balance < 0) return s + Math.abs(p.balance);
-          return s;
-        }, 0);
-        if (creditTotal > 0) {
-          const originalExpected = expectedAmount;
-          expectedAmount = Math.max(0, expectedAmount - creditTotal);
-          appliedCredit = Math.min(creditTotal, originalExpected); // amount actually consumed
-          // Adjust default finalAmount if user left amount blank (auto-calc scenario)
-          if (amount === undefined || amount === null || amount === '') {
-            finalAmount = expectedAmount; // after credit application
-          }
-        }
-      }
-    }
     const finalLateFee = calculatedLateFee;
 
     // Handle different applyTo behaviors
@@ -499,8 +520,8 @@ serverContext.app.post('/api/properties/:propertyId/payments', async (req, res) 
       const expectedDeposit = Number(tenant.deposit) || 0;
 
       // Sum previous deposit payments
-      const prevDepositPayments = await serverContext.Payment.find({ tenantId, applyTo: 'deposit' });
-      const totalPrevDeposit = prevDepositPayments.reduce((s, p) => s + (p.amount || 0), 0);
+      const prevDepositPayments = (await serverContext.Payment.find({ tenantId, applyTo: 'deposit' })).filter(payment=>payment.postingStatus!=='voided');
+      const totalPrevDeposit = prevDepositPayments.reduce((s, p) => s + creditValues.appliedValue(p), 0);
 
       // If amount not provided, assume remaining deposit
       if (!amount) finalAmount = Math.max(0, expectedDeposit - totalPrevDeposit);
@@ -574,14 +595,14 @@ serverContext.app.post('/api/properties/:propertyId/payments', async (req, res) 
     const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
 
     // Get all payments for this tenant in the current month
-    const paymentsThisMonth = await serverContext.Payment.find({
+    const paymentsThisMonth = (await serverContext.Payment.find({
       tenantId,
       applyTo: 'rent',
       $or: selectedRentPeriod ? [{ periodMonth: selectedRentPeriod }, { periodMonth: { $in: ['', null] }, date: { $gte: monthStart, $lte: monthEnd } }, { periodMonth: { $exists: false }, date: { $gte: monthStart, $lte: monthEnd } }] : [{ date: { $gte: monthStart, $lte: monthEnd } }]
-    });
+    })).filter(payment => payment.postingStatus !== 'voided');
 
     // Calculate total paid (excluding this payment)
-  const totalPaid = paymentsThisMonth.reduce((sum, p) => sum + Math.abs(p.amount || 0), 0); // count credits positively
+  const totalPaid = paymentsThisMonth.reduce((sum, p) => sum + creditValues.appliedValue(p), 0);
 
   // Calculate total late fees (excluding this payment)
   const totalLateFees = paymentsThisMonth.reduce((sum, p) => sum + (p.lateFee || 0), 0);
@@ -589,7 +610,7 @@ serverContext.app.post('/api/properties/:propertyId/payments', async (req, res) 
   // Calculate balance:
   // If override late fee was rolled into expectedAmount above, avoid double-counting by ignoring per-payment late fees
   const totalMonthlyCharges = overrideLateApplied ? expectedAmount : (expectedAmount + totalLateFees + finalLateFee);
-  const balance = totalMonthlyCharges - (totalPaid + Math.abs(finalAmount));
+  const balance = finalAmount < 0 ? -Math.abs(finalAmount) : totalMonthlyCharges - (totalPaid + finalAmount);
 
     const payment = new serverContext.Payment({
       projectId: req.params.propertyId,
@@ -636,6 +657,8 @@ serverContext.app.put('/api/properties/:propertyId/payments/:paymentId', async (
   try {
     const payment = await serverContext.Payment.findOne({_id:req.params.paymentId,projectId:req.params.propertyId});
     if (!payment) return res.status(404).json({ message: 'Payment not found' });
+    if(payment.postingStatus==='voided')return res.status(409).json({message:'Voided payments cannot be edited'});
+    if(payment.creditSourceId || creditValues.consumedCredit(payment)>0 || Number(payment.appliedCredit)>0)return res.status(409).json({message:'Payments with credit allocations cannot be edited; their source and application history must remain intact'});
     if(req.body.allocations!==undefined){
       const result=await paymentAllocations.save(payment,req.body);
       try{await paymentBalances.refreshTenant(result.tenantId);}catch(error){return res.json({success:true,rootId:result.rootId,warning:'Allocation saved. Refresh payments to finish recalculating balances.'});}
@@ -834,123 +857,15 @@ serverContext.app.put('/api/tenants/:tenantId/monthly-overrides/:period', async 
 }
 
 function post_api_properties_propertyId_payments_creditPaymentId_apply_credit() {
-// Apply a credit to a target (rent/deposit/fees) by creating an adjustment payment and consuming credit
+// Keep source consumption, target allocation, and ledger balances in one transaction.
 serverContext.app.post('/api/properties/:propertyId/payments/:creditPaymentId/apply-credit', async (req, res) => {
   try {
-    const { propertyId, creditPaymentId } = req.params;
-    const { tenantId, unitId, amount, targetApplyTo, feeType, feeLabel, periodMonth, note } = req.body;
-    const applyTo = String(targetApplyTo || 'rent').toLowerCase();
-    if (!['rent','deposit','fee','late','water','electric','trash','admin','other'].includes(applyTo)) {
-      return res.status(400).json({ message: 'Invalid target applyTo' });
-    }
-    if (!tenantId) return res.status(400).json({ message: 'tenantId is required' });
-
-    const credit = await serverContext.Payment.findOne({ _id: creditPaymentId, projectId: propertyId, tenantId });
-    if (!credit) return res.status(404).json({ message: 'Credit payment not found' });
-    const creditBase = (credit.amount || 0) < 0
-      ? Math.abs(credit.amount || 0)
-      : ((credit.balance || 0) < 0 ? Math.abs(credit.balance || 0) : 0);
-    const available = Math.max(0, creditBase - Math.abs(credit.appliedCredit || 0));
-    if (available <= 0) return res.status(400).json({ message: 'No available credit to apply' });
-
-    let applyAmount = Number(amount);
-    if (!Number.isFinite(applyAmount) || applyAmount <= 0) applyAmount = available;
-    if (applyAmount > available) applyAmount = available;
-
-    const tenant = await serverContext.Tenant.findById(tenantId);
-    if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
-
-    const today = new Date();
-    if (periodMonth && !/^\d{4}-(0[1-9]|1[0-2])$/.test(periodMonth)) return res.status(400).json({message:'Choose a valid rent period (YYYY-MM)'});
-    const targetPeriod = tenantLifecycle.paymentPeriod({periodMonth,date:today});
-    const targetDate = new Date(`${targetPeriod}-15T12:00:00`);
-    if (applyTo === 'rent' && tenantLifecycle.isFormerTenant(tenant) && !tenantLifecycle.isChargeableMonth(tenant,targetDate)) return res.status(400).json({message:'Apply credit to a rent period within the ended lease'});
-    // Determine unitId fallback: prefer provided, else credit.unitId, else tenant.unitId if stored
-    let resolvedUnitId = unitId;
-    if (!resolvedUnitId) {
-      if (credit.unitId) resolvedUnitId = credit.unitId;
-      else if (tenant.unitId) resolvedUnitId = tenant.unitId; // might be object or id
-    } 
-    const commonFields = {
-      projectId: propertyId,
-      tenantId,
-      unitId: resolvedUnitId || undefined,
-      type: 'adjustment',
-      // Do NOT add to collected totals; represent credit allocation with amount=0
-      amount: 0,
-      method: 'online',
-      date: today,
-      lateFee: 0,
-      note: (note ? String(note) + ' ' : '') + `(Applied from credit ${credit._id.toString().slice(-6)})`,
-      customType: '',
-      carryForward: false,
-      // Track consumption of credit on this allocation entry
-      appliedCredit: applyAmount
-    };
-
-    let newPayment;
-
-    if (applyTo === 'deposit') {
-      const expectedDeposit = Number(tenant.deposit) || 0;
-      // Sum previous deposit payments
-      const prevDepositPayments = await serverContext.Payment.find({ tenantId, applyTo: 'deposit' });
-      const totalPrevDeposit = prevDepositPayments.reduce((s, p) => s + (p.amount || 0), 0);
-      const depositBalance = expectedDeposit - (totalPrevDeposit + applyAmount);
-      newPayment = new serverContext.Payment({
-        ...commonFields,
-        applyTo: 'deposit',
-        balance: depositBalance
-      });
-      await newPayment.save();
-      tenant.depositPaid = (tenant.depositPaid || 0) + applyAmount;
-      await tenant.save();
-    } else if (applyTo === 'fee' || ['late','water','electric','trash','admin','other'].includes(applyTo)) {
-      // Record fee category payment
-      newPayment = new serverContext.Payment({
-        ...commonFields,
-        applyTo,
-        feeType: feeType || '',
-        feeLabel: feeLabel || '',
-        periodMonth: periodMonth || '',
-        balance: 0
-      });
-      await newPayment.save();
-    } else {
-      // applyTo === 'rent' : compute balance like POST /payments
-      const paymentDate = targetDate;
-      const monthStart = new Date(paymentDate.getFullYear(), paymentDate.getMonth(), 1);
-      const monthEnd = new Date(paymentDate.getFullYear(), paymentDate.getMonth() + 1, 0, 23, 59, 59, 999);
-      const paymentsThisMonth = await serverContext.Payment.find({ tenantId, applyTo: 'rent', $or:[{periodMonth:targetPeriod},{periodMonth:{$in:['',null]},date:{$gte:monthStart,$lte:monthEnd}},{periodMonth:{$exists:false},date:{$gte:monthStart,$lte:monthEnd}}] });
-      const totals = tenantLifecycle.tenantMonthTotals(tenant,targetDate,paymentsThisMonth,serverContext.computeExpectedRentForMonth);
-      const balance = totals.outstanding - Math.abs(applyAmount);
-
-      newPayment = new serverContext.Payment({
-        ...commonFields,
-        applyTo: 'rent',
-        periodMonth: targetPeriod,
-        balance
-      });
-      await newPayment.save();
-    }
-
-    // Consume credit using the same base we used to compute availability
-    const newApplied = Math.min(creditBase, Math.abs(credit.appliedCredit || 0) + applyAmount);
-    credit.appliedCredit = newApplied;
-    // If the credit originated from an overpaid balance (negative balance), bring that balance toward zero
-    if ((credit.amount || 0) >= 0 && (credit.balance || 0) < 0) {
-      const remainingAfter = Math.max(0, creditBase - newApplied);
-      credit.balance = -remainingAfter; // 0 when fully consumed, still negative if partial
-    }
-    await credit.save();
-
-    return res.status(201).json({
-      applied: applyAmount,
-      fromCreditId: credit._id,
-      newPayment
-    });
+    const result = await paymentCredits.apply(req.params.propertyId, req.params.creditPaymentId, req.body);
+    return res.status(result.duplicate ? 200 : 201).json(result);
   } catch (error) {
+    if (error.status) return res.status(error.status).json({message: error.message});
     console.error('Error applying credit:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Unable to apply credit. No changes were committed' });
   }
 });
 }
@@ -960,6 +875,7 @@ return {
   get_api_properties_propertyId_payments_paymentId,
   post_api_properties_propertyId_payments_paymentId_send_receipt,
   delete_api_properties_propertyId_payments_paymentId,
+  post_api_properties_propertyId_payments_paymentId_void,
   normalizePaymentTypeServer,
   daysInMonth,
   computeFirstMonthProratedBaseRent,
