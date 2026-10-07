@@ -61,6 +61,12 @@ seconds. Errors and in-progress loading statuses stay visible; a newer status
 cancels any pending dismissal.
 The payment table's informational QuickBooks connection reminder also dismisses
 after four seconds, including when no transactions match. Error notices remain.
+Property tabs fill the available viewport height. Record lists and payment
+tables use the space below their actual headers and filters, reserving room for
+pagination and mobile navigation. Sizing updates on tab changes, content
+updates, and viewport resizing; short screens retain a usable scroll area.
+Card-grid rows keep their intrinsic content height inside these scroll areas,
+so utilities, details, and action buttons are not squeezed or clipped.
 
 Overview clients send `from` and exclusive `to` timestamps plus the browser's
 IANA `timeZone`. Rent months and month-based expense counts use that calendar,

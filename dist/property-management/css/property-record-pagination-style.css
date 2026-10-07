@@ -66,3 +66,29 @@ body.dark-theme #portfolioOverviewSection .portfolio-comparison-pagination {
     #propertyDashboard .property-record-scroll,
     #propertyDashboard #payments .payments-list > .table-responsive { max-height: 60dvh; }
 }
+
+#propertyDashboard > .tab-content > .tab-pane.active {
+    min-height: var(--property-pane-height, 0px);
+    box-sizing: border-box;
+}
+#propertyDashboard > .tab-content > .tab-pane .property-viewport-scroll,
+#propertyDashboard #announcementsList.property-viewport-scroll,
+#propertyDashboard #payments .payments-list > .table-responsive.property-viewport-scroll {
+    height: var(--property-record-height) !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    box-sizing: border-box;
+    overflow: auto;
+    align-content: start;
+    grid-auto-rows: max-content;
+    scrollbar-gutter: stable;
+}
+#propertyDashboard #announcementsList {
+    align-content: start;
+}
+#propertyDashboard #announcementsList.property-viewport-scroll {
+    min-width: 0;
+}
+#propertyDashboard #announcements div:has(> #announcementsList) {
+    max-height: none !important;
+}
