@@ -100,6 +100,52 @@ test('payment table provides column headers and sticky styles inside its scroll 
   expect(css).toContain('body.dark-theme .overview-payments-table th{background:');
 });
 
+test('KPI popovers summarize collected rent for the selected period and escape tenant data',()=>{
+  const context=setup();
+  const html=context.renderPropertyKpiPopover('collected',{
+    expectedPayments:[
+      {tenantId:'tenant-a',tenantName:'Tenant <A>',period:'2026-11',unitNumber:'2',expected:1000,paid:750,outstanding:250},
+      {tenantId:'tenant-b',tenantName:'Tenant B',period:'2026-11',unitNumber:'3',expected:1000,paid:0,outstanding:1000}
+    ]
+  });
+  expect(html).toContain('role="dialog"');
+  expect(html).toContain('Payments and credits applied to rent in the selected period.');
+  expect(html).toContain('Tenant &lt;A>');
+  expect(html).toContain('2026-11 · Applied');
+  expect(html).toContain('$750.00');
+  expect(html).not.toContain('Tenant B');
+});
+
+test('each remaining property KPI has a useful detail list or empty state',()=>{
+  const context=setup();
+  const data={
+    generatedAt:'2026-10-07T12:00:00Z',
+    expectedPayments:[
+      {tenantId:'active',tenantName:'Current Tenant',period:'2026-10',unitNumber:'1',expected:1000,paid:700,outstanding:300},
+      {tenantId:'former',tenantName:'Former Tenant',period:'2026-10',unitNumber:'2',expected:800,paid:0,outstanding:800}
+    ],
+    tenants:[
+      {_id:'active',name:'Current Tenant',leaseStatus:'active',leaseEnd:'2026-10-20',unitNumber:'1'},
+      {_id:'former',name:'Former Tenant',leaseStatus:'terminated',leaseEnd:'2026-10-01',unitNumber:'2'}
+    ],
+    unitsRequiringAttention:[{number:'4',status:'vacant',rent:1200,reasons:['Vacant']}],
+    maintenance:[{title:'Repair sink',status:'open',priority:'urgent',unitNumber:'1'}],
+    equipment:[{name:'Water heater',unitNumber:'1',nextServiceDate:'2026-10-20',warrantyExpires:'2026-11-01'}]
+  };
+  expect(context.renderPropertyKpiPopover('occupancy',data)).toContain('Current Tenant');
+  expect(context.renderPropertyKpiPopover('rentRoll',data)).toContain('Current Tenant');
+  expect(context.renderPropertyKpiPopover('rentRoll',data)).not.toContain('Former Tenant');
+  expect(context.renderPropertyKpiPopover('outstanding',data)).toContain('$300.00');
+  expect(context.renderPropertyKpiPopover('vacant',data)).toContain('Unit 4');
+  expect(context.renderPropertyKpiPopover('maintenance',data)).toContain('Repair sink');
+  expect(context.renderPropertyKpiPopover('leaseRisk',data)).toContain('Current Tenant');
+  expect(context.renderPropertyKpiPopover('leaseRisk',data)).not.toContain('Former Tenant');
+  const equipment=context.renderPropertyKpiPopover('equipmentDue',data);
+  expect(equipment).toContain('Service due');
+  expect(equipment).toContain('Warranty expires');
+  expect(context.renderPropertyKpiPopover('vacant',{unitsRequiringAttention:[]})).toContain('There are no vacant units.');
+});
+
 test('outdated cached overview is fetched again before rendering',async()=>{
   const context=setup();
   const grid={innerHTML:''};

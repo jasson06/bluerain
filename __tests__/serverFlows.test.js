@@ -130,17 +130,46 @@ test('QuickBooks workspace keeps an existing link attached when its record needs
 
 test('QuickBooks payment expansion includes all invoice line descriptions', async () => {
   const invoice = {
-    TxnDate: '2026-09-15',
+    TxnDate: '2026-10-28',
+    DueDate: '2026-11-01',
     CustomerRef: { value: 'customer-1' },
     Line: [
       { DetailType: 'SalesItemLineDetail', Amount: 100, Description: 'September rent' },
       { DetailType: 'SalesItemLineDetail', Amount: 50, Description: 'Parking' }
     ]
   };
-  const expand = require('../server/quickbooks-invoice-periods')({
+  const invoicePeriods = require('../server/quickbooks-invoice-periods')({
     qbRequest: jest.fn().mockResolvedValue({ Invoice: invoice })
-  }).expand;
-  const [payment] = await expand([{
+  });
+  const [payment] = await invoicePeriods.expand([{
+    sourceType: 'Payment',
+    id: 'payment-1',
+    customerId: 'customer-1',
+    txnDate: '2026-10-29',
+    totalAmt: 150,
+    raw: { Line: [{ Amount: 150, LinkedTxn: [{ TxnType: 'Invoice', TxnId: 'invoice-1' }] }] }
+  }], {});
+
+  expect(payment.lineDescriptions).toEqual(['September rent', 'Parking']);
+  expect(payment.periodMonth).toBe('2026-11');
+  expect(payment.txnDate).toBe('2026-10-29');
+  expect(invoicePeriods.metadata(payment)).toMatchObject({
+    invoiceDate: '2026-10-28',
+    invoiceDueDate: '2026-11-01',
+    periodSource: 'invoice-due-date'
+  });
+  expect(require('../server/flows/quickbooks')({})
+    .inferPeriodMonthFromQuickBooksPaymentRecord(payment)).toBe('2026-11');
+});
+
+test('QuickBooks invoices without a due date retain invoice-date rent-period fallback', async () => {
+  const invoicePeriods = require('../server/quickbooks-invoice-periods')({
+    qbRequest: jest.fn().mockResolvedValue({ Invoice: {
+      TxnDate: '2026-10-28',
+      CustomerRef: { value: 'customer-1' }
+    } })
+  });
+  const [payment] = await invoicePeriods.expand([{
     sourceType: 'Payment',
     id: 'payment-1',
     customerId: 'customer-1',
@@ -148,7 +177,8 @@ test('QuickBooks payment expansion includes all invoice line descriptions', asyn
     raw: { Line: [{ Amount: 150, LinkedTxn: [{ TxnType: 'Invoice', TxnId: 'invoice-1' }] }] }
   }], {});
 
-  expect(payment.lineDescriptions).toEqual(['September rent', 'Parking']);
+  expect(payment.periodMonth).toBe('2026-10');
+  expect(invoicePeriods.metadata(payment)).toMatchObject({periodSource:'invoice-date'});
 });
 
 test('QuickBooks import notes no longer store the import label as note text', () => {
@@ -158,7 +188,8 @@ test('QuickBooks import notes no longer store the import label as note text', ()
     invoiceId: 'invoice-1',
     invoiceNumber: 'INV-100',
     invoiceDate: '2026-09-15',
+    invoiceDueDate: '2026-10-01',
     docNumber: 'PMT-100',
     privateNote: 'September payment'
-  })).toBe('Invoice INV-100 dated 2026-09-15 · PMT-100 · September payment');
+  })).toBe('Invoice INV-100 dated 2026-09-15, due 2026-10-01 · PMT-100 · September payment');
 });

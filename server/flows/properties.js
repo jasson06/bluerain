@@ -214,7 +214,7 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
     const rentPayments = payments.filter(p => (p.applyTo || 'rent') === 'rent');
     const nonDepositPayments = payments.filter(p => (p.applyTo || 'rent') !== 'deposit');
     const cashRentCollected = rentPayments.reduce((sum, payment) => sum + amountOrZero(payment.amount), 0);
-    const rentalIncome = cashRentCollected;
+    const rentalIncome = rentCollected;
     const otherIncome = nonDepositPayments
       .filter(payment => (payment.applyTo || 'rent') !== 'rent')
       .reduce((sum, payment) => sum + amountOrZero(payment.amount), 0);

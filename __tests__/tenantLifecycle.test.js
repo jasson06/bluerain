@@ -224,11 +224,19 @@ describe('property overview separates lease collections from cash', () => {
     ]);
     expect(data.summary.cashRentCollected).toBe(900);
     expect(data.summary.totalCashCollected).toBe(950);
-    expect(data.financials.rentalIncome).toBe(900);
+    expect(data.financials.rentalIncome).toBe(500);
     expect(data.financials.depositCollections).toBe(200);
     expect(data.formerTenants.tenantCount).toBe(1);
     expect(data.formerTenants.total).toBe(4290);
     expect(data.delinquency.tenants.every(row=>row.tenantId!=='former')).toBe(true);
+  });
+  test('operating rental income follows the selected rent month, not receipt date', async () => {
+    const data = await overview('2026-06-01','2026-07-01',[],[
+      {tenantId:'tenant-a',date:'2026-05-31',periodMonth:'2026-06',amount:530,applyTo:'rent'}
+    ]);
+    expect(data.summary.rentCollected).toBe(1030);
+    expect(data.summary.cashRentCollected).toBe(900);
+    expect(data.financials.rentalIncome).toBe(1030);
   });
   test('historical charges retain the reviewed former final month', async () => {
     const data = await overview('2026-05-01','2026-06-01');

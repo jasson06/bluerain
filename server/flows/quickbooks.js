@@ -52,6 +52,7 @@ function inferTypeFromQuickBooksPaymentRecord(record) {
 
 function inferPeriodMonthFromQuickBooksPaymentRecord(record) {
   if(record?.periodError) return '';
+  if(record?.invoiceDueDate) return record.invoiceDueDate.slice(0,7);
   if(record?.invoiceDate) return record.invoiceDate.slice(0,7);
   const directDate = (0, serverContext.normalizeQbPaymentDate)(record?.txnDate || record?.raw?.TxnDate || '');
   const fallbackYear = directDate ? Number(directDate.slice(0, 4)) : new Date().getFullYear();
@@ -110,7 +111,7 @@ function matchTenantForQuickBooksPaymentRecord(record, tenants = [], unitById = 
 
 function buildQuickBooksImportNote(record) {
   const parts = [];
-  if(record.invoiceId) parts.push(`Invoice ${record.invoiceNumber} dated ${record.invoiceDate}`);
+  if(record.invoiceId) parts.push(`Invoice ${record.invoiceNumber} dated ${record.invoiceDate}${record.invoiceDueDate?`, due ${record.invoiceDueDate}`:''}`);
   if (record?.docNumber) parts.push(record.docNumber);
   if (record?.privateNote) parts.push(String(record.privateNote).trim());
   return parts.filter(Boolean).join(' · ').slice(0, 1000);

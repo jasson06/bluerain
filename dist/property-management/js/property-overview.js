@@ -41,11 +41,168 @@ function renderOverviewExpectedPayments(rows,summary){
   }).join('')}</tbody></table></div>`;
 }
 
+function propertyKpiDetail(metric,data){
+  const payments=Array.isArray(data.expectedPayments)?data.expectedPayments:[];
+  const tenants=Array.isArray(data.tenants)?data.tenants:[];
+  const unitLabel=row=>row.unitNumber!==undefined&&row.unitNumber!==''&&row.unitNumber!=null?`Unit ${row.unitNumber}`:'';
+  const paymentRows=(field,label)=>payments.filter(row=>Number(row[field])>0).map(row=>({
+    title:`${row.tenantName||'Tenant'}${unitLabel(row)?` · ${unitLabel(row)}`:''}`,
+    detail:`${row.period} · ${label}`,
+    value:overviewMoney(row[field])
+  }));
+  const dateLabel=value=>value?String(value).slice(0,10):'Date not set';
+  const now=new Date(data.generatedAt||Date.now()),in90Days=new Date(now.getTime()+90*86400000);
+  const within90Days=value=>{const date=value?new Date(value):null;return !!date&&!Number.isNaN(date.getTime())&&date<=in90Days;};
+  const rows=[];
+  let title='',description='',emptyMessage='';
+  switch(metric){
+    case 'occupancy': {
+      title='Occupied units';
+      description='Current tenants in this property.';
+      emptyMessage='No current tenants are listed.';
+      const expectedByTenant=new Map(payments.map(row=>[String(row.tenantId),row]));
+      tenants.filter(tenant=>String(tenant.leaseStatus||'active').toLowerCase()==='active').forEach(tenant=>{
+        const expected=expectedByTenant.get(String(tenant._id));
+        const unit=expected?.unitNumber??tenant.unit?.number??tenant.unitNumber;
+        rows.push({title:tenant.name||`${tenant.firstName||''} ${tenant.lastName||''}`.trim()||'Tenant',detail:unit!==undefined&&unit!==''?`Unit ${unit}`:'Unit not listed',value:''});
+      });
+      break;
+    }
+    case 'rentRoll':
+      title='Scheduled rent';
+      description='Expected rent by tenant for each month in the selected period.';
+      emptyMessage='No expected rent payments in the selected period.';
+      const activeTenantIds=new Set(tenants.filter(tenant=>String(tenant.leaseStatus||'active').toLowerCase()==='active').map(tenant=>String(tenant._id)));
+      rows.push(...payments.filter(row=>activeTenantIds.has(String(row.tenantId))&&Number(row.expected)>0).map(row=>({
+        title:`${row.tenantName||'Tenant'}${unitLabel(row)?` · ${unitLabel(row)}`:''}`,
+        detail:row.period,
+        value:overviewMoney(row.expected)
+      })));
+      break;
+    case 'collected':
+      title='Collected rent';
+      description='Payments and credits applied to rent in the selected period.';
+      emptyMessage='No rent payments or credits were applied in the selected period.';
+      rows.push(...paymentRows('paid','Applied'));
+      break;
+    case 'outstanding':
+      title='Outstanding rent';
+      description='Unpaid rent by tenant for the selected period.';
+      emptyMessage='No rent is outstanding in the selected period.';
+      rows.push(...paymentRows('outstanding','Due'));
+      break;
+    case 'vacant':
+      title='Vacant units';
+      description='Units currently marked vacant.';
+      emptyMessage='There are no vacant units.';
+      (Array.isArray(data.unitsRequiringAttention)?data.unitsRequiringAttention:[])
+        .filter(unit=>unit.status==='vacant')
+        .forEach(unit=>rows.push({title:`Unit ${unit.number??'—'}`,detail:unit.reasons?.join(' · ')||'Vacant',value:overviewMoney(unit.rent)}));
+      break;
+    case 'maintenance':
+      title='Open maintenance';
+      description='Maintenance requests that are not completed, closed, or cancelled.';
+      emptyMessage='There are no open maintenance requests.';
+      (Array.isArray(data.maintenance)?data.maintenance:[])
+        .filter(item=>!['completed','closed','cancelled'].includes(String(item.status||'').toLowerCase()))
+        .forEach(item=>rows.push({
+          title:item.title||item.issue||'Maintenance request',
+          detail:[item.unitNumber?`Unit ${item.unitNumber}`:'',item.priority,item.status].filter(Boolean).join(' · ')||'Open request',
+          value:item.cost?overviewMoney(item.cost):''
+        }));
+      break;
+    case 'leaseRisk':
+      title='Leases expiring soon';
+      description='Current tenant leases ending within the next 90 days.';
+      emptyMessage='No leases are expiring within 90 days.';
+      tenants.filter(tenant=>{const end=tenant.leaseEnd?new Date(tenant.leaseEnd):null;return end&&!Number.isNaN(end.getTime())&&end>=now&&end<=in90Days;})
+        .forEach(tenant=>rows.push({title:tenant.name||'Tenant',detail:`Lease ends ${dateLabel(tenant.leaseEnd)}`,value:''}));
+      break;
+    case 'equipmentDue':
+      title='Equipment due';
+      description='Service due and warranties expiring within the next 90 days.';
+      emptyMessage='No equipment service or warranty items are due within 90 days.';
+      (Array.isArray(data.equipment)?data.equipment:[]).forEach(item=>{
+        if(within90Days(item.nextServiceDate))rows.push({
+          title:item.name||item.category||'Equipment',
+          detail:`${item.unitNumber!=null?`Unit ${item.unitNumber} · `:''}Service due ${dateLabel(item.nextServiceDate)}`,
+          value:''
+        });
+        if(within90Days(item.warrantyExpires))rows.push({
+          title:item.name||item.category||'Equipment',
+          detail:`${item.unitNumber!=null?`Unit ${item.unitNumber} · `:''}Warranty expires ${dateLabel(item.warrantyExpires)}`,
+          value:''
+        });
+      });
+      break;
+    default:
+      return null;
+  }
+  return {title,description,emptyMessage,rows};
+}
+
+function renderPropertyKpiPopover(metric,data){
+  const detail=propertyKpiDetail(metric,data);
+  if(!detail)return '';
+  const rows=detail.rows.length
+    ?detail.rows.map(row=>`<div class="property-kpi-popover-row" role="listitem"><div><strong>${escapeHtml(row.title)}</strong><span>${escapeHtml(row.detail)}</span></div>${row.value?`<b>${escapeHtml(row.value)}</b>`:''}</div>`).join('')
+    :`<div class="property-kpi-popover-empty">${escapeHtml(detail.emptyMessage)}</div>`;
+  return `<section class="property-kpi-popover" id="propertyKpiPopover" role="dialog" aria-label="${escapeHtml(detail.title)}"><header><div><strong>${escapeHtml(detail.title)}</strong><span>${escapeHtml(detail.description)}</span></div><button type="button" data-kpi-popover-close aria-label="Close ${escapeHtml(detail.title)} summary">×</button></header><div class="property-kpi-popover-list" role="list">${rows}</div></section>`;
+}
+
+let activePropertyKpiPopover=null;
+function closePropertyKpiPopover(returnFocus=false){
+  if(!activePropertyKpiPopover)return;
+  const active=activePropertyKpiPopover;
+  activePropertyKpiPopover=null;
+  document.removeEventListener('pointerdown',active.onOutside,true);
+  document.removeEventListener('keydown',active.onKeydown,true);
+  window.removeEventListener('resize',active.onViewportChange);
+  window.removeEventListener('scroll',active.onViewportChange,true);
+  active.popover.remove();
+  active.card.setAttribute('aria-expanded','false');
+  active.card.removeAttribute('aria-controls');
+  if(returnFocus)active.card.focus();
+}
+
+function openPropertyKpiPopover(card,metric,data){
+  if(activePropertyKpiPopover?.card===card){closePropertyKpiPopover();return;}
+  closePropertyKpiPopover();
+  const popover=document.createElement('div');
+  popover.innerHTML=renderPropertyKpiPopover(metric,data);
+  const content=popover.firstElementChild;
+  if(!content)return;
+  document.body.appendChild(content);
+  const close=returnFocus=>closePropertyKpiPopover(returnFocus);
+  const onOutside=event=>{if(!content.contains(event.target)&&!card.contains(event.target))close(false);};
+  const onKeydown=event=>{if(event.key==='Escape'){event.preventDefault();close(true);}};
+  const onViewportChange=()=>close(false);
+  activePropertyKpiPopover={card,popover:content,onOutside,onKeydown,onViewportChange};
+  card.setAttribute('aria-expanded','true');
+  card.setAttribute('aria-controls',content.id);
+  const rect=card.getBoundingClientRect(),margin=12;
+  const left=Math.max(margin,Math.min(rect.left,window.innerWidth-content.offsetWidth-margin));
+  let top=rect.bottom+8;
+  if(top+content.offsetHeight>window.innerHeight-margin)top=Math.max(margin,rect.top-content.offsetHeight-8);
+  content.style.left=`${left}px`;
+  content.style.top=`${top}px`;
+  document.addEventListener('pointerdown',onOutside,true);
+  document.addEventListener('keydown',onKeydown,true);
+  window.addEventListener('resize',onViewportChange);
+  window.addEventListener('scroll',onViewportChange,true);
+  content.querySelector('[data-kpi-popover-close]')?.addEventListener('click',()=>close(true));
+}
+
 function renderPropertyOverviewPanels(data){
   const s=data.summary||{}, statusFilter=document.getElementById('overviewStatusFilter')?.value||'all';
-  const cards=[['Occupancy',`${s.occupancyRate||0}%`,`${s.occupied||0} of ${s.totalUnits||0} units`,'units'],['Rent roll',overviewMoney(s.rentRoll),'Scheduled monthly rent','payments'],['Collected',overviewMoney(s.rentCollected),`${s.collectionRate||0}% collected`,'payments'],['Outstanding',overviewMoney(s.rentOutstanding),'Current selected period','payments'],['Vacant',s.vacant||0,`${s.maintenanceUnits||0} units offline`,'units'],['Maintenance',s.openMaintenance||0,`${s.urgentMaintenance||0} urgent`,'maintenance'],['Lease risk',s.expiringLeases90||0,'Expiring within 90 days','tenants'],['Equipment due',s.equipmentServiceDue90||0,`${s.warrantiesExpiring90||0} warranties expiring`,'units']];
-  const grid=document.getElementById('propertyOverviewGrid');grid.innerHTML=cards.map(([label,value,sub,tab])=>`<div class="property-kpi" tabindex="0" role="button" data-drilldown="${tab}"><div class="property-kpi-label">${label}</div><div class="property-kpi-value">${value}</div><div class="property-kpi-sub">${sub}</div><div class="kpi-trend">View details →</div></div>`).join('');
-  grid.querySelectorAll('[data-drilldown]').forEach(card=>{const open=()=>openPropertyOverviewTab(card.dataset.drilldown);card.addEventListener('click',open);card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});});
+  closePropertyKpiPopover();
+  const cards=[['occupancy','Occupancy',`${s.occupancyRate||0}%`,`${s.occupied||0} of ${s.totalUnits||0} units`],['rentRoll','Rent roll',overviewMoney(s.rentRoll),'Scheduled monthly rent'],['collected','Collected',overviewMoney(s.rentCollected),`${s.collectionRate||0}% collected`],['outstanding','Outstanding',overviewMoney(s.rentOutstanding),'Current selected period'],['vacant','Vacant',s.vacant||0,`${s.maintenanceUnits||0} units offline`],['maintenance','Maintenance',s.openMaintenance||0,`${s.urgentMaintenance||0} urgent`],['leaseRisk','Lease risk',s.expiringLeases90||0,'Expiring within 90 days'],['equipmentDue','Equipment due',s.equipmentServiceDue90||0,`${s.warrantiesExpiring90||0} warranties expiring`]];
+  const grid=document.getElementById('propertyOverviewGrid');grid.innerHTML=cards.map(([metric,label,value,sub])=>`<div class="property-kpi" tabindex="0" role="button" aria-haspopup="dialog" aria-expanded="false" data-kpi="${metric}"><div class="property-kpi-label">${label}</div><div class="property-kpi-value">${value}</div><div class="property-kpi-sub">${sub}</div></div>`).join('');
+  grid.querySelectorAll('[data-kpi]').forEach(card=>{
+    const open=()=>openPropertyKpiPopover(card,card.dataset.kpi,data);
+    card.addEventListener('click',open);
+    card.addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===' ')&&event.target===card){event.preventDefault();open();}});
+  });
   const financial=document.getElementById('overviewFinancial');if(financial)financial.innerHTML=`<div class="overview-metrics"><div class="overview-mini-stat"><span>Expected</span><strong>${overviewMoney(s.expectedRent??s.rentRoll)}</strong></div><div class="overview-mini-stat"><span>Collected</span><strong>${overviewMoney(s.rentCollected)}</strong></div><div class="overview-mini-stat"><span>Outstanding</span><strong>${overviewMoney(s.rentOutstanding)}</strong></div></div><div class="overview-progress"><span style="width:${Math.min(100,s.collectionRate||0)}%"></span></div><div class="overview-row"><span>Collection rate</span><strong>${s.collectionRate||0}%</strong></div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn-secondary" onclick="runOverviewAction('payment')">Record payment</button><button class="btn-secondary" onclick="openPropertyOverviewTab('payments')">Review ledger</button></div>`;
         const income=data.financials||{},incomeRoot=document.getElementById('overviewIncomeExpenses');if(incomeRoot){const variance=income.budgetVariance,totalIncome=Number(income.rentalIncome||0)+Number(income.otherIncome||0),expenseBreakdown=income.expenseBreakdown||{},showDepositRow=Number(income.depositCollections||0)>0;incomeRoot.innerHTML=`<div class="overview-row"><span>Total operating income</span><strong>${overviewMoney(totalIncome)}</strong></div><div class="overview-row"><span>Gross potential rent</span><strong>${overviewMoney(expenseBreakdown.grossPotentialRent)}</strong></div><div class="overview-row"><span>Total expenses</span><strong style="color:#b91c1c">${overviewMoney(income.operatingExpenses)}</strong></div><div class="overview-row"><span>Maintenance expenses</span><strong style="color:#b91c1c">${overviewMoney(income.maintenanceExpenses)}</strong></div><div class="overview-row"><span>Utilities subtotal</span><strong style="color:#b91c1c">${overviewMoney(expenseBreakdown.utilitiesTotal)}</strong></div><div class="overview-row"><span>Estimated NOI</span><strong style="color:${Number(income.estimatedNOI)>=0?'#047857':'#b91c1c'}">${overviewMoney(income.estimatedNOI)}</strong></div><div class="overview-row"><span>Budget variance</span><strong style="color:${variance===null?'#64748b':Number(variance)>=0?'#047857':'#b91c1c'}">${variance===null?'Budget not set':`${Number(variance)>=0?'+':''}${overviewMoney(variance)}`}</strong></div><div class="task-meta">${income.expenseCount||0} posted expense record${income.expenseCount===1?'':'s'} in this period. Deposits are excluded from operating income.${showDepositRow?' Deposit collections are tracked separately.':''} Expense totals still include the saved property assumptions and logged maintenance and utility costs.</div>${variance===null?'<button class="btn-secondary" style="margin-top:10px" onclick="openPropertyProfileEditor()">Set operating budget</button>':''}`;}
   const delinquency=data.delinquency||{aging:{},tenants:[]},delRoot=document.getElementById('overviewDelinquency');if(delRoot){const aging=delinquency.aging||{},rows=(delinquency.tenants||[]).slice(0,5);delRoot.innerHTML=`<div class="overview-metrics"><div class="overview-mini-stat"><span>Total overdue</span><strong style="color:#b91c1c">${overviewMoney(delinquency.total)}</strong></div><div class="overview-mini-stat"><span>Tenants</span><strong>${delinquency.tenantCount||0}</strong></div><div class="overview-mini-stat"><span>90+ days</span><strong>${overviewMoney(aging.days90plus)}</strong></div></div><div class="overview-row"><span>1–30 days</span><strong>${overviewMoney(aging.current)}</strong></div><div class="overview-row"><span>31–60 days</span><strong>${overviewMoney(aging.days31to60)}</strong></div><div class="overview-row"><span>61–90 days</span><strong>${overviewMoney(aging.days61to90)}</strong></div>${rows.length?`<div class="overview-table-wrap" style="margin-top:8px"><table class="overview-table"><thead><tr><th>Tenant</th><th>Unit</th><th>Balance</th><th></th></tr></thead><tbody>${rows.map(row=>`<tr><td>${escapeHtml(row.tenantName||'Tenant')}</td><td>${escapeHtml(row.unitNumber||'—')}</td><td><strong>${overviewMoney(row.balance)}</strong></td><td><button class="overview-row-action" onclick="openDelinquentTenant('${escapeHtml(String(row.tenantId))}')">Take action</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="overview-ok" style="margin-top:10px">No tenant rent delinquency found.</div>'}`;}

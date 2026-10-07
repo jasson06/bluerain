@@ -48,13 +48,16 @@ module.exports = function invoicePeriods(context) {
         let invoice;
         try { invoice = await readInvoice(id); } catch (_) { error = `Unable to read invoice ${id}. Retry after checking QuickBooks access.`; break; }
         const date = String(invoice?.TxnDate || '');
-        if (!/^\d{4}-(0[1-9]|1[0-2])-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date))) { error = `Invoice ${id} has no valid invoice date.`; break; }
+        const dueDate = String(invoice?.DueDate || '');
+        const validDate = value => /^\d{4}-(0[1-9]|1[0-2])-\d{2}$/.test(value) && Number.isFinite(Date.parse(value));
+        if (!validDate(date)) { error = `Invoice ${id} has no valid invoice date.`; break; }
+        if (dueDate && !validDate(dueDate)) { error = `Invoice ${id} has no valid due date.`; break; }
         if (String(invoice?.CustomerRef?.value || '') !== String(record.customerId)) { error = `Invoice ${id} belongs to a different customer. Review this payment.`; break; }
         parts.push({...record, id: parts.length ? `${record.id}:invoice:${id}` : record.id,
-          parentPaymentId: record.id, invoiceId: id, invoiceDate: date,
+          parentPaymentId: record.id, invoiceId: id, invoiceDate: date, invoiceDueDate: dueDate,
           invoiceTotal: invoice.TotalAmt!=null&&Number.isFinite(Number(invoice.TotalAmt))?Number(invoice.TotalAmt):null,
           invoiceBalance: invoice.Balance!=null&&Number.isFinite(Number(invoice.Balance))?Number(invoice.Balance):null,
-          invoiceNumber: String(invoice.DocNumber || id), periodMonth: date.slice(0,7),
+          invoiceNumber: String(invoice.DocNumber || id), periodMonth: (dueDate || date).slice(0,7),
           totalAmt: cents/100, parentPaymentTotal: record.totalAmt,
           lineDescriptions:lineDescriptions(invoice.Line || []),
           allocationReviewRequired:(invoice.Line||[]).filter(l=>l.DetailType==='SalesItemLineDetail'&&Number(l.Amount)>0).length>1});
@@ -64,7 +67,7 @@ module.exports = function invoicePeriods(context) {
     return result;
   }
   function metadata(record) {
-    return record.invoiceId ? {parentPaymentId:record.parentPaymentId,invoiceId:record.invoiceId,invoiceDate:record.invoiceDate,invoiceTotal:record.invoiceTotal??null,invoiceBalance:record.invoiceBalance??null,invoiceNumber:record.invoiceNumber,parentPaymentTotal:record.parentPaymentTotal,periodSource:'invoice-date',paymentCreatedAt:record.raw?.MetaData?.CreateTime || '',allocationReviewRequired:!!record.allocationReviewRequired} : {};
+    return record.invoiceId ? {parentPaymentId:record.parentPaymentId,invoiceId:record.invoiceId,invoiceDate:record.invoiceDate,invoiceDueDate:record.invoiceDueDate||'',invoiceTotal:record.invoiceTotal??null,invoiceBalance:record.invoiceBalance??null,invoiceNumber:record.invoiceNumber,parentPaymentTotal:record.parentPaymentTotal,periodSource:record.invoiceDueDate?'invoice-due-date':'invoice-date',paymentCreatedAt:record.raw?.MetaData?.CreateTime || '',allocationReviewRequired:!!record.allocationReviewRequired} : {};
   }
   return {expand, metadata};
 };

@@ -44,12 +44,18 @@ tenant edits; create a new tenant/lease record for a new lease.
 Overview expected rent and outstanding are calculated per tenant and applied
 rent month, including historical/final charges through the lease cutoff.
 `rentCollected` is capped payment/credit allocation against those charges,
-not cash received. `cashRentCollected` and `totalCashCollected` use receipt dates;
-the latter includes non-deposit income. Cash income still includes former-tenant
-receipts for NOI and management fees. `formerTenants` exposes cumulative former
-rent balances separately from active/pending delinquency. These totals overlap
-when the selected period includes former tenants' final charges; do not add them
-together. Deposits remain in their existing separate ledger.
+not cash received. Operating `rentalIncome` uses `rentCollected` for the selected
+rent months; `otherIncome` uses non-deposit receipts dated in the selected range.
+`cashRentCollected` and `totalCashCollected` are separate receipt-date measures;
+the latter includes non-deposit income. NOI and management fees use operating
+income, not the receipt-date cash totals. `formerTenants` exposes cumulative
+former rent balances separately from active/pending delinquency. These totals
+overlap when the selected period includes former tenants' final charges; do not
+add them together. Deposits remain in their existing separate ledger.
+
+QuickBooks rent payments linked to invoices are assigned to the invoice's due
+month, not its creation or payment date. If an invoice has no due date, its
+invoice date remains the fallback rent month.
 
 Overview clients send `from` and exclusive `to` timestamps plus the browser's
 IANA `timeZone`. Rent months and month-based expense counts use that calendar,

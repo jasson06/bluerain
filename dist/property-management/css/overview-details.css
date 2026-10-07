@@ -1,4 +1,29 @@
 #propertyOverview.overview-detail-active > :not(#overviewDetailPanel){display:none!important}#overviewDetailPanel{margin-top:0;scroll-margin-top:90px;min-height:350px}#overviewDetailPanel .overview-detail-heading{justify-content:flex-start;gap:18px;flex-wrap:wrap}#overviewDetailPanel[hidden]{display:none}#overviewDetailPanel .overview-detail-scroll{overflow:auto;max-height:65vh;margin-top:14px}#overviewDetailPanel table{min-width:850px;width:100%}#overviewDetailPanel thead th{position:sticky;top:0;z-index:1;background:var(--background-color,#fff)}#overviewDetailPanel td{vertical-align:top}#overviewDetailPanel tfoot{font-weight:700}
+.property-kpi-popover{position:fixed;z-index:1200;width:min(360px,calc(100vw - 24px));max-height:min(420px,calc(100vh - 24px));display:flex;flex-direction:column;overflow:hidden;border:1px solid #cbd5e1;border-radius:14px;background:#fff;box-shadow:0 18px 45px rgba(15,23,42,.24);color:#1e293b}
+.property-kpi-popover header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:13px 14px 10px;border-bottom:1px solid #e2e8f0}
+.property-kpi-popover header strong,.property-kpi-popover header span{display:block}
+.property-kpi-popover header strong{font-size:.95rem;color:#0f3f5a}
+.property-kpi-popover header span{margin-top:3px;font-size:.73rem;line-height:1.35;color:#64748b}
+.property-kpi-popover header button{flex:0 0 auto;width:28px;height:28px;border:0;border-radius:8px;background:#f1f5f9;color:#475569;font-size:1.25rem;line-height:1;cursor:pointer}
+.property-kpi-popover header button:hover,.property-kpi-popover header button:focus-visible{background:#dbeafe;color:#1d4ed8;outline:2px solid #60a5fa}
+.property-kpi-popover-list{overflow:auto;padding:4px 14px 10px;overscroll-behavior:contain}
+.property-kpi-popover-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #eef2f7}
+.property-kpi-popover-row:last-child{border-bottom:0}
+.property-kpi-popover-row div{min-width:0}
+.property-kpi-popover-row strong,.property-kpi-popover-row span{display:block;overflow-wrap:anywhere}
+.property-kpi-popover-row strong{font-size:.8rem;color:#1e3a5f}
+.property-kpi-popover-row span{margin-top:2px;font-size:.7rem;color:#64748b}
+.property-kpi-popover-row>b{flex:0 0 auto;font-size:.8rem;color:#0f766e;font-variant-numeric:tabular-nums}
+.property-kpi-popover-empty{padding:18px 4px;text-align:center;font-size:.8rem;color:#64748b}
+.property-kpi-popover[hidden]{display:none}
+.property-kpi[aria-expanded=true] .property-kpi-label{color:#176b87}
+body.dark-theme .property-kpi-popover{border-color:#334155;background:#111827;color:#e2e8f0}
+body.dark-theme .property-kpi-popover header{border-bottom-color:#334155}
+body.dark-theme .property-kpi-popover header strong,.dark-theme .property-kpi-popover-row strong{color:#e2e8f0}
+body.dark-theme .property-kpi-popover header span,.dark-theme .property-kpi-popover-row span,.dark-theme .property-kpi-popover-empty{color:#94a3b8}
+body.dark-theme .property-kpi-popover header button{background:#1e293b;color:#cbd5e1}
+body.dark-theme .property-kpi-popover-row{border-bottom-color:#334155}
+body.dark-theme .property-kpi-popover-row>b{color:#5eead4}
 .overview-expected-payments{max-height:380px;overflow:auto;overscroll-behavior:contain}
 .overview-payments-table{width:100%;min-width:330px;table-layout:fixed;border-collapse:separate;border-spacing:0}
 .overview-payment-status-column{width:88px}
