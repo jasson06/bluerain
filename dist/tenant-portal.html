@@ -1777,7 +1777,7 @@
             <div class="table-scroll">
               <table>
                 <thead>
-                  <tr><th>Date</th><th>Type</th><th>Method</th><th>Amount</th><th>Balance</th><th>Note</th></tr>
+                  <tr><th>Date</th><th>Type</th><th>Method</th><th>Amount</th><th>Balance</th></tr>
                 </thead>
                 <tbody id="paymentsTable"></tbody>
               </table>
@@ -2286,9 +2286,8 @@
           <td>${safe(title(payment.method))}</td>
           <td>${payment.postingStatus==='voided'?`<del>${money(payment.amount)}</del>`:money(payment.amount)}</td>
           <td>${payment.postingStatus==='voided'?'—':money(payment.balance)}</td>
-          <td>${safe(payment.postingStatus==='voided'?`Voided: ${payment.voidReason||''}`:payment.note || '')}</td>
         </tr>
-      `).join('') : '<tr><td colspan="6"><div class="empty">No payments have been recorded yet.</div></td></tr>';
+      `).join('') : '<tr><td colspan="5"><div class="empty">No payments have been recorded yet.</div></td></tr>';
     }
 
     function renderMaintenance(items) {
