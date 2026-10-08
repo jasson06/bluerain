@@ -2130,7 +2130,7 @@
       const now = new Date();
       const dueThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const dueNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-      const lateStarts = new Date(now.getFullYear(), now.getMonth(), 6);
+      const lateStarts = new Date(now.getFullYear(), now.getMonth(), 3);
       const dueDate = now.getDate() <= 1 ? dueThisMonth : dueNextMonth;
       const daysUntilDue = Math.max(0, daysBetween(now, dueDate));
       const cycleStart = now.getDate() <= 1 ? new Date(now.getFullYear(), now.getMonth() - 1, 1) : dueThisMonth;
