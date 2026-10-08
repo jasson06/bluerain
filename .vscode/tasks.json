@@ -10,6 +10,16 @@
 			],
 			"isBackground": true,
 			"problemMatcher": []
+		},
+		{
+			"label": "Run Blue Rain website",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"server.js"
+			],
+			"isBackground": true,
+			"problemMatcher": []
 		}
 	]
 }
