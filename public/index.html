@@ -62,7 +62,7 @@
       transition: filter .2s ease;
     }
     a{color:inherit;text-decoration:none}
-    .container{max-width:var(--max);margin:0 auto;padding:0 22px}
+    .container{max-width:var(--max);margin:0 auto;padding:0 16px}
 
     .topbar{
       position:sticky;top:0;z-index:50;
@@ -509,7 +509,7 @@
       padding:3px;
       border-left:1px solid var(--line);
       overflow:auto; /* scroll content when tall */
-      max-height: 101vh; /* ensures right panel can scroll within modal */
+      max-height: 98vh; /* ensures right panel can scroll within modal */
       -webkit-overflow-scrolling: touch; /* smooth on iOS */
     }
     .modal-top{min-height:0}
@@ -620,7 +620,8 @@
       /* Switch table to cards on mobile */
       .units table{display:none}
       .units .cards{display:grid;grid-template-columns:1fr;gap:12px;padding:12px}
-      .brand{min-width:250px}
+      .brand{min-width:245px}
+      .btn.primary{display:none}
     }
   </style>
   <style>
@@ -1020,7 +1021,7 @@ United States
           <img id="mImg" alt="Photo" decoding="async" />
           <button class="modal-nav prev" id="mPrev" aria-label="Previous photo">‹</button>
           <button class="modal-nav next" id="mNext" aria-label="Next photo">›</button>
-          <p class="leasing-disclaimer-media">Leasing services, application processing, and lease agreement executions for this property are legally managed by our designated Texas Licensed Real Estate Agent.</p>
+         
         </div>
         <div class="modal-content">
           <div class="modal-head">
@@ -1049,7 +1050,7 @@ United States
            <div class="modal-map">
             <div id="mMap" aria-label="Property location"></div>
           </div>
-
+          <p class="leasing-disclaimer-media">Leasing services, application processing, and lease agreement executions for this property are legally managed by our designated Texas Licensed Real Estate Agent.</p>
           <p class="small" id="mNotes"></p>
         </div>
       </div>

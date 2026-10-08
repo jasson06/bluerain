@@ -19,7 +19,11 @@
 				"server.js"
 			],
 			"isBackground": true,
-			"problemMatcher": []
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
 		}
 	]
 }
