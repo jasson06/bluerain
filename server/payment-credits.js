@@ -13,7 +13,7 @@ module.exports = function paymentCredits(context) {
     return Math.round(amount * 100);
   };
 
-  async function allocate(propertyId, sourceId, body = {}, reconcileLegacy = false) {
+  async function apply(propertyId, sourceId, body = {}) {
     const amountCents = money(body.amount);
     const applyTo = body.targetApplyTo;
     const period = body.periodMonth;
@@ -33,10 +33,7 @@ module.exports = function paymentCredits(context) {
             || existing.applyTo !== applyTo || existing.periodMonth !== period || Math.round(existing.appliedCredit * 100) !== amountCents) {
             throw fail('This credit request was already used for a different allocation', 409);
           }
-          result = {
-            applied: existing.appliedCredit, fromCreditId: existing.creditSourceId,
-            newPayment: existing, duplicate: true, reconciled: reconcileLegacy
-          };
+          result = {applied: existing.appliedCredit, fromCreditId: existing.creditSourceId, newPayment: existing, duplicate: true};
           return;
         }
         let credit = await context.Payment.findOne({_id: sourceId, projectId: propertyId, tenantId: body.tenantId}).session(session);
@@ -47,36 +44,18 @@ module.exports = function paymentCredits(context) {
           && (applyTo === 'deposit' || lifecycle.paymentPeriod(credit) === period)) {
           throw fail('This overpayment is already assigned to that category and period. Choose a different destination');
         }
-        const hasAmbiguousLegacyHistory = Number(credit.amount) >= 0
-          && credit.creditConsumed == null && Number(credit.appliedCredit) > 0;
-        if (hasAmbiguousLegacyHistory && !reconcileLegacy) {
+        if (Number(credit.amount) >= 0 && credit.creditConsumed == null && Number(credit.appliedCredit) > 0) {
           throw fail('This legacy payment has ambiguous credit history. Reconcile it before applying more credit', 409);
-        }
-        if (reconcileLegacy) {
-          if (!hasAmbiguousLegacyHistory) throw fail('This payment no longer needs legacy credit reconciliation', 409);
-          const legacyCents = Math.round(Number(credit.appliedCredit) * 100);
-          const balanceCents = Math.max(0, Math.round(-(Number(credit.balance) || 0) * 100));
-          if (legacyCents !== amountCents || balanceCents !== amountCents) {
-            throw fail('The legacy credit marker and remaining balance do not match. Review this payment with an administrator', 409);
-          }
-          const linkedAllocation = await context.Payment.findOne({
-            projectId: propertyId, tenantId: body.tenantId, creditSourceId: credit._id
-          }).session(session);
-          if (linkedAllocation) {
-            throw fail('This payment already has linked credit history. Review its allocations before reconciling it', 409);
-          }
         }
         const tenant = await context.Tenant.findOne({_id: body.tenantId, projectId: propertyId}).session(session);
         if (!tenant) throw fail('Tenant not found for this property', 404);
         const targetDate = new Date(`${period}-15T12:00:00`);
         if (applyTo === 'rent' && !lifecycle.isChargeableMonth(tenant, targetDate)) throw fail('Apply credit to a rent period within the lease');
-        if (!reconcileLegacy) await balances.refreshTenant(body.tenantId, session);
+        await balances.refreshTenant(body.tenantId, session);
         credit = await context.Payment.findOne({_id: sourceId, projectId: propertyId, tenantId: body.tenantId}).session(session);
-        if (!reconcileLegacy) {
-          const availableCents = Math.round(values.availableCredit(credit) * 100);
-          if (!availableCents) throw fail('No available credit to apply', 409);
-          if (amountCents > availableCents) throw fail(`Only $${(availableCents / 100).toFixed(2)} credit remains. Reload and review the amount`, 409);
-        }
+        const availableCents = Math.round(values.availableCredit(credit) * 100);
+        if (!availableCents) throw fail('No available credit to apply', 409);
+        if (amountCents > availableCents) throw fail(`Only $${(availableCents / 100).toFixed(2)} credit remains. Reload and review the amount`, 409);
         if (applyTo === 'rent' || applyTo === 'deposit') {
           const tenantPayments = await context.Payment.find({tenantId: body.tenantId}).session(session);
           const outstanding = applyTo === 'rent'
@@ -88,10 +67,8 @@ module.exports = function paymentCredits(context) {
         }
 
         const amount = amountCents / 100;
-        credit.creditConsumed = reconcileLegacy
-          ? amount
-          : (Math.round(values.consumedCredit(credit) * 100) + amountCents) / 100;
-        if (reconcileLegacy || Number(credit.amount) < 0) credit.appliedCredit = 0;
+        credit.creditConsumed = (Math.round(values.consumedCredit(credit) * 100) + amountCents) / 100;
+        if (Number(credit.amount) < 0) credit.appliedCredit = 0;
         await credit.save({session});
         const sourcePeriod = lifecycle.paymentPeriod(credit);
         const sourcePeriodLabel = new Date(`${sourcePeriod}-01T00:00:00Z`)
@@ -116,18 +93,12 @@ module.exports = function paymentCredits(context) {
         }
         await balances.refreshTenant(body.tenantId, session);
         const saved = await context.Payment.findOne({_id: allocation._id, projectId: propertyId}).session(session);
-        result = {
-          applied: amount, fromCreditId: credit._id, newPayment: saved,
-          duplicate: false, reconciled: reconcileLegacy
-        };
+        result = {applied: amount, fromCreditId: credit._id, newPayment: saved, duplicate: false};
       });
       return result;
     } finally {
       await session.endSession();
     }
   }
-  return {
-    apply: (propertyId, sourceId, body) => allocate(propertyId, sourceId, body, false),
-    reconcile: (propertyId, sourceId, body) => allocate(propertyId, sourceId, body, true)
-  };
+  return {apply};
 };

@@ -463,9 +463,6 @@ function getPaymentEditLockReason(payment) {
     if (payment.postingStatus === 'voided') {
         return 'This voided payment is kept for audit and excluded from balances.';
     }
-    if (Number(payment.amount)>=0 && payment.creditConsumed==null && Number(payment.appliedCredit)>0) {
-        return 'The payment total is locked. Select its green credit balance to review and reconcile the legacy allocation.';
-    }
     if (payment.creditSourceId || Number(payment.creditConsumed)>0 || Number(payment.appliedCredit)>0) {
         return 'Editing is disabled to preserve linked credit allocations and accounting history.';
     }

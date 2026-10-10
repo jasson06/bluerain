@@ -2574,8 +2574,6 @@ serverFlows["payments"].put_api_tenants_tenantId_monthly_overrides_period();
 
 serverFlows["payments"].post_api_properties_propertyId_payments_creditPaymentId_apply_credit();
 
-serverFlows["payments"].post_api_properties_propertyId_payments_creditPaymentId_reconcile_credit();
-
 
 // ============================================================================
 // [FLOW: catalog] Products, selections and room packages (continued)

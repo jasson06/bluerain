@@ -925,11 +925,6 @@
     "handlers": 1
   },
   {
-    "method": "post",
-    "url": "/api/properties/:propertyId/payments/:creditPaymentId/reconcile-credit",
-    "handlers": 1
-  },
-  {
     "method": "get",
     "url": "/api/room-packages",
     "handlers": 1

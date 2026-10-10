@@ -49,8 +49,7 @@ describe('payment edit lock explanation box', () => {
     test.each([
         [{creditConsumed: 30}, 'linked credit allocations and accounting history'],
         [{creditSourceId: 'source'}, 'linked credit allocations and accounting history'],
-        [{amount: -30, appliedCredit: 30}, 'linked credit allocations and accounting history'],
-        [{amount: 1785, balance: -35, appliedCredit: 35, creditConsumed: null}, 'green credit balance'],
+        [{appliedCredit: 30}, 'linked credit allocations and accounting history'],
         [{postingStatus: 'voided'}, 'excluded from balances']
     ])('shows the reason for %j without editing and stays in the viewport', (payment, reason) => {
         const {context, event, popover, closeButton, document} = setup(payment);

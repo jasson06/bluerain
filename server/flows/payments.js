@@ -918,19 +918,6 @@ serverContext.app.post('/api/properties/:propertyId/payments/:creditPaymentId/ap
 });
 }
 
-function post_api_properties_propertyId_payments_creditPaymentId_reconcile_credit() {
-serverContext.app.post('/api/properties/:propertyId/payments/:creditPaymentId/reconcile-credit', async (req, res) => {
-  try {
-    const result = await paymentCredits.reconcile(req.params.propertyId, req.params.creditPaymentId, req.body);
-    return res.status(result.duplicate ? 200 : 201).json(result);
-  } catch (error) {
-    if (error.status) return res.status(error.status).json({message: error.message});
-    console.error('Error reconciling legacy credit:', error);
-    res.status(500).json({ message: 'Unable to reconcile this credit. No changes were committed' });
-  }
-});
-}
-
 return {
   get_api_properties_propertyId_payments,
   get_api_properties_propertyId_payments_paymentId,
@@ -948,7 +935,6 @@ return {
   get_api_tenants_tenantId_monthly_overrides,
   get_api_tenants_tenantId_monthly_overrides_period,
   put_api_tenants_tenantId_monthly_overrides_period,
-  post_api_properties_propertyId_payments_creditPaymentId_apply_credit,
-  post_api_properties_propertyId_payments_creditPaymentId_reconcile_credit
+  post_api_properties_propertyId_payments_creditPaymentId_apply_credit
 };
 };

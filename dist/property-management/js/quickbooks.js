@@ -110,13 +110,11 @@ function openCreditAllocation(event,tenantId,paymentId){
  const total=availableCreditAmount(credit);
  if(!credit||total<=0){showNotification('No available credit to apply','info');return;}
  const now=new Date(),periodMonth=document.getElementById('paymentPeriodFilter')?.value||`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
- const isLegacyReconciliation=Number(credit.amount)>=0&&credit.creditConsumed==null&&Number(credit.appliedCredit)>0;
- paymentAllocationEditor={mode:isLegacyReconciliation?'reconcile':'credit',propertyId,creditPaymentId:credit._id,tenantId:String(tenantId),credit,payment:credit,total,periodMonth,requestId:window.crypto.randomUUID()};
+ paymentAllocationEditor={mode:'credit',propertyId,creditPaymentId:credit._id,tenantId:String(tenantId),credit,payment:credit,total,periodMonth,requestId:window.crypto.randomUUID()};
  const modal=ensurePaymentAllocationModal();
  renderPaymentAllocationModal(paymentAllocationEditor);
- const defaultCategory=isLegacyReconciliation?'late':'rent';
- const outstanding=creditTargetOutstanding(paymentAllocationEditor,{applyTo:defaultCategory,periodMonth});
- addPaymentAllocationRow({applyTo:defaultCategory,periodMonth,amount:outstanding==null?total:Math.min(total,outstanding)});
+ const outstanding=creditTargetOutstanding(paymentAllocationEditor,{applyTo:'rent',periodMonth});
+ addPaymentAllocationRow({periodMonth,amount:outstanding==null?total:Math.min(total,outstanding)});
  openModal('paymentAllocationModal');
 }
 function creditTargetOutstanding(data,row){
@@ -129,37 +127,33 @@ function creditTargetOutstanding(data,row){
  return null;
 }
 function renderPaymentAllocationModal(data){
- const modal=ensurePaymentAllocationModal(),isReconcile=data.mode==='reconcile',isCredit=data.mode==='credit'||isReconcile;
- modal.setAttribute('aria-label',isReconcile?'Reconcile payment allocation':isCredit?'Apply available credit':'Allocate payment');
- const title=isReconcile?'Reconcile payment allocation':isCredit?'Apply available credit':'Allocate payment';
- const intro=isReconcile
-  ?`This payment includes <strong>$${Number(data.total).toFixed(2)}</strong> of legacy unassigned credit. The received payment total will not change. Choose the category and month where this amount was actually paid.`
-  :isCredit
+ const modal=ensurePaymentAllocationModal(),isCredit=data.mode==='credit';
+ modal.setAttribute('aria-label',isCredit?'Apply available credit':'Allocate payment');
+ const title=isCredit?'Apply available credit':'Allocate payment';
+ const intro=isCredit
   ?`Available credit <strong>$${Number(data.total).toFixed(2)}</strong> from payment ending ${escapeHtml(String(data.creditPaymentId).slice(-6))}. Choose where to apply it. This creates an auditable credit adjustment; it does not record new cash.`
   :`Received <strong>$${Number(data.total).toFixed(2)}</strong> on ${escapeHtml(formatDateDisplay(data.payment.date))}. Assign each portion to a category and month. The received date and total stay unchanged.`;
  const invoice=data.invoice;
  const invoiceContent=!isCredit&&invoice
   ?`${renderInvoiceOutstanding(invoice,data.total)}<details open><summary>Invoice ${escapeHtml(invoice.number||'')} · ${escapeHtml(invoice.date||'')}</summary><div class="overview-table-wrap"><table class="overview-table"><thead><tr><th>Item</th><th>Description</th><th>Invoice amount</th></tr></thead><tbody>${invoice.lines.map(line=>`<tr><td>${escapeHtml(line.item)}</td><td>${escapeHtml(line.description)}</td><td>$${Number(line.amount).toFixed(2)}</td></tr>`).join('')}</tbody></table></div><button class="btn-secondary" onclick="useInvoiceAllocationLines()">Use invoice lines as a draft</button><p class="task-meta">Invoice charges may exceed this payment. Review the categories and months, and reduce unpaid lines to $0 or remove them.</p></details>`
   :(!isCredit?`<p class="overview-alert">${escapeHtml(data.invoiceError||'No invoice details are linked. Enter the allocation from your records.')}</p>`:'');
- const note=isReconcile
-  ?'Reconciliation converts the legacy marker into linked, auditable credit history. Review the destination carefully before saving.'
-  :isCredit
+ const note=isCredit
   ?'Applying a credit updates this app only. It does not create or change a QuickBooks transaction.'
   :'These allocations update this app only. They do not create or change a QuickBooks payment. A late-fee allocation records money paid toward that fee; it does not add a new charge.';
- modal.innerHTML=`<div class="modal-content" style="max-width:1000px;max-height:90vh;overflow:auto"><div class="panel-heading"><h2>${title}</h2><button class="btn-secondary" onclick="closeModal('paymentAllocationModal')">Close</button></div><p>${intro}</p>${invoiceContent}<p class="task-meta">${note}</p><div class="overview-table-wrap"><table class="overview-table"><thead><tr><th>Category</th><th>Applied month</th><th>${isCredit?'Amount to apply':'Amount paid'}</th><th>Description</th>${isCredit?'':'<th></th>'}</tr></thead><tbody id="paymentAllocationRows"></tbody></table></div>${isCredit?'':'<button class="btn-secondary" onclick="addPaymentAllocationRow()">Add allocation</button>'}<p id="paymentAllocationTotal" role="status" aria-live="polite"></p><p id="paymentAllocationMessage" role="status" aria-live="polite"></p><div class="modal-buttons"><button class="btn-secondary" onclick="closeModal('paymentAllocationModal')">Cancel</button><button type="button" id="paymentAllocationSave" class="btn-primary" onclick="savePaymentAllocation()">${isReconcile?'Reconcile allocation':isCredit?'Apply credit':'Save allocations'}</button></div></div>`;
+ modal.innerHTML=`<div class="modal-content" style="max-width:1000px;max-height:90vh;overflow:auto"><div class="panel-heading"><h2>${title}</h2><button class="btn-secondary" onclick="closeModal('paymentAllocationModal')">Close</button></div><p>${intro}</p>${invoiceContent}<p class="task-meta">${note}</p><div class="overview-table-wrap"><table class="overview-table"><thead><tr><th>Category</th><th>Applied month</th><th>${isCredit?'Amount to apply':'Amount paid'}</th><th>Description</th>${isCredit?'':'<th></th>'}</tr></thead><tbody id="paymentAllocationRows"></tbody></table></div>${isCredit?'':'<button class="btn-secondary" onclick="addPaymentAllocationRow()">Add allocation</button>'}<p id="paymentAllocationTotal" role="status" aria-live="polite"></p><p id="paymentAllocationMessage" role="status" aria-live="polite"></p><div class="modal-buttons"><button class="btn-secondary" onclick="closeModal('paymentAllocationModal')">Cancel</button><button type="button" id="paymentAllocationSave" class="btn-primary" onclick="savePaymentAllocation()">${isCredit?'Apply credit':'Save allocations'}</button></div></div>`;
 }
 function addPaymentAllocationRow(row={}){
  const root=document.getElementById('paymentAllocationRows');if(!root||root.children.length>=40)return;
  const tr=document.createElement('tr');const categories={rent:'Rent',deposit:'Security deposit',fee:'Fee (application / non-refundable)',late:'Late fee',water:'Water',electric:'Electric',trash:'Trash',admin:'Admin fee',other:'Other'};
  const period=row.periodMonth||paymentAllocationEditor?.payment?.periodMonth||String(paymentAllocationEditor?.invoice?.date||'').slice(0,7);
- const isCredit=['credit','reconcile'].includes(paymentAllocationEditor?.mode);
+ const isCredit=paymentAllocationEditor?.mode==='credit';
  tr.innerHTML=`<td><select class="allocation-category" aria-label="Category">${Object.entries(categories).map(([key,label])=>`<option value="${key}" ${key===(row.applyTo||'rent')?'selected':''}>${label}</option>`).join('')}</select></td><td><input class="allocation-period" aria-label="Applied month" type="month" value="${escapeHtml(period)}"></td><td><input class="allocation-amount" aria-label="${isCredit?'Amount to apply':'Amount paid'}" type="number" min="0" ${isCredit?`max="${Number(paymentAllocationEditor.total).toFixed(2)}"`:''} step="0.01" value="${Number(row.amount||0).toFixed(2)}"></td><td><input class="allocation-label" aria-label="Description" maxlength="200" value="${escapeHtml(row.feeLabel||'')}"></td>${isCredit?'':'<td><button class="btn-secondary" type="button">Remove</button></td>'}`;
  const remove=tr.querySelector('button');if(remove)remove.onclick=()=>{tr.remove();updatePaymentAllocationTotal();};tr.oninput=updatePaymentAllocationTotal;tr.onchange=updatePaymentAllocationTotal;root.appendChild(tr);updatePaymentAllocationTotal();
 }
 function readPaymentAllocationRows(){return [...document.querySelectorAll('#paymentAllocationRows tr')].map(tr=>({applyTo:tr.querySelector('.allocation-category').value,periodMonth:tr.querySelector('.allocation-period').value,amount:Number(tr.querySelector('.allocation-amount').value),feeLabel:tr.querySelector('.allocation-label').value}));}
 function updatePaymentAllocationTotal(){
  const rows=readPaymentAllocationRows(),total=Math.round(Number(paymentAllocationEditor?.total||0)*100),sum=rows.reduce((n,r)=>n+(Number.isFinite(r.amount)?Math.round(r.amount*100):0),0);
- const isReconcile=paymentAllocationEditor?.mode==='reconcile',isCredit=paymentAllocationEditor?.mode==='credit'||isReconcile;
+ const isCredit=paymentAllocationEditor?.mode==='credit';
  let error='';
  if(isCredit&&rows.length!==1)error='Apply credit to one category and month at a time.';
  if(!rows.length||!rows.some(r=>r.amount>0))error=isCredit?'Enter an amount of credit to apply.':'Enter at least one amount paid.';
@@ -169,18 +163,15 @@ function updatePaymentAllocationTotal(){
   if(r.amount>0&&!/^20\d{2}-(0[1-9]|1[0-2])$/.test(r.periodMonth)){error=`Row ${i+1}: select the applied month.`;break;}
  }
  if(!error&&isCredit&&sum>total)error=`Credit application exceeds the available amount by $${((sum-total)/100).toFixed(2)}.`;
- if(!error&&isReconcile&&sum!==total)error=`Reconcile the full legacy amount of $${(total/100).toFixed(2)} at once.`;
  const outstanding=isCredit&&rows.length===1?creditTargetOutstanding(paymentAllocationEditor,rows[0]):null;
  if(!error&&outstanding!=null&&sum>Math.round(outstanding*100))error=`Only $${outstanding.toFixed(2)} is outstanding for this destination. Reduce the credit amount.`;
  if(!error&&!isCredit&&sum!==total)error=sum>total?`Allocations exceed the received payment by $${((sum-total)/100).toFixed(2)}. Set unpaid invoice lines to $0 or reduce the paid amounts.`:`Allocate the remaining $${((total-sum)/100).toFixed(2)} of the received payment.`;
  if(paymentAllocationEditor)paymentAllocationEditor.validationError=error;
  const text=document.getElementById('paymentAllocationTotal');
- if(text)text.textContent=isReconcile
-  ?`Reconciling $${(sum/100).toFixed(2)} of $${(total/100).toFixed(2)} legacy credit. ${error||'The received payment total will remain unchanged.'}`
-  :isCredit
+ if(text)text.textContent=isCredit
   ?`Applying $${(sum/100).toFixed(2)} of $${(total/100).toFixed(2)} available credit. ${outstanding==null?'':`Target outstanding: $${outstanding.toFixed(2)}. `}${error||`$${((total-sum)/100).toFixed(2)} will remain available.`}`
   :`Allocated: $${(sum/100).toFixed(2)} of $${(total/100).toFixed(2)}. ${error||'Received payment fully allocated. Any invoice balance remains outstanding.'}`;
- const save=document.getElementById('paymentAllocationSave');if(save){save.disabled=!!paymentAllocationEditor?.saving;save.textContent=paymentAllocationEditor?.saving?'Saving…':isReconcile?'Reconcile allocation':isCredit?'Apply credit':'Save allocations';}
+ const save=document.getElementById('paymentAllocationSave');if(save){save.disabled=!!paymentAllocationEditor?.saving;save.textContent=paymentAllocationEditor?.saving?'Saving…':isCredit?'Apply credit':'Save allocations';}
  return !error;
 }
 function useInvoiceAllocationLines(){
@@ -207,24 +198,23 @@ async function savePaymentAllocation(){
  }
  const allocations=readPaymentAllocationRows().filter(row=>row.amount>0),message=document.getElementById('paymentAllocationMessage');
  data.saving=true;updatePaymentAllocationTotal();
- message.textContent=data.mode==='reconcile'?'Reconciling credit history and recalculating balances…':data.mode==='credit'?'Applying credit and recalculating balances…':'Saving allocations and recalculating balances…';
+ message.textContent=data.mode==='credit'?'Applying credit and recalculating balances…':'Saving allocations and recalculating balances…';
  let saved=false;
  try{
   let result;
-  if(data.mode==='credit'||data.mode==='reconcile'){
+  if(data.mode==='credit'){
    if(String(state.currentProperty?._id)!==String(data.propertyId))throw Error('The selected property changed. Reopen this dialog and try again.');
    const allocation=allocations[0],tenant=state.tenants.find(item=>String(item._id)===String(data.tenantId));
    const unitId=data.credit.unitId?._id||data.credit.unitId||tenant?.unitId?._id||tenant?.unitId;
-   const action=data.mode==='reconcile'?'reconcile-credit':'apply-credit';
-   const response=await fetch(`${API_URL}/properties/${data.propertyId}/payments/${data.creditPaymentId}/${action}`,{
+   const response=await fetch(`${API_URL}/properties/${data.propertyId}/payments/${data.creditPaymentId}/apply-credit`,{
     method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({tenantId:data.tenantId,unitId,amount:allocation.amount,targetApplyTo:allocation.applyTo,feeType:allocation.applyTo==='fee'?'other':allocation.applyTo,feeLabel:allocation.feeLabel,periodMonth:allocation.periodMonth,note:allocation.feeLabel?`Credit application: ${allocation.feeLabel}`:undefined,requestId:data.requestId})
    });
-   result=await response.json();if(!response.ok)throw Error(result.message||(data.mode==='reconcile'?'Unable to reconcile credit':'Unable to apply credit'));saved=true;
-   message.textContent=data.mode==='reconcile'?'Allocation reconciled. Refreshing payments and balances…':'Credit applied. Refreshing payments and balances…';
+   result=await response.json();if(!response.ok)throw Error(result.message||'Unable to apply credit');saved=true;
+   message.textContent='Credit applied. Refreshing payments and balances…';
    invalidateCache('payments','tenants');state.propertyOverviewData=null;
    await Promise.all([refreshContent('payments'),refreshContent('tenants')]);
-   closeModal('paymentAllocationModal');showNotification(data.mode==='reconcile'?'Allocation reconciled. Payments and balances updated.':'Credit applied. Payments and balances updated.','success');
+   closeModal('paymentAllocationModal');showNotification('Credit applied. Payments and balances updated.','success');
   }else{
    const response=await fetch(`${API_URL}/properties/${data.propertyId}/payments/${data.rootId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({allocations,version:data.version})});
    result=await response.json();if(!response.ok)throw Error(result.message||'Unable to save allocations');saved=true;

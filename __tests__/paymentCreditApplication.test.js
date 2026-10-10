@@ -3,7 +3,7 @@ const lifecycle = require('../server/tenant-lifecycle');
 const {randomUUID} = require('crypto');
 
 function setup(sourceOverrides = {}) {
-    const handlers = {};
+    let handler;
     let nextId = 1;
     let payments = [{
         _id: 'source', projectId: 'property', tenantId: 'tenant',
@@ -65,7 +65,7 @@ function setup(sourceOverrides = {}) {
         tenant = data;
     }});
     const context = {
-        app: {post: (url, callback) => {handlers[url] = callback;}},
+        app: {post: (url, callback) => {handler = callback;}},
         Payment,
         Tenant: {
             findOne: filter => query(() => tenant._id === filter._id && tenant.projectId === filter.projectId ? tenantDoc() : null),
@@ -74,24 +74,19 @@ function setup(sourceOverrides = {}) {
     };
     Object.assign(context, require('../server/flows/payments')(context));
     context.post_api_properties_propertyId_payments_creditPaymentId_apply_credit();
-    context.post_api_properties_propertyId_payments_creditPaymentId_reconcile_credit();
-    async function request(action, changes = {}) {
+    async function apply(changes = {}) {
         const res = {
             statusCode: 200,
             status(code) {this.statusCode = code; return this;},
             json(body) {this.body = body; return this;}
         };
-        await handlers[`/api/properties/:propertyId/payments/:creditPaymentId/${action}`]({
+        await handler({
             params: {propertyId: 'property', creditPaymentId: 'source'},
             body: {tenantId: 'tenant', amount: 30, targetApplyTo: 'rent', periodMonth: '2026-11', requestId: randomUUID(), ...changes}
         }, res);
         return res;
     }
-    return {
-        apply: changes => request('apply-credit', changes),
-        reconcile: changes => request('reconcile-credit', changes),
-        context, session, getPayments: () => payments, getTenant: () => tenant
-    };
+    return {apply, context, session, getPayments: () => payments, getTenant: () => tenant};
 }
 
 describe('transactional credit allocation', () => {
@@ -276,44 +271,6 @@ describe('transactional credit allocation', () => {
         const {apply, getPayments} = setup(source);
         expect((await apply()).statusCode).toBe(409);
         expect(getPayments()).toHaveLength(1);
-    });
-
-    test('reconciles a matching positive legacy overpayment into an auditable linked allocation', async () => {
-        const {reconcile, getPayments} = setup({
-            amount: 1785, balance: -35, appliedCredit: 35, creditConsumed: null
-        });
-
-        const response = await reconcile({
-            amount: 35, targetApplyTo: 'late', periodMonth: '2026-10',
-            feeLabel: 'October late fee'
-        });
-
-        expect(response.statusCode).toBe(201);
-        expect(response.body.reconciled).toBe(true);
-        expect(getPayments()).toHaveLength(2);
-        expect(getPayments()[0]).toMatchObject({
-            amount: 1785, appliedCredit: 0, creditConsumed: 35
-        });
-        expect(getPayments()[1]).toMatchObject({
-            amount: 0, appliedCredit: 35, applyTo: 'late',
-            periodMonth: '2026-10', creditSourceId: 'source',
-            feeLabel: 'October late fee'
-        });
-    });
-
-    test('rejects legacy reconciliation when the marker and remaining balance do not agree', async () => {
-        const {reconcile, getPayments} = setup({
-            amount: 1785, balance: -35, appliedCredit: 20, creditConsumed: null
-        });
-
-        const response = await reconcile({
-            amount: 35, targetApplyTo: 'late', periodMonth: '2026-10'
-        });
-
-        expect(response.statusCode).toBe(409);
-        expect(response.body.message).toContain('do not match');
-        expect(getPayments()).toHaveLength(1);
-        expect(getPayments()[0]).toMatchObject({appliedCredit: 20, creditConsumed: null});
     });
 
     test('legacy negative credits preserve their previously consumed amount without double counting', async () => {
