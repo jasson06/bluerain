@@ -150,6 +150,7 @@ function openPaymentModalForTenantAndProperty(tenantId, propertyId, lockProperty
     const form = document.getElementById('addPaymentForm');
     if (!form) return;
     form.reset();
+    setCreditAllocationEditMode(form, false);
     form.dataset.editMode = 'false';
     form.dataset.paymentId = '';
     form.dataset.portfolioMode = propertyId === '__portfolio__' ? 'true' : 'false';
@@ -186,13 +187,27 @@ function openPaymentModalForTenantAndProperty(tenantId, propertyId, lockProperty
     openModal('addPaymentModal');
 }
 
+function setCreditAllocationEditMode(form, enabled) {
+    if (!form) return;
+    form.dataset.creditAllocationEdit = enabled ? 'true' : 'false';
+    ['paymentProperty', 'paymentTenant', 'paymentUnit', 'paymentType', 'paymentMethod', 'paymentDate', 'paymentLateFee', 'paymentAmount', 'paymentCarryForward']
+        .forEach(id => {
+            const field = document.getElementById(id);
+            if (field) {
+                field.disabled = enabled;
+                if (id === 'paymentAmount') field.readOnly = enabled;
+            }
+        });
+}
+
 // Normalize and validate payment type against server enum
 
 
-function editPayment(paymentId) {
+function editPayment(paymentId, allowCreditAllocation = false) {
     const payment = state.payments.find(p => p._id === paymentId);
     if (!payment) return showNotification('Payment not found', 'error');
-    const editLockReason = getPaymentEditLockReason(payment);
+    const isCreditAllocation = Boolean(payment.creditSourceId) && allowCreditAllocation;
+    const editLockReason = isCreditAllocation ? '' : getPaymentEditLockReason(payment);
     if (editLockReason) return showNotification(editLockReason, 'info');
 
     // Populate selects before setting values
@@ -230,7 +245,8 @@ function editPayment(paymentId) {
     const form = document.getElementById('addPaymentForm');
     form.dataset.editMode = 'true';
     form.dataset.paymentId = paymentId;
-    form.querySelector('button[type="submit"]').textContent = 'Update Payment';
+    setCreditAllocationEditMode(form, isCreditAllocation);
+    form.querySelector('button[type="submit"]').textContent = isCreditAllocation ? 'Update Allocation' : 'Update Payment';
 
     // Sync visibility toggles
     document.getElementById('paymentApplyTo')?.dispatchEvent(new Event('change'));
@@ -285,6 +301,7 @@ async function handleAddPayment(event) {
 
     const form = event.target;
     const isEdit = form.dataset.editMode === 'true';
+    const isCreditAllocation = form.dataset.creditAllocationEdit === 'true';
     const paymentId = form.dataset.paymentId;
     showLoader();
     try {
@@ -324,11 +341,13 @@ async function handleAddPayment(event) {
         console.warn('Error refreshing portfolio after payment:', e);
     }
         closeModal('addPaymentModal');
-        showNotification(isEdit ? 'Payment updated successfully' : 'Payment recorded successfully', 'success');
+        showNotification(isCreditAllocation ? 'Allocation updated successfully' : isEdit ? 'Payment updated successfully' : 'Payment recorded successfully', 'success');
         event.target.reset();
+        setCreditAllocationEditMode(form, false);
         // Reset form mode
         form.dataset.editMode = 'false';
         form.dataset.paymentId = '';
+        form.dataset.creditAllocationEdit = 'false';
         form.querySelector('button[type="submit"]').textContent = 'Save Payment';
     } catch (error) {
         console.error('Error saving payment:', error);
