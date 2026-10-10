@@ -706,31 +706,6 @@ serverContext.app.put('/api/properties/:propertyId/payments/:paymentId', async (
     const payment = await serverContext.Payment.findOne({_id:req.params.paymentId,projectId:req.params.propertyId});
     if (!payment) return res.status(404).json({ message: 'Payment not found' });
     if(payment.postingStatus==='voided')return res.status(409).json({message:'Voided payments cannot be edited'});
-    if (payment.creditSourceId) {
-      const allowedApplyTo = ['rent','deposit','fee','late','water','electric','trash','admin','other'];
-      const applyTo = String(req.body.applyTo || payment.applyTo || 'rent').toLowerCase();
-      const periodMonth = req.body.periodMonth !== undefined ? String(req.body.periodMonth || '') : payment.periodMonth || '';
-      if (!allowedApplyTo.includes(applyTo)) return res.status(400).json({message:'Choose a valid allocation category'});
-      if (!/^20\d{2}-(0[1-9]|1[0-2])$/.test(periodMonth)) return res.status(400).json({message:'Choose an applied month (YYYY-MM)'});
-      if (String(req.body.feeLabel || '').length > 200 || String(req.body.note || '').length > 1200) {
-        return res.status(400).json({message:'Allocation description is too long'});
-      }
-      const tenant = await serverContext.Tenant.findById(payment.tenantId);
-      if (!tenant) return res.status(404).json({message:'Tenant not found'});
-      const appliedCredit = Math.max(0, Number(payment.appliedCredit) || 0);
-      if (payment.applyTo === 'deposit') tenant.depositPaid = Math.max(0, (Number(tenant.depositPaid) || 0) - appliedCredit);
-      if (applyTo === 'deposit') tenant.depositPaid = (Number(tenant.depositPaid) || 0) + appliedCredit;
-      if (payment.applyTo === 'deposit' || applyTo === 'deposit') await tenant.save();
-      payment.applyTo = applyTo;
-      payment.periodMonth = periodMonth;
-      payment.feeType = String(req.body.feeType || '').slice(0, 60);
-      payment.feeLabel = String(req.body.feeLabel || '').trim();
-      payment.note = String(req.body.note || '').trim();
-      await paymentBalances.recalculate(payment);
-      await payment.save();
-      await paymentBalances.refreshTenant(payment.tenantId);
-      return res.json({payment});
-    }
     if(payment.creditSourceId || creditValues.consumedCredit(payment)>0 || Number(payment.appliedCredit)>0)return res.status(409).json({message:'Payments with credit allocations cannot be edited; their source and application history must remain intact'});
     if(req.body.allocations!==undefined){
       const result=await paymentAllocations.save(payment,req.body);

@@ -358,18 +358,10 @@ function openPaymentEditLockPopover(event, paymentId) {
     popover.setAttribute('role', 'dialog');
     popover.setAttribute('aria-labelledby', 'paymentEditLockTitle');
     popover.setAttribute('aria-describedby', 'paymentEditLockReason');
-    const allocationAction = payment.creditSourceId
-        ? `<button type="button" class="btn-secondary credit-allocation-edit" style="margin-top:8px">Change allocation</button>`
-        : '';
-    popover.innerHTML = `<div class="payment-edit-lock-header"><span class="payment-edit-lock-icon" aria-hidden="true"><i class="fas fa-lock"></i></span><strong id="paymentEditLockTitle">Read-only payment</strong><button type="button" aria-label="Close editing explanation"><i class="fas fa-times" aria-hidden="true"></i></button></div><p id="paymentEditLockReason">${escapeHtml(reason)}</p>${allocationAction}`;
+    popover.innerHTML = `<div class="payment-edit-lock-header"><span class="payment-edit-lock-icon" aria-hidden="true"><i class="fas fa-lock"></i></span><strong id="paymentEditLockTitle">Read-only payment</strong><button type="button" aria-label="Close editing explanation"><i class="fas fa-times" aria-hidden="true"></i></button></div><p id="paymentEditLockReason">${escapeHtml(reason)}</p>`;
     popover.addEventListener('click', clickEvent => clickEvent.stopPropagation());
     const closeButton = popover.querySelector('button');
     closeButton.addEventListener('click', () => closePaymentEditLockPopover(true));
-    const allocationButton = popover.querySelector('.credit-allocation-edit');
-    allocationButton?.addEventListener('click', () => {
-        closePaymentEditLockPopover();
-        editPayment(paymentId, true);
-    });
     document.body.appendChild(popover);
     const rect = trigger.getBoundingClientRect();
     const width = popover.offsetWidth, height = popover.offsetHeight;
