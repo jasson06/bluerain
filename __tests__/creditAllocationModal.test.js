@@ -83,6 +83,42 @@ describe('credit allocation modal', () => {
         expect(modal.innerHTML).not.toContain('Add allocation');
     });
 
+    test('opens matching positive legacy credit in reconciliation mode with a late-fee draft', () => {
+        const {context} = setup();
+        context.ensurePaymentAllocationModal = jest.fn(() => ({}));
+        context.renderPaymentAllocationModal = jest.fn();
+        context.addPaymentAllocationRow = jest.fn();
+        context.state.payments = [{
+            _id: 'legacy-1', tenantId: 'tenant-1', amount: 1785,
+            balance: -35, appliedCredit: 35, creditConsumed: null
+        }];
+
+        context.openCreditAllocation({stopPropagation: jest.fn()}, 'tenant-1', 'legacy-1');
+
+        expect(getAllocationEditor(context).mode).toBe('reconcile');
+        expect(getAllocationEditor(context).total).toBe(35);
+        expect(context.addPaymentAllocationRow).toHaveBeenCalledWith(
+            expect.objectContaining({applyTo: 'late', amount: 35})
+        );
+    });
+
+    test('renders clear reconciliation guidance and preserves the received total', () => {
+        const {context, modal} = setup();
+        context.ensurePaymentAllocationModal = jest.fn(() => modal);
+
+        context.renderPaymentAllocationModal({
+            mode: 'reconcile',
+            creditPaymentId: 'legacy-123456',
+            total: 35,
+            payment: {date: '2026-10-01'}
+        });
+
+        expect(modal.setAttribute).toHaveBeenCalledWith('aria-label', 'Reconcile payment allocation');
+        expect(modal.innerHTML).toContain('$35.00</strong> of legacy unassigned credit');
+        expect(modal.innerHTML).toContain('received payment total will not change');
+        expect(modal.innerHTML).toContain('Reconcile allocation');
+    });
+
     test('removes the separate menu and prompt flow', () => {
         const source = fs.readFileSync(
             path.join(__dirname, '../dist/property-management/js/payments-search.js'),
@@ -163,5 +199,45 @@ describe('credit allocation modal', () => {
         );
         expect(context.invalidateCache).toHaveBeenCalledWith('payments', 'tenants');
         expect(context.closeModal).toHaveBeenCalledWith('paymentAllocationModal');
+    });
+
+    test('submits legacy reconciliation through its dedicated endpoint', async () => {
+        const {context} = setup();
+        context.API_URL = '/api';
+        context.fetch = jest.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({applied: 35, reconciled: true})
+        });
+        context.readPaymentAllocationRows = () => [
+            {applyTo: 'late', periodMonth: '2026-10', amount: 35, feeLabel: 'October late fee'}
+        ];
+        context.updatePaymentAllocationTotal = jest.fn(() => true);
+        context.invalidateCache = jest.fn();
+        context.refreshContent = jest.fn().mockResolvedValue();
+        context.closeModal = jest.fn();
+        context.showNotification = jest.fn();
+        context.state.tenants = [{_id: 'tenant-1', unitId: 'unit-1'}];
+        vm.runInContext(
+            'paymentAllocationEditor = {mode: "reconcile", propertyId: "property-1", creditPaymentId: "legacy-1", tenantId: "tenant-1", credit: {}, total: 35, requestId: "12345678-1234-4123-8123-123456789abc"}',
+            context
+        );
+
+        await context.savePaymentAllocation();
+
+        expect(context.fetch).toHaveBeenCalledWith(
+            '/api/properties/property-1/payments/legacy-1/reconcile-credit',
+            expect.objectContaining({method: 'POST'})
+        );
+        expect(JSON.parse(context.fetch.mock.calls[0][1].body)).toEqual(
+            expect.objectContaining({
+                amount: 35,
+                targetApplyTo: 'late',
+                periodMonth: '2026-10'
+            })
+        );
+        expect(context.showNotification).toHaveBeenCalledWith(
+            'Allocation reconciled. Payments and balances updated.',
+            'success'
+        );
     });
 });
