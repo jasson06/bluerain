@@ -21,7 +21,7 @@ serverContext.app.delete("/api/selection-boards", async (req, res) => {
   }
 
   try {
-    const normalizedRoom = decodeURIComponent(room).trim().toLowerCase();
+    const normalizedRoom = room.trim().toLowerCase();
 
     // Log all rooms for debug
     const boards = await serverContext.SelectionBoard.find({ projectId });
@@ -29,7 +29,7 @@ serverContext.app.delete("/api/selection-boards", async (req, res) => {
 
     const deleted = await serverContext.SelectionBoard.findOneAndDelete({
       projectId,
-      room: { $regex: new RegExp(`^${normalizedRoom}$`, 'i') } // Case-insensitive exact match
+      room: { $regex: new RegExp('^' + normalizedRoom.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') }
     });
 
     if (!deleted) {
@@ -44,6 +44,14 @@ serverContext.app.delete("/api/selection-boards", async (req, res) => {
 });
 }
 
+function patch_api_selection_boards() {
+serverContext.app.patch('/api/selection-boards',async(req,res)=>{
+ const {projectId,room,newRoom}=req.body||{};if(!projectId||typeof room!=='string'||typeof newRoom!=='string'||!newRoom.trim()||newRoom.trim().length>80)return res.status(400).json({error:'Enter a valid room name.'});
+ try{const key=v=>String(v).trim().toLowerCase().replace(/[-\s]+/g,' ');const boards=await serverContext.SelectionBoard.find({projectId});const current=boards.find(b=>key(b.room)===key(room));if(boards.some(b=>key(b.room)===key(newRoom)&&b!==current))return res.status(409).json({error:'Room already exists.'});
+ if(current){current.room=newRoom.trim();await current.save();res.json({board:current});}else{const board=new serverContext.SelectionBoard({projectId,room:newRoom.trim(),selections:[]});await board.save();res.json({board});}
+ }catch(error){res.status(500).json({error:'Could not rename room.'});}
+});
+}
 function get_api_products() {
 // GET /api/products - Return all products
 serverContext.app.get('/api/products', async (req, res) => {
@@ -131,28 +139,19 @@ serverContext.app.get('/api/selection-boards', async (req, res) => {
 }
 
 function get_api_product_details() {
-// --------------------- Endpoint: Proxy for External URL --------------------- //
-serverContext.app.get('/api/product-details', async (req, res) => {
-  const { url } = req.query;
-  if (!url) {
-    return res.status(400).json({ error: 'Missing url parameter' });
-  }
-  try {
-    // Replace 'YOUR_API_KEY' with your actual Microlink API key or set it in an environment variable.
-    const apiKey = process.env.MICROLINK_API_KEY || 'YOUR_API_KEY';
-    const apiUrl = `https://api.microlink.io/?url=${encodeURIComponent(url)}&api_key=${apiKey}`;
-    const response = await (0, serverContext.fetch)(apiUrl);
-    if (!response.ok) {
-      return res.status(500).json({ error: 'Error fetching data from Microlink' });
-    }
-    const data = await response.json();
-    // Microlink returns data under a "data" key
-    res.json(data.data);
-  } catch (error) {
-    console.error("Error fetching product details:", error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+serverContext.app.get('/api/product-details', async(req,res)=>{
+ try { require('../product-import').validUrl(req.query.url); } catch {return res.status(400).json({error:'Use a public http or https product URL.'});}
+ try {res.json(await require('../product-import').importProduct(req.query.url,serverContext.fetch));}
+ catch(error){res.status(502).json({error:error.message});}
 });
+}
+function post_api_product_image() {
+ const upload=require('multer')({storage:require('multer').memoryStorage(),limits:{fileSize:5*1024*1024,files:1}}).single('image');
+ serverContext.app.post('/api/product-image',(req,res)=>upload(req,res,async error=>{
+  if(error)return res.status(400).json({error:'Choose one image under 5 MB.'});
+  try {if(!req.file)throw Error('Choose an image.');res.json({url:await require('../product-import').storeImage(req.file.buffer)});}
+  catch(e){res.status(400).json({error:e.message});}
+ }));
 }
 
 function delete_api_products_id() {
@@ -216,11 +215,13 @@ serverContext.app.put('/api/room-packages/:key', async (req, res) => {
 
 return {
   delete_api_selection_boards,
+  patch_api_selection_boards,
   get_api_products,
   post_api_products,
   post_api_selection_board,
   get_api_selection_boards,
   get_api_product_details,
+  post_api_product_image,
   delete_api_products_id,
   get_api_room_packages,
   get_api_room_packages_key,

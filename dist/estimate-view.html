@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Client Overview</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="./vendor/marked/marked.umd.js"></script>
+  <script src="./description-editor.js"></script>
   <style>
     :root {
       --bg: #eef2f3;
@@ -814,7 +816,7 @@
     }
 
     .flow-items {
-      display: grid;
+      display: block;
       gap: 12px;
       max-height: 520px;
       overflow-y: auto;
@@ -905,7 +907,11 @@
 
     .tab.active { background: var(--ink); color: #fff; border-color: var(--ink); }
 
-    .category-stack { display: grid; gap: 12px; }
+    .category-stack { 
+    display: grid; 
+    gap: 12px;
+    max-height: 300px;
+    overflow: auto; }
 
     details.category-detail {
       border: 1px solid var(--line);
@@ -1243,7 +1249,7 @@
         padding-left: 16px;
         padding-right: 16px;
       }
-      .status-board, .focus-meta, .rail { grid-template-columns: 1fr; }
+       .focus-meta, .rail { grid-template-columns: 1fr; }
       details.category-detail summary, .line-row { grid-template-columns: 1fr; }
       .category-progress { justify-content: flex-start; }
       h1 { max-width: 100%; }
@@ -1294,6 +1300,29 @@
       .hero-card, .card, .rail-card, .progress-orb-card { box-shadow: none; background: #fff; border: 1px solid #d9e0e4; }
       details.category-detail { break-inside: avoid; }
     }
+    /* Only the embedded selections section uses these styles. */
+    #client-selections {padding:0;overflow:hidden;scroll-margin-top:140px}
+    #client-selections > summary {display:flex;justify-content:space-between;align-items:center;gap:20px;padding:20px 24px;cursor:pointer;list-style:none}
+    #client-selections > summary::-webkit-details-marker {display:none}
+    #client-selections > summary:focus-visible {outline:3px solid var(--accent);outline-offset:-4px}
+    #client-selections summary strong {display:block;font-size:1rem}
+    #client-selections summary small {display:block;color:var(--muted);margin-top:5px;font-size:.82rem;line-height:1.5}
+    #client-selections .selection-prompt {font-size:.8rem;color:var(--accent);white-space:nowrap;font-weight:700}
+    #client-selections[open] .selection-prompt > span {display:inline-block;transform:rotate(45deg)}
+    #client-selections .selection-content {padding:0 16px 16px}
+    #client-selection-frame {width:100%;height:calc(100dvh - 190px);min-height:440px;border:1px solid var(--line);border-radius:16px;background:var(--surface-soft)}
+    @media(max-width:720px){#client-selections > summary{align-items:flex-start;flex-direction:column;gap:10px;padding:18px}#client-selection-frame{height:calc(100dvh - 170px);min-height:440px}}
+    @media print{#client-selections{display:none}}
+#mobile-more-dialog{width:min(440px,calc(100% - 24px));border:1px solid var(--line);border-radius:22px;padding:20px;color:var(--ink)}#mobile-more-dialog::backdrop{background:#17202677}.more-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}.more-heading h2{font-size:1.1rem;margin:0}.more-heading button{width:44px;height:44px;border:0;border-radius:50%;font-size:24px;background:var(--surface-soft)}#mobile-more-dialog nav{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+@media(max-width:720px){.mobile-footer-shell{padding-bottom:env(safe-area-inset-bottom,0px);transform:none!important}.mobile-footer-nav{display:flex;overflow:visible;gap:2px;padding:6px;justify-content:space-between}.mobile-footer-nav .mobile-nav-link{flex:1;min-width:0;padding:8px 2px;min-height:56px;border:0;font-family:inherit;cursor:pointer}.mobile-footer-nav .mobile-nav-text{font-size:.61rem}.mobile-footer-nav .mobile-nav-icon{width:26px;height:26px}.app-shell{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}input,select,textarea{font-size:16px}}
+    .formatted-description{min-width:0;max-width:100%;color:var(--muted);font-size:.88rem;line-height:1.65;overflow-wrap:anywhere}
+    .formatted-description p{margin:0 0 .65em;font:inherit;color:inherit}
+    .formatted-description ul,.formatted-description ol{margin:.45em 0 .8em;padding-left:1.5em;list-style-position:outside}
+    .formatted-description ul{list-style-type:disc}.formatted-description ol{list-style-type:decimal}
+    .formatted-description li{display:list-item;margin:.2em 0}.formatted-description li>p{margin:0}
+    .formatted-description blockquote{margin:.65em 0;padding:.35em .9em;border-left:3px solid var(--accent);background:var(--surface-soft);border-radius:0 8px 8px 0}
+    .formatted-description strong,.formatted-description b{font-weight:700;color:var(--ink)}
+    .formatted-description>:last-child{margin-bottom:0}
   </style>
 </head>
 <body>
@@ -1313,7 +1342,7 @@
           <a class="topbar-nav-link" href="#project-flow">Project Flow</a>
           <a class="topbar-nav-link" href="#work-areas">Work Areas</a>
           <a class="topbar-nav-link" href="#project-details">Project Details</a>
-          <a class="topbar-nav-link" href="#budget-summary">Budget</a>
+          <a class="topbar-nav-link" href="#budget-summary">Budget</a><a class="topbar-nav-link" href="#client-selections">Selections</a>
           <a class="topbar-nav-link" href="#needs-attention">Needs Attention</a>
         </div>
         <button class="mobile-actions-toggle" id="mobile-actions-toggle" type="button" aria-expanded="false" aria-controls="mobile-action-sheet" aria-label="Open actions" title="Open actions">
@@ -1330,6 +1359,7 @@
         </div>
       </div>
     </nav>
+
 
     <section class="hero" id="overview">
       <article class="hero-card">
@@ -1354,6 +1384,7 @@
         <p class="card-subtitle" id="progress-caption">Calculating progress from completed project line items.</p>
       </aside>
     </section>
+
 
     <section class="layout">
       <aside class="card" id="project-path">
@@ -1430,6 +1461,11 @@
         </section>
       </aside>
     </section>
+    <details class="card" id="client-selections">
+      <summary><span><strong>Room selections</strong><small>View your saved products or choose finishes for each room.</small></span><span class="selection-prompt">View selections <span aria-hidden="true">＋</span></span></summary>
+      <div class="selection-content"><p id="selection-unavailable" role="status">Selections will load when the project is available.</p>
+      <iframe id="client-selection-frame" title="Room selections and product library" hidden></iframe></div>
+    </details>
   </div>
 
   <div class="mobile-action-sheet-backdrop" id="mobile-action-sheet-backdrop"></div>
@@ -1484,45 +1520,47 @@
         </span>
         <span class="mobile-nav-text">Overview</span>
       </a>
-      <a class="mobile-nav-link" href="#project-path" data-section="project-path">
-        <span class="mobile-nav-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M5 18h3l3-12h3l3 12h2"></path><path d="M4 18h16"></path></svg>
-        </span>
-        <span class="mobile-nav-text">Path</span>
-      </a>
+      
       <a class="mobile-nav-link" href="#project-flow" data-section="project-flow">
         <span class="mobile-nav-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M4 7h6"></path><path d="M14 7h6"></path><path d="M10 7l4 0"></path><path d="M7 7v10"></path><path d="M7 17h10"></path><path d="M17 17v-4"></path></svg>
         </span>
-        <span class="mobile-nav-text">Flow</span>
+        <span class="mobile-nav-text">Progress</span>
       </a>
-      <a class="mobile-nav-link" href="#work-areas" data-section="work-areas">
-        <span class="mobile-nav-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><rect x="4" y="5" width="7" height="6" rx="1.5"></rect><rect x="13" y="5" width="7" height="6" rx="1.5"></rect><rect x="4" y="13" width="7" height="6" rx="1.5"></rect><rect x="13" y="13" width="7" height="6" rx="1.5"></rect></svg>
-        </span>
-        <span class="mobile-nav-text">Areas</span>
-      </a>
-      <a class="mobile-nav-link" href="#project-details" data-section="project-details">
-        <span class="mobile-nav-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2"></rect><path d="M9 9h6"></path><path d="M9 13h6"></path><path d="M9 17h4"></path></svg>
-        </span>
-        <span class="mobile-nav-text">Details</span>
-      </a>
+      
+      
       <a class="mobile-nav-link" href="#budget-summary" data-section="budget-summary">
         <span class="mobile-nav-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M12 4v16"></path><path d="M16 8.5c0-1.7-1.8-3-4-3s-4 1.3-4 3 1.8 3 4 3 4 1.3 4 3-1.8 3-4 3-4-1.3-4-3"></path></svg>
         </span>
         <span class="mobile-nav-text">Budget</span>
       </a>
-      <a class="mobile-nav-link" href="#needs-attention" data-section="needs-attention">
+      <a class="mobile-nav-link" href="#client-selections" data-section="client-selections"><span class="mobile-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"></rect><rect x="14" y="4" width="6" height="6" rx="1"></rect><path d="M5 17l4 3 9-7"></path></svg></span><span class="mobile-nav-text">Selections</span></a>
+      
+    <button type="button" class="mobile-nav-link" id="mobile-more" aria-haspopup="dialog"><span class="mobile-nav-icon" aria-hidden="true">•••</span><span class="mobile-nav-text">More</span></button></nav>
+  </div>
+
+  <dialog id="mobile-more-dialog" aria-labelledby="mobile-more-title"><div class="more-heading"><h2 id="mobile-more-title">More project details</h2><button type="button" id="mobile-more-close" aria-label="Close navigation">×</button></div><nav aria-label="More navigation"><a class="mobile-nav-link" href="#project-path" data-section="project-path">
+        <span class="mobile-nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M5 18h3l3-12h3l3 12h2"></path><path d="M4 18h16"></path></svg>
+        </span>
+        <span class="mobile-nav-text">Path</span>
+      </a><a class="mobile-nav-link" href="#work-areas" data-section="work-areas">
+        <span class="mobile-nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><rect x="4" y="5" width="7" height="6" rx="1.5"></rect><rect x="13" y="5" width="7" height="6" rx="1.5"></rect><rect x="4" y="13" width="7" height="6" rx="1.5"></rect><rect x="13" y="13" width="7" height="6" rx="1.5"></rect></svg>
+        </span>
+        <span class="mobile-nav-text">Areas</span>
+      </a><a class="mobile-nav-link" href="#project-details" data-section="project-details">
+        <span class="mobile-nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2"></rect><path d="M9 9h6"></path><path d="M9 13h6"></path><path d="M9 17h4"></path></svg>
+        </span>
+        <span class="mobile-nav-text">Details</span>
+      </a><a class="mobile-nav-link" href="#needs-attention" data-section="needs-attention">
         <span class="mobile-nav-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M12 4l9 16H3L12 4z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
         </span>
         <span class="mobile-nav-text">Alerts</span>
-      </a>
-    </nav>
-  </div>
-
+      </a></nav></dialog>
   <script>
     document.addEventListener("DOMContentLoaded", async () => {
       const estimateId = new URLSearchParams(window.location.search).get("estimateId");
@@ -1562,7 +1600,7 @@
 
       const $ = (id) => document.getElementById(id);
       const setText = (id, value) => { const el = $(id); if (el) el.textContent = value; };
-      const sectionIds = ["overview", "project-path", "project-flow", "work-areas", "project-details", "budget-summary", "needs-attention"];
+      const sectionIds = ["overview", "project-path", "project-flow", "work-areas", "project-details", "budget-summary", "needs-attention", "client-selections"];
       const mobileMedia = window.matchMedia("(max-width: 720px)");
 
       function setActiveNav(sectionId) {
@@ -1653,7 +1691,7 @@
           const currentScrollY = window.scrollY;
           const scrollingDown = currentScrollY > lastScrollY;
           const pastTop = currentScrollY > 80;
-          const shouldHide = mobileMedia.matches && pastTop && scrollingDown;
+          const shouldHide = false;
           footerShell.classList.toggle("is-hidden", shouldHide);
           lastScrollY = currentScrollY;
           ticking = false;
@@ -1672,6 +1710,12 @@
       }
       const escapeHtml = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
 
+      function renderItemDescription(value, fallback) {
+        if (!window.DescriptionEditor) return escapeHtml(value || fallback).replace(/\n/g, '<br>');
+        return window.DescriptionEditor.plain(value).trim()
+          ? window.DescriptionEditor.render(value)
+          : escapeHtml(fallback);
+      }
       function formatCurrency(value) {
         return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value) || 0);
       }
@@ -2013,7 +2057,7 @@
                 <div><span class="pill ${badgeClass}">${escapeHtml(badgeLabel)}</span><h3 style="margin-top:10px">${escapeHtml(item.name || "Unnamed item")}</h3></div>
                 <strong>${formatCurrency(item.amount)}</strong>
               </header>
-              <p>${escapeHtml(item.description || `${item.categoryName} work item.`)}</p>
+              <div class="formatted-description">${renderItemDescription(item.description, `${item.categoryName} work item.`)}</div>
               <div class="focus-meta">
                 <div class="mini-stat"><small>Phase</small><strong>${escapeHtml(getProjectPhaseLabel(item.phase))}</strong></div>
                 <div class="mini-stat"><small>% Complete</small><strong>${progress}%</strong></div>
@@ -2090,7 +2134,7 @@
                     <article class="line-row">
                       <div>
                         <h4>${escapeHtml(item.name || "Unnamed item")}</h4>
-                        <p>${escapeHtml(item.description || "No additional description provided.")}</p>
+                        <div class="formatted-description">${renderItemDescription(item.description, "No additional description provided.")}</div>
                         <p style="margin-top:7px"><span class="pill">${escapeHtml(getProjectPhaseLabel(item.phase))}</span> <span class="pill">${progressValue}% Complete</span> <span class="pill ${status.className}">${escapeHtml(status.label)}</span>${scheduleLabel ? ` <span class="pill ${schedule.type}">${escapeHtml(scheduleLabel)}</span>` : ''}</p>
                       </div>
                       <strong>${formatCurrency(item.amount)}</strong>
@@ -2164,7 +2208,35 @@
         setText("budget-caption", `${formatCurrency(completedValue)} is complete, ${formatCurrency(remainingValue)} remains, and ${formatCurrency(total)} is the current estimated project total.`);
       }
 
+      function openSelectionBoard() {
+        const panel = document.getElementById("client-selections");
+        const frame = document.getElementById("client-selection-frame");
+        if (!panel.open || !frame.dataset.src) return;
+        if (frame.getAttribute("src") !== frame.dataset.src) frame.src = frame.dataset.src;
+        frame.hidden = false;
+        document.getElementById("selection-unavailable").hidden = true;
+      }
+      document.getElementById("client-selections").addEventListener("toggle", openSelectionBoard);
+      function openSelectionLink() {
+        if (location.hash === "#client-selections") {
+          document.getElementById("client-selections").open = true;
+          openSelectionBoard();
+        }
+      }
+      document.querySelectorAll('a[href="#client-selections"]').forEach(link => link.addEventListener("click", () => {
+        document.getElementById("client-selections").open = true;
+        openSelectionBoard();
+      }));
+      window.addEventListener("hashchange", openSelectionLink);
+      openSelectionLink();
       function renderEstimate(estimate) {
+        const selectionProjectId = typeof estimate.projectId === "string" ? estimate.projectId : estimate.projectId?._id;
+        const selectionFrame = document.getElementById("client-selection-frame");
+        if (selectionProjectId && selectionFrame) {
+          const selectionUrl = "Selection-Board.html?v=20261012-room-sheet&mode=client&embed=1&projectId=" + encodeURIComponent(selectionProjectId);
+          selectionFrame.dataset.src = selectionUrl;
+          openSelectionBoard();
+        }
         currentEstimate = estimate;
         currentCategories = normalizeCategories(estimate);
         const items = flattenEstimateItems(estimate);
@@ -2293,6 +2365,9 @@
       $("copy-link")?.addEventListener("click", async () => { await handleCopyLink("copy-link"); });
       $("mobile-copy-link")?.addEventListener("click", async () => { await handleCopyLink("mobile-copy-link"); });
 
+      document.getElementById('mobile-more').addEventListener('click',()=>document.getElementById('mobile-more-dialog').showModal());
+      document.getElementById('mobile-more-close').addEventListener('click',()=>document.getElementById('mobile-more-dialog').close());
+      document.querySelectorAll('#mobile-more-dialog a').forEach(link=>link.addEventListener('click',()=>document.getElementById('mobile-more-dialog').close()));
       initSectionNavigation();
       initMobileActions();
       initMobileFooterBehavior();

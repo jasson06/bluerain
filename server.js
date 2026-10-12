@@ -2277,6 +2277,8 @@ serverFlows["estimates"].put_api_estimates_line_items_lineItemId();
 // Implementation: server/flows/catalog.js
 serverFlows["catalog"].delete_api_selection_boards();
 
+serverFlows["catalog"].patch_api_selection_boards();
+
 serverFlows["catalog"].get_api_products();
 
 serverFlows["catalog"].post_api_products();
@@ -2286,6 +2288,8 @@ serverFlows["catalog"].post_api_selection_board();
 serverFlows["catalog"].get_api_selection_boards();
 
 serverFlows["catalog"].get_api_product_details();
+
+serverFlows["catalog"].post_api_product_image();
 
 serverFlows["catalog"].delete_api_products_id();
 

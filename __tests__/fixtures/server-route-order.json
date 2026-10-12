@@ -475,6 +475,11 @@
     "handlers": 1
   },
   {
+    "method": "patch",
+    "url": "/api/selection-boards",
+    "handlers": 1
+  },
+  {
     "method": "get",
     "url": "/api/products",
     "handlers": 1
@@ -497,6 +502,11 @@
   {
     "method": "get",
     "url": "/api/product-details",
+    "handlers": 1
+  },
+  {
+    "method": "post",
+    "url": "/api/product-image",
     "handlers": 1
   },
   {
