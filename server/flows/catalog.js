@@ -141,15 +141,18 @@ serverContext.app.get('/api/selection-boards', async (req, res) => {
 function get_api_product_details() {
 serverContext.app.get('/api/product-details', async(req,res)=>{
  try { require('../product-import').validUrl(req.query.url); } catch {return res.status(400).json({error:'Use a public http or https product URL.'});}
- try {res.json(await require('../product-import').importProduct(req.query.url,serverContext.fetch));}
+ try {res.json(await require('../product-import').importProduct(req.query.url,serverContext.fetch,{uploadDir:serverContext.uploadDir}));}
  catch(error){res.status(502).json({error:error.message});}
 });
 }
 function post_api_product_image() {
+ // Use the same storage root for serving, manual uploads, and imported photos.
+ const importer=require('../product-import');
+ serverContext.app.use('/uploads/product-images',require('express').static(importer.productImageDir({uploadDir:serverContext.uploadDir}),{dotfiles:'deny',immutable:true,maxAge:'1y',fallthrough:false}));
  const upload=require('multer')({storage:require('multer').memoryStorage(),limits:{fileSize:5*1024*1024,files:1}}).single('image');
  serverContext.app.post('/api/product-image',(req,res)=>upload(req,res,async error=>{
   if(error)return res.status(400).json({error:'Choose one image under 5 MB.'});
-  try {if(!req.file)throw Error('Choose an image.');res.json({url:await require('../product-import').storeImage(req.file.buffer)});}
+  try {if(!req.file)throw Error('Choose an image.');res.json({url:await require('../product-import').storeImage(req.file.buffer,{uploadDir:serverContext.uploadDir})});}
   catch(e){res.status(400).json({error:e.message});}
  }));
 }
