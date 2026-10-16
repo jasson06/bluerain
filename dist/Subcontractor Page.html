@@ -1939,13 +1939,7 @@ function setMaintenancePhotoBusy(itemId, type, busy) {
   if (uploadInput) uploadInput.disabled = busy;
   if (uploadLabel) uploadLabel.classList.toggle("is-disabled", busy);
 
-  if (photoContainer && busy) {
-    photoContainer.innerHTML = `
-      <div class="maintenance-photo-loader">
-        <div class="maintenance-spinner"></div>
-      </div>
-    `;
-  }
+
 }
 
 function removeMaintenanceItem(itemId) {
@@ -2290,7 +2284,7 @@ async function uploadMaintenancePhoto(event, itemId, type, projectId, estimateId
     const response = await MaintenanceMedia.upload("/api/upload-photos", {
       method: "POST",
       body: formData
-    });
+    }, document.getElementById(`maintenance-${type}-${itemId}`));
 
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || "Upload failed.");

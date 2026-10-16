@@ -1378,10 +1378,10 @@ window.closePhotoViewer = closePhotoViewer;
   const photoContainer = document.getElementById(`${type}-photos-${itemId}`);
   input.disabled = true;
   photoContainer?.setAttribute('aria-busy', 'true');
-  photoContainer?.classList.add('photo-is-loading');
+
 
   try {
-    const response = await MaintenanceMedia.upload("/api/upload-photos", { method: "POST", body: formData });
+    const response = await MaintenanceMedia.upload("/api/upload-photos", { method: "POST", body: formData }, photoContainer);
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !Array.isArray(result.photoUrls)) {
       throw new Error(result.message || "The upload failed.");

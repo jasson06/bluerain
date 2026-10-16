@@ -1556,12 +1556,12 @@ async function handlePhotoUpload(event, type) {
     formData.append('photos', file);
     formData.append('type', type);
     formData.append('taskId', taskId);
-    showLoader(); // 👈 START
+
     try {
       const response = await MaintenanceMedia.upload('/api/upload-photos', {
         method: 'POST',
         body: formData,
-      });
+      }, document.getElementById('task-details'));
 
       if (response.ok) {
         const result = await response.json();
@@ -1572,7 +1572,7 @@ async function handlePhotoUpload(event, type) {
     } catch (error) {
       console.error('Error uploading photo:', error);
     } finally {
-      hideLoader(); // 👈 END
+
     }
   }
 

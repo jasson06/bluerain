@@ -246,7 +246,7 @@ document.getElementById('maintenancePhotos')?.addEventListener('change', async f
         }
         const fd = new FormData();
         Array.from(input.files).forEach(f => fd.append('photos', f));
-        const resp = await MaintenanceMedia.upload(`${API_URL}/properties/${projectId}/maintenance/temp-photos`, { method: 'POST', body: fd });
+        const resp = await MaintenanceMedia.upload(`${API_URL}/properties/${projectId}/maintenance/temp-photos`, { method: 'POST', body: fd }, preview);
         if (!resp.ok) throw new Error('Failed to upload photos');
         const data = await resp.json();
         const current = form.dataset.tempPhotosPaths ? JSON.parse(form.dataset.tempPhotosPaths) : [];
