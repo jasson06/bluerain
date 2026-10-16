@@ -407,7 +407,7 @@ function openMaintenancePhotoUpload(requestId, source = 'property') {
         try {
             const body = new FormData();
             files.forEach(file => body.append('photos', file));
-            const response = await MaintenanceMedia.upload(`${API_URL}/properties/${encodeURIComponent(projectId)}/maintenance/${encodeURIComponent(requestId)}`, { method:'PUT', body }, Array.from(document.querySelectorAll('[data-maint-photo-gallery]')).find(node => node.dataset.requestId === String(requestId) && node.dataset.source === source));
+            const response = await MaintenanceMedia.upload(`${API_URL}/properties/${encodeURIComponent(projectId)}/maintenance/${encodeURIComponent(requestId)}`, { method:'PUT', body }, Array.from(document.querySelectorAll('[data-maint-photo-upload]')).find(node => node.dataset.requestId === String(requestId) && node.dataset.source === source));
             if (!response.ok) throw new Error('Could not upload photos. Please try again.');
             const updated = await response.json();
             // Preserve populated unit/vendor objects used by the cards.
@@ -440,11 +440,14 @@ function renderMaintenancePhotoGallery(request, source = 'property') {
     const deferPhotos = shouldDeferMaintenancePhotos(source);
 
     const uploadAction = requestId ? `<button type="button" class="overview-row-action" onclick="event.stopPropagation();openMaintenancePhotoUpload(decodeURIComponent('${encodeURIComponent(requestId)}'),'${source}')"><i class="fas fa-camera" aria-hidden="true"></i> + Upload photos</button>` : '';
-    if (!beforePhotos.length && !afterPhotos.length) return uploadAction;
     return `
-        ${uploadAction}
-        <div data-maint-photo-gallery="true" data-request-id="${requestId}" data-source="${source}" style="display:grid;gap:0;">
-            ${deferPhotos ? renderMaintenancePhotoGalleryLoadingState(beforePhotos, afterPhotos) : renderMaintenancePhotoGalleryContent(request, source)}
+        <div data-maint-photo-upload="true" data-request-id="${requestId}" data-source="${source}">
+            ${uploadAction}
+            ${beforePhotos.length || afterPhotos.length ? `
+                <div data-maint-photo-gallery="true" data-request-id="${requestId}" data-source="${source}" style="display:grid;gap:0;">
+                    ${deferPhotos ? renderMaintenancePhotoGalleryLoadingState(beforePhotos, afterPhotos) : renderMaintenancePhotoGalleryContent(request, source)}
+                </div>
+            ` : ''}
         </div>
     `;
 }
