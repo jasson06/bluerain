@@ -127,7 +127,7 @@ function renderPropertyRecurringMaintenanceCard(schedule) {
             <strong style="font-size:1.08em;color:#2c3e50;"><i class="fas fa-sync-alt" style="color:#217dbb;margin-right:8px;"></i>${schedule.title} ${window.RecurringMaintenanceHistory.qcBadge(schedule)}</strong>
             <span style="margin-left:12px;">${freqLabel}</span>
           </div>
-          <div class="maintenance-actions">
+          ${renderMaintenanceActions(`
                         <button onclick="openRecurringMaintenanceEstimate('${schedule._id}', '${state.currentProperty ? state.currentProperty._id : ''}', 'property')" class="btn-secondary" style="margin-right:6px;font-size:0.97em;">
                             <i class="fas fa-arrow-up-right-from-square"></i> Estimate
                         </button>
@@ -137,7 +137,7 @@ function renderPropertyRecurringMaintenanceCard(schedule) {
             <button onclick="deleteMaintenanceSchedule('${schedule._id}')" class="btn-icon delete-btn" title="Delete" style="font-size:0.97em;">
               <i class="fas fa-trash"></i>
             </button>
-          </div>
+          `)}
         </div>
                 <div class="maintenance-content" style="padding:14px 18px;">
                     <div class="compact-maintenance-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;align-items:start;">

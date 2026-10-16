@@ -498,7 +498,7 @@ function renderTenants() {
         <div class="tenant-card">
             <div class="tenant-header">
                 <div class="tenant-avatar-small">${initials}</div>
-                <h3>${tenant.name}</h3>
+                <h3><button type="button" class="tenant-name-button" onclick="viewTenantDetails('${tenant._id}')" title="View tenant details">${escapeHtml(tenant.name)}</button></h3>
             </div>
             <div class="tenant-card-scroll">
                 <div class="tenant-card-layout">
@@ -545,11 +545,8 @@ function renderTenants() {
                             <button type="button" class="btn-secondary" onclick="openTenantTermination('${tenant._id}')">${tenant.leaseStatus === 'terminated' ? 'Review termination / move-out' : 'Terminate lease'}</button>
                             ${isFormer ? `<button type="button" class="btn-secondary" onclick="openTenantBalanceModal('${tenant._id}')">Former rent balance: ${formerRentBalance === null ? 'Needs lease-date review' : tenantCurrency(formerRentBalance)}</button><span class="task-meta">${tenant.termination?.effectiveDate ? `Terminated ${formatDateDisplay(tenant.termination.effectiveDate)} · ${tenant.termination.possessionReturned ? 'Possession returned' : 'Possession not confirmed'}` : 'Review lease end and possession'} · ${formerRentBalance === 0 ? 'Rent settled (deposit review separate)' : 'Ledger remains open'}</span>` : ''}
                             <button type="button" class="btn-secondary" data-eviction-tenant="${tenant._id}" onclick="openEvictionCases('${tenant._id}')">Eviction case</button>
-                            <button onclick="viewTenantDetails('${tenant._id}')" class="btn-secondary">
-                                <i class="fas fa-eye"></i> Details
-                            </button>
-                            <button onclick="editTenant('${tenant._id}')" class="btn-secondary">
-                                <i class="fas fa-edit"></i> Edit
+                            <button type="button" onclick="editTenant('${tenant._id}')" class="btn-secondary" aria-label="Edit tenant" title="Edit tenant">
+                                <i class="fas fa-edit" aria-hidden="true"></i>
                             </button>
                             <button onclick="deleteTenant('${tenant._id}')" class="btn-icon delete-btn" title="Delete Tenant">
                                 <i class="fas fa-trash"></i>

@@ -684,7 +684,7 @@ function renderMaintenanceRequests(requests = getFilteredPropertyMaintenanceItem
             <span style="margin-left:12px;">${priorityBadge}</span>
                         <span style="margin-left:8px;">${workflowBadge}</span>
           </div>
-          <div class="maintenance-actions">
+          ${renderMaintenanceActions(`
                         <button onclick="openMaintenanceEstimate('${request._id}', '${state.currentProperty?._id || ''}', 'property')" class="btn-secondary" style="margin-right:6px;">
                             <i class="fas fa-arrow-up-right-from-square"></i> Estimate
                         </button>
@@ -694,7 +694,7 @@ function renderMaintenanceRequests(requests = getFilteredPropertyMaintenanceItem
             <button onclick="deleteMaintenance('${request._id}')" class="btn-icon delete-btn" title="Delete Request" style="font-size:0.97em;">
               <i class="fas fa-trash"></i>
             </button>
-          </div>
+          `)}
         </div>
         <div class="maintenance-content" style="padding:10px 14px;">
                 <div class="compact-maintenance-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;align-items:start;">

@@ -252,7 +252,46 @@ function syncMobilePortfolioUi() {
     }
 }
 
+function initializeMobileBottomNavScroll() {
+    const navigation = document.getElementById('mobileBottomNav');
+    if (!navigation || navigation.dataset.scrollBound === 'true') return;
+    navigation.dataset.scrollBound = 'true';
+    let positions = new WeakMap();
+    const reveal = () => navigation.classList.remove('scroll-hidden');
+    document.addEventListener('scroll', event => {
+        if (window.innerWidth > 900) return;
+        const target = event.target === document ? document.scrollingElement : event.target;
+        if (!(target instanceof Element)) return;
+        if (target.closest('.modal,.portfolio-record-drawer,.notes-drawer-panel,.sidebar,#portfolioTasksSidebar,#mobileBottomNav')) return;
+        const maximum = Math.max(0, target.scrollHeight - target.clientHeight);
+        const top = Math.min(maximum, Math.max(0, target.scrollTop));
+        const previous = positions.get(target) || {top: 0, movement: 0};
+        if (previous.maximum !== undefined && previous.maximum !== maximum) {
+            positions.set(target, {top, movement: 0, maximum});
+            return;
+        }
+        const delta = top - previous.top;
+        const movement = delta === 0 || Math.sign(delta) === Math.sign(previous.movement) ? previous.movement + delta : delta;
+        positions.set(target, {top, movement, maximum});
+        if (navigation.contains(document.activeElement)
+            || document.querySelector('.sidebar.visible,#portfolioTasksSidebar.mobile-open,#mobilePanelOverlay.visible')
+            || top <= 8) {
+            reveal();
+            positions.set(target, {top, movement: 0, maximum});
+        } else if (Math.abs(movement) >= 12) {
+            navigation.classList.toggle('scroll-hidden', movement > 0);
+            positions.set(target, {top, movement: 0, maximum});
+        }
+    }, {capture: true, passive: true});
+    navigation.addEventListener('focusin', reveal);
+    window.addEventListener('resize', () => {
+        positions = new WeakMap();
+        reveal();
+    });
+}
+
 function initializeMobilePortfolioNavigation() {
+    initializeMobileBottomNavScroll();
     const sidebar = document.querySelector('.sidebar');
     const propertiesBtn = document.getElementById('mobileNavPropertiesBtn');
     const tasksBtn = document.getElementById('mobileNavTasksBtn');

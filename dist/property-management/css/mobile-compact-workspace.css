@@ -1,9 +1,25 @@
 
 /* Compact phone/tablet workspace. Desktop sizing remains unchanged. */
 @media (max-width:900px) {
+  #mobileBottomNav { transition:transform .22s ease; }
+  #mobileBottomNav.scroll-hidden:not(:focus-within) { transform:translateY(calc(100% + 20px)); pointer-events:none; }
+  .portfolio-comparison-table { height:var(--portfolio-record-height,55dvh)!important; max-height:none!important; box-sizing:border-box; }
+  .portfolio-overview-section { padding-bottom:0!important; }
   body.workspace-hover-layout .main-content { min-width:0; max-width:100%; box-sizing:border-box; }
   #propertyDashboard,.tab-content,.tab-pane,#portfolioOverviewSection,.portfolio-persistent-main,
   .portfolio-comparison-panel,.portfolio-comparison-tools,.property-panel { min-width:0; max-width:100%; box-sizing:border-box; }
+  .portfolio-comparison-heading p { display:none; }
+  /* Keep native iOS fields shrinkable and readable without focus zoom. */
+  .portfolio-comparison-tools { gap:6px; }
+  .portfolio-comparison-tools > * { flex:1 1 120px; min-width:0!important; max-width:100%; box-sizing:border-box; }
+  .portfolio-comparison-tools input,.portfolio-comparison-tools select {
+    width:0; min-height:30px!important; padding:6px 8px!important; font-size:16px!important;
+  }
+  .portfolio-comparison-tools input[type=search] { flex-basis:100%; width:100%; }
+  .portfolio-comparison-tools select { flex-basis:calc(50% - 3px); }
+  .portfolio-comparison-tools > .portfolio-context-action { flex:0 0 auto; min-width:44px!important; min-height:30px; justify-content:center; }
+  .portfolio-comparison-tools > .portfolio-type-toggle { flex-wrap:wrap; }
+  .portfolio-comparison-tools .portfolio-type-toggle button { flex:1 1 auto; min-height:30px; padding:6px 8px; }
   .portfolio-maintenance-cards { grid-template-columns:minmax(0,1fr)!important; }
   .units-grid,.tenant-card-layout,.portfolio-tenant-card-grid,.portfolio-tenant-card-columns,
   .compact-maintenance-grid { grid-template-columns:minmax(0,1fr)!important; }
@@ -12,6 +28,9 @@
   #propertyDashboard .dashboard-header .tab-btn { flex:0 0 auto; }
   .form-row { flex-wrap:wrap; }
   .form-row > .form-group { min-width:0; flex:1 1 220px; }
+}
+@media (max-width:900px) and (prefers-reduced-motion:reduce) {
+  #mobileBottomNav { transition:none; }
 }
 @media (max-width:600px) {
   body.workspace-hover-layout .main-content { padding:0 8px 20px!important; }
@@ -43,9 +62,6 @@
   .portfolio-comparison-panel,.property-panel,.property-info-card,.unit-card,.unit-card-modern,.tenant-card,
   .portfolio-visual-card,.portfolio-drawer-section { padding:10px!important; border-radius:11px!important; margin-bottom:8px; }
   .portfolio-comparison-heading h3 { font-size:.95rem; }
-  .portfolio-comparison-tools { gap:6px; }
-  .portfolio-comparison-tools > * { flex:1 1 120px; max-width:100%; box-sizing:border-box; }
-  .portfolio-comparison-tools input { min-width:0!important; }
   .overview-control-bar,.portfolio-command-bar { gap:6px!important; flex-wrap:wrap; }
   .overview-control-bar > div,.portfolio-command-bar label { min-width:0; flex:1 1 130px; }
   .interactive-overview-grid,.property-overview-grid,.portfolio-graphics-dashboard { gap:8px!important; }
@@ -57,12 +73,10 @@
   .portfolio-maintenance-cards .compact-maintenance-grid { height:auto!important; }
   .maintenance-thread-messages { max-height:240px!important; overflow:auto; }
   #portfolioOverviewSection:not(.portfolio-tasks-only) #portfolioTasksSidebar { height:auto!important; max-height:340px!important; overflow:auto; }
-    .portfolio-comparison-table { height:55dvh!important; max-height:55dvh!important; }
-    #propertyDashboard .property-record-scroll { max-height:55dvh!important; }
   .portfolio-performance-table th,.portfolio-performance-table td { padding:8px 7px!important; font-size:.76rem!important; }
-  .portfolio-comparison-pagination { gap:5px!important; margin-top:6px!important; padding-top:6px!important; }
+  .portfolio-comparison-pagination { gap:1px!important; margin-top:6px!important; padding-top:6px!important; }
   .portfolio-comparison-pagination button { min-width:36px; min-height:36px; padding:5px!important; }
-  .portfolio-comparison-pagination .task-meta,.portfolio-page-size { font-size:.73rem!important; }
+  .portfolio-comparison-pagination .task-meta,.portfolio-page-size { font-size:.70rem!important; }
   .portfolio-comparison-pagination .portfolio-page-size { display:inline-flex; align-items:center; gap:5px; }
   input:not([type=checkbox]):not([type=radio]):not([type=file]),textarea,select { font-size:16px!important; box-sizing:border-box; max-width:100%; }
   .form-row { display:flex!important; flex-direction:column; gap:8px!important; }
@@ -82,6 +96,5 @@
   #applicationsFilterBar > div,#invitesFilterBar > div { min-width:0!important; max-width:100%; box-sizing:border-box; }
 }
 @media (max-width:380px) {
-  .portfolio-comparison-tools > * { flex-basis:100%; }
   .portfolio-graphic-stat-row { grid-template-columns:minmax(0,1fr); }
 }

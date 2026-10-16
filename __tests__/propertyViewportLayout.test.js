@@ -45,11 +45,11 @@ function setup({height = 900, top = 250, pagerHeight = 52, mobile = false} = {})
     const frames = [];
     const context = vm.createContext({
         document: {
-            getElementById: id => id === 'propertyDashboard' ? dashboard : navigation,
+            getElementById: id => id === 'propertyDashboard' ? dashboard : id === 'mobileBottomNav' ? navigation : null,
             querySelector: () => toolbar,
             addEventListener: jest.fn()
         },
-        window: {innerHeight: height, scrollY: 0, addEventListener: jest.fn()},
+        window: {innerHeight: height, innerWidth: mobile ? 390 : 1200, scrollY: 0, addEventListener: jest.fn()},
         getComputedStyle: node => node.computed,
         MutationObserver: Observer,
         ResizeObserver: Observer,
@@ -82,6 +82,37 @@ describe('property viewport layout', () => {
         const {context, root} = setup({height: 400, top: 350});
         context.updatePropertyViewportLayout();
         expect(root.style.getPropertyValue('--property-record-height')).toBe('140px');
+    });
+
+    test('hidden mobile navigation gives its space back to records and the pager', () => {
+        const {context, root, navigation} = setup({height: 844, top: 300, pagerHeight: 88, mobile: true});
+        navigation.contains = () => false;
+        navigation.classList.add('scroll-hidden');
+        context.updatePropertyViewportLayout();
+        expect(root.style.getPropertyValue('--property-record-height')).toBe('435px');
+    });
+
+    test('mobile sizing follows visible coordinates when the document has scrolled', () => {
+        const {context, root} = setup({height: 844, top: 200, pagerHeight: 88, mobile: true});
+        context.window.scrollY = 100;
+        context.updatePropertyViewportLayout();
+        expect(root.style.getPropertyValue('--property-record-height')).toBe('471px');
+    });
+
+    test('mobile portfolio records reserve their wrapped pager and expand when navigation hides', () => {
+        const {context, navigation, root, pager, pane} = setup({height: 844, top: 300, pagerHeight: 88, mobile: true});
+        const original = context.document.getElementById;
+        context.document.getElementById = id => id === 'portfolioOverviewSection' ? pane
+            : id === 'portfolioComparisonTable' ? root : original(id);
+        pane.closest = () => null;
+        root.closest = () => pane;
+        navigation.contains = () => false;
+        context.updatePropertyViewportLayout();
+        expect(root.style.getPropertyValue('--portfolio-record-height')).toBe('371px');
+        navigation.classList.add('scroll-hidden');
+        context.updatePropertyViewportLayout();
+        expect(root.style.getPropertyValue('--portfolio-record-height')).toBe('435px');
+        expect(pager.getBoundingClientRect().height).toBe(88);
     });
 
     test('browser keyboard and dynamic viewport changes resize the available area', () => {

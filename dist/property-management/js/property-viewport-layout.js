@@ -4,6 +4,7 @@ function propertyViewportBottomSpace(dashboard) {
     const main = dashboard.closest('.main-content');
     const padding = main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0;
     const navigation = document.getElementById('mobileBottomNav');
+    if (navigation?.classList.contains('scroll-hidden') && !navigation.contains(document.activeElement)) return 8;
     const fixedNavigation = navigation?.getClientRects().length && getComputedStyle(navigation).position === 'fixed'
         ? navigation.getBoundingClientRect().height : 0;
     return Math.max(padding, fixedNavigation) + 8;
@@ -30,15 +31,24 @@ function propertyViewportTrailingSpace(root, pane) {
 function updatePropertyViewportLayout() {
     const dashboard = document.getElementById('propertyDashboard');
     const pane = dashboard?.querySelector('.tab-pane.active');
-    if (!pane?.getClientRects().length) return;
     const viewport = window.visualViewport;
     const bottom = viewport ? viewport.height + viewport.offsetTop : window.innerHeight;
-    const gutter = propertyViewportBottomSpace(dashboard);
-    const documentTop = element => element.getBoundingClientRect().top + window.scrollY;
+    const mobile = window.innerWidth <= 900;
+    const documentTop = element => element.getBoundingClientRect().top + (mobile ? 0 : window.scrollY);
     const setHeight = (element, key, height) => {
         const value = `${Math.max(0, Math.floor(height))}px`;
         if (element.style.getPropertyValue(key) !== value) element.style.setProperty(key, value);
     };
+    const portfolio = document.getElementById('portfolioOverviewSection');
+    const comparison = document.getElementById('portfolioComparisonTable');
+    const comparisonPanel = comparison?.closest('.portfolio-comparison-panel');
+    if (mobile && comparisonPanel && portfolio?.getClientRects().length && comparison?.getClientRects().length) {
+        setHeight(comparison, '--portfolio-record-height', Math.max(140,
+            bottom - documentTop(comparison) - propertyViewportBottomSpace(portfolio)
+            - propertyViewportTrailingSpace(comparison, comparisonPanel)));
+    }
+    if (!pane?.getClientRects().length) return;
+    const gutter = propertyViewportBottomSpace(dashboard);
     setHeight(pane, '--property-pane-height', bottom - documentTop(pane) - gutter);
     const selectors = '.property-record-scroll, #paymentsList > .table-responsive, #paymentWorkspaceOperational, #paymentWorkspaceLedger, #announcementsList';
     pane.querySelectorAll(selectors).forEach(root => {
@@ -63,10 +73,16 @@ function initializePropertyViewportLayout() {
     };
     const mutations = new MutationObserver(schedule);
     mutations.observe(dashboard, {subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'style', 'hidden']});
+    const navigation = document.getElementById('mobileBottomNav');
+    if (navigation) mutations.observe(navigation, {attributes: true, attributeFilter: ['class']});
+    const portfolio = document.getElementById('portfolioOverviewSection');
+    if (portfolio) mutations.observe(portfolio, {subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'style', 'hidden']});
     const sizes = new ResizeObserver(schedule);
     sizes.observe(dashboard);
     const main = dashboard.closest('.main-content');
     if (main) sizes.observe(main);
+    if (navigation) sizes.observe(navigation);
+    if (portfolio) sizes.observe(portfolio);
     const toolbar = document.querySelector('.top-tools-bar');
     if (toolbar) sizes.observe(toolbar);
     window.addEventListener('resize', schedule);

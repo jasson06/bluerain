@@ -10,12 +10,12 @@ body select:focus-visible{outline:2px solid var(--pm-select-focus)!important;out
 body select:disabled{opacity:.55;cursor:not-allowed;box-shadow:none!important}
 body select option,body select optgroup{background:var(--pm-select-option)!important;color:var(--pm-select-text)!important;font-size:14px}
 body select[multiple],body select[size]:not([size="1"]){background-image:none!important;cursor:default}
-body select.pm-page-size,body .portfolio-page-size select,body #portfolioPageSize{width:auto!important;min-width:76px!important;min-height:34px!important;padding-top:6px!important;padding-bottom:6px!important;font-size:13px!important;flex:0 0 auto}
+body select.pm-page-size,body .portfolio-page-size select,body #portfolioPageSize{width:auto!important;min-width:60px!important;min-height:34px!important;padding-top:6px!important;padding-bottom:6px!important;font-size:13px!important;flex:0 0 auto}
 body .portfolio-page-size{display:inline-flex;align-items:center;gap:9px;font-size:12px;font-weight:500;color:var(--pm-select-text);flex-wrap:wrap}
 body .portfolio-comparison-pagination .portfolio-page-size{background:transparent;border:0;padding:0;box-shadow:none}
 body #overviewRange,body #overviewStatusFilter,body #overviewAttentionFilter{min-width:145px;max-width:100%}
 .overview-control-bar>div{min-width:0}.overview-control-bar label{display:block;margin-bottom:6px}
-@media(max-width:600px){body select{font-size:16px!important;min-height:42px!important}body select.pm-page-size,body .portfolio-page-size select,body #portfolioPageSize{font-size:16px!important;min-height:42px!important}}
+@media(max-width:600px){body select{font-size:14px!important;min-height:30px!important}body select.pm-page-size,body .portfolio-page-size select,body #portfolioPageSize{font-size:14px!important;min-height:30px!important}}
 @media(prefers-reduced-motion:reduce){body select{transition:none}}
 @media(forced-colors:active){body select:not([multiple]):is(:not([size]),[size="1"]){appearance:auto;-webkit-appearance:auto;background-image:none!important;padding-right:10px!important}body select:focus-visible{outline:2px solid Highlight!important}}
 

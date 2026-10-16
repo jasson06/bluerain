@@ -1,6 +1,92 @@
 // Property management: maintenance workflow.
 // Classic script: declarations share the page scope; startup runs in property-management.js.
 
+let maintenanceActionsMenu = null;
+let maintenanceActionsTrigger = null;
+
+function renderMaintenanceActions(buttons) {
+    return `<div class="maintenance-actions">
+        <button type="button" class="btn-icon maintenance-actions-trigger" aria-label="Maintenance actions" title="Maintenance actions" aria-haspopup="menu" aria-expanded="false" aria-controls="maintenanceActionsMenu" onclick="openMaintenanceActionsMenu(event)"><i class="fas fa-ellipsis-v" aria-hidden="true"></i></button>
+        <template>${buttons}</template>
+    </div>`;
+}
+
+function closeMaintenanceActionsMenu(restoreFocus = false) {
+    if (!maintenanceActionsMenu) return;
+    maintenanceActionsMenu.remove();
+    maintenanceActionsMenu = null;
+    const trigger = maintenanceActionsTrigger;
+    maintenanceActionsTrigger = null;
+    trigger.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('click', dismissMaintenanceActionsMenu);
+    document.removeEventListener('keydown', handleMaintenanceActionsKeydown);
+    window.removeEventListener('scroll', dismissMaintenanceActionsMenu, true);
+    window.removeEventListener('resize', dismissMaintenanceActionsMenu);
+    if (restoreFocus && trigger.isConnected) trigger.focus();
+}
+
+function dismissMaintenanceActionsMenu(event) {
+    if (event.type === 'click' && (maintenanceActionsMenu?.contains(event.target) || maintenanceActionsTrigger?.contains(event.target))) return;
+    if (event.type === 'scroll' && maintenanceActionsMenu?.contains(event.target)) return;
+    closeMaintenanceActionsMenu();
+}
+
+function handleMaintenanceActionsKeydown(event) {
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        closeMaintenanceActionsMenu(true);
+    } else if (event.key === 'Tab') {
+        closeMaintenanceActionsMenu(true);
+    } else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        event.preventDefault();
+        const items = Array.from(maintenanceActionsMenu.querySelectorAll('button'));
+        const index = items.indexOf(document.activeElement);
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1
+            : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+        items[next].focus();
+    }
+}
+
+function openMaintenanceActionsMenu(event) {
+    event.stopPropagation();
+    const trigger = event.currentTarget;
+    const sameTrigger = maintenanceActionsTrigger === trigger;
+    closeMaintenanceActionsMenu();
+    if (sameTrigger) return;
+    const menu = document.createElement('div');
+    menu.id = 'maintenanceActionsMenu';
+    menu.className = 'payment-actions-menu maintenance-actions-menu';
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', 'Maintenance actions');
+    menu.appendChild(trigger.parentElement.querySelector('template').content.cloneNode(true));
+    menu.querySelectorAll('button').forEach(button => {
+        button.type = 'button';
+        button.setAttribute('role', 'menuitem');
+        button.style.removeProperty('margin-right');
+        if (button.classList.contains('delete-btn')) {
+            button.classList.add('payment-action-delete');
+            button.appendChild(document.createTextNode(' Delete'));
+        }
+        button.querySelectorAll('i').forEach(icon => icon.setAttribute('aria-hidden', 'true'));
+    });
+    menu.addEventListener('click', event => {
+        event.stopPropagation();
+        if (event.target.closest('button')) closeMaintenanceActionsMenu(true);
+    });
+    maintenanceActionsMenu = menu;
+    maintenanceActionsTrigger = trigger;
+    document.body.appendChild(menu);
+    const rect = trigger.getBoundingClientRect();
+    menu.style.left = `${Math.max(8, Math.min(rect.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 8))}px`;
+    menu.style.top = `${Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - menu.offsetHeight - 8))}px`;
+    trigger.setAttribute('aria-expanded', 'true');
+    menu.querySelector('button').focus();
+    document.addEventListener('click', dismissMaintenanceActionsMenu);
+    document.addEventListener('keydown', handleMaintenanceActionsKeydown);
+    window.addEventListener('scroll', dismissMaintenanceActionsMenu, true);
+    window.addEventListener('resize', dismissMaintenanceActionsMenu);
+}
+
 function escapeHtml(value) {
     return String(value || '')
         .replace(/&/g, '&amp;')
@@ -503,7 +589,7 @@ function rerenderPropertyMaintenanceItem(requestId) {
                         <span style="margin-left:12px;">${priorityBadge}</span>
                                                 <span style="margin-left:8px;">${workflowBadge}</span>
                     </div>
-                    <div class="maintenance-actions">
+                    ${renderMaintenanceActions(`
                                                 <button onclick="openMaintenanceEstimate('${request._id}', '${state.currentProperty?._id || ''}', 'property')" class="btn-secondary" style="margin-right:6px;">
                                                         <i class="fas fa-arrow-up-right-from-square"></i> Estimate
                                                 </button>
@@ -513,7 +599,7 @@ function rerenderPropertyMaintenanceItem(requestId) {
                         <button onclick="deleteMaintenance('${request._id}')" class="btn-icon delete-btn" title="Delete Request" style="font-size:0.97em;">
                             <i class="fas fa-trash"></i>
                         </button>
-                    </div>
+                    `)}
                 </div>
                 <div class="maintenance-content" style="padding:10px 14px;">
                                 <div class="compact-maintenance-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;align-items:start;">
@@ -989,11 +1075,11 @@ function renderPortfolioMaintenanceRequestCard(request) {
                     <span style="margin-left:12px;">${priorityBadge}</span>
                     <span style="margin-left:8px;">${workflowBadge}</span>
                 </div>
-                <div class="maintenance-actions" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                ${renderMaintenanceActions(`
                     <button onclick="openMaintenanceEstimate('${request._id}', '${projectId}', 'portfolio')" class="btn-secondary" style="margin-right:6px;"><i class="fas fa-arrow-up-right-from-square"></i> Estimate</button>
                     <button onclick="editPortfolioMaintenance('${request._id}', '${projectId}')" class="btn-secondary" style="margin-right:6px;"><i class="fas fa-edit"></i> Edit</button>
                     <button onclick="deletePortfolioMaintenance('${request._id}', '${projectId}')" class="btn-icon delete-btn" title="Delete Request" style="font-size:0.97em;"><i class="fas fa-trash"></i></button>
-                </div>
+                `)}
             </div>
             <div class="maintenance-content" style="padding:10px 14px;">
                 <div class="compact-maintenance-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;align-items:start;">
@@ -1080,11 +1166,11 @@ function renderPortfolioRecurringMaintenanceCard(schedule) {
                     <strong style="font-size:1.05em;color:#2c3e50;"><i class="fas fa-sync-alt" style="color:#217dbb;margin-right:8px;"></i>${schedule.title || 'Recurring Maintenance'} ${window.RecurringMaintenanceHistory.qcBadge(schedule)}</strong>
                     <span style="margin-left:8px;" class="portfolio-badge">Recurring</span>
                 </div>
-                <div class="maintenance-actions" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                ${renderMaintenanceActions(`
                     <button onclick="openRecurringMaintenanceEstimate('${schedule._id}', '${projectId}', 'portfolio')" class="btn-secondary"><i class="fas fa-arrow-up-right-from-square"></i> Estimate</button>
                     <button onclick="editPortfolioRecurringMaintenance('${schedule._id}', '${projectId}')" class="btn-secondary"><i class="fas fa-edit"></i> Edit</button>
                     <button onclick="openPortfolioRecurringMaintenance('${schedule._id}', '${projectId}')" class="btn-secondary"><i class="fas fa-arrow-up-right-from-square"></i> Open</button>
-                </div>
+                `)}
             </div>
             <div class="maintenance-content" style="padding:10px 14px;">
                 <div class="compact-maintenance-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;align-items:start;">
