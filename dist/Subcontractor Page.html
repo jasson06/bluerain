@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script src="/maintenance-media.js?v=20261015"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Subcontractor Dashboard</title>
@@ -1437,7 +1438,8 @@ align-items: center;
 "></div>
 </div>
 
-<!-- Add this to your <style> block or <head> -->
+<!-- Add this to your <style> block or <head>
+  <script src="/maintenance-media.js?v=20261015"></script> -->
 <style>
 @keyframes spin {
 0% { transform: rotate(0deg); }
@@ -1777,7 +1779,14 @@ function renderMaintenancePhotoModal() {
 
   if (!image || !caption || !prevButton || !nextButton || !currentPhoto) return;
 
-  image.src = currentPhoto;
+  image.src = MaintenanceMedia.preview(currentPhoto, 'view');
+  let originalLink = document.getElementById('maintenance-photo-original');
+  if (!originalLink) {
+    originalLink = document.createElement('a'); originalLink.id = 'maintenance-photo-original';
+    originalLink.textContent = 'Open original'; originalLink.target = '_blank'; originalLink.rel = 'noopener';
+    caption.parentNode.appendChild(originalLink);
+  }
+  originalLink.href = currentPhoto;
   image.alt = `${maintenancePhotoViewer.type} photo ${maintenancePhotoViewer.index + 1}`;
   caption.textContent = `${capitalizeMaintenancePhotoType(maintenancePhotoViewer.type)} photo ${maintenancePhotoViewer.index + 1} of ${totalPhotos}`;
   prevButton.disabled = maintenancePhotoViewer.index === 0;
@@ -2020,14 +2029,14 @@ function generateMaintenancePhotoList(photos, itemId, type) {
     return `<p class="maintenance-placeholder">No photos uploaded.</p>`;
   }
 
-  return photos.map((photo, index) => `
+  return photos.slice(0, 6).map((photo, index) => `
     <button type="button" class="maintenance-photo-thumb is-loading" onclick="openMaintenancePhoto('${itemId}', '${type}', ${index})">
       <span class="maintenance-thumb-loader" aria-hidden="true">
         <span class="maintenance-thumb-spinner"></span>
       </span>
-      <img src="${photo}" alt="${type} photo for item ${itemId}" loading="lazy" decoding="async" fetchpriority="low" onload="handleMaintenancePhotoThumbLoad(this)" onerror="handleMaintenancePhotoThumbLoad(this)">
+      <img src="${MaintenanceMedia.preview(photo)}" alt="${type} photo for item ${itemId}" loading="lazy" decoding="async" fetchpriority="low" onload="handleMaintenancePhotoThumbLoad(this)" onerror="handleMaintenancePhotoThumbLoad(this)">
     </button>
-  `).join("");
+  `).join("") + (photos.length > 6 ? `<button type="button" onclick="openMaintenancePhoto('${itemId}', '${type}', 6)">View all ${photos.length} photos</button>` : '');
 }
 
 function handleMaintenancePhotoThumbLoad(imageElement) {
@@ -2278,7 +2287,7 @@ async function uploadMaintenancePhoto(event, itemId, type, projectId, estimateId
   setMaintenancePhotoBusy(itemId, type, true);
 
   try {
-    const response = await fetch("/api/upload-photos", {
+    const response = await MaintenanceMedia.upload("/api/upload-photos", {
       method: "POST",
       body: formData
     });

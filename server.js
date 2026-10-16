@@ -15,6 +15,7 @@
 // ============================================================================
 // Live getters preserve initialization timing and cross-flow dependencies.
 const serverContext = {
+  get maintenanceMedia() { return maintenanceMedia; },
   get uploadDir() { return uploadDir; },
   get resolveStoredUploadPath() { return resolveStoredUploadPath; },
   get sanitizeHeaderFilename() { return sanitizeHeaderFilename; },
@@ -641,6 +642,8 @@ app.use((req, res, next) => {
 app.use(logger);
 
 app.use('/uploads', express.static(uploadDir));
+const maintenanceMedia = require('./server/maintenance-media')({ uploadDir });
+maintenanceMedia.register(app);
 
 
 // ============================================================================
@@ -2491,7 +2494,7 @@ const maintenancePhotoStorage = multer.diskStorage({
     cb(null, unique);
   }
 });
-const maintenancePhotoUpload = multer({ storage: maintenancePhotoStorage });
+const maintenancePhotoUpload = { array: () => maintenanceMedia.upload('maintenance') };
 
 // Temp storage for pre-save uploads
 const maintenanceTempStorage = multer.diskStorage({
@@ -2505,7 +2508,7 @@ const maintenanceTempStorage = multer.diskStorage({
     cb(null, unique);
   }
 });
-const maintenanceTempUpload = multer({ storage: maintenanceTempStorage });
+const maintenanceTempUpload = { array: () => maintenanceMedia.upload('maintenance/temp') };
 
 serverFlows["maintenance"].post_api_properties_propertyId_maintenance();
 

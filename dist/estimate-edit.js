@@ -1381,7 +1381,7 @@ window.closePhotoViewer = closePhotoViewer;
   photoContainer?.classList.add('photo-is-loading');
 
   try {
-    const response = await fetch("/api/upload-photos", { method: "POST", body: formData });
+    const response = await MaintenanceMedia.upload("/api/upload-photos", { method: "POST", body: formData });
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !Array.isArray(result.photoUrls)) {
       throw new Error(result.message || "The upload failed.");

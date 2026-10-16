@@ -21,8 +21,9 @@ test('all route paths, methods, middleware counts, and registration order match 
     expect(handlers.every(handler => typeof handler === 'function')).toBe(true);
     actual.push({ method, url, handlers: handlers.length });
   }]));
+  app.use = jest.fn();
   const stub = new Proxy(function () { return stub; }, { get() { return stub; } });
-  const context = new Proxy({ app }, { get(target, name) { return name === 'app' ? app : stub; } });
+  const context = new Proxy({ app }, { get(target, name) { return name === 'app' ? app : name === 'uploadDir' ? '/test/uploads' : stub; } });
   const flows = Object.fromEntries(flowFiles.map(file => [file.replace('.js', ''), require(path.join(flowDir, file))(context)]));
   const source = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
   for (const match of source.matchAll(/serverFlows\["([^"]+)"\]\.([A-Za-z0-9_]+)\(\);/g)) flows[match[1]][match[2]]();

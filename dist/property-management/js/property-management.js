@@ -232,6 +232,7 @@ document.getElementById('maintenancePhotos')?.addEventListener('change', async f
     const form = document.getElementById('addMaintenanceForm');
     if (!input.files || !input.files.length || !form) return;
     try {
+        if (JSON.parse(form.dataset.tempPhotosPaths || '[]').length + input.files.length > 10) throw new Error('Attach up to 10 new photos before saving this request.');
         const propertySelect = document.getElementById('maintenanceProperty');
         let projectId = '';
         if (propertySelect && propertySelect.value) {
@@ -245,7 +246,7 @@ document.getElementById('maintenancePhotos')?.addEventListener('change', async f
         }
         const fd = new FormData();
         Array.from(input.files).forEach(f => fd.append('photos', f));
-        const resp = await fetch(`${API_URL}/properties/${projectId}/maintenance/temp-photos`, { method: 'POST', body: fd });
+        const resp = await MaintenanceMedia.upload(`${API_URL}/properties/${projectId}/maintenance/temp-photos`, { method: 'POST', body: fd });
         if (!resp.ok) throw new Error('Failed to upload photos');
         const data = await resp.json();
         const current = form.dataset.tempPhotosPaths ? JSON.parse(form.dataset.tempPhotosPaths) : [];
@@ -254,7 +255,7 @@ document.getElementById('maintenancePhotos')?.addEventListener('change', async f
         // Render previews with removable X
         preview.innerHTML = all.map(url => {
             return `<div class="maint-thumb" data-url="${url}" style="position:relative;width:72px;height:72px;border-radius:6px;overflow:hidden;box-shadow:0 0 4px rgba(0,0,0,0.15);">
-                <img src="${url}" style="width:100%;height:100%;object-fit:cover;">
+                <img src="${MaintenanceMedia.preview(url)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">
                 <button type="button" class="thumb-remove" title="Remove" style="position:absolute;top:4px;right:4px;width:18px;height:18px;border:none;border-radius:50%;background:rgba(0,0,0,0.65);color:#fff;font-size:12px;line-height:18px;text-align:center;cursor:pointer;">×</button>
             </div>`;
         }).join('');
@@ -421,7 +422,7 @@ document.getElementById('maintenanceList')?.addEventListener('click', (event) =>
                         <button id="mpvNext" class="btn-secondary" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:0.9;">⟩</button>
                         <button id="mpvClose" class="btn-secondary" style="position:absolute;right:10px;top:10px;">✕</button>
                     </div>
-                    <div id="mpvCaption" style="padding:8px 12px;color:#ddd;font-size:0.9em;"></div>
+                    <a id="mpvOriginal" target="_blank" rel="noopener" style="color:white">Open original</a><div id="mpvCaption" style="padding:8px 12px;color:#ddd;font-size:0.9em;"></div>
                 </div>
             </div>`;
         document.body.insertAdjacentHTML('beforeend', viewerHtml);
@@ -438,7 +439,8 @@ document.getElementById('maintenanceList')?.addEventListener('click', (event) =>
 
     function render() {
         if (!currentList.length) return;
-        img.src = currentList[currentIndex];
+        img.src = MaintenanceMedia.preview(currentList[currentIndex], 'view');
+        document.getElementById('mpvOriginal').href = currentList[currentIndex];
         caption.textContent = `${currentPhotoLabel} ${currentIndex+1} of ${currentList.length}`;
         btnPrev.disabled = currentIndex === 0;
         btnNext.disabled = currentIndex === currentList.length - 1;

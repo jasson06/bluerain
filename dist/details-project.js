@@ -1558,7 +1558,7 @@ async function handlePhotoUpload(event, type) {
     formData.append('taskId', taskId);
     showLoader(); // 👈 START
     try {
-      const response = await fetch('/api/upload-photos', {
+      const response = await MaintenanceMedia.upload('/api/upload-photos', {
         method: 'POST',
         body: formData,
       });

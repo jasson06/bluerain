@@ -268,6 +268,7 @@ async function handleAddMaintenance(event) {
 
     const photosInput = document.getElementById('maintenancePhotos');
     const preview = document.getElementById('maintenancePhotosPreview');
+    if (MaintenanceMedia.isBusy()) { showNotification('Wait for the photo uploads to finish.', 'info'); return; }
     const hasPhotos = photosInput && photosInput.files && photosInput.files.length;
     // If photos were uploaded earlier as temp, they are stored in form dataset
     const tempPhotosPaths = (event.target.dataset.tempPhotosPaths ? JSON.parse(event.target.dataset.tempPhotosPaths) : []);
@@ -406,7 +407,7 @@ function openMaintenancePhotoUpload(requestId, source = 'property') {
         try {
             const body = new FormData();
             files.forEach(file => body.append('photos', file));
-            const response = await fetch(`${API_URL}/properties/${encodeURIComponent(projectId)}/maintenance/${encodeURIComponent(requestId)}`, { method:'PUT', body });
+            const response = await MaintenanceMedia.upload(`${API_URL}/properties/${encodeURIComponent(projectId)}/maintenance/${encodeURIComponent(requestId)}`, { method:'PUT', body });
             if (!response.ok) throw new Error('Could not upload photos. Please try again.');
             const updated = await response.json();
             // Preserve populated unit/vendor objects used by the cards.
@@ -485,14 +486,15 @@ function renderMaintenancePhotoGalleryContent(request, source = 'property') {
                 <i class="fas ${photoType === 'after' ? 'fa-flag-checkered' : 'fa-camera'}" style="margin-right:6px;"></i>${label}
             </div>
             <div class="maintenance-photos" style="display:flex;flex-wrap:wrap;gap:6px;">
-                ${photos.map((src, idx) => `
+                ${photos.slice(0, 6).map((src, idx) => `
                     <div class="photo-thumb maintenance-photo-thumb-loading" style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:6px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.12);cursor:pointer;background:linear-gradient(180deg,#eff6ff,#dbeafe);">
                         <span class="maintenance-photo-thumb-overlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg, rgba(239,246,255,0.92), rgba(219,234,254,0.88));z-index:1;pointer-events:none;">
                             <span style="width:18px;height:18px;border:2px solid rgba(14,165,233,0.22);border-top-color:#0ea5e9;border-radius:50%;animation:spin 0.8s linear infinite;"></span>
                         </span>
-                        <img src="${src}" alt="${label} ${idx + 1}" loading="lazy" decoding="async" fetchpriority="low" style="width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 0.2s ease;" onclick="openMaintenancePhotoViewer('${request._id}', ${idx}, '${source}', '${photoType}')" onload="handlePropertyManagementMaintenancePhotoLoad(this)" onerror="handlePropertyManagementMaintenancePhotoLoad(this)">
+                        <img src="${MaintenanceMedia.preview(src)}" alt="${label} ${idx + 1}" loading="lazy" decoding="async" fetchpriority="low" style="width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 0.2s ease;" onclick="openMaintenancePhotoViewer('${request._id}', ${idx}, '${source}', '${photoType}')" onload="handlePropertyManagementMaintenancePhotoLoad(this)" onerror="handlePropertyManagementMaintenancePhotoLoad(this)">
                     </div>
                 `).join('')}
+                ${photos.length > 6 ? `<button type="button" class="btn-secondary" onclick="openMaintenancePhotoViewer('${request._id}', 6, '${source}', '${photoType}')">View all ${photos.length} photos</button>` : ''}
             </div>
         </div>
     `;
@@ -772,7 +774,7 @@ function focusMaintenanceSchedule() {
 
 async function updateMaintenanceInlineFields(projectId, requestId, payload, options = {}) {
     const { refreshProperty = true, refreshPortfolio = true, refreshOverview = false } = options;
-    const response = await fetch(`${API_URL}/properties/${projectId}/maintenance/${requestId}`, {
+    const response = await MaintenanceMedia.upload(`${API_URL}/properties/${projectId}/maintenance/${requestId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -1327,14 +1329,14 @@ async function editMaintenance(requestId, options = {}) {
                                 const closeStyle = 'position:absolute;top:4px;right:4px;width:18px;height:18px;border:none;border-radius:50%;background:rgba(0,0,0,0.65);color:#fff;font-size:12px;line-height:18px;text-align:center;cursor:pointer;';
                                 existing.innerHTML = photos.length ? photos.map(p => `
                                     <div class="maint-thumb" data-url="${p}" style="${thumbStyle}">
-                                        <img src="${p}" style="width:100%;height:100%;object-fit:cover;">
+                                        <img src="${MaintenanceMedia.preview(p)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">
                                         <button type="button" class="thumb-remove" title="Remove" style="${closeStyle}">×</button>
                                     </div>
                                 `).join('') : '<em style="color:#888;">No photos yet.</em>';
                                 if (existingAfter) {
                                     existingAfter.innerHTML = afterPhotos.length ? afterPhotos.map((p, idx) => `
                                         <div class="maint-thumb" data-url="${p}" style="${thumbStyle}">
-                                            <img src="${p}" alt="After photo ${idx + 1}" style="width:100%;height:100%;object-fit:cover;cursor:pointer;" onclick="openMaintenancePhotoViewer('${request._id}', ${idx}, '${options.source || 'property'}', 'after')">
+                                            <img src="${MaintenanceMedia.preview(p)}" loading="lazy" alt="After photo ${idx + 1}" style="width:100%;height:100%;object-fit:cover;cursor:pointer;" onclick="openMaintenancePhotoViewer('${request._id}', ${idx}, '${options.source || 'property'}', 'after')">
                                         </div>
                                     `).join('') : '<em style="color:#888;">No after photos yet.</em>';
                                 }
@@ -1430,7 +1432,7 @@ async function editMaintenance(requestId, options = {}) {
                         if (tempNew.length) {
                             fd.append('tempPhotosPaths', JSON.stringify(tempNew));
                         }
-                                const resp = await fetch(`${API_URL}/properties/${projectId}/maintenance/${requestId}`, {
+                                const resp = await MaintenanceMedia.upload(`${API_URL}/properties/${projectId}/maintenance/${requestId}`, {
                                         method: 'PUT',
                                         body: fd
                                 });
@@ -1466,11 +1468,12 @@ async function editMaintenance(requestId, options = {}) {
                     if (!this.files || !this.files.length) return;
                     try {
                         const activeForm = document.getElementById('editMaintenanceForm');
+                        if (JSON.parse(activeForm?.dataset.tempPhotosPaths || '[]').length + this.files.length > 10) throw new Error('Attach up to 10 new photos before saving this request.');
                         const activeProjectId = activeForm?.dataset.projectId || projectId;
                         if (!activeProjectId) throw new Error('Property context is required');
                         const fd = new FormData();
                         Array.from(this.files).forEach(f => fd.append('photos', f));
-                        const resp = await fetch(`${API_URL}/properties/${activeProjectId}/maintenance/temp-photos`, { method: 'POST', body: fd });
+                        const resp = await MaintenanceMedia.upload(`${API_URL}/properties/${activeProjectId}/maintenance/temp-photos`, { method: 'POST', body: fd });
                         if (!resp.ok) throw new Error('Failed to upload photos');
                         const data = await resp.json();
                         const current = activeForm?.dataset.tempPhotosPaths ? JSON.parse(activeForm.dataset.tempPhotosPaths) : [];
@@ -1491,7 +1494,7 @@ async function editMaintenance(requestId, options = {}) {
                             wrap.className = 'maint-thumb';
                             wrap.setAttribute('data-url', url);
                             wrap.style = thumbStyle;
-                            wrap.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;"><button type="button" class="thumb-remove" title="Remove" style="${closeStyle}">×</button>`;
+                            wrap.innerHTML = `<img src="${MaintenanceMedia.preview(url)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;"><button type="button" class="thumb-remove" title="Remove" style="${closeStyle}">×</button>`;
                             existing.appendChild(wrap);
                             wrap.querySelector('.thumb-remove')?.addEventListener('click', (e) => {
                                 if (!confirm('Remove this photo from the update?')) return;

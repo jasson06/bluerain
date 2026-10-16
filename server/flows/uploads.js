@@ -24,12 +24,12 @@ function post_api_upload_photos() {
 
 // Photo Upload Route
 // Photo Upload Route (Updated to Save Photos in Both Estimate and Vendor)
-serverContext.app.post("/api/upload-photos", serverContext.upload.array("photos", 10), async (req, res) => {
+serverContext.app.post("/api/upload-photos", serverContext.maintenanceMedia.upload(''), async (req, res) => {
   try {
     const { itemId, taskId, type, estimateId, vendorId } = req.body;
 
     // 🚨 Validate Required Fields
-    if (!req.files || req.files.length === 0 || (!itemId && !taskId && !estimateId) || !type) {
+    if (!req.files || req.files.length === 0 || (!itemId && !taskId && !estimateId) || !['before', 'after'].includes(type)) {
       return res.status(400).json({ message: "Missing required fields (photos, itemId/taskId/estimateId, or type)." });
     }
 

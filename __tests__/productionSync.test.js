@@ -52,6 +52,8 @@ function boot(overrides = {}) {
   const visionConstructor = jest.fn(function () {});
   const mocks = {
     express, path: path.posix, fs: mockFs, mongoose, multer,
+    'fs/promises': { mkdir: never, writeFile: never },
+    dns: { promises: { lookup: never } }, https: { get: never }, http: { get: never }, net: require('net'),
     dotenv: { config() {} }, cors: middleware, morgan: middleware,
     '@google-cloud/vision': { ImageAnnotatorClient: visionConstructor },
     bcrypt: {}, jsonwebtoken: {}, crypto: require('crypto'),
@@ -69,6 +71,7 @@ function boot(overrides = {}) {
     if (cache.has(filename)) return cache.get(filename).exports;
     const mod = { exports: {} }; cache.set(filename, mod);
     const req = specifier => {
+      if (specifier === './server/maintenance-media') return () => ({ upload: middleware, register: jest.fn() });
       if (specifier.startsWith('.')) return load(path.resolve(path.dirname(filename), specifier) + '.js');
       if (Object.hasOwn(mocks, specifier)) return mocks[specifier];
       throw Error('Unexpected dependency: ' + specifier);

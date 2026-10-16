@@ -906,6 +906,11 @@
   },
   {
     "method": "post",
+    "url": "/api/properties/:propertyId/payments/:paymentId/reinstate",
+    "handlers": 1
+  },
+  {
+    "method": "post",
     "url": "/api/properties/:propertyId/payments",
     "handlers": 1
   },

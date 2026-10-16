@@ -69,7 +69,8 @@
     return target;
   }
   function gallery(photos, type) {
-    return `<div><strong>${type === 'before' ? 'Before' : 'After'}</strong><div class="rm-photos">${(photos || []).map(safePhoto).filter(Boolean).map((url, index) => `<button type="button" class="rm-photo" data-photo="${escape(url)}" aria-label="Enlarge ${type} photo ${index + 1}"><img src="${escape(url)}" alt="${type} photo ${index + 1}" loading="lazy"></button>`).join('') || '<span class="rm-muted">Photos unavailable</span>'}</div></div>`;
+    const urls = (photos || []).map(safePhoto).filter(Boolean);
+    return `<div><strong>${type === 'before' ? 'Before' : 'After'}</strong><div class="rm-photos" data-gallery="${escape(JSON.stringify(urls))}">${urls.slice(0, 6).map((url, index) => `<button type="button" class="rm-photo" data-photo="${escape(url)}" data-index="${index}" aria-label="Enlarge ${type} photo ${index + 1}"><img src="${escape(MaintenanceMedia.preview(url))}" alt="${type} photo ${index + 1}" loading="lazy" decoding="async"></button>`).join('') || '<span class="rm-muted">Photos unavailable</span>'}${urls.length > 6 ? `<button type="button" class="rm-photo" data-index="6">View all ${urls.length} photos</button>` : ''}</div></div>`;
   }
   function details(entry, schedule) {
     const canReview = entry.qcStatus === 'awaiting-qc';
@@ -199,17 +200,17 @@
     } else expandRow(button);
   }
   function openPhoto(button) {
-    const buttons = [...button.closest('.rm-photos').querySelectorAll('[data-photo]')];
-    let index = buttons.indexOf(button);
+    const photos = JSON.parse(button.closest('.rm-photos').dataset.gallery || '[]');
+    let index = Number(button.dataset.index || 0);
     const dialog = document.createElement('dialog');
     dialog.className = 'rm-photo-dialog';
     const photoKind = button.closest('.rm-photos')?.parentElement?.querySelector('strong')?.textContent || 'Maintenance evidence';
     dialog.setAttribute('aria-label', `${photoKind} photo viewer`);
-    dialog.innerHTML = `<div class="rm-photo-dialog__header"><div><span class="rm-photo-dialog__eyebrow">Maintenance evidence</span><strong class="rm-photo-dialog__title">${escape(photoKind)} photo</strong></div><form method="dialog"><button type="submit" class="rm-photo-dialog__close" aria-label="Close photo viewer">&times;</button></form></div><div class="rm-photo-dialog__body"><div class="rm-photo-dialog__image-frame"><img alt="${escape(photoKind)} maintenance evidence"></div></div><div class="rm-photo-dialog__footer"><span class="rm-photo-dialog__counter" aria-live="polite"></span><div class="rm-actions"><button type="button" class="btn-secondary" data-prev><i class="fas fa-arrow-left"></i> Previous</button><button type="button" class="btn-secondary" data-next>Next <i class="fas fa-arrow-right"></i></button></div></div>`;
-    const update = () => { const current = buttons[index]; dialog.querySelector('img').src = current.dataset.photo; dialog.querySelector('img').alt = `${photoKind} maintenance evidence ${index + 1}`; dialog.querySelector('.rm-photo-dialog__counter').textContent = `${photoKind} · ${index + 1} of ${buttons.length}`; dialog.querySelector('[data-prev]').disabled = index === 0; dialog.querySelector('[data-next]').disabled = index === buttons.length - 1; };
+    dialog.innerHTML = `<div class="rm-photo-dialog__header"><div><span class="rm-photo-dialog__eyebrow">Maintenance evidence</span><strong class="rm-photo-dialog__title">${escape(photoKind)} photo</strong></div><form method="dialog"><button type="submit" class="rm-photo-dialog__close" aria-label="Close photo viewer">&times;</button></form></div><div class="rm-photo-dialog__body"><div class="rm-photo-dialog__image-frame"><img alt="${escape(photoKind)} maintenance evidence"></div></div><div class="rm-photo-dialog__footer"><a data-original target="_blank" rel="noopener">Open original</a><span class="rm-photo-dialog__counter" aria-live="polite"></span><div class="rm-actions"><button type="button" class="btn-secondary" data-prev><i class="fas fa-arrow-left"></i> Previous</button><button type="button" class="btn-secondary" data-next>Next <i class="fas fa-arrow-right"></i></button></div></div>`;
+    const update = () => { const current = photos[index]; dialog.querySelector('img').src = MaintenanceMedia.preview(current, 'view'); dialog.querySelector('[data-original]').href = current; dialog.querySelector('img').alt = `${photoKind} maintenance evidence ${index + 1}`; dialog.querySelector('.rm-photo-dialog__counter').textContent = `${photoKind} · ${index + 1} of ${photos.length}`; dialog.querySelector('[data-prev]').disabled = index === 0; dialog.querySelector('[data-next]').disabled = index === photos.length - 1; };
     dialog.querySelector('[data-prev]').onclick = () => { index--; update(); };
     dialog.querySelector('[data-next]').onclick = () => { index++; update(); };
-    dialog.addEventListener('keydown', event => { if (event.key === 'ArrowLeft' && index > 0) { index--; update(); } if (event.key === 'ArrowRight' && index < buttons.length - 1) { index++; update(); } });
+    dialog.addEventListener('keydown', event => { if (event.key === 'ArrowLeft' && index > 0) { index--; update(); } if (event.key === 'ArrowRight' && index < photos.length - 1) { index++; update(); } });
     dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
     dialog.addEventListener('close', () => dialog.remove());
     document.body.append(dialog); update(); dialog.showModal();
