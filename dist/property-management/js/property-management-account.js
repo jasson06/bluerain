@@ -30,7 +30,8 @@ function initializeManagerAccountMenu() {
     trigger.addEventListener('keydown', event => { if (event.key === 'ArrowDown') { event.preventDefault(); setManagerMenuOpen(true); } });
     document.getElementById('managerProfileMenuItem').addEventListener('click', openManagerProfileSettings);
     document.addEventListener('pointerdown', event => { if (!container.contains(event.target)) setManagerMenuOpen(false); });
-    container.addEventListener('focusout', event => { if (!container.contains(event.relatedTarget)) setManagerMenuOpen(false); });
+    // iOS Safari blurs without focusing tapped buttons (relatedTarget is null); outside taps are handled by pointerdown.
+    container.addEventListener('focusout', event => { if (event.relatedTarget && !container.contains(event.relatedTarget)) setManagerMenuOpen(false); });
     menu.addEventListener('keydown', event => {
         const items = Array.from(menu.querySelectorAll('[role=menuitem]'));
         if (event.key === 'Escape') { event.preventDefault(); setManagerMenuOpen(false, true); }
