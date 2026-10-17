@@ -133,6 +133,7 @@ async function openPortfolioOverview() {
     if (!section) return;
     if (dashboard) dashboard.style.display = 'none';
     section.style.display = 'block';
+    if (window.innerWidth <= 900) scrollPortfolioTabsBelowToolbar();
     renderWorkspaceSidebar();
     syncMobilePortfolioUi();
     // Return navigation reuses the rendered overview and its in-memory datasets.

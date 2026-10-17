@@ -271,7 +271,8 @@ function initializeMobileBottomNavScroll() {
             return;
         }
         const delta = top - previous.top;
-        const movement = delta === 0 || Math.sign(delta) === Math.sign(previous.movement) ? previous.movement + delta : delta;
+        if (delta === 0) return;
+        const movement = Math.sign(delta) === Math.sign(previous.movement) ? previous.movement + delta : delta;
         positions.set(target, {top, movement, maximum});
         if (navigation.contains(document.activeElement)
             || document.querySelector('.sidebar.visible,#portfolioTasksSidebar.mobile-open,#mobilePanelOverlay.visible')

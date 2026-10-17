@@ -78,6 +78,34 @@ describe('mobile bottom navigation scroll behavior', () => {
         expect(classes.has('scroll-hidden')).toBe(true);
     });
 
+    test('horizontal KPI scrolling does not reveal hidden navigation', () => {
+        const {scroll, classes, Element} = setup();
+        const kpis = new Element();
+        kpis.scrollHeight = kpis.clientHeight;
+        scroll(100);
+        expect(classes.has('scroll-hidden')).toBe(true);
+        kpis.scrollLeft = 150;
+        scroll(0, kpis);
+        kpis.scrollLeft = 300;
+        scroll(0, kpis);
+        expect(classes.has('scroll-hidden')).toBe(true);
+    });
+
+    test('horizontal scrolling in a record table does not reveal navigation or reset vertical progress', () => {
+        const {scroll, classes, Element} = setup();
+        const table = new Element();
+        scroll(100, table);
+        table.scrollLeft = 200;
+        scroll(100, table);
+        expect(classes.has('scroll-hidden')).toBe(true);
+        scroll(94, table);
+        table.scrollLeft = 300;
+        scroll(94, table);
+        expect(classes.has('scroll-hidden')).toBe(true);
+        scroll(88, table);
+        expect(classes.has('scroll-hidden')).toBe(false);
+    });
+
     test('clamps iOS overscroll at both ends without false direction reversals', () => {
         const {scroll, classes} = setup();
         scroll(1000);
