@@ -290,7 +290,69 @@ function initializeMobileBottomNavScroll() {
     });
 }
 
+function getMobileContextAddAction() {
+    if (isPortfolioOverviewVisible()) {
+        const action = document.getElementById('portfolioRecordPayment');
+        if (!action || action.hidden || action.style.display === 'none') return null;
+        const config = getPortfolioComparisonActionConfig();
+        return config ? {id: 'portfolioRecordPayment', label: config.title} : null;
+    }
+    const dashboard = document.getElementById('propertyDashboard');
+    if (!state.currentProperty || !dashboard?.getClientRects().length) return null;
+    const pane = dashboard.querySelector('.tab-pane.active');
+    const actions = {
+        units: {id: 'addUnitBtn', label: 'Add unit'},
+        tenants: {id: 'addTenantBtn', label: 'Add tenant'},
+        documents: {id: 'uploadDocumentBtn', label: 'Upload document'},
+        payments: {id: 'addPaymentBtn', label: 'Record payment'}
+    };
+    if (pane?.id === 'maintenance') {
+        return document.getElementById('recurringMaintenanceTab')?.classList.contains('active')
+            ? {id: 'addScheduleBtn', label: 'Create maintenance schedule'}
+            : {id: 'addMaintenanceBtn', label: 'New maintenance request'};
+    }
+    if (pane?.id === 'applications') {
+        const applications = document.getElementById('applicationsPane-applications');
+        return applications?.getClientRects().length ? {id: 'sendApplicationBtn', label: 'Send application'} : null;
+    }
+    return actions[pane?.id] || null;
+}
+
+function syncMobileContextAddAction() {
+    const button = document.getElementById('mobileNavAddBtn');
+    if (!button) return;
+    const action = getMobileContextAddAction();
+    const target = action && document.getElementById(action.id);
+    button.disabled = !target || target.disabled;
+    const label = action?.label || 'No add action in this view';
+    button.setAttribute('aria-label', label);
+    button.title = label;
+}
+
+function initializeMobileContextAdd() {
+    const button = document.getElementById('mobileNavAddBtn');
+    const main = document.querySelector('.main-content');
+    if (!button || !main || button.dataset.bound === 'true') return;
+    button.dataset.bound = 'true';
+    button.addEventListener('click', () => {
+        const action = getMobileContextAddAction();
+        const target = action && document.getElementById(action.id);
+        if (!target || target.disabled) {
+            showNotification('No add action is available in this view', 'info');
+            syncMobileContextAddAction();
+            return;
+        }
+        target.click();
+    });
+    const observer = new MutationObserver(syncMobileContextAddAction);
+    observer.observe(main, {subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'style', 'hidden', 'disabled']});
+    window.addEventListener('resize', syncMobileContextAddAction);
+    document.body.classList.add('mobile-context-add-ready');
+    syncMobileContextAddAction();
+}
+
 function initializeMobilePortfolioNavigation() {
+    initializeMobileContextAdd();
     initializeMobileBottomNavScroll();
     const sidebar = document.querySelector('.sidebar');
     const propertiesBtn = document.getElementById('mobileNavPropertiesBtn');

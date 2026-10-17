@@ -1,25 +1,80 @@
 
 /* Compact phone/tablet workspace. Desktop sizing remains unchanged. */
+.maintenance-clear-icon { display:none; }
 @media (max-width:900px) {
+  /* Safari date fields otherwise retain native minimum sizing inside flex/grid layouts. */
+  body input:is([type=date],[type=month],[type=datetime-local],[type=time],[type=week]) {
+    -webkit-appearance:none; appearance:none; box-sizing:border-box;
+    min-width:0!important; max-width:100%; height:38px; min-height:38px;
+    padding:6px 8px!important; font-family:inherit; font-size:16px!important; line-height:1.25;
+  }
+  body .form-group input:is([type=date],[type=month],[type=datetime-local],[type=time],[type=week]) { width:100%; }
+  body input:is([type=date],[type=month],[type=datetime-local],[type=time],[type=week])::-webkit-date-and-time-value {
+    min-width:0; margin:0; text-align:left;
+  }
+  body input:is([type=date],[type=month],[type=datetime-local],[type=time],[type=week])::-webkit-datetime-edit { min-width:0; padding:0; }
+  #propertyMaintenanceFilterBar { flex-wrap:nowrap!important; align-items:center!important; gap:5px!important; margin-bottom:6px!important; }
+  #propertyMaintenanceFilterBar > div:first-child { flex:1 1 0!important; min-width:0!important; gap:4px!important; }
+  #propertyMaintenanceSearchBar { flex:1 1 0!important; width:0; min-width:0; max-width:100%!important; min-height:36px; box-sizing:border-box; padding:5px 7px!important; font-size:16px!important; }
+  #propertyMaintenanceFilterBar #clearPropertyMaintenanceFiltersBtn,
+  #propertyMaintenanceFilterBar #toggleScheduleViewBtn { flex:0 0 36px; width:36px; min-height:36px; margin:0!important; padding:6px!important; display:inline-flex; align-items:center; justify-content:center; }
+  #propertyMaintenanceFilterBar #toggleCalendarIcon { flex:0 0 36px; }
+  #propertyMaintenanceFilterBar .maintenance-clear-icon { display:inline-block; }
+  #propertyMaintenanceFilterBar .maintenance-clear-label,
+  #propertyMaintenanceFilterBar #scheduleViewLabel,
+  #propertyMaintenanceStatusFilter,
+  #propertyMaintenanceUnitFilter { display:none!important; }
   #mobileBottomNav { transition:transform .22s ease; }
+  #mobileBottomNav { grid-template-columns:repeat(5,minmax(0,1fr)); gap:2px; padding-left:6px; padding-right:6px; }
+  #mobileBottomNav .mobile-nav-add { align-self:center; min-width:44px; min-height:56px; border-radius:18px; background:rgba(255,255,255,.2); }
+  #mobileBottomNav .mobile-nav-add i { font-size:1.4rem; }
+  #mobileBottomNav .mobile-nav-add:disabled { opacity:.4; cursor:default; box-shadow:none; transform:none; }
+  body.mobile-context-add-ready #propertyDashboard .mobile-add-header,
+  body.mobile-context-add-ready #payments > .payments-header:first-of-type,
+  body.mobile-context-add-ready #applicationsPane-applications > .payments-header,
+  body.mobile-context-add-ready #applicationsPane-invites > .payments-header,
+  body.mobile-context-add-ready #addPaymentBtn,
+  body.mobile-context-add-ready #sendApplicationBtn,
+  body.mobile-context-add-ready #portfolioRecordPayment { display:none!important; }
   #mobileBottomNav.scroll-hidden:not(:focus-within) { transform:translateY(calc(100% + 20px)); pointer-events:none; }
+  #payments .payment-period-toolbar { display:flex!important; flex-direction:column; align-items:stretch!important; padding:6px!important; gap:4px!important; margin:2px 0 6px!important; border-radius:10px; }
+  #payments .payment-period-controls { display:grid!important; grid-template-columns:minmax(0,1fr) auto auto; gap:5px!important; min-width:0; }
+  .payment-period-controls label { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+  #payments #paymentPeriodFilter { width:100%; min-width:0; max-width:100%; min-height:36px; box-sizing:border-box; padding:4px 6px!important; font-size:16px!important; }
+  #payments .payment-period-controls .btn-secondary { min-height:36px; margin:0; padding:5px 7px!important; font-size:.75rem!important; white-space:nowrap; }
+  #paymentPeriodResultCount { font-size:.7rem; line-height:1.2; }
+  #paymentPeriodResultCount:empty { display:none; }
   .portfolio-comparison-table { height:var(--portfolio-record-height,55dvh)!important; max-height:none!important; box-sizing:border-box; }
   .portfolio-overview-section { padding-bottom:0!important; }
   body.workspace-hover-layout .main-content { min-width:0; max-width:100%; box-sizing:border-box; }
   #propertyDashboard,.tab-content,.tab-pane,#portfolioOverviewSection,.portfolio-persistent-main,
   .portfolio-comparison-panel,.portfolio-comparison-tools,.property-panel { min-width:0; max-width:100%; box-sizing:border-box; }
   .portfolio-comparison-heading p { display:none; }
+  #portfolioOverviewSection #portfolioWorkspaceTitle,
+  #portfolioOverviewSection #portfolioWorkspaceBack { display:none!important; }
   /* Keep native iOS fields shrinkable and readable without focus zoom. */
   .portfolio-comparison-tools { gap:6px; }
   .portfolio-comparison-tools > * { flex:1 1 120px; min-width:0!important; max-width:100%; box-sizing:border-box; }
   .portfolio-comparison-tools input,.portfolio-comparison-tools select {
-    width:0; min-height:30px!important; padding:6px 8px!important; font-size:16px!important;
+    width:0; min-height:30px!important; padding:6px 8px!important; font-size:14px!important;
   }
   .portfolio-comparison-tools input[type=search] { flex-basis:100%; width:100%; }
   .portfolio-comparison-tools select { flex-basis:calc(50% - 3px); }
   .portfolio-comparison-tools > .portfolio-context-action { flex:0 0 auto; min-width:44px!important; min-height:30px; justify-content:center; }
   .portfolio-comparison-tools > .portfolio-type-toggle { flex-wrap:wrap; }
   .portfolio-comparison-tools .portfolio-type-toggle button { flex:1 1 auto; min-height:30px; padding:6px 8px; }
+  .portfolio-comparison-tools:has([data-tenant-view]) { display:grid; grid-template-columns:auto minmax(0,1fr); }
+  .portfolio-comparison-tools:has([data-tenant-view]) > input[type=search],
+  .portfolio-comparison-tools:has([data-tenant-view]) > #portfolioComparisonSort { grid-column:1 / -1; width:100%; }
+  .portfolio-comparison-tools:has([data-tenant-view]) > input[type=search] { grid-row:1; }
+  .portfolio-comparison-tools:has([data-tenant-view]) > .portfolio-type-toggle { grid-column:1; grid-row:2; }
+  .portfolio-comparison-tools:has([data-tenant-view]) > #portfolioWorkspaceFilter { grid-column:2; grid-row:2; width:100%; }
+  .portfolio-comparison-tools:has([data-maint-view]) { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); }
+  .portfolio-comparison-tools:has([data-maint-view]) > .portfolio-type-toggle,
+  .portfolio-comparison-tools:has([data-maint-view]) > #portfolioComparisonSort { grid-column:1 / -1; }
+  .portfolio-comparison-tools:has([data-maint-view]) > #portfolioComparisonSearch { grid-column:1; grid-row:2; width:100%; }
+  .portfolio-comparison-tools:has([data-maint-view]) > #portfolioWorkspaceFilter { grid-column:2; grid-row:2; width:100%; }
+  .portfolio-comparison-tools:has([data-maint-view]) > #portfolioComparisonSort { width:100%; }
   .portfolio-maintenance-cards { grid-template-columns:minmax(0,1fr)!important; }
   .units-grid,.tenant-card-layout,.portfolio-tenant-card-grid,.portfolio-tenant-card-columns,
   .compact-maintenance-grid { grid-template-columns:minmax(0,1fr)!important; }
@@ -96,5 +151,7 @@
   #applicationsFilterBar > div,#invitesFilterBar > div { min-width:0!important; max-width:100%; box-sizing:border-box; }
 }
 @media (max-width:380px) {
+  #payments .payment-period-controls { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  #payments #paymentPeriodFilter { grid-column:1 / -1; }
   .portfolio-graphic-stat-row { grid-template-columns:minmax(0,1fr); }
 }

@@ -19,6 +19,7 @@ function updatePropertyMaintenanceViewToggle() {
     icon.className = meta.iconClass;
     label.textContent = meta.label;
     button.title = meta.title;
+    button.setAttribute('aria-label', meta.title);
 }
 
 function getPropertyMaintenanceFilterTab(tabName = currentMaintenanceTab) {

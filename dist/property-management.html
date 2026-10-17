@@ -42,6 +42,10 @@
         <i class="fas fa-chart-pie"></i>
         <span>Overview</span>
     </button>
+    <button type="button" class="mobile-nav-btn mobile-nav-add" id="mobileNavAddBtn" aria-label="No add action in this view" title="No add action in this view" disabled>
+        <i class="fas fa-plus" aria-hidden="true"></i>
+        <span>Add</span>
+    </button>
     <button type="button" class="mobile-nav-btn" id="mobileNavMaintenanceBtn" aria-label="Open maintenance overview">
         <i class="fas fa-tools"></i>
         <span>Maintenance</span>
@@ -280,7 +284,7 @@
                     </div>
                     <!-- Units Tab -->
                     <div class="tab-pane" id="units">
-                        <div class="units-header">
+                        <div class="units-header mobile-add-header">
                             <h2>Units</h2>
                             <button class="btn-secondary" id="addUnitBtn">+ Add Unit</button>
                         </div>
@@ -288,7 +292,7 @@
                     </div>
                     <!-- Tenants Tab -->
 <div class="tab-pane" id="tenants">
-    <div class="tenants-header">
+    <div class="tenants-header mobile-add-header">
         <h2>Tenants</h2>
         <button class="btn-secondary" id="addTenantBtn">+ Add Tenant</button>
     </div>
@@ -313,7 +317,7 @@
 
                     <!-- Maintenance Tab -->
 <div class="tab-pane" id="maintenance">
-<div class="maintenance-header">
+<div class="maintenance-header mobile-add-header">
   <h2>Maintenance</h2>
 
 
@@ -344,10 +348,10 @@
     <div style="position:relative;flex:1 1 320px;min-width:240px;display:flex;align-items:center;gap:6px;justify-content:flex-start;">
         <i class="fas fa-magnifying-glass" style="color:#6b7280;margin-left:4px;"></i>
         <input id="propertyMaintenanceSearchBar" type="text" placeholder="Search maintenance by title, unit, status, vendor..." style="flex:0 1 320px;max-width:320px;border:1px solid #e5e7eb;border-radius:10px;padding:6px 9px;background:#fff;font-size:0.9rem;" />
-        <button class="btn-secondary" id="clearPropertyMaintenanceFiltersBtn" title="Clear search" style="margin-right:4px;padding:6px 8px;font-size:0.7rem;">Clear</button>
+        <button type="button" class="btn-secondary" id="clearPropertyMaintenanceFiltersBtn" aria-label="Clear maintenance filters" title="Clear maintenance filters" style="margin-right:4px;padding:6px 8px;font-size:0.7rem;"><i class="fas fa-xmark maintenance-clear-icon" aria-hidden="true"></i><span class="maintenance-clear-label">Clear</span></button>
     </div>
-      <button id="toggleScheduleViewBtn" class="btn-secondary" style="display:flex;align-items:center;gap:8px;size:0.75em;">
-    <i id="scheduleViewIcon" class="fas fa-list"></i>
+      <button type="button" id="toggleScheduleViewBtn" class="btn-secondary" aria-label="Switch to list view" style="display:flex;align-items:center;gap:8px;size:0.75em;">
+    <i id="scheduleViewIcon" class="fas fa-list" aria-hidden="true"></i>
     <span id="scheduleViewLabel">List View</span>
   </button>
   <span id="toggleCalendarIcon"
@@ -379,7 +383,7 @@
 
                     <!-- Documents Tab -->
                     <div class="tab-pane" id="documents">
-                        <div class="documents-header">
+                        <div class="documents-header mobile-add-header">
                             <h2>Documents</h2>
                             <button class="btn-secondary" id="uploadDocumentBtn">+ Upload Document</button>
                         </div>
@@ -597,7 +601,7 @@
         <button class="btn-secondary payment-workspace-tab" type="button" data-payment-workspace="activity" onclick="selectPaymentWorkspace('activity')"><i class="fas fa-clock-rotate-left"></i> Activity</button>
     </div>
     <section id="paymentWorkspaceTransactions">
-    <div class="payments-header" style="margin:2px 0 10px;gap:12px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><label for="paymentPeriodFilter" style="font-weight:650;color:#475569">Period</label><input type="month" id="paymentPeriodFilter" style="padding:7px 9px;border:1px solid #cbd5e1;border-radius:8px"><button type="button" class="btn-secondary" onclick="setPaymentPeriodFilter('current')">This month</button><button type="button" class="btn-secondary" onclick="setPaymentPeriodFilter('all')">All periods</button></div><div id="paymentPeriodResultCount" class="task-meta"></div></div>
+    <div class="payments-header payment-period-toolbar" style="margin:2px 0 10px;gap:12px"><div class="payment-period-controls" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><label for="paymentPeriodFilter" style="font-weight:650;color:#475569">Period</label><input type="month" id="paymentPeriodFilter" style="padding:7px 9px;border:1px solid #cbd5e1;border-radius:8px"><button type="button" class="btn-secondary" onclick="setPaymentPeriodFilter('current')">This month</button><button type="button" class="btn-secondary" onclick="setPaymentPeriodFilter('all')">All periods</button></div><div id="paymentPeriodResultCount" class="task-meta"></div></div>
     <div id="paymentsFilterBar" style="margin-top: 9px;border-radius:12px;padding:0px;display:flex;flex-wrap:wrap;gap:0px;align-items:flex-start;position:relative;">
         <div style="position:relative;flex:1 1 100%;min-width:280px;display:flex;align-items:center;gap:6px;justify-content:flex-start;">
             <i class="fas fa-magnifying-glass" style="color:#6b7280;margin-left:6px;"></i>
