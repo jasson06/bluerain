@@ -791,6 +791,17 @@ function renderPropertyMaintenanceRequestListRow(request) {
         </tr>`;
 }
 
+function getRecurringMaintenanceFrequencyLabel(schedule) {
+    if (schedule.frequency === 'custom') {
+        const days = Number(schedule.intervalDays);
+        return Number.isInteger(days) && days > 0
+            ? `Every ${days} ${days === 1 ? 'day' : 'days'}`
+            : 'Custom interval';
+    }
+    const labels = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' };
+    return labels[schedule.frequency] || 'Not specified';
+}
+
 function renderPropertyRecurringMaintenanceListRow(schedule) {
     const selectedVendorId = schedule.assignedVendor?._id || schedule.assignedVendor || '';
     const selectedVendorLabel = schedule.assignedVendor?.name || '';
@@ -798,10 +809,7 @@ function renderPropertyRecurringMaintenanceListRow(schedule) {
     const nextDate = schedule.nextScheduledDate ? formatDateDisplay(schedule.nextScheduledDate, 'en-US') : 'N/A';
     const statusRaw = String(schedule.status || 'pending').toLowerCase();
     const costLabel = typeof schedule.cost === 'number' ? `$${schedule.cost.toFixed(2)}` : '$0.00';
-    let freqLabel = schedule.frequency.charAt(0).toUpperCase() + schedule.frequency.slice(1);
-    if (schedule.frequency === 'custom' && schedule.intervalDays) {
-        freqLabel = `<span style="background:#eaf6ff;color:#217dbb;padding:2px 10px;border-radius:10px;">Every ${schedule.intervalDays} days</span>`;
-    }
+    const freqLabel = getRecurringMaintenanceFrequencyLabel(schedule);
     let unitLabel = '<span style="color:#888;">None</span>';
     if (schedule.unitId) {
         if (typeof schedule.unitId === 'object' && schedule.unitId.number) unitLabel = `Unit ${schedule.unitId.number}`;
@@ -1016,7 +1024,6 @@ function enterRecurringMaintenanceRowEditMode(row, schedule, options = {}) {
             }, {
                 refreshPortfolio: options.refreshPortfolio ?? false
             });
-            showNotification('Recurring maintenance updated', 'success');
         } catch (err) {
             console.error('Inline recurring maintenance update error:', err);
             showNotification('Could not update recurring maintenance', 'error');
@@ -1164,7 +1171,7 @@ function renderPortfolioRecurringMaintenanceCard(schedule) {
             <div class="maintenance-header" style="padding:10px 14px;border-bottom:1px solid #e1e8ed;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
                 <div>
                     <strong style="font-size:1.05em;color:#2c3e50;"><i class="fas fa-sync-alt" style="color:#217dbb;margin-right:8px;"></i>${schedule.title || 'Recurring Maintenance'} ${window.RecurringMaintenanceHistory.qcBadge(schedule)}</strong>
-                    <span style="margin-left:8px;" class="portfolio-badge">Recurring</span>
+                    <span style="margin-left:8px;" class="portfolio-badge" title="Maintenance frequency">${getRecurringMaintenanceFrequencyLabel(schedule)}</span>
                 </div>
                 ${renderMaintenanceActions(`
                     <button onclick="openRecurringMaintenanceEstimate('${schedule._id}', '${projectId}', 'portfolio')" class="btn-secondary"><i class="fas fa-arrow-up-right-from-square"></i> Estimate</button>
@@ -1212,6 +1219,7 @@ function renderPortfolioRecurringMaintenanceRow(schedule) {
             <td style="padding:8px 8px;font-weight:600;color:#217dbb;">Recurring</td>
             <td data-maint-summary-cell="true" style="padding:8px 8px;min-width:220px;">
                 <div style="font-weight:700;color:#0f172a;">${schedule.title || 'Recurring Maintenance'} ${window.RecurringMaintenanceHistory.qcBadge(schedule)}</div>
+                <div style="margin-top:4px;color:#217dbb;"><strong>Frequency:</strong> ${getRecurringMaintenanceFrequencyLabel(schedule)}</div>
                 ${renderMaintenanceDescriptionTable(schedule.description)}
             </td>
             <td style="padding:8px 8px;white-space:nowrap;">${assignedControl}</td>

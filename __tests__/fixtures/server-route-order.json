@@ -1106,6 +1106,16 @@
   },
   {
     "method": "patch",
+    "url": "/api/properties/:propertyId/maintenance-schedules/:scheduleId/history/:historyId",
+    "handlers": 1
+  },
+  {
+    "method": "delete",
+    "url": "/api/properties/:propertyId/maintenance-schedules/:scheduleId/history/:historyId",
+    "handlers": 1
+  },
+  {
+    "method": "patch",
     "url": "/api/properties/:propertyId/maintenance-schedules/:scheduleId/complete",
     "handlers": 1
   },

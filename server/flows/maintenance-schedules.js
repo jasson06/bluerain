@@ -89,7 +89,7 @@ async function ensureScheduleActivatedForDate(schedule) {
   await schedule.save();
   await (0, serverContext.sendTodayMaintenanceReminder)(schedule);
   console.log(`Auto-updated schedule "${schedule.title}" to in-progress for today.`);
-  await (0, serverContext.syncMaintenanceScheduleToEstimate)(schedule, { createIfMissing: true });
+  return (0, serverContext.syncMaintenanceScheduleToEstimate)(schedule, { createIfMissing: true });
 }
 
 async function sendOverdueScheduleAlert(schedule) {
@@ -160,6 +160,7 @@ function getNextScheduledDateForCompletion(schedule, completedAt = new Date()) {
 // --- auto schedule logic ---
 async function updateNextScheduledDates(scheduleId = null) {
   try {
+    let itemCreated = false;
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     // 0. Optionally scope processing to a single schedule when editing
@@ -176,7 +177,8 @@ async function updateNextScheduledDates(scheduleId = null) {
     }).populate('assignedVendor projectId');
 
     for (const schedule of schedulesToday) {
-      await (0, serverContext.ensureScheduleActivatedForDate)(schedule);
+      const activated = await (0, serverContext.ensureScheduleActivatedForDate)(schedule);
+      itemCreated = activated?.itemCreated || itemCreated;
     }
 
     // 2. Notify for overdue schedules (nextScheduledDate < today, not completed)
@@ -189,6 +191,7 @@ async function updateNextScheduledDates(scheduleId = null) {
     for (const schedule of overdueSchedules) { 
       await (0, serverContext.sendOverdueScheduleAlert)(schedule);
     }
+    return itemCreated;
   } catch (err) {
     console.error('Error updating nextScheduledDates:', err);
   }
@@ -376,6 +379,52 @@ serverContext.app.patch('/api/properties/:propertyId/maintenance-schedules/:sche
 });
 }
 
+async function changeCompletionHistory(req, res, remove) {
+  try {
+    await serverContext.maintenanceQC.reviewer(req);
+    const schedule = await serverContext.MaintenanceSchedule.findOne({ _id: req.params.scheduleId, projectId: req.params.propertyId });
+    const entry = schedule?.history.id(req.params.historyId);
+    if (!entry) return res.status(404).json({ message: 'Completion not found.' });
+    const body = req.body || {};
+    if (!Number.isSafeInteger(body.expectedVersion) || body.expectedVersion < 0) {
+      return res.status(400).json({ message: 'A schedule version is required. Refresh before changing completion history.' });
+    }
+    if (body.expectedVersion !== (schedule.__v || 0)) {
+      return res.status(409).json({ message: 'This schedule changed. Refresh before changing completion history.' });
+    }
+    if (remove) {
+      entry.deleteOne();
+    } else {
+      const completedAt = typeof body.completedAt === 'string' && body.completedAt.trim()
+        ? new Date(body.completedAt) : null;
+      if (!completedAt || !Number.isFinite(completedAt.getTime())) {
+        return res.status(400).json({ message: 'Enter a valid completion date.' });
+      }
+      if (typeof body.completedBy !== 'string' || body.completedBy.trim().length > 200) {
+        return res.status(400).json({ message: 'Completed by must be text of at most 200 characters.' });
+      }
+      if (typeof body.notes !== 'string' || body.notes.length > 4000) {
+        return res.status(400).json({ message: 'Notes must be text of at most 4000 characters.' });
+      }
+      if (typeof body.cost !== 'number' || !Number.isFinite(body.cost) || body.cost < 0) {
+        return res.status(400).json({ message: 'Enter a valid non-negative cost.' });
+      }
+      Object.assign(entry, { completedAt, completedBy: body.completedBy.trim(), notes: body.notes, cost: body.cost });
+    }
+    // Historical corrections never change recurrence, evidence, QC, or linked work.
+    await schedule.save();
+    res.json({ success: true, schedule });
+  } catch (error) { (0, serverContext.maintenanceQCError)(res, error); }
+}
+
+function patch_api_properties_propertyId_maintenance_schedules_scheduleId_history_historyId() {
+serverContext.app.patch('/api/properties/:propertyId/maintenance-schedules/:scheduleId/history/:historyId', (req, res) => changeCompletionHistory(req, res, false));
+}
+
+function delete_api_properties_propertyId_maintenance_schedules_scheduleId_history_historyId() {
+serverContext.app.delete('/api/properties/:propertyId/maintenance-schedules/:scheduleId/history/:historyId', (req, res) => changeCompletionHistory(req, res, true));
+}
+
 function patch_api_properties_propertyId_maintenance_schedules_scheduleId_complete() {
 serverContext.app.patch('/api/properties/:propertyId/maintenance-schedules/:scheduleId/complete', async (req, res) => {
   try {
@@ -535,34 +584,34 @@ serverContext.app.put('/api/properties/:propertyId/maintenance-schedules/:schedu
         completedBy: req.body.completedBy || 'Manager', notes: req.body.notes || '',
         expectedNextScheduledDate: req.body.expectedNextScheduledDate
       });
+      if (linked.itemCreated) res.set('X-Maintenance-Line-Item-Created', 'true');
       return res.json(completed);
     }
     Object.assign(existingSchedule, updateObj);
     let updated = await existingSchedule.save();
+    let itemCreated = false;
 
     const startDateChanged = dateChanged;
     if (startDateChanged && updated?._id) {
-      await (0, serverContext.updateNextScheduledDates)(updated._id);
+      itemCreated = await (0, serverContext.updateNextScheduledDates)(updated._id);
       updated = await serverContext.MaintenanceSchedule.findById(updated._id);
     }
 
-    const shouldSyncEstimate = !!updated && (
-      updated.status === 'in-progress'
-      || !!updated.linkedEstimateId
-      || !!updated.linkedEstimateItemId
-      || String(existingSchedule.assignedVendor || '') !== String(updated.assignedVendor || '')
-      || String(existingSchedule.title || '') !== String(updated.title || '')
-      || String(existingSchedule.description || '') !== String(updated.description || '')
-      || String(existingSchedule.unitId || '') !== String(updated.unitId || '')
-      || Number(existingSchedule.cost || 0) !== Number(updated.cost || 0)
-    );
-    if (shouldSyncEstimate) {
+    if (updated) {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const dayAfterTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
+      const nextScheduledDate = new Date(updated.nextScheduledDate);
+      // Edits may update existing items anytime, but only create visits due today or tomorrow.
       const syncResult = await (0, serverContext.syncMaintenanceScheduleToEstimate)(updated, {
-        createIfMissing: updated.status === 'in-progress' || !!updated.linkedEstimateId
+        createIfMissing: nextScheduledDate >= today && nextScheduledDate < dayAfterTomorrow
       });
+      itemCreated = syncResult?.itemCreated || itemCreated;
       updated = syncResult?.schedule || updated;
     }
 
+    // Response-only event metadata keeps repeat edits from showing the creation toast.
+    if (itemCreated) res.set('X-Maintenance-Line-Item-Created', 'true');
     res.json(updated);
   } catch (err) {
     (0, serverContext.maintenanceQCError)(res, err);
@@ -590,6 +639,8 @@ return {
   get_api_properties_maintenance_schedules,
   get_api_properties_propertyId_maintenance_schedules_scheduleId_history_historyId,
   patch_api_properties_propertyId_maintenance_schedules_scheduleId_history_historyId_review,
+  patch_api_properties_propertyId_maintenance_schedules_scheduleId_history_historyId,
+  delete_api_properties_propertyId_maintenance_schedules_scheduleId_history_historyId,
   patch_api_properties_propertyId_maintenance_schedules_scheduleId_complete,
   getOverdueMaintenanceEmailHtml,
   sendTodayMaintenanceReminder,

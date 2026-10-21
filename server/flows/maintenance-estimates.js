@@ -262,6 +262,7 @@ async function syncMaintenanceScheduleToEstimate(schedule, options = {}) {
     return { schedule, estimate, item: null };
   }
 
+  const itemCreated = !estimateItem;
   if (!estimateItem) {
     estimateItem = {
       type: 'item',
@@ -339,7 +340,7 @@ async function syncMaintenanceScheduleToEstimate(schedule, options = {}) {
     await (0, serverContext.syncVendorAssignedEstimateItem)(savedEstimate, savedItem, schedule.assignedVendor);
   }
 
-  return { schedule, estimate: savedEstimate, item: savedItem || null };
+  return { schedule, estimate: savedEstimate, item: savedItem || null, itemCreated: itemCreated && !!savedItem };
 }
 
 async function syncMaintenanceRequestToEstimate(request) {

@@ -1115,8 +1115,16 @@ async function editPortfolioRecurringMaintenance(scheduleId, projectId) {
     }
 }
 
+function getMaintenanceScheduleUpdateMessage(response, fallback = 'Recurring maintenance updated') {
+    return response.headers.get('X-Maintenance-Line-Item-Created') === 'true'
+        ? 'Maintenance created and sent to the linked estimate'
+        : fallback;
+}
+
 async function updatePortfolioRecurringMaintenanceSchedule(scheduleId, projectId, updates = {}, options = {}) {
-    const schedule = (state.portfolioRecurringMaintenance || []).find(item => String(item._id) === String(scheduleId));
+    const isCurrentProperty = state.currentProperty && String(state.currentProperty._id) === String(projectId);
+    const schedule = (isCurrentProperty && (state.maintenanceSchedules || []).find(item => String(item._id) === String(scheduleId)))
+        || (state.portfolioRecurringMaintenance || []).find(item => String(item._id) === String(scheduleId));
     if (!schedule || !projectId) {
         throw new Error('Recurring maintenance schedule not found');
     }
@@ -1128,7 +1136,7 @@ async function updatePortfolioRecurringMaintenanceSchedule(scheduleId, projectId
         description: schedule.description || '',
         frequency: schedule.frequency || 'monthly',
         intervalDays: schedule.frequency === 'custom' ? Number(schedule.intervalDays) || null : null,
-        startDate: getRecurringMaintenanceDisplayDate(schedule) ? String(getRecurringMaintenanceDisplayDate(schedule)).substring(0, 10) : '',
+        startDate: schedule.startDate || '',
         assignedVendor: assignedVendorId || null,
         unitId: unitId || null,
         status: schedule.status || 'pending',
@@ -1157,7 +1165,7 @@ async function updatePortfolioRecurringMaintenanceSchedule(scheduleId, projectId
         String(item._id) === String(scheduleId) ? updatedSchedule : item
     );
 
-    if (state.currentProperty && String(state.currentProperty._id) === String(projectId)) {
+    if (isCurrentProperty) {
             state.maintenanceSchedules = (state.maintenanceSchedules || []).map(item =>
                 String(item._id) === String(scheduleId) ? updatedSchedule : item
             );
@@ -1169,6 +1177,7 @@ async function updatePortfolioRecurringMaintenanceSchedule(scheduleId, projectId
         await refreshPortfolioMaintenanceItem(scheduleId, 'recurring');
     }
 
+    showNotification(getMaintenanceScheduleUpdateMessage(response), 'success');
     return updatedSchedule;
 }
 

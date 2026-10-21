@@ -712,7 +712,6 @@ function initializePortfolioMaintenanceWorkspaceCardHandlers(){
                     startDate:startDateField?.value?dateInputToISOAtNoon(startDateField.value):'',
                     status:statusField?.value||'pending'
                 },{refreshPortfolio:true});
-                showNotification('Recurring maintenance updated','success');
             }catch(err){
                 console.error('Error updating recurring maintenance from portfolio workspace:',err);
                 showNotification('Could not update recurring maintenance','error');

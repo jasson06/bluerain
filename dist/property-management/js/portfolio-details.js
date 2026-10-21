@@ -1098,7 +1098,6 @@ function renderPortfolioDetails(type, target = {}) {
                         }, {
                             refreshPortfolio: true
                         });
-                        showNotification('Recurring maintenance updated', 'success');
                     } catch (err) {
                         console.error('Error updating recurring maintenance from list view:', err);
                         showNotification('Could not update recurring maintenance', 'error');
@@ -1190,7 +1189,6 @@ function renderPortfolioDetails(type, target = {}) {
                             startDate: startDateInput?.value ? dateInputToISOAtNoon(startDateInput.value) : '',
                             status: statusSelect?.value || 'pending'
                         });
-                        showNotification('Recurring maintenance updated', 'success');
                     } catch (err) {
                         console.error('Error updating recurring maintenance from card view:', err);
                         showNotification('Could not update recurring maintenance', 'error');

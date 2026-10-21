@@ -2709,6 +2709,10 @@ serverFlows["maintenance-schedules"].get_api_properties_propertyId_maintenance_s
 
 serverFlows["maintenance-schedules"].patch_api_properties_propertyId_maintenance_schedules_scheduleId_history_historyId_review();
 
+serverFlows["maintenance-schedules"].patch_api_properties_propertyId_maintenance_schedules_scheduleId_history_historyId();
+
+serverFlows["maintenance-schedules"].delete_api_properties_propertyId_maintenance_schedules_scheduleId_history_historyId();
+
 serverFlows["maintenance-schedules"].patch_api_properties_propertyId_maintenance_schedules_scheduleId_complete();
 
 scheduleDailyUpdateNextScheduledDates();

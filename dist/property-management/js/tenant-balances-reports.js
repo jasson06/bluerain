@@ -714,12 +714,68 @@ function calculateOccupancyRate(units) {
 }
 
 function showNotification(message, type = 'info') {
-    const notification = document.getElementById('notification');
-    notification.textContent = message;
-    notification.className = `notification ${type}`;
-    notification.classList.add('show');
-    
-    setTimeout(() => {
-        notification.classList.remove('show');
-    }, 3000);
+    const container = document.getElementById('notification');
+    const variants = {
+        success: { label: 'Success', icon: 'fa-check-circle' },
+        error: { label: 'Error', icon: 'fa-exclamation-circle' },
+        warning: { label: 'Warning', icon: 'fa-exclamation-triangle' },
+        info: { label: 'Notice', icon: 'fa-info-circle' }
+    };
+    const variant = Object.hasOwn(variants, type) ? type : 'info';
+    const notification = document.createElement('div');
+    notification.className = `notification ${variant} show`;
+
+    const icon = document.createElement('i');
+    icon.className = `fas ${variants[variant].icon} notification-icon`;
+    icon.setAttribute('aria-hidden', 'true');
+    const content = document.createElement('div');
+    content.className = 'notification-content';
+    const heading = document.createElement('strong');
+    heading.textContent = variants[variant].label;
+    const text = document.createElement('span');
+    text.textContent = String(message);
+    content.append(heading, text);
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'notification-close';
+    close.setAttribute('aria-label', 'Dismiss notification');
+    close.textContent = '\u00d7';
+    notification.append(icon, content, close);
+    container.appendChild(notification);
+
+    let remaining = Math.max(8000, text.textContent.length * 50);
+    let startedAt;
+    let timer;
+    let leaving = false;
+    let hovered = false;
+    let focused = false;
+    const dismiss = () => {
+        if (leaving) return;
+        leaving = true;
+        clearTimeout(timer);
+        notification.classList.add('is-leaving');
+        setTimeout(() => notification.remove(), 350);
+    };
+    const resume = () => {
+        if (leaving || hovered || focused) return;
+        startedAt = Date.now();
+        timer = setTimeout(dismiss, remaining);
+    };
+    const pause = () => {
+        clearTimeout(timer);
+        if (startedAt !== undefined) {
+            remaining = Math.max(0, remaining - (Date.now() - startedAt));
+            startedAt = undefined;
+        }
+    };
+    notification.addEventListener('mouseenter', () => { hovered = true; pause(); });
+    notification.addEventListener('mouseleave', () => { hovered = false; resume(); });
+    notification.addEventListener('focusin', () => { focused = true; pause(); });
+    notification.addEventListener('focusout', event => {
+        if (notification.contains(event.relatedTarget)) return;
+        focused = false;
+        resume();
+    });
+    close.addEventListener('click', dismiss);
+    resume();
 }

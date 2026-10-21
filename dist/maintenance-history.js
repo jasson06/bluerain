@@ -35,9 +35,12 @@
       <strong>Completion History</strong>
       ${summary(schedule) ? `<div class="rm-attention">${escape(summary(schedule))}</div>` : ''}
       ${history.length ? `
-        <ul class="rm-date-list">${history.map(entry => `<li><button type="button" class="rm-date" data-entry="${escape(entry._id)}" aria-pressed="${entry === selected}">
+        <ul class="rm-date-list">${history.map(entry => `<li class="rm-history-entry"><button type="button" class="rm-date" data-entry="${escape(entry._id)}" aria-pressed="${entry === selected}">
           <span class="rm-date-title">${escape(date(entry.completedAt))}</span><span class="rm-date-status">${escape(status(entry))}</span>
-        </button></li>`).join('')}</ul>` : '<p>No completion history yet.</p>'}
+        </button><span class="rm-entry-actions">
+          <button type="button" class="rm-entry-action" data-history-action="edit" data-entry="${escape(entry._id)}" title="Edit completion" aria-label="Edit completion ${escape(date(entry.completedAt))}"><i class="fas fa-pen" aria-hidden="true"></i></button>
+          <button type="button" class="rm-entry-action rm-entry-delete" data-history-action="delete" data-entry="${escape(entry._id)}" title="Delete completion" aria-label="Delete completion ${escape(date(entry.completedAt))}"><i class="fas fa-trash" aria-hidden="true"></i></button>
+        </span></li>`).join('')}</ul>` : '<p>No completion history yet.</p>'}
     </section>`;
   }
   function historyButton(schedule, source = 'portfolio') {
@@ -105,6 +108,96 @@
     return { headers, managerId };
   }
   const endpoint = (schedule, entryId) => `/api/properties/${encodeURIComponent(property(schedule))}/maintenance-schedules/${encodeURIComponent(key(schedule))}/history/${encodeURIComponent(entryId)}`;
+  function syncHistory(schedule, result) {
+    const updated = { ...schedule, ...result.schedule, projectId: schedule.projectId, assignedVendor: schedule.assignedVendor, unitId: schedule.unitId };
+    schedules.set(key(updated), updated);
+    window.syncRecurringHistorySchedule?.(updated);
+    document.querySelectorAll('.rm-history').forEach(panel => {
+      if (panel.dataset.schedule === key(updated)) {
+        const target = panel.closest('.maintenance-card')?.querySelector('.rm-details');
+        target?.remove();
+        panel.outerHTML = render(updated);
+      }
+    });
+    document.querySelectorAll('.rm-open-history').forEach(button => {
+      if (button.dataset.schedule === key(updated)) button.outerHTML = historyButton(updated, button.dataset.source);
+    });
+  }
+  function localDateTime(value) {
+    if (!value) return '';
+    const parsed = new Date(value);
+    if (!Number.isFinite(parsed.getTime())) return '';
+    const pad = number => String(number).padStart(2, '0');
+    const minutes = `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}T${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`;
+    return parsed.getSeconds() ? `${minutes}:${pad(parsed.getSeconds())}` : minutes;
+  }
+  function editHistory(panel, entryId, action, trigger) {
+    const schedule = schedules.get(panel.dataset.schedule);
+    const entry = schedule?.history?.find(item => String(item._id) === entryId);
+    if (!entry || panel.dataset.saving) return;
+    const remove = action === 'delete';
+    const dialog = document.createElement('dialog');
+    dialog.className = 'rm-history-dialog';
+    dialog.setAttribute('aria-label', remove ? 'Delete completion history' : 'Edit completion history');
+    dialog.innerHTML = `<form class="rm-history-form">
+      <h3>${remove ? 'Delete completion?' : 'Edit completion'}</h3>
+      ${remove ? `<p>Delete the completion recorded on ${escape(date(entry.completedAt))}? This cannot be undone.</p>` : `
+        <label class="rm-selector">Completion date<input name="completedAt" type="datetime-local" step="1" value="${escape(localDateTime(entry.completedAt))}" required></label>
+        <label class="rm-selector">Completed by<input name="completedBy" type="text" maxlength="200" value="${escape(entry.completedBy || '')}"></label>
+        <label class="rm-selector">Cost ($)<input name="cost" type="number" min="0" step="0.01" value="${escape(entry.cost ?? 0)}" required></label>
+        <label class="rm-selector">Notes<textarea name="notes" rows="4" maxlength="4000">${escape(entry.notes || '')}</textarea></label>`}
+      <p class="rm-muted">${remove ? 'Only this history record will be removed.' : 'Photos and QC records will be preserved.'} The schedule, next visit, linked estimate, and vendor work will not change.</p>
+      <div class="rm-error" role="alert"></div>
+      <div class="rm-actions"><button type="button" class="btn-secondary" data-cancel>Cancel</button><button type="submit" class="${remove ? 'rm-confirm-delete' : 'btn-primary'}">${remove ? 'Delete completion' : 'Save changes'}</button></div>
+    </form>`;
+    let saving = false;
+    const form = dialog.querySelector('form');
+    dialog.querySelector('[data-cancel]').onclick = () => dialog.close();
+    dialog.addEventListener('cancel', event => { if (saving) event.preventDefault(); });
+    dialog.addEventListener('close', () => {
+      dialog.remove();
+      if (trigger.isConnected) trigger.focus();
+    });
+    form.onsubmit = async event => {
+      event.preventDefault();
+      if (saving || !form.reportValidity()) return;
+      saving = true;
+      panel.dataset.saving = 'true';
+      const errorBox = dialog.querySelector('.rm-error');
+      errorBox.textContent = '';
+      form.querySelectorAll('button, input, textarea').forEach(control => control.disabled = true);
+      try {
+        const auth = managerAuthHeaders();
+        const payload = { expectedVersion: schedule.__v || 0, managerId: auth.managerId };
+        if (!remove) {
+          const completedAt = form.querySelector('[name="completedAt"]').value;
+          Object.assign(payload, {
+            completedAt: completedAt === localDateTime(entry.completedAt) ? entry.completedAt : new Date(completedAt).toISOString(),
+            completedBy: form.querySelector('[name="completedBy"]').value,
+            cost: Number(form.querySelector('[name="cost"]').value),
+            notes: form.querySelector('[name="notes"]').value
+          });
+        }
+        const response = await fetch(endpoint(schedule, entryId), {
+          method: remove ? 'DELETE' : 'PATCH', headers: auth.headers, body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Unable to change completion history');
+        if (!remove) selections.set(key(schedule), entryId);
+        syncHistory(schedule, result);
+        dialog.close();
+        window.showNotification?.(remove ? 'Completion history deleted' : 'Completion history updated', 'success');
+      } catch (error) {
+        errorBox.textContent = error.message;
+      } finally {
+        saving = false;
+        delete panel.dataset.saving;
+        form.querySelectorAll('button, input, textarea').forEach(control => control.disabled = false);
+      }
+    };
+    document.body.append(dialog);
+    dialog.showModal();
+  }
   async function load(panel) {
     const schedule = schedules.get(panel.dataset.schedule);
     const selectedId = panel.dataset.selected;
@@ -148,16 +241,7 @@
         body: JSON.stringify({ status: action, notes, managerId: auth.managerId, expectedReviewCount: (entry.reviews || []).length }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Unable to save review');
-      // Preserve populated display metadata when the write API returns raw IDs.
-      const updated = { ...schedule, ...result.schedule, projectId: schedule.projectId, assignedVendor: schedule.assignedVendor, unitId: schedule.unitId };
-      schedules.set(key(updated), updated);
-      window.syncRecurringHistorySchedule?.(updated);
-      document.querySelectorAll('.rm-history').forEach(other => {
-        if (other.dataset.schedule === key(updated)) other.outerHTML = render(updated);
-      });
-      document.querySelectorAll('.rm-open-history').forEach(button => {
-        if (button.dataset.schedule === key(updated)) button.outerHTML = historyButton(updated, button.dataset.source);
-      });
+      syncHistory(schedule, result);
       window.showNotification?.(action === 'approved' ? 'Maintenance approved' : action === 'rework' ? 'Rework requested' : 'Submitted for QC', 'success');
     } catch (error) { errorBox.textContent = error.message; }
     finally { delete panel.dataset.saving; [...panel.querySelectorAll('button'), ...target.querySelectorAll('button, textarea, select')].forEach(el => el.disabled = false); }
@@ -229,7 +313,9 @@
     const panel = event.target.closest('.rm-history') || event.target.closest('.rm-details')?.historyPanel;
     if (!panel || !panel.isConnected) return;
     const button = event.target.closest('button');
-    if (button?.dataset.entry && !panel.dataset.saving) {
+    if (button?.dataset.historyAction) {
+      editHistory(panel, button.dataset.entry, button.dataset.historyAction, button);
+    } else if (button?.dataset.entry && !panel.dataset.saving) {
       panel.dataset.selected = button.dataset.entry;
       panel.querySelectorAll('.rm-date').forEach(dateButton => dateButton.setAttribute('aria-pressed', String(dateButton === button)));
       load(panel);

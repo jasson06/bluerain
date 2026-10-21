@@ -1284,7 +1284,7 @@ body.dark-theme .unit-card-body {
     font-size: 0.7rem;
     font-weight: 500;
     margin-left: 0px;
-    max-width: 62px;
+    max-width: 128px;
 }
 .badge-success { background: #e1f7e1; color: #27ae60; }
 .badge-warning { background: #fff3cd; color: #856404; }
@@ -1496,43 +1496,116 @@ body.dark-theme .portfolio-tasks-new button:focus {
     }
 }
 
-.notification {
+.notification-stack {
     position: fixed;
     top: 18px;
     right: 18px;
-    max-width: 320px;
-    padding: 12px 18px;
-    border-radius: 10px;
-    color: #f9fafb;
-    font-weight: 500;
-    font-size: 0.9rem;
-    box-shadow: 0 14px 40px rgba(15,23,42,0.35);
-    backdrop-filter: blur(10px);
-    background: linear-gradient(135deg, rgba(15,23,42,0.92), rgba(30,64,175,0.92));
+    width: min(500px, calc(100vw - 36px));
+    max-height: calc(100dvh - 36px);
     display: flex;
-    align-items: center;
-    gap: 8px;
-    transform: translateY(-150%);
-    opacity: 0;
-    transition: transform 0.28s ease, opacity 0.28s ease;
-    z-index: 5002;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    padding: 4px;
+    pointer-events: none;
+    z-index: 10050;
+}
+
+.notification {
+    --notification-accent: #60a5fa;
+    position: relative;
+    flex-shrink: 0;
+    padding: 16px;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-left: 4px solid var(--notification-accent);
+    border-radius: 14px;
+    color: #fff;
+    font-weight: 500;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    box-shadow: 0 8px 20px rgba(15,23,42,0.24);
+    backdrop-filter: blur(10px);
+    background: linear-gradient(135deg, #1e3a8a, #172554);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    pointer-events: auto;
+    transition: transform 0.35s ease, opacity 0.35s ease;
 }
 
 .notification.show {
-    transform: translateY(0);
-    opacity: 1;
+    animation: notification-enter 0.3s ease-out both;
+}
+
+.notification.is-leaving {
+    animation: none;
+    transform: translateX(24px);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.notification-icon {
+    color: var(--notification-accent);
+    margin-top: 4px;
+    font-size: 1.15rem;
+}
+
+.notification-content {
+    display: grid;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.notification-content strong {
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+}
+
+.notification .notification-close {
+    flex-shrink: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    padding: 0 6px;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.notification .notification-close:hover,
+.notification .notification-close:focus-visible {
+    background: rgba(255,255,255,0.18);
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
 }
 
 .notification.success {
-    background: linear-gradient(135deg, rgba(16,185,129,0.96), rgba(5,150,105,0.96));
+    --notification-accent: #6ee7b7;
+    background: linear-gradient(135deg, #09926b, #086d52);
 }
 
 .notification.error {
-    background: linear-gradient(135deg, rgba(220,38,38,0.96), rgba(153,27,27,0.96));
+    --notification-accent: #fca5a5;
+    background: linear-gradient(135deg, #991b1b, #7f1d1d);
 }
 
-.notification.info {
-    background: linear-gradient(135deg, rgba(37,99,235,0.96), rgba(30,64,175,0.96));
+.notification.warning {
+    --notification-accent: #fcd34d;
+    background: linear-gradient(135deg, #92400e, #78350f);
+}
+
+@keyframes notification-enter {
+    from { opacity: 0; transform: translateY(-12px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .notification.show { animation: none; }
+    .notification { transition: none; }
 }
 
 /* Tab Pane Styles */

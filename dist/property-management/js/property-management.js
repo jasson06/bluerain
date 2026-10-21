@@ -284,7 +284,7 @@ document.getElementById('maintenancePhotos')?.addEventListener('change', async f
     }
 });
 
-document.getElementById('maintenanceList')?.addEventListener('change', async (event) => {
+async function handlePropertyMaintenanceInlineChange(event) {
     const recurringChangedField = event.target.closest('.recurring-maintenance-inline-vendor, .recurring-maintenance-inline-start-date, .recurring-maintenance-inline-status');
     if (recurringChangedField) {
         const target = recurringChangedField.closest('[data-maint-id][data-maint-source="recurring"]');
@@ -311,7 +311,6 @@ document.getElementById('maintenanceList')?.addEventListener('change', async (ev
             }, {
                 refreshPortfolio: true
             });
-            showNotification('Recurring maintenance updated', 'success');
         } catch (error) {
             console.error('Error updating recurring maintenance from list view:', error);
             showNotification('Could not update recurring maintenance', 'error');
@@ -375,9 +374,9 @@ document.getElementById('maintenanceList')?.addEventListener('change', async (ev
         setMaintenanceVendorComboboxDisabled(vendorSelect, false);
         setPropertyMaintenanceItemSaving(requestId, false);
     }
-});
+}
 
-document.getElementById('maintenanceList')?.addEventListener('click', (event) => {
+function handlePropertyMaintenanceRowClick(event) {
     if (event.target.closest('button, select, input, a, textarea')) return;
     const row = event.target.closest('tr[data-maint-id][data-maint-source]');
     if (!row) return;
@@ -408,6 +407,12 @@ document.getElementById('maintenanceList')?.addEventListener('click', (event) =>
             setPropertyMaintenanceItemSaving(requestId, isSaving);
         }
     });
+}
+
+['maintenanceList', 'scheduleList'].forEach(listId => {
+    const list = document.getElementById(listId);
+    list?.addEventListener('change', handlePropertyMaintenanceInlineChange);
+    list?.addEventListener('click', handlePropertyMaintenanceRowClick);
 });
 
 // Photo viewer modal (full-screen, next/prev)

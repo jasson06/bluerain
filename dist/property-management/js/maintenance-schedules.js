@@ -86,9 +86,9 @@ function renderPropertyRecurringMaintenanceCard(schedule) {
         ? formatDateDisplay(getRecurringMaintenanceDisplayDate(schedule), 'en-US')
       : 'N/A';
 
-    let freqLabel = schedule.frequency.charAt(0).toUpperCase() + schedule.frequency.slice(1);
+    let freqLabel = getRecurringMaintenanceFrequencyLabel(schedule);
     if (schedule.frequency === 'custom' && schedule.intervalDays) {
-      freqLabel = `<span class="badge badge-info" style="background:#eaf6ff;color:#217dbb;padding:2px 10px;border-radius:10px;font-size:0.92em;"><i class="fas fa-sync-alt"></i> Every ${schedule.intervalDays} days</span>`;
+      freqLabel = `<span class="badge badge-info" style="background:#eaf6ff;color:#217dbb;padding:2px 10px;border-radius:10px;font-size:0.92em;"><i class="fas fa-sync-alt"></i> ${freqLabel}</span>`;
     } else {
       freqLabel = `<span class="badge badge-default" style="background:#f6fafd;color:#217dbb;padding:2px 10px;border-radius:10px;font-size:0.92em;"><i class="fas fa-clock"></i> ${freqLabel}</span>`;
     }
@@ -223,8 +223,8 @@ async function populateScheduleUnitSelect(propertyId = '', selectedUnitId = '') 
         }).join('');
 }
 
-async function populateScheduleVendorSelect() {
-    await populateMaintenanceVendorSelect('scheduleVendor', document.getElementById('scheduleVendor')?.value || '', {
+async function populateScheduleVendorSelect(selectedVendorId = document.getElementById('scheduleVendor')?.value || '') {
+    await populateMaintenanceVendorSelect('scheduleVendor', selectedVendorId, {
         emptyLabel: 'None',
         placeholder: 'Search vendor'
     });
@@ -298,7 +298,7 @@ async function editMaintenanceSchedule(scheduleId, options = {}) {
       return;
     }
 
-    await populateScheduleVendorSelect();
+    await populateScheduleVendorSelect(getMaintenanceVendorId(schedule));
         await populateScheduleUnitSelect(projectId, schedule.unitId?._id || schedule.unitId || '');
 
     // Populate modal fields
@@ -308,7 +308,7 @@ async function editMaintenanceSchedule(scheduleId, options = {}) {
     document.getElementById('customIntervalGroup').style.display = schedule.frequency === 'custom' ? 'block' : 'none';
     document.getElementById('scheduleIntervalDays').value = schedule.intervalDays || '';
     document.getElementById('scheduleStartDate').value = schedule.startDate ? (String(schedule.startDate).substring(0,10)) : '';
-    setMaintenanceVendorComboboxValue('scheduleVendor', schedule.assignedVendor?._id || '', schedule.assignedVendor?.name || schedule.assignedVendor?.email || '');
+    setMaintenanceVendorComboboxValue('scheduleVendor', getMaintenanceVendorId(schedule), schedule.assignedVendor?.name || schedule.assignedVendor?.email || '');
     document.getElementById('scheduleUnit').value = schedule.unitId?._id || schedule.unitId || '';
     document.getElementById('scheduleStatus').value = schedule.status || 'pending';
     document.getElementById('scheduleCost').value = typeof schedule.cost === 'number' ? schedule.cost : '';
@@ -387,7 +387,7 @@ async function handleUpdateMaintenanceSchedule(scheduleId, options = {}) {
     if (!res.ok) throw new Error('Failed to update schedule');
         const updatedSchedule = await res.json();
     closeModal('addScheduleModal');
-    showNotification('Schedule updated!', 'success');
+    showNotification(getMaintenanceScheduleUpdateMessage(res, 'Schedule updated!'), 'success');
         if (state.currentProperty && String(state.currentProperty._id) === String(projectId)) {
                 state.maintenanceSchedules = (state.maintenanceSchedules || []).map(item =>
                     String(item._id) === String(scheduleId) ? { ...item, ...updatedSchedule } : item
