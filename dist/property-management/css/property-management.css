@@ -4996,9 +4996,88 @@ body.dark-theme .portfolio-maintenance-sticky-bar {
 }
 
 .compact-maintenance-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+    gap: 10px 14px;
+    align-content: start;
+    align-items: start;
+    min-width: 0;
     max-height: 265px !important;
     overflow-y: auto;
     padding-right: 2px !important;
+}
+
+.compact-maintenance-panel > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    margin-bottom: 0 !important;
+}
+
+.compact-maintenance-panel > .maintenance-description-card,
+.compact-maintenance-panel > [data-maint-photo-upload],
+.compact-maintenance-panel > .rm-details {
+    grid-column: 1 / -1;
+}
+
+/* Keep the editor wrapper for delegated saves while its fields share the card grid. */
+.compact-maintenance-panel > .maintenance-inline-editor {
+    display: contents !important;
+}
+
+.compact-maintenance-panel > .maintenance-inline-editor > label {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 4px !important;
+    margin: 0;
+    min-width: 0;
+    align-self: end;
+}
+
+.compact-maintenance-panel .maintenance-inline-editor input,
+.compact-maintenance-panel .maintenance-inline-editor select,
+.compact-maintenance-panel .maintenance-vendor-combobox {
+    box-sizing: border-box;
+    width: 100% !important;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.compact-maintenance-panel .maintenance-inline-editor input:not([type="hidden"]),
+.compact-maintenance-panel .maintenance-inline-editor select {
+    height: 36px;
+    min-height: 36px;
+    margin: 0;
+    font-family: inherit;
+    line-height: 1.25;
+}
+
+.compact-maintenance-panel .maintenance-inline-editor input:is([type="date"], [type="datetime-local"]) {
+    -webkit-appearance: none;
+    appearance: none;
+    text-align: left;
+}
+
+.compact-maintenance-panel .maintenance-inline-editor input::-webkit-date-and-time-value {
+    min-width: 0;
+    margin: 0;
+    text-align: left;
+}
+
+.compact-maintenance-panel .maintenance-inline-editor input::-webkit-datetime-edit {
+    min-width: 0;
+    padding: 0;
+}
+
+.compact-maintenance-panel:has(> .maintenance-inline-editor[data-request-id]) {
+    gap: 6px 10px;
+}
+
+.compact-maintenance-panel:has(> .maintenance-inline-editor[data-request-id]) > div:not(.maintenance-description-card, .maintenance-inline-editor, [data-maint-photo-upload], .rm-details) > strong,
+.compact-maintenance-panel > .maintenance-inline-editor[data-request-id] > label > :is(strong, span) {
+    color: #64748b !important;
+    font-size: 0.74rem !important;
+    font-weight: 600;
+    line-height: 1.3;
 }
 
 .compact-maintenance-thread {

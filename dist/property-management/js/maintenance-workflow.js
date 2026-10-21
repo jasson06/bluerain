@@ -564,7 +564,7 @@ function rerenderPropertyMaintenanceItem(requestId) {
                         <i class="fas fa-diagram-project"></i> ${workflowLabel}
                 </span>`;
         const descriptionHtml = `
-            <div style="
+            <div class="maintenance-description-card" style="
                 margin-bottom:12px;
                 background: linear-gradient(90deg, #eaf6ff 0%, #f7f7ff 100%);
                 border-left: 4px solid #3498db;
