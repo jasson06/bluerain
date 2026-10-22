@@ -2233,7 +2233,7 @@
         const selectionProjectId = typeof estimate.projectId === "string" ? estimate.projectId : estimate.projectId?._id;
         const selectionFrame = document.getElementById("client-selection-frame");
         if (selectionProjectId && selectionFrame) {
-          const selectionUrl = "Selection-Board.html?v=20261012-room-sheet&mode=client&embed=1&projectId=" + encodeURIComponent(selectionProjectId);
+          const selectionUrl = "Selection-Board.html?v=20261022-no-prices&mode=client&embed=1&hidePrices=1&projectId=" + encodeURIComponent(selectionProjectId);
           selectionFrame.dataset.src = selectionUrl;
           openSelectionBoard();
         }

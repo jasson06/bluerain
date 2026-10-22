@@ -3,6 +3,8 @@
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const client = params.get('mode') === 'client';
+const hidePrices = params.get('hidePrices') === '1';
+if (hidePrices) document.body.classList.add('hide-prices');
 if (params.get('embed') === '1') document.body.classList.add('embedded');
 
 const money = value => new Intl.NumberFormat('en-US', {style:'currency',currency:'USD'}).format(Number(value)||0);
@@ -59,13 +61,16 @@ function fixtureHeading(product) {
 function showDetails(product) {
  const content=$('detail-content'); content.replaceChildren();
  content.append(productImage(product));
- content.append(fixtureHeading(product),el('p',money(product.price)),el('p',product.description));
+ content.append(fixtureHeading(product));
+ if(!hidePrices)content.append(el('p',money(product.price)));
+ content.append(el('p',product.description));
 
  $('details').showModal();
 }
 function card(product,saved) {
  const node=el('article',undefined,'card'), media=productImage(product);
- const body=el('div',undefined,'card-body');body.append(fixtureHeading(product),el('div',money(product.price),'price'));
+ const body=el('div',undefined,'card-body');body.append(fixtureHeading(product));
+ if(!hidePrices)body.append(el('div',money(product.price),'price'));
  const actions=el('div',undefined,'card-actions');
  actions.append(button('Details',()=>showDetails(product)));
  const favorite=button(favorites.includes(product.link)?'♥':'♡',()=>{
@@ -90,34 +95,75 @@ function card(product,saved) {
  }
  body.append(actions);node.append(media,body);return node;
 }
-function attachRoomMenu(button,name,edit,remove){
- let timer=null,x=0,y=0,held=false;
+let closeRoomSwipe=null;
+document.addEventListener('pointerdown',event=>{if(closeRoomSwipe&&!event.target.closest('.room-row.swipe-open'))closeRoomSwipe();});
+function attachRoomMenu(button,name,edit,remove,row){
+ let timer=null,x=0,y=0,held=false,pointer=null,dragging=false,swiped=false,offset=0,startOffset=0;
+ const tablet=()=>matchMedia('(min-width:701px) and (any-pointer:coarse)').matches;
  const stop=()=>{clearTimeout(timer);button.classList.remove('holding');};
+ const position=value=>{
+  offset=value;row.style.setProperty('--room-shift',value+'px');
+  row.classList.toggle('swipe-open',value!==0);
+  row.dataset.swipeAction=value>0?'delete':value<0?'edit':'';
+ };
+ const close=()=>{position(0);if(closeRoomSwipe===close)closeRoomSwipe=null;};
  const open=()=>{stop();held=true;$('room-actions-title').textContent=pretty(name);$('room-menu-edit').onclick=()=>{$('room-actions').close();edit.onclick();};$('room-menu-delete').onclick=()=>{$('room-actions').close();remove.onclick();};$('room-actions').showModal();};
- button.setAttribute('aria-haspopup','dialog');button.setAttribute('aria-describedby','room-hold-hint');
- button.addEventListener('pointerdown',event=>{held=false;if(event.button!==0||!matchMedia('(max-width:700px)').matches)return;x=event.clientX;y=event.clientY;button.classList.add('holding');timer=setTimeout(open,500);});
- button.addEventListener('pointermove',event=>{if(Math.hypot(event.clientX-x,event.clientY-y)>10)stop();});
- ['pointerup','pointercancel','pointerleave'].forEach(type=>button.addEventListener(type,stop));
- button.addEventListener('click',event=>{if(held){event.preventDefault();event.stopImmediatePropagation();held=false;}},true);
- button.addEventListener('contextmenu',event=>{if(matchMedia('(max-width:700px)').matches){event.preventDefault();if(!$('room-actions').open)open();}});
+ button.setAttribute('aria-haspopup','dialog');button.setAttribute('aria-describedby',tablet()?'room-swipe-hint':'room-hold-hint');
+ button.addEventListener('pointerdown',event=>{
+  if(event.isPrimary===false)return;
+  held=false;swiped=false;if(event.button!==0||button.disabled)return;
+  const canSwipe=tablet();
+  if(!canSwipe&&!matchMedia('(max-width:700px)').matches)return;
+  x=event.clientX;y=event.clientY;
+  if(canSwipe){if(closeRoomSwipe&&closeRoomSwipe!==close)closeRoomSwipe();pointer=event.pointerId;startOffset=offset;}
+  button.classList.add('holding');timer=setTimeout(open,500);
+ });
+ button.addEventListener('pointermove',event=>{
+  const dx=event.clientX-x,dy=event.clientY-y;
+  if(Math.hypot(dx,dy)>10)stop();
+  if(event.pointerId!==pointer||held)return;
+  if(!dragging){
+   if(Math.abs(dy)>10&&Math.abs(dy)>=Math.abs(dx)){pointer=null;return;}
+   if(Math.abs(dx)<=10||Math.abs(dx)<=Math.abs(dy))return;
+   dragging=true;swiped=true;row.classList.add('swiping');button.setPointerCapture(pointer);
+  }
+  position(Math.max(-80,Math.min(80,startOffset+dx)));
+ });
+ const finish=event=>{
+  stop();if(event.pointerId!==pointer)return;
+  pointer=null;row.classList.remove('swiping');
+  if(dragging){
+   position(event.type==='pointerup'&&Math.abs(offset)>=44?Math.sign(offset)*80:0);
+   closeRoomSwipe=offset?close:null;
+   if(button.hasPointerCapture(event.pointerId))button.releasePointerCapture(event.pointerId);
+  }
+  dragging=false;
+ };
+ ['pointerup','pointercancel','lostpointercapture'].forEach(type=>button.addEventListener(type,finish));
+ button.addEventListener('pointerleave',stop);
+ button.addEventListener('click',event=>{if(held||swiped||tablet()&&offset){event.preventDefault();event.stopImmediatePropagation();if(!swiped)close();held=false;swiped=false;}},true);
+ [edit,remove].forEach(action=>action.addEventListener('click',close,true));
+ button.addEventListener('contextmenu',event=>{if(tablet()||matchMedia('(max-width:700px)').matches){event.preventDefault();if(!$('room-actions').open)open();}});
+ row.addEventListener('keydown',event=>{if(event.key==='Escape'){close();button.focus();}});
  button.addEventListener('keydown',event=>{if(event.key==='ContextMenu'||event.key==='F10'&&event.shiftKey){event.preventDefault();open();}});
 }
 $('room-menu-cancel').onclick=()=>$('room-actions').close();
 $('room-actions').addEventListener('click',event=>{if(event.target===$('room-actions')){const r=event.target.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)event.target.close();}});
 function render() {
+ if(closeRoomSwipe)closeRoomSwipe();
  const rooms=$('rooms');const roomScroll=rooms.scrollLeft;rooms.replaceChildren();
  const names=new Map();boards.forEach(b=>names.set(normalized(b.room),b.room)); additionalRooms.forEach(r=>{if(r.value&&!names.has(normalized(r.value)))names.set(normalized(r.value),r.value);}); if(room&&!names.has(normalized(room)))names.set(normalized(room),room);
  ['living-room','kitchen','bathroom','bedroom'].forEach(r=>{if(!hiddenRooms.includes(normalized(r))&&!names.has(normalized(r)))names.set(normalized(r),r);});
  if(!room)room=names.values().next().value;
  [...names.values()].forEach(name=>{const b=button(pretty(name),()=>{room=name;render();});b.className='room'+(normalized(name)===normalized(room)?' active':'');b.setAttribute('aria-pressed',String(normalized(name)===normalized(room)));const count=boards.find(x=>normalized(x.room)===normalized(name))?.selections?.length||0;b.append(el('small',String(count)));const row=el('div',undefined,'room-row');const edit=button('✎',()=>{editingRoom=name;$('room-form').elements.room.value=pretty(name);$('room-dialog-title').textContent='Edit room';$('save-room').textContent='Save name';$('room-dialog').showModal();});edit.className='room-action';edit.setAttribute('aria-label','Edit '+pretty(name));
-const remove=button('×',()=>{if(!confirm('Remove '+pretty(name)+' and its saved selections?'))return;task(async()=>{const response=await fetch('/api/selection-boards?projectId='+encodeURIComponent(projectId)+'&room='+encodeURIComponent(name),{method:'DELETE'});if(!response.ok&&response.status!==404)throw Error('Could not remove room.');rememberHidden(name);additionalRooms=additionalRooms.filter(r=>normalized(r.value)!==normalized(name));boards=await getBoards();room=boards[0]?.room||'';notify('Room removed.');});});remove.className='room-action';remove.setAttribute('aria-label','Remove '+pretty(name));attachRoomMenu(b,name,edit,remove);row.append(b,edit,remove);rooms.append(row);});
+const remove=button('×',()=>{if(!confirm('Remove '+pretty(name)+' and its saved selections?'))return;task(async()=>{const response=await fetch('/api/selection-boards?projectId='+encodeURIComponent(projectId)+'&room='+encodeURIComponent(name),{method:'DELETE'});if(!response.ok&&response.status!==404)throw Error('Could not remove room.');rememberHidden(name);additionalRooms=additionalRooms.filter(r=>normalized(r.value)!==normalized(name));boards=await getBoards();room=boards[0]?.room||'';notify('Room removed.');});});remove.className='room-action room-delete';remove.setAttribute('aria-label','Remove '+pretty(name));edit.classList.add('room-edit');edit.append(el('span','Edit','room-action-label'));remove.append(el('span','Delete','room-action-label'));attachRoomMenu(b,name,edit,remove,row);row.append(b,edit,remove);rooms.append(row);});
  rooms.scrollLeft=roomScroll;
- $('room-title').textContent=pretty(room||'Choose or add a room');$('count').textContent=selections().length;$('total').textContent=money(selections().reduce((sum,p)=>sum+(Number(p.price)||0),0));
+ $('room-title').textContent=pretty(room||'Choose or add a room');$('count').textContent=selections().length;$('total').textContent=hidePrices?'':money(selections().reduce((sum,p)=>sum+(Number(p.price)||0),0));
  const selected=$('selected');selected.replaceChildren();selections().forEach(p=>selected.append(card(p,true)));
  if(!selections().length){empty(selected,'No selections for this room yet','Explore the product library to find your finishes and fixtures.');selected.lastElementChild.append(button('Browse products',()=>{setMobileView(true);$('product-library').scrollIntoView({block:'nearest',behavior:'smooth'});}));}
  const query=$('search').value.trim().toLowerCase();
  const filtered=products.filter(p=>(String(p.name)+' '+String(p.description)).toLowerCase().includes(query)&&(!onlyFavorites||favorites.includes(p.link)));
- filtered.sort((a,b)=>$('sort').value==='low'?Number(a.price)-Number(b.price):$('sort').value==='high'?Number(b.price)-Number(a.price):String(a.name).localeCompare(String(b.name)));
+ filtered.sort((a,b)=>!hidePrices&&$('sort').value==='low'?Number(a.price)-Number(b.price):!hidePrices&&$('sort').value==='high'?Number(b.price)-Number(a.price):String(a.name).localeCompare(String(b.name)));
  $('results').textContent=filtered.length+' products';
  const library=$('products');library.replaceChildren();filtered.forEach(p=>library.append(card(p,false)));
  if(!filtered.length)empty(library,'No products found','Try another search or add a new product.');
