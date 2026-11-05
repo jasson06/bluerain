@@ -177,8 +177,12 @@ async function updateNextScheduledDates(scheduleId = null) {
     }).populate('assignedVendor projectId');
 
     for (const schedule of schedulesToday) {
-      const activated = await (0, serverContext.ensureScheduleActivatedForDate)(schedule);
-      itemCreated = activated?.itemCreated || itemCreated;
+      try {
+        const activated = await (0, serverContext.ensureScheduleActivatedForDate)(schedule);
+        itemCreated = activated?.itemCreated || itemCreated;
+      } catch (err) {
+        console.error(`Error activating maintenance schedule "${schedule.title}" (${schedule._id}):`, err);
+      }
     }
 
     // 2. Notify for overdue schedules (nextScheduledDate < today, not completed)

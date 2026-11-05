@@ -33,12 +33,13 @@ function getRecurringMaintenanceEstimateTitle(schedule) {
 
 async function ensureVendorProjectAssignment(vendorId, projectId) {
   if (!vendorId || !projectId) return null;
+  vendorId = vendorId._id || vendorId;
   let vendor = await serverContext.Vendor.findById(vendorId);
   if (!vendor) return null;
 
-  const projectIdStr = String(projectId);
+  const projectIdStr = String(projectId._id || projectId);
   const alreadyAssignedProject = (vendor.assignedProjects || []).some(
-    entry => entry.projectId && entry.projectId.toString() === projectIdStr
+    entry => entry.projectId && String(entry.projectId._id || entry.projectId) === projectIdStr
   );
   if (!alreadyAssignedProject) {
     vendor.assignedProjects.push({ projectId: projectIdStr, status: 'new' });
@@ -53,7 +54,7 @@ async function syncVendorAssignedEstimateItem(estimate, item, vendorId = null) {
   const itemId = item?._id ? String(item._id) : '';
   if (!itemId || !estimate?._id || !estimate?.projectId) return;
 
-  const normalizedVendorId = vendorId ? String(vendorId) : '';
+  const normalizedVendorId = vendorId ? String(vendorId._id || vendorId) : '';
   const pullFilter = normalizedVendorId ? { _id: { $ne: normalizedVendorId } } : {};
   await serverContext.Vendor.updateMany(
     { ...pullFilter, 'assignedItems.itemId': itemId },
