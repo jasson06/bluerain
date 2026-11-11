@@ -1198,6 +1198,12 @@ td:nth-child(4) {
   <script>
 
 window.onload = async () => {
+  const requestedInvoiceId = new URLSearchParams(window.location.search).get('invoiceId');
+  const requestedInvoice = new URLSearchParams(window.location.search).get('invoiceNumber');
+  if (requestedInvoiceId || requestedInvoice) {
+    await openSavedInvoiceModal(requestedInvoice, requestedInvoiceId);
+    return;
+  }
   const vendorId = localStorage.getItem("vendorId");
 
   if (!vendorId) {
@@ -2648,11 +2654,14 @@ document.getElementById('historyNextPage').addEventListener('click', () => {
 });
 
 
-async function openSavedInvoiceModal(invoiceNumber) {
+async function openSavedInvoiceModal(invoiceNumber, invoiceId) {
   const preview = document.getElementById('invoicePreviewContent');
+  document.getElementById('invoiceModal').style.display = 'flex';
   showLoader(); // 👈 START
   try {
-    const res = await fetch(`/api/invoices/by-number/${invoiceNumber}`);
+    const endpoint = invoiceId ? `/api/invoices/${encodeURIComponent(invoiceId)}`
+      : `/api/invoices/by-number/${encodeURIComponent(invoiceNumber)}`;
+    const res = await fetch(endpoint);
     if (!res.ok) throw new Error("Failed to fetch invoice");
     const { invoice } = await res.json();
      invoice.lineItems = await hydrateInvoiceHistoryLineItems(invoice.lineItems || []);

@@ -475,21 +475,19 @@ function renderTenants() {
             .slice(-8)
             .map(note => {
                 const noteId = note._id || '';
-                const managerFallback = note.authorRole === 'tenant'
-                    ? 'Tenant'
-                    : (localStorage.getItem('managerName') || localStorage.getItem('userName') || localStorage.getItem('managerId') || 'Management');
+                const managerFallback = note.authorRole === 'tenant' ? 'Tenant' : 'Management';
                 const authorLabel = escapeHtml(note.authorName || note.createdByName || note.managerName || note.createdBy || note.managerId || managerFallback);
                 const timestamp = note.createdAt ? new Date(note.createdAt).toLocaleString('en-US') : '';
                 const bubbleBackground = note.authorRole === 'tenant' ? '#eff6ff' : '#ecfdf5';
                 const bubbleBorder = note.authorRole === 'tenant' ? '#bfdbfe' : '#bbf7d0';
-                const deleteButton = noteId ? `<button type="button" class="tenant-card-note-delete" data-tenant-id="${tenant._id}" data-note-id="${noteId}" title="Delete note"><i class="fas fa-trash"></i></button>` : '';
+                const deleteButton = noteId ? `<button type="button" class="tenant-card-note-delete" data-tenant-id="${tenant._id}" data-note-id="${noteId}" onclick="deleteTenantCardNote(this.dataset.tenantId, this.dataset.noteId, event)" title="Delete note" aria-label="Delete note"><i class="fas fa-trash" aria-hidden="true"></i></button>` : '';
                 return `<div class="tenant-card-note" data-note-id="${noteId}"><div class="tenant-card-note-bubble" style="border:1px solid ${bubbleBorder};background:${bubbleBackground};">
-                            ${deleteButton}
+                            ${renderTenantNoteEditButton(tenant._id, noteId)}${deleteButton}
                             <div style="font-weight:700;font-size:0.8rem;color:#0f172a;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;">
                                 <span>${authorLabel}</span>
                                 <span style="font-weight:500;color:#64748b;">${escapeHtml(timestamp)}</span>
                             </div>
-                            <div style="font-size:0.84rem;color:#475569;margin-top:3px;white-space:pre-line;">${escapeHtml(note.text || '')}</div>
+                            <div data-tenant-note-text data-tenant-id="${escapeHtml(tenant._id)}" data-note-id="${escapeHtml(noteId)}" style="font-size:0.84rem;color:#475569;margin-top:3px;white-space:pre-line;">${escapeHtml(note.text || '')}</div>
                         </div></div>`;
             }).join('')
         : '<div style="font-size:0.84rem;color:#64748b;padding:8px;border:1px dashed #cbd5e1;border-radius:8px;background:#fff;">No notes yet. Start the conversation below.</div>';
@@ -602,16 +600,6 @@ function renderTenants() {
         });
     });
 
-    tenantsList.querySelectorAll('.tenant-card-note-delete').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const tenantId = btn.getAttribute('data-tenant-id');
-            const noteId = btn.getAttribute('data-note-id');
-            if (!tenantId || !noteId) return;
-            deleteTenantCardNote(tenantId, noteId);
-        });
-    });
 }
 
 async function sendTenantCardNote(event, tenantId) {
@@ -627,18 +615,10 @@ async function sendTenantCardNote(event, tenantId) {
         input.disabled = true;
         const button = form.querySelector('button[type="submit"]');
         if (button) button.disabled = true;
-        const managerId = localStorage.getItem('managerId') || '';
-        const managerName = localStorage.getItem('managerName') || localStorage.getItem('userName') || '';
-
-        const res = await fetch(`/api/tenants/${tenantId}/notes`, {
+        const res = await managerSessionRequest(`/api/tenants/${tenantId}/notes`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                text,
-                managerId,
-                authorName: managerName,
-                createdBy: managerName || managerId
-            })
+            body: JSON.stringify({ text })
         });
         if (!res.ok) throw new Error('Failed to add note');
 
@@ -667,7 +647,9 @@ async function sendTenantCardNote(event, tenantId) {
     }
 }
 
-async function deleteTenantCardNote(tenantId, noteId) {
+async function deleteTenantCardNote(tenantId, noteId, event) {
+    event?.preventDefault();
+    event?.stopPropagation();
     if (!tenantId || !noteId) return;
     if (!confirm('Delete this note? This cannot be undone.')) return;
 

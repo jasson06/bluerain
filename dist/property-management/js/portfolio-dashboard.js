@@ -597,6 +597,56 @@ function renderPortfolioTenantGridView(){const root=document.getElementById('por
 
 function renderPortfolioTenantsWorkspace(){const toggle=document.getElementById('portfolioWorkspaceTypeToggle');if(!toggle)return;const view=getPortfolioTenantWorkspaceView();toggle.hidden=false;toggle.innerHTML=`<span class="portfolio-maintenance-view-toggle"><button class="${view==='list'?'active':''}" data-tenant-view="list" title="List view"><i class="fas fa-list"></i></button><button class="${view==='grid'?'active':''}" data-tenant-view="grid" title="Grid view"><i class="fas fa-table-cells-large"></i></button></span>`;if(view==='grid')renderPortfolioTenantGridView();else enhancePortfolioTenantListView();}
 
+function filterPortfolioMaintenanceWorkspaceItems(items, statusFilter, type) {
+    const query = String(document.getElementById('portfolioComparisonSearch')?.value || '').toLowerCase();
+    return items.filter(item => {
+        if (statusFilter && getPortfolioMaintenanceStatusValue(item, type) !== statusFilter) return false;
+        return !query || `${item.title || item.issue || ''} ${item.description || ''} ${portfolioPropertyName(portfolioPropertyId(item))}`.toLowerCase().includes(query);
+    });
+}
+
+function renderPortfolioMaintenancePagination(total, page, pages) {
+    const pager = document.getElementById('portfolioComparisonPagination');
+    if (pager) pager.innerHTML = `<button ${page <= 1 ? 'disabled' : ''} onclick="state.portfolioComparisonPage--;renderUnifiedPortfolioWorkspace(false)"><i class="fas fa-chevron-left"></i></button><span class="task-meta">Page ${page} of ${pages} · ${total} records</span><button ${page >= pages ? 'disabled' : ''} onclick="state.portfolioComparisonPage++;renderUnifiedPortfolioWorkspace(false)"><i class="fas fa-chevron-right"></i></button>`;
+}
+
+function refreshPortfolioMaintenanceWorkspaceAfterRemoval() {
+    if (state.portfolioWorkspaceMode !== 'maintenance' || (state.portfolioMaintenanceType || 'request') !== 'request') return;
+    const root = document.getElementById('portfolioComparisonTable');
+    const isCard = state.portfolioMaintenanceView === 'card';
+    const container = root?.querySelector(isCard ? '.portfolio-maintenance-cards' : 'tbody');
+    if (!container) return;
+    const properties = new Set(getPortfolioFilteredProperties().map(property => String(property._id)));
+    const available = (state.portfolioMaintenance || []).filter(item => properties.has(portfolioPropertyId(item)));
+    const status = getPortfolioMaintenanceFilterState('request').status;
+    const items = filterPortfolioMaintenanceWorkspaceItems(available, status, 'request');
+    const size = Number(state.portfolioRowsPerPage || 15);
+    const pages = Math.max(1, Math.ceil(items.length / size));
+    const page = Math.min(state.portfolioComparisonPage || 1, pages);
+    state.portfolioComparisonPage = page;
+    const visible = items.slice((page - 1) * size, page * size);
+    const ids = new Set(visible.map(item => String(item._id)));
+    const existing = new Map();
+    Array.from(container.children).forEach(node => {
+        if (ids.has(node.dataset.maintId)) existing.set(node.dataset.maintId, node);
+        else node.remove();
+    });
+    let inserted = false;
+    visible.forEach((item, index) => {
+        let node = existing.get(String(item._id));
+        if (!node) {
+            const template = document.createElement('template');
+            template.innerHTML = (isCard ? renderPortfolioMaintenanceRequestCard(item) : renderPortfolioMaintenanceRequestRow(item)).trim();
+            node = template.content.firstElementChild;
+            inserted = true;
+        }
+        if (container.children[index] !== node) container.insertBefore(node, container.children[index] || null);
+    });
+    if (!visible.length) root.innerHTML = '<div class="empty-compact">No maintenance records match the current filters.</div>';
+    renderPortfolioMaintenancePagination(items.length, page, pages);
+    if (inserted && isCard) scheduleMaintenancePhotoHydration('portfolio');
+}
+
 function renderPortfolioMaintenanceWorkspace(){
     const root=document.getElementById('portfolioComparisonTable'),toggle=document.getElementById('portfolioWorkspaceTypeToggle'),filter=document.getElementById('portfolioWorkspaceFilter');if(!root||!toggle)return;
     initializePortfolioMaintenanceWorkspaceCardHandlers();
@@ -625,15 +675,11 @@ function renderPortfolioMaintenanceWorkspace(){
     const view=state.portfolioMaintenanceView||'list',type=state.portfolioMaintenanceType||'request';
     document.querySelector('.portfolio-comparison-panel')?.classList.toggle('portfolio-maintenance-list-mode',view==='list');
     toggle.hidden=false;toggle.insertAdjacentHTML('beforeend',`<span class="portfolio-maintenance-view-toggle"><button class="${view==='list'?'active':''}" data-maint-view="list" title="List view"><i class="fas fa-list"></i></button><button class="${view==='card'?'active':''}" data-maint-view="card" title="Card and chat view"><i class="fas fa-table-cells-large"></i></button></span>`);
-    const propertyIds=new Set(getPortfolioFilteredProperties().map(p=>String(p._id))),query=String(document.getElementById('portfolioComparisonSearch')?.value||'').toLowerCase();
+    const propertyIds=new Set(getPortfolioFilteredProperties().map(p=>String(p._id)));
     let items=(type==='recurring'?state.portfolioRecurringMaintenance:state.portfolioMaintenance)||[];
     const availableItems=items.filter(m=>propertyIds.has(portfolioPropertyId(m)));
     const statusFilter=renderPortfolioMaintenanceWorkspaceFilter(filter,availableItems,type);
-    items=availableItems.filter(m=>{
-        if(statusFilter&&getPortfolioMaintenanceStatusValue(m,type)!==statusFilter)return false;
-        if(query&&!`${m.title||m.issue||''} ${m.description||''} ${portfolioPropertyName(portfolioPropertyId(m))}`.toLowerCase().includes(query))return false;
-        return true;
-    });
+    items=filterPortfolioMaintenanceWorkspaceItems(availableItems,statusFilter,type);
     const size=Number(state.portfolioRowsPerPage||15),pages=Math.max(1,Math.ceil(items.length/size)),page=Math.min(state.portfolioComparisonPage||1,pages),visible=items.slice((page-1)*size,page*size);
     if(view==='card'){
         root.innerHTML=visible.length?`<div class="portfolio-maintenance-cards">${visible.map(item=>type==='recurring'?renderPortfolioRecurringMaintenanceCard(item):renderPortfolioMaintenanceRequestCard(item)).join('')}</div>`:'<div class="empty-compact">No maintenance records match the current filters.</div>';
@@ -649,7 +695,7 @@ function renderPortfolioMaintenanceWorkspace(){
             ? `<div style="overflow-x:auto;"><table id="portfolioMaintenanceListTable" class="maintenance-table" style="width:100%;border-collapse:collapse;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(44,62,80,0.07);"><thead><tr>${headers.map(header=>`<th style="padding:9px 8px;font-weight:600;color:#4b5563;text-align:left;">${header}</th>`).join('')}</tr></thead><tbody>${rowsHtml}</tbody></table></div>`
             : '<div class="empty-compact">No maintenance records match the current filters.</div>';
     }
-    const pager=document.getElementById('portfolioComparisonPagination');if(pager)pager.innerHTML=`<button ${page<=1?'disabled':''} onclick="state.portfolioComparisonPage--;renderUnifiedPortfolioWorkspace(false)"><i class="fas fa-chevron-left"></i></button><span class="task-meta">Page ${page} of ${pages} · ${items.length} records</span><button ${page>=pages?'disabled':''} onclick="state.portfolioComparisonPage++;renderUnifiedPortfolioWorkspace(false)"><i class="fas fa-chevron-right"></i></button>`;
+    renderPortfolioMaintenancePagination(items.length,page,pages);
 }
 
 function initializePortfolioMaintenanceWorkspaceCardHandlers(){

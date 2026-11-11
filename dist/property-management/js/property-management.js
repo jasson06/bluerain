@@ -1167,7 +1167,7 @@ document.getElementById('notesDrawerForm')?.addEventListener('submit', async (e)
         setNotesDrawerLoading(true);
         const managerId = localStorage.getItem('managerId') || '';
         const managerName = localStorage.getItem('managerName') || localStorage.getItem('userName') || '';
-        const res = await fetch(url, {
+        const options = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1176,7 +1176,8 @@ document.getElementById('notesDrawerForm')?.addEventListener('submit', async (e)
                 authorName: managerName,
                 createdBy: managerName || managerId
             })
-        });
+        };
+        const res = await (ctx.type === 'tenant' ? managerSessionRequest(url, options) : fetch(url, options));
         if (!res.ok) throw new Error('Failed to add note');
         const data = await res.json();
         const notes = data.notes || [];
@@ -1191,6 +1192,9 @@ document.getElementById('notesDrawerForm')?.addEventListener('submit', async (e)
             );
         } else if (ctx.type === 'tenant') {
             state.allTenants = (state.allTenants || []).map(t =>
+                String(t._id) === String(ctx.id) ? { ...t, notesHistory: notes } : t
+            );
+            state.tenants = (state.tenants || []).map(t =>
                 String(t._id) === String(ctx.id) ? { ...t, notesHistory: notes } : t
             );
         }
@@ -1615,7 +1619,7 @@ renderPortfolioTenantGridCard=function(item){
     const notesMarkup=recentNotes.length
         ? recentNotes.map(note=>{
             const noteId=note._id||'';
-            return `<div class="tenant-card-note" data-note-id="${noteId}"><div class="tenant-card-note-bubble" style="border:1px solid ${note.authorRole==='tenant'?'#bfdbfe':'#bbf7d0'};background:${note.authorRole==='tenant'?'#eff6ff':'#ecfdf5'};">${noteId?`<button type="button" class="tenant-card-note-delete" data-tenant-id="${tenant._id}" data-note-id="${noteId}" title="Delete note"><i class="fas fa-trash"></i></button>`:''}<div style="font-weight:700;font-size:0.8rem;color:#0f172a;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;"><span>${escapeHtml(note.authorName||note.createdByName||note.managerName||note.createdBy||'Management')}</span><span style="font-weight:500;color:#64748b;">${escapeHtml(note.createdAt?new Date(note.createdAt).toLocaleString('en-US'):'')}</span></div><div style="font-size:0.84rem;color:#475569;margin-top:3px;white-space:pre-line;">${escapeHtml(note.text||note.note||note.content||'')}</div></div></div>`;
+            return `<div class="tenant-card-note" data-note-id="${noteId}"><div class="tenant-card-note-bubble" style="border:1px solid ${note.authorRole==='tenant'?'#bfdbfe':'#bbf7d0'};background:${note.authorRole==='tenant'?'#eff6ff':'#ecfdf5'};">${renderTenantNoteEditButton(tenant._id,noteId)}${noteId?`<button type="button" class="tenant-card-note-delete" data-tenant-id="${tenant._id}" data-note-id="${noteId}" onclick="deleteTenantCardNote(this.dataset.tenantId, this.dataset.noteId, event)" title="Delete note" aria-label="Delete note"><i class="fas fa-trash" aria-hidden="true"></i></button>`:''}<div style="font-weight:700;font-size:0.8rem;color:#0f172a;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;"><span>${escapeHtml(note.authorName||note.createdByName||note.managerName||note.createdBy||'Management')}</span><span style="font-weight:500;color:#64748b;">${escapeHtml(note.createdAt?new Date(note.createdAt).toLocaleString('en-US'):'')}</span></div><div data-tenant-note-text data-tenant-id="${escapeHtml(tenant._id)}" data-note-id="${escapeHtml(noteId)}" style="font-size:0.84rem;color:#475569;margin-top:3px;white-space:pre-line;">${escapeHtml(note.text||note.note||note.content||'')}</div></div></div>`;
         }).join('')
         : '<div style="font-size:0.84rem;color:#64748b;padding:8px;border:1px dashed #cbd5e1;border-radius:8px;background:#fff;">No notes yet. Start the conversation below.</div>';
     const emergency=tenant.emergencyContact

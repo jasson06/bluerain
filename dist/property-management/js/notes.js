@@ -3,6 +3,88 @@
 
 // ===== Notes Drawer Logic (Applications, Invites & Tenants) =====
 
+function renderTenantNoteEditButton(tenantId, noteId, surface = 'tenant-card-note') {
+    if (!tenantId || !noteId) return '';
+    return `<button type="button" class="${surface}-edit tenant-note-edit" data-tenant-id="${escapeHtml(tenantId)}" onclick="editTenantNote(event, this)" title="Edit note" aria-label="Edit note"><i class="fas fa-pen" aria-hidden="true"></i></button>`;
+}
+
+function editTenantNote(event, button) {
+    event.preventDefault();
+    event.stopPropagation();
+    const message = button.closest('[data-note-id]');
+    if (message.dataset.editing === 'true') return;
+    const tenantId = button.dataset.tenantId;
+    const noteId = message.dataset.noteId;
+    const original = message.querySelector('[data-tenant-note-text]');
+    const deleteButton = message.querySelector('.tenant-card-note-delete, .notes-drawer-delete, .portfolio-notes-delete');
+    const form = document.createElement('form');
+    form.className = 'tenant-note-editor';
+    form.innerHTML = '<textarea aria-label="Edit tenant note" required></textarea><div><button type="submit" class="btn-primary">Save</button><button type="button" class="btn-secondary">Cancel</button></div>';
+    const input = form.querySelector('textarea');
+    input.value = original.textContent;
+    message.dataset.editing = 'true';
+    button.disabled = true;
+    if (deleteButton) deleteButton.disabled = true;
+    const restore = () => {
+        form.replaceWith(original);
+        delete message.dataset.editing;
+        button.disabled = false;
+        if (deleteButton) deleteButton.disabled = false;
+        button.focus({ preventScroll: true });
+    };
+    form.querySelector('[type="button"]').onclick = restore;
+    form.addEventListener('click', e => e.stopPropagation());
+    form.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && form.dataset.saving !== 'true') {
+            e.preventDefault();
+            e.stopPropagation();
+            restore();
+        }
+    });
+    form.onsubmit = async e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (form.dataset.saving === 'true') return;
+        const text = input.value.trim();
+        if (!text) {
+            showNotification('Note text is required', 'error');
+            input.focus();
+            return;
+        }
+        form.dataset.saving = 'true';
+        form.querySelectorAll('textarea, button').forEach(control => { control.disabled = true; });
+        try {
+            const response = await managerSessionRequest(`${API_URL}/tenants/${encodeURIComponent(tenantId)}/notes/${encodeURIComponent(noteId)}`, {
+                method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || data.error || 'Could not edit tenant note');
+            const updated = Array.isArray(data.notes) && data.notes.find(note => String(note._id) === String(noteId));
+            if (!updated || typeof updated.text !== 'string') throw new Error('The server did not return the edited note.');
+            ['tenants', 'allTenants'].forEach(key => {
+                state[key] = (state[key] || []).map(tenant =>
+                    String(tenant._id) === String(tenantId) ? { ...tenant, notesHistory: data.notes } : tenant
+                );
+            });
+            original.textContent = updated.text;
+            restore();
+            document.querySelectorAll('[data-tenant-note-text]').forEach(target => {
+                if (target.dataset.tenantId === tenantId && target.dataset.noteId === noteId) target.textContent = updated.text;
+            });
+            invalidateCache('tenants');
+            showNotification('Tenant note updated', 'success');
+        } catch (error) {
+            console.error('Edit tenant note error:', error);
+            showNotification(error.message || 'Could not edit tenant note', 'error');
+        } finally {
+            delete form.dataset.saving;
+            form.querySelectorAll('textarea, button').forEach(control => { control.disabled = false; });
+        }
+    };
+    original.replaceWith(form);
+    input.focus({ preventScroll: true });
+}
+
 function getNotesDrawerElements() {
     return {
         root: document.getElementById('notesDrawer'),
@@ -41,10 +123,12 @@ function renderNotesDrawerMessages(notes) {
             return `
                 <div class="notes-drawer-message" data-note-id="${noteId}">
                     <div class="notes-drawer-bubble">
+                        ${state.notesDrawerContext?.type === 'tenant' ? renderTenantNoteEditButton(state.notesDrawerContext.id, noteId, 'notes-drawer') : ''}
                         <button type="button" class="notes-drawer-delete" data-note-id="${noteId}" title="Delete note">
                             <i class="fas fa-trash"></i>
                         </button>
-                        <div>${safeText}</div>
+                        ${state.notesDrawerContext?.type === 'tenant' ? `<strong>${escapeHtml(n.authorName || (n.authorRole === 'tenant' ? 'Tenant' : 'Management'))}</strong>` : ''}
+                        <div ${state.notesDrawerContext?.type === 'tenant' ? `data-tenant-note-text data-tenant-id="${escapeHtml(state.notesDrawerContext.id)}" data-note-id="${escapeHtml(noteId)}"` : ''}>${safeText}</div>
                         <span class="notes-drawer-timestamp">${ts}</span>
                     </div>
                 </div>`;
@@ -125,7 +209,7 @@ function renderPortfolioNotesPanel() {
                 const safeText = (n.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
                 const noteId = n._id || '';
                 return `
-                    <div class=\"portfolio-notes-item\" data-note-id=\"${noteId}\">\n                        <div class=\"portfolio-notes-bubble\">\n                            <button type=\"button\" class=\"portfolio-notes-delete\" data-note-id=\"${noteId}\" title=\"Delete note\">\n                                <i class=\"fas fa-trash\"></i>\n                            </button>\n                            <div>${safeText}</div>\n                            <span class=\"portfolio-notes-timestamp\">${ts}</span>\n                        </div>\n                    </div>`;
+                    <div class=\"portfolio-notes-item\" data-note-id=\"${noteId}\">\n                        <div class=\"portfolio-notes-bubble\">\n                            ${ctx.type === 'tenant' ? renderTenantNoteEditButton(ctx.id, noteId, 'portfolio-notes') : ''}\n                            <button type=\"button\" class=\"portfolio-notes-delete\" data-note-id=\"${noteId}\" title=\"Delete note\">\n                                <i class=\"fas fa-trash\"></i>\n                            </button>\n                            ${ctx.type === 'tenant' ? `<strong>${escapeHtml(n.authorName || (n.authorRole === 'tenant' ? 'Tenant' : 'Management'))}</strong>` : ''}\n                            <div ${ctx.type === 'tenant' ? `data-tenant-note-text data-tenant-id="${escapeHtml(ctx.id)}" data-note-id="${escapeHtml(noteId)}"` : ''}>${safeText}</div>\n                            <span class=\"portfolio-notes-timestamp\">${ts}</span>\n                        </div>\n                    </div>`;
             }).join('');
         listEl.innerHTML = rows;
         listEl.querySelectorAll('.portfolio-notes-delete').forEach(btn => {
@@ -162,11 +246,12 @@ async function savePortfolioNote(text) {
     }
 
     try {
-        const res = await fetch(url, {
+        const options = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text })
-        });
+        };
+        const res = await (ctx.type === 'tenant' ? managerSessionRequest(url, options) : fetch(url, options));
         if (!res.ok) throw new Error('Failed to add note');
         const data = await res.json();
         const notes = data.notes || [];

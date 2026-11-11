@@ -25,6 +25,80 @@ To edit a flow, change its module. To add an endpoint, export its registration f
 
 No endpoint was removed or renamed. Existing `maintenance-qc.js` and `eviction-cases.js` integrations retain their registration and setup locations.
 
+## Maintenance invoices
+
+Maintenance responses include an `invoices` array derived from invoice lines
+matching both `linkedEstimateId` and `linkedEstimateItemId` on the same line.
+Each summary contains `_id`, `invoiceNumber`, `date`, `status`, and `amount`.
+The amount sums only the matching lines, not the entire invoice. Multiple
+invoices per item are supported; unlinked work returns an empty array.
+Recurring history entries match their own `estimateId` and `estimateItemId`,
+never the current visit's item. The schedule's `invoices` array includes both
+current and completed visits, so completing a visit and clearing its current
+item link does not remove its invoice from the response. An invoice
+covering multiple visits appears once on the schedule, with the sum of its
+matching visit lines. No historical links are guessed.
+
+Property and portfolio maintenance requests show invoice summaries. Recurring
+cards and expanded rows show invoices only for the selected completion, updating
+when another history date is selected; they do not display the schedule-wide
+invoice aggregate. Invoice numbers/statuses remain beside completed dates.
+Clicking the invoice number opens the existing
+invoice preview using `invoice-creater.html?invoiceId=...`, without requiring
+a vendor ID for that preview. Links are resolved on read, so edits, deletion,
+and re-categorization are reflected on refresh without a backfill or migration.
+`GET /api/invoices/:id` retrieves the exact invoice, including bills whose
+reference number is blank or reused.
+
+## Maintenance chat updates
+
+Posting, editing, and deleting chat updates synchronize the affected request's
+thread in property and portfolio views without rebuilding the section, changing
+filters, or discarding other message drafts. Request deletion removes its own
+card/row and updates counts and portfolio pagination in place.
+
+Managers can edit or delete management and tenant messages with
+`PATCH` / `DELETE /api/properties/:propertyId/maintenance/:requestId/messages/:updateId`.
+These endpoints require a manager bearer token, scope updates to the request and
+property, and allow managers to edit/delete manager, tenant, system, and workflow
+updates; vendor messages remain read-only. Edits preserve authorship
+and creation time and record `editedAt`. Atomic per-message updates preserve
+concurrently posted messages and reject changes to an update that changed during
+the operation. Hover/focus reveals edit/delete icons; touch devices show them.
+If the manager token is missing or expired, an in-place sign-in dialog renews
+the session through the existing manager sign-in endpoint, then retries the
+edit/delete once. Cancelling leaves the update and draft unchanged. Manager IDs
+alone never authorize message changes, and invalid sessions are not bypassed.
+
+Tenant notes can also be edited in place using the pencil beside the delete
+icon on property/portfolio tenant cards, the tenant notes drawer, and the
+portfolio notes sidebar. `PATCH /api/tenants/:id/notes/:noteId` requires a
+manager bearer token and atomically changes only the matching note's text,
+preserving its ID, creation time, and other notes. Empty text and invalid IDs
+return 400; a missing tenant/note returns 404. Editing renews expired manager
+sessions through the same sign-in dialog. Save updates the loaded tenant records
+and visible copies of that note without rebuilding cards or clearing new-note
+drafts; Cancel leaves the note unchanged.
+Tenant card delete controls call the shared deletion handler directly in both
+property and portfolio grids, including after cards are re-rendered.
+
+Posting tenant notes (`POST /api/tenants/:id/notes`) requires a manager bearer
+token. The server stores `authorRole: 'manager'` and an `authorName` snapshot
+from the authenticated manager's profile, ignoring client-supplied authorship.
+All tenant note posting surfaces use session renewal when needed. Cards, the
+notes drawer, and the portfolio sidebar display the saved author. Older notes
+without authorship remain labeled Management, not the current viewer's name;
+their original author cannot be reconstructed. Edits preserve authorship.
+
+Maintenance request workflow/status changes through PATCH and full-edit PUT
+require a manager session. Their timeline entries store `authorRole: 'manager'`
+and the authenticated manager's profile name as `authorName`. `kind: 'workflow'`
+identifies generated workflow entries, which managers can also edit or delete.
+Changing/removing a timeline entry does not change the request's workflow status.
+Other automatic updates remain System; historical entries are not relabeled.
+Inline, quick-status, and photo/full-edit saves all support session renewal and
+preserve the existing media-upload flow.
+
 ## Tenant termination and overview accounting
 
 `tenant-lifecycle.js` defines lease charge cutoffs and tenant/period payment

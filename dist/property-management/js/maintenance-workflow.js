@@ -4,6 +4,25 @@
 let maintenanceActionsMenu = null;
 let maintenanceActionsTrigger = null;
 
+function renderMaintenanceUpdates(request) {
+    if (!request.updates?.length) {
+        return '<div class="maintenance-updates-empty">No chat updates yet.</div>';
+    }
+    return request.updates.map(update => {
+        const editable = update._id && ['manager', 'tenant', 'system'].includes(update.authorRole);
+        return `<div class="maintenance-update ${update.authorRole === 'tenant' ? 'maintenance-update-tenant' : ''}" data-maintenance-update-id="${escapeHtml(update._id || '')}">
+            <div class="maintenance-update-author">${escapeHtml(update.authorName || update.authorRole || 'Update')}
+                <span>${escapeHtml(update.createdAt ? new Date(update.createdAt).toLocaleString() : '')}${update.editedAt ? ' (edited)' : ''}</span>
+            </div>
+            <div class="maintenance-update-text">${escapeHtml(update.text || '')}</div>
+            ${editable ? `<div class="maintenance-update-actions">
+                <button type="button" class="maintenance-update-action" onclick="editMaintenanceUpdate(this)" title="Edit update" aria-label="Edit update"><i class="fas fa-pen" aria-hidden="true"></i></button>
+                <button type="button" class="maintenance-update-action maintenance-update-delete" onclick="deleteMaintenanceUpdate(this)" title="Delete update" aria-label="Delete update"><i class="fas fa-trash" aria-hidden="true"></i></button>
+            </div>` : ''}
+        </div>`;
+    }).join('');
+}
+
 function renderMaintenanceActions(buttons) {
     return `<div class="maintenance-actions">
         <button type="button" class="btn-icon maintenance-actions-trigger" aria-label="Maintenance actions" title="Maintenance actions" aria-haspopup="menu" aria-expanded="false" aria-controls="maintenanceActionsMenu" onclick="openMaintenanceActionsMenu(event)"><i class="fas fa-ellipsis-v" aria-hidden="true"></i></button>
@@ -607,6 +626,7 @@ function rerenderPropertyMaintenanceItem(requestId) {
                             ${descriptionHtml}
                             <div style="margin-bottom:8px;"><strong><i class="fas fa-calendar-alt"></i> Created:</strong> <span style="color:#217dbb;">${createdDate}</span></div>
                             <div style="margin-bottom:8px;"><strong><i class="fas fa-dollar-sign"></i> Cost:</strong> <span style="color:#0f172a;">${costLabel}</span></div>
+                            ${window.RecurringMaintenanceHistory.renderInvoices(request.invoices)}
                             <div style="margin-bottom:8px;"><strong><i class="fas fa-info-circle"></i> Status:</strong> ${statusBadge}</div>
                                                         ${accessNotes ? `<div style="margin-bottom:8px;"><strong><i class="fas fa-key"></i> Access:</strong> <span style="color:#475569;white-space:pre-line;">${accessNotes}</span></div>` : ''}
                                                         <div style="margin-bottom:8px;"> ${unit ? `<i class="fas fa-door-open"></i> Unit ${unit.number}` : '<span style="color:#888;font-size:0.97em;"><i class="fas fa-door-closed"></i> None</span>'}</div>
@@ -615,13 +635,8 @@ function rerenderPropertyMaintenanceItem(requestId) {
                         </div>
                                                 <div class="maintenance-thread compact-maintenance-thread" style="border:1px solid #e5e7eb;border-radius:10px;padding:10px;background:#f8fafc;display:grid;gap:6px;">
                                                                 <div style="font-weight:700;color:#0f172a;font-size:0.88rem;margin-bottom:6px;"><i class="fas fa-comments" style="color:#2563eb;margin-right:6px;"></i>Maintenance Chat / Updates</div>
-                                                                <div class="maintenance-thread-messages" style="display:grid;gap:6px;margin-bottom:6px;max-height:220px;overflow-y:auto;padding-right:4px;align-content:start;scrollbar-width: none;">
-                                                                        ${Array.isArray(request.updates) && request.updates.length ? request.updates.map(update => `
-                                                                                <div style="padding:8px 10px;border-radius:8px;border:1px solid ${update.authorRole === 'tenant' ? '#bfdbfe' : '#d1fae5'};background:${update.authorRole === 'tenant' ? '#eff6ff' : '#ecfdf5'};">
-                                                                                        <div style="font-weight:700;font-size:0.8rem;color:#0f172a;">${update.authorName || update.authorRole || 'Update'} <span style="font-weight:500;color:#64748b;">${update.createdAt ? new Date(update.createdAt).toLocaleString() : ''}</span></div>
-                                                                                        <div style="font-size:0.84rem;color:#475569;margin-top:3px;white-space:pre-line;">${update.text || ''}</div>
-                                                                                </div>
-                                                                        `).join('') : '<div style="font-size:0.84rem;color:#64748b;padding:8px;border:1px dashed #cbd5e1;border-radius:8px;background:#fff;">No chat updates yet.</div>'}
+                                                                <div class="maintenance-thread-messages" data-maintenance-updates data-request-id="${request._id}" data-project-id="${state.currentProperty?._id || ''}" style="display:grid;gap:6px;margin-bottom:6px;max-height:220px;overflow-y:auto;padding-right:4px;align-content:start;scrollbar-width: none;">
+                                                                        ${renderMaintenanceUpdates(request)}
                                                                 </div>
                                                                 <form onsubmit="sendManagerMaintenanceMessage(event, '${request._id}')" style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;">
                                                                         <input name="message" type="text" maxlength="1200" placeholder="Reply to tenant or add office update" style="border:1px solid #cbd5e1;border-radius:8px;padding:7px 9px;background:#fff;">
@@ -771,7 +786,7 @@ function renderPropertyMaintenanceRequestListRow(request) {
     return `
         <tr style="border-bottom:1px solid #e1e8ed;cursor:pointer;" data-maint-id="${request._id}" data-project-id="${state.currentProperty?._id || ''}" data-maint-source="request">
             <td style="padding:8px 8px;font-weight:600;color:#217dbb;">${request.title}</td>
-            <td data-maint-summary-cell="true" style="padding:8px 8px;min-width:220px;color:#555;">${renderMaintenanceDescriptionTable(request.description)}</td>
+            <td data-maint-summary-cell="true" style="padding:8px 8px;min-width:220px;color:#555;">${renderMaintenanceDescriptionTable(request.description)}${window.RecurringMaintenanceHistory.renderInvoices(request.invoices)}</td>
             <td style="padding:8px 8px;">${priorityBadge}</td>
             <td style="padding:8px 8px;">${unit ? `Unit ${unit.number}` : 'N/A'}</td>
             <td style="padding:8px 8px;white-space:nowrap;"><select class="maintenance-inline-workflow" style="padding:6px 8px;border-radius:8px;border:1px solid #d1d5db;background:#fff;min-width:138px;">${getMaintenanceWorkflowOptionsHtml(workflowStage)}</select></td>
@@ -1095,6 +1110,7 @@ function renderPortfolioMaintenanceRequestCard(request) {
                         <div style="margin-bottom:8px;"><strong><i class="fas fa-building"></i> Property:</strong> <span style="color:#217dbb;">${propertyLabel || '—'}</span></div>
                         <div style="margin-bottom:8px;"><strong><i class="fas fa-calendar-alt"></i> Created:</strong> <span style="color:#217dbb;">${createdDate}</span></div>
                         <div style="margin-bottom:8px;"><strong><i class="fas fa-dollar-sign"></i> Cost:</strong> <span style="color:#0f172a;">${costLabel}</span></div>
+                        ${window.RecurringMaintenanceHistory.renderInvoices(request.invoices)}
                         <div style="margin-bottom:8px;"><strong><i class="fas fa-info-circle"></i> Status:</strong> ${statusBadge}</div>
                         ${accessNotes ? `<div style="margin-bottom:8px;"><strong><i class="fas fa-key"></i> Access:</strong> <span style="color:#475569;white-space:pre-line;">${accessNotes}</span></div>` : ''}
                         <div style="margin-bottom:8px;">${unitLabel === 'None' ? '<span style="color:#888;font-size:0.97em;"><i class="fas fa-door-closed"></i> None</span>' : `<i class="fas fa-door-open"></i> ${unitLabel}`}</div>
@@ -1103,8 +1119,8 @@ function renderPortfolioMaintenanceRequestCard(request) {
                     </div>
                     <div class="maintenance-thread compact-maintenance-thread" style="border:1px solid #e5e7eb;border-radius:10px;padding:10px;background:#f8fafc;display:grid;gap:6px;">
                         <div style="font-weight:700;color:#0f172a;font-size:0.88rem;margin-bottom:6px;"><i class="fas fa-comments" style="color:#2563eb;margin-right:6px;"></i>Maintenance Chat / Updates</div>
-                        <div class="maintenance-thread-messages" style="display:grid;gap:6px;margin-bottom:6px;max-height:220px;overflow-y:auto;padding-right:4px;align-content:start;scrollbar-width:none;">
-                            ${Array.isArray(request.updates) && request.updates.length ? request.updates.map(update => `<div style="padding:8px 10px;border-radius:8px;border:1px solid ${update.authorRole === 'tenant' ? '#bfdbfe' : '#d1fae5'};background:${update.authorRole === 'tenant' ? '#eff6ff' : '#ecfdf5'};"><div style="font-weight:700;font-size:0.8rem;color:#0f172a;">${update.authorName || update.authorRole || 'Update'} <span style="font-weight:500;color:#64748b;">${update.createdAt ? new Date(update.createdAt).toLocaleString() : ''}</span></div><div style="font-size:0.84rem;color:#475569;margin-top:3px;white-space:pre-line;">${update.text || ''}</div></div>`).join('') : '<div style="font-size:0.84rem;color:#64748b;padding:8px;border:1px dashed #cbd5e1;border-radius:8px;background:#fff;">No chat updates yet.</div>'}
+                        <div class="maintenance-thread-messages" data-maintenance-updates data-request-id="${request._id}" data-project-id="${projectId}" style="display:grid;gap:6px;margin-bottom:6px;max-height:220px;overflow-y:auto;padding-right:4px;align-content:start;scrollbar-width:none;">
+                            ${renderMaintenanceUpdates(request)}
                         </div>
                         <form onsubmit="sendPortfolioMaintenanceMessage(event, '${request._id}', '${projectId}')" style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;">
                             <input name="message" type="text" maxlength="1200" placeholder="Reply to tenant or add office update" style="border:1px solid #cbd5e1;border-radius:8px;padding:7px 9px;background:#fff;">
@@ -1140,6 +1156,7 @@ function renderPortfolioMaintenanceRequestRow(request) {
             <td data-maint-summary-cell="true" style="padding:8px 8px;min-width:220px;">
                 <div style="font-weight:700;color:#0f172a;">${request.title || 'Maintenance Request'}</div>
                 ${renderMaintenanceDescriptionTable(request.description)}
+                ${window.RecurringMaintenanceHistory.renderInvoices(request.invoices)}
             </td>
             <td style="padding:8px 8px;white-space:nowrap;">${assignedControl}</td>
             <td style="padding:8px 8px;white-space:nowrap;">${scheduledControl}</td>

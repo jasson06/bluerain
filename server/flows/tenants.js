@@ -175,19 +175,25 @@ serverContext.app.delete('/api/properties/:propertyId/tenants/:tenantId', async 
 
 function post_api_tenants_id_notes() {
 // Tenant Notes Routes (portfolio-level, not scoped by property)
-serverContext.app.post('/api/tenants/:id/notes', async (req, res) => {
+serverContext.app.post('/api/tenants/:id/notes', serverContext.authenticateManagerProfile, async (req, res) => {
   try {
     const { id } = req.params;
-    let { text } = req.body || {};
-    text = (text || '').trim();
+    if (!serverContext.mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid tenant ID.' });
+    }
+    const text = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
     if (!text) {
       return res.status(400).json({ message: 'Note text is required' });
     }
+    const manager = await serverContext.Manager.findById(req.profileManagerId).select('name').lean();
+    if (!manager) return res.status(401).json({ message: 'Manager account not found. Sign in again.' });
+    const authorName = typeof manager.name === 'string' ? manager.name.trim() : '';
+    if (!authorName) return res.status(400).json({ message: 'Set your manager profile name before posting a tenant note.' });
 
     const updated = await serverContext.Tenant.findByIdAndUpdate(
       id,
-      { $push: { notesHistory: { text, createdAt: new Date() } } },
-      { new: true }
+      { $push: { notesHistory: { text, authorRole: 'manager', authorName, createdAt: new Date() } } },
+      { new: true, runValidators: true }
     ).select('notesHistory').lean();
 
     if (!updated) {
@@ -197,6 +203,29 @@ serverContext.app.post('/api/tenants/:id/notes', async (req, res) => {
     return res.json({ notes: updated.notesHistory || [] });
   } catch (err) {
     console.error('Append tenant note error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+}
+
+function patch_api_tenants_id_notes_noteId() {
+serverContext.app.patch('/api/tenants/:id/notes/:noteId', serverContext.authenticateManagerProfile, async (req, res) => {
+  try {
+    const { id, noteId } = req.params;
+    if (![id, noteId].every(value => serverContext.mongoose.Types.ObjectId.isValid(value))) {
+      return res.status(400).json({ message: 'Invalid tenant or note ID.' });
+    }
+    const text = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
+    if (!text) return res.status(400).json({ message: 'Note text is required' });
+    const updated = await serverContext.Tenant.findOneAndUpdate(
+      { _id: id, 'notesHistory._id': noteId },
+      { $set: { 'notesHistory.$.text': text } },
+      { new: true, runValidators: true }
+    ).select('notesHistory').lean();
+    if (!updated) return res.status(404).json({ message: 'Tenant or note not found' });
+    return res.json({ notes: updated.notesHistory || [] });
+  } catch (err) {
+    console.error('Edit tenant note error:', err);
     return res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -274,6 +303,7 @@ return {
   put_api_properties_propertyId_tenants_tenantId,
   delete_api_properties_propertyId_tenants_tenantId,
   post_api_tenants_id_notes,
+  patch_api_tenants_id_notes_noteId,
   delete_api_tenants_id_notes_noteId,
   put_api_tenants_id_move_in_checklist
 };

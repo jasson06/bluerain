@@ -777,7 +777,12 @@
   {
     "method": "post",
     "url": "/api/tenants/:id/notes",
-    "handlers": 1
+    "handlers": 2
+  },
+  {
+    "method": "patch",
+    "url": "/api/tenants/:id/notes/:noteId",
+    "handlers": 2
   },
   {
     "method": "delete",
@@ -807,12 +812,12 @@
   {
     "method": "patch",
     "url": "/api/properties/:propertyId/maintenance/:requestId",
-    "handlers": 1
+    "handlers": 2
   },
   {
     "method": "put",
     "url": "/api/properties/:propertyId/maintenance/:requestId",
-    "handlers": 2
+    "handlers": 3
   },
   {
     "method": "delete",
@@ -828,6 +833,16 @@
     "method": "post",
     "url": "/api/properties/:propertyId/maintenance/:requestId/messages",
     "handlers": 1
+  },
+  {
+    "method": "patch",
+    "url": "/api/properties/:propertyId/maintenance/:requestId/messages/:updateId",
+    "handlers": 2
+  },
+  {
+    "method": "delete",
+    "url": "/api/properties/:propertyId/maintenance/:requestId/messages/:updateId",
+    "handlers": 2
   },
   {
     "method": "get",
@@ -1062,6 +1077,11 @@
   {
     "method": "get",
     "url": "/api/invoices/by-number/:invoiceNumber",
+    "handlers": 1
+  },
+  {
+    "method": "get",
+    "url": "/api/invoices/:id",
     "handlers": 1
   },
   {

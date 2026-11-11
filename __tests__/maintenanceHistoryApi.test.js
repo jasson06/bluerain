@@ -29,6 +29,7 @@ function setup() {
     app.use(express.json());
     const context = {
         app, MaintenanceSchedule: { findOne: jest.fn(async () => schedule) },
+        Invoice: { find: () => ({ select: () => ({ sort: () => ({ lean: async () => [] }) }) }) },
         maintenanceQC: { reviewer: jest.fn(async () => ({ _id: 'manager' })) },
         maintenanceQCError: jest.fn((res, error) => res.status(error.status || (error.name === 'VersionError' ? 409 : 500)).json({ message: error.message })),
         syncMaintenanceScheduleToEstimate: jest.fn()

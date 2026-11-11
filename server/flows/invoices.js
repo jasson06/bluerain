@@ -531,6 +531,22 @@ serverContext.app.get('/api/invoices/by-number/:invoiceNumber', async (req, res)
 });
 }
 
+function get_api_invoices_id() {
+serverContext.app.get('/api/invoices/:id', async (req, res) => {
+  if (!serverContext.mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ message: 'Invalid invoice ID' });
+  }
+  try {
+    const invoice = await serverContext.Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
+    res.json({ invoice });
+  } catch (error) {
+    console.error('Error fetching invoice:', error);
+    res.status(500).json({ message: 'Failed to fetch invoice' });
+  }
+});
+}
+
 function post_api_invoices() {
 // Create Invoice (Bill) - Add missing POST /api/invoices endpoint
 serverContext.app.post('/api/invoices', async (req, res) => {
@@ -619,6 +635,7 @@ return {
   delete_api_invoices_id,
   post_api_invoices_id_recategorize_expense,
   get_api_invoices_by_number_invoiceNumber,
+  get_api_invoices_id,
   post_api_invoices,
   get_history
 };

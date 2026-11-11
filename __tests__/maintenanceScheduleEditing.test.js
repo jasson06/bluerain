@@ -28,6 +28,7 @@ function setup({ daysUntilDue = 7, status = 'in-progress', linked = true, histor
   };
   let handler;
   const context = {
+    Invoice: { find: () => ({ select: () => ({ sort: () => ({ lean: async () => [] }) }) }) },
     app: { put: (url, fn) => { handler = fn; } },
     MaintenanceSchedule: {
       findOne: jest.fn(async () => schedule),
@@ -57,7 +58,9 @@ function setup({ daysUntilDue = 7, status = 'in-progress', linked = true, histor
     };
     const res = { json: jest.fn(), status: jest.fn().mockReturnThis(), set: jest.fn() };
     await handler(req, res);
-    expect(res.json).toHaveBeenCalledWith(schedule);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      ...schedule, invoices: [], history: schedule.history.map(entry => ({ ...entry, invoices: [] }))
+    }));
     return res;
   };
   const edit = async (overrides = {}) => {

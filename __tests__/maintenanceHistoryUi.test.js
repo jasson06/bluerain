@@ -206,7 +206,7 @@ test.each(['renderPropertyRecurringMaintenanceCard', 'renderPortfolioRecurringMa
     const schedules = fs.readFileSync(path.join(dist, 'property-management/js/maintenance-schedules.js'), 'utf8');
     const context = vm.createContext({
         state: { currentProperty: { _id: 'property-a' } },
-        window: { RecurringMaintenanceHistory: { qcBadge: () => '' } },
+        window: { RecurringMaintenanceHistory: { qcBadge: () => '', renderInvoices: () => '' } },
         formatDateDisplay: value => `formatted:${value}`,
         getPortfolioMaintenanceRenderContext: () => ({ projectId: 'property-a', propertyLabel: 'Property', unitLabel: 'None' }),
         getPortfolioMaintenanceSavingIndicator: () => '',
@@ -251,7 +251,7 @@ test.each([
     const schedules = fs.readFileSync(path.join(dist, 'property-management/js/maintenance-schedules.js'), 'utf8');
     const context = vm.createContext({
         state: { currentProperty: { _id: 'property-a' } },
-        window: { RecurringMaintenanceHistory: { qcBadge: () => '', historyButton: () => '' } },
+        window: { RecurringMaintenanceHistory: { qcBadge: () => '', historyButton: () => '', renderInvoices: jest.fn(() => 'ALL-VISIT-INVOICES') } },
         formatDateDisplay: value => value,
         getPortfolioMaintenanceRenderContext: () => ({ projectId: 'property-a', propertyLabel: 'Property', unitLabel: 'None' }),
         getPortfolioMaintenanceSavingIndicator: () => '',
@@ -273,7 +273,8 @@ test.each([
     load(workflow, 'getRecurringMaintenanceFrequencyLabel');
     const schedule = {
         _id: 'schedule-a', title: 'Inspection', frequency, intervalDays, history: [],
-        startDate: '2026-10-10', nextScheduledDate: '2026-11-10'
+        startDate: '2026-10-10', nextScheduledDate: '2026-11-10',
+        invoices: [{ invoiceNumber: 'OTHER-VISIT' }]
     };
     for (const name of [
         'renderPropertyRecurringMaintenanceCard', 'renderPropertyRecurringMaintenanceListRow',
@@ -282,6 +283,8 @@ test.each([
         load(name === 'renderPropertyRecurringMaintenanceCard' ? schedules : workflow, name);
         const html = context[name](schedule);
         expect(html).toContain(label);
+        expect(html).not.toContain('ALL-VISIT-INVOICES');
+        expect(context.window.RecurringMaintenanceHistory.renderInvoices).not.toHaveBeenCalled();
         if (name === 'renderPortfolioRecurringMaintenanceCard') {
             const header = html.slice(html.indexOf('class="maintenance-header"'), html.indexOf('class="maintenance-content"'));
             expect(header).toContain(`class="portfolio-badge" title="Maintenance frequency">${label}</span>`);

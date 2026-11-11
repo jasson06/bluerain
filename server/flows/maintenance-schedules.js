@@ -1,5 +1,6 @@
 // maintenance schedules flow. Shared dependencies remain live through serverContext.
 // Route registration is invoked by server.js in its original order.
+const withMaintenanceInvoices = require('../maintenance-invoices');
 module.exports = function createFlow(serverContext) {
 
 // Helper for overdue email
@@ -351,7 +352,7 @@ serverContext.app.get('/api/properties/maintenance-schedules', async (req, res) 
       .populate('projectId')
       .sort({ nextScheduledDate: 1, createdAt: -1 });
 
-    res.json(schedules);
+    res.json(await withMaintenanceInvoices(serverContext.Invoice, schedules));
   } catch (error) {
     console.error('Error fetching all maintenance schedules:', error);
     res.status(500).json({ message: 'Server error' });
@@ -365,7 +366,9 @@ serverContext.app.get('/api/properties/:propertyId/maintenance-schedules/:schedu
     const schedule = await serverContext.MaintenanceSchedule.findOne({ _id: req.params.scheduleId, projectId: req.params.propertyId });
     const entry = schedule?.history.id(req.params.historyId);
     if (!entry) return res.status(404).json({ message: 'Completion not found.' });
-    res.json(await serverContext.maintenanceQC.historyDetails(schedule, entry));
+    const details = await serverContext.maintenanceQC.historyDetails(schedule, entry);
+    const linked = await withMaintenanceInvoices(serverContext.Invoice, { history: [details] });
+    res.json(linked.history[0]);
   } catch (error) { (0, serverContext.maintenanceQCError)(res, error); }
 });
 }
@@ -378,7 +381,7 @@ serverContext.app.patch('/api/properties/:propertyId/maintenance-schedules/:sche
     const entry = schedule?.history.id(req.params.historyId);
     if (!entry) return res.status(404).json({ message: 'Completion not found.' });
     await serverContext.maintenanceQC.review(schedule, entry, req.body.status, req.body.notes, manager, [], req.body.expectedReviewCount);
-    res.json({ success: true, schedule });
+    res.json({ success: true, schedule: await withMaintenanceInvoices(serverContext.Invoice, schedule) });
   } catch (error) { (0, serverContext.maintenanceQCError)(res, error); }
 });
 }
@@ -417,7 +420,7 @@ async function changeCompletionHistory(req, res, remove) {
     }
     // Historical corrections never change recurrence, evidence, QC, or linked work.
     await schedule.save();
-    res.json({ success: true, schedule });
+    res.json({ success: true, schedule: await withMaintenanceInvoices(serverContext.Invoice, schedule) });
   } catch (error) { (0, serverContext.maintenanceQCError)(res, error); }
 }
 
@@ -441,7 +444,7 @@ serverContext.app.patch('/api/properties/:propertyId/maintenance-schedules/:sche
     schedule = await serverContext.maintenanceQC.complete(linked.schedule, linked.estimate, linked.item, {
       ...req.body, completedAt: new Date(), resubmit: true
     });
-    res.json({ success: true, schedule });
+    res.json({ success: true, schedule: await withMaintenanceInvoices(serverContext.Invoice, schedule) });
   } catch (error) { (0, serverContext.maintenanceQCError)(res, error); }
 });
 }
@@ -485,7 +488,7 @@ serverContext.app.post('/api/properties/:propertyId/maintenance-schedules', asyn
       const syncResult = await (0, serverContext.syncMaintenanceScheduleToEstimate)(schedule, { createIfMissing: true });
       responseSchedule = syncResult?.schedule || schedule;
     }
-    res.status(201).json(responseSchedule);
+    res.status(201).json(await withMaintenanceInvoices(serverContext.Invoice, responseSchedule));
   } catch (err) {
     res.status(500).json({ message: 'Failed to create schedule.' });
   }
@@ -498,7 +501,7 @@ serverContext.app.get('/api/properties/:propertyId/maintenance-schedules', async
   try {
     const schedules = await serverContext.MaintenanceSchedule.find({ projectId: req.params.propertyId })
       .populate('assignedVendor', 'name email'); 
-    res.json(schedules);
+    res.json(await withMaintenanceInvoices(serverContext.Invoice, schedules));
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch maintenance schedules' });
   }
@@ -519,7 +522,7 @@ serverContext.app.post('/api/properties/:propertyId/maintenance-schedules/:sched
 
     res.json({
       success: true,
-      schedule: responseSchedule,
+      schedule: await withMaintenanceInvoices(serverContext.Invoice, responseSchedule),
       estimateId: syncResult?.estimate?._id || responseSchedule.linkedEstimateId || null,
       lineItemId: syncResult?.item?._id || responseSchedule.linkedEstimateItemId || null
     });
@@ -589,7 +592,7 @@ serverContext.app.put('/api/properties/:propertyId/maintenance-schedules/:schedu
         expectedNextScheduledDate: req.body.expectedNextScheduledDate
       });
       if (linked.itemCreated) res.set('X-Maintenance-Line-Item-Created', 'true');
-      return res.json(completed);
+      return res.json(await withMaintenanceInvoices(serverContext.Invoice, completed));
     }
     Object.assign(existingSchedule, updateObj);
     let updated = await existingSchedule.save();
@@ -616,7 +619,7 @@ serverContext.app.put('/api/properties/:propertyId/maintenance-schedules/:schedu
 
     // Response-only event metadata keeps repeat edits from showing the creation toast.
     if (itemCreated) res.set('X-Maintenance-Line-Item-Created', 'true');
-    res.json(updated);
+    res.json(await withMaintenanceInvoices(serverContext.Invoice, updated));
   } catch (err) {
     (0, serverContext.maintenanceQCError)(res, err);
   }

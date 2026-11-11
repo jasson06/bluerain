@@ -1191,6 +1191,8 @@ const invoiceSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+invoiceSchema.index({ 'lineItems.itemId': 1 });
+
 const quoteSchema = new mongoose.Schema({
   from: {
     name: String,
@@ -1624,6 +1626,8 @@ leaseHolders: {
 notesHistory: [
   {
     text: { type: String, required: true },
+    authorRole: { type: String, enum: ['tenant', 'manager', 'vendor', 'system'] },
+    authorName: { type: String, default: '' },
     createdAt: { type: Date, default: Date.now }
   }
 ],
@@ -1711,8 +1715,10 @@ const maintenanceRequestSchema = new mongoose.Schema({
   updates: [{
     authorRole: { type: String, enum: ['tenant', 'manager', 'vendor', 'system'], default: 'system' },
     authorName: { type: String, default: '' },
+    kind: { type: String, enum: ['message', 'workflow'] },
     text: { type: String, required: true },
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now },
+    editedAt: Date
   }]
 }, { timestamps: true });
 
@@ -2472,6 +2478,8 @@ serverFlows["tenants"].delete_api_properties_propertyId_tenants_tenantId();
 
 serverFlows["tenants"].post_api_tenants_id_notes();
 
+serverFlows["tenants"].patch_api_tenants_id_notes_noteId();
+
 serverFlows["tenants"].delete_api_tenants_id_notes_noteId();
 
 serverFlows["tenants"].put_api_tenants_id_move_in_checklist();
@@ -2523,6 +2531,10 @@ serverFlows["maintenance"].delete_api_properties_propertyId_maintenance_requestI
 serverFlows["maintenance"].delete_api_properties_propertyId_maintenance_requestId();
 
 serverFlows["maintenance"].post_api_properties_propertyId_maintenance_requestId_messages();
+
+serverFlows["maintenance"].patch_api_properties_propertyId_maintenance_requestId_messages_updateId();
+
+serverFlows["maintenance"].delete_api_properties_propertyId_maintenance_requestId_messages_updateId();
 
 
 // ============================================================================
@@ -2672,6 +2684,8 @@ serverFlows["invoices"].delete_api_invoices_id();
 serverFlows["invoices"].post_api_invoices_id_recategorize_expense();
 
 serverFlows["invoices"].get_api_invoices_by_number_invoiceNumber();
+
+serverFlows["invoices"].get_api_invoices_id();
 
 
 // ============================================================================

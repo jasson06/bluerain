@@ -203,7 +203,7 @@ function renderGlobalMaintenanceRequestsOverview(items, hasFilters) {
                         const scheduledLabel = getMaintenanceOverviewScheduledLabel(r, 'requests');
                         const costLabel = formatMaintenanceCost(r.cost);
                         return `
-                            <tr style="border-bottom:1px solid #e1e8ed;">
+                            <tr data-maint-id="${r._id}" data-maint-source="request" style="border-bottom:1px solid #e1e8ed;">
                                 <td class="mobile-card-wide" data-label="Title" style="padding:10px 8px;font-weight:600;color:#2563eb;">
                                     <button class="maintenance-jump-link" data-project-id="${(r.projectId && r.projectId._id) || r.projectId || ''}" data-request-id="${r._id || ''}" style="background:none;border:none;color:#2563eb;padding:0;margin:0;font:inherit;text-align:left;cursor:pointer;">
                                         ${r.title || ''}
@@ -213,6 +213,7 @@ function renderGlobalMaintenanceRequestsOverview(items, hasFilters) {
                                     <div class="maintenance-description-inner">
                                         ${DescriptionEditor.render(r.description) || '<span style="color:#888;">No description provided.</span>'}
                                     </div>
+                                    ${window.RecurringMaintenanceHistory.renderInvoices(r.invoices)}
                                 </td>
                                 <td class="mobile-card-wide" data-label="Property">${getMaintenanceOverviewPropertyLabel(r)}</td>
                                 <td data-label="Unit">${unitLabel}</td>

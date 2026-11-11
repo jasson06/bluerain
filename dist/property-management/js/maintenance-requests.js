@@ -1,6 +1,8 @@
 // Property management: maintenance requests.
 // Classic script: declarations share the page scope; startup runs in property-management.js.
 
+let maintenanceManagerSignIn = null;
+
 function getMaintenanceViewToggleMeta(isListView) {
     return {
         iconClass: isListView ? 'fas fa-th-large' : 'fas fa-list',
@@ -703,6 +705,7 @@ function renderMaintenanceRequests(requests = getFilteredPropertyMaintenanceItem
               ${descriptionHtml}
               <div style="margin-bottom:8px;"><strong><i class="fas fa-calendar-alt"></i> Created:</strong> <span style="color:#217dbb;">${createdDate}</span></div>
               <div style="margin-bottom:8px;"><strong><i class="fas fa-dollar-sign"></i> Cost:</strong> <span style="color:#0f172a;">${costLabel}</span></div>
+              ${window.RecurringMaintenanceHistory.renderInvoices(request.invoices)}
               <div style="margin-bottom:8px;"><strong><i class="fas fa-info-circle"></i> Status:</strong> ${statusBadge}</div>
                             ${accessNotes ? `<div style="margin-bottom:8px;"><strong><i class="fas fa-key"></i> Access:</strong> <span style="color:#475569;white-space:pre-line;">${accessNotes}</span></div>` : ''}
                             <div style="margin-bottom:8px;"> ${unit ? `<i class="fas fa-door-open"></i> Unit ${unit.number}` : '<span style="color:#888;font-size:0.97em;"><i class="fas fa-door-closed"></i> None</span>'}</div>
@@ -712,13 +715,8 @@ function renderMaintenanceRequests(requests = getFilteredPropertyMaintenanceItem
             </div>
                         <div class="maintenance-thread compact-maintenance-thread" style="border:1px solid #e5e7eb;border-radius:10px;padding:10px;background:#f8fafc;display:grid;gap:6px;">
                                 <div style="font-weight:700;color:#0f172a;font-size:0.88rem;margin-bottom:6px;"><i class="fas fa-comments" style="color:#2563eb;margin-right:6px;"></i>Maintenance Chat / Updates</div>
-                                <div class="maintenance-thread-messages" style="display:grid;gap:6px;margin-bottom:6px;max-height:220px;overflow-y:auto;padding-right:4px;align-content:start;scrollbar-width: none;">
-                                    ${Array.isArray(request.updates) && request.updates.length ? request.updates.map(update => `
-                                        <div style="padding:8px 10px;border-radius:8px;border:1px solid ${update.authorRole === 'tenant' ? '#bfdbfe' : '#d1fae5'};background:${update.authorRole === 'tenant' ? '#eff6ff' : '#ecfdf5'};">
-                                            <div style="font-weight:700;font-size:0.8rem;color:#0f172a;">${update.authorName || update.authorRole || 'Update'} <span style="font-weight:500;color:#64748b;">${update.createdAt ? new Date(update.createdAt).toLocaleString() : ''}</span></div>
-                                            <div style="font-size:0.84rem;color:#475569;margin-top:3px;white-space:pre-line;">${update.text || ''}</div>
-                                        </div>
-                                    `).join('') : '<div style="font-size:0.84rem;color:#64748b;padding:8px;border:1px dashed #cbd5e1;border-radius:8px;background:#fff;">No chat updates yet.</div>'}
+                                <div class="maintenance-thread-messages" data-maintenance-updates data-request-id="${request._id}" data-project-id="${state.currentProperty?._id || ''}" style="display:grid;gap:6px;margin-bottom:6px;max-height:220px;overflow-y:auto;padding-right:4px;align-content:start;scrollbar-width: none;">
+                                    ${renderMaintenanceUpdates(request)}
                                 </div>
                                 <form onsubmit="sendManagerMaintenanceMessage(event, '${request._id}')" style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;">
                                     <input name="message" type="text" maxlength="1200" placeholder="Reply to tenant or add office update" style="border:1px solid #cbd5e1;border-radius:8px;padding:7px 9px;background:#fff;">
@@ -778,11 +776,11 @@ function focusMaintenanceSchedule() {
 
 async function updateMaintenanceInlineFields(projectId, requestId, payload, options = {}) {
     const { refreshProperty = true, refreshPortfolio = true, refreshOverview = false } = options;
-    const response = await MaintenanceMedia.upload(`${API_URL}/properties/${projectId}/maintenance/${requestId}`, {
+    const response = await managerSessionRequest(`${API_URL}/properties/${projectId}/maintenance/${requestId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-    });
+    }, (url, options) => MaintenanceMedia.upload(url, options));
     if (!response.ok) {
         throw new Error('Failed to update maintenance request');
     }
@@ -819,26 +817,7 @@ async function updateMaintenanceInlineFields(projectId, requestId, payload, opti
 // Add before the window exports
 
 async function deleteMaintenance(requestId) {
-    if (!confirm('Are you sure you want to delete this maintenance request?')) {
-        return;
-    }
-     showLoader();
-    try {
-        const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/maintenance/${requestId}`, {
-            method: 'DELETE'
-        });
-
-        if (!response.ok) throw new Error('Failed to delete maintenance request');
-
-    invalidateCache('maintenance');
-    await refreshContent('maintenance');
-        showNotification('Maintenance request deleted successfully', 'success');
-    } catch (error) {
-        console.error('Error deleting maintenance request:', error);
-        showNotification('Error deleting maintenance request', 'error');
-            } finally {
-        hideLoader();
-    }
+    await deleteMaintenanceRequestLocally(requestId, state.currentProperty?._id);
 }
 
 function openMaintenanceEstimate(requestId, projectId = '', source = 'property') {
@@ -969,31 +948,223 @@ async function ensureVendorInvitedToProject(vendorId, projectId) {
 }
 
 async function sendManagerMaintenanceMessage(event, requestId) {
+    await postMaintenanceMessage(event, requestId, state.currentProperty?._id);
+}
+
+function syncMaintenanceRequestUpdates(projectId, requestId, updates) {
+    const updateItems = items => (items || []).map(item =>
+        String(item._id) === String(requestId) ? { ...item, updates } : item
+    );
+    state.maintenanceRequests = updateItems(state.maintenanceRequests);
+    state.portfolioMaintenance = updateItems(state.portfolioMaintenance);
+    globalMaintenanceOverviewState.requests = updateItems(globalMaintenanceOverviewState.requests);
+    invalidateCache('maintenance');
+    document.querySelectorAll('[data-maintenance-updates]').forEach(messages => {
+        if (messages.dataset.requestId !== String(requestId) || messages.dataset.projectId !== String(projectId)) return;
+        const scrollTop = messages.scrollTop;
+        const atBottom = messages.scrollHeight - messages.clientHeight - scrollTop < 8;
+        messages.innerHTML = renderMaintenanceUpdates({ updates });
+        messages.scrollTop = atBottom ? messages.scrollHeight : scrollTop;
+    });
+}
+
+function reauthenticateMaintenanceManager() {
+    if (maintenanceManagerSignIn) return maintenanceManagerSignIn;
+    maintenanceManagerSignIn = new Promise((resolve, reject) => {
+        const dialog = document.createElement('dialog');
+        dialog.className = 'rm-history-dialog';
+        dialog.setAttribute('aria-labelledby', 'maintenanceSignInTitle');
+        dialog.innerHTML = `<form class="rm-history-form">
+            <h3 id="maintenanceSignInTitle">Sign in to continue</h3>
+            <p>Your manager session needs to be renewed. Your update will stay here while you sign in.</p>
+            <label class="rm-selector">Email<input name="email" type="email" autocomplete="username" required></label>
+            <label class="rm-selector">Password<input name="password" type="password" autocomplete="current-password" required></label>
+            <div class="rm-error" role="alert"></div>
+            <div class="rm-actions"><button type="button" class="btn-secondary" data-cancel>Cancel</button><button type="submit" class="btn-primary">Sign in and retry</button></div>
+        </form>`;
+        const form = dialog.querySelector('form');
+        const email = form.querySelector('[name="email"]');
+        const password = form.querySelector('[name="password"]');
+        const errorBox = form.querySelector('.rm-error');
+        const submit = form.querySelector('[type="submit"]');
+        const cancel = form.querySelector('[data-cancel]');
+        email.value = localStorage.getItem('managerEmail') || '';
+        let signingIn = false;
+        let authenticated = false;
+        cancel.onclick = () => dialog.close();
+        dialog.addEventListener('cancel', event => { if (signingIn) event.preventDefault(); });
+        dialog.addEventListener('close', () => {
+            password.value = '';
+            dialog.remove();
+            if (!authenticated) reject(new Error('Sign-in cancelled. Your update has not been changed.'));
+        });
+        form.onsubmit = async event => {
+            event.preventDefault();
+            if (signingIn || !form.reportValidity()) return;
+            signingIn = true;
+            submit.disabled = true;
+            cancel.disabled = true;
+            errorBox.textContent = '';
+            try {
+                const response = await fetch(`${API_URL}/manager/signin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email.value.trim(), password: password.value })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message || 'Could not sign in. Please try again.');
+                if (typeof data.token !== 'string' || !data.token || typeof data.managerId !== 'string' || !data.managerId) {
+                    throw new Error('Sign-in did not return a valid manager session.');
+                }
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('managerId', data.managerId);
+                if (typeof data.managerName === 'string') localStorage.setItem('managerName', data.managerName);
+                authenticated = true;
+                dialog.close();
+                resolve(data.token);
+            } catch (error) {
+                errorBox.textContent = error.message || 'Could not sign in. Please try again.';
+            } finally {
+                password.value = '';
+                signingIn = false;
+                submit.disabled = false;
+                cancel.disabled = false;
+            }
+        };
+        document.body.append(dialog);
+        dialog.showModal();
+    }).finally(() => { maintenanceManagerSignIn = null; });
+    return maintenanceManagerSignIn;
+}
+
+async function managerSessionRequest(url, options, sendRequest = fetch) {
+    let token = (localStorage.getItem('token') || '').trim().replace(/^Bearer\s+/i, '');
+    let renewedSession = false;
+    if (!token) {
+        token = await reauthenticateMaintenanceManager();
+        renewedSession = true;
+    }
+    const send = () => sendRequest(url, { ...options, headers: { ...options.headers, Authorization: `Bearer ${token}` } });
+    let response = await send();
+    if (response.status === 401 && !renewedSession) {
+        token = await reauthenticateMaintenanceManager();
+        response = await send();
+    }
+    return response;
+}
+
+async function maintenanceMessageRequest(projectId, requestId, method, payload, updateId = '') {
+    const endpoint = `${API_URL}/properties/${encodeURIComponent(projectId)}/maintenance/${encodeURIComponent(requestId)}/messages${updateId ? `/${encodeURIComponent(updateId)}` : ''}`;
+    const options = { method, headers: { 'Content-Type': 'application/json' }, ...(payload ? { body: JSON.stringify(payload) } : {}) };
+    const response = await (method === 'POST' ? fetch(endpoint, options) : managerSessionRequest(endpoint, options));
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || data.error || 'Could not change maintenance update.');
+    if (!Array.isArray(data.updates)) throw new Error('The server did not return maintenance updates.');
+    syncMaintenanceRequestUpdates(projectId, requestId, data.updates);
+}
+
+async function postMaintenanceMessage(event, requestId, projectId) {
     event.preventDefault();
-    if (!state.currentProperty?._id || !requestId) return;
-    const input = event.currentTarget.querySelector('input[name="message"]');
+    const form = event.currentTarget;
+    if (form.dataset.saving === 'true') return;
+    if (!projectId || !requestId) {
+        showNotification('Cannot send update: maintenance request context is missing.', 'error');
+        return;
+    }
+    const input = form.querySelector('input[name="message"]');
     const text = (input?.value || '').trim();
     if (!text) {
         showNotification('Type a maintenance update first', 'error');
         return;
     }
+    const submit = form.querySelector('button[type="submit"]');
+    form.dataset.saving = 'true';
+    if (submit) submit.disabled = true;
     try {
-        const response = await fetch(`${API_URL}/properties/${state.currentProperty._id}/maintenance/${requestId}/messages`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                text,
-                authorName: localStorage.getItem('managerName') || localStorage.getItem('userName') || 'Management'
-            })
+        await maintenanceMessageRequest(projectId, requestId, 'POST', {
+            text,
+            authorName: localStorage.getItem('managerName') || localStorage.getItem('userName') || 'Management'
         });
-        if (!response.ok) throw new Error('Failed to send update');
-        input.value = '';
-        invalidateCache('maintenance');
-        await loadMaintenanceRequests(state.currentProperty._id, true);
+        if (input.value.trim() === text) input.value = '';
+        input.focus({ preventScroll: true });
         showNotification('Maintenance update sent to tenant portal', 'success');
     } catch (error) {
         console.error('Error sending maintenance update:', error);
-        showNotification('Error sending maintenance update', 'error');
+        showNotification(error.message || 'Error sending maintenance update', 'error');
+    } finally {
+        delete form.dataset.saving;
+        if (submit) submit.disabled = false;
+    }
+}
+
+function editMaintenanceUpdate(button) {
+    const message = button.closest('[data-maintenance-update-id]');
+    if (message.dataset.editing === 'true') return;
+    const messages = message.closest('[data-maintenance-updates]');
+    const original = message.querySelector('.maintenance-update-text');
+    const actions = message.querySelector('.maintenance-update-actions');
+    const form = document.createElement('form');
+    form.className = 'maintenance-update-editor';
+    form.innerHTML = '<textarea maxlength="1200" rows="3" required aria-label="Update text"></textarea><div><button type="submit" class="btn-secondary">Save</button><button type="button" class="btn-secondary" data-cancel>Cancel</button></div>';
+    const input = form.querySelector('textarea');
+    input.value = original.textContent;
+    let saving = false;
+    const cancel = () => {
+        if (saving) return;
+        form.replaceWith(original);
+        actions.hidden = false;
+        delete message.dataset.editing;
+        button.focus({ preventScroll: true });
+    };
+    form.querySelector('[data-cancel]').onclick = cancel;
+    form.addEventListener('keydown', event => {
+        if (event.key === 'Escape') { event.preventDefault(); cancel(); }
+    });
+    form.onsubmit = async event => {
+        event.preventDefault();
+        if (saving) return;
+        const text = input.value.trim();
+        if (!text || text.length > 1200) {
+            showNotification('Enter an update of 1 to 1200 characters.', 'error');
+            return;
+        }
+        saving = true;
+        form.querySelectorAll('button, textarea').forEach(field => { field.disabled = true; });
+        try {
+            await maintenanceMessageRequest(messages.dataset.projectId, messages.dataset.requestId, 'PATCH', { text }, message.dataset.maintenanceUpdateId);
+            messages.querySelector(`[data-maintenance-update-id="${message.dataset.maintenanceUpdateId}"] .maintenance-update-action`)?.focus({ preventScroll: true });
+            showNotification('Maintenance update saved', 'success');
+        } catch (error) {
+            console.error('Error editing maintenance update:', error);
+            showNotification(error.message || 'Error editing maintenance update', 'error');
+        } finally {
+            saving = false;
+            form.querySelectorAll('button, textarea').forEach(field => { field.disabled = false; });
+        }
+    };
+    message.dataset.editing = 'true';
+    actions.hidden = true;
+    original.replaceWith(form);
+    input.focus({ preventScroll: true });
+}
+
+async function deleteMaintenanceUpdate(button) {
+    const message = button.closest('[data-maintenance-update-id]');
+    if (message.dataset.saving === 'true' || !confirm('Delete this maintenance update?')) return;
+    const messages = message.closest('[data-maintenance-updates]');
+    message.dataset.saving = 'true';
+    const controls = message.querySelectorAll('button');
+    controls.forEach(control => { control.disabled = true; });
+    try {
+        await maintenanceMessageRequest(messages.dataset.projectId, messages.dataset.requestId, 'DELETE', null, message.dataset.maintenanceUpdateId);
+        messages.closest('.maintenance-thread')?.querySelector('input[name="message"]')?.focus({ preventScroll: true });
+        showNotification('Maintenance update deleted', 'success');
+    } catch (error) {
+        console.error('Error deleting maintenance update:', error);
+        showNotification(error.message || 'Error deleting maintenance update', 'error');
+    } finally {
+        delete message.dataset.saving;
+        controls.forEach(control => { control.disabled = false; });
     }
 }
 
@@ -1017,70 +1188,57 @@ async function editPortfolioMaintenance(requestId, projectId) {
 }
 
 async function deletePortfolioMaintenance(requestId, projectId) {
-    if (!requestId || !projectId) return;
+    await deleteMaintenanceRequestLocally(requestId, projectId);
+}
+
+async function deleteMaintenanceRequestLocally(requestId, projectId) {
+    if (!requestId || !projectId) {
+        showNotification('Cannot delete maintenance: request context is missing.', 'error');
+        return;
+    }
     if (!confirm('Are you sure you want to delete this maintenance request?')) {
         return;
     }
-    showLoader();
     try {
         const response = await fetch(`${API_URL}/properties/${projectId}/maintenance/${requestId}`, {
             method: 'DELETE'
         });
-        if (!response.ok) throw new Error('Failed to delete maintenance request');
-
-        state.portfolioMaintenance = (state.portfolioMaintenance || []).filter(item => String(item._id) !== String(requestId));
-        if (state.currentProperty && String(state.currentProperty._id) === String(projectId)) {
-            invalidateCache('maintenance');
-            await refreshContent('maintenance');
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.message || 'Failed to delete maintenance request');
         }
-        await renderPortfolioOverview();
-        renderPortfolioDetails('maintenance');
+        const withoutRequest = items => (items || []).filter(item => String(item._id) !== String(requestId));
+        state.maintenanceRequests = withoutRequest(state.maintenanceRequests);
+        state.portfolioMaintenance = withoutRequest(state.portfolioMaintenance);
+        globalMaintenanceOverviewState.requests = withoutRequest(globalMaintenanceOverviewState.requests);
+        invalidateCache('maintenance');
+        document.querySelectorAll('[data-maint-id]').forEach(node => {
+            if (node.dataset.maintId === String(requestId) && node.dataset.maintSource !== 'recurring') node.remove();
+        });
+        const propertyList = document.getElementById('maintenanceList');
+        if (propertyList && !propertyList.querySelector('[data-maint-id]')) {
+            propertyList.innerHTML = '<div class="empty-state"><p>No maintenance requests match the current filters.</p></div>';
+        }
+        const details = state.currentPortfolioDetailsType === 'maintenance' ? document.getElementById('portfolioDetailsTbody') : null;
+        if (details && !details.querySelector('[data-maint-id]')) {
+            details.innerHTML = details.tagName === 'TBODY'
+                ? '<tr><td colspan="10" class="empty-compact">No maintenance requests match the current filters.</td></tr>'
+                : '<div class="empty-compact">No maintenance requests match the current filters.</div>';
+        }
+        updateMaintenanceTabBadge();
+        syncPortfolioMaintenanceOverviewSummary();
+        syncPortfolioMaintenanceExecutiveCards();
+        refreshPortfolioMaintenanceWorkspaceAfterRemoval();
+        void preloadGlobalMaintenanceCount();
         showNotification('Maintenance request deleted successfully', 'success');
     } catch (error) {
         console.error('Error deleting portfolio maintenance request:', error);
-        showNotification('Error deleting maintenance request', 'error');
-    } finally {
-        hideLoader();
+        showNotification(error.message || 'Error deleting maintenance request', 'error');
     }
 }
 
 async function sendPortfolioMaintenanceMessage(event, requestId, projectId) {
-    event.preventDefault();
-    if (!requestId || !projectId) return;
-    const input = event.currentTarget.querySelector('input[name="message"]');
-    const text = (input?.value || '').trim();
-    if (!text) {
-        showNotification('Type a maintenance update first', 'error');
-        return;
-    }
-    try {
-        const response = await fetch(`${API_URL}/properties/${projectId}/maintenance/${requestId}/messages`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                text,
-                authorName: localStorage.getItem('managerName') || localStorage.getItem('userName') || 'Management'
-            })
-        });
-        if (!response.ok) throw new Error('Failed to send update');
-        const data = await response.json();
-        input.value = '';
-        state.portfolioMaintenance = (state.portfolioMaintenance || []).map(item =>
-            String(item._id) === String(requestId)
-                ? { ...item, ...(data.request || {}), updates: data.updates || data.request?.updates || item.updates }
-                : item
-        );
-        if (state.currentProperty && String(state.currentProperty._id) === String(projectId)) {
-            invalidateCache('maintenance');
-            await loadMaintenanceRequests(projectId, true);
-        }
-        await renderPortfolioOverview();
-        renderPortfolioDetails('maintenance');
-        showNotification('Maintenance update sent to tenant portal', 'success');
-    } catch (error) {
-        console.error('Error sending portfolio maintenance update:', error);
-        showNotification('Error sending maintenance update', 'error');
-    }
+    await postMaintenanceMessage(event, requestId, projectId);
 }
 
 async function openPortfolioRecurringMaintenance(scheduleId, projectId) {
@@ -1191,7 +1349,7 @@ async function updateMaintenanceStatus(requestId) {
         if (!newStatus) return; // User cancelled
 
         showLoader(); // Only show loader for the network request
-        const response = await fetch(
+        const response = await managerSessionRequest(
             `${API_URL}/properties/${state.currentProperty._id}/maintenance/${requestId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
@@ -1445,10 +1603,10 @@ async function editMaintenance(requestId, options = {}) {
                         if (tempNew.length) {
                             fd.append('tempPhotosPaths', JSON.stringify(tempNew));
                         }
-                                const resp = await MaintenanceMedia.upload(`${API_URL}/properties/${projectId}/maintenance/${requestId}`, {
+                                const resp = await managerSessionRequest(`${API_URL}/properties/${projectId}/maintenance/${requestId}`, {
                                         method: 'PUT',
                                         body: fd
-                                }, form);
+                                }, (url, options) => MaintenanceMedia.upload(url, options, form));
                                 if (!resp.ok) throw new Error('Failed to update maintenance request');
                                 const updatedRequest = await resp.json();
                                 closeModal('editMaintenanceModal');

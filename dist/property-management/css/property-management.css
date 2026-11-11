@@ -2332,7 +2332,7 @@ body.dark-theme .tenants-list {
 
 .tenant-card-note-bubble {
     position: relative;
-    padding: 8px 32px 8px 10px;
+    padding: 8px 52px 8px 10px;
     border-radius: 8px;
 }
 
@@ -2352,6 +2352,7 @@ body.dark-theme .tenants-list {
 }
 
 .tenant-card-note:hover .tenant-card-note-delete,
+.tenant-card-note:focus-within .tenant-card-note-delete,
 .tenant-card-note-bubble:hover .tenant-card-note-delete,
 .tenant-card-note-delete:focus-visible {
     opacity: 1;
@@ -2361,6 +2362,30 @@ body.dark-theme .tenants-list {
 .tenant-card-note-delete:hover,
 .tenant-card-note-delete:focus-visible {
     color: #dc2626;
+}
+
+.tenant-note-edit {
+    position: absolute;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.78rem;
+}
+.tenant-card-note-edit { top: 8px; right: 30px; opacity: 0; pointer-events: none; }
+.tenant-card-note:hover .tenant-note-edit,
+.tenant-card-note:focus-within .tenant-note-edit { opacity: 1; pointer-events: auto; }
+.tenant-note-edit:hover, .tenant-note-edit:focus-visible { color: #2563eb; }
+.tenant-note-edit:disabled { opacity: .5; cursor: wait; }
+.notes-drawer-edit { right: 24px; top: 33px; }
+.notes-drawer-bubble:has(.tenant-note-edit) { padding-right: 44px; }
+.portfolio-notes-edit { left: 6px; top: 24px; }
+.tenant-note-editor { display: grid; gap: 6px; margin-top: 4px; }
+.tenant-note-editor textarea { width: 100%; min-width: 0; padding: 6px; border: 1px solid #94a3b8; border-radius: 5px; font: inherit; resize: vertical; }
+.tenant-note-editor > div { display: flex; gap: 5px; flex-wrap: wrap; }
+@media (hover: none) {
+    .tenant-card-note-edit, .tenant-card-note-delete { opacity: 1; pointer-events: auto; }
 }
 
 body.dark-theme .tenant-card-main .tenant-actions {
@@ -5094,6 +5119,31 @@ body.dark-theme .portfolio-maintenance-sticky-bar {
 .compact-maintenance-thread form {
     gap: 5px !important;
 }
+
+.maintenance-update {
+    position: relative;
+    padding: 8px 68px 8px 10px;
+    border: 1px solid #d1fae5;
+    border-radius: 8px;
+    background: #ecfdf5;
+}
+.maintenance-update-tenant { border-color: #bfdbfe; background: #eff6ff; }
+.maintenance-update-author { font-size: .8rem; font-weight: 700; color: #0f172a; }
+.maintenance-update-author span { font-weight: 500; color: #64748b; }
+.maintenance-update-text { margin-top: 3px; font-size: .84rem; color: #475569; white-space: pre-wrap; overflow-wrap: anywhere; }
+.maintenance-update-actions { position: absolute; top: 5px; right: 5px; display: flex; gap: 3px; opacity: 0; pointer-events: none; }
+.maintenance-update-actions[hidden] { display: none; }
+.maintenance-update:hover .maintenance-update-actions,
+.maintenance-update:focus-within .maintenance-update-actions { opacity: 1; pointer-events: auto; }
+.maintenance-update-action { width: 25px; height: 25px; padding: 0; border: 1px solid #cbd5e1; border-radius: 5px; background: #fff; color: #217dbb; font-size: .72rem; cursor: pointer; }
+.maintenance-update-delete { color: #b91c1c; }
+.maintenance-update-action:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.maintenance-update-action:disabled { opacity: .5; cursor: wait; }
+.maintenance-update-editor { display: grid; margin-top: 5px; }
+.maintenance-update-editor textarea { width: 100%; min-width: 0; padding: 6px; border: 1px solid #94a3b8; border-radius: 5px; font: inherit; resize: vertical; }
+.maintenance-update-editor > div { display: flex; flex-wrap: wrap; gap: 5px; }
+.maintenance-updates-empty { padding: 8px; border: 1px dashed #cbd5e1; border-radius: 8px; background: #fff; color: #64748b; font-size: .84rem; }
+@media (hover: none) { .maintenance-update-actions { opacity: 1; pointer-events: auto; } }
 
 .compact-maintenance-card .maintenance-header strong {
     font-size: 1em !important;

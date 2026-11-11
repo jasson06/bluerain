@@ -11,6 +11,15 @@
   const key = schedule => String(schedule._id);
   const property = schedule => String(schedule.projectId?._id || schedule.projectId || '');
   const status = entry => labels[entry.qcStatus] || labels.legacy;
+  function renderInvoices(invoices = [], label = 'Invoices') {
+    const currency = amount => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    return `<div class="maintenance-invoices" style="margin-top:8px;"><strong>${escape(label)}:</strong> ${
+      invoices.length ? invoices.map(invoice => {
+        const href = `/invoice-creater.html?invoiceId=${encodeURIComponent(invoice._id)}`;
+        return `<div><a href="${escape(href)}" target="_blank" rel="noopener noreferrer" aria-label="View invoice ${escape(invoice.invoiceNumber || 'Invoice')}">${escape(invoice.invoiceNumber || 'Invoice')}</a> &middot; ${escape(invoice.status)} &middot; ${escape(currency(invoice.amount))}</div>`;
+      }).join('') : '<span>Not invoiced</span>'
+    }</div>`;
+  }
   const safePhoto = value => {
     if (typeof value !== 'string' || !value) return '';
     try { const url = new URL(value, location.origin); return ['http:', 'https:'].includes(url.protocol) ? url.href : ''; } catch { return ''; }
@@ -37,6 +46,7 @@
       ${history.length ? `
         <ul class="rm-date-list">${history.map(entry => `<li class="rm-history-entry"><button type="button" class="rm-date" data-entry="${escape(entry._id)}" aria-pressed="${entry === selected}">
           <span class="rm-date-title">${escape(date(entry.completedAt))}</span><span class="rm-date-status">${escape(status(entry))}</span>
+          ${(entry.invoices || []).map(invoice => `<span class="rm-date-invoice">Invoice ${escape(invoice.invoiceNumber || 'created')} &middot; ${escape(invoice.status)}</span>`).join('')}
         </button><span class="rm-entry-actions">
           <button type="button" class="rm-entry-action" data-history-action="edit" data-entry="${escape(entry._id)}" title="Edit completion" aria-label="Edit completion ${escape(date(entry.completedAt))}"><i class="fas fa-pen" aria-hidden="true"></i></button>
           <button type="button" class="rm-entry-action rm-entry-delete" data-history-action="delete" data-entry="${escape(entry._id)}" title="Delete completion" aria-label="Delete completion ${escape(date(entry.completedAt))}"><i class="fas fa-trash" aria-hidden="true"></i></button>
@@ -82,6 +92,7 @@
       ${canReview ? '<option value="awaiting-qc">Awaiting QC</option><option value="approved">Approved</option><option value="rework">Rework Required</option>' : canResubmit ? '<option value="rework">Rework Required</option><option value="resubmit">Awaiting QC — resubmit</option>' : `<option value="${escape(entry.qcStatus)}">${escape(status(entry))}</option>`}
       </select></label></div>
       <div>Completed: ${escape(date(entry.completedAt))}${entry.completedBy ? `<br>By: ${escape(entry.completedBy)}` : ''}<br>Cost: ${escape(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(entry.cost) || 0))}</div>
+      ${renderInvoices(entry.invoices, 'invoice')}
       ${entry.notes ? `<p class="rm-notes">${escape(entry.notes)}</p>` : ''}
       <div class="rm-galleries">${gallery(entry.photos?.before, 'before')}${gallery(entry.photos?.after, 'after')}</div>
       ${entry.photoSource === 'unavailable' ? '<p class="rm-muted">No photos could be matched to this completed visit in the linked estimate.</p>' : ''}
@@ -342,4 +353,5 @@
   const observer = new MutationObserver(hydrate);
   observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'hidden'] });
   window.RecurringMaintenanceHistory = { render, historyButton, summary, qcBadge };
+  window.RecurringMaintenanceHistory.renderInvoices = renderInvoices;
 })();

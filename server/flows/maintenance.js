@@ -1,5 +1,6 @@
 // maintenance flow. Shared dependencies remain live through serverContext.
 // Route registration is invoked by server.js in its original order.
+const withMaintenanceInvoices = require('../maintenance-invoices');
 module.exports = function createFlow(serverContext) {
 
 function deriveMaintenanceStatusFromStage(stage, fallback = 'pending') {
@@ -37,15 +38,32 @@ function normalizeMaintenanceWorkflowStage(workflowStage, legacyStatus, hasAssig
 }
 
 function appendMaintenanceSystemUpdate(request, text) {
+  appendMaintenanceUpdate(request, text, { authorRole: 'system', authorName: 'System' });
+}
+
+function appendMaintenanceUpdate(request, text, author) {
   const message = String(text || '').trim();
   if (!message) return;
   request.updates = request.updates || [];
   request.updates.push({
-    authorRole: 'system',
-    authorName: 'System',
+    ...author,
     text: message,
     createdAt: new Date()
   });
+}
+
+async function getMaintenanceWorkflowAuthor(req, res) {
+  const manager = await serverContext.Manager.findById(req.profileManagerId).select('name').lean();
+  if (!manager) {
+    res.status(401).json({ message: 'Manager account not found. Sign in again.' });
+    return null;
+  }
+  const authorName = typeof manager.name === 'string' ? manager.name.trim() : '';
+  if (!authorName) {
+    res.status(400).json({ message: 'Set your manager profile name before changing maintenance workflow.' });
+    return null;
+  }
+  return { authorRole: 'manager', authorName, kind: 'workflow' };
 }
 
 function parseMaintenanceDate(value) {
@@ -133,7 +151,7 @@ serverContext.app.get('/api/properties/maintenance', async (req, res) => {
       .populate('assignedVendor', 'name email trade specialty')
       .populate('projectId') // include project name + address so frontend can show property address
       .sort({ createdAt: -1 });
-    res.json(requests);
+    res.json(await withMaintenanceInvoices(serverContext.Invoice, requests));
   } catch (error) {
     console.error('Error fetching all maintenance requests:', error);
     res.status(500).json({ message: 'Server error' });
@@ -149,7 +167,7 @@ serverContext.app.get('/api/properties/:propertyId/maintenance', async (req, res
       .populate('unitId')
       .populate('assignedVendor', 'name email trade specialty')
       .sort({ createdAt: -1 });
-    res.json(requests);
+    res.json(await withMaintenanceInvoices(serverContext.Invoice, requests));
   } catch (error) {
     console.error('Error fetching maintenance requests:', error);
     res.status(500).json({ message: 'Server error' });
@@ -245,7 +263,7 @@ serverContext.app.post('/api/properties/:propertyId/maintenance', serverContext.
     }
     await request.save();
     await (0, serverContext.syncMaintenanceRequestToEstimate)(request);
-    res.status(201).json(request);
+    res.status(201).json(await withMaintenanceInvoices(serverContext.Invoice, request));
   } catch (error) {
     console.error('Error creating maintenance request:', error);
     res.status(500).json({ message: 'Server error' });
@@ -268,8 +286,10 @@ serverContext.app.post('/api/properties/:propertyId/maintenance/temp-photos', se
 
 function patch_api_properties_propertyId_maintenance_requestId() {
 // Legacy status-only patch retained for quick status updates
-serverContext.app.patch('/api/properties/:propertyId/maintenance/:requestId', async (req, res) => {
+serverContext.app.patch('/api/properties/:propertyId/maintenance/:requestId', serverContext.authenticateManagerProfile, async (req, res) => {
   try {
+    const author = await getMaintenanceWorkflowAuthor(req, res);
+    if (!author) return;
     const request = await serverContext.MaintenanceRequest.findById(req.params.requestId);
     if (!request) return res.status(404).json({ message: 'Maintenance request not found' });
 
@@ -285,13 +305,13 @@ serverContext.app.patch('/api/properties/:propertyId/maintenance/:requestId', as
     if (request.status !== nextStatus || request.workflowStage !== nextWorkflowStage) {
       request.status = nextStatus;
       request.workflowStage = nextWorkflowStage;
-      (0, serverContext.appendMaintenanceSystemUpdate)(request, `Workflow moved to ${nextWorkflowStage.replace(/-/g, ' ')}.`);
+      appendMaintenanceUpdate(request, `Workflow moved to ${nextWorkflowStage.replace(/-/g, ' ')}.`, author);
     }
     if (request.status === 'completed' && !request.completedAt) request.completedAt = new Date();
     if (request.status !== 'completed') request.completedAt = null;
     await request.save();
     await (0, serverContext.syncMaintenanceRequestToEstimate)(request);
-    res.json(request);
+    res.json(await withMaintenanceInvoices(serverContext.Invoice, request));
   } catch (error) {
     console.error('Error updating maintenance request status:', error);
     res.status(500).json({ message: 'Server error' });
@@ -301,8 +321,10 @@ serverContext.app.patch('/api/properties/:propertyId/maintenance/:requestId', as
 
 function put_api_properties_propertyId_maintenance_requestId() {
 // Full edit (all fields + append/replace photos)
-serverContext.app.put('/api/properties/:propertyId/maintenance/:requestId', serverContext.maintenancePhotoUpload.array('photos', 10), async (req, res) => {
+serverContext.app.put('/api/properties/:propertyId/maintenance/:requestId', serverContext.authenticateManagerProfile, serverContext.maintenancePhotoUpload.array('photos', 10), async (req, res) => {
   try {
+    const author = await getMaintenanceWorkflowAuthor(req, res);
+    if (!author) return;
     const request = await serverContext.MaintenanceRequest.findById(req.params.requestId);
     if (!request) return res.status(404).json({ message: 'Maintenance request not found' });
 
@@ -445,9 +467,9 @@ serverContext.app.put('/api/properties/:propertyId/maintenance/:requestId', serv
     }
 
     if (previousWorkflowStage !== request.workflowStage) {
-      (0, serverContext.appendMaintenanceSystemUpdate)(request, `Workflow moved to ${request.workflowStage.replace(/-/g, ' ')}.`);
+      appendMaintenanceUpdate(request, `Workflow moved to ${request.workflowStage.replace(/-/g, ' ')}.`, author);
     } else if (previousStatus !== request.status) {
-      (0, serverContext.appendMaintenanceSystemUpdate)(request, `Status updated to ${request.status.replace(/-/g, ' ')}.`);
+      appendMaintenanceUpdate(request, `Status updated to ${request.status.replace(/-/g, ' ')}.`, author);
     }
 
     const nextAssignedVendorId = request.assignedVendor ? String(request.assignedVendor) : '';
@@ -474,7 +496,7 @@ serverContext.app.put('/api/properties/:propertyId/maintenance/:requestId', serv
 
     await request.save();
     await (0, serverContext.syncMaintenanceRequestToEstimate)(request);
-    res.json(request);
+    res.json(await withMaintenanceInvoices(serverContext.Invoice, request));
   } catch (error) {
     console.error('Error fully updating maintenance request:', error);
     res.status(500).json({ message: 'Server error' });
@@ -500,7 +522,7 @@ serverContext.app.delete('/api/properties/:propertyId/maintenance/:requestId/pho
       const baseDir = serverContext.path.join(serverContext.uploadDir, 'maintenance');
       if (abs.startsWith(baseDir) && serverContext.fs.existsSync(abs)) serverContext.fs.unlinkSync(abs);
     } catch {}
-    res.json({ message: 'Photo deleted', request });
+    res.json({ message: 'Photo deleted', request: await withMaintenanceInvoices(serverContext.Invoice, request) });
   } catch (error) {
     console.error('Error deleting maintenance photo:', error);
     res.status(500).json({ message: 'Server error' });
@@ -565,12 +587,53 @@ serverContext.app.post('/api/properties/:propertyId/maintenance/:requestId/messa
       createdAt: new Date()
     });
     await request.save();
-    res.status(201).json({ message: 'Message added', updates: request.updates, request });
+    res.status(201).json({ message: 'Message added', updates: request.updates, request: await withMaintenanceInvoices(serverContext.Invoice, request) });
   } catch (error) {
     console.error('Property maintenance message error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
+}
+
+async function changeMaintenanceMessage(req, res, remove) {
+  try {
+    const { propertyId, requestId, updateId } = req.params;
+    if (![propertyId, requestId, updateId].every(value => serverContext.mongoose.Types.ObjectId.isValid(value))) {
+      return res.status(400).json({ message: 'Invalid property, request, or update ID.' });
+    }
+    const text = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
+    if (!remove && (!text || text.length > 1200)) {
+      return res.status(400).json({ message: 'Enter an update of 1 to 1200 characters.' });
+    }
+    const request = await serverContext.MaintenanceRequest.findOne({ _id: requestId, projectId: propertyId });
+    const update = request?.updates.id(updateId);
+    if (!update) return res.status(404).json({ message: 'Maintenance update not found.' });
+    if (!['manager', 'tenant', 'system'].includes(update.authorRole)) {
+      return res.status(403).json({ message: 'Vendor maintenance updates cannot be changed.' });
+    }
+    const result = await serverContext.MaintenanceRequest.findOneAndUpdate({
+      _id: requestId, projectId: propertyId,
+      updates: { $elemMatch: { _id: updateId, authorRole: update.authorRole, text: update.text } }
+    }, remove
+      ? { $pull: { updates: { _id: updateId } } }
+      : { $set: { 'updates.$.text': text, 'updates.$.editedAt': new Date() } },
+    { new: true, runValidators: true });
+    if (!result) return res.status(409).json({ message: 'This update changed. Refresh the request and try again.' });
+    res.json({ message: remove ? 'Maintenance update deleted.' : 'Maintenance update saved.', updates: result.updates });
+  } catch (error) {
+    console.error('Error changing maintenance update:', error);
+    res.status(500).json({ message: 'Could not change maintenance update.' });
+  }
+}
+
+function patch_api_properties_propertyId_maintenance_requestId_messages_updateId() {
+serverContext.app.patch('/api/properties/:propertyId/maintenance/:requestId/messages/:updateId',
+  serverContext.authenticateManagerProfile, (req, res) => changeMaintenanceMessage(req, res, false));
+}
+
+function delete_api_properties_propertyId_maintenance_requestId_messages_updateId() {
+serverContext.app.delete('/api/properties/:propertyId/maintenance/:requestId/messages/:updateId',
+  serverContext.authenticateManagerProfile, (req, res) => changeMaintenanceMessage(req, res, true));
 }
 
 return {
@@ -590,6 +653,8 @@ return {
   put_api_properties_propertyId_maintenance_requestId,
   delete_api_properties_propertyId_maintenance_requestId_photos,
   delete_api_properties_propertyId_maintenance_requestId,
-  post_api_properties_propertyId_maintenance_requestId_messages
+  post_api_properties_propertyId_maintenance_requestId_messages,
+  patch_api_properties_propertyId_maintenance_requestId_messages_updateId,
+  delete_api_properties_propertyId_maintenance_requestId_messages_updateId
 };
 };
