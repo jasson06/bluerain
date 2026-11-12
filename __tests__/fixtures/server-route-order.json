@@ -1205,6 +1205,11 @@
     "handlers": 1
   },
   {
+    "method": "post",
+    "url": "/api/properties/:propertyId/expenses/sync",
+    "handlers": 2
+  },
+  {
     "method": "get",
     "url": "/api/properties/:propertyId/quickbooks/sync-log",
     "handlers": 1

@@ -17,7 +17,7 @@ function updatePropertySectionHeadings() {
     const dashboard = document.getElementById('propertyDashboard');
     if (!dashboard) return;
     const name = String(state.currentProperty?.name || '').trim();
-    const labels = {'Property Overview':'Overview', 'Property Information':'Property', Units:'Units', Tenants:'Tenants', Evictions:'Evictions', Maintenance:'Maintenance', Documents:'Documents', Announcements:'Announcements', Payments:'Payments', 'Payments Workspace':'Payments', Applications:'Applications', Invites:'Invites'};
+    const labels = {'Property Overview':'Overview', 'Property Information':'Property', Units:'Units', Tenants:'Tenants', Evictions:'Evictions', Maintenance:'Maintenance', Documents:'Documents', Announcements:'Announcements', Payments:'Payments', Expenses:'Expenses', 'Payments Workspace':'Payments', Applications:'Applications', Invites:'Invites'};
     dashboard.querySelectorAll('.tab-pane h2').forEach(heading => {
         const original = heading.dataset.propertySectionLabel || heading.textContent.trim();
         if (!Object.prototype.hasOwnProperty.call(labels, original)) return;
@@ -127,6 +127,9 @@ async function loadTabContent(tabId, force = false) {
                     await loadTenants(state.currentProperty._id, force);
                 }
                 await loadAnnouncements(state.currentProperty._id);
+                break;
+            case 'expenses':
+                await loadExpenseWorkspace(state.currentProperty._id);
                 break;
             case 'payments':
                 await loadPayments(state.currentProperty._id, force);

@@ -207,7 +207,7 @@ describe('property overview separates lease collections from cash', () => {
       Tenant:{find:()=>query([active,former,...extraTenants])},Unit:{find:()=>query([])},
       Payment:{find:()=>query(payments)},QuickBooksConnection:{findOne:()=>query(null)}
     });
-    for (const model of ['MaintenanceRequest','MaintenanceSchedule','PortfolioTask','Expense']) context[model]={find:()=>query([])};
+    for (const model of ['MaintenanceRequest','MaintenanceSchedule','PortfolioTask','PropertyExpense']) context[model]={find:()=>query([])};
     require('../server/flows/properties')(context).get_api_properties_id_overview();
     const res = response();
     await context.app.get.mock.calls[0][1]({params:{id:'property-a'},query:{from,to,timeZone}},res);

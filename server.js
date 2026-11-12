@@ -42,6 +42,7 @@ const serverContext = {
   set Document(value) { Document = value; },
   get Estimate() { return Estimate; },
   set Estimate(value) { Estimate = value; },
+  get PropertyExpense() { return PropertyExpense; },
   get Expense() { return Expense; },
   set Expense(value) { Expense = value; },
   get FileSystem() { return FileSystem; },
@@ -782,6 +783,10 @@ const quickBooksConnectionSchema = new mongoose.Schema({
   status: { type: String, enum: ['connected', 'attention', 'disconnected'], default: 'connected' },
   connectedBy: { type: String, default: '' },
   connectedAt: { type: Date, default: Date.now },
+  lastExpenseImportAt: Date,
+  expenseImportLease: String,
+  expenseImportLeaseUntil: Date,
+  expenseImportHistory: { type: [mongoose.Schema.Types.Mixed], default: [] },
   lastSuccessfulSyncAt: Date,
   lastRefreshAt: Date,
   lastError: { type: String, default: '' },
@@ -1893,6 +1898,7 @@ const SYSTEM_FOLDER_IDS = Object.freeze({
 });
 
 const Expense = mongoose.model('Expense', expenseSchema);
+const PropertyExpense = require('./server/property-expense-model')(mongoose);
 
 if (mongoose.connection.readyState === 1) {
   ensureExpenseReceiptIndexAllowsLineItems();
@@ -2773,6 +2779,7 @@ serverFlows["quickbooks"].put_api_properties_propertyId_quickbooks_mappings();
 serverFlows["quickbooks"].post_api_properties_propertyId_payments_paymentId_sync_quickbooks();
 
 serverFlows["quickbooks"].post_api_properties_propertyId_expenses_expenseId_sync_quickbooks();
+serverFlows["quickbooks"].post_api_properties_propertyId_expenses_sync();
 serverFlows["quickbooks"].get_api_properties_propertyId_quickbooks_sync_log();
 serverFlows["quickbooks"].get_api_properties_propertyId_quickbooks_payments();
 

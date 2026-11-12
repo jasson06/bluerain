@@ -76,3 +76,15 @@ breakdown that reconciles with all three rent totals. Missing or inconsistent
 details display a refresh error rather than a false empty-payment message.
 
 The initial split preserved all 561 function declarations exactly. A subsequent static audit removed seven unreferenced functions and three superseded duplicate declarations; retained function bodies are unchanged. All startup statements were preserved exactly in their original order. Every generated script parses successfully. Effective global function definitions match the original, including duplicate declarations. Live authenticated browser flows were not exercised.
+
+
+## Property expenses
+
+`expenses.js` owns the independent property expense workspace. It loads before
+`property-management.js`, following the existing classic-script ordering.
+Navigation and overview links open Expenses; opening or changing the inclusive
+calendar range performs an authenticated automatic sync. Search/category filters
+apply locally to both rows and totals. Request sequence and property checks reject
+late responses; busy connections retry while this tab remains active. The UI
+shows sync failures and incomplete saved data, last successful sync, and history.
+Construction expense and estimating screens do not use this workspace.
