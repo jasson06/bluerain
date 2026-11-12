@@ -135,7 +135,7 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
       serverContext.MaintenanceRequest.find(maintenanceScopeQuery).sort({ createdAt: -1 }).lean(),
       serverContext.MaintenanceSchedule.find(maintenanceScopeQuery).sort({ nextScheduledDate: 1 }).lean(),
       serverContext.PortfolioTask.find({ projectId: id }).sort({ pinned: -1, dueDate: 1, createdAt: -1 }).lean(),
-      serverContext.Expense.find({ $or: [{ projectId: id }, { 'lineItems.projectId': id }], status: { $nin: ['rejected', 'archived', 'missing info'] } }).lean()
+      serverContext.PropertyExpense.find({ projectId: id, status: 'approved' }).lean()
     ]);
 
     const amountOrZero = value => Math.max(0, Number(value) || 0);
@@ -222,15 +222,13 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
     const depositCollections = payments
       .filter(payment => (payment.applyTo || 'rent') === 'deposit')
       .reduce((sum, payment) => sum + amountOrZero(payment.amount), 0);
-    const expenseAmountForProperty = expense => {
-      const matchingLines = (expense.lineItems || []).filter(line => String(line.projectId || '') === String(id));
-      if (matchingLines.length) return matchingLines.reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
-      if (String(expense.projectId || '') !== String(id)) return 0;
-      if (Number.isFinite(Number(expense.receiptTotal))) return Number(expense.receiptTotal);
-      if (Number.isFinite(Number(expense.amount))) return Number(expense.amount);
-      return (expense.lineItems || []).reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
-    };
+    const expenseAmountForProperty = expense => Number(expense.amount) || 0;
     const periodExpenses = expenses.filter(expense => {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(expense.date || '')) {
+        const [y,m,d] = expense.date.split('-').map(Number);
+        const date = new Date(y,m-1,d);
+        return date >= calendarFrom && date < calendarTo;
+      }
       const date = new Date(expense.date || expense.createdAt);
       return !Number.isNaN(date.getTime()) && date >= from && date < to;
     });
@@ -298,7 +296,7 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
     const trackedMaintenanceExpenses = trackedMaintenanceRequestExpenses + trackedMaintenanceScheduleExpenses;
     const maintenanceExpensesInPeriod = trackedMaintenanceExpenses + postedMaintenanceExpenses;
     const maintenanceExpenses = maintenanceExpensesInPeriod;
-    const nonMaintenancePostedExpenses = Math.max(0, postedExpenses - postedMaintenanceExpenses);
+    const nonMaintenancePostedExpenses = postedExpenses - postedMaintenanceExpenses;
     const totalOperatingIncome = rentalIncome + otherIncome;
     const managementFeeExpense = totalOperatingIncome * (managementFeeRate / 100);
     const vacancyLossExpense = grossPotentialRent * (vacancyLossRate / 100);
@@ -306,7 +304,7 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
     const operatingExpenses = nonMaintenancePostedExpenses + recurringPropertyExpenses + landlordUtilityExpenses + maintenanceExpenses;
     const expenseDetails = periodExpenses.map(expense => ({
       date: expense.date || expense.createdAt, description: expense.description || expense.item?.name || 'Expense',
-      source: 'Expense ledger', category: isMaintenanceExpense(expense) ? 'Maintenance' : expense.category || 'Other',
+      source: 'Property expense ledger', category: isMaintenanceExpense(expense) ? 'Maintenance' : expense.category || 'Other',
       status: expense.status, amount: expenseAmountForProperty(expense)
     }));
     maintenance.forEach(item => {
@@ -324,8 +322,6 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
     addCalculatedExpense(`Management fee (${managementFeeRate}%)`,managementFeeExpense);
     addCalculatedExpense(`Vacancy loss (${vacancyLossRate}%)`,vacancyLossExpense);
     Object.entries(utilityExpenseBreakdown).forEach(([key,amount])=>addCalculatedExpense(key,amount,'Utility total (saved assumption or logged bills)','Utilities'));
-    // Preserve the existing non-maintenance expense floor in the displayed reconciliation.
-    addCalculatedExpense('Non-maintenance ledger floor adjustment',nonMaintenancePostedExpenses-(postedExpenses-postedMaintenanceExpenses),'Calculation adjustment');
 
     const annualOperatingBudget = Number(property.propertyProfile?.annualOperatingBudget) || 0;
     const operatingBudget = annualOperatingBudget ? annualOperatingBudget / 12 * periodMonths : null;

@@ -241,6 +241,7 @@
     <button class="tab-btn" data-tab="announcements">
         Announcements <span class="tab-count-badge" id="tabCountAnnouncements"></span>
     </button>
+    <button class="tab-btn" data-tab="expenses"><i class="fas fa-receipt"></i><span>Expenses</span></button>
     <button class="tab-btn" data-tab="payments">
         Payments <span class="tab-count-badge" id="tabCountPayments"></span>
     </button>
@@ -581,6 +582,21 @@
                         </div>
                     </div>
 
+                    <!-- Expenses Tab -->
+<div class="tab-pane" id="expenses">
+    <link rel="stylesheet" href="./property-management/css/expenses.css">
+    <div class="expense-header"><div><h2>Expenses</h2><p class="task-meta">Paid expenses sync automatically from this property's QuickBooks company.</p></div><button type="button" class="btn-secondary" id="expenseRefresh" onclick="loadExpenseWorkspace(state.currentProperty._id)"><i class="fas fa-rotate"></i> Refresh</button></div>
+    <div class="expense-controls">
+        <label for="expenseRange">Period<select id="expenseRange" onchange="setExpenseRange()"><option value="month">This month</option><option value="lastMonth">Last month</option><option value="quarter">This quarter</option><option value="year">This year</option><option value="custom">Custom dates</option></select></label>
+        <label for="expenseFrom">From<input type="date" id="expenseFrom" onchange="changeExpenseDates()"></label>
+        <label for="expenseTo">Through<input type="date" id="expenseTo" onchange="changeExpenseDates()"></label>
+    </div>
+    <div id="expenseSyncStatus" role="status" aria-live="polite"></div>
+    <div class="expense-filters"><input type="search" id="expenseSearch" placeholder="Search vendor or description" aria-label="Search expenses" oninput="renderExpenseWorkspace()"><select id="expenseCategory" aria-label="Expense category" onchange="renderExpenseWorkspace()"><option value="">All categories</option></select></div>
+    <p id="expenseSummary" role="status" aria-live="polite"></p>
+    <div id="expensesList" aria-busy="false"></div>
+    <details><summary>Import history</summary><div id="expenseHistory"></div></details>
+</div>
                     <!-- Payments Tab -->
 <div class="tab-pane" id="payments">
     <link rel="stylesheet" href="./property-management/css/payment-workspace.css?v=20261007-payment-locks-compact">
@@ -1607,6 +1623,7 @@
     <script src="./property-management/js/portfolio-search.js"></script>
     <script src="./property-management/js/property-profile.js"></script>
     <script src="./property-management/js/quickbooks.js?v=20261007-progress-dismiss"></script>
+    <script src="./property-management/js/expenses.js"></script>
     <script src="./property-management/js/property-overview.js"></script>
     <script src="./property-management/js/navigation-properties.js?v=20261007-payments-heading"></script>
     <script src="./property-management/js/property-viewport-layout.js?v=20261007-viewport-fill"></script>

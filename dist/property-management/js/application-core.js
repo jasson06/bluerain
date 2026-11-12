@@ -174,7 +174,7 @@ function initializeEventListeners() {
     document.getElementById('overviewStatusFilter')?.addEventListener('change', () => state.propertyOverviewData && renderPropertyOverviewPanels(state.propertyOverviewData));
     document.getElementById('overviewAttentionFilter')?.addEventListener('change', () => state.propertyOverviewData && renderOverviewAttention(state.propertyOverviewData.unitsRequiringAttention||[], document.getElementById('overviewStatusFilter')?.value||'all'));
     document.getElementById('overviewExportBtn')?.addEventListener('click', exportPropertyOverview);
-    document.getElementById('overviewOpenExpensesBtn')?.addEventListener('click', () => openOverviewDetailPanel('expenses'));
+    document.getElementById('overviewOpenExpensesBtn')?.addEventListener('click', () => openExpensesFromOverview());
     document.getElementById('overviewOpenEquipmentBtn')?.addEventListener('click', () => openOverviewDetailPanel('equipment'));
     document.getElementById('overviewQuickActionBtn')?.addEventListener('click', () => { const el=document.getElementById('overviewQuickActions'); if(el) el.hidden=!el.hidden; });
     document.getElementById('overviewQuickActions')?.addEventListener('click', event => { const button=event.target.closest('[data-action]'); if(button) runOverviewAction(button.dataset.action); });

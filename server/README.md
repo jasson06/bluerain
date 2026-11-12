@@ -216,3 +216,38 @@ are guessed or bulk-migrated.
 Run `npm test -- --runInBand`. `__tests__/serverFlows.test.js` covers module initialization, the original 253 endpoint registrations (paths, methods, handler counts, and order), tenant handlers, payment calculations, maintenance normalization, and QuickBooks configuration/encryption. Tests use mocked dependencies and do not start the production server.
 
 The extraction was also checked by comparing parsed code before and after dependency qualification: all 98 helper functions and 253 handlers retained their logic, and other startup statements retained their order. Live database, email, OCR, and QuickBooks integrations still require environment-backed testing.
+
+
+## Property expense imports
+
+Property Management uses the dedicated `PropertyExpense` model and
+`property_expenses` collection. Construction `Expense` records, estimate line
+allocations, receipts, and export routes are unchanged. No construction data is
+migrated or matched into this ledger.
+
+`POST /api/properties/:propertyId/expenses/sync` requires the existing manager
+bearer token and an inclusive `{from: "YYYY-MM-DD", to: "YYYY-MM-DD"}` range.
+The property’s existing one-company connection is the sole source. This version
+imports QuickBooks `Purchase` transactions (cash/check/card expenses and credits);
+`Bill` and `BillPayment` processing is outside this first version. No QuickBooks
+records are written. Opening Expenses or changing dates invokes sync; there is
+no scheduled background import. This month is the default in the browser’s
+calendar, with last month, quarter, year, and custom dates available.
+
+Source keys include environment, company, entity type, and transaction ID and
+have a unique index. A renewable connection lease prevents overlapping imports.
+All query pages are fetched before saving. Missing imported IDs are read directly
+to distinguish a moved date from deletion; only QuickBooks error 610 archives a
+missing record. Failed syncs show saved records as potentially incomplete, retain
+the last successful timestamp, and can be retried. The last 20 import attempts
+are retained on the connection. Amounts include tax and use QuickBooks exchange
+rates to express transaction totals in company home currency; credits are signed.
+
+The overview’s recorded expense amount reads only the property ledger, using
+calendar dates. Its existing broader operating estimate still includes saved
+property assumptions and tracked maintenance/utilities; the UI labels that
+estimate separately. Construction costs are no longer part of this property
+ledger total. No new environment variables are needed. Deploy the server and
+static files together; allow Mongoose to create the new collection and indexes.
+Live QuickBooks and database validation should be performed in a sandbox company
+before production rollout.

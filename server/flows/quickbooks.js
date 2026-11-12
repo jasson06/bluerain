@@ -468,7 +468,12 @@ serverContext.app.post('/api/properties/:propertyId/quickbooks/payment-workspace
 }catch(error){res.status(error?.code===11000?409:400).json({message:error.message||'Unable to import payment'});}});
 }
 
+function post_api_properties_propertyId_expenses_sync() {
+  require('../quickbooks-expenses')(serverContext).register();
+}
+
 return {
+  post_api_properties_propertyId_expenses_sync,
   encryptQbSecret,
   decryptQbSecret,
   createQbState,
