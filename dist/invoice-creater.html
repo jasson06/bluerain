@@ -34,11 +34,149 @@ body {
   transition: box-shadow 0.3s ease;
 }
 
+.invoice-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.invoice-workspace-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid #d9e8fb;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #f8fbff 0%, #eef6ff 100%);
+}
+
+.invoice-workspace-header h2 {
+  margin: 0;
+}
+
+.invoice-workspace-header p {
+  margin: 6px 0 0;
+  color: var(--secondary);
+  max-width: 640px;
+}
+
+.invoice-flow-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.invoice-flow-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #cfe1fb;
+  color: #0f3f76;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.invoice-stage {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  padding: 18px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
+}
+
+.invoice-stage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.invoice-stage-header h3 {
+  margin: 0;
+}
+
+.invoice-stage-header p {
+  margin: 4px 0 0;
+  color: var(--secondary);
+  font-size: 14px;
+}
+
+.invoice-draft-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 280px;
+}
+
+.invoice-summary-card {
+  border: 1px solid #dbe7f5;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 12px 14px;
+}
+
+.invoice-summary-label {
+  display: block;
+  color: var(--secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.invoice-summary-value {
+  display: block;
+  margin-top: 6px;
+  color: #0f172a;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.invoice-actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e5edf8;
+}
+
+.invoice-actions-copy {
+  color: var(--secondary);
+  font-size: 13px;
+}
+
+.invoice-actions-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.btn.ghost-btn {
+  background: #eef5ff;
+  color: #0b5394;
+  border: 1px solid #cfe1fb;
+}
+
+.btn.ghost-btn:hover {
+  background: #dcecff;
+}
+
 input,
 select,
 button {
   font-family: inherit;
-  font-size: 16px;
+  font-size: 14px;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -56,7 +194,7 @@ h2, h3 {
 label {
   font-weight: bold;
   display: block;
-  margin: 15px 0 5px;
+  margin: 12px 0 5px;
 }
 
 .party-grid {
@@ -182,7 +320,7 @@ td:nth-child(4) {
 .btn {
   background: var(--primary);
   color: var(--white);
-  padding: 10px 20px;
+  padding: 5px 10px;
   border: none;
   border-radius: var(--radius);
   cursor: pointer;
@@ -359,69 +497,17 @@ td:nth-child(4) {
   font-size: 14px;
 }
 
-.import-steps {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.import-step {
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.92);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-}
-
-.import-step.is-active {
-  border-color: #93c5fd;
-  background: #eff6ff;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.08);
-}
-
-.import-step.is-complete {
-  border-color: #86efac;
-  background: #f0fdf4;
-}
-
-.import-step-label {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  background: #e8f1ff;
-  color: var(--primary);
-  font-weight: 700;
-  font-size: 13px;
-  margin-bottom: 8px;
-}
-
-.import-step.is-active .import-step-label {
-  background: #dbeafe;
-}
-
-.import-step.is-complete .import-step-label {
-  background: #dcfce7;
-  color: #15803d;
-}
-
-.import-step-title {
+.quick-selection-field label {
   display: block;
   font-weight: 700;
   margin-bottom: 4px;
-}
-
-.import-step-note {
-  display: block;
-  color: var(--secondary);
   font-size: 13px;
-  line-height: 1.4;
-  margin-bottom: 8px;
 }
 
-.import-step select {
+.quick-selection-field input,
+.quick-selection-field select {
+  width: 100%;
+  min-width: 0;
   margin-bottom: 0;
 }
 
@@ -457,6 +543,10 @@ td:nth-child(4) {
   padding: 8px;
 }
 
+.import-empty-state[hidden] {
+  display: none;
+}
+
 .import-actions {
   display: flex;
   justify-content: space-between;
@@ -469,6 +559,196 @@ td:nth-child(4) {
   margin: 0;
   color: var(--secondary);
   font-size: 13px;
+}
+
+.quick-selection-wrap {
+  margin-top: 14px;
+  border: 1px solid #dbe7f5;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 12px;
+}
+
+.quick-selection-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.5fr) auto;
+  align-items: end;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.quick-selection-field {
+  min-width: 0;
+}
+
+.quick-selection-toolbar .btn {
+  margin: 0;
+  min-height: 40px;
+}
+
+.quick-selection-count {
+  color: var(--secondary);
+  font-size: 13px;
+}
+
+.quick-selection-list {
+  max-height: 300px;
+  overflow: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.quick-selection-table {
+  margin: 0;
+  min-width: 850px;
+  table-layout: auto;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.quick-selection-table th,
+.quick-selection-table td {
+  width: auto;
+  padding: 8px;
+  border: 0;
+  border-bottom: 1px solid #eef2f7;
+  font-size: 13px;
+}
+
+.quick-selection-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f1f5f9;
+}
+
+.quick-selection-table th:first-child {
+  width: 36px;
+}
+
+.quick-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.quick-select-all input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.quick-select-all-mobile {
+  display: none;
+}
+
+.quick-selection-table .import-description-cell {
+  width: 40%;
+  min-width: 320px;
+  max-width: 500px;
+}
+
+.quick-sort-button,
+.import-description-toggle {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #0b5394;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.quick-sort-button {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.import-description-toggle {
+  margin-top: 3px;
+  font-size: 12px;
+  text-decoration: underline;
+}
+
+.import-item-checkbox {
+  margin: 4px 0 0;
+}
+
+.import-item-project {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #e8f1ff;
+  color: #0b5394;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.import-item-name {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.import-item-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-weight: 600;
+}
+
+.import-item-total {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.import-item-estimate {
+  color: #0f172a;
+}
+
+.import-item-description {
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.import-item-description.is-expanded {
+  display: block;
+}
+
+.import-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.import-pill.status-approved {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.import-pill.status-completed {
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
 .entry-divider {
@@ -504,6 +784,36 @@ td:nth-child(4) {
   align-items: flex-start;
   gap: 12px;
   margin-bottom: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.manual-entry-toggle {
+  color: var(--secondary);
+  font-size: 16px;
+  line-height: 1;
+  margin-top: 2px;
+  transition: transform 0.25s ease;
+}
+
+.manual-entry-wrap.collapsed .manual-entry-toggle {
+  transform: rotate(-90deg);
+}
+
+.manual-entry-body {
+  overflow: hidden;
+  max-height: 600px;
+  opacity: 1;
+  transition: max-height 0.3s ease, opacity 0.25s ease;
+}
+
+.manual-entry-wrap.collapsed .manual-entry-body {
+  max-height: 0;
+  opacity: 0;
+}
+
+.manual-entry-wrap.collapsed .manual-entry-header {
+  margin-bottom: 0;
 }
 
 .manual-entry-header h4 {
@@ -619,6 +929,85 @@ td:nth-child(4) {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+  body {
+    padding: 12px;
+  }
+
+  header {
+    padding: 14px !important;
+    margin-bottom: 14px !important;
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 12px;
+  }
+
+  header h2 {
+    font-size: 22px;
+  }
+
+  .container {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .invoice-workspace {
+    gap: 14px;
+  }
+
+  .invoice-workspace-header,
+  .invoice-stage-header,
+  .invoice-actions-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .invoice-workspace-header,
+  .invoice-stage,
+  .party-card,
+  .import-flow,
+  .quick-selection-wrap,
+  .manual-entry-wrap {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .invoice-workspace-header p,
+  .import-flow-header p,
+  .manual-entry-header p,
+  .invoice-stage-header p,
+  .invoice-actions-copy,
+  .history-header p,
+  .import-list-note,
+  .quick-selection-count {
+    font-size: 12px;
+  }
+
+  .invoice-flow-badges,
+  .invoice-actions-buttons {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .invoice-flow-badge {
+    font-size: 10px;
+    padding: 6px 10px;
+  }
+
+  .invoice-draft-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    min-width: 0;
+  }
+
+  .invoice-summary-card {
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .invoice-summary-value {
+    font-size: 18px;
+  }
+
   .party-grid,
   .party-card-grid,
   .history-filters {
@@ -663,10 +1052,40 @@ td:nth-child(4) {
 
   .line-item-row input {
     flex: 1 1 100%;
+    min-width: 0;
   }
 
-  .import-steps {
-    grid-template-columns: 1fr;
+  .line-item-row select,
+  .line-item-row button,
+  .invoice-actions-buttons .btn,
+  .quick-selection-toolbar .btn,
+  .import-actions .btn,
+  header button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .line-item-row {
+    gap: 8px;
+  }
+
+  .quick-selection-toolbar {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .quick-selection-field:first-child,
+  .quick-selection-field:nth-child(2) {
+    grid-column: span 3;
+  }
+
+  .quick-selection-field:nth-child(3) {
+    grid-column: span 4;
+  }
+
+  .quick-selection-toolbar .btn {
+    grid-column: span 2;
+    padding-left: 6px;
+    padding-right: 6px;
   }
 
   .import-flow-header,
@@ -679,6 +1098,110 @@ td:nth-child(4) {
     align-items: flex-start;
   }
 
+  .quick-selection-toolbar input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .quick-selection-toolbar,
+  .import-actions,
+  .invoice-actions-buttons {
+    gap: 8px;
+  }
+
+  .import-list-wrap,
+  .quick-selection-wrap {
+    margin-top: 10px;
+  }
+
+  .quick-selection-table,
+  .quick-selection-table tbody {
+    display: block;
+    min-width: 0;
+  }
+
+  .quick-selection-table thead {
+    display: none;
+  }
+
+  .quick-select-all-mobile {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f1f5f9;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .quick-select-all-mobile .quick-select-all {
+    
+    padding-left: 8px;
+    box-sizing: border-box;
+  }
+
+  .quick-selection-table .import-item-row {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-areas:
+      "check project project status"
+      ". name name name"
+      ". estimate estimate estimate"
+      ". qty total total"
+      ". description description description";
+    gap: 6px;
+    padding: 8px;
+    border-bottom: 1px solid #eef2f7;
+  }
+
+  .quick-selection-table td {
+    display: block;
+    min-width: 0;
+    max-width: none;
+    padding: 0;
+    border: 0;
+  }
+
+  .quick-selection-table .import-check-cell { grid-area: check; }
+  .quick-selection-table .import-project-cell { grid-area: project; }
+  .quick-selection-table .import-estimate-cell { grid-area: estimate; }
+  .quick-selection-table .import-name-cell { grid-area: name; }
+  .quick-selection-table .import-description-cell { grid-area: description; width: auto; min-width: 0; max-width: none; }
+  .quick-selection-table .import-qty-cell { grid-area: qty; }
+  .quick-selection-table .import-total-cell { grid-area: total; }
+  .quick-selection-table .import-status-cell { grid-area: status; }
+
+  .quick-selection-table .import-item-checkbox {
+    margin-top: 4px;
+  }
+
+  .import-item-project,
+  .import-item-meta-chip,
+  .import-pill {
+    font-size: 10px;
+  }
+
+  .import-item-description {
+    font-size: 12px;
+  }
+
+  .responsive-table-wrapper {
+    margin: 0 -2px;
+  }
+
+  .responsive-table-wrapper table {
+    min-width: 560px;
+  }
+
+  table th,
+  table td {
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .history {
+    margin-top: 24px;
+  }
+
   .modal-content {
     padding: 20px;
   }
@@ -689,8 +1212,8 @@ td:nth-child(4) {
   background: #fff;
   max-width: 800px;
   width: 90%;
-  margin-left: -47px;
-  margin-top: -41px;
+  margin-left: 0;
+  margin-top: 0;
   border-radius: 12px;
   padding: 30px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
@@ -718,8 +1241,76 @@ td:nth-child(4) {
 }
 
 @media (max-width: 480px) {
+  body {
+    padding: 8px;
+  }
+
+  .container {
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .party-card,
+  .invoice-workspace-header,
+  .invoice-stage,
+  .import-flow,
+  .quick-selection-wrap,
+  .manual-entry-wrap {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .invoice-draft-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .invoice-summary-value {
+    font-size: 17px;
+  }
+
+  .invoice-flow-badge {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .import-list-title,
+  .manual-entry-header h4,
+  .invoice-stage-header h3 {
+    font-size: 15px;
+  }
+
+  .line-item-row {
+    gap: 6px;
+  }
+
+  .quick-selection-toolbar,
+  .import-actions,
+  .invoice-actions-bar {
+    gap: 6px;
+  }
+
+  .import-item-name {
+    font-size: 13px;
+  }
+
+  .responsive-table-wrapper table {
+    min-width: 520px;
+  }
+
+  #help-fab {
+    width: 48px !important;
+    height: 48px !important;
+    right: 16px !important;
+    bottom: 16px !important;
+    font-size: 26px !important;
+  }
+
   #invoiceModal .modal-content {
-    padding: 15px;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 14px;
+    border-radius: 10px;
   }
 
   #invoiceModal .modal-content h2,
@@ -909,76 +1500,152 @@ td:nth-child(4) {
 
 
 <div class="container">
-  <h2>Create Invoice</h2>
-
-  <div class="import-flow">
-    <div class="import-flow-header">
+  <div class="invoice-workspace">
+    <div class="invoice-workspace-header">
       <div>
-        <h3>Add Line Items</h3>
-        <p>Use assigned work when available, or add a manual line item in the same section.</p>
+        <h2>Create Invoice</h2>
+        
+      </div>
+
+    </div>
+
+    <div class="invoice-stage">
+      <div class="import-flow">
+        <div class="import-flow-header">
+          <div>
+            <h3>Add Line Items</h3>
+            
+          </div>
+        </div>
+
+        <div class="quick-selection-wrap">
+          <div class="import-list-header">
+            
+            <span class="quick-selection-count" id="quickSelectionCount">Loading available line items...</span>
+          </div>
+          <div class="quick-selection-toolbar">
+            <div class="quick-selection-field">
+              <label for="projectSelect">Choose project</label>
+              <select id="projectSelect">
+                <option value="">-- Loading Projects --</option>
+              </select>
+            </div>
+            <div class="quick-selection-field">
+              <label for="estimateSelect">Choose estimate</label>
+              <select id="estimateSelect">
+                <option value="">-- All Estimates --</option>
+              </select>
+            </div>
+            <div class="quick-selection-field">
+              <label for="quickSelectionSearch">Search</label>
+              <input type="text" id="quickSelectionSearch" placeholder="Search items, cost codes, projects, or estimates" />
+            </div>
+            <button onclick="importLineItems()" class="btn">Create Invoice</button>
+          </div>
+          <div id="quickSelectionList" class="quick-selection-list">
+            <div class="quick-select-all-mobile">
+              <label class="quick-select-all">
+                <input type="checkbox" data-select-all-quick aria-label="Select all displayed items" title="Select all displayed items" disabled>
+              </label>
+            </div>
+            <table class="quick-selection-table">
+              <thead>
+                <tr>
+                  <th scope="col">
+                    <label class="quick-select-all">
+                      <input type="checkbox" data-select-all-quick aria-label="Select all displayed items" title="Select all displayed items" disabled>
+                    </label>
+                  </th>
+                  <th scope="col" aria-sort="none"><button type="button" class="quick-sort-button" data-quick-sort="projectName">Project ↕</button></th>
+                  <th scope="col" aria-sort="none"><button type="button" class="quick-sort-button" data-quick-sort="estimateTitle">Estimate ↕</button></th>
+                  <th scope="col" aria-sort="none"><button type="button" class="quick-sort-button" data-quick-sort="name">Item ↕</button></th>
+                  <th scope="col" aria-sort="none"><button type="button" class="quick-sort-button" data-quick-sort="description">Description ↕</button></th>
+                  <th scope="col" aria-sort="none"><button type="button" class="quick-sort-button" data-quick-sort="quantity">Qty ↕</button></th>
+                  <th scope="col" aria-sort="none"><button type="button" class="quick-sort-button" data-quick-sort="total">Total ↕</button></th>
+                  <th scope="col" aria-sort="none"><button type="button" class="quick-sort-button" data-quick-sort="status">Status ↕</button></th>
+                </tr>
+              </thead>
+              <tbody id="quickSelectionRows"></tbody>
+            </table>
+            <div id="quickSelectionEmpty" class="import-empty-state">Loading available line items...</div>
+          </div>
+        </div>
+
+        <div class="entry-divider">Or</div>
+
+        <div class="manual-entry-wrap collapsed" id="manualEntryWrap">
+          <div class="manual-entry-header" onclick="toggleManualEntry()" role="button" tabindex="0" aria-expanded="false" aria-controls="manualEntryBody" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleManualEntry();}">
+            <div>
+              <h4>Add Manually</h4>
+              <p>Use this when the item is not in assigned work or you need a custom entry.</p>
+            </div>
+            <span class="manual-entry-toggle" aria-hidden="true">▾</span>
+          </div>
+
+          <div class="manual-entry-body" id="manualEntryBody">
+          <div class="line-item-row" style="display: flex; flex-wrap: wrap; gap: 10px; position: relative; margin-bottom: 0;">
+            <select id="itemProjectSelect" style="flex: 1 1 180px; min-width: 80px;">
+              <option value="">-- Select Project For Item --</option>
+            </select>
+            <input type="text" id="itemCostCode" placeholder="Cost Code" style="flex: 0 0 100px; min-width: 80px;">
+            <input type="text" id="itemName" placeholder="Item Name" style="flex: 1 1 160px; min-width: 140px;">
+            <input type="text" id="itemDesc" placeholder="Description" style="flex: 2 1 400px; min-width: 200px;">
+            <input type="number" id="itemQty" placeholder="Qty" style="flex: 0 0 80px; min-width: 60px;">
+            <input type="number" id="itemPrice" placeholder="Unit Price" style="flex: 0 0 100px; min-width: 80px;">
+            <button class="btn" onclick="addManualItem()" style="flex: 0 0 70px;">Add</button>
+          </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="import-steps">
-      <div class="import-step is-active" data-import-step="1">
-        <span class="import-step-label">1</span>
-        <span class="import-step-title">Choose project</span>
-        
-        <select id="projectSelect" style="width: 100%; padding: 10px;">
-          <option value="">-- Loading Projects --</option>
-        </select>
-      </div>
-
-      <div class="import-step" data-import-step="2">
-        <span class="import-step-label">2</span>
-        <span class="import-step-title">Choose estimate</span>
-        
-        <select id="estimateSelect" style="width: 100%; padding: 10px;">
-          <option value="">-- Select Estimate --</option>
-        </select>
-      </div>
-
-      <div class="import-step" data-import-step="3">
-        <span class="import-step-label">3</span>
-        <span class="import-step-title">Import approved items</span>
-        
-      </div>
-    </div>
-
-    <div class="import-list-wrap">
-      <div class="import-list-header">
-        <span class="import-list-title">Available line items</span>
-        <span class="import-list-note">Approved or completed items are selectable.</span>
-      </div>
-      <div id="lineItemCheckboxList" style="max-height: 220px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; margin-bottom: 0;">
-        <div class="import-empty-state">Step 1: choose a project to load available estimates.</div>
-      </div>
-      <div class="import-actions">
-        <p>Select items, then import them into the invoice table below.</p>
-        <button onclick="importLineItems()" class="btn">Import</button>
-      </div>
-    </div>
-
-    <div class="entry-divider">Or</div>
-
-    <div class="manual-entry-wrap">
-      <div class="manual-entry-header">
+    <div class="invoice-stage">
+      <div class="invoice-stage-header">
         <div>
-          <h4>Add Manually</h4>
-          <p>Use this when the item is not in assigned work or you need a custom entry.</p>
+          <h3>Line Items</h3>
+          
+        </div>
+        <div class="invoice-draft-summary">
+          <div class="invoice-summary-card">
+            <span class="invoice-summary-label">Line Items</span>
+            <span class="invoice-summary-value" id="draftLineItemCount">0</span>
+          </div>
+          <div class="invoice-summary-card">
+            <span class="invoice-summary-label">Projects</span>
+            <span class="invoice-summary-value" id="draftProjectCount">0</span>
+          </div>
+          <div class="invoice-summary-card">
+            <span class="invoice-summary-label">Draft Total</span>
+            <span class="invoice-summary-value" id="draftInvoiceTotal">$0.00</span>
+          </div>
         </div>
       </div>
 
-      <div class="line-item-row" style="display: flex; flex-wrap: wrap; gap: 10px; position: relative; margin-bottom: 0;">
-        <select id="itemProjectSelect" style="flex: 1 1 180px; min-width: 80px;">
-          <option value="">-- Select Project For Item --</option>
-        </select>
-        <input type="text" id="itemCostCode" placeholder="Cost Code" style="flex: 0 0 100px; min-width: 80px;">
-        <input type="text" id="itemName" placeholder="Item Name" style="flex: 1 1 160px; min-width: 140px;">
-        <input type="text" id="itemDesc" placeholder="Description" style="flex: 2 1 400px; min-width: 200px;">
-        <input type="number" id="itemQty" placeholder="Qty" style="flex: 0 0 80px; min-width: 60px;">
-        <input type="number" id="itemPrice" placeholder="Unit Price" style="flex: 0 0 100px; min-width: 80px;">
-        <button class="btn" onclick="addManualItem()" style="flex: 0 0 70px;">Add</button>
+      
+      <div class="responsive-table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Project</th>
+              <th>Cost Code</th>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Qty</th>
+              
+              <th>Total</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="lineItemsTable"></tbody>
+        </table>
+      </div>
+
+      <div class="invoice-actions-bar">
+        
+        <div class="invoice-actions-buttons">
+          <button class="btn ghost-btn" onclick="openInvoicePreview()" style="display: none;">Preview Invoice</button>
+          <button class="btn" onclick="submitInvoice()">Submit Invoice</button>
+        </div>
       </div>
     </div>
   </div>
@@ -987,32 +1654,8 @@ td:nth-child(4) {
 
 
 
-<h3>Line Items</h3>
-<div class="responsive-table-wrapper">
-  <table>
-    <thead>
-      <tr>
-        <th>Project</th>
-        <th>Cost Code</th>
-        <th>Name</th>
-        <th>Description</th>
-        <th>Qty</th>
-        
-        <th>Total</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="lineItemsTable"></tbody>
-  </table>
-</div>
-
-
 <!-- Hidden Email Field -->
 <input type="email" id="invoiceEmail" value="jleonel3915@gmail.com" style="display: none;" />
-
-
-    <button class="btn" onclick="openInvoicePreview()">Preview Invoice</button>
-    <button class="btn" onclick="submitInvoice()">Submit Invoice</button>
 
     <div class="history">
       <div class="history-header">
@@ -1198,13 +1841,13 @@ td:nth-child(4) {
   <script>
 
 window.onload = async () => {
+  const vendorId = localStorage.getItem("vendorId");
   const requestedInvoiceId = new URLSearchParams(window.location.search).get('invoiceId');
   const requestedInvoice = new URLSearchParams(window.location.search).get('invoiceNumber');
   if (requestedInvoiceId || requestedInvoice) {
     await openSavedInvoiceModal(requestedInvoice, requestedInvoiceId);
     return;
   }
-  const vendorId = localStorage.getItem("vendorId");
 
   if (!vendorId) {
     showToast("Missing vendor ID");
@@ -1213,8 +1856,21 @@ window.onload = async () => {
 
   document.getElementById('recipientCompany').value = 'BESF LLC'; // ✅ Default value
 
+  const quickSelectionSearch = document.getElementById('quickSelectionSearch');
+  if (quickSelectionSearch) {
+    quickSelectionSearch.addEventListener('input', renderQuickSelection);
+  }
+  document.querySelectorAll('[data-quick-sort]').forEach(button => {
+    button.addEventListener('click', () => sortQuickSelection(button.dataset.quickSort));
+  });
+  document.querySelectorAll('[data-select-all-quick]').forEach(checkbox => {
+    checkbox.addEventListener('change', () => setAllQuickSelection(checkbox.checked));
+  });
+  window.addEventListener('resize', updateDescriptionToggles);
+
   // Load vendor-specific data
   await fetchVendorName();
+  await refreshSubmittedLineItemIds(vendorId);
   await fetchAssignedProjects(vendorId);
   await fetchInvoiceHistory(vendorId);
   await fetchVendorNameAndAutofill();
@@ -1228,6 +1884,9 @@ window.onload = async () => {
     let vendorName = 'Vendor';
     let invoiceHistoryCache = [];
     let historyCurrentPage = 1;
+    let submittedLineItemIds = new Set();
+    let quickSelectionSort = { field: '', direction: 'ascending' };
+    let importProjectBundles = [];
     const projectHistoryDetailsCache = new Map();
 
     function formatProjectAddress(address = {}) {
@@ -1241,7 +1900,7 @@ window.onload = async () => {
       return assignedProjects.find(project => String(project._id) === normalizedId) || null;
     }
 
-        async function getHistoryProjectDetails(projectId) {
+    async function getHistoryProjectDetails(projectId) {
       const normalizedProjectId = projectId && typeof projectId === 'object'
         ? String(projectId._id || projectId.id || '')
         : String(projectId || '');
@@ -1318,6 +1977,336 @@ window.onload = async () => {
       }));
     }
 
+    function normalizeEstimateId(value) {
+      if (!value) return '';
+      if (typeof value === 'object') {
+        return String(value._id || value.id || '');
+      }
+      return String(value);
+    }
+
+    function getImportItemKey(item = {}) {
+      const persistedId = item.itemId || item._id;
+      if (persistedId) return String(persistedId);
+
+      return [
+        item.projectId,
+        item.estimateId,
+        item.costCode,
+        item.name,
+        item.description,
+        item.quantity,
+        item.total,
+        item.laborCost,
+        item.unitPrice
+      ].map(value => String(value || '')).join('::');
+    }
+
+    function getCurrentInvoiceImportKeys() {
+      return new Set(lineItems.map(item => getImportItemKey(item)).filter(Boolean));
+    }
+
+    function isSelectableImportStatus(status) {
+      const normalizedStatus = String(status || '').trim().toLowerCase();
+      return normalizedStatus === 'approved' || normalizedStatus === 'completed';
+    }
+
+    function normalizeAssignedImportItem(item, project) {
+      const laborCost = typeof item.laborCost !== 'undefined'
+        ? parseFloat(item.laborCost) || 0
+        : (typeof item.total !== 'undefined' ? parseFloat(item.total) || 0 : 0);
+
+      return {
+        ...item,
+        _id: item._id,
+        itemId: item.itemId || item._id || undefined,
+        projectId: String(project._id),
+        projectName: project.name,
+        projectAddress: project.addressLabel,
+        estimateId: normalizeEstimateId(item.estimateId),
+        costCode: item.costCode || 'Uncategorized',
+        quantity: Number(item.quantity) || 0,
+        unitPrice: parseFloat(item.unitPrice) || 0,
+        laborCost,
+        total: laborCost,
+        status: String(item.status || '').toLowerCase()
+      };
+    }
+
+    function getVisibleImportItems(items = []) {
+      const currentInvoiceKeys = getCurrentInvoiceImportKeys();
+
+      return items.filter(item => {
+        if (!isSelectableImportStatus(item.status)) return false;
+
+        const persistedId = item._id || item.itemId;
+        if (persistedId && submittedLineItemIds.has(String(persistedId))) {
+          return false;
+        }
+
+        return !currentInvoiceKeys.has(getImportItemKey(item));
+      });
+    }
+
+    function getEstimateDisplayLabel(estimate = {}) {
+      return estimate.title || (estimate.invoiceNumber ? `Estimate #${estimate.invoiceNumber}` : 'Untitled estimate');
+    }
+
+    function setQuickSelectionMessage(message) {
+      const rows = document.getElementById('quickSelectionRows');
+      const empty = document.getElementById('quickSelectionEmpty');
+      const count = document.getElementById('quickSelectionCount');
+      if (rows) rows.innerHTML = '';
+      updateQuickSelectAll();
+      if (empty) {
+        empty.textContent = message;
+        empty.hidden = false;
+      }
+      if (count) {
+        count.textContent = message;
+      }
+    }
+
+    function renderProjectImportOptions(selectedProjectId = '') {
+      const projectSelect = document.getElementById('projectSelect');
+      if (!projectSelect) return;
+
+      const normalizedSelectedId = String(selectedProjectId || '');
+      const bundles = importProjectBundles
+        .map(bundle => ({
+          ...bundle,
+          visibleItemCount: bundle.estimates.reduce((sum, estimate) => sum + getVisibleImportItems(estimate.items).length, 0)
+        }))
+        .filter(bundle => bundle.visibleItemCount > 0 || bundle.projectId === normalizedSelectedId);
+
+      if (!bundles.length) {
+        projectSelect.innerHTML = '<option value="">-- No Projects With Importable Items --</option>';
+        return;
+      }
+
+      const options = ['<option value="">-- All Projects --</option>'];
+      bundles.forEach(bundle => {
+        const selected = bundle.projectId === normalizedSelectedId ? ' selected' : '';
+        options.push(`<option value="${bundle.projectId}"${selected}>${bundle.projectName} (${bundle.visibleItemCount})</option>`);
+      });
+      projectSelect.innerHTML = options.join('');
+    }
+
+    function renderEstimateOptions(projectId, selectedEstimateId = '') {
+      const estimateSelect = document.getElementById('estimateSelect');
+      if (!estimateSelect) return;
+
+      const normalizedSelectedId = String(selectedEstimateId || '');
+      const estimates = importProjectBundles
+        .filter(bundle => !projectId || bundle.projectId === String(projectId))
+        .flatMap(bundle => bundle.estimates.map(estimate => ({
+          ...estimate,
+          projectName: bundle.projectName,
+          visibleItems: getVisibleImportItems(estimate.items)
+        })))
+        .filter(estimate => estimate.visibleItems.length > 0 || estimate.estimateId === normalizedSelectedId);
+
+      if (!estimates.length) {
+        estimateSelect.innerHTML = '<option value="">-- No Estimates With Importable Items --</option>';
+        return;
+      }
+
+      const options = ['<option value="">-- All Estimates --</option>'];
+      estimates.forEach(estimate => {
+        const selected = estimate.estimateId === normalizedSelectedId ? ' selected' : '';
+        const label = projectId ? estimate.label : `${estimate.projectName} - ${estimate.label}`;
+        options.push(`<option value="${estimate.estimateId}" data-invoice-number="${estimate.invoiceNumber || ''}"${selected}>${label} (${estimate.visibleItems.length})</option>`);
+      });
+      estimateSelect.innerHTML = options.join('');
+    }
+
+    function buildImportItemRow(item, index, selected) {
+      const wrapper = document.createElement('tr');
+      wrapper.className = 'import-item-row';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'import-item-checkbox';
+      checkbox.id = `quick-lineitem-${index}`;
+      checkbox.checked = selected;
+      checkbox.setAttribute('aria-label', `Select ${item.name || 'unnamed item'} from ${item.projectName || 'project'}`);
+      checkbox.dataset.details = JSON.stringify(item);
+      checkbox.dataset.selectionKey = getImportItemKey(item);
+      checkbox.addEventListener('change', updateQuickSelectAll);
+
+      function addCell(cellClass, content, contentClass = '') {
+        const cell = document.createElement('td');
+        cell.className = cellClass;
+        if (typeof content === 'string') {
+          const text = document.createElement('span');
+          text.className = contentClass;
+          text.textContent = content;
+          cell.appendChild(text);
+        } else {
+          cell.appendChild(content);
+        }
+        wrapper.appendChild(cell);
+        return cell;
+      }
+
+      addCell('import-check-cell', checkbox);
+      addCell('import-project-cell', item.projectName || 'Project', 'import-item-project');
+      addCell('import-estimate-cell', item.estimateTitle || 'Estimate', 'import-item-meta-chip import-item-estimate');
+
+      const name = document.createElement('label');
+      name.htmlFor = checkbox.id;
+      name.className = 'import-item-name';
+      name.textContent = item.name || 'Unnamed';
+      addCell('import-name-cell', name);
+
+      const description = document.createElement('div');
+      description.className = 'import-item-description';
+      description.id = `quick-description-${index}`;
+      description.textContent = item.description || 'No description provided.';
+      const descriptionCell = addCell('import-description-cell', description);
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'import-description-toggle';
+      toggle.textContent = 'Show more';
+      toggle.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-controls', description.id);
+      toggle.addEventListener('click', () => {
+        const expanded = description.classList.toggle('is-expanded');
+        toggle.textContent = expanded ? 'Show less' : 'Show more';
+        toggle.setAttribute('aria-expanded', String(expanded));
+      });
+      descriptionCell.appendChild(toggle);
+
+      addCell('import-qty-cell', Number(item.quantity) > 0 ? `Qty ${item.quantity}` : 'Qty N/A', 'import-item-meta-chip');
+      addCell('import-total-cell', `$${(parseFloat(item.total) || 0).toFixed(2)}`, 'import-item-meta-chip import-item-total');
+      const statusClass = String(item.status || '').toLowerCase() === 'completed' ? 'status-completed' : 'status-approved';
+      addCell('import-status-cell', String(item.status || 'ready').toUpperCase(), `import-pill ${statusClass}`);
+      wrapper.addEventListener('click', event => {
+        if (!event.target.closest('button, input, label')) checkbox.click();
+      });
+      return wrapper;
+    }
+
+    function updateDescriptionToggles() {
+      document.querySelectorAll('#quickSelectionRows .import-description-cell').forEach(cell => {
+        const description = cell.querySelector('.import-item-description');
+        const toggle = cell.querySelector('.import-description-toggle');
+        if (!description.classList.contains('is-expanded')) {
+          toggle.hidden = description.scrollHeight <= description.clientHeight + 1;
+        }
+      });
+    }
+
+    function updateQuickSelectAll() {
+      const items = Array.from(document.querySelectorAll('#quickSelectionRows .import-item-checkbox'));
+      const selectedCount = items.filter(checkbox => checkbox.checked).length;
+      document.querySelectorAll('[data-select-all-quick]').forEach(checkbox => {
+        checkbox.disabled = items.length === 0;
+        checkbox.checked = items.length > 0 && selectedCount === items.length;
+        checkbox.indeterminate = selectedCount > 0 && selectedCount < items.length;
+      });
+    }
+
+    function setAllQuickSelection(checked) {
+      document.querySelectorAll('#quickSelectionRows .import-item-checkbox').forEach(checkbox => {
+        checkbox.checked = checked;
+      });
+      updateQuickSelectAll();
+    }
+
+    function sortQuickSelectionItems(items, sort) {
+      if (!sort.field) return items;
+      const numeric = sort.field === 'quantity' || sort.field === 'total';
+      const multiplier = sort.direction === 'ascending' ? 1 : -1;
+      return items.slice().sort((a, b) => {
+        const comparison = numeric
+          ? (Number(a[sort.field]) || 0) - (Number(b[sort.field]) || 0)
+          : String(a[sort.field] || '').localeCompare(String(b[sort.field] || ''), undefined, { numeric: true, sensitivity: 'base' });
+        return comparison * multiplier;
+      });
+    }
+
+    function sortQuickSelection(field) {
+      const numeric = field === 'quantity' || field === 'total';
+      const direction = quickSelectionSort.field === field
+        ? (quickSelectionSort.direction === 'ascending' ? 'descending' : 'ascending')
+        : (numeric ? 'descending' : 'ascending');
+      quickSelectionSort = { field, direction };
+      document.querySelectorAll('[data-quick-sort]').forEach(button => {
+        const active = button.dataset.quickSort === field;
+        button.parentElement.setAttribute('aria-sort', active ? direction : 'none');
+        const label = button.textContent.replace(/[↕↑↓]/g, '').trim();
+        button.textContent = `${label} ${active ? (direction === 'ascending' ? '↑' : '↓') : '↕'}`;
+      });
+      renderQuickSelection();
+    }
+
+    function renderQuickSelection() {
+      const searchInput = document.getElementById('quickSelectionSearch');
+      const container = document.getElementById('quickSelectionList');
+      const rows = document.getElementById('quickSelectionRows');
+      const empty = document.getElementById('quickSelectionEmpty');
+      const count = document.getElementById('quickSelectionCount');
+      if (!container || !rows || !empty || !count) return;
+
+      const selectedKeys = new Set(
+        Array.from(container.querySelectorAll('.import-item-checkbox:checked'), checkbox => checkbox.dataset.selectionKey)
+      );
+
+      const query = String(searchInput?.value || '').trim().toLowerCase();
+      const projectId = document.getElementById('projectSelect').value;
+      const estimateId = document.getElementById('estimateSelect').value;
+      const items = importProjectBundles
+        .filter(bundle => !projectId || bundle.projectId === projectId)
+        .flatMap(bundle => bundle.estimates
+          .filter(estimate => !estimateId || estimate.estimateId === estimateId)
+          .flatMap(estimate => getVisibleImportItems(estimate.items).map(item => ({
+            ...item,
+            estimateTitle: estimate.label
+          })))
+        );
+
+      const filteredItems = items.filter(item => {
+        if (!query) return true;
+        return [
+          item.name,
+          item.description,
+          item.costCode,
+          item.projectName,
+          item.estimateTitle
+        ].some(value => String(value || '').toLowerCase().includes(query));
+      });
+
+      count.textContent = `${filteredItems.length} line item${filteredItems.length === 1 ? '' : 's'} ready to import`;
+      rows.innerHTML = '';
+
+      if (!filteredItems.length) {
+        empty.textContent = items.length ? 'No quick-selection matches your search.' : (projectId || estimateId ? 'No line items are ready to import for the selected filters.' : 'No line items are ready to import yet.');
+        empty.hidden = false;
+        updateQuickSelectAll();
+        return;
+      }
+
+      empty.hidden = true;
+      sortQuickSelectionItems(filteredItems, quickSelectionSort).forEach((item, index) => {
+        rows.appendChild(buildImportItemRow(item, index, selectedKeys.has(getImportItemKey(item))));
+      });
+      updateQuickSelectAll();
+      requestAnimationFrame(updateDescriptionToggles);
+    }
+
+    function refreshImportAvailability() {
+      const projectSelect = document.getElementById('projectSelect');
+      const estimateSelect = document.getElementById('estimateSelect');
+      const selectedProjectId = projectSelect?.value || '';
+      const selectedEstimateId = estimateSelect?.value || '';
+
+      renderProjectImportOptions(selectedProjectId);
+      renderEstimateOptions(projectSelect?.value || '', selectedEstimateId);
+      renderQuickSelection();
+    }
+
     function buildProjectOptionsHtml(selectedProjectId = '') {
       const normalizedSelectedId = String(selectedProjectId || '');
       const options = ['<option value="">-- Select Project For Item --</option>'];
@@ -1364,25 +2353,6 @@ window.onload = async () => {
       )];
     }
 
-    function setImportListMessage(message) {
-      const container = document.getElementById('lineItemCheckboxList');
-      if (!container) return;
-      container.innerHTML = `<div class="import-empty-state">${message}</div>`;
-    }
-
-    function updateImportStepState(currentStep = 1, completedSteps = []) {
-      document.querySelectorAll('[data-import-step]').forEach(step => {
-        const stepNumber = Number(step.dataset.importStep);
-        step.classList.remove('is-active', 'is-complete');
-
-        if (completedSteps.includes(stepNumber)) {
-          step.classList.add('is-complete');
-        } else if (stepNumber === currentStep) {
-          step.classList.add('is-active');
-        }
-      });
-    }
-
     function resetImportFlow() {
       const projectSelect = document.getElementById('projectSelect');
       const estimateSelect = document.getElementById('estimateSelect');
@@ -1392,12 +2362,76 @@ window.onload = async () => {
       }
 
       if (estimateSelect) {
-        estimateSelect.innerHTML = '<option value="">-- Select Estimate --</option>';
         estimateSelect.value = '';
       }
 
-      setImportListMessage('Step 1: choose a project to load available estimates.');
-      updateImportStepState(1, []);
+      refreshImportAvailability();
+    }
+
+    async function refreshSubmittedLineItemIds(vendorId) {
+      submittedLineItemIds = vendorId ? await getPreviouslySubmittedLineItemIds(vendorId) : new Set();
+      return submittedLineItemIds;
+    }
+
+    async function buildImportProjectBundle(vendorId, project) {
+      try {
+        const [itemsRes, estimatesRes] = await Promise.all([
+          fetch(`/api/vendors/${vendorId}/assigned-items/${project._id}?t=${Date.now()}`),
+          fetch(`/api/estimates?projectId=${project._id}&t=${Date.now()}`)
+        ]);
+
+        let items = [];
+        if (itemsRes.status !== 404) {
+          if (!itemsRes.ok) throw new Error(`Failed to fetch assigned items for ${project.name}`);
+          const data = await itemsRes.json();
+          items = Array.isArray(data.items) ? data.items : [];
+        }
+
+        if (!estimatesRes.ok) throw new Error(`Failed to fetch estimates for ${project.name}`);
+        const { estimates } = await estimatesRes.json();
+
+        const estimateMeta = new Map((Array.isArray(estimates) ? estimates : []).map(estimate => {
+          const estimateId = normalizeEstimateId(estimate._id);
+          return [estimateId, {
+            estimateId,
+            label: getEstimateDisplayLabel(estimate),
+            invoiceNumber: estimate.invoiceNumber || '',
+            items: []
+          }];
+        }));
+
+        items
+          .map(item => normalizeAssignedImportItem(item, project))
+          .forEach(item => {
+            const estimateId = item.estimateId;
+            if (!estimateId || !estimateMeta.has(estimateId)) return;
+            estimateMeta.get(estimateId).items.push(item);
+          });
+
+        return {
+          projectId: String(project._id),
+          projectName: project.name,
+          addressLabel: project.addressLabel,
+          estimates: Array.from(estimateMeta.values())
+        };
+      } catch (error) {
+        console.error('❌ Error building import bundle:', error);
+        return {
+          projectId: String(project._id),
+          projectName: project.name,
+          addressLabel: project.addressLabel,
+          estimates: []
+        };
+      }
+    }
+
+    async function hydrateImportProjectBundles(vendorId) {
+      setQuickSelectionMessage('Loading available line items...');
+      importProjectBundles = await Promise.all(
+        assignedProjects.map(project => buildImportProjectBundle(vendorId, project))
+      );
+
+      refreshImportAvailability();
     }
 
 
@@ -1487,31 +2521,20 @@ async function fetchAssignedProjects(vendorId) {
         addressLabel: formatProjectAddress(project.address || {})
       }));
 
-    const projectSelect = document.getElementById('projectSelect');
-    projectSelect.innerHTML = `<option value="">-- Select Project --</option>`;
-
-    assignedProjects.forEach(project => {
-      const option = document.createElement("option");
-      option.value = project._id;
-      option.textContent = project.name;
-      option.dataset.address = project.addressLabel;
-      projectSelect.appendChild(option);
-    });
-
     populateLineItemProjectSelect();
-    resetImportFlow();
+    await hydrateImportProjectBundles(vendorId);
 
-    // 📌 Hook up estimate selection after selecting a project
-    projectSelect.addEventListener("change", function () {
+    const projectSelect = document.getElementById('projectSelect');
+    const estimateSelect = document.getElementById('estimateSelect');
+
+    projectSelect.onchange = function () {
       const projectId = this.value;
       syncManualProjectSelection(projectId, true);
-      if (projectId) {
-        updateImportStepState(2, [1]);
-        fetchEstimatesForProject(vendorId, projectId);
-      } else {
-        resetImportFlow();
-      }
-    });
+      renderEstimateOptions(projectId, estimateSelect.value);
+      renderQuickSelection();
+    };
+
+    estimateSelect.onchange = renderQuickSelection;
 
   } catch (err) {
     console.error("❌ Error loading assigned projects:", err);
@@ -1521,119 +2544,8 @@ async function fetchAssignedProjects(vendorId) {
 
 
 
-async function fetchEstimatesForProject(vendorId, projectId) {
-  try {
-    const estimateSelect = document.getElementById('estimateSelect');
-    const lineItemCheckboxList = document.getElementById('lineItemCheckboxList');
-    estimateSelect.innerHTML = `<option value="">-- Select Estimate --</option>`;
-    if (lineItemCheckboxList) setImportListMessage('Step 2: choose an estimate to view its line items.');
-    updateImportStepState(2, [1]);
-
-    // 1. Fetch assigned items
-    const itemsRes = await fetch(`/api/vendors/${vendorId}/assigned-items/${projectId}`);
-    let items = [];
-
-    if (itemsRes.status === 404) {
-      console.warn("⚠️ No assigned items found. Continuing with empty list.");
-    } else if (!itemsRes.ok) {
-      throw new Error("Failed to fetch assigned items.");
-    } else {
-      const data = await itemsRes.json();
-      items = data.items || [];
-      console.log("📦 Fetched Assigned Items:", items);
-
-      // 👇 Force laborCost as total for imported items
-      items.forEach(item => {
-        // If laborCost is missing but total is correct, use total as laborCost
-        if (typeof item.laborCost === "undefined" && typeof item.total !== "undefined") {
-          item.laborCost = item.total;
-        }
-        // Always use laborCost as total for imported items
-        if (typeof item.laborCost !== "undefined") {
-          item.total = item.laborCost;
-        }
-      });
-    }
-
-    // 2. Group items by estimateId and adjust the total
-    const estimateMap = new Map();
-    items.forEach(item => {
-      if (item.estimateId) {
-        if (!estimateMap.has(item.estimateId)) {
-          estimateMap.set(item.estimateId, []);
-        }
-        estimateMap.get(item.estimateId).push(item);
-      }
-    });
-
-    if (estimateMap.size === 0) {
-      estimateSelect.innerHTML = `<option value="">-- No Assigned Estimates --</option>`;
-      setImportListMessage('No assigned estimates were found for this project yet.');
-      updateImportStepState(2, [1]);
-      showToast("⚠️ No estimates with assigned items found.");
-      return;
-    }
-
-    // 3. Fetch estimates for project
-    const estRes = await fetch(`/api/estimates?projectId=${projectId}`);
-    if (!estRes.ok) throw new Error("Failed to fetch estimates.");
-    const { estimates } = await estRes.json();
-    console.log("📋 Fetched Estimates:", estimates);
-
-    let matchedEstimates = 0;
-
-    estimates.forEach(est => {
-      if (estimateMap.has(est._id)) {
-        const option = document.createElement("option");
-        const label = est.title || `Estimate #${est.invoiceNumber}`;
-        option.value = est._id;
-        option.textContent = label;
-        option.setAttribute("data-invoice-number", est.invoiceNumber || `EST-${Math.floor(Math.random() * 10000)}`);
-        estimateSelect.appendChild(option);
-        matchedEstimates++;
-      }
-    });
-
-    if (matchedEstimates === 0) {
-      estimateSelect.innerHTML = `<option value="">-- No Assigned Estimates Found --</option>`;
-      setImportListMessage('No matching estimates were found for your assigned items in this project.');
-      updateImportStepState(2, [1]);
-      showToast("⚠️ No estimates assigned to you in this project.");
-      return;
-    }
-
-    // 4. Replace old estimate dropdown with new one to reset listeners
-    const newEstimateSelect = estimateSelect.cloneNode(true);
-    estimateSelect.parentNode.replaceChild(newEstimateSelect, estimateSelect);
-
-    // 5. Handle estimate selection
-    newEstimateSelect.addEventListener("change", function () {
-      const estimateId = this.value;
-      const selectedOption = this.options[this.selectedIndex];
-      const invoiceNumber = selectedOption.getAttribute("data-invoice-number");
-
-      console.log(`📦 Selected Estimate: ${estimateId} | Invoice Number: ${invoiceNumber}`);
-
-      if (estimateId) {
-        const assignedItems = estimateMap.get(estimateId) || [];
-        console.log("📦 Assigned Items for Selected Estimate:", assignedItems);
-        displayLineItems(assignedItems);
-      } else {
-        updateImportStepState(2, [1]);
-        setImportListMessage('Step 2: choose an estimate to view its line items.');
-      }
-    });
-
-  } catch (err) {
-    console.error("❌ Error fetching estimates:", err);
-    showToast("❌ Could not fetch estimates.");
-  }
-}
-
-
-
 async function importLineItems() {
-  const checkboxes = Array.from(document.querySelectorAll('#lineItemCheckboxList input[type="checkbox"]:checked'));
+  const checkboxes = Array.from(document.querySelectorAll('.import-item-checkbox:checked'));
   if (checkboxes.length === 0) {
     showToast("Please select at least one line item to import.", "warning");
     return;
@@ -1647,16 +2559,36 @@ async function importLineItems() {
   // Fetch all previously submitted line item IDs for this vendor
   const usedIds = await getPreviouslySubmittedLineItemIds(vendorId);
 
+  const selectedItems = [];
+  const selectionKeys = new Set();
+  checkboxes.forEach(box => {
+    const selectionKey = box.dataset.selectionKey || '';
+    if (selectionKey && selectionKeys.has(selectionKey)) {
+      return;
+    }
+
+    if (selectionKey) {
+      selectionKeys.add(selectionKey);
+    }
+
+    selectedItems.push(JSON.parse(box.dataset.details));
+  });
+
   let duplicateCount = 0;
   let notApprovedCount = 0;
   let importedCount = 0;
-  checkboxes.forEach(box => {
-    const item = JSON.parse(box.dataset.details);
+  selectedItems.forEach(item => {
+    const status = String(item.status || '').toLowerCase();
+    const persistedId = item._id || item.itemId;
 
-
+    if (!isSelectableImportStatus(status)) {
+      notApprovedCount++;
+      showToast(`This line item is not ready to import yet. Please contact project manager.`, "warning");
+      return;
+    }
 
     // Only check for duplicates if the item has a unique _id
-    if (item._id && usedIds.has(item._id)) {
+    if (persistedId && usedIds.has(String(persistedId))) {
       duplicateCount++;
       showToast(`⚠️  "${item.name}" already Submitted.`, "error");
       return;
@@ -1664,7 +2596,7 @@ async function importLineItems() {
 
     // Prevent adding the same item twice in the same invoice
     const alreadyInCurrent = lineItems.some(existing =>
-      existing._id && item._id && existing._id === item._id
+      getImportItemKey(existing) === getImportItemKey(item)
     );
     if (alreadyInCurrent) {
       duplicateCount++;
@@ -1700,69 +2632,6 @@ async function getPreviouslySubmittedLineItemIds(vendorId) {
     return new Set();
   }
 }
-// Display line items with checkboxes
-async function displayLineItems(items) {
-  const container = document.getElementById('lineItemCheckboxList');
-  container.innerHTML = '';
-
-  // Fetch all previously submitted line item IDs for this vendor
-  const vendorId = localStorage.getItem("vendorId");
-  const usedIds = vendorId ? await getPreviouslySubmittedLineItemIds(vendorId) : new Set();
-
-  if (!items.length) {
-    updateImportStepState(3, [1, 2]);
-    setImportListMessage('No line items are available for this estimate yet.');
-    return;
-  }
-
-  updateImportStepState(3, [1, 2]);
-
-  items.forEach((item, idx) => {
-    const status = String(item.status || '').toLowerCase();
-    const alreadySubmitted = item._id && usedIds.has(item._id);
-    const isSelectable = (status === 'approved' || status === 'completed') && !alreadySubmitted;
-
-    const id = `lineitem-checkbox-${idx}`;
-    const label = `
-      <span><strong>${item.name || 'Unnamed'}</strong></span>
-      <span style="color:#64748b; margin-left:8px;">${item.description || 'No description'}</span>
-      ${alreadySubmitted ? '<span style="color:#ef4444; margin-left:8px;">(Submitted)</span>' : ''}
-    `;
-    const wrapper = document.createElement('div');
-    wrapper.style.marginBottom = '6px';
-    wrapper.style.display = 'flex';
-    wrapper.style.alignItems = 'center';
-    wrapper.style.opacity = isSelectable ? '1' : '0.5';
-
-    // Build checkbox and label via DOM APIs to safely attach JSON data
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.id = id;
-    checkbox.style.marginRight = '8px';
-    if (!isSelectable) {
-      checkbox.disabled = true;
-    }
-    // Store full JSON safely without HTML-escaping issues
-    checkbox.dataset.details = JSON.stringify(item);
-
-    const labelEl = document.createElement('label');
-    labelEl.htmlFor = id;
-    labelEl.style.cursor = isSelectable ? 'pointer' : 'not-allowed';
-    labelEl.style.flex = '1';
-    labelEl.style.display = 'flex';
-    labelEl.style.alignItems = 'center';
-    labelEl.style.gap = '10px';
-    labelEl.innerHTML = label;
-
-    wrapper.appendChild(checkbox);
-    wrapper.appendChild(labelEl);
-    container.appendChild(wrapper);
-  });
-}
-
-
-
-
 
 
 
@@ -1845,6 +2714,14 @@ function showLaborSuggestions() {
 
 
 
+// Toggle the "Add Manually" section open/closed
+function toggleManualEntry() {
+  const wrap = document.getElementById('manualEntryWrap');
+  const header = wrap.querySelector('.manual-entry-header');
+  const collapsed = wrap.classList.toggle('collapsed');
+  header.setAttribute('aria-expanded', String(!collapsed));
+}
+
 // Add manual item (auto-includes cost code now!)
 function addManualItem() {
   const selectedProjectId = document.getElementById('itemProjectSelect').value || document.getElementById('projectSelect').value;
@@ -1912,6 +2789,22 @@ function addItemToTable(item, isImported = false) {
   console.log(`✅ Item Added - ${isImported ? "Imported" : "Manual"}:`, cleaned);
   lineItems.push(cleaned);
   renderLineItems();
+  refreshImportAvailability();
+}
+
+
+function updateDraftSummary() {
+  const lineItemCountEl = document.getElementById('draftLineItemCount');
+  const projectCountEl = document.getElementById('draftProjectCount');
+  const totalEl = document.getElementById('draftInvoiceTotal');
+
+  const itemCount = lineItems.length;
+  const projectCount = new Set(lineItems.map(item => item.projectId || item.projectName).filter(Boolean)).size;
+  const draftTotal = lineItems.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
+
+  if (lineItemCountEl) lineItemCountEl.textContent = String(itemCount);
+  if (projectCountEl) projectCountEl.textContent = String(projectCount);
+  if (totalEl) totalEl.textContent = `$${draftTotal.toFixed(2)}`;
 }
 
 
@@ -1919,6 +2812,12 @@ function addItemToTable(item, isImported = false) {
 function renderLineItems() {
   const tbody = document.getElementById('lineItemsTable');
   tbody.innerHTML = '';
+
+  if (!lineItems.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#6b7280; padding:20px;">No line items in this draft yet. Import approved work above or add one manually.</td></tr>';
+    updateDraftSummary();
+    return;
+  }
 
   lineItems.forEach((item, index) => {
     const row = document.createElement('tr');
@@ -1941,6 +2840,8 @@ function renderLineItems() {
     `;
     tbody.appendChild(row);
   });
+
+  updateDraftSummary();
 }
 
   
@@ -1972,6 +2873,7 @@ function renderLineItems() {
     function deleteItem(index) {
       lineItems.splice(index, 1);
       renderLineItems();
+      refreshImportAvailability();
       showToast('Deleted item.');
     }
 
@@ -2015,13 +2917,12 @@ function openInvoicePreview(savedInvoice) {
     ? new Date(savedInvoice.date).toLocaleDateString()
     : 'N/A';
 
-  // Get estimate title from savedInvoice or from the dropdown if not present
-  let estimateTitle = savedInvoice?.estimateTitle;
-  if (!estimateTitle) {
-    const estimateSelect = document.getElementById('estimateSelect');
-    const selectedEstimateOption = estimateSelect?.options[estimateSelect.selectedIndex];
-    estimateTitle = selectedEstimateOption ? selectedEstimateOption.textContent : '';
-  }
+  const estimateIds = new Set(lineItems.map(item => normalizeEstimateId(item.estimateId)).filter(Boolean));
+  const estimateTitles = importProjectBundles.flatMap(bundle => bundle.estimates)
+    .filter(estimate => estimateIds.has(estimate.estimateId))
+    .map(estimate => estimate.label);
+  const estimateTitle = savedInvoice?.estimateTitle ||
+    (estimateTitles.length > 1 ? 'Multiple estimates' : estimateTitles[0]);
 
   // 👇 Use item.total (which is laborCost for imported items)
   const total = lineItems.reduce((sum, i) => sum + (parseFloat(i.total) || 0), 0);
@@ -2280,11 +3181,12 @@ async function submitInvoice() {
           ? Number(item.laborCost)
           : (Number(item.quantity) * (parseFloat(item.unitPrice) || 0))),
     estimateId: item.estimateId || undefined, // <-- ADD
-    itemId: item.itemId || item._id || undefined // <-- ADD
+            itemId: item.itemId || item._id || undefined, // <-- ADD
+            lineItemId: item.itemId || item._id || undefined
   }));
 
 
-  const fallbackProjectId = document.getElementById('projectSelect').value || lineItemsWithTotal[0]?.projectId || '';
+  const fallbackProjectId = lineItemsWithTotal[0]?.projectId || document.getElementById('projectSelect').value || '';
   const invoiceData = {
     vendorId,
     projectId: fallbackProjectId,
@@ -2389,6 +3291,12 @@ async function submitInvoice() {
 
     // ✅ 5. Final UI updates
     showToast('✅ Invoice submitted!');
+    lineItemsWithTotal.forEach(item => {
+      const persistedId = item._id || item.itemId || item.lineItemId;
+      if (persistedId) {
+        submittedLineItemIds.add(String(persistedId));
+      }
+    });
     invoiceHistoryCache.unshift({
       ...savedInvoice,
       lineItems: lineItemsWithTotal
@@ -2396,6 +3304,7 @@ async function submitInvoice() {
     await renderInvoiceHistoryTable();
     lineItems = [];
     renderLineItems();
+    refreshImportAvailability();
     closeInvoicePreview();
   } catch (err) {
     showToast('❌ Error submitting invoice.');
@@ -2659,12 +3568,12 @@ async function openSavedInvoiceModal(invoiceNumber, invoiceId) {
   document.getElementById('invoiceModal').style.display = 'flex';
   showLoader(); // 👈 START
   try {
-    const endpoint = invoiceId ? `/api/invoices/${encodeURIComponent(invoiceId)}`
+        const endpoint = invoiceId ? `/api/invoices/${encodeURIComponent(invoiceId)}`
       : `/api/invoices/by-number/${encodeURIComponent(invoiceNumber)}`;
     const res = await fetch(endpoint);
     if (!res.ok) throw new Error("Failed to fetch invoice");
     const { invoice } = await res.json();
-     invoice.lineItems = await hydrateInvoiceHistoryLineItems(invoice.lineItems || []);
+    invoice.lineItems = await hydrateInvoiceHistoryLineItems(invoice.lineItems || []);
 
     const itemProjectNames = [...new Set((invoice.lineItems || []).map(item => item.projectName).filter(Boolean))];
     const itemProjectAddresses = [...new Set((invoice.lineItems || []).map(item => item.projectAddress).filter(Boolean))];
