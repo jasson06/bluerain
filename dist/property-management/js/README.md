@@ -115,8 +115,11 @@ changes update the preview and sticky save footer without importing records.
 Closing, changing the period/property, or leaving the page protects unsaved
 changes. Switching sub-tabs preserves drafts; saving locks edits until complete.
 
-At widths up to 600px, Expenses uses accessible icon navigation and compact
+At widths up to 900px, Expenses uses accessible icon navigation and compact
 transaction cards with payee, date, included amount, and a one-line description.
 Expandable details retain full descriptions, allocations, original/excluded
 amounts, and maintenance report editing. Mapping and import-history tables
 reflow into cards without horizontal scrolling; desktop tables remain intact.
+Expense cards override the shared payment table minimum width and include card
+padding/borders within the available width, so internal containers do not scroll
+sideways on phones or tablets.

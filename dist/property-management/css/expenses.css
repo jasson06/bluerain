@@ -38,8 +38,11 @@
 #expenseMappingsPanel .expense-mapping-footer { position:sticky; bottom:0; display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:14px 0; background:#fff; border-top:1px solid #dbe2ea; z-index:1; }
 #expenseMappingDirty { flex:1; }
 #expenses .expense-mobile-label, #expenses .expense-mobile-description, #expenses .expense-mobile-totals { display:none; }
-@media(max-width:600px) {
+@media(max-width:900px) {
     #expenses { min-width:0; }
+    #expenses .payments-table { min-width:0!important; max-width:100%; box-sizing:border-box; }
+    #expenses .payments-table tbody, #expenses .payments-table tr { box-sizing:border-box; }
+    #expenseTransactionsPanel, #expensesList, #expensesList > .table-responsive { width:100%; min-width:0; max-width:100%; box-sizing:border-box; }
     #expenses .expense-header, #expenses .expense-controls, #expenses .expense-filters, #expenses .expense-workspace-tabs { gap:6px; margin-bottom:10px; }
     #expenses .expense-header > div { flex:1; min-width:0; }
     #expenses .expense-header h2 { font-size:18px; }
