@@ -246,6 +246,20 @@ the last successful timestamp, and can be retried. The last 20 import attempts
 are retained on the connection. Amounts include tax and use QuickBooks exchange
 rates to express transaction totals in company home currency; credits are signed.
 
+The mapping catalog accepts an optional inclusive `from` / `to` query on
+`GET /api/properties/:propertyId/expenses/mappings`. With dates, it reads all
+QuickBooks Purchase pages across all dates, deduplicating transaction usage by
+account into `accountActivity`. Historical, zero-net, and currently unimported
+transactions count as activity. Only purchases within the selected range enter
+the read-only financial impact preview. It never saves purchases or
+adds import history. Preview failures are reported rather than presented as
+zero activity. Account activity is deduplicated by transaction in the UI.
+Mapping PUTs additionally accept `excludedAccountIds`, a unique array of account
+IDs disjoint from mapped accounts. These explicit exclusions are stored on the
+same company connection and protected by the existing mapping version/lease
+check. Legacy unmapped accounts remain unreviewed, and intentional exclusions
+are omitted from sync's needs-mapping warnings. No QuickBooks records are written.
+
 The overview’s recorded expense amount reads only the property ledger, using
 calendar dates. Its existing broader operating estimate still includes saved
 property assumptions and tracked maintenance/utilities; the UI labels that

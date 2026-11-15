@@ -50,5 +50,96 @@ test('mapping save is isolated from payment mappings and rejects concurrent edit
   const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
   await routes.save({ params: { propertyId: 'p' }, body: { version: 0, mappings: [{ accountId: '1', group: 'electricity' }] } }, res);
   expect(res.status).toHaveBeenCalledWith(409);
-  expect(context.QuickBooksConnection.findOneAndUpdate.mock.calls[0][1].$set).toEqual({ expenseMappings: [{ accountId: '1', group: 'electricity' }] });
+  expect(context.QuickBooksConnection.findOneAndUpdate.mock.calls[0][1].$set).toEqual({ expenseMappings: [{ accountId: '1', group: 'electricity' }], expenseExcludedAccountIds: [] });
+});
+
+test('mapping activity uses all dates while preview includes only the selected range without ledger writes', async () => {
+  const routes = {};
+  const qbRequest = jest.fn(async (_, method, path) => {
+    const query = decodeURIComponent(path);
+    if (query.includes('from Account')) return { QueryResponse: { Account: [
+      { Id: '1', Name: 'Electricity', AccountType: 'Expense', Active: true },
+      { Id: '2', Name: 'Repairs', AccountType: 'Expense', Active: false }
+    ] } };
+    if (query.includes('from Purchase')) return { QueryResponse: { Purchase: [
+      { ...purchase, TxnDate: '2026-11-01' }, { ...purchase, Id: '2', TxnDate: '2026-11-02', Credit: true, ExchangeRate: 1.5 },
+      { Id: '3', TxnDate: '2026-11-03', TotalAmt: 5, Line: [{ Amount: 5, ItemBasedExpenseLineDetail: { ItemRef: { value: '7' } } }] },
+      { Id: '4', TxnDate: '2025-01-01', TotalAmt: 0, Line: [line('1', 10), line('1', -10)] }
+    ] } };
+    if (path === 'item/7') return { Item: { ExpenseAccountRef: { value: '2', name: 'Repairs' } } };
+    throw new Error(path);
+  });
+  const context = {
+    app: { get: (url, auth, handler) => { routes[url] = handler; }, put: jest.fn() },
+    authenticateManagerProfile: jest.fn(), qbRequest,
+    getQbConnection: jest.fn(async () => ({ expenseMappings: [], expenseExcludedAccountIds: ['2'] })),
+    PropertyExpense: { findOneAndUpdate: jest.fn() }, QuickBooksConnection: { updateOne: jest.fn() }
+  };
+  createMappings(context, require('../server/quickbooks-expenses').validateRange).register();
+  const handler = routes['/api/properties/:propertyId/expenses/mappings'];
+  const range = { from: '2026-11-01', to: '2026-11-30' };
+  const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+  await handler({ params: { propertyId: 'p' }, query: range }, res);
+  expect(res.status).not.toHaveBeenCalled();
+  const payload = res.json.mock.calls[0][0];
+  expect(payload.preview).toEqual({ range, transactions: [
+    { id: '1', allocations: [{ accountId: '1', amount: 66 }, { accountId: '2', amount: 44 }] },
+    { id: '2', allocations: [{ accountId: '1', amount: -99 }, { accountId: '2', amount: -66 }] },
+    { id: '3', allocations: [{ accountId: '2', amount: 5 }] }
+  ] });
+  expect(payload.accounts[1].active).toBe(false);
+  expect(payload.accountActivity).toEqual([{ accountId: '1', count: 3 }, { accountId: '2', count: 3 }]);
+  expect(payload.excludedAccountIds).toEqual(['2']);
+  expect(context.PropertyExpense.findOneAndUpdate).not.toHaveBeenCalled();
+  expect(context.QuickBooksConnection.updateOne).not.toHaveBeenCalled();
+  expect(decodeURIComponent(qbRequest.mock.calls[1][2])).toContain('select * from Purchase orderby Id');
+  expect(decodeURIComponent(qbRequest.mock.calls[1][2])).not.toContain('TxnDate');
+  qbRequest.mockClear();
+  await handler({ params: { propertyId: 'p' }, query: { from: "bad' query", to: range.to } }, res);
+  expect(res.status).toHaveBeenCalledWith(400);
+  expect(qbRequest).not.toHaveBeenCalled();
+});
+
+test('an incomplete preview page reports an error instead of zero activity', async () => {
+  let handler;
+  const context = {
+    app: { get: (url, auth, fn) => { handler = fn; }, put: jest.fn() },
+    authenticateManagerProfile: jest.fn(), getQbConnection: async () => ({}),
+    qbRequest: jest.fn().mockResolvedValueOnce({ QueryResponse: { Account: [] } })
+      .mockResolvedValueOnce({})
+  };
+  createMappings(context, require('../server/quickbooks-expenses').validateRange).register();
+  const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+  await handler({ params: { propertyId: 'p' }, query: { from: '2026-11-01', to: '2026-11-30' } }, res);
+  expect(res.status).toHaveBeenCalledWith(503);
+  expect(res.json.mock.calls[0][0].message).toContain('incomplete');
+  expect(res.json.mock.calls[0][0].preview).toBeUndefined();
+});
+
+test('explicit exclusions validate separately, save atomically, and survive legacy updates', async () => {
+  let handler;
+  const context = {
+    app: { get: jest.fn(), put: (url, auth, fn) => { handler = fn; } }, authenticateManagerProfile: jest.fn(),
+    getQbConnection: jest.fn(async () => ({ _id: 'a', expenseExcludedAccountIds: ['2'] })),
+    qbRequest: async () => ({ QueryResponse: { Account: [{ Id: '1' }, { Id: '2' }] } }),
+    QuickBooksConnection: { findOneAndUpdate: jest.fn().mockResolvedValue({ expenseMappingVersion: 2 }) }
+  };
+  createMappings(context).register();
+  const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+  const req = { params: { propertyId: 'p' }, body: { version: 1, mappings: [{ accountId: '1', group: 'electricity' }], excludedAccountIds: ['2'] } };
+  await handler(req, res);
+  expect(context.QuickBooksConnection.findOneAndUpdate.mock.calls[0][1]).toMatchObject({
+    $set: { expenseMappings: req.body.mappings, expenseExcludedAccountIds: ['2'] }, $inc: { expenseMappingVersion: 1 }
+  });
+  expect(res.json.mock.calls[0][0]).toMatchObject({ excludedAccountIds: ['2'], version: 2 });
+  delete req.body.excludedAccountIds;
+  await handler(req, res);
+  expect(context.QuickBooksConnection.findOneAndUpdate.mock.calls[1][1].$set.expenseExcludedAccountIds).toEqual(['2']);
+  context.QuickBooksConnection.findOneAndUpdate.mockClear();
+  for (const excludedAccountIds of [['1'], ['2', '2'], ['999'], [2], '2']) {
+    req.body.excludedAccountIds = excludedAccountIds;
+    await handler(req, res);
+    expect(res.status).toHaveBeenLastCalledWith(400);
+  }
+  expect(context.QuickBooksConnection.findOneAndUpdate).not.toHaveBeenCalled();
 });

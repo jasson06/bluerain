@@ -3,6 +3,7 @@ let expenseWorkspaceRequest = 0;
 let expenseWorkspaceProperty = '';
 let expenseWorkspaceData = null;
 let expenseWorkspaceRange = '';
+let expenseSyncStatusTimeout = null;
 
 function expenseTransactionCount() {
     return expenseWorkspaceProperty === String(state.currentProperty?._id)
@@ -35,7 +36,7 @@ function expensePresetRange(preset, now = new Date()) {
 
 function initializeExpenseWorkspace(propertyId) {
     if (expenseWorkspaceProperty === String(propertyId)) return;
-    if (typeof closeExpenseMappings === 'function') closeExpenseMappings();
+    if (typeof closeExpenseMappings === 'function') closeExpenseMappings(true);
     expenseWorkspaceProperty = String(propertyId);
     expenseWorkspaceData = null;
     expenseWorkspaceRange = '';
@@ -76,12 +77,25 @@ function openExpensesFromOverview() {
 async function loadExpenseWorkspace(propertyId, sync = false, busyAttempt = 0) {
     if (!propertyId) return;
     initializeExpenseWorkspace(propertyId);
+    if (expenseMappingEditor && (expenseMappingEditor.preview.range.from !== document.getElementById('expenseFrom').value
+        || expenseMappingEditor.preview.range.to !== document.getElementById('expenseTo').value)) {
+        const editor = expenseMappingEditor;
+        if (!closeExpenseMappings()) {
+            document.getElementById('expenseFrom').value = editor.preview.range.from;
+            document.getElementById('expenseTo').value = editor.preview.range.to;
+            document.getElementById('expenseRange').value = editor.preset;
+            return;
+        }
+    }
     const request = ++expenseWorkspaceRequest;
     const range = { from: document.getElementById('expenseFrom').value, to: document.getElementById('expenseTo').value };
     const status = document.getElementById('expenseSyncStatus');
     const list = document.getElementById('expensesList');
     const refresh = document.getElementById('expenseRefresh');
     const current = () => request === expenseWorkspaceRequest && String(state.currentProperty?._id) === String(propertyId);
+    clearTimeout(expenseSyncStatusTimeout);
+    expenseSyncStatusTimeout = null;
+    status.hidden = false;
     const rangeKey = `${range.from}:${range.to}`;
     if (expenseWorkspaceRange !== rangeKey) {
         expenseWorkspaceData = null;
@@ -119,6 +133,12 @@ async function loadExpenseWorkspace(propertyId, sync = false, busyAttempt = 0) {
         status.textContent = `${issue ? data.sync.message + ' Showing saved records; totals may be incomplete.' : sync ? 'Expenses for this period are up to date.' : 'Showing saved expenses. Use Sync now to check for QuickBooks updates.'} Last successful sync: ${synced}${data.companyName ? ' · ' + data.companyName : ''}`;
         if (!data.mappingCount) status.textContent = 'No categories mapped. Open Category mappings to choose what to import. ' + status.textContent;
         if (data.sync.unmapped?.length) status.textContent += ` ${data.sync.unmapped.length} unmapped accounts were excluded; review Category mappings.`;
+        if (data.sync.status !== 'failed' && !data.sync.busy && !data.sync.unmapped?.length) {
+            expenseSyncStatusTimeout = setTimeout(() => {
+                expenseSyncStatusTimeout = null;
+                if (current()) status.hidden = true;
+            }, 4000);
+        }
         renderExpenseWorkspace();
         document.getElementById('expenseHistory').innerHTML = (data.history || []).length
             ? `<div class="table-responsive"><table class="payments-table"><thead><tr><th>Date / time</th><th>Period</th><th>Status</th><th>Imported</th><th>Refreshed</th><th>Removed</th></tr></thead><tbody>${data.history.map(item => `<tr><td>${escapeHtml(new Date(item.completedAt || item.startedAt).toLocaleString())}</td><td>${escapeHtml(item.from)} – ${escapeHtml(item.to)}</td><td>${item.status === 'synced' ? 'Synced' : `Failed: ${escapeHtml(item.message || 'Use Sync now to retry.')}`}</td><td>${Number(item.imported) || 0}</td><td>${Number(item.updated) || 0}</td><td>${Number(item.removed) || 0}</td></tr>`).join('')}</tbody></table></div>`

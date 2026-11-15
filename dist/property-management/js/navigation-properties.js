@@ -421,6 +421,7 @@ function renderPropertyList() {
 }
 
 async function selectProperty(propertyId, options = {}) {
+    if (String(state.currentProperty?._id) !== String(propertyId) && !closeExpenseMappings()) return;
     closeManagerProfileContainer();
 
     const loaderContext = options.loaderContext || (typeof window !== 'undefined' ? window.event : null);

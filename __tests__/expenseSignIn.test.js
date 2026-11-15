@@ -3,7 +3,7 @@ const vm = require('vm');
 const path = require('path');
 function setup(responses) {
   const context = vm.createContext({
-    document: { addEventListener: jest.fn() }, fetch: jest.fn(), localStorage: { getItem: () => 'old-token' },
+    document: { addEventListener: jest.fn() }, window: { addEventListener: jest.fn() }, fetch: jest.fn(), localStorage: { getItem: () => 'old-token' },
   });
   for (const file of ['maintenance-requests.js', 'expense-mappings.js']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../dist/property-management/js', file), 'utf8'), context);

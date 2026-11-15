@@ -93,4 +93,24 @@ loaded transactions for the selected period, independent of local filters, and
 reset when the period or property changes. Request sequence and property checks reject
 late responses; busy connections are polled with read-only GETs while this tab remains active. The UI
 shows sync failures and incomplete saved data, last successful sync, and history.
+Completed status messages and connection/mapping reminders dismiss after four
+seconds, matching Payments. Errors, active syncs, and unmapped-account warnings
+remain visible; a new request cancels the previous dismissal timer.
 Construction expense and estimating screens do not use this workspace.
+
+`expense-mappings.js` provides Needs mapping / Mapped / Excluded review views,
+account search, persistent selections for bulk assignments, and reviewed
+name/subtype suggestions restricted to expense accounts. Inactive unreviewed
+accounts without transactions are hidden by default. Each review view splits
+accounts into With transactions and No transactions using all QuickBooks Purchase
+dates, with the transaction group first. Zero-net transactions still count as
+activity, and inactive QuickBooks accounts with transactions remain visible.
+The financial impact preview remains limited to the selected period; an account
+with historical activity stays in With transactions even if this period is empty.
+Search and bulk selections apply to both groups in the selected mapping view. Explicit
+exclusions are saved independently from unreviewed accounts. The read-only
+QuickBooks preview includes tax and signed credits in company home currency;
+operating expenses, debt, returned rent, and deposits remain separate. Draft
+changes update the preview and sticky save footer without importing records.
+Closing, changing the period/property, or leaving the page protects unsaved
+changes. Switching sub-tabs preserves drafts; saving locks edits until complete.

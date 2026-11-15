@@ -115,6 +115,22 @@ test('concurrent sync returns busy without querying or mutating expenses', async
   expect(context.qbRequest).not.toHaveBeenCalled();
 });
 
+test('intentional exclusions are not reported as accounts needing mapping during sync', async () => {
+  const { service, context } = setup();
+  const excludedConnection = { ...connection, expenseExcludedAccountIds: ['20'] };
+  context.getQbConnection.mockResolvedValue(excludedConnection);
+  context.QuickBooksConnection.findOneAndUpdate.mockResolvedValue(excludedConnection);
+  context.qbRequest.mockResolvedValue({ QueryResponse: { Purchase: [purchase('1', {
+    TotalAmt: 30, TxnTaxDetail: { TotalTax: 0 },
+    Line: ['10', '20', '30'].map(value => ({
+      Amount: 10, AccountBasedExpenseLineDetail: { AccountRef: { value, name: `Account ${value}` } }
+    }))
+  })] } });
+  const result = await service.synchronize('p', range);
+  expect(result.unmapped).toEqual([{ accountId: '30', category: 'Account 30' }]);
+  expect(result.imported).toBe(1);
+});
+
 test('authenticated route validates range before touching data', async () => {
   const { service, context } = setup();
   context.authenticateManagerProfile = jest.fn();

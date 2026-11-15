@@ -73,6 +73,7 @@ module.exports = function createExpenseSync(context) {
     if (!locked) return { busy: true, message: 'Expenses are syncing in another session. Refresh shortly.' };
     connection.expenseMappings = locked.expenseMappings || [];
     connection.expenseMappingVersion = locked.expenseMappingVersion || 0;
+    connection.expenseExcludedAccountIds = locked.expenseExcludedAccountIds || [];
     const heartbeat = async () => {
       const result = await context.QuickBooksConnection.updateOne({ _id: connection._id, expenseImportLease: lease },
         { $set: { expenseImportLeaseUntil: new Date(Date.now() + 120000) } });
@@ -81,16 +82,7 @@ module.exports = function createExpenseSync(context) {
     const summary = { ...range, mappingVersion: connection.expenseMappingVersion || 0, startedAt: now, imported: 0, updated: 0, skipped: 0, removed: 0, status: 'synced' };
     try {
       // Fetch every page before saving; a failed page must not imply removed records.
-      const purchases = new Map();
-      for (let start = 1; ; start += 1000) {
-        await heartbeat();
-        const query = `select * from Purchase where TxnDate >= '${range.from}' and TxnDate <= '${range.to}' orderby Id startposition ${start} maxresults 1000`;
-        const response = await context.qbRequest(connection, 'get', `query?query=${encodeURIComponent(query)}`);
-        if (!response.QueryResponse) throw new Error('QuickBooks returned an incomplete expense response.');
-        const page = response.QueryResponse.Purchase || [];
-        for (const purchase of page) purchases.set(String(purchase.Id), purchase);
-        if (page.length < 1000) break;
-      }
+      const purchases = await createMappings(context).purchases(connection, range, heartbeat);
       const previous = await context.PropertyExpense.find({ projectId: propertyId, 'quickBooks.connectionId': connection._id,
         'quickBooks.realmId': connection.realmId, 'quickBooks.environment': connection.environment,
         'quickBooks.entityType': 'Purchase', date: { $gte: range.from, $lte: range.to }, status: { $ne: 'archived' } }).lean();
@@ -113,11 +105,12 @@ module.exports = function createExpenseSync(context) {
       const resolve = createMappings(context).resolver(connection);
       const resolved = [];
       const unmapped = new Map();
+      const excluded = new Set(connection.expenseExcludedAccountIds);
       for (const purchase of purchases.values()) {
         await heartbeat();
         const item = await resolve(purchase);
         const mapped = allocate(item, connection.expenseMappings || []);
-        mapped.unmapped.forEach(row => unmapped.set(row.accountId || row.category, row));
+        mapped.unmapped.filter(row => !excluded.has(row.accountId)).forEach(row => unmapped.set(row.accountId || row.category, row));
         resolved.push(item);
       }
       summary.unmapped = [...unmapped.values()];
@@ -151,7 +144,7 @@ module.exports = function createExpenseSync(context) {
   }
 
   function register() {
-    createMappings(context).register();
+    createMappings(context, validateRange).register();
     const loadExpenses = async (req, res, shouldSync) => {
       let range;
       try { range = validateRange(shouldSync ? req.body : req.query); } catch (error) { return res.status(400).json({ message: error.message }); }

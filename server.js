@@ -785,6 +785,7 @@ const quickBooksConnectionSchema = new mongoose.Schema({
   connectedAt: { type: Date, default: Date.now },
   lastExpenseImportAt: Date,
   expenseMappings: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  expenseExcludedAccountIds: { type: [String], default: [] },
   expenseMappingVersion: { type: Number, default: 0 },
   expenseImportLease: String,
   expenseImportLeaseUntil: Date,

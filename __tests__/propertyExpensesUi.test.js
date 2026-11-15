@@ -10,7 +10,7 @@ function setup() {
   const context = vm.createContext({ document: { getElementById: get, querySelectorAll: () => tabs },
     state: { currentProperty: { _id: 'p' }, currentTab: 'expenses', propertyOverviewData: {} },
     localStorage: { getItem: () => 'manager-token' },
-    fetch: jest.fn(), setTimeout: jest.fn(), renderPropertyOverview: jest.fn(), navigateWorkspaceTab: jest.fn(),
+    fetch: jest.fn(), setTimeout: jest.fn(), clearTimeout: jest.fn(), renderPropertyOverview: jest.fn(), navigateWorkspaceTab: jest.fn(),
     escapeHtml: value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')
   });
   context.expenseMappingFetch = (...args) => context.fetch(...args);
@@ -189,4 +189,62 @@ test('the dedicated property collection cannot expose construction expense field
   expect(model.schema.path('item')).toBeUndefined();
   expect(model.schema.path('lineItems')).toBeUndefined();
   expect(model.schema.indexes()).toContainEqual([{ quickBooksImportKey: 1 }, { unique: true, background: true }]);
+});
+
+describe('expense status dismissal', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+  function setupTimers() {
+    const result = setup();
+    result.context.setTimeout = setTimeout;
+    result.context.clearTimeout = clearTimeout;
+    return result;
+  }
+
+  test.each([{ status: 'saved' }, { disconnected: true, message: 'Connect QuickBooks' }])(
+    'dismisses a completed status or connection reminder after four seconds: %j', async sync => {
+      const { context, get } = setupTimers();
+      context.fetch.mockResolvedValue(response(data([], sync)));
+      await context.loadExpenseWorkspace('p');
+      expect(get('expenseSyncStatus').hidden).toBe(false);
+      jest.advanceTimersByTime(3999);
+      expect(get('expenseSyncStatus').hidden).toBe(false);
+      jest.advanceTimersByTime(1);
+      expect(get('expenseSyncStatus').hidden).toBe(true);
+    });
+
+  test.each([
+    { status: 'failed', message: 'QuickBooks unavailable' },
+    { status: 'synced', unmapped: [{ accountId: '10' }] }
+  ])('keeps failures and unmapped-account warnings visible: %j', async sync => {
+    const { context, get } = setupTimers();
+    context.fetch.mockResolvedValue(response(data([], sync)));
+    await context.loadExpenseWorkspace('p');
+    jest.advanceTimersByTime(60000);
+    expect(get('expenseSyncStatus').hidden).toBe(false);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  test('a new request cancels dismissal and keeps progress visible until it completes', async () => {
+    const { context, get } = setupTimers();
+    context.fetch.mockResolvedValueOnce(response(data()));
+    await context.loadExpenseWorkspace('p');
+    jest.advanceTimersByTime(3000);
+    let finish;
+    context.fetch.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+    const pending = context.loadExpenseWorkspace('p', true);
+    jest.advanceTimersByTime(60000);
+    expect(get('expenseSyncStatus').hidden).toBe(false);
+    expect(get('expenseSyncStatus').textContent).toContain('Syncing');
+    finish(response(data()));
+    await pending;
+    jest.advanceTimersByTime(4000);
+    expect(get('expenseSyncStatus').hidden).toBe(true);
+
+    context.fetch.mockRejectedValueOnce(new Error('Network unavailable'));
+    await context.loadExpenseWorkspace('p');
+    jest.advanceTimersByTime(60000);
+    expect(get('expenseSyncStatus').hidden).toBe(false);
+    expect(get('expenseSyncStatus').textContent).toContain('Network unavailable');
+  });
 });
