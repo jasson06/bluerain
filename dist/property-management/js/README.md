@@ -123,3 +123,13 @@ reflow into cards without horizontal scrolling; desktop tables remain intact.
 Expense cards override the shared payment table minimum width and include card
 padding/borders within the available width, so internal containers do not scroll
 sideways on phones or tablets.
+The expense search/category controls share a single row in a 3:1 width ratio.
+
+Payments transactions also reflow into compact cards up to 900px: tenant, unit,
+date, amount, and the existing Actions menu stay visible. Tapping the card (or
+pressing Enter/Space on a focused card) expands/collapses
+the original type, applied period, method, fees, balance, note, and QuickBooks
+controls without duplicating editable fields or changing credit/void semantics.
+Nested controls do not toggle the card or edit the row. Desktop clicks retain
+editing/allocation and read-only lock explanations. Desktop tables and sorting remain
+unchanged, and pagination still limits both layouts to the same rows.

@@ -4,6 +4,8 @@
 #expenses .expense-controls label { display:flex; flex-direction:column; gap:5px; font-size:13px; font-weight:600; }
 #expenses input, #expenses select { padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; color:#1e293b; min-height:40px; }
 #expenses .expense-filters input { flex:1; min-width:180px; }
+#expenses .expense-filters { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); }
+#expenses .expense-filters input, #expenses .expense-filters select { min-width:0; width:100%; box-sizing:border-box; }
 #expenseSyncStatus { margin-bottom:16px; }
 #expenseSummary { font-weight:600; margin-bottom:12px; }
 #expenses .expense-table { width:100%; }

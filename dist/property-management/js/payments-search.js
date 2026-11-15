@@ -338,6 +338,27 @@ function handlePaymentEditLockRowKeydown(event, paymentId) {
     openPaymentEditLockPopover(event, paymentId);
 }
 
+function handlePaymentRowClick(event, paymentId) {
+    if (event.target.closest('button, a, input, select, textarea, summary, details, [role="button"]')) return;
+    if (window.innerWidth <= 900) {
+        const row = event.currentTarget;
+        const expanded = row.dataset.mobileExpanded !== 'true';
+        row.dataset.mobileExpanded = String(expanded);
+        row.setAttribute('aria-expanded', String(expanded));
+        return;
+    }
+    const payment = (state.payments || []).find(item => String(item._id) === String(paymentId));
+    if (!payment || getPaymentEditLockReason(payment)) openPaymentEditLockPopover(event, paymentId);
+    else if (payment.quickBooks?.manualAllocation) openPaymentAllocation(paymentId);
+    else editPayment(paymentId);
+}
+
+function handlePaymentRowKeydown(event, paymentId) {
+    if (event.target !== event.currentTarget || !['Enter', ' '].includes(event.key)) return;
+    event.preventDefault();
+    handlePaymentRowClick(event, paymentId);
+}
+
 function openPaymentEditLockPopover(event, paymentId) {
     event.stopPropagation();
     const payment = (state.payments || []).find(item => String(item._id) === String(paymentId));
@@ -639,7 +660,7 @@ function renderPayments() {
     paymentsList.innerHTML = `
     ${quickBooksStatusMessage}
     <div class="table-responsive">
-    <table class="payments-table">
+    <table class="payments-table payment-transactions-table">
             <thead>
                 <tr>
                     <th class="sortable" data-sort-key="tenant">Tenant <span class="sort-arrow" id="arrow-tenant"></span></th>
@@ -681,15 +702,12 @@ function renderPayments() {
                     const isVoided = payment.postingStatus === 'voided';
                     const editLockReason = getPaymentEditLockReason(payment);
                     const isPersistedMatch = payment.quickBooks?.syncStatus === 'synced' && payment.quickBooks?.entityId;
-                    const rowClick = editLockReason
-                        ? `openPaymentEditLockPopover(event, '${payment._id}')`
-                        : `${payment.quickBooks?.manualAllocation?'openPaymentAllocation':'editPayment'}('${payment._id}')`;
                     return `
-                        <tr class="payment-row${isVoided?' payment-row-voided':''}" onclick="${rowClick}"${editLockReason?` tabindex="0" aria-haspopup="dialog" aria-expanded="false" aria-controls="paymentEditLockPopover" onkeydown="handlePaymentEditLockRowKeydown(event, '${payment._id}')"`:''}>
+                        <tr class="payment-row${isVoided?' payment-row-voided':''}" onclick="handlePaymentRowClick(event, '${payment._id}')" tabindex="0" aria-expanded="false"${editLockReason?' aria-haspopup="dialog" aria-controls="paymentEditLockPopover"':''} onkeydown="handlePaymentRowKeydown(event, '${payment._id}')">
                             <td>${row.tenantName ? `<button class=\"link-button\" title=\"View balance sheet\" onclick=\"event.stopPropagation();openTenantBalanceModal('${payment.tenantId}')\">${escapeHtml(row.tenantName)}</button>` : 'N/A'}</td>
                             <td>${escapeHtml(row.unitText || 'N/A')}</td>
-                            <td>${escapeHtml(row.typeText || '')}</td>
-                            <td>${escapeHtml(row.appliedText || 'Rent')}</td>
+                            <td data-label="Type">${escapeHtml(row.typeText || '')}</td>
+                            <td data-label="Applied to">${escapeHtml(row.appliedText || 'Rent')}</td>
                             <td>${(
                                 isVoided
                                     ? `<del title="Voided payment">$${Number(payment.amount || 0).toFixed(2)}</del>`
@@ -700,18 +718,18 @@ function renderPayments() {
                                         ? '<span style="color:#dc2626" title="Credit">-$' + Math.abs(payment.amount).toFixed(2) + '</span>'
                                         : '$' + Number(payment.amount).toFixed(2))
                               )}</td>
-                               <td>${escapeHtml(row.methodText || '')}</td>
+                               <td data-label="Method">${escapeHtml(row.methodText || '')}</td>
                             <td>${formatDateDisplay(payment.date)}</td>
-                               <td>$${Number(row.lateFeeDisplay).toFixed(2)}</td>
-                                                        <td>
+                               <td data-label="Late fee">$${Number(row.lateFeeDisplay).toFixed(2)}</td>
+                                                        <td data-label="Balance">
                                                         ${isVoided ? '—' : row.displayBalance < 0 || payment.amount < 0
                                                             ? `<button class="link-button" title="Apply credit${row.overrideActive ? ' • override active' : ''}" onclick="event.stopPropagation();openCreditAllocation(event, '${payment.tenantId}', '${payment._id}')">` +
                                                                 (row.displayBalance < 0 ? `<span style='color:#16a34a'>-$${Math.abs(row.displayBalance).toFixed(2)}</span>` : `$${(Number(row.displayBalance).toFixed(2))}`) +
                                                                      `</button>`
                                                             : (row.displayBalance !== undefined && row.displayBalance !== null ? `$${(Number(row.displayBalance).toFixed(2))}` : '')}
                                                         </td>
-                                                     <td class="note-cell">${renderPaymentNote(row)}${isVoided?`<span class="payment-void-reason">${escapeHtml(payment.voidReason||'Voided')}</span>`:''}</td>
-                            <td onclick="event.stopPropagation()">
+                                                     <td class="note-cell" data-label="Note">${renderPaymentNote(row)}${isVoided?`<span class="payment-void-reason">${escapeHtml(payment.voidReason||'Voided')}</span>`:''}</td>
+                            <td data-label="QuickBooks" onclick="event.stopPropagation()">
                                 ${isVoided
                                     ? '<span class="badge badge-warning">Voided locally</span>'
                                     : payment.quickBooks?.syncStatus === 'failed'

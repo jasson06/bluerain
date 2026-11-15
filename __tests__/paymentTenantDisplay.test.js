@@ -19,6 +19,36 @@ function setup(state) {
 }
 
 describe('payment row tenant and unit display', () => {
+    test('mobile card clicks toggle details without editing, including voided and credit payments', () => {
+        const context = setup({});
+        context.window.innerWidth = 375;
+        context.editPayment = jest.fn();
+        context.openPaymentEditLockPopover = jest.fn();
+        const row = { dataset: {}, setAttribute: jest.fn(), closest: () => null };
+        const event = { target: row, currentTarget: row };
+        context.handlePaymentRowClick(event, 'payment-1');
+        expect(row.dataset.mobileExpanded).toBe('true');
+        expect(row.setAttribute).toHaveBeenLastCalledWith('aria-expanded', 'true');
+        context.handlePaymentRowClick(event, 'payment-1');
+        expect(row.dataset.mobileExpanded).toBe('false');
+        expect(context.editPayment).not.toHaveBeenCalled();
+        expect(context.openPaymentEditLockPopover).not.toHaveBeenCalled();
+    });
+
+    test.each(['Enter', ' '])('mobile card supports %s and ignores nested action controls', key => {
+        const context = setup({});
+        context.window.innerWidth = 375;
+        const row = { dataset: {}, setAttribute: jest.fn(), closest: () => null };
+        const event = { key, target: row, currentTarget: row, preventDefault: jest.fn() };
+        context.handlePaymentRowKeydown(event, 'payment-1');
+        expect(event.preventDefault).toHaveBeenCalled();
+        expect(row.dataset.mobileExpanded).toBe('true');
+        const buttonEvent = { ...event, target: { closest: () => ({}) } };
+        context.handlePaymentRowClick(buttonEvent, 'payment-1');
+        context.handlePaymentRowKeydown(buttonEvent, 'payment-1');
+        expect(row.dataset.mobileExpanded).toBe('true');
+    });
+
     test.each([
         ['posted', {}, 'editPayment', {}],
         ['posted', {manualAllocation: true}, 'openPaymentAllocation', {}],
@@ -54,8 +84,8 @@ describe('payment row tenant and unit display', () => {
 
         const row = list.innerHTML.match(/<tr class="payment-row[\s\S]*?<\/tr>/)[0];
         const lockReason = context.getPaymentEditLockReason(context.state.payments[0]);
-        const accessibility = lockReason ? ' tabindex="0" aria-haspopup="dialog" aria-expanded="false" aria-controls="paymentEditLockPopover" onkeydown="handlePaymentEditLockRowKeydown(event, \'payment-1\')"' : '';
-        const openingTag = `<tr class="payment-row${postingStatus === 'voided' ? ' payment-row-voided' : ''}" onclick="${handler}(${handler === 'openPaymentEditLockPopover' ? 'event, ' : ''}'payment-1')"${accessibility}>`;
+        const accessibility = lockReason ? ' aria-haspopup="dialog" aria-controls="paymentEditLockPopover"' : '';
+        const openingTag = `<tr class="payment-row${postingStatus === 'voided' ? ' payment-row-voided' : ''}" onclick="handlePaymentRowClick(event, 'payment-1')" tabindex="0" aria-expanded="false"${accessibility} onkeydown="handlePaymentRowKeydown(event, 'payment-1')">`;
         expect(row.startsWith(openingTag)).toBe(true);
         const cells = row.slice(openingTag.length).match(/<td(?:\s[^>]*)?>[\s\S]*?<\/td>/g);
         expect(cells).toHaveLength(12);
@@ -63,8 +93,16 @@ describe('payment row tenant and unit display', () => {
         expect(cells[1]).toBe('<td>101</td>');
         expect(row).not.toContain('Editing locked');
         expect(cells[2]).not.toContain('<button');
-        expect(cells[2]).toBe('<td>Rent</td>');
-        expect(cells[3]).toBe('<td>Rent · OCT-26</td>');
+        expect(cells[2]).toBe('<td data-label="Type">Rent</td>');
+        expect(cells[3]).toBe('<td data-label="Applied to">Rent · OCT-26</td>');
+        expect(cells[9]).toContain('data-label="Note"');
+        expect(cells[10]).toContain('data-label="QuickBooks"');
+        expect(row).not.toContain('Payment details');
+        context.editPayment = jest.fn();
+        context.openPaymentAllocation = jest.fn();
+        context.openPaymentEditLockPopover = jest.fn();
+        context.handlePaymentRowClick({ target: { closest: () => null } }, 'payment-1');
+        expect(context[handler]).toHaveBeenCalled();
         if (postingStatus === 'voided') {
             expect(cells[10]).toContain('<span class="badge badge-warning">Voided locally</span>');
             expect(row.match(/class="badge badge-warning"/g)).toHaveLength(1);
