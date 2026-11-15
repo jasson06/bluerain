@@ -18,6 +18,7 @@ function expensePresetRange(preset, now = new Date()) {
 
 function initializeExpenseWorkspace(propertyId) {
     if (expenseWorkspaceProperty === String(propertyId)) return;
+    if (typeof closeExpenseMappings === 'function') closeExpenseMappings();
     expenseWorkspaceProperty = String(propertyId);
     expenseWorkspaceData = null;
     document.getElementById('expenseRange').value = 'month';
@@ -72,7 +73,7 @@ async function loadExpenseWorkspace(propertyId, busyAttempt = 0) {
     list.setAttribute('aria-busy', 'true');
     refresh.disabled = true;
     try {
-        const response = await fetch(`/api/properties/${encodeURIComponent(propertyId)}/expenses/sync`, {
+        const response = await (typeof managerSessionFetch === 'function' ? managerSessionFetch : fetch)(`/api/properties/${encodeURIComponent(propertyId)}/expenses/sync`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
             body: JSON.stringify(range)
         });
@@ -81,13 +82,15 @@ async function loadExpenseWorkspace(propertyId, busyAttempt = 0) {
         if (!response.ok) throw new Error(response.status === 401 ? 'Sign in again to sync expenses.' : data.message || 'Unable to load expenses.');
         expenseWorkspaceData = data;
         const selected = document.getElementById('expenseCategory').value;
-        const categories = [...new Set(data.expenses.map(item => item.category))].sort();
+        const categories = [...new Set(data.expenses.flatMap(item => item.allocations?.map(line => line.category) || [item.category]))].sort();
         document.getElementById('expenseCategory').innerHTML = '<option value="">All categories</option>' + categories.map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('');
         document.getElementById('expenseCategory').value = categories.includes(selected) ? selected : '';
         const synced = data.lastSyncedAt ? new Date(data.lastSyncedAt).toLocaleString() : 'Never';
         const issue = data.sync.status === 'failed' || data.sync.busy || data.sync.disconnected;
         status.className = issue ? 'overview-alert' : 'overview-ok';
         status.textContent = `${issue ? data.sync.message + ' Showing saved records; totals may be incomplete.' : 'Expenses for this period are up to date.'} Last successful sync: ${synced}${data.companyName ? ' · ' + data.companyName : ''}`;
+        if (!data.mappingCount) status.textContent = 'No categories mapped. Open Category mappings to choose what to import. ' + status.textContent;
+        if (data.sync.unmapped?.length) status.textContent += ` ${data.sync.unmapped.length} unmapped accounts were excluded; review Category mappings.`;
         renderExpenseWorkspace();
         document.getElementById('expenseHistory').innerHTML = (data.history || []).length
             ? `<ul>${data.history.map(item => `<li>${escapeHtml(new Date(item.completedAt || item.startedAt).toLocaleString())} · ${escapeHtml(item.from)} – ${escapeHtml(item.to)} · ${item.status === 'synced' ? `${Number(item.imported) || 0} imported, ${Number(item.updated) || 0} refreshed, ${Number(item.removed) || 0} removed` : `Failed: ${escapeHtml(item.message || 'Refresh to retry.')}`}</li>`).join('')}</ul>`
@@ -112,12 +115,16 @@ function renderExpenseWorkspace() {
     if (!data) return;
     const search = document.getElementById('expenseSearch').value.trim().toLowerCase();
     const category = document.getElementById('expenseCategory').value;
-    const rows = data.expenses.filter(item => (!category || item.category === category)
-        && (!search || [item.vendor, item.description, item.category].join(' ').toLowerCase().includes(search)));
+    const rows = data.expenses.map(item => ({ ...item, visibleLines: (item.allocations || [{ category: item.category, amount: item.amount, group: 'other' }]).filter(line => !category || line.category === category) }))
+        .filter(item => item.visibleLines.length && (!search || [item.vendor, item.description, ...item.visibleLines.map(line => line.category)].join(' ').toLowerCase().includes(search)));
     const money = value => Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const total = rows.reduce((sum, item) => sum + Math.round(Number(item.amount) * 100), 0) / 100;
-    document.getElementById('expenseSummary').textContent = `${rows.length} of ${data.expenses.length} expenses · Total: ${money(total)} · Company home currency`;
+    const totals = { operating: 0, debt: 0, returnedRent: 0, depositTransfer: 0 };
+    rows.forEach(item => item.visibleLines.forEach(line => {
+        const group = line.group === 'monthlyDebt' ? 'debt' : ['returnedRent','depositTransfer'].includes(line.group) ? line.group : 'operating';
+        totals[group] += Math.round(Number(line.amount) * 100);
+    }));
+    document.getElementById('expenseSummary').textContent = `${rows.length} of ${data.expenses.length} transactions · Operating: ${money(totals.operating/100)} · Mortgage / debt: ${money(totals.debt/100)} · Returned rent: ${money(totals.returnedRent/100)} · Deposit transfers: ${money(totals.depositTransfer/100)} · Company home currency`;
     document.getElementById('expensesList').innerHTML = rows.length
-        ? `<div class="table-responsive"><table class="payments-table expense-table"><thead><tr><th>Date</th><th>Vendor</th><th>Description</th><th>Category</th><th>Amount</th><th>Source / status</th></tr></thead><tbody>${rows.map(item => `<tr><td>${escapeHtml(item.date)}</td><td>${escapeHtml(item.vendor || '—')}</td><td>${escapeHtml(item.description || '—')}</td><td>${escapeHtml(item.category)}</td><td class="expense-amount">${money(item.amount)}</td><td>${escapeHtml(item.source)} · ${escapeHtml(item.status)}</td></tr>`).join('')}</tbody></table></div>`
-        : '<div class="empty-compact">No expenses match this date range and filters.</div>';
+        ? `<div class="table-responsive"><table class="payments-table expense-table"><thead><tr><th>Date</th><th>Payee</th><th>Description / allocations</th><th>Included amount</th><th>Original total</th></tr></thead><tbody>${rows.map(item => `<tr><td>${escapeHtml(item.date)}</td><td>${escapeHtml(item.vendor || 'Payee not supplied')}</td><td>${escapeHtml(item.description || '—')}${item.ref ? ' · Ref: '+escapeHtml(item.ref) : ''}${typeof expenseReportEditor === 'function' ? expenseReportEditor(item) : ''}<details><summary>${item.visibleLines.length} allocation(s)</summary>${item.visibleLines.map(line => `<p>${escapeHtml(line.category)} — ${money(line.amount)}${line.description ? ' · '+escapeHtml(line.description) : ''}</p>`).join('')}<p>Excluded from import: ${money(item.excludedAmount)}. ${escapeHtml(item.source)} · ${escapeHtml(item.status)}</p></details></td><td>${money(item.visibleLines.reduce((sum,line) => sum+Math.round(Number(line.amount)*100),0)/100)}</td><td>${money(item.originalTotal ?? item.amount)}</td></tr>`).join('')}</tbody></table></div>`
+        : '<div class="empty-compact">No mapped expenses match this date range and filters.</div>';
 }

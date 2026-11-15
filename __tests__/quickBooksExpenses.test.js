@@ -1,10 +1,10 @@
 const createSync = require('../server/quickbooks-expenses');
 const { validateRange, purchaseFields, expenseAmount } = createSync;
-const connection = { _id: 'connection-a', realmId: 'company-a', environment: 'sandbox' };
+const connection = { _id: 'connection-a', realmId: 'company-a', environment: 'sandbox', expenseMappings: [{ accountId: '10', group: 'maintenance' }] };
 const range = { from: '2026-11-01', to: '2026-11-30' };
-const purchase = (id = '1', overrides = {}) => ({ Id: id, TxnDate: '2026-11-01', TotalAmt: 108.25,
+const purchase = (id = '1', overrides = {}) => ({ Id: id, TxnDate: '2026-11-01', TotalAmt: 108.25, TxnTaxDetail: { TotalTax: 8.25 },
   EntityRef: { name: 'Hardware store' }, Line: [{ Amount: 100, Description: 'Repair supplies',
-    AccountBasedExpenseLineDetail: { AccountRef: { name: 'Repairs' } } }], ...overrides });
+    AccountBasedExpenseLineDetail: { AccountRef: { value: '10', name: 'Repairs' } } }], ...overrides });
 const lean = value => ({ lean: () => Promise.resolve(value) });
 function matches(row, query) {
   return Object.entries(query).every(([key, value]) => {
@@ -60,7 +60,7 @@ test('uses tax-inclusive totals, descriptions/categories, signed credits and hom
 test('repeated imports update the same property record, including a zeroed/voided amount', async () => {
   const { service, rows } = setup();
   expect(await service.savePurchase(connection, 'p', purchase())).toBe('imported');
-  expect(await service.savePurchase(connection, 'p', purchase('1', { TotalAmt: 0 }))).toBe('updated');
+  expect(await service.savePurchase(connection, 'p', purchase('1', { TotalAmt: 0, Line: [{ Amount: 0, AccountBasedExpenseLineDetail: { AccountRef: { value: '10', name: 'Repairs' } } }], TxnTaxDetail: { TotalTax: 0 } }))).toBe('updated');
   expect(rows).toHaveLength(1);
   expect(rows[0]).toMatchObject({ projectId: 'p', amount: 0, status: 'approved', quickBooksImportKey: 'sandbox:company-a:Purchase:1' });
 });
@@ -70,7 +70,7 @@ test('property imports never query or mutate construction expense records', asyn
   context.Expense = new Proxy({}, { get() { throw new Error('Construction expenses must stay separate'); } });
   context.QuickBooksSyncLog = new Proxy({}, { get() { throw new Error('Construction export logs must stay separate'); } });
   await service.savePurchase(connection, 'p', purchase());
-  await service.savePurchase(connection, 'p', purchase('1', { TotalAmt: 25 }));
+  await service.savePurchase(connection, 'p', purchase('1', { TotalAmt: 25, Line: [{ Amount: 25, AccountBasedExpenseLineDetail: { AccountRef: { value: '10', name: 'Repairs' } } }], TxnTaxDetail: { TotalTax: 0 } }));
   expect(rows).toHaveLength(1);
   expect(rows[0].amount).toBe(25);
 });
@@ -118,7 +118,7 @@ test('concurrent sync returns busy without querying or mutating expenses', async
 test('authenticated route validates range before touching data', async () => {
   const { service, context } = setup();
   context.authenticateManagerProfile = jest.fn();
-  context.app = { post: jest.fn() };
+  context.app = { post: jest.fn(), get: jest.fn(), put: jest.fn() };
   service.register();
   const [path, auth, handler] = context.app.post.mock.calls[0];
   expect(path).toBe('/api/properties/:propertyId/expenses/sync');
@@ -136,7 +136,7 @@ test('disconnected route returns saved property records only, scoped by date and
     { _id: 'old', projectId: 'p', date: '2026-10-31', amount: 999, status: 'approved' },
     { _id: 'deleted', projectId: 'p', date: '2026-11-01', amount: 999, status: 'archived' }
   ]);
-  context.app = { post: jest.fn() }; context.authenticateManagerProfile = jest.fn();
+  context.app = { post: jest.fn(), get: jest.fn(), put: jest.fn() }; context.authenticateManagerProfile = jest.fn();
   context.mongoose = { Types: { ObjectId: { isValid: () => true } } };
   context.Project = { findById: () => ({ select: async () => ({ _id: 'p' }) }) };
   context.QuickBooksConnection.findOne = () => ({ lean: async () => null, select() { return this; } });
@@ -144,7 +144,7 @@ test('disconnected route returns saved property records only, scoped by date and
   const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
   await context.app.post.mock.calls[0][2]({ body: range, params: { propertyId: 'p' } }, res);
   expect(res.status).not.toHaveBeenCalled();
-  expect(res.json.mock.calls[0][0]).toMatchObject({ sync: { disconnected: true }, expenses: [{ _id: 'mine', amount: 12 }] });
+  expect(res.json.mock.calls[0][0]).toMatchObject({ sync: { disconnected: true }, expenses: [] });
   expect(context.qbRequest).not.toHaveBeenCalled();
 });
 

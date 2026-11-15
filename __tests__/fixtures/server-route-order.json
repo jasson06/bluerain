@@ -1205,6 +1205,21 @@
     "handlers": 1
   },
   {
+    "method": "put",
+    "url": "/api/properties/:propertyId/expenses/:expenseId/report",
+    "handlers": 2
+  },
+  {
+    "method": "get",
+    "url": "/api/properties/:propertyId/expenses/mappings",
+    "handlers": 2
+  },
+  {
+    "method": "put",
+    "url": "/api/properties/:propertyId/expenses/mappings",
+    "handlers": 2
+  },
+  {
     "method": "post",
     "url": "/api/properties/:propertyId/expenses/sync",
     "handlers": 2

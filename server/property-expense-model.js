@@ -9,6 +9,7 @@ module.exports = function createPropertyExpenseModel(mongoose) {
     date: { type: String, required: true },
     vendor: { type: String, default: '' },
     description: { type: String, default: '' },
+    maintenanceReport: { month: String, reference: String, url: String },
     category: { type: String, default: 'Uncategorized' },
     amount: { type: Number, required: true },
     receiptTotal: { type: Number, required: true },

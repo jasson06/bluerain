@@ -1,4 +1,6 @@
 'use strict';
+const { allocate, projectRecord } = require('./property-expense-allocations');
+const createMappings = require('./property-expense-mappings');
 
 // Dates here are inclusive QuickBooks calendar dates, never UTC instants.
 function validDate(value) {
@@ -36,14 +38,16 @@ module.exports = function createExpenseSync(context) {
   const importKey = (connection, id) => `${connection.environment}:${connection.realmId}:Purchase:${id}`;
 
   async function savePurchase(connection, propertyId, purchase) {
-    const fields = purchaseFields(purchase);
+    const mapped = allocate(purchase, connection.expenseMappings || []);
+    if (!mapped.allocations.length) return 'skipped';
+    const fields = { ...purchaseFields(purchase), amount: mapped.amount };
     const key = importKey(connection, purchase.Id);
     const existing = await context.PropertyExpense.findOne({ projectId: propertyId, quickBooksImportKey: key }).lean();
     const quickBooks = { ...existing?.quickBooks, connectionId: connection._id, realmId: connection.realmId,
       environment: connection.environment, entityType: 'Purchase', entityId: String(purchase.Id),
       docNumber: purchase.DocNumber || '', syncToken: purchase.SyncToken, syncStatus: 'synced',
       syncedAt: new Date(), lastError: '', currency: purchase.CurrencyRef?.value || '',
-      sourceUpdatedAt: purchase.MetaData?.LastUpdatedTime || '', lines: purchase.Line || [] };
+      sourceUpdatedAt: purchase.MetaData?.LastUpdatedTime || '', lines: purchase.Line || [], purchase };
     const update = { ...fields, projectId: propertyId, quickBooksImportKey: key, quickBooks };
     // Property records are independent of construction expenses and estimates.
     if (!existing) update.source = 'quickbooks';
@@ -67,12 +71,14 @@ module.exports = function createExpenseSync(context) {
       $or: [{ expenseImportLeaseUntil: { $exists: false } }, { expenseImportLeaseUntil: { $lte: now } }] },
     { $set: { expenseImportLease: lease, expenseImportLeaseUntil: new Date(Date.now() + 120000) } }, { new: true });
     if (!locked) return { busy: true, message: 'Expenses are syncing in another session. Refresh shortly.' };
+    connection.expenseMappings = locked.expenseMappings || [];
+    connection.expenseMappingVersion = locked.expenseMappingVersion || 0;
     const heartbeat = async () => {
       const result = await context.QuickBooksConnection.updateOne({ _id: connection._id, expenseImportLease: lease },
         { $set: { expenseImportLeaseUntil: new Date(Date.now() + 120000) } });
       if (!result.matchedCount) throw new Error('Expense sync session expired. Refresh to retry.');
     };
-    const summary = { ...range, startedAt: now, imported: 0, updated: 0, removed: 0, status: 'synced' };
+    const summary = { ...range, mappingVersion: connection.expenseMappingVersion || 0, startedAt: now, imported: 0, updated: 0, skipped: 0, removed: 0, status: 'synced' };
     try {
       // Fetch every page before saving; a failed page must not imply removed records.
       const purchases = new Map();
@@ -104,7 +110,18 @@ module.exports = function createExpenseSync(context) {
           removed.push(expense);
         }
       }
+      const resolve = createMappings(context).resolver(connection);
+      const resolved = [];
+      const unmapped = new Map();
       for (const purchase of purchases.values()) {
+        await heartbeat();
+        const item = await resolve(purchase);
+        const mapped = allocate(item, connection.expenseMappings || []);
+        mapped.unmapped.forEach(row => unmapped.set(row.accountId || row.category, row));
+        resolved.push(item);
+      }
+      summary.unmapped = [...unmapped.values()];
+      for (const purchase of resolved) {
         await heartbeat();
         summary[await savePurchase(connection, propertyId, purchase)]++;
       }
@@ -132,6 +149,7 @@ module.exports = function createExpenseSync(context) {
   }
 
   function register() {
+    createMappings(context).register();
     context.app.post('/api/properties/:propertyId/expenses/sync', context.authenticateManagerProfile, async (req, res) => {
       let range;
       try { range = validateRange(req.body); } catch (error) { return res.status(400).json({ message: error.message }); }
@@ -147,12 +165,13 @@ module.exports = function createExpenseSync(context) {
           catch (error) { sync = { status: 'failed', message: 'Unable to connect to QuickBooks. Check the connection and refresh.' }; }
         }
         const records = await context.PropertyExpense.find({ ...scope(propertyId), status: 'approved', date: { $gte: range.from, $lte: range.to } }).lean();
-        const expenses = records.map(item => ({ _id: item._id, date: item.date,
-          vendor: item.vendor || '', description: item.description || '', category: item.category || 'Uncategorized',
-          amount: expenseAmount(item), source: 'QuickBooks', status: item.quickBooks?.syncStatus || item.status }));
+        const projected = records.map(item => projectRecord(item, connection)).filter(Boolean);
+        const expenses = projected.map(item => ({ _id: item._id, date: item.date,
+          vendor: item.vendor || '', ref: item.ref || '', maintenanceReport: item.maintenanceReport || null, description: item.description || '', category: item.category || 'Uncategorized',
+          amount: expenseAmount(item), originalTotal: item.originalTotal, excludedAmount: item.excludedAmount, allocations: item.allocations, source: 'QuickBooks', status: item.quickBooks?.syncStatus || item.status }));
         expenses.sort((a, b) => b.date.localeCompare(a.date));
         const latest = await context.QuickBooksConnection.findOne({ projectId: propertyId }).select('lastExpenseImportAt expenseImportHistory companyName').lean();
-        res.json({ expenses, range, sync, companyName: latest?.companyName || '', lastSyncedAt: latest?.lastExpenseImportAt || null,
+        res.json({ expenses, range, sync, mappingCount: (connection?.expenseMappings || []).length, companyName: latest?.companyName || '', lastSyncedAt: latest?.lastExpenseImportAt || null,
           history: (latest?.expenseImportHistory || []).slice().reverse() });
       } catch (error) {
         res.status(500).json({ message: 'Unable to load expenses. Refresh to retry.' });

@@ -1,3 +1,4 @@
+const expenseAllocations = require('../property-expense-allocations');
 // properties flow. Shared dependencies remain live through serverContext.
 // Route registration is invoked by server.js in its original order.
 module.exports = function createFlow(serverContext) {
@@ -223,7 +224,9 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
       .filter(payment => (payment.applyTo || 'rent') === 'deposit')
       .reduce((sum, payment) => sum + amountOrZero(payment.amount), 0);
     const expenseAmountForProperty = expense => Number(expense.amount) || 0;
-    const periodExpenses = expenses.filter(expense => {
+    const mappedGroups = new Set((quickBooksConnection?.expenseMappings || []).map(row => row.group));
+    const groupTotals = {};
+    const periodExpenses = expenses.map(row => expenseAllocations.projectRecord(row, quickBooksConnection)).filter(Boolean).filter(expense => {
       if (/^\d{4}-\d{2}-\d{2}$/.test(expense.date || '')) {
         const [y,m,d] = expense.date.split('-').map(Number);
         const date = new Date(y,m-1,d);
@@ -232,13 +235,19 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
       const date = new Date(expense.date || expense.createdAt);
       return !Number.isNaN(date.getTime()) && date >= from && date < to;
     });
-    const postedExpenses = periodExpenses.reduce((sum, expense) => sum + expenseAmountForProperty(expense), 0);
-    const maintenancePattern = /maintenance|repair|hvac|plumb|electrical|appliance|turnover|make[- ]?ready/i;
-    const isMaintenanceExpense = expense => maintenancePattern.test([
-      expense.category, expense.description, expense.item?.name, expense.item?.costCode,
-      ...(expense.lineItems || []).flatMap(line => [line.name, line.costCode, line.description])
-    ].filter(Boolean).join(' '));
-    const postedMaintenanceExpenses = periodExpenses.filter(isMaintenanceExpense).reduce((sum, expense) => sum + expenseAmountForProperty(expense), 0);
+    periodExpenses.forEach(expense => expense.allocations.forEach(line => { groupTotals[line.group] = (groupTotals[line.group] || 0) + line.amount; }));
+    const postedExpenses = Object.entries(groupTotals).reduce((sum, [group, amount]) => sum + (expenseAllocations.nonOperating.has(group) ? 0 : amount), 0);
+    const postedMaintenanceExpenses = groupTotals.maintenance || 0;
+    const sourceFor = group => mappedGroups.has(group) ? 'QuickBooks actuals' : 'Property estimate';
+    const dateKey = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    const lastDay = new Date(calendarTo.getTime()-1);
+    const lastImport = (quickBooksConnection?.expenseImportHistory || []).slice(-1)[0];
+    const coverage = lastImport?.status !== 'failed' && quickBooksConnection?.status !== 'disconnected' && (quickBooksConnection?.expenseImportHistory || []).some(row => row.status === 'synced'
+      && Number(row.mappingVersion || 0) === Number(quickBooksConnection?.expenseMappingVersion || 0)
+      && row.from <= dateKey(calendarFrom) && row.to >= dateKey(lastDay));
+    const expenseActualsStatus = !mappedGroups.size ? 'No QuickBooks categories mapped.' : coverage
+      ? 'QuickBooks actuals replace saved amounts for mapped categories.'
+      : periodExpenses.length ? 'Cached QuickBooks actuals; this range needs a successful refresh. Totals may be incomplete.' : 'QuickBooks actuals unavailable for this range. Open Expenses to sync; mapped estimates are excluded.';
     const propertyProfile = property.propertyProfile || {};
     const managementFeeRate = Number.isFinite(Number(propertyProfile.managementFeeRate)) ? Math.max(0, Number(propertyProfile.managementFeeRate)) : 3;
     const vacancyLossRate = Number.isFinite(Number(propertyProfile.vacancyLossRate)) ? Math.max(0, Number(propertyProfile.vacancyLossRate)) : 3;
@@ -250,6 +259,10 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
       propertyTax: (amountOrZero(propertyProfile.annualPropertyTax) / 12) * periodMonths,
       insurance: (amountOrZero(propertyProfile.insurancePremium) / 12) * periodMonths
     };
+    const manualDebt = propertyExpenseBreakdown.monthlyDebt;
+    Object.keys(propertyExpenseBreakdown).forEach(key => { if (mappedGroups.has(key)) propertyExpenseBreakdown[key] = 0; });
+    const debtPayments = mappedGroups.has('monthlyDebt') ? groupTotals.monthlyDebt || 0 : manualDebt;
+    propertyExpenseBreakdown.monthlyDebt = 0; // Debt is displayed separately from operating expenses.
     const loggedUtilityExpensesByType = units.reduce((totals, unit) => {
       (unit.utilityBills || []).forEach(bill => {
         if (!isDateWithinPeriod(bill?.dueDate)) return;
@@ -268,6 +281,7 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
       gas: Math.max(amountOrZero(propertyProfile.gasMonthly) * periodMonths, loggedUtilityExpensesByType.gas || 0),
       internet: amountOrZero(propertyProfile.internetMonthly) * periodMonths
     };
+    Object.keys(utilityExpenseBreakdown).forEach(key => { if (mappedGroups.has(key)) utilityExpenseBreakdown[key] = 0; });
     const landlordUtilityExpenses = Object.values(utilityExpenseBreakdown).reduce((sum, amount) => sum + amountOrZero(amount), 0);
     const trackedMaintenanceRequestExpenses = maintenance.reduce((sum, item) => {
       if (!Number.isFinite(Number(item?.cost)) || Number(item.cost) <= 0) return sum;
@@ -294,27 +308,26 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
       .reduce((sum,entry) => sum + entry.cost, 0);
     const trackedMaintenanceScheduleExpenses = schedules.reduce((sum, item) => sum + scheduleCompletionCostTotal(item, isDateWithinPeriod), 0);
     const trackedMaintenanceExpenses = trackedMaintenanceRequestExpenses + trackedMaintenanceScheduleExpenses;
-    const maintenanceExpensesInPeriod = trackedMaintenanceExpenses + postedMaintenanceExpenses;
+    const maintenanceExpensesInPeriod = (mappedGroups.has('maintenance') ? 0 : trackedMaintenanceExpenses) + postedMaintenanceExpenses;
     const maintenanceExpenses = maintenanceExpensesInPeriod;
     const nonMaintenancePostedExpenses = postedExpenses - postedMaintenanceExpenses;
     const totalOperatingIncome = rentalIncome + otherIncome;
-    const managementFeeExpense = totalOperatingIncome * (managementFeeRate / 100);
+    const managementFeeExpense = mappedGroups.has('managementFee') ? 0 : totalOperatingIncome * (managementFeeRate / 100);
     const vacancyLossExpense = grossPotentialRent * (vacancyLossRate / 100);
     const recurringPropertyExpenses = Object.values(propertyExpenseBreakdown).reduce((sum, amount) => sum + amountOrZero(amount), 0) + managementFeeExpense + vacancyLossExpense;
     const operatingExpenses = nonMaintenancePostedExpenses + recurringPropertyExpenses + landlordUtilityExpenses + maintenanceExpenses;
-    const expenseDetails = periodExpenses.map(expense => ({
-      date: expense.date || expense.createdAt, description: expense.description || expense.item?.name || 'Expense',
-      source: 'Property expense ledger', category: isMaintenanceExpense(expense) ? 'Maintenance' : expense.category || 'Other',
-      status: expense.status, amount: expenseAmountForProperty(expense)
-    }));
-    maintenance.forEach(item => {
+    const expenseDetails = periodExpenses.flatMap(expense => expense.allocations.filter(line => !expenseAllocations.nonOperating.has(line.group)).map(line => ({
+      date: expense.date, description: line.description || expense.description, source: 'QuickBooks actuals',
+      category: expenseAllocations.groups[line.group], status: expense.status, amount: line.amount
+    })));
+    if (!mappedGroups.has('maintenance')) maintenance.forEach(item => {
       const date = item.completedAt || item.scheduledFor || item.updatedAt || item.createdAt;
       if (amountOrZero(item.cost) > 0 && isDateWithinPeriod(date)) expenseDetails.push({date, description:item.title || item.issue || 'Maintenance request',source:'Maintenance request',category:'Maintenance',status:item.status,amount:amountOrZero(item.cost)});
     });
-    schedules.forEach(schedule => scheduleCompletionEntries(schedule).forEach(entry => {
+    if (!mappedGroups.has('maintenance')) schedules.forEach(schedule => scheduleCompletionEntries(schedule).forEach(entry => {
       if (isDateWithinPeriod(entry.completedAt)) expenseDetails.push({date:entry.completedAt,description:schedule.title || 'Recurring maintenance',source:entry.legacy?'Recurring maintenance (legacy cost)':'Recurring maintenance completion',category:'Maintenance',status:'completed',amount:amountOrZero(entry.cost)});
     }));
-    const addCalculatedExpense = (description,amount,source='Property assumption',category='Operating expense') => {
+    const addCalculatedExpense = (description,amount,source='Property estimate',category='Operating expense') => {
       if (amount) expenseDetails.push({date:null,description,source,category,status:'Calculated for period',amount});
     };
     const expenseLabels={contractServices:'Contract services',payroll:'Payroll',administrative:'Administrative',monthlyDebt:'Debt service',propertyTax:'Property tax',insurance:'Insurance'};
@@ -404,6 +417,9 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
         otherIncome,
         depositCollections,
         operatingExpenses,
+        debtPayments, returnedRentAdjustments: groupTotals.returnedRent || 0, depositTransfers: groupTotals.depositTransfer || 0,
+        expenseActualsStatus, expenseActualsUnavailable: mappedGroups.size > 0 && !coverage && !periodExpenses.length,
+        expenseSources: Object.fromEntries(Object.keys(expenseAllocations.groups).map(key => [key, sourceFor(key)])),
         maintenanceExpenses,
         estimatedNOI,
         operatingBudget,
@@ -416,20 +432,20 @@ serverContext.app.get('/api/properties/:id/overview', async (req, res) => {
         trackedMaintenanceExpenses,
         maintenanceExpensesInPeriod,
         expenseBreakdown: {
-          contractServices: propertyExpenseBreakdown.contractServices,
-          payroll: propertyExpenseBreakdown.payroll,
-          managementFee: managementFeeExpense,
+          contractServices: propertyExpenseBreakdown.contractServices + (groupTotals.contractServices || 0),
+          payroll: propertyExpenseBreakdown.payroll + (groupTotals.payroll || 0),
+          managementFee: managementFeeExpense + (groupTotals.managementFee || 0),
           vacancyLoss: vacancyLossExpense,
-          administrative: propertyExpenseBreakdown.administrative,
-          monthlyDebt: propertyExpenseBreakdown.monthlyDebt,
-          propertyTax: propertyExpenseBreakdown.propertyTax,
-          insurance: propertyExpenseBreakdown.insurance,
-          electrical: utilityExpenseBreakdown.electricity,
-          water: utilityExpenseBreakdown.water,
-          trashSewer: utilityExpenseBreakdown.trashSewer,
-          gas: utilityExpenseBreakdown.gas,
-          internet: utilityExpenseBreakdown.internet,
-          utilitiesTotal: landlordUtilityExpenses,
+          administrative: propertyExpenseBreakdown.administrative + (groupTotals.administrative || 0),
+          monthlyDebt: debtPayments,
+          propertyTax: propertyExpenseBreakdown.propertyTax + (groupTotals.propertyTax || 0),
+          insurance: propertyExpenseBreakdown.insurance + (groupTotals.insurance || 0),
+          electrical: utilityExpenseBreakdown.electricity + (groupTotals.electricity || 0),
+          water: utilityExpenseBreakdown.water + (groupTotals.water || 0),
+          trashSewer: utilityExpenseBreakdown.trashSewer + (groupTotals.trashSewer || 0),
+          gas: utilityExpenseBreakdown.gas + (groupTotals.gas || 0),
+          internet: utilityExpenseBreakdown.internet + (groupTotals.internet || 0),
+          utilitiesTotal: landlordUtilityExpenses + ['electricity','water','gas','trashSewer','internet'].reduce((sum, key) => sum + (groupTotals[key] || 0), 0),
           recurringFixedTotal: recurringPropertyExpenses,
           scheduledRent,
           grossPotentialRent,

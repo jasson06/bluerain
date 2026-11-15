@@ -14,3 +14,7 @@
 #expenses details summary { cursor:pointer; font-weight:600; }
 #expenseHistory li { margin:8px 0; }
 @media(max-width:600px) { #expenses .expense-controls label { flex:1 1 130px; } #expenses .expense-controls input, #expenses .expense-controls select { width:100%; box-sizing:border-box; } #expenses .expense-filters select { width:100%; } }
+
+#expenseMappingsPanel { margin: 16px 0; padding: 16px; border: 1px solid #dbe2ea; border-radius: 12px; }
+#expenseMappingsPanel .table-responsive { max-height: 420px; overflow: auto; margin: 12px 0; }
+#expenseMappingsPanel select { min-width: 190px; max-width: 100%; }
