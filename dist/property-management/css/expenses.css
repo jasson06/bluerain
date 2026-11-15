@@ -37,3 +37,77 @@
 #expenseMappingsPanel .expense-mapping-activity-group[data-mapping-activity="with"] h4 { color:#1e3a5f; }
 #expenseMappingsPanel .expense-mapping-footer { position:sticky; bottom:0; display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:14px 0; background:#fff; border-top:1px solid #dbe2ea; z-index:1; }
 #expenseMappingDirty { flex:1; }
+#expenses .expense-mobile-label, #expenses .expense-mobile-description, #expenses .expense-mobile-totals { display:none; }
+@media(max-width:600px) {
+    #expenses { min-width:0; }
+    #expenses .expense-header, #expenses .expense-controls, #expenses .expense-filters, #expenses .expense-workspace-tabs { gap:6px; margin-bottom:10px; }
+    #expenses .expense-header > div { flex:1; min-width:0; }
+    #expenses .expense-header h2 { font-size:18px; }
+    #expenses .expense-header .task-meta { font-size:11px; margin:0; }
+    #expenses .expense-button-label { display:none; }
+    #expenses .expense-icon-button { min-width:44px; min-height:44px; padding:8px; }
+    #expenses .expense-workspace-tabs { flex-wrap:nowrap; }
+    #expenses .expense-workspace-tabs button { flex:1; }
+    #expenses .expense-controls { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+    #expenses .expense-controls label:first-child { grid-column:1 / -1; }
+    #expenses .expense-controls label { min-width:0; font-size:11px; gap:3px; }
+    #expenses input, #expenses select { min-width:0; max-width:100%; box-sizing:border-box; padding:8px; font-size:16px; }
+    #expenses .expense-filters input, #expenses .expense-filters select { width:100%; min-width:0; }
+    #expenseSyncStatus, #expenseSummary { font-size:12px; line-height:1.5; margin-bottom:10px; overflow-wrap:anywhere; }
+    #expenseSummary { display:none; }
+    #expenses .expense-mobile-totals { display:block; font-size:12px; margin:0 0 8px; padding:0 8px; background:#f8fafc; border-radius:8px; }
+    #expenses .expense-table, #expenses .expense-table tbody { display:block; width:100%; }
+    #expenses .expense-table thead { display:none; }
+    #expenses .expense-table tr { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 8px; padding:10px; margin-bottom:8px; border:1px solid #dbe2ea; border-radius:10px; }
+    #expenses .expense-table td { display:block; padding:0; border:0; min-width:0; max-width:none; white-space:normal; }
+    #expenses .expense-table .expense-date { grid-column:1; grid-row:2; font-size:11px; color:#64748b; }
+    #expenses .expense-table .expense-payee { grid-column:1; grid-row:1; font-size:13px; font-weight:600; }
+    #expenses .expense-table .expense-amount { grid-column:2; grid-row:1 / 3; align-self:center; font-size:14px; font-weight:600; text-align:right; }
+    #expenses .expense-amount .expense-mobile-label { display:block; font-size:10px; color:#64748b; font-weight:400; }
+    #expenses .expense-table .expense-description { grid-column:1 / -1; grid-row:3; min-width:0; font-size:12px; }
+    #expenses .expense-description-preview { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; color:#64748b; }
+    #expenses .expense-table .expense-original { display:none; }
+    #expenses .expense-mobile-label { display:inline; }
+    #expenses .expense-mobile-description { display:block; }
+    #expenses details { margin-top:6px; }
+    #expenses details summary { min-height:44px; display:flex; align-items:center; gap:4px; font-size:12px; }
+    #expenses details summary::before { content:"+"; }
+    #expenses details[open] > summary::before { content:"-"; }
+    #expenses details p { margin:6px 0; overflow-wrap:anywhere; }
+    #expenses details label { display:flex; flex-direction:column; gap:3px; margin:6px 0; }
+    #expenses details button { min-height:44px; }
+    #expenseMappingsPanel { padding:10px; margin:10px 0; }
+    #expenseMappingsPanel h3, #expenseHistoryPanel h3 { font-size:15px; margin-bottom:8px; }
+    #expenseMappingsPanel > p, #expenseHistoryPanel .task-meta { font-size:11px; line-height:1.4; }
+    #expenseMappingsPanel .expense-mapping-toolbar, #expenseMappingsPanel .expense-mapping-filters { gap:6px; margin:8px 0; }
+    #expenseMappingSearch { flex-basis:100%; width:100%; }
+    #expenseMappingsPanel .expense-mapping-toolbar label { font-size:11px; }
+    #expenseMappingsPanel .expense-mapping-toolbar button { min-height:44px; padding:8px; font-size:12px; }
+    #expenseMappingBulk { flex:1; min-width:0; width:100%; }
+    #expenseMappingSelected { font-size:11px; }
+    #expenseMappingsPanel .expense-mapping-activity-group { margin:12px 0; }
+    #expenseMappingsPanel .expense-mapping-activity-group h4 { font-size:13px; }
+    #expenseMappingsPanel .table-responsive { max-height:none; overflow:visible; }
+    #expenseMappingsPanel .payments-table, #expenseMappingsPanel tbody { display:block; width:100%; }
+    #expenseMappingsPanel thead { display:none; }
+    #expenseMappingsPanel tr { display:grid; grid-template-columns:24px minmax(0,1fr); gap:4px 6px; border:1px solid #dbe2ea; border-radius:8px; padding:8px; margin:6px 0; }
+    #expenseMappingsPanel td { padding:0; border:0; white-space:normal; overflow-wrap:anywhere; font-size:12px; min-width:0; }
+    #expenseMappingsPanel td:first-child { grid-column:1; grid-row:1 / 4; align-self:start; }
+    #expenseMappingsPanel td:nth-child(2), #expenseMappingsPanel td:nth-child(3), #expenseMappingsPanel td:nth-child(4) { grid-column:2; }
+    #expenseMappingsPanel td:nth-child(3) { font-size:11px; color:#64748b; }
+    #expenseMappingsPanel td[colspan] { grid-column:1 / -1; }
+    #expenseMappingsPanel select { min-width:0; width:100%; }
+    #expenseMappingsPanel .expense-mapping-suggestion { margin-top:4px; font-size:11px; }
+    #expenseMappingsPanel .expense-mapping-suggestion button { min-height:44px; }
+    #expenseMappingsPanel .expense-mapping-impact { font-size:11px; padding:8px; line-height:1.5; }
+    #expenseMappingsPanel .expense-mapping-footer { gap:6px; padding:8px 0; padding-bottom:calc(8px + env(safe-area-inset-bottom)); }
+    #expenseMappingDirty { flex-basis:100%; font-size:12px; }
+    #expenseMappingsPanel .expense-mapping-footer button { flex:1; min-height:44px; padding:8px; font-size:13px; }
+    #expenseHistoryPanel .table-responsive { overflow:visible; }
+    #expenses .expense-history-table, #expenses .expense-history-table tbody { display:block; width:100%; }
+    #expenses .expense-history-table thead { display:none; }
+    #expenses .expense-history-table tr { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; padding:8px; border:1px solid #dbe2ea; border-radius:8px; margin:8px 0; }
+    #expenses .expense-history-table td { padding:0; border:0; white-space:normal; overflow-wrap:anywhere; font-size:12px; }
+    #expenses .expense-history-table td:nth-child(-n+3) { grid-column:1 / -1; }
+    #expenses .expense-history-table td::before { content:attr(data-label); display:block; font-size:10px; color:#64748b; }
+}

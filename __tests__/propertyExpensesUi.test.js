@@ -161,6 +161,26 @@ test('expense tab and sidebar counts track the loaded period, not search filters
   expect(get('tabCountExpenses').textContent).toBe(0);
 });
 
+test('compact transaction summaries preserve original amounts, allocation details and a single report editor', async () => {
+  const { context, get } = setup();
+  context.expenseReportEditor = () => '<details id="report-e1"><summary>Maintenance report</summary></details>';
+  context.fetch.mockResolvedValue(response(data([{
+    _id: 'e1', date: '2026-11-01', vendor: '<Vendor>', description: 'Full repair description',
+    ref: '<Ref>', originalTotal: 175, excludedAmount: 50, source: 'QuickBooks', status: 'synced',
+    allocations: [{ group: 'maintenance', category: 'Maintenance', amount: 125 }]
+  }])));
+  await context.loadExpenseWorkspace('p');
+  const html = get('expensesList').innerHTML;
+  expect(html).toContain('class="expense-mobile-totals"');
+  expect(html).toContain('1 of 1 · Operating: 125.00');
+  expect(html).toContain('class="expense-payee">&lt;Vendor>');
+  expect(html).toContain('class="expense-transaction-details"');
+  expect(html).toContain('class="expense-mobile-description">Full repair description · Ref: &lt;Ref>');
+  expect(html).toContain('Original total: 175.00');
+  expect(html).toContain('Excluded from import: 50.00');
+  expect(html.match(/id="report-e1"/g)).toHaveLength(1);
+});
+
 test('a late response cannot overwrite a different range or property', async () => {
   const { context, get } = setup();
   let resolveFirst;
