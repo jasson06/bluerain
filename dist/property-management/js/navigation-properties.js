@@ -57,6 +57,8 @@ function updateTabCounts() {
     if (annBadge) annBadge.textContent = state.announcements?.length || 0;
     // Payments
     document.getElementById('tabCountPayments').textContent = state.payments?.length || 0;
+    const expenseBadge = document.getElementById('tabCountExpenses');
+    if (expenseBadge) expenseBadge.textContent = expenseTransactionCount();
     // Applications
     const appsBadge = document.getElementById('tabCountApplications');
     const appsFilteredCount = getFilteredApplicationsList().length;
@@ -317,7 +319,7 @@ function renderWorkspaceSidebar() {
     else if (focusGroup) root.querySelector(`[data-rail-group="${focusGroup}"]`)?.focus({ preventScroll: true });
 }
 
-function workspaceBadge(key){if(key==='units')return state.units?.length||0;if(key==='tenants')return(state.tenants||[]).filter(t=>t.status!=='inactive').length;if(key==='evictions')return(state.evictions||[]).filter(item=>item.active).length;if(key==='documents')return state.documents?.length||0;if(key==='applications')return state.applications?.length||0;if(key==='payments')return Number(state.paymentWorkspace?.summary?.unmatched||0)+Number(state.paymentWorkspace?.summary?.conflicts||0);if(key==='maintenance')return(state.maintenanceRequests||[]).filter(r=>!['completed','closed'].includes(String(r.status||'').toLowerCase())).length;if(key==='delinquency')return Number(state.propertyOverviewData?.delinquency?.tenantCount||0);return 0;}
+function workspaceBadge(key){if(key==='expenses')return expenseTransactionCount();if(key==='units')return state.units?.length||0;if(key==='tenants')return(state.tenants||[]).filter(t=>t.status!=='inactive').length;if(key==='evictions')return(state.evictions||[]).filter(item=>item.active).length;if(key==='documents')return state.documents?.length||0;if(key==='applications')return state.applications?.length||0;if(key==='payments')return Number(state.paymentWorkspace?.summary?.unmatched||0)+Number(state.paymentWorkspace?.summary?.conflicts||0);if(key==='maintenance')return(state.maintenanceRequests||[]).filter(r=>!['completed','closed'].includes(String(r.status||'').toLowerCase())).length;if(key==='delinquency')return Number(state.propertyOverviewData?.delinquency?.tenantCount||0);return 0;}
 
 function renderWorkspacePropertyOptions(query=''){const q=String(query).trim().toLowerCase();return(state.properties||[]).filter(p=>!q||String(p.name||'').toLowerCase().includes(q)||formatAddress(p.address).toLowerCase().includes(q)).map(p=>`<button type="button" class="workspace-property-option" onclick="selectWorkspaceProperty('${p._id}', this)"><span>${escapeHtml(p.name)}</span>${state.currentProperty?._id===p._id?'<i class="fas fa-check"></i>':''}</button>`).join('')||'<div class="empty-compact">No properties found.</div>';}
 

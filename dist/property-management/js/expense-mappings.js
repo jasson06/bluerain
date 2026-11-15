@@ -20,6 +20,7 @@ async function openExpenseMappings() {
 function closeExpenseMappings() {
     expenseMappingRequest++; expenseMappingEditor = null;
     document.getElementById('expenseMappingsPanel').hidden = true;
+    selectExpenseWorkspace('transactions');
 }
 function suggestExpenseMappings() {
     if (!expenseMappingEditor) return;
@@ -50,7 +51,7 @@ async function saveExpenseMappings() {
         editor.version = data.version;
         document.getElementById('expenseMappingMessage').textContent = 'Mappings saved. Refreshing selected period…';
         state.propertyOverviewData = null;
-        await loadExpenseWorkspace(editor.propertyId);
+        await loadExpenseWorkspace(editor.propertyId, true);
     } catch (error) { if (expenseMappingEditor === editor) document.getElementById('expenseMappingMessage').textContent = error.message; }
     finally { button.disabled = false; }
 }

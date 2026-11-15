@@ -1,7 +1,24 @@
-// Property expenses: QuickBooks sync runs on entry and date-range changes.
+// Saved property expenses load on entry; QuickBooks sync is explicit.
 let expenseWorkspaceRequest = 0;
 let expenseWorkspaceProperty = '';
 let expenseWorkspaceData = null;
+let expenseWorkspaceRange = '';
+
+function expenseTransactionCount() {
+    return expenseWorkspaceProperty === String(state.currentProperty?._id)
+        ? expenseWorkspaceData?.expenses.length || 0 : 0;
+}
+
+function selectExpenseWorkspace(section) {
+    const panels = { transactions: 'expenseTransactionsPanel', mappings: 'expenseMappingsPanel', history: 'expenseHistoryPanel' };
+    Object.entries(panels).forEach(([key, id]) => { document.getElementById(id).hidden = key !== section; });
+    document.querySelectorAll('[data-expense-workspace]').forEach(button => {
+        const active = button.dataset.expenseWorkspace === section;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+    });
+    if (section === 'mappings' && !expenseMappingEditor) openExpenseMappings();
+}
 
 function expenseCalendarDate(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -21,10 +38,14 @@ function initializeExpenseWorkspace(propertyId) {
     if (typeof closeExpenseMappings === 'function') closeExpenseMappings();
     expenseWorkspaceProperty = String(propertyId);
     expenseWorkspaceData = null;
+    expenseWorkspaceRange = '';
+    document.getElementById('expenseHistory').innerHTML = '';
+    selectExpenseWorkspace('transactions');
     document.getElementById('expenseRange').value = 'month';
     document.getElementById('expenseSearch').value = '';
     document.getElementById('expenseCategory').innerHTML = '<option value="">All categories</option>';
     setExpenseRange(false);
+    updateTabCounts();
 }
 
 function setExpenseRange(reload = true) {
@@ -48,10 +69,11 @@ function openExpensesFromOverview() {
     initializeExpenseWorkspace(propertyId);
     document.getElementById('expenseRange').value = document.getElementById('overviewRange')?.value || 'month';
     setExpenseRange(false);
+    selectExpenseWorkspace('transactions');
     navigateWorkspaceTab('expenses');
 }
 
-async function loadExpenseWorkspace(propertyId, busyAttempt = 0) {
+async function loadExpenseWorkspace(propertyId, sync = false, busyAttempt = 0) {
     if (!propertyId) return;
     initializeExpenseWorkspace(propertyId);
     const request = ++expenseWorkspaceRequest;
@@ -60,27 +82,33 @@ async function loadExpenseWorkspace(propertyId, busyAttempt = 0) {
     const list = document.getElementById('expensesList');
     const refresh = document.getElementById('expenseRefresh');
     const current = () => request === expenseWorkspaceRequest && String(state.currentProperty?._id) === String(propertyId);
-    expenseWorkspaceData = null;
-    list.innerHTML = '';
-    document.getElementById('expenseSummary').textContent = '';
-    document.getElementById('expenseHistory').innerHTML = '';
+    const rangeKey = `${range.from}:${range.to}`;
+    if (expenseWorkspaceRange !== rangeKey) {
+        expenseWorkspaceData = null;
+        list.innerHTML = '';
+        document.getElementById('expenseSummary').textContent = '';
+        updateTabCounts();
+    }
     status.className = 'empty-compact';
     if (!range.from || !range.to || range.from > range.to) {
         status.className = 'overview-alert'; status.textContent = 'Choose valid start and end dates.';
         refresh.disabled = false; list.setAttribute('aria-busy', 'false'); return;
     }
-    status.textContent = 'Syncing expenses from QuickBooks…';
+    status.textContent = sync ? 'Syncing expenses from QuickBooks…' : 'Loading saved expenses…';
     list.setAttribute('aria-busy', 'true');
     refresh.disabled = true;
     try {
-        const response = await expenseMappingFetch(`/api/properties/${encodeURIComponent(propertyId)}/expenses/sync`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
-            body: JSON.stringify(range)
+        const url = `/api/properties/${encodeURIComponent(propertyId)}/expenses`;
+        const response = await expenseMappingFetch(sync ? `${url}/sync` : `${url}?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`, {
+            method: sync ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+            ...(sync ? { body: JSON.stringify(range) } : {})
         });
         const data = await response.json();
         if (!current()) return;
         if (!response.ok) throw new Error(response.status === 401 ? 'Sign in again to sync expenses.' : data.message || 'Unable to load expenses.');
         expenseWorkspaceData = data;
+        expenseWorkspaceRange = rangeKey;
+        updateTabCounts();
         const selected = document.getElementById('expenseCategory').value;
         const categories = [...new Set(data.expenses.flatMap(item => item.allocations?.map(line => line.category) || [item.category]))].sort();
         document.getElementById('expenseCategory').innerHTML = '<option value="">All categories</option>' + categories.map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('');
@@ -88,23 +116,25 @@ async function loadExpenseWorkspace(propertyId, busyAttempt = 0) {
         const synced = data.lastSyncedAt ? new Date(data.lastSyncedAt).toLocaleString() : 'Never';
         const issue = data.sync.status === 'failed' || data.sync.busy || data.sync.disconnected;
         status.className = issue ? 'overview-alert' : 'overview-ok';
-        status.textContent = `${issue ? data.sync.message + ' Showing saved records; totals may be incomplete.' : 'Expenses for this period are up to date.'} Last successful sync: ${synced}${data.companyName ? ' · ' + data.companyName : ''}`;
+        status.textContent = `${issue ? data.sync.message + ' Showing saved records; totals may be incomplete.' : sync ? 'Expenses for this period are up to date.' : 'Showing saved expenses. Use Sync now to check for QuickBooks updates.'} Last successful sync: ${synced}${data.companyName ? ' · ' + data.companyName : ''}`;
         if (!data.mappingCount) status.textContent = 'No categories mapped. Open Category mappings to choose what to import. ' + status.textContent;
         if (data.sync.unmapped?.length) status.textContent += ` ${data.sync.unmapped.length} unmapped accounts were excluded; review Category mappings.`;
         renderExpenseWorkspace();
         document.getElementById('expenseHistory').innerHTML = (data.history || []).length
-            ? `<ul>${data.history.map(item => `<li>${escapeHtml(new Date(item.completedAt || item.startedAt).toLocaleString())} · ${escapeHtml(item.from)} – ${escapeHtml(item.to)} · ${item.status === 'synced' ? `${Number(item.imported) || 0} imported, ${Number(item.updated) || 0} refreshed, ${Number(item.removed) || 0} removed` : `Failed: ${escapeHtml(item.message || 'Refresh to retry.')}`}</li>`).join('')}</ul>`
+            ? `<div class="table-responsive"><table class="payments-table"><thead><tr><th>Date / time</th><th>Period</th><th>Status</th><th>Imported</th><th>Refreshed</th><th>Removed</th></tr></thead><tbody>${data.history.map(item => `<tr><td>${escapeHtml(new Date(item.completedAt || item.startedAt).toLocaleString())}</td><td>${escapeHtml(item.from)} – ${escapeHtml(item.to)}</td><td>${item.status === 'synced' ? 'Synced' : `Failed: ${escapeHtml(item.message || 'Use Sync now to retry.')}`}</td><td>${Number(item.imported) || 0}</td><td>${Number(item.updated) || 0}</td><td>${Number(item.removed) || 0}</td></tr>`).join('')}</tbody></table></div>`
             : '<p>No import history yet.</p>';
-        state.propertyOverviewData = null;
-        if (state.currentTab === 'propertyOverview') renderPropertyOverview(true);
+        if (sync) {
+            state.propertyOverviewData = null;
+            if (state.currentTab === 'propertyOverview') renderPropertyOverview(true);
+        }
         if (data.sync.busy && busyAttempt < 10) {
             setTimeout(() => {
-                if (current() && state.currentTab === 'expenses') loadExpenseWorkspace(propertyId, busyAttempt + 1);
+                if (current() && state.currentTab === 'expenses') loadExpenseWorkspace(propertyId, false, busyAttempt + 1);
             }, 3000);
         }
     } catch (error) {
         if (!current()) return;
-        status.className = 'overview-alert'; status.textContent = `${error.message} Use Refresh to retry.`;
+        status.className = 'overview-alert'; status.textContent = `${error.message} Use Sync now to retry.`;
     } finally {
         if (current()) { refresh.disabled = false; list.setAttribute('aria-busy', 'false'); }
     }

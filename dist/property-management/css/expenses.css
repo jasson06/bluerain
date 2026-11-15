@@ -13,6 +13,9 @@
 #expenses details { margin-top:20px; }
 #expenses details summary { cursor:pointer; font-weight:600; }
 #expenseHistory li { margin:8px 0; }
+#expenses .expense-workspace-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+#expenses .expense-workspace-tabs .active { background:#1e293b; color:#fff; }
+#expenseHistoryPanel .table-responsive { overflow:auto; margin-top:12px; }
 @media(max-width:600px) { #expenses .expense-controls label { flex:1 1 130px; } #expenses .expense-controls input, #expenses .expense-controls select { width:100%; box-sizing:border-box; } #expenses .expense-filters select { width:100%; } }
 
 #expenseMappingsPanel { margin: 16px 0; padding: 16px; border: 1px solid #dbe2ea; border-radius: 12px; }

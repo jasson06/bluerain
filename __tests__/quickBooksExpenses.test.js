@@ -148,6 +148,46 @@ test('disconnected route returns saved property records only, scoped by date and
   expect(context.qbRequest).not.toHaveBeenCalled();
 });
 
+test('saved expense GET is authenticated, scoped, and never contacts QuickBooks or adds history', async () => {
+  const history = [{ ...range, status: 'synced', imported: 1 }];
+  const savedConnection = { ...connection, expenseImportHistory: history };
+  const record = (id, projectId, date = '2026-11-01', status = 'approved') => ({
+    _id: id, projectId, date, status,
+    quickBooks: { realmId: connection.realmId, environment: connection.environment, purchase: purchase(id) }
+  });
+  const { service, context } = setup([
+    record('mine', 'p'), record('other', 'other'), record('old', 'p', '2026-10-01'), record('deleted', 'p', range.from, 'archived')
+  ]);
+  context.app = { post: jest.fn(), get: jest.fn(), put: jest.fn() };
+  context.authenticateManagerProfile = jest.fn();
+  context.mongoose = { Types: { ObjectId: { isValid: () => true } } };
+  context.Project = { findById: () => ({ select: async () => ({ _id: 'p' }) }) };
+  context.QuickBooksConnection.findOne = () => ({ lean: async () => savedConnection, select() { return this; } });
+  service.register();
+  const [, auth, handler] = context.app.get.mock.calls.find(([url]) => url === '/api/properties/:propertyId/expenses');
+  expect(auth).toBe(context.authenticateManagerProfile);
+  const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+  await handler({ query: range, params: { propertyId: 'p' } }, res);
+  expect(res.status).not.toHaveBeenCalled();
+  const payload = res.json.mock.calls[0][0];
+  expect(payload.expenses.map(item => item._id)).toEqual(['mine']);
+  expect(payload).toMatchObject({ sync: { status: 'saved' }, history, mappingCount: 1 });
+  expect(context.getQbConnection).not.toHaveBeenCalled();
+  expect(context.qbRequest).not.toHaveBeenCalled();
+  expect(context.QuickBooksConnection.updateOne).not.toHaveBeenCalled();
+  expect(context.PropertyExpense.findOneAndUpdate).not.toHaveBeenCalled();
+
+  savedConnection.expenseImportHistory = [{ ...range, status: 'failed', message: 'Offline' }];
+  await handler({ query: range, params: { propertyId: 'p' } }, res);
+  expect(res.json.mock.calls.at(-1)[0].sync).toMatchObject({ status: 'failed', message: 'Offline' });
+  savedConnection.expenseImportLeaseUntil = new Date(Date.now() + 60000);
+  await handler({ query: range, params: { propertyId: 'p' } }, res);
+  expect(res.json.mock.calls.at(-1)[0].sync.busy).toBe(true);
+
+  await handler({ query: { from: 'invalid' }, params: { propertyId: 'p' } }, res);
+  expect(res.status).toHaveBeenCalledWith(400);
+});
+
 test('unique-key conflicts never update a different property', async () => {
   const { service, context } = setup();
   context.PropertyExpense.findOneAndUpdate.mockRejectedValue({ code: 11000 });

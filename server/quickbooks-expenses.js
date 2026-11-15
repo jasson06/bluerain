@@ -152,9 +152,9 @@ module.exports = function createExpenseSync(context) {
 
   function register() {
     createMappings(context).register();
-    context.app.post('/api/properties/:propertyId/expenses/sync', context.authenticateManagerProfile, async (req, res) => {
+    const loadExpenses = async (req, res, shouldSync) => {
       let range;
-      try { range = validateRange(req.body); } catch (error) { return res.status(400).json({ message: error.message }); }
+      try { range = validateRange(shouldSync ? req.body : req.query); } catch (error) { return res.status(400).json({ message: error.message }); }
       const propertyId = req.params.propertyId;
       if (!context.mongoose.Types.ObjectId.isValid(propertyId)) return res.status(400).json({ message: 'Invalid property.' });
       try {
@@ -162,7 +162,7 @@ module.exports = function createExpenseSync(context) {
         let sync;
         const connection = await context.QuickBooksConnection.findOne({ projectId: propertyId }).lean();
         if (!connection || connection.status === 'disconnected') sync = { disconnected: true, message: 'Connect this property to QuickBooks to sync expenses.' };
-        else {
+        else if (shouldSync) {
           try { sync = await synchronize(propertyId, range); }
           catch (error) { sync = { status: 'failed', reconnectRequired: error.code === 'QUICKBOOKS_RECONNECT_REQUIRED', message: error.code === 'QUICKBOOKS_RECONNECT_REQUIRED' ? error.message : 'Unable to connect to QuickBooks. Check the connection and refresh.' }; }
         }
@@ -172,13 +172,23 @@ module.exports = function createExpenseSync(context) {
           vendor: item.vendor || '', ref: item.ref || '', maintenanceReport: item.maintenanceReport || null, description: item.description || '', category: item.category || 'Uncategorized',
           amount: expenseAmount(item), originalTotal: item.originalTotal, excludedAmount: item.excludedAmount, allocations: item.allocations, source: 'QuickBooks', status: item.quickBooks?.syncStatus || item.status }));
         expenses.sort((a, b) => b.date.localeCompare(a.date));
-        const latest = await context.QuickBooksConnection.findOne({ projectId: propertyId }).select('lastExpenseImportAt expenseImportHistory companyName').lean();
+        const latest = await context.QuickBooksConnection.findOne({ projectId: propertyId }).select('lastExpenseImportAt expenseImportHistory companyName expenseImportLeaseUntil').lean();
+        if (!sync) {
+          const lastAttempt = (latest?.expenseImportHistory || []).slice().reverse().find(item => item.from === range.from && item.to === range.to);
+          sync = latest?.expenseImportLeaseUntil && new Date(latest.expenseImportLeaseUntil) > new Date()
+            ? { busy: true, message: 'Expenses are syncing in another session.' }
+            : lastAttempt?.status === 'failed' ? lastAttempt : { status: 'saved' };
+        }
         res.json({ expenses, range, sync, mappingCount: (connection?.expenseMappings || []).length, companyName: latest?.companyName || '', lastSyncedAt: latest?.lastExpenseImportAt || null,
           history: (latest?.expenseImportHistory || []).slice().reverse() });
       } catch (error) {
         res.status(500).json({ message: 'Unable to load expenses. Refresh to retry.' });
       }
-    });
+    };
+    context.app.get('/api/properties/:propertyId/expenses', context.authenticateManagerProfile,
+      (req, res) => loadExpenses(req, res, false));
+    context.app.post('/api/properties/:propertyId/expenses/sync', context.authenticateManagerProfile,
+      (req, res) => loadExpenses(req, res, true));
   }
   return { register, synchronize, savePurchase };
 };

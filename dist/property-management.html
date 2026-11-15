@@ -241,7 +241,7 @@
     <button class="tab-btn" data-tab="announcements">
         Announcements <span class="tab-count-badge" id="tabCountAnnouncements"></span>
     </button>
-    <button class="tab-btn" data-tab="expenses"><i class="fas fa-receipt"></i><span>Expenses</span></button>
+    <button class="tab-btn" data-tab="expenses"><span>Expenses</span> <span class="tab-count-badge" id="tabCountExpenses">0</span></button>
     <button class="tab-btn" data-tab="payments">
         Payments <span class="tab-count-badge" id="tabCountPayments"></span>
     </button>
@@ -585,19 +585,25 @@
                     <!-- Expenses Tab -->
 <div class="tab-pane" id="expenses">
     <link rel="stylesheet" href="./property-management/css/expenses.css">
-    <div class="expense-header"><div><h2>Expenses</h2><p class="task-meta">Mapped allocations sync automatically from this property's QuickBooks company.</p></div><button type="button" class="btn-secondary" id="expenseRefresh" onclick="loadExpenseWorkspace(state.currentProperty._id)"><i class="fas fa-rotate"></i> Refresh</button></div>
+    <div class="expense-header"><div><h2>Expenses</h2><p class="task-meta">View saved allocations. Use Sync now to fetch updates from this property's QuickBooks company.</p></div><button type="button" class="btn-secondary" id="expenseRefresh" onclick="loadExpenseWorkspace(state.currentProperty._id, true)"><i class="fas fa-rotate"></i> Sync now</button></div>
     <div class="expense-controls">
         <label for="expenseRange">Period<select id="expenseRange" onchange="setExpenseRange()"><option value="month">This month</option><option value="lastMonth">Last month</option><option value="quarter">This quarter</option><option value="year">This year</option><option value="custom">Custom dates</option></select></label>
         <label for="expenseFrom">From<input type="date" id="expenseFrom" onchange="changeExpenseDates()"></label>
         <label for="expenseTo">Through<input type="date" id="expenseTo" onchange="changeExpenseDates()"></label>
     </div>
     <div id="expenseSyncStatus" role="status" aria-live="polite"></div>
+    <div class="expense-workspace-tabs" role="group" aria-label="Expense sections">
+        <button type="button" class="btn-secondary active" data-expense-workspace="transactions" aria-pressed="true" aria-controls="expenseTransactionsPanel" onclick="selectExpenseWorkspace('transactions')">Transactions</button>
+        <button type="button" class="btn-secondary" data-expense-workspace="mappings" aria-pressed="false" aria-controls="expenseMappingsPanel" onclick="selectExpenseWorkspace('mappings')">Category mappings</button>
+        <button type="button" class="btn-secondary" data-expense-workspace="history" aria-pressed="false" aria-controls="expenseHistoryPanel" onclick="selectExpenseWorkspace('history')">Import history</button>
+    </div>
+    <section id="expenseTransactionsPanel">
     <div class="expense-filters"><input type="search" id="expenseSearch" placeholder="Search payee or description" aria-label="Search expenses" oninput="renderExpenseWorkspace()"><select id="expenseCategory" aria-label="Expense category" onchange="renderExpenseWorkspace()"><option value="">All categories</option></select></div>
-    <button type="button" class="btn-secondary" onclick="openExpenseMappings()">Category mappings</button>
-    <section id="expenseMappingsPanel" hidden></section>
     <p id="expenseSummary" role="status" aria-live="polite"></p>
     <div id="expensesList" aria-busy="false"></div>
-    <details><summary>Import history</summary><div id="expenseHistory"></div></details>
+    </section>
+    <section id="expenseMappingsPanel" hidden></section>
+    <section id="expenseHistoryPanel" hidden><h3>Import history</h3><p class="task-meta">Recent sync attempts. Viewing this history does not start an import.</p><div id="expenseHistory"></div></section>
 </div>
                     <!-- Payments Tab -->
 <div class="tab-pane" id="payments">

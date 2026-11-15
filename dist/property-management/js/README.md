@@ -83,8 +83,14 @@ The initial split preserved all 561 function declarations exactly. A subsequent 
 `expenses.js` owns the independent property expense workspace. It loads before
 `property-management.js`, following the existing classic-script ordering.
 Navigation and overview links open Expenses; opening or changing the inclusive
-calendar range performs an authenticated automatic sync. Search/category filters
-apply locally to both rows and totals. Request sequence and property checks reject
-late responses; busy connections retry while this tab remains active. The UI
+calendar range loads saved records with an authenticated GET. **Sync now** and
+**Save mappings and sync** explicitly trigger QuickBooks imports. Transactions,
+Category mappings, and Import history are separate sub-tabs; switching between
+them does not start an import. Rows remain visible during sync for the same range.
+Search/category filters
+apply locally to both rows and totals. The Expenses tab and sidebar count all
+loaded transactions for the selected period, independent of local filters, and
+reset when the period or property changes. Request sequence and property checks reject
+late responses; busy connections are polled with read-only GETs while this tab remains active. The UI
 shows sync failures and incomplete saved data, last successful sync, and history.
 Construction expense and estimating screens do not use this workspace.

@@ -230,8 +230,11 @@ bearer token and an inclusive `{from: "YYYY-MM-DD", to: "YYYY-MM-DD"}` range.
 The property’s existing one-company connection is the sole source. This version
 imports QuickBooks `Purchase` transactions (cash/check/card expenses and credits);
 `Bill` and `BillPayment` processing is outside this first version. No QuickBooks
-records are written. Opening Expenses or changing dates invokes sync; there is
-no scheduled background import. This month is the default in the browser’s
+records are written. Opening Expenses or changing dates reads saved records via
+authenticated `GET /api/properties/:propertyId/expenses?from=YYYY-MM-DD&to=YYYY-MM-DD`
+without contacting QuickBooks or adding import history. Only **Sync now** and
+**Save mappings and sync** invoke imports; busy-session polling only reads saved
+records. There is no scheduled background import. This month is the default in the browser’s
 calendar, with last month, quarter, year, and custom dates available.
 
 Source keys include environment, company, entity type, and transaction ID and
