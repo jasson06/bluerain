@@ -14,7 +14,7 @@ function verifyQbState(state) { const [payload,sig]=String(state||'').split('.')
 
 function qbBaseUrl(connection) { return connection.environment==='production'?'https://quickbooks.api.intuit.com':'https://sandbox-quickbooks.api.intuit.com'; }
 
-async function refreshQbConnection(connection) { const full=connection.encryptedAccessToken?connection:await serverContext.QuickBooksConnection.findById(connection._id).select('+encryptedAccessToken +encryptedRefreshToken');if(full.accessTokenExpiresAt&&full.accessTokenExpiresAt.getTime()>Date.now()+5*60*1000)return full;const params=new URLSearchParams({grant_type:'refresh_token',refresh_token:(0, serverContext.decryptQbSecret)(full.encryptedRefreshToken)});const response=await serverContext.axios.post('https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',params,{headers:{Authorization:'Basic '+Buffer.from(`${serverContext.QB_CLIENT_ID}:${serverContext.QB_CLIENT_SECRET}`).toString('base64'),'Content-Type':'application/x-www-form-urlencoded'}});full.encryptedAccessToken=(0, serverContext.encryptQbSecret)(response.data.access_token);if(response.data.refresh_token)full.encryptedRefreshToken=(0, serverContext.encryptQbSecret)(response.data.refresh_token);full.accessTokenExpiresAt=new Date(Date.now()+(Number(response.data.expires_in)||3600)*1000);if(response.data.x_refresh_token_expires_in)full.refreshTokenExpiresAt=new Date(Date.now()+Number(response.data.x_refresh_token_expires_in)*1000);full.lastRefreshAt=new Date();full.status='connected';full.lastError='';await full.save();return full; }
+const refreshQbConnection = require('../quickbooks-token-refresh')(serverContext);
 
 async function getQbConnection(projectId) { const connection=await serverContext.QuickBooksConnection.findOne({projectId,status:{$ne:'disconnected'}}).select('+encryptedAccessToken +encryptedRefreshToken');if(!connection)throw new Error('This property is not connected to QuickBooks');return (0, serverContext.refreshQbConnection)(connection); }
 
@@ -403,10 +403,11 @@ function get_api_properties_propertyId_quickbooks_payment_workspace() {
 serverContext.app.get('/api/properties/:propertyId/quickbooks/payment-workspace',async(req,res)=>{try{
   const existingConnection=await serverContext.QuickBooksConnection.findOne({projectId:req.params.propertyId,status:{$ne:'disconnected'}}).lean();
   if(!existingConnection)return res.json({connected:false,summary:{unmatched:0,conflicts:0,unmappedCustomers:0},unmatched:[],conflicts:[],customers:[],activity:[],mappingHealth:{}});
+  const workspaceConnection = await (0, serverContext.getQbConnection)(req.params.propertyId);
   const [resolved,logs,customerResponse]=await Promise.all([
     (0, serverContext.autoResolveQuickBooksPaymentsForProperty)(req.params.propertyId),
     serverContext.QuickBooksSyncLog.find({projectId:req.params.propertyId}).sort({updatedAt:-1}).limit(200).lean(),
-    (0, serverContext.qbRequest)(await (0, serverContext.getQbConnection)(req.params.propertyId),'get',`query?query=${encodeURIComponent("select * from Customer where Active = true maxresults 1000")}`)
+    (0, serverContext.qbRequest)(workspaceConnection,'get',`query?query=${encodeURIComponent("select * from Customer where Active = true maxresults 1000")}`)
   ]);
   const live=resolved.connection;
   const localPayments=resolved.localPayments;

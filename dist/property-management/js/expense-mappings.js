@@ -1,4 +1,5 @@
-const expenseMappingFetch = (url, options = {}) => (typeof managerSessionFetch === 'function' ? managerSessionFetch : fetch)(url, { ...options, headers: { ...options.headers, Authorization: `Bearer ${localStorage.getItem('token') || ''}` } });
+const expenseMappingFetch = (url, options = {}) => managerSessionRequest(url, options,
+    typeof managerSessionFetch === 'function' ? managerSessionFetch : fetch);
 let expenseMappingEditor = null;
 let expenseMappingRequest = 0;
 async function openExpenseMappings() {

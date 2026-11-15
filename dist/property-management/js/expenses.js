@@ -73,7 +73,7 @@ async function loadExpenseWorkspace(propertyId, busyAttempt = 0) {
     list.setAttribute('aria-busy', 'true');
     refresh.disabled = true;
     try {
-        const response = await (typeof managerSessionFetch === 'function' ? managerSessionFetch : fetch)(`/api/properties/${encodeURIComponent(propertyId)}/expenses/sync`, {
+        const response = await expenseMappingFetch(`/api/properties/${encodeURIComponent(propertyId)}/expenses/sync`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
             body: JSON.stringify(range)
         });

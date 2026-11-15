@@ -137,7 +137,9 @@ module.exports = function createExpenseSync(context) {
       return summary;
     } catch (error) {
       summary.status = 'failed';
+      if (error.code === 'QUICKBOOKS_RECONNECT_REQUIRED' || error.response?.status === 401) summary.reconnectRequired = true;
       summary.message = String(error.response?.data?.Fault?.Error?.[0]?.Message || error.message).slice(0, 500);
+      if (summary.reconnectRequired) summary.message = 'QuickBooks authorization expired. Reconnect this property to QuickBooks.';
       summary.completedAt = new Date();
       await context.QuickBooksConnection.updateOne({ _id: connection._id, expenseImportLease: lease },
         { $push: { expenseImportHistory: { $each: [summary], $slice: -20 } } });
@@ -162,7 +164,7 @@ module.exports = function createExpenseSync(context) {
         if (!connection || connection.status === 'disconnected') sync = { disconnected: true, message: 'Connect this property to QuickBooks to sync expenses.' };
         else {
           try { sync = await synchronize(propertyId, range); }
-          catch (error) { sync = { status: 'failed', message: 'Unable to connect to QuickBooks. Check the connection and refresh.' }; }
+          catch (error) { sync = { status: 'failed', reconnectRequired: error.code === 'QUICKBOOKS_RECONNECT_REQUIRED', message: error.code === 'QUICKBOOKS_RECONNECT_REQUIRED' ? error.message : 'Unable to connect to QuickBooks. Check the connection and refresh.' }; }
         }
         const records = await context.PropertyExpense.find({ ...scope(propertyId), status: 'approved', date: { $gte: range.from, $lte: range.to } }).lean();
         const projected = records.map(item => projectRecord(item, connection)).filter(Boolean);
