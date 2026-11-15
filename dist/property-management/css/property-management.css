@@ -3756,7 +3756,7 @@ body.dark-theme #portfolioDetailsTfoot {
 
 /* Portfolio details active filter chips */
 #portfolioDetailsActiveFilterChips {
-    display: flex;
+    display: none !important;
     flex-wrap: wrap;
     gap: 6px;
 }

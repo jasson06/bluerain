@@ -299,6 +299,36 @@ test('invoice UI renders multiple exact-ID links, item amounts, statuses, and es
   expect(ui.renderInvoices([], 'Current visit invoices')).toContain('Current visit invoices');
 });
 
+test.each([
+  { invoices: [] },
+  { invoices: [{ _id: 'invoice-1', invoiceNumber: 'INV-1', status: 'Paid', amount: 25 },
+    { _id: 'invoice-2', invoiceNumber: 'INV-2', status: 'Pending', amount: 50 }] }
+])('maintenance overview keeps invoices beside the estimate action, outside the description: %j', ({ invoices }) => {
+  const context = vm.createContext({
+    window: { RecurringMaintenanceHistory: historyUi() },
+    DescriptionEditor: { render: value => value },
+    getMaintenanceWorkflowStage: () => 'new',
+    getMaintenanceWorkflowStageLabel: () => 'New',
+    getMaintenanceWorkflowOptionsHtml: () => '<option>New</option>',
+    getMaintenanceVendorLabel: () => 'Vendor',
+    formatMaintenanceCost: () => '$75.00'
+  });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../dist/property-management/js/maintenance-overview.js'), 'utf8'), context);
+  const html = context.renderGlobalMaintenanceRequestsOverview([
+    { _id: 'request-1', projectId: 'property-1', title: 'Repair sink', description: 'Fix leak', invoices }
+  ], false);
+  const description = html.match(/<td[^>]*data-label="Description"[^>]*>([\s\S]*?)<\/td>/)[1];
+  const actions = html.match(/<td data-label="Actions">([\s\S]*?)<\/td>/)[1];
+  expect(description).toContain('Fix leak');
+  expect(description).not.toContain('maintenance-invoices');
+  expect(actions).toContain('class="maintenance-overview-actions"');
+  expect(actions).toContain("openMaintenanceEstimate('request-1', 'property-1', 'overview')");
+  expect(actions).toMatch(/<\/button>\s*<div class="maintenance-invoices"/);
+  expect((html.match(/class="maintenance-invoices"/g) || [])).toHaveLength(1);
+  if (!invoices.length) expect(actions).toContain('Not invoiced');
+  invoices.forEach(invoice => expect(actions).toContain(`/invoice-creater.html?invoiceId=${invoice._id}`));
+});
+
 test('completed date entries show their invoice number and status without nesting preview links inside buttons', () => {
   const ui = historyUi();
   const html = ui.render({

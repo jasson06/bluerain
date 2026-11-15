@@ -213,7 +213,6 @@ function renderGlobalMaintenanceRequestsOverview(items, hasFilters) {
                                     <div class="maintenance-description-inner">
                                         ${DescriptionEditor.render(r.description) || '<span style="color:#888;">No description provided.</span>'}
                                     </div>
-                                    ${window.RecurringMaintenanceHistory.renderInvoices(r.invoices)}
                                 </td>
                                 <td class="mobile-card-wide" data-label="Property">${getMaintenanceOverviewPropertyLabel(r)}</td>
                                 <td data-label="Unit">${unitLabel}</td>
@@ -228,9 +227,12 @@ function renderGlobalMaintenanceRequestsOverview(items, hasFilters) {
                                 </td>
                                 <td data-label="Created">${created || '—'}</td>
                                 <td data-label="Actions">
-                                    <button onclick="openMaintenanceEstimate('${r._id || ''}', '${(r.projectId && r.projectId._id) || r.projectId || ''}', 'overview')" class="btn-secondary" title="Open Estimate">
-                                        <i class="fas fa-file-invoice-dollar"></i>
-                                    </button>
+                                    <div class="maintenance-overview-actions">
+                                        <button onclick="openMaintenanceEstimate('${r._id || ''}', '${(r.projectId && r.projectId._id) || r.projectId || ''}', 'overview')" class="btn-secondary" title="Open Estimate">
+                                            <i class="fas fa-file-invoice-dollar"></i>
+                                        </button>
+                                        ${window.RecurringMaintenanceHistory.renderInvoices(r.invoices)}
+                                    </div>
                                 </td>
                             </tr>`;
                     }).join('')}

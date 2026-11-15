@@ -207,12 +207,13 @@ function renderPortfolioDetails(type, target = {}) {
         } else {
             state.keepPortfolioTypeFilterOnNextRender = false;
         }
-        initializePortfolioDetailsSearch();
-        renderFilteredPortfolioDetailsRows();
+        // The overview drawer can coexist with inline details using the same control IDs.
+        initializePortfolioDetailsSearch(body);
+        renderFilteredPortfolioDetailsRows(body);
 
         // Wire Applications/Invites type tags inside the portfolio view
         (function setupPortfolioAppsTypeTags() {
-            const container = document.getElementById('portfolioAppsTypeTags');
+            const container = body.querySelector('#portfolioAppsTypeTags');
             if (!container) return;
             const buttons = Array.from(container.querySelectorAll('.portfolio-apps-tag-btn'));
             if (!buttons.length) return;
@@ -234,7 +235,7 @@ function renderPortfolioDetails(type, target = {}) {
                 container.classList.toggle('portfolio-apps-type-invite', currentType === 'invite');
             };
             const applyTypeFilter = (selectedType) => {
-                const input = document.getElementById('portfolioDetailsSearchBar');
+                const input = body.querySelector('#portfolioDetailsSearchBar');
                 const combined = `${(window.__portfolioDetailsAccumulatedQuery || '').trim()} ${(input?.value || '').trim()}`.trim();
                 const { tokens } = parsePortfolioDetailsSearch(combined);
                 // Replace type filter with the selected one
@@ -248,7 +249,7 @@ function renderPortfolioDetails(type, target = {}) {
                 if (tokens.balanceFlags && tokens.balanceFlags.length) parts.push(`balance:${tokens.balanceFlags.join(',')}`);
                 window.__portfolioDetailsAccumulatedQuery = parts.join(' ');
                 if (input) input.value = '';
-                renderFilteredPortfolioDetailsRows();
+                renderFilteredPortfolioDetailsRows(body);
             };
             // Set initial active tag based on current type filter
             syncActiveFromFilter();

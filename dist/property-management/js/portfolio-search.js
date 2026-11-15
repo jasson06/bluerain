@@ -2,64 +2,64 @@
 // Classic script: declarations share the page scope; startup runs in property-management.js.
 
 // ===== Shared Portfolio Details Search (rent, maintenance, leases, vacancy) =====
-function initializePortfolioDetailsSearch() {
-    const search = document.getElementById('portfolioDetailsSearchBar');
+function initializePortfolioDetailsSearch(root = document) {
+    const search = root.querySelector('#portfolioDetailsSearchBar');
     if (!search) return;
     if (search.dataset._inited === '1') return;
     search.dataset._inited = '1';
 
-    const debouncedRender = debounce(renderFilteredPortfolioDetailsRows, 200);
+    const debouncedRender = debounce(() => renderFilteredPortfolioDetailsRows(root), 200);
 
     search.addEventListener('input', () => {
-        positionPortfolioDetailsSearchSuggestions();
-        autoSuggestPortfolioDetails();
-        showPortfolioDetailsSearchSuggestions(true);
+        positionPortfolioDetailsSearchSuggestions(root);
+        autoSuggestPortfolioDetails(root);
+        showPortfolioDetailsSearchSuggestions(true, root);
         debouncedRender();
     });
     search.addEventListener('change', () => {
-        positionPortfolioDetailsSearchSuggestions();
+        positionPortfolioDetailsSearchSuggestions(root);
         debouncedRender();
     });
     search.addEventListener('focus', () => {
-        positionPortfolioDetailsSearchSuggestions();
-        showPortfolioDetailsSearchSuggestions(true);
+        positionPortfolioDetailsSearchSuggestions(root);
+        showPortfolioDetailsSearchSuggestions(true, root);
     });
-    search.addEventListener('blur', () => setTimeout(() => showPortfolioDetailsSearchSuggestions(false), 120));
+    search.addEventListener('blur', () => setTimeout(() => showPortfolioDetailsSearchSuggestions(false, root), 120));
 
-    const clr = document.getElementById('clearPortfolioDetailsFiltersBtn');
+    const clr = root.querySelector('#clearPortfolioDetailsFiltersBtn');
     if (clr) clr.onclick = () => {
         search.value = '';
         window.__portfolioDetailsAccumulatedQuery = '';
-        renderFilteredPortfolioDetailsRows();
-        showPortfolioDetailsSearchSuggestions(false);
+        renderFilteredPortfolioDetailsRows(root);
+        showPortfolioDetailsSearchSuggestions(false, root);
     };
 
-    const sug = document.getElementById('portfolioDetailsSearchSuggestions');
+    const sug = root.querySelector('#portfolioDetailsSearchSuggestions');
     if (sug) {
-        renderPortfolioDetailsSuggestionTokens();
+        renderPortfolioDetailsSuggestionTokens(root);
         sug.addEventListener('mousedown', (e) => {
             const tokenEl = e.target.closest('.suggest-item');
             const valEl = e.target.closest('.suggest-value');
             e.preventDefault();
             if (tokenEl) {
                 const token = tokenEl.getAttribute('data-token') || '';
-                showPortfolioDetailsValueSuggestions(token);
+                showPortfolioDetailsValueSuggestions(token, root);
             } else if (valEl) {
                 const token = valEl.getAttribute('data-token') || '';
                 const value = valEl.getAttribute('data-value') || '';
                 const acc = (window.__portfolioDetailsAccumulatedQuery || '').trim();
                 const sep = acc ? ' ' : '';
                 window.__portfolioDetailsAccumulatedQuery = `${acc}${sep}${token}${value}`;
-                const input = document.getElementById('portfolioDetailsSearchBar');
+                const input = root.querySelector('#portfolioDetailsSearchBar');
                 if (input) input.value = '';
-                renderFilteredPortfolioDetailsRows();
-                showPortfolioDetailsSearchSuggestions(false);
+                renderFilteredPortfolioDetailsRows(root);
+                showPortfolioDetailsSearchSuggestions(false, root);
             }
         });
-        const backBtn = document.getElementById('portfolioDetailsSuggestBack');
+        const backBtn = root.querySelector('#portfolioDetailsSuggestBack');
         if (backBtn) backBtn.addEventListener('mousedown', (e) => {
             e.preventDefault();
-            renderPortfolioDetailsSuggestionTokens();
+            renderPortfolioDetailsSuggestionTokens(root);
         });
     }
 }
@@ -90,17 +90,17 @@ function parsePortfolioDetailsSearch(queryStr) {
     return { tokens, text: tokens.text };
 }
 
-function getPortfolioDetailsSearch() {
-    const input = document.getElementById('portfolioDetailsSearchBar');
+function getPortfolioDetailsSearch(root = document) {
+    const input = root.querySelector('#portfolioDetailsSearchBar');
     const current = input ? input.value : '';
     const combined = `${(window.__portfolioDetailsAccumulatedQuery || '').trim()} ${current.trim()}`.trim();
     const query = parsePortfolioDetailsSearch(combined);
-    renderPortfolioDetailsFilterChips(query.tokens);
+    renderPortfolioDetailsFilterChips(query.tokens, root);
     return query;
 }
 
-function renderPortfolioDetailsFilterChips(tokens) {
-    const container = document.getElementById('portfolioDetailsActiveFilterChips');
+function renderPortfolioDetailsFilterChips(tokens, root = document) {
+    const container = root.querySelector('#portfolioDetailsActiveFilterChips');
     if (!container) return;
     const isRentDetails = state.currentPortfolioDetailsType === 'rent';
     const mkChip = (k, v, disp) =>
@@ -121,13 +121,13 @@ function renderPortfolioDetailsFilterChips(tokens) {
     container.querySelectorAll('.chip-remove').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const chip = e.target.closest('.filter-chip');
-            removePortfolioDetailsFilterToken(chip.getAttribute('data-key') || '', chip.getAttribute('data-value') || '');
+            removePortfolioDetailsFilterToken(chip.getAttribute('data-key') || '', chip.getAttribute('data-value') || '', root);
         });
     });
 }
 
-function removePortfolioDetailsFilterToken(key, value) {
-    const input = document.getElementById('portfolioDetailsSearchBar');
+function removePortfolioDetailsFilterToken(key, value, root = document) {
+    const input = root.querySelector('#portfolioDetailsSearchBar');
     const combined = `${(window.__portfolioDetailsAccumulatedQuery || '').trim()} ${(input?.value || '').trim()}`.trim();
     const { tokens } = parsePortfolioDetailsSearch(combined);
     const rem = (arr) => {
@@ -151,20 +151,20 @@ function removePortfolioDetailsFilterToken(key, value) {
     if (tokens.balanceFlags.length) parts.push(`balance:${tokens.balanceFlags.join(',')}`);
     window.__portfolioDetailsAccumulatedQuery = parts.join(' ');
     if (input) input.value = '';
-    renderFilteredPortfolioDetailsRows();
+    renderFilteredPortfolioDetailsRows(root);
 }
 
-function showPortfolioDetailsSearchSuggestions(show) {
-    const box = document.getElementById('portfolioDetailsSearchSuggestions');
+function showPortfolioDetailsSearchSuggestions(show, root = document) {
+    const box = root.querySelector('#portfolioDetailsSearchSuggestions');
     if (!box) return;
-    if (show) renderPortfolioDetailsSuggestionTokens();
+    if (show) renderPortfolioDetailsSuggestionTokens(root);
     box.style.display = show ? 'block' : 'none';
 }
 
-function positionPortfolioDetailsSearchSuggestions() {
-    const bar = document.getElementById('portfolioDetailsFilterBar');
-    const input = document.getElementById('portfolioDetailsSearchBar');
-    const box = document.getElementById('portfolioDetailsSearchSuggestions');
+function positionPortfolioDetailsSearchSuggestions(root = document) {
+    const bar = root.querySelector('#portfolioDetailsFilterBar');
+    const input = root.querySelector('#portfolioDetailsSearchBar');
+    const box = root.querySelector('#portfolioDetailsSearchSuggestions');
     if (!bar || !input || !box) return;
     const barRect = bar.getBoundingClientRect();
     const inRect = input.getBoundingClientRect();
@@ -173,11 +173,11 @@ function positionPortfolioDetailsSearchSuggestions() {
     box.style.minWidth = `${Math.max(inRect.width, 260)}px`;
 }
 
-function renderPortfolioDetailsSuggestionTokens() {
-    const list = document.getElementById('portfolioDetailsSuggestList');
-    const title = document.getElementById('portfolioDetailsSuggestTitle');
-    const values = document.getElementById('portfolioDetailsSuggestValues');
-    const backBtn = document.getElementById('portfolioDetailsSuggestBack');
+function renderPortfolioDetailsSuggestionTokens(root = document) {
+    const list = root.querySelector('#portfolioDetailsSuggestList');
+    const title = root.querySelector('#portfolioDetailsSuggestTitle');
+    const values = root.querySelector('#portfolioDetailsSuggestValues');
+    const backBtn = root.querySelector('#portfolioDetailsSuggestBack');
     if (!list) return;
     const isRentDetails = state.currentPortfolioDetailsType === 'rent';
     const tokens = isRentDetails
@@ -195,11 +195,11 @@ function renderPortfolioDetailsSuggestionTokens() {
     list.style.display = 'block';
 }
 
-function showPortfolioDetailsValueSuggestions(token) {
-    const list = document.getElementById('portfolioDetailsSuggestList');
-    const values = document.getElementById('portfolioDetailsSuggestValues');
-    const title = document.getElementById('portfolioDetailsSuggestTitle');
-    const backBtn = document.getElementById('portfolioDetailsSuggestBack');
+function showPortfolioDetailsValueSuggestions(token, root = document) {
+    const list = root.querySelector('#portfolioDetailsSuggestList');
+    const values = root.querySelector('#portfolioDetailsSuggestValues');
+    const title = root.querySelector('#portfolioDetailsSuggestTitle');
+    const backBtn = root.querySelector('#portfolioDetailsSuggestBack');
     if (!list || !values || !title) return;
     let items = [];
     if (token === 'property:') {
@@ -207,7 +207,7 @@ function showPortfolioDetailsValueSuggestions(token) {
         // current table rows so filters use the actual address text that is shown
         // in the "Property" column instead of the internal property name.
         if (state.currentPortfolioDetailsType === 'applications') {
-            const bodyRows = Array.from(document.querySelectorAll('#portfolioDetailsTbody tr'));
+            const bodyRows = Array.from(root.querySelectorAll('#portfolioDetailsTbody tr'));
             const seen = new Set();
             items = bodyRows.map(r => {
                 const label = (r.children[3]?.textContent || '').trim();
@@ -226,7 +226,7 @@ function showPortfolioDetailsValueSuggestions(token) {
         items = (state.allUnits || []).map(u => ({ label: `${u.number || u.unitNumber || ''}`, value: String(u.number || u.unitNumber || '').toLowerCase() }));
     } else if (token === 'status:') {
         // Gather statuses from current rows if possible, otherwise fall back to common set
-        const bodyRows = Array.from(document.querySelectorAll('#portfolioDetailsTbody tr'));
+        const bodyRows = Array.from(root.querySelectorAll('#portfolioDetailsTbody tr'));
         const set = new Set();
         bodyRows.forEach(r => { if (r.dataset.status) set.add(r.dataset.status.toLowerCase()); });
         if (!set.size) ['active','pending','expired','terminated','vacant','in-progress','completed'].forEach(v => set.add(v));
@@ -249,7 +249,7 @@ function showPortfolioDetailsValueSuggestions(token) {
             return { label: base, value: (base || '').toLowerCase() };
         }).filter(it => it.label);
     } else if (token === 'type:') {
-        const bodyRows = Array.from(document.querySelectorAll('#portfolioDetailsTbody tr'));
+        const bodyRows = Array.from(root.querySelectorAll('#portfolioDetailsTbody tr'));
         const set = new Set();
         bodyRows.forEach(r => { if (r.dataset.type) set.add(r.dataset.type.toLowerCase()); });
         if (!set.size) ['rent','maintenance','lease expiring','upcoming move-in','vacancy'].forEach(v => set.add(v));
@@ -274,18 +274,18 @@ function showPortfolioDetailsValueSuggestions(token) {
     values.style.display = items.length ? 'block' : 'none';
 }
 
-function autoSuggestPortfolioDetails() {
-    const input = document.getElementById('portfolioDetailsSearchBar');
+function autoSuggestPortfolioDetails(root = document) {
+    const input = root.querySelector('#portfolioDetailsSearchBar');
     const val = (input?.value || '').trim();
     const m = val.match(/(name:|property:|unit:|status:|type:|balance:)([^\s]*)$/i);
     if (!m) {
-        renderPortfolioDetailsSuggestionTokens();
+        renderPortfolioDetailsSuggestionTokens(root);
         return;
     }
     const token = m[1].toLowerCase();
     const partial = (m[2] || '').toLowerCase();
-    showPortfolioDetailsValueSuggestions(token);
-    const values = document.getElementById('portfolioDetailsSuggestValues');
+    showPortfolioDetailsValueSuggestions(token, root);
+    const values = root.querySelector('#portfolioDetailsSuggestValues');
     if (values && partial) {
         Array.from(values.querySelectorAll('.suggest-value')).forEach(li => {
             const v = (li.getAttribute('data-value') || '').toLowerCase();
@@ -294,10 +294,10 @@ function autoSuggestPortfolioDetails() {
     }
 }
 
-function renderFilteredPortfolioDetailsRows() {
-    const tbody = document.getElementById('portfolioDetailsTbody');
+function renderFilteredPortfolioDetailsRows(root = document) {
+    const tbody = root.querySelector('#portfolioDetailsTbody');
     if (!tbody) return;
-    const { tokens, text } = getPortfolioDetailsSearch();
+    const { tokens, text } = getPortfolioDetailsSearch(root);
     const isRentDetails = state.currentPortfolioDetailsType === 'rent';
     let anyVisible = false;
     const rows = Array.from(tbody.querySelectorAll('[data-portfolio-filter-item="true"], tr')).filter(row => !row.closest('.rm-expanded-row'));
@@ -326,8 +326,8 @@ function renderFilteredPortfolioDetailsRows() {
     });
 
     // If this is the vacancy view, update the total rent footer based on visible rows
-    const tfoot = document.getElementById('portfolioDetailsTfoot');
-    const totalCell = document.getElementById('portfolioVacancyTotalRent');
+    const tfoot = root.querySelector('#portfolioDetailsTfoot');
+    const totalCell = root.querySelector('#portfolioVacancyTotalRent');
     if (tfoot && totalCell) {
         let total = 0;
         rows.forEach(row => {
