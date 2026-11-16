@@ -48,3 +48,20 @@ body.dark-theme .overview-payment-unit,body.dark-theme .overview-payment-amounts
 body.dark-theme .overview-payment-amounts strong{color:#e2e8f0}
 body.dark-theme .overview-expected-payment .link-button{color:#7dd3fc}
 body.dark-theme .overview-expected-payment .link-button:hover,body.dark-theme .overview-expected-payment .link-button:focus-visible{background:#243447;color:#bae6fd}
+.overview-financial-detail-trigger{width:100%;border:0;border-bottom:1px solid #eef2f7;background:transparent!important;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.overview-financial-detail-trigger:hover,.overview-financial-detail-trigger:focus-visible{background:#f8fafc!important}
+.overview-financial-detail-trigger:focus-visible{outline:2px solid #176b87;outline-offset:2px}
+.overview-financial-detail-popover{z-index:1201}
+.overview-financial-detail-list{max-height:min(340px,calc(100vh - 180px));min-height:0;overscroll-behavior:contain}
+.overview-financial-detail-item div{min-width:0}
+.overview-financial-detail-item div strong,.overview-financial-detail-item div span{display:block;overflow-wrap:anywhere}
+.overview-financial-detail-item div span{margin-top:2px;font-size:.7rem;color:#64748b}
+.overview-financial-detail-item>b{flex:0 0 auto;font-size:.8rem;color:#0f766e;font-variant-numeric:tabular-nums}
+.overview-financial-detail-total{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-top:1px solid #e2e8f0}
+.overview-financial-detail-total b{flex:0 0 auto;font-size:.8rem;color:#0f766e;font-variant-numeric:tabular-nums}
+.overview-financial-detail-total[hidden]{display:none!important}
+body.dark-theme .overview-financial-detail-trigger{border-bottom-color:#334155;color:#e2e8f0}
+body.dark-theme .overview-financial-detail-trigger:hover,body.dark-theme .overview-financial-detail-trigger:focus-visible{background:#1e293b!important}
+body.dark-theme .overview-financial-detail-item div span{color:#94a3b8}
+body.dark-theme .overview-financial-detail-total{border-top-color:#334155}
+body.dark-theme .overview-financial-detail-total b,body.dark-theme .overview-financial-detail-item>b{color:#5eead4}

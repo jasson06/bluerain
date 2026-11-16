@@ -150,6 +150,15 @@ function renderPropertyKpiPopover(metric,data){
   return `<section class="property-kpi-popover" id="propertyKpiPopover" role="dialog" aria-label="${escapeHtml(detail.title)}"><header><div><strong>${escapeHtml(detail.title)}</strong><span>${escapeHtml(detail.description)}</span></div><button type="button" data-kpi-popover-close aria-label="Close ${escapeHtml(detail.title)} summary">×</button></header><div class="property-kpi-popover-list" role="list">${rows}</div></section>`;
 }
 
+function positionPropertyOverviewPopover(trigger,popover){
+  const rect=trigger.getBoundingClientRect(),margin=12;
+  const left=Math.max(margin,Math.min(rect.left,window.innerWidth-popover.offsetWidth-margin));
+  let top=rect.bottom+8;
+  if(top+popover.offsetHeight>window.innerHeight-margin)top=Math.max(margin,rect.top-popover.offsetHeight-8);
+  popover.style.left=`${left}px`;
+  popover.style.top=`${top}px`;
+}
+
 let activePropertyKpiPopover=null;
 function closePropertyKpiPopover(returnFocus=false){
   if(!activePropertyKpiPopover)return;
@@ -168,6 +177,7 @@ function closePropertyKpiPopover(returnFocus=false){
 function openPropertyKpiPopover(card,metric,data){
   if(activePropertyKpiPopover?.card===card){closePropertyKpiPopover();return;}
   closePropertyKpiPopover();
+  closeOverviewFinancialDetail();
   const popover=document.createElement('div');
   popover.innerHTML=renderPropertyKpiPopover(metric,data);
   const content=popover.firstElementChild;
@@ -180,12 +190,7 @@ function openPropertyKpiPopover(card,metric,data){
   activePropertyKpiPopover={card,popover:content,onOutside,onKeydown,onViewportChange};
   card.setAttribute('aria-expanded','true');
   card.setAttribute('aria-controls',content.id);
-  const rect=card.getBoundingClientRect(),margin=12;
-  const left=Math.max(margin,Math.min(rect.left,window.innerWidth-content.offsetWidth-margin));
-  let top=rect.bottom+8;
-  if(top+content.offsetHeight>window.innerHeight-margin)top=Math.max(margin,rect.top-content.offsetHeight-8);
-  content.style.left=`${left}px`;
-  content.style.top=`${top}px`;
+  positionPropertyOverviewPopover(card,content);
   document.addEventListener('pointerdown',onOutside,true);
   document.addEventListener('keydown',onKeydown,true);
   window.addEventListener('resize',onViewportChange);
@@ -193,9 +198,111 @@ function openPropertyKpiPopover(card,metric,data){
   content.querySelector('[data-kpi-popover-close]')?.addEventListener('click',()=>close(true));
 }
 
+function overviewFinancialDetail(type,data){
+  const financials=data.financials||{},totalIncome=Number(financials.rentalIncome||0)+Number(financials.otherIncome||0);
+  const expenseUnavailable=financials.expenseActualsUnavailable&&Number(financials.expenseCount)>0;
+  const operatingExpenses=expenseUnavailable?'Actuals unavailable':overviewMoney(financials.operatingExpenses);
+  const rows=[];
+  let title='',description='',emptyMessage='No details are available for this value.',total=null;
+  const item=(title,detail,value)=>({title,detail,value:overviewMoney(value)});
+  switch(type){
+    case 'totalIncome':
+      title='Total income';description='Income received during the selected period.';
+      rows.push(item('Rent collected','Rent applied to charges',financials.rentalIncome),item('Other income','Non-deposit fees and other income',financials.otherIncome));
+      total={label:'Total income',value:overviewMoney(totalIncome)};
+      break;
+    case 'potentialRent':
+      title='Potential rent';description='Rent if every unit were occupied during the selected period.';
+      rows.push(item('Potential rent at full occupancy',description,financials.expenseBreakdown?.grossPotentialRent));
+      break;
+    case 'operatingExpenses':
+      title='Operating expenses';description='Expense details for the selected period.';
+      if(Array.isArray(data.expenseDetails)){
+        data.expenseDetails.forEach(expense=>rows.push(item(
+          expense.description||expense.category||'Expense',
+          [expense.category,expense.source,expense.date?overviewDate(expense.date):'Period estimate'].filter(Boolean).join(' · '),
+          expense.amount
+        )));
+        emptyMessage='No expenses for this period.';
+      }else emptyMessage='Expense details are unavailable. Refresh the overview to try again.';
+      total={label:'Total operating expenses',value:operatingExpenses};
+      break;
+    case 'debtPayments':
+      title='Mortgage and loan payments';description='Debt payments for the selected period.';
+      rows.push(item('Mortgage and loan payments','Recorded or saved debt payments',financials.debtPayments));
+      break;
+    case 'estimatedNOI':
+      title='Estimated net operating income';description='Total income minus operating expenses.';
+      rows.push(item('Total income','Rent collected plus other income',totalIncome),item('Operating expenses','Subtracted from total income',financials.operatingExpenses));
+      total={label:'Estimated net operating income (NOI)',value:expenseUnavailable?'Actuals unavailable':overviewMoney(financials.estimatedNOI)};
+      break;
+    case 'budgetVariance':
+      title='Budget difference';description='Operating budget minus operating expenses for this period.';
+      rows.push(item('Operating budget','Budget for the selected period',financials.operatingBudget),item('Operating expenses','Subtracted from the operating budget',financials.operatingExpenses));
+      total={label:'Budget difference',value:overviewMoney(financials.budgetVariance)};
+      break;
+    default:
+      return null;
+  }
+  return {title,description,emptyMessage,rows,total};
+}
+
+let activeOverviewFinancialPopover=null;
+function closeOverviewFinancialDetail(returnFocus=false){
+  if(!activeOverviewFinancialPopover)return;
+  const active=activeOverviewFinancialPopover;
+  activeOverviewFinancialPopover=null;
+  document.removeEventListener('pointerdown',active.onOutside,true);
+  document.removeEventListener('keydown',active.onKeydown,true);
+  window.removeEventListener('resize',active.onViewportChange);
+  window.removeEventListener('scroll',active.onViewportChange,true);
+  const returnToTrigger=returnFocus||active.popover.contains(document.activeElement);
+  active.popover.hidden=true;
+  active.trigger.setAttribute('aria-expanded','false');
+  active.trigger.removeAttribute('aria-controls');
+  if(returnToTrigger&&active.trigger.isConnected)active.trigger.focus();
+}
+
+function openOverviewFinancialDetail(type,data,trigger){
+  if(activeOverviewFinancialPopover?.trigger===trigger){closeOverviewFinancialDetail();return;}
+  closeOverviewFinancialDetail();
+  closePropertyKpiPopover();
+  const detail=overviewFinancialDetail(type,data),popover=document.getElementById('overviewFinancialDetailModal');
+  if(!detail||!popover){showNotification('Financial details are unavailable. Refresh the page and try again.','error');return;}
+  const title=popover.querySelector('#overviewFinancialDetailTitle'),description=popover.querySelector('#overviewFinancialDetailDescription'),list=popover.querySelector('#overviewFinancialDetailItems'),empty=popover.querySelector('#overviewFinancialDetailEmpty'),total=popover.querySelector('#overviewFinancialDetailTotal'),closeButton=popover.querySelector('[data-overview-financial-detail-close]');
+  if(!title||!description||!list||!empty||!total||!closeButton){showNotification('Financial details are unavailable. Refresh the page and try again.','error');return;}
+  title.textContent=detail.title;
+  description.textContent=detail.description;
+  list.innerHTML=detail.rows.map(row=>`<div class="property-kpi-popover-row overview-financial-detail-item" role="listitem"><div><strong>${escapeHtml(row.title)}</strong><span>${escapeHtml(row.detail)}</span></div><b>${escapeHtml(row.value)}</b></div>`).join('');
+  list.hidden=!detail.rows.length;
+  empty.textContent=detail.emptyMessage;
+  empty.hidden=detail.rows.length>0;
+  total.innerHTML=detail.total?`<strong>${escapeHtml(detail.total.label)}</strong><b>${escapeHtml(detail.total.value)}</b>`:'';
+  total.hidden=!detail.total;
+  popover.hidden=false;
+  trigger.setAttribute('aria-expanded','true');
+  trigger.setAttribute('aria-controls',popover.id);
+  const onOutside=event=>{if(!popover.contains(event.target)&&!trigger.contains(event.target))closeOverviewFinancialDetail();};
+  const onKeydown=event=>{if(event.key==='Escape'){event.preventDefault();closeOverviewFinancialDetail(true);}};
+  const onViewportChange=()=>closeOverviewFinancialDetail();
+  activeOverviewFinancialPopover={trigger,popover,onOutside,onKeydown,onViewportChange};
+  positionPropertyOverviewPopover(trigger,popover);
+  document.addEventListener('pointerdown',onOutside,true);
+  document.addEventListener('keydown',onKeydown,true);
+  window.addEventListener('resize',onViewportChange);
+  window.addEventListener('scroll',onViewportChange,true);
+  closeButton.onclick=()=>closeOverviewFinancialDetail(true);
+  closeButton.focus();
+}
+
+function renderOverviewFinancialRow(label,value,type,valueColor=''){
+  return `<button type="button" class="overview-row overview-financial-detail-trigger" data-overview-financial-detail="${type}" aria-haspopup="dialog" aria-expanded="false" aria-label="View ${escapeHtml(label)} details"><span>${label}</span><strong${valueColor?` style="color:${valueColor}"`:''}>${value}</strong></button>`;
+}
+
 function renderPropertyOverviewPanels(data){
   const s=data.summary||{}, statusFilter=document.getElementById('overviewStatusFilter')?.value||'all';
   closePropertyKpiPopover();
+  closeOverviewFinancialDetail();
   const cards=[['occupancy','Occupancy',`${s.occupancyRate||0}%`,`${s.occupied||0} of ${s.totalUnits||0} units`],['rentRoll','Rent roll',overviewMoney(s.rentRoll),'Scheduled monthly rent'],['collected','Collected',overviewMoney(s.rentCollected),`${s.collectionRate||0}% collected`],['outstanding','Outstanding',overviewMoney(s.rentOutstanding),'Current selected period'],['vacant','Vacant',s.vacant||0,`${s.maintenanceUnits||0} units offline`],['maintenance','Maintenance',s.openMaintenance||0,`${s.urgentMaintenance||0} urgent`],['leaseRisk','Lease risk',s.expiringLeases90||0,'Expiring within 90 days'],['equipmentDue','Equipment due',s.equipmentServiceDue90||0,`${s.warrantiesExpiring90||0} warranties expiring`]];
   const grid=document.getElementById('propertyOverviewGrid');grid.innerHTML=cards.map(([metric,label,value,sub])=>`<div class="property-kpi" tabindex="0" role="button" aria-haspopup="dialog" aria-expanded="false" data-kpi="${metric}"><div class="property-kpi-label">${label}</div><div class="property-kpi-value">${value}</div><div class="property-kpi-sub">${sub}</div></div>`).join('');
   grid.querySelectorAll('[data-kpi]').forEach(card=>{
@@ -204,12 +311,28 @@ function renderPropertyOverviewPanels(data){
     card.addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===' ')&&event.target===card){event.preventDefault();open();}});
   });
   const financial=document.getElementById('overviewFinancial');if(financial)financial.innerHTML=`<div class="overview-metrics"><div class="overview-mini-stat"><span>Expected</span><strong>${overviewMoney(s.expectedRent??s.rentRoll)}</strong></div><div class="overview-mini-stat"><span>Collected</span><strong>${overviewMoney(s.rentCollected)}</strong></div><div class="overview-mini-stat"><span>Outstanding</span><strong>${overviewMoney(s.rentOutstanding)}</strong></div></div><div class="overview-progress"><span style="width:${Math.min(100,s.collectionRate||0)}%"></span></div><div class="overview-row"><span>Collection rate</span><strong>${s.collectionRate||0}%</strong></div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn-secondary" onclick="runOverviewAction('payment')">Record payment</button><button class="btn-secondary" onclick="openPropertyOverviewTab('payments')">Review ledger</button></div>`;
-        const income=data.financials||{},incomeRoot=document.getElementById('overviewIncomeExpenses');if(incomeRoot){const variance=income.budgetVariance,totalIncome=Number(income.rentalIncome||0)+Number(income.otherIncome||0),expenseBreakdown=income.expenseBreakdown||{},showDepositRow=Number(income.depositCollections||0)>0;incomeRoot.innerHTML=`<div class="overview-row"><span>Total operating income</span><strong>${overviewMoney(totalIncome)}</strong></div><div class="overview-row"><span>Gross potential rent</span><strong>${overviewMoney(expenseBreakdown.grossPotentialRent)}</strong></div><div class="overview-row"><span>Operating expenses (actuals + unmapped estimates)</span><strong style="color:#b91c1c">${income.expenseActualsUnavailable ? 'Actuals unavailable' : overviewMoney(income.operatingExpenses)}</strong></div><div class="overview-row"><span>Mortgage / debt payments</span><strong>${overviewMoney(income.debtPayments)}</strong></div><div class="overview-row"><span>Returned rent adjustments (separate)</span><strong>${overviewMoney(income.returnedRentAdjustments)}</strong></div><div class="overview-row"><span>Tenant deposit transfers (separate)</span><strong>${overviewMoney(income.depositTransfers)}</strong></div><div class="overview-row"><span>Recorded operating expenses</span><strong>${overviewMoney(income.postedExpenses)}</strong></div><div class="overview-row"><span>Maintenance expenses</span><strong style="color:#b91c1c">${overviewMoney(income.maintenanceExpenses)}</strong></div><div class="overview-row"><span>Utilities subtotal</span><strong style="color:#b91c1c">${overviewMoney(expenseBreakdown.utilitiesTotal)}</strong></div><div class="overview-row"><span>Estimated NOI</span><strong style="color:${Number(income.estimatedNOI)>=0?'#047857':'#b91c1c'}">${income.expenseActualsUnavailable ? 'Actuals unavailable' : overviewMoney(income.estimatedNOI)}</strong></div><div class="overview-row"><span>Budget variance</span><strong style="color:${variance===null?'#64748b':Number(variance)>=0?'#047857':'#b91c1c'}">${variance===null?'Budget not set':`${Number(variance)>=0?'+':''}${overviewMoney(variance)}`}</strong></div><div class="task-meta">${income.expenseCount||0} posted expense record${income.expenseCount===1?'':'s'} in this period. Deposits are excluded from operating income.${showDepositRow?' Deposit collections are tracked separately.':''} ${escapeHtml(income.expenseActualsStatus || '')} Saved amounts and tracked maintenance count only for unmapped categories.</div>${variance===null?'<button class="btn-secondary" style="margin-top:10px" onclick="openPropertyProfileEditor()">Set operating budget</button>':''}`;}
+  const income=data.financials||{},incomeRoot=document.getElementById('overviewIncomeExpenses');
+  if(incomeRoot){
+    const variance=income.budgetVariance,totalIncome=Number(income.rentalIncome||0)+Number(income.otherIncome||0),expenseBreakdown=income.expenseBreakdown||{},actualsUnavailable=income.expenseActualsUnavailable&&Number(income.expenseCount)>0;
+    const budgetValue=variance===null?'Budget not set':`${Number(variance)>=0?'+':''}${overviewMoney(variance)}`;
+    const budgetRow=variance===null
+      ?`<div class="overview-row"><span>Budget difference</span><strong style="color:#64748b">${budgetValue}</strong></div>`
+      :renderOverviewFinancialRow('Budget difference',budgetValue,'budgetVariance',Number(variance)>=0?'#047857':'#b91c1c');
+    incomeRoot.innerHTML=[
+      renderOverviewFinancialRow('Total income',overviewMoney(totalIncome),'totalIncome'),
+      renderOverviewFinancialRow('Potential rent (fully occupied)',overviewMoney(expenseBreakdown.grossPotentialRent),'potentialRent'),
+      renderOverviewFinancialRow('Operating expenses',actualsUnavailable?'Actuals unavailable':overviewMoney(income.operatingExpenses),'operatingExpenses','#b91c1c'),
+      renderOverviewFinancialRow('Mortgage and loan payments',overviewMoney(income.debtPayments),'debtPayments'),
+      renderOverviewFinancialRow('Estimated net operating income (NOI)',actualsUnavailable?'Actuals unavailable':overviewMoney(income.estimatedNOI),'estimatedNOI',Number(income.estimatedNOI)>=0?'#047857':'#b91c1c'),
+      budgetRow,
+      variance===null?'<button class="btn-secondary" style="margin-top:10px" onclick="openPropertyProfileEditor()">Set operating budget</button>':''
+    ].join('');
+    incomeRoot.querySelectorAll('[data-overview-financial-detail]').forEach(button=>button.addEventListener('click',()=>openOverviewFinancialDetail(button.dataset.overviewFinancialDetail,data,button)));
+  }
   const delinquency=data.delinquency||{aging:{},tenants:[]},delRoot=document.getElementById('overviewDelinquency');if(delRoot){const aging=delinquency.aging||{},rows=(delinquency.tenants||[]).slice(0,5);delRoot.innerHTML=`<div class="overview-metrics"><div class="overview-mini-stat"><span>Total overdue</span><strong style="color:#b91c1c">${overviewMoney(delinquency.total)}</strong></div><div class="overview-mini-stat"><span>Tenants</span><strong>${delinquency.tenantCount||0}</strong></div><div class="overview-mini-stat"><span>90+ days</span><strong>${overviewMoney(aging.days90plus)}</strong></div></div><div class="overview-row"><span>1–30 days</span><strong>${overviewMoney(aging.current)}</strong></div><div class="overview-row"><span>31–60 days</span><strong>${overviewMoney(aging.days31to60)}</strong></div><div class="overview-row"><span>61–90 days</span><strong>${overviewMoney(aging.days61to90)}</strong></div>${rows.length?`<div class="overview-table-wrap" style="margin-top:8px"><table class="overview-table"><thead><tr><th>Tenant</th><th>Unit</th><th>Balance</th><th></th></tr></thead><tbody>${rows.map(row=>`<tr><td>${escapeHtml(row.tenantName||'Tenant')}</td><td>${escapeHtml(row.unitNumber||'—')}</td><td><strong>${overviewMoney(row.balance)}</strong></td><td><button class="overview-row-action" onclick="openDelinquentTenant('${escapeHtml(String(row.tenantId))}')">Take action</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="overview-ok" style="margin-top:10px">No tenant rent delinquency found.</div>'}`;}
   const leasing=document.getElementById('overviewLeasing');if(leasing)leasing.innerHTML=`<div class="overview-metrics"><div class="overview-mini-stat"><span>Occupied</span><strong>${s.occupied||0}</strong></div><div class="overview-mini-stat"><span>Vacant</span><strong>${s.vacant||0}</strong></div><div class="overview-mini-stat"><span>Expiring</span><strong>${s.expiringLeases90||0}</strong></div></div><div class="overview-progress"><span style="width:${s.occupancyRate||0}%"></span></div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn-secondary" onclick="runOverviewAction('tenant')">Add tenant</button><button class="btn-secondary" onclick="runOverviewAction('application')">Invite applicant</button></div>`;
   if(financial)financial.insertAdjacentHTML('beforeend',`<div class="overview-row"><span>Total cash collected (excluding deposits)</span><strong>${overviewMoney(s.totalCashCollected)}</strong></div>`);
   if(financial)financial.insertAdjacentHTML('beforeend',`<h4>Expected payments</h4>${renderOverviewExpectedPayments(data.expectedPayments,s)}`);
-  if(delRoot){const former=data.formerTenants||{};delRoot.insertAdjacentHTML('beforeend',`<h3>Former tenant rent balances</h3><div class="overview-row"><span>Former rent outstanding</span><strong>${overviewMoney(former.total)}</strong></div><p class="task-meta">${former.tenantCount||0} former tenants with rent owed. ${former.needsReview?`${former.needsReview} accounts need an end-date review. `:''}Deposits remain separate.</p>${(former.tenants||[]).map(row=>`<div class="overview-row"><span>${escapeHtml(row.tenantName)}</span><strong>${row.needsReview?'Needs end-date review':overviewMoney(row.balance)}</strong><button class="overview-row-action" onclick="openTenantBalanceModal('${escapeHtml(row.tenantId)}')">Ledger</button></div>`).join('')}`);}
   const maintenance=(data.maintenance||[]).filter(item=>!['completed','closed','cancelled'].includes(String(item.status||'').toLowerCase())).slice(0,5);const maintRoot=document.getElementById('overviewMaintenance');if(maintRoot)maintRoot.innerHTML=maintenance.length?`<div class="overview-table-wrap"><table class="overview-table"><thead><tr><th>Request</th><th>Priority</th><th>Status</th><th></th></tr></thead><tbody>${maintenance.map(item=>`<tr><td>${escapeHtml(item.title||'Maintenance')}</td><td><span class="task-priority ${escapeHtml(item.priority||'')}">${escapeHtml(item.priority||'medium')}</span></td><td>${escapeHtml(item.status||'pending')}</td><td><button class="overview-row-action" onclick="openPropertyOverviewTab('maintenance')">Open</button></td></tr>`).join('')}</tbody></table></div><button class="btn-secondary" style="margin-top:10px" onclick="runOverviewAction('maintenance')">+ New request</button>`:'<div class="overview-ok">No open maintenance requests.</div><button class="btn-secondary" style="margin-top:10px" onclick="runOverviewAction(\'maintenance\')">Create request</button>';
   const equipment=(data.equipment||[]).filter(item=>item.nextServiceDate||['poor','replace'].includes(item.condition)).sort((a,b)=>new Date(a.nextServiceDate||'9999')-new Date(b.nextServiceDate||'9999')).slice(0,6);const eqRoot=document.getElementById('overviewEquipment');if(eqRoot)eqRoot.innerHTML=equipment.length?equipment.map(item=>`<div class="overview-row"><span><strong>Unit ${escapeHtml(item.unitNumber||'—')}</strong><br>${escapeHtml(item.category||item.name||'Equipment')} ${escapeHtml([item.brand,item.model].filter(Boolean).join(' '))}</span><span>${overviewDate(item.nextServiceDate)}<br><button class="overview-row-action" onclick="editUnit('${escapeHtml(String(item.unitId))}')">Open unit</button></span></div>`).join(''):'<div class="empty-compact">No equipment service risks found.</div>';
   const qb=data.quickBooks||{},qbRoot=document.getElementById('overviewQuickBooks');if(qbRoot)qbRoot.innerHTML=qb.connected?`<div class="overview-ok"><strong>${escapeHtml(qb.companyName||'QuickBooks connected')}</strong></div><div class="overview-metrics"><div class="overview-mini-stat"><span>Synced</span><strong>${qb.syncedPayments||0}</strong></div><div class="overview-mini-stat"><span>Waiting</span><strong>${qb.pendingPayments||0}</strong></div><div class="overview-mini-stat"><span>Failed</span><strong style="color:${qb.failedPayments?'#b91c1c':'inherit'}">${qb.failedPayments||0}</strong></div></div><div class="overview-row"><span>Local payments</span><strong>${overviewMoney(qb.localPaymentTotal)}</strong></div><div class="overview-row"><span>QuickBooks synced</span><strong>${overviewMoney(qb.syncedPaymentTotal)}</strong></div><div class="overview-row"><span>Difference</span><strong>${overviewMoney((qb.localPaymentTotal||0)-(qb.syncedPaymentTotal||0))}</strong></div><button class="btn-secondary" style="margin-top:10px" onclick="openPropertyOverviewTab('payments')">Review payments</button>`:'<div class="overview-alert"><strong>QuickBooks is not connected.</strong><p>Connect this property to its own company to begin syncing.</p><button class="btn-primary" onclick="openQuickBooksSettings()">Connect QuickBooks</button></div>';
