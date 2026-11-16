@@ -40,7 +40,7 @@ function setup(sourceOverrides = {}) {
     });
     function Payment(data) { Object.assign(this, structuredClone(data)); }
     Payment.prototype.save = jest.fn(async function () {
-        if (this.creditSourceId && context.failAllocation) throw new Error('Allocation write failed');
+        if (this.creditSourceId && (context.failAllocation || (context.failAllocationAfter && nextId > context.failAllocationAfter))) throw new Error('Allocation write failed');
         this._id ||= `allocation-${nextId++}`;
         const data = {...this};
         const index = payments.findIndex(payment => payment._id === this._id);
@@ -90,6 +90,94 @@ function setup(sourceOverrides = {}) {
 }
 
 describe('transactional credit allocation', () => {
+    test('applies multiple destinations atomically and retries idempotently', async () => {
+        const {apply,getPayments,getTenant} = setup();
+        const requestId = randomUUID();
+        const allocations = [
+            {targetApplyTo:'rent',periodMonth:'2026-11',amount:30},
+            {targetApplyTo:'deposit',periodMonth:'2026-12',amount:40}
+        ];
+        const response = await apply({requestId,allocations});
+        expect(response.statusCode).toBe(201);
+        expect(response.body.applied).toBe(70);
+        expect(getPayments()).toHaveLength(3);
+        expect(getPayments()[0].creditConsumed).toBe(70);
+        expect(getPayments()[1]).toMatchObject({applyTo:'rent',appliedCredit:30});
+        expect(getPayments()[2]).toMatchObject({applyTo:'deposit',appliedCredit:40});
+        expect(getTenant().depositPaid).toBe(40);
+        expect((await apply({requestId,allocations})).statusCode).toBe(200);
+        expect((await apply({requestId,allocations:[allocations[0],{...allocations[1],amount:20}]})).statusCode).toBe(409);
+        expect(getPayments()).toHaveLength(3);
+    });
+
+    test('concurrent retries of a batch consume credit once', async () => {
+        const {apply,getPayments} = setup();
+        const requestId = randomUUID();
+        const allocations = [
+            {targetApplyTo:'rent',periodMonth:'2026-11',amount:20},
+            {targetApplyTo:'rent',periodMonth:'2026-12',amount:30}
+        ];
+        const results = await Promise.all([apply({requestId,allocations}),apply({requestId,allocations})]);
+        expect(results.map(result => result.statusCode)).toEqual([201,200]);
+        expect(getPayments()).toHaveLength(3);
+        expect(values.availableCredit(getPayments()[0])).toBe(50);
+    });
+
+    test('rejects batches exceeding available credit or the combined deposit balance', async () => {
+        const {apply,getPayments,getTenant} = setup();
+        expect((await apply({allocations:[
+            {targetApplyTo:'rent',periodMonth:'2026-11',amount:60},
+            {targetApplyTo:'rent',periodMonth:'2026-12',amount:50}
+        ]})).statusCode).toBe(409);
+        getTenant().depositPaid = 170;
+        const result = await apply({allocations:[
+            {targetApplyTo:'deposit',periodMonth:'2026-11',amount:20},
+            {targetApplyTo:'deposit',periodMonth:'2026-12',amount:20}
+        ]});
+        expect(result.statusCode).toBe(409);
+        expect(result.body.message).toContain('$10.00');
+        expect(getPayments()).toHaveLength(1);
+        expect(values.availableCredit(getPayments()[0])).toBe(100);
+    });
+
+    test('rejects cumulative duplicate-target overpayment without applying any row', async () => {
+        const {apply,getPayments} = setup({amount:-200,balance:-200});
+        const response = await apply({allocations:[
+            {targetApplyTo:'rent',periodMonth:'2026-11',amount:60},
+            {targetApplyTo:'rent',periodMonth:'2026-11',amount:50}
+        ]});
+        expect(response.statusCode).toBe(409);
+        expect(getPayments()).toHaveLength(1);
+        expect(response.body.message).toContain('$40.00');
+        expect(values.availableCredit(getPayments()[0])).toBe(200);
+    });
+
+    test('rolls back earlier rows when a later destination is invalid', async () => {
+        const {apply,getPayments} = setup();
+        const response = await apply({allocations:[
+            {targetApplyTo:'rent',periodMonth:'2026-11',amount:30},
+            {targetApplyTo:'rent',periodMonth:'2027-01',amount:20}
+        ]});
+        expect(response.statusCode).toBe(400);
+        expect(getPayments()).toHaveLength(1);
+        expect(values.availableCredit(getPayments()[0])).toBe(100);
+    });
+
+    test('rolls back the entire batch if a later adjustment write fails', async () => {
+        const {apply,context,getPayments} = setup();
+        context.failAllocationAfter = 1;
+        const log = jest.spyOn(console,'error').mockImplementation(() => {});
+        try {
+            const response = await apply({allocations:[
+                {targetApplyTo:'rent',periodMonth:'2026-11',amount:30},
+                {targetApplyTo:'deposit',periodMonth:'2026-11',amount:20}
+            ]});
+            expect(response.statusCode).toBe(500);
+            expect(getPayments()).toHaveLength(1);
+            expect(values.availableCredit(getPayments()[0])).toBe(100);
+        } finally { log.mockRestore(); }
+    });
+
     test('a $30 application from $100 credit leaves $70 and settles exactly $30 of target rent', async () => {
         const {apply, getPayments, context} = setup();
         const response = await apply();

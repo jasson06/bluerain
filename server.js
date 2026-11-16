@@ -1773,6 +1773,7 @@ const paymentSchema = new mongoose.Schema({
   creditConsumed: { type: Number, default: null, min: 0 },
   creditSourceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment', default: null },
   creditApplicationKey: { type: String },
+  creditApplicationFingerprint: { type: String },
   amount: { type: Number, required: true },
   method: { type: String, enum: ['cash', 'check', 'bank', 'online'], required: true },
   date: { type: Date, required: true },

@@ -210,8 +210,8 @@ late-fee input; Save is required to persist the dollar amount.
 
 ### Credit application
 
-Credits are applied explicitly through the shared allocation modal, one category
-and month at a time. Posting a receipt no longer automatically consumes legacy
+Credits are applied explicitly through the shared Allocate payment modal, with
+multiple categories and months in one save. Posting a receipt no longer automatically consumes legacy
 `carryForward` credits. Partial applications leave the unused amount available.
 The payment table displays applied months as `NOV-26`. Generated credit notes
 use the source credit's period, for example `(Credit applied from OCT-26)`,
@@ -220,9 +220,9 @@ for display when their source is loaded, without rewriting historical records.
 
 The source stores `creditConsumed`; a zero-cash adjustment stores `appliedCredit`,
 `creditSourceId`, and an idempotency UUID (`creditApplicationKey`). Source
-consumption, the adjustment, deposit tracking, and balance recalculation commit
-in one MongoDB transaction. Retrying the same UUID returns the original
-adjustment; changing its destination or amount returns a conflict. Invalid or
+consumption, all adjustments, deposit tracking, and balance recalculation commit
+in one MongoDB transaction. Retrying the same UUID returns the original result;
+changing an allocation returns a conflict. Invalid or
 excessive amounts are rejected rather than silently replaced or capped.
 Rent and deposit applications cannot exceed the outstanding balance; any
 unused source credit remains available.

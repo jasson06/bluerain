@@ -66,7 +66,7 @@ describe('credit allocation modal', () => {
         expect(context.openModal).toHaveBeenCalledWith('paymentAllocationModal');
     });
 
-    test('renders a credit-specific view in the shared modal without the old menu flow', () => {
+    test('renders the same multi-allocation editor for available credit', () => {
         const {context, modal} = setup();
         context.ensurePaymentAllocationModal = jest.fn(() => modal);
 
@@ -76,11 +76,11 @@ describe('credit allocation modal', () => {
             total: 42.5
         });
 
-        expect(modal.setAttribute).toHaveBeenCalledWith('aria-label', 'Apply available credit');
+        expect(modal.setAttribute).toHaveBeenCalledWith('aria-label', 'Allocate payment');
         expect(modal.innerHTML).toContain('Available credit <strong>$42.50</strong>');
         expect(modal.innerHTML).toContain('Amount to apply');
-        expect(modal.innerHTML).toContain('Apply credit');
-        expect(modal.innerHTML).not.toContain('Add allocation');
+        expect(modal.innerHTML).toContain('Save allocations');
+        expect(modal.innerHTML).toContain('Add allocation');
     });
 
     test('removes the separate menu and prompt flow', () => {
@@ -121,7 +121,24 @@ describe('credit allocation modal', () => {
         expect(getAllocationEditor(context).validationError).toContain('Allocate the remaining $70.00');
     });
 
-    test('submits the selected category and amount through the existing credit application endpoint', async () => {
+    test('validates multiple allocations against both available credit and each destination', () => {
+        const {context} = setup();
+        context.state.tenants = [{_id:'tenant-1',baseRent:100}];
+        vm.runInContext('paymentAllocationEditor = {mode: "credit", total: 150, tenantId:"tenant-1"}', context);
+        context.readPaymentAllocationRows = () => [
+            {applyTo:'rent',periodMonth:'2026-10',amount:60},
+            {applyTo:'rent',periodMonth:'2026-11',amount:40}
+        ];
+        expect(context.updatePaymentAllocationTotal()).toBe(true);
+        context.readPaymentAllocationRows = () => [
+            {applyTo:'rent',periodMonth:'2026-10',amount:60},
+            {applyTo:'rent',periodMonth:'2026-10',amount:50}
+        ];
+        expect(context.updatePaymentAllocationTotal()).toBe(false);
+        expect(getAllocationEditor(context).validationError).toContain('outstanding');
+    });
+
+    test('submits all allocations in one credit application request', async () => {
         const {context} = setup();
         context.API_URL = '/api';
         context.fetch = jest.fn().mockResolvedValue({
@@ -129,7 +146,8 @@ describe('credit allocation modal', () => {
             json: async () => ({applied: 30})
         });
         context.readPaymentAllocationRows = () => [
-            {applyTo: 'rent', periodMonth: '2026-10', amount: 30, feeLabel: ''}
+            {applyTo: 'rent', periodMonth: '2026-10', amount: 30, feeLabel: ''},
+            {applyTo: 'water', periodMonth: '2026-11', amount: 20, feeLabel: 'Water'}
         ];
         context.updatePaymentAllocationTotal = jest.fn(() => true);
         context.invalidateCache = jest.fn();
@@ -155,9 +173,10 @@ describe('credit allocation modal', () => {
             expect.objectContaining({
                 tenantId: 'tenant-1',
                 unitId: 'unit-1',
-                amount: 30,
-                targetApplyTo: 'rent',
-                periodMonth: '2026-10',
+                allocations: [
+                    expect.objectContaining({amount:30,targetApplyTo:'rent',periodMonth:'2026-10'}),
+                    expect.objectContaining({amount:20,targetApplyTo:'water',periodMonth:'2026-11',feeLabel:'Water'})
+                ],
                 requestId: '12345678-1234-4123-8123-123456789abc'
             })
         );

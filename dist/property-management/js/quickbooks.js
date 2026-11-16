@@ -202,8 +202,8 @@ function creditTargetOutstanding(data,row){
 }
 function renderPaymentAllocationModal(data){
  const modal=ensurePaymentAllocationModal(),isCredit=data.mode==='credit';
- modal.setAttribute('aria-label',isCredit?'Apply available credit':'Allocate payment');
- const title=isCredit?'Apply available credit':'Allocate payment';
+ modal.setAttribute('aria-label','Allocate payment');
+ const title='Allocate payment';
  const intro=isCredit
   ?`Available credit <strong>$${Number(data.total).toFixed(2)}</strong> from payment ending ${escapeHtml(String(data.creditPaymentId).slice(-6))}. Choose where to apply it. This creates an auditable credit adjustment; it does not record new cash.`
   :`Received <strong>$${Number(data.total).toFixed(2)}</strong> on ${escapeHtml(formatDateDisplay(data.payment.date))}. Assign each portion to a category and month. The received date and total stay unchanged.`;
@@ -214,14 +214,14 @@ function renderPaymentAllocationModal(data){
  const note=isCredit
   ?'Applying a credit updates this app only. It does not create or change a QuickBooks transaction.'
   :'These allocations update this app only. They do not create or change a QuickBooks payment. A late-fee allocation records money paid toward that fee; it does not add a new charge.';
- modal.innerHTML=`<div class="modal-content" style="max-width:1000px;max-height:90vh;overflow:auto"><div class="panel-heading"><h2>${title}</h2><button class="btn-secondary" onclick="closeModal('paymentAllocationModal')">Close</button></div><p>${intro}</p>${invoiceContent}<p class="task-meta">${note}</p><div class="overview-table-wrap"><table class="overview-table"><thead><tr><th>Category</th><th>Applied month</th><th>${isCredit?'Amount to apply':'Amount paid'}</th><th>Description</th>${isCredit?'':'<th></th>'}</tr></thead><tbody id="paymentAllocationRows"></tbody></table></div>${isCredit?'':'<button class="btn-secondary" onclick="addPaymentAllocationRow()">Add allocation</button>'}<p id="paymentAllocationTotal" role="status" aria-live="polite"></p><p id="paymentAllocationMessage" role="status" aria-live="polite"></p><div class="modal-buttons"><button class="btn-secondary" onclick="closeModal('paymentAllocationModal')">Cancel</button><button type="button" id="paymentAllocationSave" class="btn-primary" onclick="savePaymentAllocation()">${isCredit?'Apply credit':'Save allocations'}</button></div></div>`;
+ modal.innerHTML=`<div class="modal-content" style="max-width:1000px;max-height:90vh;overflow:auto"><div class="panel-heading"><h2>${title}</h2><button class="btn-secondary" onclick="closeModal('paymentAllocationModal')">Close</button></div><p>${intro}</p>${invoiceContent}<p class="task-meta">${note}</p><div class="overview-table-wrap"><table class="overview-table"><thead><tr><th>Category</th><th>Applied month</th><th>${isCredit?'Amount to apply':'Amount paid'}</th><th>Description</th><th></th></tr></thead><tbody id="paymentAllocationRows"></tbody></table></div><button class="btn-secondary" onclick="addPaymentAllocationRow()">Add allocation</button><p id="paymentAllocationTotal" role="status" aria-live="polite"></p><p id="paymentAllocationMessage" role="status" aria-live="polite"></p><div class="modal-buttons"><button class="btn-secondary" onclick="closeModal('paymentAllocationModal')">Cancel</button><button type="button" id="paymentAllocationSave" class="btn-primary" onclick="savePaymentAllocation()">Save allocations</button></div></div>`;
 }
 function addPaymentAllocationRow(row={}){
  const root=document.getElementById('paymentAllocationRows');if(!root||root.children.length>=40)return;
  const tr=document.createElement('tr');const categories={rent:'Rent',deposit:'Security deposit',fee:'Fee (application / non-refundable)',late:'Late fee',water:'Water',electric:'Electric',trash:'Trash',admin:'Admin fee',other:'Other'};
- const period=row.periodMonth||paymentAllocationEditor?.payment?.periodMonth||String(paymentAllocationEditor?.invoice?.date||'').slice(0,7);
+ const period=row.periodMonth||paymentAllocationEditor?.periodMonth||paymentAllocationEditor?.payment?.periodMonth||String(paymentAllocationEditor?.invoice?.date||'').slice(0,7);
  const isCredit=paymentAllocationEditor?.mode==='credit';
- tr.innerHTML=`<td><select class="allocation-category" aria-label="Category">${Object.entries(categories).map(([key,label])=>`<option value="${key}" ${key===(row.applyTo||'rent')?'selected':''}>${label}</option>`).join('')}</select></td><td><input class="allocation-period" aria-label="Applied month" type="month" value="${escapeHtml(period)}"></td><td><input class="allocation-amount" aria-label="${isCredit?'Amount to apply':'Amount paid'}" type="number" min="0" ${isCredit?`max="${Number(paymentAllocationEditor.total).toFixed(2)}"`:''} step="0.01" value="${Number(row.amount||0).toFixed(2)}"></td><td><input class="allocation-label" aria-label="Description" maxlength="200" value="${escapeHtml(row.feeLabel||'')}"></td>${isCredit?'':'<td><button class="btn-secondary" type="button">Remove</button></td>'}`;
+ tr.innerHTML=`<td><select class="allocation-category" aria-label="Category">${Object.entries(categories).map(([key,label])=>`<option value="${key}" ${key===(row.applyTo||'rent')?'selected':''}>${label}</option>`).join('')}</select></td><td><input class="allocation-period" aria-label="Applied month" type="month" value="${escapeHtml(period)}"></td><td><input class="allocation-amount" aria-label="${isCredit?'Amount to apply':'Amount paid'}" type="number" min="0" ${isCredit?`max="${Number(paymentAllocationEditor.total).toFixed(2)}"`:''} step="0.01" value="${Number(row.amount||0).toFixed(2)}"></td><td><input class="allocation-label" aria-label="Description" maxlength="200" value="${escapeHtml(row.feeLabel||'')}"></td><td><button class="btn-secondary" type="button">Remove</button></td>`;
  const remove=tr.querySelector('button');if(remove)remove.onclick=()=>{tr.remove();updatePaymentAllocationTotal();};tr.oninput=updatePaymentAllocationTotal;tr.onchange=updatePaymentAllocationTotal;root.appendChild(tr);updatePaymentAllocationTotal();
 }
 function readPaymentAllocationRows(){return [...document.querySelectorAll('#paymentAllocationRows tr')].map(tr=>({applyTo:tr.querySelector('.allocation-category').value,periodMonth:tr.querySelector('.allocation-period').value,amount:Number(tr.querySelector('.allocation-amount').value),feeLabel:tr.querySelector('.allocation-label').value}));}
@@ -229,7 +229,6 @@ function updatePaymentAllocationTotal(){
  const rows=readPaymentAllocationRows(),total=Math.round(Number(paymentAllocationEditor?.total||0)*100),sum=rows.reduce((n,r)=>n+(Number.isFinite(r.amount)?Math.round(r.amount*100):0),0);
  const isCredit=paymentAllocationEditor?.mode==='credit';
  let error='';
- if(isCredit&&rows.length!==1)error='Apply credit to one category and month at a time.';
  if(!rows.length||!rows.some(r=>r.amount>0))error=isCredit?'Enter an amount of credit to apply.':'Enter at least one amount paid.';
  for(let i=0;i<rows.length;i++){
   const r=rows[i];
@@ -238,14 +237,23 @@ function updatePaymentAllocationTotal(){
  }
  if(!error&&isCredit&&sum>total)error=`Credit application exceeds the available amount by $${((sum-total)/100).toFixed(2)}.`;
  const outstanding=isCredit&&rows.length===1?creditTargetOutstanding(paymentAllocationEditor,rows[0]):null;
- if(!error&&outstanding!=null&&sum>Math.round(outstanding*100))error=`Only $${outstanding.toFixed(2)} is outstanding for this destination. Reduce the credit amount.`;
+ if(isCredit&&!error){
+  const targets=new Map();
+  for(const row of rows.filter(r=>r.amount>0)){
+   const remaining=creditTargetOutstanding(paymentAllocationEditor,row);
+   if(remaining==null)continue;
+   const key=row.applyTo==='deposit'?'deposit':`${row.applyTo}:${row.periodMonth}`;
+   const applied=(targets.get(key)||0)+Math.round(row.amount*100);targets.set(key,applied);
+   if(applied>Math.round(remaining*100)){error=`Only $${remaining.toFixed(2)} is outstanding for this destination. Reduce the credit amount.`;break;}
+  }
+ }
  if(!error&&!isCredit&&sum!==total)error=sum>total?`Allocations exceed the received payment by $${((sum-total)/100).toFixed(2)}. Set unpaid invoice lines to $0 or reduce the paid amounts.`:`Allocate the remaining $${((total-sum)/100).toFixed(2)} of the received payment.`;
  if(paymentAllocationEditor)paymentAllocationEditor.validationError=error;
  const text=document.getElementById('paymentAllocationTotal');
  if(text)text.textContent=isCredit
   ?`Applying $${(sum/100).toFixed(2)} of $${(total/100).toFixed(2)} available credit. ${outstanding==null?'':`Target outstanding: $${outstanding.toFixed(2)}. `}${error||`$${((total-sum)/100).toFixed(2)} will remain available.`}`
   :`Allocated: $${(sum/100).toFixed(2)} of $${(total/100).toFixed(2)}. ${error||'Received payment fully allocated. Any invoice balance remains outstanding.'}`;
- const save=document.getElementById('paymentAllocationSave');if(save){save.disabled=!!paymentAllocationEditor?.saving;save.textContent=paymentAllocationEditor?.saving?'Saving…':isCredit?'Apply credit':'Save allocations';}
+ const save=document.getElementById('paymentAllocationSave');if(save){save.disabled=!!paymentAllocationEditor?.saving;save.textContent=paymentAllocationEditor?.saving?'Saving…':'Save allocations';}
  return !error;
 }
 function useInvoiceAllocationLines(){
@@ -278,11 +286,11 @@ async function savePaymentAllocation(){
   let result;
   if(data.mode==='credit'){
    if(String(state.currentProperty?._id)!==String(data.propertyId))throw Error('The selected property changed. Reopen this dialog and try again.');
-   const allocation=allocations[0],tenant=state.tenants.find(item=>String(item._id)===String(data.tenantId));
+   const tenant=(state.tenants||[]).find(item=>String(item._id)===String(data.tenantId));
    const unitId=data.credit.unitId?._id||data.credit.unitId||tenant?.unitId?._id||tenant?.unitId;
    const response=await fetch(`${API_URL}/properties/${data.propertyId}/payments/${data.creditPaymentId}/apply-credit`,{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({tenantId:data.tenantId,unitId,amount:allocation.amount,targetApplyTo:allocation.applyTo,feeType:allocation.applyTo==='fee'?'other':allocation.applyTo,feeLabel:allocation.feeLabel,periodMonth:allocation.periodMonth,note:allocation.feeLabel?`Credit application: ${allocation.feeLabel}`:undefined,requestId:data.requestId})
+    body:JSON.stringify({tenantId:data.tenantId,unitId,allocations:allocations.map(allocation=>({amount:allocation.amount,targetApplyTo:allocation.applyTo,feeType:allocation.applyTo==='fee'?'other':allocation.applyTo,feeLabel:allocation.feeLabel,periodMonth:allocation.periodMonth,note:allocation.feeLabel?`Credit application: ${allocation.feeLabel}`:undefined})),requestId:data.requestId})
    });
    result=await response.json();if(!response.ok)throw Error(result.message||'Unable to apply credit');saved=true;
    message.textContent='Credit applied. Refreshing payments and balances…';
