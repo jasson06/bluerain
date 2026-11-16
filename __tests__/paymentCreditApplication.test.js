@@ -294,6 +294,20 @@ describe('transactional credit allocation', () => {
         expect(getPayments()).toHaveLength(1);
     });
 
+    test('identifies the fully paid deposit row rather than reporting an ambiguous destination', async () => {
+        const {apply,getTenant,getPayments} = setup({amount:-550,balance:-550});
+        getTenant().depositPaid = 200;
+        const response = await apply({allocations:[
+            {targetApplyTo:'deposit',periodMonth:'2026-05',amount:500},
+            {targetApplyTo:'rent',periodMonth:'2026-05',amount:50}
+        ]});
+        expect(response.statusCode).toBe(409);
+        expect(response.body.message).toContain('Row 1: Security deposit (all months)');
+        expect(response.body.message).toContain('You entered $500.00, but only $0.00 remains unpaid');
+        expect(response.body.message).toContain('already fully paid');
+        expect(getPayments()).toHaveLength(1);
+    });
+
     test.each([undefined, null, '', 0, -1, 'invalid', Infinity, 0.001, true, 101])('rejects invalid or unavailable amount %p without committing anything', async amount => {
         const {apply, getPayments} = setup();
         const response = await apply({amount});

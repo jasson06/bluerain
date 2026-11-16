@@ -135,7 +135,26 @@ describe('credit allocation modal', () => {
             {applyTo:'rent',periodMonth:'2026-10',amount:50}
         ];
         expect(context.updatePaymentAllocationTotal()).toBe(false);
-        expect(getAllocationEditor(context).validationError).toContain('outstanding');
+        expect(getAllocationEditor(context).validationError).toContain('Row 2: Rent for October 2026');
+        expect(getAllocationEditor(context).validationError).toContain('only $40.00 remains unpaid after earlier allocations');
+    });
+
+    test('identifies the paid deposit row in a $550 allocation and clears the corrected error', () => {
+        const {context,message,text} = setup();
+        context.state.tenants = [{_id:'tenant-1',deposit:500,depositPaid:500,baseRent:100}];
+        vm.runInContext('paymentAllocationEditor = {mode:"credit",total:550,tenantId:"tenant-1"}',context);
+        context.readPaymentAllocationRows = () => [
+            {applyTo:'deposit',periodMonth:'2026-05',amount:500},
+            {applyTo:'rent',periodMonth:'2026-05',amount:50}
+        ];
+        expect(context.updatePaymentAllocationTotal()).toBe(false);
+        expect(text.textContent).toContain('Row 1: Security deposit (all months)');
+        expect(text.textContent).toContain('You entered $500.00, but only $0.00 remains unpaid');
+        expect(text.textContent).toContain('already fully paid');
+        message.textContent = getAllocationEditor(context).validationError;
+        context.readPaymentAllocationRows = () => [{applyTo:'rent',periodMonth:'2026-05',amount:50}];
+        expect(context.updatePaymentAllocationTotal()).toBe(true);
+        expect(message.textContent).toBe('');
     });
 
     test('submits all allocations in one credit application request', async () => {

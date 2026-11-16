@@ -72,7 +72,8 @@ module.exports = function paymentCredits(context) {
         if (amountCents > availableCents) throw fail(`Only $${(availableCents / 100).toFixed(2)} credit remains. Reload and review the amount`, 409);
         const tenantPayments = await context.Payment.find({tenantId: body.tenantId}).session(session);
         const allocatedByTarget = new Map();
-        for (const item of allocations) {
+        for (let index = 0; index < allocations.length; index++) {
+          const item = allocations[index];
           const {applyTo, period} = item;
           if (applyTo !== 'rent' && applyTo !== 'deposit') continue;
           const target = applyTo === 'deposit' ? 'deposit' : `rent:${period}`;
@@ -81,7 +82,13 @@ module.exports = function paymentCredits(context) {
             : Math.max(0, (Number(tenant.deposit) || 0) - (Number(tenant.depositPaid) || 0));
           const remaining = Math.max(0, Math.round(outstanding * 100) - (allocatedByTarget.get(target) || 0));
           if (item.amountCents > remaining) {
-            throw fail(`Only $${(remaining / 100).toFixed(2)} is outstanding for this ${applyTo === 'rent' ? 'rent month' : 'deposit'}. Reduce the credit amount`, 409);
+            const destination = applyTo === 'deposit' ? 'Security deposit (all months)'
+              : `Rent for ${new Date(`${period}-15T12:00:00`).toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}`;
+            const earlier = allocatedByTarget.get(target) || 0;
+            const guidance = outstanding <= 0 ? 'This destination is already fully paid. Choose another destination or remove this row.'
+              : remaining <= 0 ? 'Earlier rows already cover this balance. Remove this row or choose another destination.'
+                : `Reduce this row to $${(remaining / 100).toFixed(2)} or allocate the rest elsewhere.`;
+            throw fail(`Row ${index + 1}: ${destination}. You entered $${(item.amountCents / 100).toFixed(2)}, but only $${(remaining / 100).toFixed(2)} remains unpaid${earlier ? ' after earlier allocations' : ''}. ${guidance}`, 409);
           }
           allocatedByTarget.set(target, (allocatedByTarget.get(target) || 0) + item.amountCents);
         }

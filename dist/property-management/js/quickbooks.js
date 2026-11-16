@@ -239,16 +239,25 @@ function updatePaymentAllocationTotal(){
  const outstanding=isCredit&&rows.length===1?creditTargetOutstanding(paymentAllocationEditor,rows[0]):null;
  if(isCredit&&!error){
   const targets=new Map();
-  for(const row of rows.filter(r=>r.amount>0)){
+  for(let index=0;index<rows.length;index++){
+   const row=rows[index];if(row.amount<=0)continue;
    const remaining=creditTargetOutstanding(paymentAllocationEditor,row);
    if(remaining==null)continue;
    const key=row.applyTo==='deposit'?'deposit':`${row.applyTo}:${row.periodMonth}`;
-   const applied=(targets.get(key)||0)+Math.round(row.amount*100);targets.set(key,applied);
-   if(applied>Math.round(remaining*100)){error=`Only $${remaining.toFixed(2)} is outstanding for this destination. Reduce the credit amount.`;break;}
+   const previouslyAllocated=targets.get(key)||0;
+   const applied=previouslyAllocated+Math.round(row.amount*100);targets.set(key,applied);
+   if(applied>Math.round(remaining*100)){
+    const available=Math.max(0,Math.round(remaining*100)-previouslyAllocated)/100;
+    const destination=row.applyTo==='deposit'?'Security deposit (all months)':`Rent for ${new Date(`${row.periodMonth}-15T12:00:00`).toLocaleDateString('en-US',{month:'long',year:'numeric'})}`;
+    const guidance=remaining<=0?'This destination is already fully paid. Choose another destination or remove this row.':available<=0?'Earlier rows already cover this balance. Remove this row or choose another destination.':`Reduce this row to $${available.toFixed(2)} or allocate the rest elsewhere.`;
+    error=`Row ${index+1}: ${destination}. You entered $${row.amount.toFixed(2)}, but only $${available.toFixed(2)} remains unpaid${previouslyAllocated?' after earlier allocations':''}. ${guidance}`;break;
+   }
   }
  }
  if(!error&&!isCredit&&sum!==total)error=sum>total?`Allocations exceed the received payment by $${((sum-total)/100).toFixed(2)}. Set unpaid invoice lines to $0 or reduce the paid amounts.`:`Allocate the remaining $${((total-sum)/100).toFixed(2)} of the received payment.`;
  if(paymentAllocationEditor)paymentAllocationEditor.validationError=error;
+ const message=document.getElementById('paymentAllocationMessage');
+ if(message?.textContent&&!paymentAllocationEditor?.saving)message.textContent=error;
  const text=document.getElementById('paymentAllocationTotal');
  if(text)text.textContent=isCredit
   ?`Applying $${(sum/100).toFixed(2)} of $${(total/100).toFixed(2)} available credit. ${outstanding==null?'':`Target outstanding: $${outstanding.toFixed(2)}. `}${error||`$${((total-sum)/100).toFixed(2)} will remain available.`}`

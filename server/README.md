@@ -225,7 +225,9 @@ in one MongoDB transaction. Retrying the same UUID returns the original result;
 changing an allocation returns a conflict. Invalid or
 excessive amounts are rejected rather than silently replaced or capped.
 Rent and deposit applications cannot exceed the outstanding balance; any
-unused source credit remains available.
+unused source credit remains available. Validation alerts identify the row,
+category and rent month, entered amount, and remaining unpaid balance (including
+earlier draft rows), with guidance for fully paid destinations.
 
 Receipt amounts and dates remain unchanged. Transferring an overpayment reduces
 its source-category applied value and applies it to the selected destination;
