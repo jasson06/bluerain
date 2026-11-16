@@ -303,26 +303,13 @@ async function handleAddPayment(event) {
             });
         }
         if (!response.ok) throw new Error('Failed to save payment');
-    invalidateCache('payments');
-    // Only refresh the payments tab list if we're currently on Payments
-    if (state.currentTab === 'payments') {
-        await refreshContent('payments');
-    }
-    // Also refresh portfolio rent metrics/table if portfolio is in use
-    try {
-        if (typeof renderPortfolioOverview === 'function') {
-            // Invalidate cached portfolio-wide payments so fresh data is used
-            if (Array.isArray(state.portfolioPayments)) {
-                state.portfolioPayments = [];
-            }
-            await renderPortfolioOverview();
-            if (state.currentPortfolioDetailsType === 'rent') {
-                renderPortfolioDetails('rent');
-            }
+        const saved = await response.json();
+        if (!saved.payment?._id) throw new Error('Payment saved, but the response is invalid. Refresh payments before retrying.');
+        updatePortfolioTenantAfterPayment(saved.payment);
+        invalidateCache('payments');
+        if (state.currentTab === 'payments' && !state.portfolioMode) {
+            await refreshContent('payments');
         }
-    } catch (e) {
-        console.warn('Error refreshing portfolio after payment:', e);
-    }
         closeModal('addPaymentModal');
         showNotification(isEdit ? 'Payment updated successfully' : 'Payment recorded successfully', 'success');
         event.target.reset();
@@ -330,9 +317,10 @@ async function handleAddPayment(event) {
         form.dataset.editMode = 'false';
         form.dataset.paymentId = '';
         form.querySelector('button[type="submit"]').textContent = 'Save Payment';
+        await refreshPortfolioPaymentSummary(selectedPropertyId);
     } catch (error) {
         console.error('Error saving payment:', error);
-        showNotification('Error saving payment', 'error');
+        showNotification(error.message || 'Error saving payment', 'error');
             } finally {
         hideLoader();
     }

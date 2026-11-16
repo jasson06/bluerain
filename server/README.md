@@ -182,6 +182,13 @@ action still runs the automatic check. Neither path creates a QuickBooks payment
 sales receipt, or customer. Existing QuickBooks-to-local imports and expense
 synchronization remain separate workflows.
 
+Saving a payment updates the affected tenant's portfolio rent row and cached
+selected-month totals in place, without rebuilding the workspace. Search, filters,
+page, scroll, row selection, and notes remain undisturbed. A row that becomes paid
+stays in place until the next filter/page change or explicit refresh. Summary
+cards reload only the affected property's overview, not all portfolio sections
+or QuickBooks payments; summary failures are reported without retrying the save.
+
 Voided payments can be reinstated through the payment Actions menu. Reinstatement
 restores the pre-void posting status (posted for older voids), retains the void
 reason/date, and records a reinstatement timestamp. All rows of a split allocation

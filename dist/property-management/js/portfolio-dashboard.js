@@ -54,7 +54,128 @@ async function loadPortfolioPayments(force = false) {
 
     const all = perPropertyArrays.flat();
     state.portfolioPayments = all;
+    state.portfolioPaymentsLoaded = true;
     return all;
+}
+
+function updatePortfolioTenantAfterPayment(payment) {
+    const tenantId = String(payment.tenantId?._id || payment.tenantId);
+    const previous = (state.portfolioPayments || []).find(item => String(item._id) === String(payment._id));
+    if (Array.isArray(state.portfolioPayments) && (state.portfolioPaymentsLoaded || state.portfolioPayments.length)) {
+        const index = state.portfolioPayments.findIndex(item => String(item._id) === String(payment._id));
+        if (index >= 0) state.portfolioPayments[index] = payment;
+        else state.portfolioPayments.push(payment);
+    }
+    if (String(state.currentProperty?._id) === String(payment.projectId)) {
+        const index = (state.payments || []).findIndex(item => String(item._id) === String(payment._id));
+        if (index >= 0) state.payments[index] = payment;
+        else if (Array.isArray(state.payments)) state.payments.push(payment);
+    }
+    const now = new Date();
+    const period = state.portfolioRentMonth || `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const [year, month] = period.split('-').map(Number);
+    const date = new Date(year, month-1, 15);
+    const periodEnd = new Date(year, month, 1);
+    const payments = (state.portfolioPayments || []).filter(item => item.date && new Date(item.date) < periodEnd && new Date(item.date) <= now);
+    const affected = new Set([tenantId, previous && String(previous.tenantId?._id || previous.tenantId)].filter(Boolean));
+    for (const id of affected) {
+        const entry = (state.portfolioTenantsWithBalance || []).find(item => String(item.tenant?._id) === id);
+        if (!entry) continue;
+        const totals = computeTenantMonthTotals(entry.tenant, date, payments);
+        entry.expectedMonthly = entry.outOfLease ? 0 : totals.expected;
+        entry.paidThisMonth = entry.outOfLease ? 0 : totals.paid;
+        entry.remainingRent = Math.max(0, entry.expectedMonthly-entry.paidThisMonth);
+        const paid = entry.remainingRent <= .01;
+        // Keep the row and its action controls mounted, even if its status no longer matches a filter.
+        document.querySelectorAll('#portfolioComparisonTable tr, #portfolioDetailsTbody tr').forEach(row => {
+            const marker = row.querySelector('[data-portfolio-rent-tenant]');
+            const legacy = state.currentPortfolioDetailsType === 'rent' && row.dataset.tenantId === id;
+            if (!legacy && marker?.dataset.portfolioRentTenant !== id) return;
+            const cells = row.cells;
+            cells[3].textContent = portfolioMoney(entry.expectedMonthly);
+            cells[4].textContent = portfolioMoney(entry.paidThisMonth);
+            if (legacy) {
+                row.dataset.balance = paid ? 'no-balance' : 'with-balance';
+                cells[3].innerHTML = entry.outOfLease ? '<span style="color:#9ca3af;">N/A</span>' : portfolioMoney(entry.expectedMonthly);
+                cells[5].innerHTML = entry.outOfLease ? '<span style="color:#9ca3af;">N/A</span>' : paid
+                    ? `<span style="color:#16a34a;font-weight:600;" title="Paid in full"><i class="fas fa-circle-check" aria-hidden="true" style="margin-right:4px;"></i>${portfolioMoney(entry.remainingRent)}</span>`
+                    : portfolioMoney(entry.remainingRent);
+            } else {
+                cells[5].textContent = portfolioMoney(entry.remainingRent);
+                cells[6].innerHTML = entry.outOfLease ? 'Out of lease' : paid ? '<span class="portfolio-paid-status"><i class="fas fa-circle-check"></i> Paid</span>' : entry.paidThisMonth > 0 ? 'Partial' : 'Unpaid';
+            }
+        });
+    }
+    const entries = state.portfolioTenantsWithBalance || [];
+    const expected = entries.reduce((sum, item) => sum + item.expectedMonthly, 0);
+    const collected = entries.reduce((sum, item) => sum + item.paidThisMonth, 0);
+    const unpaid = entries.filter(item => item.remainingRent > .01);
+    const amount = document.getElementById('portfolioOpenRentAmount');
+    const count = document.getElementById('portfolioOpenRentCount');
+    const summary = document.getElementById('portfolioRentCollectedSummary');
+    const bar = document.getElementById('portfolioRentCollectedBar');
+    const percent = expected ? Math.max(0,Math.min(100,Math.round(collected/expected*100))) : 100;
+    if (amount) amount.textContent = portfolioMoney(unpaid.reduce((sum,item) => sum+item.remainingRent,0));
+    if (count) count.textContent = unpaid.length ? `${unpaid.length} tenant${unpaid.length===1?'':'s'} with balance` : 'All current month rent paid';
+    if (summary) summary.textContent = `Collected ${percent}% of expected rent`;
+    if (bar) bar.style.width = `${percent}%`;
+}
+
+async function refreshPortfolioPaymentSummary(propertyId) {
+    const overviews = state.portfolioOverviewByProperty;
+    if (!overviews?.has(String(propertyId))) return;
+    const requestId = state.portfolioExecutiveRequestId;
+    const range = getPortfolioExecutiveRange();
+    try {
+        const response = await fetch(`${API_URL}/properties/${propertyId}/overview?${overviewRangeQuery(range)}`);
+        if (!response.ok) throw new Error('Unable to refresh property payment totals');
+        const overview = await response.json();
+        if (requestId !== state.portfolioExecutiveRequestId || overviews !== state.portfolioOverviewByProperty) return;
+        overviews.set(String(propertyId), overview);
+        const totals = {expected:0,collected:0,outstanding:0,noi:0,delinquent:0,cash:0,former:0};
+        overviews.forEach((data, id) => {
+            const summary = data.summary || {};
+            const expected = Number(summary.expectedRent ?? summary.rentRoll ?? 0);
+            const collected = Number(summary.rentCollected ?? 0);
+            const outstanding = Number(summary.rentOutstanding ?? data.delinquency?.total ?? Math.max(0,expected-collected));
+            const noi = Number(data.financials?.estimatedNOI ?? collected-Number(data.financials?.operatingExpenses ?? 0));
+            const delinquent = Number(data.delinquency?.tenantCount ?? 0);
+            totals.expected += expected;
+            totals.collected += collected;
+            totals.outstanding += outstanding;
+            totals.noi += noi;
+            totals.delinquent += delinquent;
+            totals.cash += Number(summary.totalCashCollected || 0);
+            totals.former += Number(data.formerTenants?.total || 0);
+            const row = (state.portfolioComparisonMasterRows || []).find(item => String(item.property._id) === id);
+            if (row) Object.assign(row, {expected,collected,outstanding,noi,delinquent,collection:expected?Math.min(100,collected/expected*100):100});
+        });
+        const root = document.getElementById('portfolioExecutiveKpis');
+        const collection = totals.expected ? totals.collected/totals.expected*100 : 100;
+        for (const [key, value, trend, tone] of [
+            ['rent',totals.expected],
+            ['collection',totals.collected,`${collection.toFixed(1)}% collection rate`,collection>=95?'good':collection>=85?'warn':'danger'],
+            ['delinquency',totals.outstanding,`${totals.delinquent} delinquent tenants`,totals.outstanding?'danger':'good'],
+            ['noi',totals.noi,null,totals.noi>=0?'good':'danger']
+        ]) {
+            const card = root?.querySelector(`[data-portfolio-drill="${key}"]`);
+            if (!card) continue;
+            card.querySelector('.portfolio-executive-value').textContent = portfolioMoney(value);
+            if (trend) card.querySelector('.portfolio-executive-trend').textContent = trend;
+            if (tone) card.querySelector('.portfolio-executive-trend').className = `portfolio-executive-trend ${tone}`;
+        }
+        root?.querySelectorAll('article').forEach(card => {
+            const label = card.querySelector('.portfolio-executive-label')?.textContent;
+            if (label === 'Total cash collected' || label === 'Former tenant rent balances') {
+                card.querySelector('.portfolio-executive-value').textContent = portfolioMoney(label === 'Total cash collected' ? totals.cash : totals.former);
+            }
+        });
+        state.portfolioFormerTenantBalances = [...overviews].flatMap(([id, data]) =>
+            (data.formerTenants?.tenants || []).map(tenant => ({...tenant,propertyId:id,propertyName:(state.properties||[]).find(property=>String(property._id)===id)?.name})));
+    } catch (error) {
+        console.error('Error refreshing portfolio payment totals:', error);
+        showNotification('Payment saved. Portfolio summary could not refresh; use Refresh to update it.', 'error');
+    }
 }
 
 // Compute and render portfolio-wide metrics into the overview strip
@@ -457,6 +578,7 @@ async function renderPortfolioExecutiveDashboard(){
     const extraTotals={cash:0,former:0,needsReview:0};
     state.portfolioFormerTenantBalances=[];
     rows.forEach(row=>{const overview=overviewByProperty.get(String(row.property._id));if(overview){extraTotals.cash+=Number(overview.summary?.totalCashCollected||0);extraTotals.former+=Number(overview.formerTenants?.total||0);extraTotals.needsReview+=Number(overview.formerTenants?.needsReview||0);state.portfolioFormerTenantBalances.push(...(overview.formerTenants?.tenants||[]).map(tenant=>({...tenant,propertyId:row.property._id,propertyName:row.property.name})));}});
+    state.portfolioOverviewByProperty=overviewByProperty;
     state.portfolioComparisonRows=rows;state.portfolioComparisonMasterRows=rows;state.portfolioComparisonPage=1;
     const totals=rows.reduce((a,r)=>{a.units+=r.units;a.occupied+=r.occupied;a.expected+=r.expected;a.collected+=r.collected;a.outstanding+=r.outstanding;a.expenses+=r.expenses;a.noi+=r.noi;a.maintenance+=r.maintenance;a.delinquent+=r.delinquent;return a},{units:0,occupied:0,expected:0,collected:0,outstanding:0,expenses:0,noi:0,maintenance:0,delinquent:0});
     const occupancy=totals.units?totals.occupied/totals.units*100:0,collection=totals.expected?totals.collected/totals.expected*100:100,pendingApps=(state.applications||[]).filter(a=>String(a.status||'pending').toLowerCase()==='pending').length;
@@ -502,7 +624,7 @@ if(mode==='properties'){records=(state.portfolioComparisonMasterRows||state.port
 else if(mode==='tenants'){label='All tenants';description='Active, pending, inactive, expired and terminated tenants across the portfolio.';records=(state.allTenants||[]).filter(t=>propertyIds.has(portfolioPropertyId(t))).map(t=>{const balance=(state.portfolioTenantsWithBalance||[]).find(x=>String(x.tenant?._id)===String(t._id));return{raw:t,status:portfolioStatus(t.leaseStatus||t.status),search:`${t.name||''} ${t.email||''} ${portfolioPropertyName(portfolioPropertyId(t))}`,cells:[`<span class="portfolio-record-primary">${escapeHtml(t.name||'Unnamed tenant')}</span><div class="portfolio-record-secondary">${escapeHtml(t.email||t.phone||'No contact')}</div>`,escapeHtml(portfolioPropertyName(portfolioPropertyId(t))),escapeHtml(portfolioUnitName(t.unitId?._id||t.unitId)),portfolioStatus(t.leaseStatus||t.status),portfolioDate(t.leaseStart),portfolioDate(t.leaseEnd),portfolioMoney(t.baseRent),portfolioMoney(balance?.remainingRent||0),`<button class="overview-row-action" onclick="openPortfolioRecordDrawer('tenant','${t._id}')">Open</button>`]}});columns=['Tenant','Property','Unit','Status','Lease start','Lease end','Rent','Balance',''];filterOptions=[['all','All tenants'],['active','Active'],['pending','Pending'],['inactive','Inactive'],['expired','Expired'],['terminated','Terminated']];}
 else if(mode==='maintenance'){label='Maintenance';description='Current, scheduled, recurring, completed and closed maintenance activity.';const requests=(state.portfolioMaintenance||[]).filter(m=>propertyIds.has(portfolioPropertyId(m))).map(m=>({kind:'Request',raw:m,status:portfolioStatus(m.status),search:`${m.title||m.issue||''} ${m.description||''} ${portfolioPropertyName(portfolioPropertyId(m))}`,cells:[`<span class="portfolio-record-primary">${escapeHtml(m.title||m.issue||'Maintenance request')}</span><div class="portfolio-record-secondary">${escapeHtml(m.description||'')}</div>`,'Request',escapeHtml(portfolioPropertyName(portfolioPropertyId(m))),escapeHtml(portfolioUnitName(m.unitId?._id||m.unitId)),portfolioStatus(m.status),escapeHtml(m.priority||'—'),portfolioDate(m.scheduledDate||m.createdAt),escapeHtml(m.assignedVendor?.name||m.vendor?.name||'—'),`<button class="overview-row-action" onclick="openPortfolioRecordDrawer('maintenance','${m._id}')">Open</button>`]}));const recurring=(state.portfolioRecurringMaintenance||[]).filter(m=>propertyIds.has(portfolioPropertyId(m))).map(m=>({kind:'Recurring',raw:m,status:portfolioStatus(m.status),search:`${m.title||''} ${m.description||''} ${portfolioPropertyName(portfolioPropertyId(m))}`,cells:[`<span class="portfolio-record-primary">${escapeHtml(m.title||'Recurring maintenance')}</span><div class="portfolio-record-secondary">${escapeHtml(m.description||'')}</div>`,'Recurring',escapeHtml(portfolioPropertyName(portfolioPropertyId(m))),'—',portfolioStatus(m.status),escapeHtml(m.priority||'—'),portfolioDate(m.nextScheduledDate),escapeHtml(m.assignedVendor?.name||'—'),`<button class="overview-row-action" onclick="openPortfolioRecordDrawer('maintenance','${m._id}')">Open</button>`]}));records=(state.portfolioMaintenanceType||'request')==='recurring'?recurring:requests;columns=['Maintenance','Type','Property','Unit','Status','Priority','Scheduled','Vendor',''];filterOptions=[['all','All statuses'],['current','Current / open'],['pending','Pending'],['in-progress','In progress'],['scheduled','Scheduled'],['completed','Completed'],['closed','Closed']];}
 else if(mode==='applications'){label=(state.portfolioApplicationType||'application')==='invite'?'Invitations':'Applications';description='Fast review of applications and invitations without leaving the portfolio.';const apps=(state.applications||[]).map(a=>({kind:'application',raw:a,status:portfolioStatus(a.status||'pending'),search:`${a.name||''} ${a.email||''} ${a.unit||''}`,cells:[`<span class="portfolio-record-primary">${escapeHtml(a.name||'Applicant')}</span><div class="portfolio-record-secondary">${escapeHtml(a.email||'')}</div>`,'Application',escapeHtml(a.propertyName||'—'),escapeHtml(a.unit||'—'),portfolioStatus(a.status||'pending'),portfolioDate(a.submitted||a.createdAt),'—',`<button class="overview-row-action" onclick="openPortfolioRecordDrawer('application','${a._id}')">Open</button>`]}));const invites=(state.invites||[]).map(i=>({kind:'invite',raw:i,status:portfolioStatus(i.status||'sent'),search:`${i.name||''} ${i.email||''} ${i.propertyName||''}`,cells:[`<span class="portfolio-record-primary">${escapeHtml(i.name||'Invitee')}</span><div class="portfolio-record-secondary">${escapeHtml(i.email||'')}</div>`,'Invite',escapeHtml(i.propertyName||'—'),escapeHtml(i.unitNumber||'—'),portfolioStatus(i.status||'sent'),portfolioDate(i.sentAt),i.openedAt?`${portfolioDate(i.openedAt)}<div class="portfolio-record-secondary">${new Date(i.openedAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})} · ${Number(i.openCount)||1} opens</div>`:'Never',`<button class="overview-row-action" onclick="openPortfolioRecordDrawer('invite','${i._id}')">Open</button>`]}));records=(state.portfolioApplicationType||'application')==='invite'?invites:apps;columns=['Applicant / Invitee','Type','Property','Unit','Status','Sent / Submitted','Last opened',''];filterOptions=[['all','All statuses'],['pending','Pending'],['approved','Approved'],['rejected','Rejected'],['sent','Sent'],['opened','Opened'],['expired','Expired']];}
-else if(mode==='rent'){label='Coming rent';description='Expected charges, posted payments and remaining rent for every current tenant.';records=(state.portfolioTenantsWithBalance||[]).filter(x=>propertyIds.has(portfolioPropertyId(x.tenant))).map(x=>({raw:x,status:x.outOfLease?'out-of-lease':x.remainingRent<=.01?'paid':x.paidThisMonth>0?'partial':'unpaid',search:`${x.tenant?.name||''} ${portfolioPropertyName(portfolioPropertyId(x.tenant))}`,cells:[`<span class="portfolio-record-primary">${escapeHtml(x.tenant?.name||'Tenant')}</span>`,escapeHtml(portfolioPropertyName(portfolioPropertyId(x.tenant))),escapeHtml(portfolioUnitName(x.tenant?.unitId?._id||x.tenant?.unitId)),portfolioMoney(x.expectedMonthly),portfolioMoney(x.paidThisMonth),portfolioMoney(x.remainingRent),x.outOfLease?'Out of lease':x.remainingRent<=.01?'<span class="portfolio-paid-status"><i class="fas fa-circle-check"></i> Paid</span>':x.paidThisMonth>0?'Partial':'Unpaid',`<div class="portfolio-rent-actions-cell"><button class="overview-row-action" onclick="openPortfolioTenantLedger('${x.tenant?._id}')">Ledger</button><button type="button" class="btn-secondary portfolio-record-payment-btn" onclick="event.stopPropagation();openPaymentModalForTenantAndProperty('${x.tenant?._id}','${portfolioPropertyId(x.tenant)}',false)">+ Payment</button></div>`]}));columns=['Tenant','Property','Unit','Expected','Collected','Remaining','Status',''];filterOptions=[['all','All rent'],['paid','Paid'],['partial','Partially paid'],['unpaid','Unpaid'],['out-of-lease','Out of lease']];}
+else if(mode==='rent'){label='Coming rent';description='Expected charges, posted payments and remaining rent for every current tenant.';records=(state.portfolioTenantsWithBalance||[]).filter(x=>propertyIds.has(portfolioPropertyId(x.tenant))).map(x=>({raw:x,status:x.outOfLease?'out-of-lease':x.remainingRent<=.01?'paid':x.paidThisMonth>0?'partial':'unpaid',search:`${x.tenant?.name||''} ${portfolioPropertyName(portfolioPropertyId(x.tenant))}`,cells:[`<span class="portfolio-record-primary" data-portfolio-rent-tenant="${escapeHtml(x.tenant?._id||'')}">${escapeHtml(x.tenant?.name||'Tenant')}</span>`,escapeHtml(portfolioPropertyName(portfolioPropertyId(x.tenant))),escapeHtml(portfolioUnitName(x.tenant?.unitId?._id||x.tenant?.unitId)),portfolioMoney(x.expectedMonthly),portfolioMoney(x.paidThisMonth),portfolioMoney(x.remainingRent),x.outOfLease?'Out of lease':x.remainingRent<=.01?'<span class="portfolio-paid-status"><i class="fas fa-circle-check"></i> Paid</span>':x.paidThisMonth>0?'Partial':'Unpaid',`<div class="portfolio-rent-actions-cell"><button class="overview-row-action" onclick="openPortfolioTenantLedger('${x.tenant?._id}')">Ledger</button><button type="button" class="btn-secondary portfolio-record-payment-btn" onclick="event.stopPropagation();openPaymentModalForTenantAndProperty('${x.tenant?._id}','${portfolioPropertyId(x.tenant)}',false)">+ Payment</button></div>`]}));columns=['Tenant','Property','Unit','Expected','Collected','Remaining','Status',''];filterOptions=[['all','All rent'],['paid','Paid'],['partial','Partially paid'],['unpaid','Unpaid'],['out-of-lease','Out of lease']];}
 else if(mode==='upcoming'){const days=Number(document.getElementById('portfolioUpcomingPeriod')?.value||60),now=Date.now(),limit=now+days*86400000,inRange=value=>{const t=new Date(value||0).getTime();return t>=now&&t<=limit},events=[];(state.allTenants||[]).filter(t=>propertyIds.has(portfolioPropertyId(t))).forEach(t=>{if(inRange(t.leaseEnd))events.push({status:'lease',date:t.leaseEnd,search:`${t.name} lease`,cells:[`<span class="portfolio-record-primary">Lease expires</span><div class="portfolio-record-secondary">${escapeHtml(t.name||'Tenant')}</div>`,'Lease',escapeHtml(portfolioPropertyName(portfolioPropertyId(t))),portfolioDate(t.leaseEnd),'Upcoming',`<button class="overview-row-action" onclick="setPortfolioWorkspaceMode('tenants')">Tenants</button>`]});if(inRange(t.leaseStart))events.push({status:'move-in',date:t.leaseStart,search:`${t.name} move in`,cells:[`<span class="portfolio-record-primary">Move-in</span><div class="portfolio-record-secondary">${escapeHtml(t.name||'Tenant')}</div>`,'Move-in',escapeHtml(portfolioPropertyName(portfolioPropertyId(t))),portfolioDate(t.leaseStart),'Upcoming',`<button class="overview-row-action" onclick="setPortfolioWorkspaceMode('tenants')">Tenants</button>`]})});[...(state.portfolioMaintenance||[]),...(state.portfolioRecurringMaintenance||[])].filter(m=>propertyIds.has(portfolioPropertyId(m))).forEach(m=>{const date=m.scheduledDate||m.nextScheduledDate||m.dueDate;if(inRange(date))events.push({status:'maintenance',date,search:`${m.title||m.issue||''} maintenance`,cells:[`<span class="portfolio-record-primary">${escapeHtml(m.title||m.issue||'Scheduled maintenance')}</span>`,'Maintenance',escapeHtml(portfolioPropertyName(portfolioPropertyId(m))),portfolioDate(date),portfolioStatus(m.status),`<button class="overview-row-action" onclick="setPortfolioWorkspaceMode('maintenance')">Maintenance</button>`]})});(state.allUnits||[]).filter(u=>propertyIds.has(portfolioPropertyId(u))).forEach(u=>{const date=u.profile?.availableDate||u.availableDate;if(inRange(date))events.push({status:'availability',date,search:`unit ${u.number} available`,cells:[`<span class="portfolio-record-primary">Unit ${escapeHtml(u.number||'—')} available</span>`,'Availability',escapeHtml(portfolioPropertyName(portfolioPropertyId(u))),portfolioDate(date),portfolioStatus(u.status),`<button class="overview-row-action" onclick="setPortfolioWorkspaceMode('vacant')">Units</button>`]});(u.equipment||[]).forEach(eq=>{if(inRange(eq.nextServiceDate))events.push({status:'equipment',date:eq.nextServiceDate,search:`${eq.name||eq.category||''} equipment`,cells:[`<span class="portfolio-record-primary">${escapeHtml(eq.name||eq.category||'Equipment service')}</span><div class="portfolio-record-secondary">Unit ${escapeHtml(u.number||'—')}</div>`,'Equipment',escapeHtml(portfolioPropertyName(portfolioPropertyId(u))),portfolioDate(eq.nextServiceDate),'Service due',`<button class="overview-row-action" onclick="setPortfolioWorkspaceMode('vacant')">Units</button>`]})})});(state.portfolioTasks||[]).forEach(t=>{if(inRange(t.dueDate))events.push({status:'task',date:t.dueDate,search:`${t.title||''} task`,cells:[`<span class="portfolio-record-primary">${escapeHtml(t.title||'Task')}</span>`,'Task',escapeHtml(portfolioPropertyName(t.projectId?._id||t.projectId)),portfolioDate(t.dueDate),portfolioStatus(t.status),`<button class="overview-row-action" onclick="togglePortfolioTasksDrawer(true)">Tasks</button>`]})});records=events.sort((a,b)=>new Date(a.date)-new Date(b.date));label=`Upcoming ${days} days`;description='Lease, move-in, maintenance, availability, equipment and task events in one timeline.';columns=['Event','Type','Property','Date','Status',''];filterOptions=[['all','All events'],['lease','Lease expirations'],['move-in','Move-ins'],['maintenance','Maintenance'],['availability','Availability'],['equipment','Equipment'],['task','Tasks']];}
 else{label='Units & vacancies';description='See every unit, or narrow the same list to vacant units requiring leasing action.';records=(state.allUnits||[]).filter(u=>propertyIds.has(portfolioPropertyId(u))&&((state.portfolioUnitType||'all')==='all'||portfolioStatus(u.status)==='vacant')).map(u=>{const tenant=(state.allTenants||[]).find(t=>String(t.unitId?._id||t.unitId)===String(u._id)&&!['terminated','expired','inactive'].includes(portfolioStatus(t.leaseStatus||t.status)));return{raw:u,status:portfolioStatus(u.status),search:`${u.number||''} ${portfolioPropertyName(portfolioPropertyId(u))} ${tenant?.name||''}`,cells:[`<span class="portfolio-record-primary">Unit ${escapeHtml(u.number||'—')}</span><div class="portfolio-record-secondary">${escapeHtml(u.profile?.floorPlan||u.type||'')}</div>`,escapeHtml(portfolioPropertyName(portfolioPropertyId(u))),portfolioStatus(u.status),escapeHtml(tenant?.name||'—'),portfolioMoney(u.rent||u.monthlyRent),portfolioDate(u.profile?.availableDate||u.availableDate),`${(u.equipment||[]).length} items`,escapeHtml(u.profile?.condition||'Not rated'),`<button class="overview-row-action" onclick="openPortfolioRecordDrawer('unit','${u._id}')">Open</button>`]}});columns=['Unit','Property','Status','Tenant','Rent','Available','Equipment','Condition',''];filterOptions=[['all','All units'],['vacant','Vacant units only'],['occupied','Occupied'],['maintenance','Maintenance'],['unavailable','Unavailable']];}
 title.innerHTML=`<i class="fas ${mode==='properties'?'fa-chart-column':mode==='tenants'?'fa-users':mode==='maintenance'?'fa-screwdriver-wrench':mode==='applications'?'fa-file-signature':mode==='rent'?'fa-sack-dollar':mode==='vacant'?'fa-door-open':'fa-building-user'}"></i> ${label}`;summary.textContent=description;sort.style.display=mode==='properties'?'':'none';if(resetFilter){filter.innerHTML=filterOptions.map(([v,l])=>`<option value="${v}">${l}</option>`).join('');filter.value='all';}const filterValue=filter.value||'all';if(filterValue!=='all')records=records.filter(r=>filterValue==='current'?['new','pending','scheduled','waiting','in-progress'].includes(r.status):filterValue==='recurring'?r.kind==='Recurring':filterValue==='application'||filterValue==='invite'?r.kind===filterValue:r.status===filterValue);if(query)records=records.filter(r=>String(r.search||JSON.stringify(r.cells||[])).toLowerCase().includes(query));if(mode==='properties'){state.portfolioComparisonRows=records;renderPortfolioComparisonTable();return;}const size=Number(document.getElementById('portfolioPageSize')?.value||15),pages=Math.max(1,Math.ceil(records.length/size)),page=Math.min(state.portfolioComparisonPage||1,pages),visible=records.slice((page-1)*size,page*size);state.portfolioComparisonPage=page;root.innerHTML=visible.length?`<table class="portfolio-performance-table"><thead><tr>${columns.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${visible.map(r=>`<tr>${r.cells.map(c=>`<td>${c??'—'}</td>`).join('')}</tr>`).join('')}</tbody></table>`:'<div class="empty-compact">No records match the current portfolio filters.</div>';pager.innerHTML=`<button ${page<=1?'disabled':''} onclick="state.portfolioComparisonPage--;renderUnifiedPortfolioWorkspace(false)"><i class="fas fa-chevron-left"></i></button><span class="task-meta">Page ${page} of ${pages} · ${records.length} records</span><button ${page>=pages?'disabled':''} onclick="state.portfolioComparisonPage++;renderUnifiedPortfolioWorkspace(false)"><i class="fas fa-chevron-right"></i></button>`;}
