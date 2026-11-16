@@ -50,6 +50,32 @@ function tenantBalancePaymentStatus(month, asOf = new Date()) {
         : {key:'overdue',label:'Overdue',icon:'fa-exclamation-circle'};
 }
 
+function tenantLateFeeSuggestion(month, asOf = new Date()) {
+    const [year, monthNumber] = month.period.split('-').map(Number);
+    if (asOf < new Date(year, monthNumber - 1, 4) || month.outstanding <= 0.005 || month.late > 0 || month.rent <= 0) return null;
+    const amount = Math.round(month.rent * 12) / 100;
+    return amount > 0 ? amount : null;
+}
+
+function useTenantLateFeeSuggestion(event) {
+    const button = event.currentTarget;
+    const amount = Number(button.dataset.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+        showNotification('Unable to suggest a late fee. Reload the tenant ledger.', 'error');
+        return;
+    }
+    const input = button.form.elements.lateFee;
+    input.value = amount.toFixed(2);
+    input.focus();
+    showNotification('Suggested late fee filled in. Select Save to apply it.', 'info');
+}
+
+function renderTenantLateFeeForm(month, target) {
+    const suggestedLateFee = tenantLateFeeSuggestion(month);
+    const suggestion = suggestedLateFee === null ? '' : `<button type="button" class="overview-row-action tenant-late-fee-suggestion" data-amount="${suggestedLateFee.toFixed(2)}" onclick="useTenantLateFeeSuggestion(event)" title="After the 3rd: 12% of expected rent / fees, excluding late fees. Select Save to apply.">Suggest 12% (${tenantCurrency(suggestedLateFee)})</button>`;
+    return `<form class="tenant-ledger-charge-form tenant-ledger-late-fee-form" onsubmit="saveTenantLeaseLedgerExpected(event,'${escapeHtml(month.period)}','${target}','lateFee')"><input type="number" name="lateFee" min="0" step="0.01" required value="${month.late.toFixed(2)}" aria-label="Late fee amount for ${escapeHtml(month.period)}"><button type="submit" class="overview-row-action">Save</button>${suggestion}</form>`;
+}
+
 function tenantBalanceLeaseSchedule(tenant, payments) {
     const months = tenantLeaseLedgerMonths(tenant, payments);
     const depositExpected = Math.max(0,Number(tenant.deposit)||0)
@@ -81,9 +107,9 @@ function tenantBalanceLeaseSchedule(tenant, payments) {
             : '—';
         const status = tenantBalancePaymentStatus(month);
         const statusCell = `<span class="tenant-payment-status ${status.key}" title="${status.label}"><i class="fas ${status.icon}" aria-hidden="true"></i><span>${status.label}</span></span>`;
-        return `<tr><td>${escapeHtml(month.period)}${month.overridden?'<div class="task-meta">Override</div>':''}</td><td>${statusCell}</td><td><form class="tenant-ledger-charge-form" onsubmit="saveTenantLeaseLedgerExpected(event,'${escapeHtml(month.period)}','balanceSheet')"><input type="number" name="expectedRent" min="0" step="0.01" required value="${month.rent.toFixed(2)}" aria-label="Expected rent for ${escapeHtml(month.period)}"><button type="submit" class="overview-row-action">Save</button></form></td><td>${depositCell}</td><td>${tenantCurrency(month.late)}</td><td>${tenantCurrency(month.expected)}</td><td>${tenantCurrency(month.paid)}</td><td>${tenantCurrency(month.outstanding)}</td></tr>`;
+        return `<tr><td>${escapeHtml(month.period)}${month.overridden?'<div class="task-meta">Override</div>':''}</td><td>${statusCell}</td><td><form class="tenant-ledger-charge-form" onsubmit="saveTenantLeaseLedgerExpected(event,'${escapeHtml(month.period)}','balanceSheet')"><input type="number" name="expectedRent" min="0" step="0.01" required value="${month.rent.toFixed(2)}" aria-label="Expected rent for ${escapeHtml(month.period)}"><button type="submit" class="overview-row-action">Save</button></form></td><td>${depositCell}</td><td>${renderTenantLateFeeForm(month,'balanceSheet')}</td><td>${tenantCurrency(month.expected)}</td><td>${tenantCurrency(month.paid)}</td><td>${tenantCurrency(month.outstanding)}</td></tr>`;
     }).join('');
-    const html = `<h3>Monthly rent schedule</h3><p class="task-meta">Every lease month is shown, including upcoming months. The security deposit is tracked separately and is due in the first lease month. Edit and save expected rent for an individual month. Future charges are scheduled, not overdue.</p><div class="overview-table-wrap" style="max-height:380px;overflow:auto"><table class="overview-table"><thead><tr><th>Rent month</th><th>Status</th><th>Expected rent / fees</th><th>Security deposit (due / paid / remaining)</th><th>Late fees</th><th>Total expected rent</th><th>Rent applied</th><th>Rent outstanding</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th>Rent totals</th><th></th><th>${tenantCurrency(totals.rent)}</th><th>${tenantCurrency(totals.depositExpected)} due<div class="task-meta">Paid: ${tenantCurrency(totals.depositPaid)} · Remaining: ${tenantCurrency(totals.depositOutstanding)}</div></th><th>${tenantCurrency(totals.late)}</th><th>${tenantCurrency(totals.expected)}</th><th>${tenantCurrency(totals.paid)}</th><th>${tenantCurrency(totals.outstanding)}</th></tr></tfoot></table></div>`;
+    const html = `<h3>Monthly rent schedule</h3><p class="task-meta">Every lease month is shown, including upcoming months. The security deposit is tracked separately and is due in the first lease month. Edit and save expected rent or the late-fee dollar amount for an individual month. Saving a late fee replaces that month's percentage or payment-level late fees. Future charges are scheduled, not overdue.</p><div class="overview-table-wrap" style="max-height:380px;overflow:auto"><table class="overview-table"><thead><tr><th>Rent month</th><th>Status</th><th>Expected rent / fees</th><th>Security deposit (due / paid / remaining)</th><th>Late fees</th><th>Total expected rent</th><th>Rent applied</th><th>Rent outstanding</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th>Rent totals</th><th></th><th>${tenantCurrency(totals.rent)}</th><th>${tenantCurrency(totals.depositExpected)} due<div class="task-meta">Paid: ${tenantCurrency(totals.depositPaid)} · Remaining: ${tenantCurrency(totals.depositOutstanding)}</div></th><th>${tenantCurrency(totals.late)}</th><th>${tenantCurrency(totals.expected)}</th><th>${tenantCurrency(totals.paid)}</th><th>${tenantCurrency(totals.outstanding)}</th></tr></tfoot></table></div>`;
     return {months,html};
 }
 
@@ -171,9 +197,9 @@ function renderTenantLeaseLedger(loading = false, error = '') {
             const totals = months.reduce((sum,month) => ({
                 expected:sum.expected+month.expected,paid:sum.paid+month.paid,outstanding:sum.outstanding+month.outstanding
             }),{expected:0,paid:0,outstanding:0});
-            content = `<p class="task-meta">Lease: ${formatDateDisplay(tenant.leaseStart)} to ${formatDateDisplay(tenantLeaseChargeEnd(tenant))}. Future months are scheduled charges, not overdue debt. Expected rent excludes late fees; saving it overrides only that month's rent and recurring fees.</p>
+            content = `<p class="task-meta">Lease: ${formatDateDisplay(tenant.leaseStart)} to ${formatDateDisplay(tenantLeaseChargeEnd(tenant))}. Future months are scheduled charges, not overdue debt. Expected rent excludes late fees; saving it overrides only that month's rent and recurring fees. Late fees are editable dollar amounts; saving replaces that month's percentage or payment-level late fees. Suggestions fill the amount only; select Save to apply.</p>
                 <div class="overview-metrics"><div class="overview-mini-stat"><span>Lease expected</span><strong>${tenantCurrency(totals.expected)}</strong></div><div class="overview-mini-stat"><span>Applied payments / credits</span><strong>${tenantCurrency(totals.paid)}</strong></div><div class="overview-mini-stat"><span>Unpaid lease charges (includes future)</span><strong>${tenantCurrency(totals.outstanding)}</strong></div></div>
-                <div class="overview-table-wrap"><table class="overview-table"><thead><tr><th>Rent month</th><th>Expected rent / fees</th><th>Late fees</th><th>Total expected</th><th>Applied</th><th>Outstanding</th></tr></thead><tbody>${months.map(month=>`<tr><td>${escapeHtml(month.period)}${month.overridden?'<div class="task-meta">Override</div>':''}</td><td><form class="tenant-ledger-charge-form" onsubmit="saveTenantLeaseLedgerExpected(event,'${month.period}')"><input type="number" name="expectedRent" min="0" step="0.01" required value="${month.rent.toFixed(2)}" aria-label="Expected rent for ${month.period}"><button type="submit" class="overview-row-action">Save</button></form></td><td>${tenantCurrency(month.late)}</td><td>${tenantCurrency(month.expected)}</td><td>${tenantCurrency(month.paid)}</td><td>${tenantCurrency(month.outstanding)}</td></tr>`).join('')}</tbody></table></div>
+                <div class="overview-table-wrap"><table class="overview-table"><thead><tr><th>Rent month</th><th>Expected rent / fees</th><th>Late fees</th><th>Total expected</th><th>Applied</th><th>Outstanding</th></tr></thead><tbody>${months.map(month=>`<tr><td>${escapeHtml(month.period)}${month.overridden?'<div class="task-meta">Override</div>':''}</td><td><form class="tenant-ledger-charge-form" onsubmit="saveTenantLeaseLedgerExpected(event,'${month.period}')"><input type="number" name="expectedRent" min="0" step="0.01" required value="${month.rent.toFixed(2)}" aria-label="Expected rent for ${month.period}"><button type="submit" class="overview-row-action">Save</button></form></td><td>${renderTenantLateFeeForm(month,'ledger')}</td><td>${tenantCurrency(month.expected)}</td><td>${tenantCurrency(month.paid)}</td><td>${tenantCurrency(month.outstanding)}</td></tr>`).join('')}</tbody></table></div>
                 <h3>Payment history</h3>${payments.length?`<div class="overview-table-wrap"><table class="overview-table"><thead><tr><th>Received</th><th>Applied month</th><th>Apply to</th><th>Amount</th><th>Applied credit</th></tr></thead><tbody>${[...payments].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(payment=>`<tr><td>${formatDateDisplay(payment.date)}</td><td>${escapeHtml(payment.periodMonth||tenantPaymentPeriod(payment))}</td><td>${escapeHtml(payment.applyTo||'rent')}</td><td>${tenantCurrency(payment.amount)}</td><td>${tenantCurrency(payment.appliedCredit)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="task-meta">No payments recorded.</p>'}`;
         } catch (ledgerError) {
             console.error('Tenant ledger calculation error:',ledgerError);
@@ -183,15 +209,17 @@ function renderTenantLeaseLedger(loading = false, error = '') {
     modal.innerHTML = `<div class="modal-content tenant-details-modal tenant-drawer"><div class="portfolio-record-drawer-header"><h3>${escapeHtml(tenant.name||'Tenant')} ledger</h3><button type="button" aria-label="Close tenant ledger" onclick="closeTenantLeaseLedger()"><i class="fas fa-times"></i></button></div><div class="portfolio-record-drawer-body"><button type="button" class="btn-secondary" onclick="backToTenantDetailsFromLedger()"><i class="fas fa-arrow-left"></i> Back to tenant details</button><section class="tenant-lease-ledger">${content}</section></div></div>`;
 }
 
-async function saveTenantLeaseLedgerExpected(event, period, target = 'ledger') {
+async function saveTenantLeaseLedgerExpected(event, period, target = 'ledger', field = 'expectedRent') {
     event.preventDefault();
     const form = event.target;
-    const input = form.elements.expectedRent;
-    const expectedRent = Number(input.value);
+    const isLateFee = field === 'lateFee';
+    const label = isLateFee ? 'Late fee' : 'Expected rent';
+    const input = form.elements[field];
+    const amount = Number(input.value);
     const modal = document.getElementById(target === 'balanceSheet' ? 'tenantBalanceModal' : 'tenantDetailsModal');
     const context = target === 'balanceSheet' ? modal?.balanceSheet : modal?.leaseLedger;
-    if (!context || input.value === '' || !Number.isFinite(expectedRent) || expectedRent < 0) {
-        showNotification('Enter a non-negative expected rent amount','error');
+    if (!context || input.value === '' || !Number.isFinite(amount) || amount < 0) {
+        showNotification(`Enter a non-negative ${label.toLowerCase()} amount`,'error');
         return;
     }
     const sequence = tenantLeaseLedgerSequence;
@@ -199,11 +227,11 @@ async function saveTenantLeaseLedgerExpected(event, period, target = 'ledger') {
     button.disabled = true;
     try {
         const response = await fetch(`${API_URL}/tenants/${context.tenantId}/monthly-overrides/${period}`,{
-            method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({expectedRent})
+            method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(isLateFee ? {lateFee:amount,lateFeeMode:'amount'} : {expectedRent:amount})
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.message||'Unable to save expected rent');
-        if (!data.override || typeof data.override.expectedRent !== 'number') throw new Error('The saved expected rent response is invalid. Reload the ledger.');
+        if (!response.ok) throw new Error(data.message||`Unable to save ${label.toLowerCase()}`);
+        if (!data.override || typeof data.override[field] !== 'number' || !Number.isFinite(data.override[field]) || data.override[field] < 0 || (isLateFee && data.override.lateFeeMode !== 'amount')) throw new Error(`The saved ${label.toLowerCase()} response is invalid. Reload the ledger.`);
         upsertLocalTenantMonthlyOverride(context.tenantId,period,data.override);
         upsertLocalAllTenantMonthlyOverride(context.tenantId,period,data.override);
         context.tenant.monthlyOverrides = {...context.tenant.monthlyOverrides,[period]:data.override};
@@ -227,9 +255,9 @@ async function saveTenantLeaseLedgerExpected(event, period, target = 'ledger') {
             } else if (target === 'balanceSheet') openTenantBalanceModal(context.tenantId);
             else renderTenantLeaseLedger();
         }
-        showNotification(`Expected rent for ${period} saved`,'success');
+        showNotification(`${label} for ${period} saved`,'success');
     } catch (error) {
-        console.error('Tenant expected rent save error:',error);
+        console.error(`Tenant ${label.toLowerCase()} save error:`,error);
         showNotification(error.message,'error');
     } finally {
         button.disabled = false;

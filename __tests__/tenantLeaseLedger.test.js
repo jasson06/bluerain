@@ -77,6 +77,8 @@ describe('lease ledger month schedule', () => {
     expect(schedule.html).toContain('Monthly rent schedule');
     expect(schedule.html).toContain(`saveTenantLeaseLedgerExpected(event,'2026-02','balanceSheet')`);
     expect(schedule.html).toContain('Expected rent for 2026-02');
+    expect(schedule.html).toContain(`saveTenantLeaseLedgerExpected(event,'2026-02','balanceSheet','lateFee')`);
+    expect(schedule.html).toContain('name="lateFee" min="0" step="0.01" required value="20.00"');
   });
   test('tracks the one-time deposit separately from monthly rent', () => {
     const {context,tenant} = browserContext();
@@ -294,6 +296,47 @@ describe('details to ledger navigation and editing', () => {
     expect(scheduleContainer.innerHTML).toContain('$670.00');
     expect(button.disabled).toBe(false);
   });
+  test.each([['balanceSheet',35],['balanceSheet',0],['ledger',35],['ledger',0]])('%s late fee edits save $%s without changing expected rent', async (target,lateFee) => {
+    const {context,tenant,balanceModal,modal,scheduleContainer} = browserContext();
+    tenant.monthlyOverrides['2026-02']={expectedRent:800,lateFee:10,lateFeeMode:'percent'};
+    balanceModal.balanceSheet={tenantId:'tenant-a',tenant,payments:[]};
+    modal.leaseLedger={tenantId:'tenant-a',tenant,payments:[]};
+    context.state.currentTab='payments';
+    context.fetch.mockResolvedValue({ok:true,json:async()=>({ok:true,override:{expectedRent:800,lateFee,lateFeeMode:'amount'}})});
+    const button={disabled:false};
+    await context.saveTenantLeaseLedgerExpected({
+      preventDefault:jest.fn(),target:{elements:{lateFee:{value:String(lateFee)}},querySelector:()=>button}
+    },'2026-02',target,'lateFee');
+    expect(JSON.parse(context.fetch.mock.calls[0][1].body)).toEqual({lateFee,lateFeeMode:'amount'});
+    expect(tenant.monthlyOverrides['2026-02']).toEqual({expectedRent:800,lateFee,lateFeeMode:'amount'});
+    expect(target==='balanceSheet'?scheduleContainer.innerHTML:modal.innerHTML).toContain(context.tenantCurrency(800+lateFee));
+    expect(context.showNotification).toHaveBeenCalledWith('Late fee for 2026-02 saved','success');
+    expect(button.disabled).toBe(false);
+  });
+  test.each(['','-1','invalid'])('rejects invalid late fee %j without saving', async value => {
+    const {context,tenant,balanceModal}=browserContext();
+    balanceModal.balanceSheet={tenantId:'tenant-a',tenant,payments:[]};
+    await context.saveTenantLeaseLedgerExpected({
+      preventDefault:jest.fn(),target:{elements:{lateFee:{value}}}
+    },'2026-02','balanceSheet','lateFee');
+    expect(context.fetch).not.toHaveBeenCalled();
+    expect(context.showNotification).toHaveBeenCalledWith('Enter a non-negative late fee amount','error');
+  });
+  test('failed late fee saves retain the existing fee and re-enable Save', async () => {
+    const {context,tenant,balanceModal}=browserContext();
+    balanceModal.balanceSheet={tenantId:'tenant-a',tenant,payments:[]};
+    context.fetch.mockResolvedValue({ok:false,json:async()=>({message:'Unable to save late fee'})});
+    const button={disabled:false};
+    const log=jest.spyOn(console,'error').mockImplementation(()=>{});
+    try {
+      await context.saveTenantLeaseLedgerExpected({
+        preventDefault:jest.fn(),target:{elements:{lateFee:{value:'35'}},querySelector:()=>button}
+      },'2026-02','balanceSheet','lateFee');
+      expect(tenant.monthlyOverrides['2026-02'].lateFee).toBe(20);
+      expect(context.showNotification).toHaveBeenCalledWith('Unable to save late fee','error');
+      expect(button.disabled).toBe(false);
+    } finally { log.mockRestore(); }
+  });
   test('closing while loading prevents a stale response from rewriting the modal', async () => {
     const {context,tenant,modal} = browserContext();
     let resolve;
@@ -320,6 +363,76 @@ describe('details to ledger navigation and editing', () => {
   });
 });
 
+describe('late fee suggestions', () => {
+  const month={period:'2026-11',rent:1030,late:0,expected:1030,paid:0,outstanding:1030};
+  test.each([
+    [new Date(2026,10,3,23,59,59),null],
+    [new Date(2026,10,4,0,0,0),123.60],
+    [new Date(2026,11,1),123.60],
+    [new Date(2026,9,15),null]
+  ])('suggests only after the third of the charge month at %s', (asOf,expected) => {
+    const {context}=browserContext();
+    expect(context.tenantLateFeeSuggestion(month,asOf)).toBe(expected);
+  });
+  test('uses the full expected rent for partial payments and rounds to cents', () => {
+    const {context}=browserContext();
+    expect(context.tenantLateFeeSuggestion({...month,paid:1000,outstanding:30},new Date(2026,10,4))).toBe(123.60);
+    expect(context.tenantLateFeeSuggestion({...month,rent:709.68},new Date(2026,10,4))).toBe(85.16);
+  });
+  test.each([
+    {paid:1030,outstanding:0},
+    {late:10},
+    {rent:0},
+    {rent:0.01}
+  ])('does not suggest for paid months, existing fees, or zero-cent suggestions %j', changes => {
+    const {context}=browserContext();
+    expect(context.tenantLateFeeSuggestion({...month,...changes},new Date(2026,10,4))).toBeNull();
+  });
+  test.each(['balanceSheet','ledger'])('renders eligible suggestions in %s without adding a charge', target => {
+    const {context,tenant,modal}=browserContext();
+    tenant.leaseStart='2000-01-01T12:00:00';
+    tenant.leaseEnd='2000-04-30T12:00:00';
+    tenant.monthlyOverrides={'2000-02':{lateFee:20,lateFeeMode:'amount'}};
+    const payments=[
+      {tenantId:'tenant-a',date:'2000-03-01',periodMonth:'2000-03',amount:1030},
+      {tenantId:'tenant-a',date:'2000-04-01',periodMonth:'2000-04',amount:1000}
+    ];
+    const schedule=context.tenantBalanceLeaseSchedule(tenant,payments);
+    modal.leaseLedger={tenantId:'tenant-a',tenant,payments};
+    context.renderTenantLeaseLedger();
+    const html=target==='ledger'?modal.innerHTML:schedule.html;
+    expect(html).toContain('Suggest 12% ($120.00)');
+    expect(html).toContain('Suggest 12% ($123.60)');
+    expect((html.match(/class="overview-row-action tenant-late-fee-suggestion"/g)||[])).toHaveLength(2);
+    expect(html).toContain('type="button" class="overview-row-action tenant-late-fee-suggestion"');
+    expect(html).toContain(`saveTenantLeaseLedgerExpected(event,'2000-04','${target}','lateFee')`);
+    expect(schedule.months[0]).toMatchObject({late:0,expected:1000});
+    expect(schedule.months[3]).toMatchObject({late:0,expected:1030,outstanding:30});
+    expect(context.fetch).not.toHaveBeenCalled();
+  });
+  test.each(['balanceSheet','ledger'])('fills the %s suggestion without persisting until Save is selected', async target => {
+    const {context,tenant,balanceModal,modal}=browserContext();
+    balanceModal.balanceSheet={tenantId:'tenant-a',tenant,payments:[]};
+    modal.leaseLedger={tenantId:'tenant-a',tenant,payments:[]};
+    context.state.currentTab='payments';
+    const input={value:'0.00',focus:jest.fn()};
+    const saveButton={disabled:false};
+    const form={elements:{lateFee:input},querySelector:()=>saveButton};
+    context.useTenantLateFeeSuggestion({currentTarget:{dataset:{amount:'96.00'},form}});
+    expect(input.value).toBe('96.00');
+    expect(input.focus).toHaveBeenCalled();
+    expect(context.fetch).not.toHaveBeenCalled();
+    context.fetch.mockResolvedValue({ok:true,json:async()=>({ok:true,override:{expectedRent:800,lateFee:96,lateFeeMode:'amount'}})});
+    await context.saveTenantLeaseLedgerExpected({preventDefault:jest.fn(),target:form},'2026-02',target,'lateFee');
+    expect(JSON.parse(context.fetch.mock.calls[0][1].body)).toEqual({lateFee:96,lateFeeMode:'amount'});
+    expect(tenant.monthlyOverrides['2026-02'].lateFee).toBe(96);
+    if(target==='ledger') {
+      expect(modal.innerHTML).toContain('value="96.00"');
+      expect(modal.innerHTML).toContain('$896.00');
+    }
+  });
+});
+
 function routeSetup() {
   const tenant={
     _id:'tenant-a',leaseStatus:'active',leaseStart:'2026-01-01',leaseEnd:'2026-12-31',baseRent:1000,
@@ -340,6 +453,19 @@ function routeSetup() {
 }
 
 describe('monthly expected-rent persistence', () => {
+  test.each([35,0])('late fee amount override $%s preserves rent and recalculates stored balances', async lateFee => {
+    const {context,tenant,session,handler,response}=routeSetup();
+    const payment={_id:'payment-a',tenantId:'tenant-a',type:'rent',applyTo:'rent',periodMonth:'2026-06',date:'2026-06-01',amount:100,lateFee:50,balance:890};
+    context.Payment.find.mockReturnValue({session:async()=>[payment]});
+    context.Payment.bulkWrite=jest.fn().mockResolvedValue({});
+    const res=response();
+    await handler({params:{tenantId:tenant._id,period:'2026-06'},body:{lateFee,lateFeeMode:'amount'}},res);
+    expect(res.code).toBe(200);
+    expect(res.payload.override).toEqual({expectedRent:900,lateFee,lateFeeMode:'amount'});
+    expect(context.Payment.bulkWrite).toHaveBeenCalledWith([
+      {updateOne:{filter:{_id:'payment-a'},update:{$set:{balance:800+lateFee,lateFee:0}}}}
+    ],{ordered:true,session});
+  });
   test('partial rent update preserves percentage late fees and runs in a transaction', async () => {
     const {handler,tenant,session,response}=routeSetup();
     const res=response();

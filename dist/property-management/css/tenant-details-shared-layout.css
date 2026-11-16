@@ -3,4 +3,11 @@
 #tenantDetailsModal .portfolio-record-drawer-header { flex-shrink:0; }
 #tenantDetailsModal .portfolio-record-drawer-body { height:auto; min-height:0; flex:1; overflow:auto; }
 .tenant-lease-ledger{margin-top:16px}.tenant-ledger-charge-form{display:flex;align-items:center;gap:6px}.tenant-ledger-charge-form input{width:110px;padding:7px;border:1px solid #cbd5e1;border-radius:6px}.tenant-lease-ledger .overview-table{min-width:660px}.tenant-lease-ledger .overview-metrics{margin-bottom:16px}
+.tenant-ledger-charge-form button[type="submit"]{opacity:0;pointer-events:none}
+.tenant-ledger-charge-form:hover button[type="submit"],
+.tenant-ledger-charge-form:focus-within button[type="submit"],
+.tenant-ledger-charge-form button[type="submit"]:disabled{opacity:1;pointer-events:auto}
+.tenant-ledger-late-fee-form{flex-wrap:wrap}
+.tenant-late-fee-suggestion{flex-basis:100%;text-align:left}
+@media(hover:none){.tenant-ledger-charge-form button[type="submit"]{opacity:1;pointer-events:auto}}
 @media(max-width:600px){#tenantDetailsModal > .tenant-details-modal.tenant-drawer {width:calc(100vw - 16px)!important;}}

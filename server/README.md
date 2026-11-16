@@ -191,6 +191,15 @@ allocation groups are rejected. This operation does not modify QuickBooks.
 Monthly override updates validate the lease period and non-negative amounts,
 preserve omitted fields, and recalculate stored payment balances transactionally.
 Changing final-month expected rent also updates the reviewed termination charge.
+The Tenant Balance Sheet and tenant lease ledger allow each month's late fee to be edited as a dollar
+amount using the same save flow as expected rent. Saving replaces any percentage
+or payment-level late fees for that month while preserving expected rent. Schedule
+Save buttons appear on hover or keyboard focus and remain visible on touch devices.
+After the 3rd of a rent month (browser-local calendar), unpaid or partially paid
+months without an existing late fee offer a 12% suggestion based on expected rent
+and recurring fees, excluding late fees, rounded to cents. Past months are eligible;
+future and fully paid rent months are not. Selecting the suggestion only fills the
+late-fee input; Save is required to persist the dollar amount.
 
 ### Credit application
 
