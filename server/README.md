@@ -166,6 +166,22 @@ Posting a replacement receipt also excludes voided receipts and their late
 fees from the prior-payment totals, so a returned payment cannot create credit.
 Payments linked to QuickBooks are voided locally; their QuickBooks transaction
 must be voided separately.
+
+New positive local payments are automatically checked against existing
+QuickBooks payments or sales receipts when the property is connected, regardless
+of the former payment sync setting. Matching requires the same tenant, receipt
+date, amount, and, for invoice allocations, rent period. Only one unlinked
+candidate is linked; missing or ambiguous matches remain local for review or
+retry. A transaction already linked to another local payment is not reused.
+The Payments Match action opens a read-only review of unlinked transactions with
+the same tenant and amount. It highlights date and invoice-period differences;
+linking an invoice allocation updates the local rent period. The user must select
+and confirm a transaction. The server rechecks the reviewed details and rejects
+voided, changed, or already-linked payments before linking. The Conflicts Retry
+action still runs the automatic check. Neither path creates a QuickBooks payment,
+sales receipt, or customer. Existing QuickBooks-to-local imports and expense
+synchronization remain separate workflows.
+
 Voided payments can be reinstated through the payment Actions menu. Reinstatement
 restores the pre-void posting status (posted for older voids), retains the void
 reason/date, and records a reinstatement timestamp. All rows of a split allocation

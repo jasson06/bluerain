@@ -20,7 +20,7 @@ async function connectPropertyQuickBooks(){
 
 function qbOption(value,label,selected){return `<option value="${escapeHtml(value||'')}" ${String(value||'')===String(selected||'')?'selected':''}>${escapeHtml(label||'Select')}</option>`;}
 
-async function loadQuickBooksMappingsAndCatalog(){const panel=document.getElementById('quickBooksMappingsPanel');const save=document.getElementById('qbSaveMappingsBtn');if(save)save.disabled=true;setQuickBooksProgress('setup','Loading QuickBooks accounts, items, and mappings…');try{const response=await fetch(`/api/properties/${state.currentProperty._id}/quickbooks/catalog`),catalog=await response.json();if(!response.ok)throw new Error(catalog.message||'Unable to load catalog');const mapping=state.quickBooksStatus.connection.mappings||{},items=catalog.items||[],allAccounts=catalog.accounts||[],depositAccounts=allAccounts.filter(a=>['Bank','Other Current Asset'].includes(a.AccountType)||a.AccountSubType==='UndepositedFunds'),expenseAccounts=allAccounts.filter(a=>['Expense','Cost of Goods Sold','Other Expense'].includes(a.AccountType)),methods=catalog.paymentMethods||[];const fill=(id,list,selected)=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">Select…</option>'+list.map(item=>qbOption(item.Id,item.FullyQualifiedName||item.Name,selected)).join('');};fill('qbMapRentItem',items,mapping.incomeItems?.rent?.value);fill('qbMapLateItem',items,mapping.incomeItems?.late?.value);fill('qbMapOtherItem',items,mapping.incomeItems?.other?.value);fill('qbMapDepositItem',items,mapping.incomeItems?.deposit?.value);fill('qbMapDepositAccount',depositAccounts,mapping.depositAccounts?.default?.value);fill('qbMapExpenseAccount',expenseAccounts,mapping.expenseAccounts?.default?.value);fill('qbMapExpensePaymentAccount',depositAccounts,mapping.defaultExpensePaymentAccount?.value);fill('qbMapMethodCash',methods,mapping.paymentMethods?.cash?.value);fill('qbMapMethodCheck',methods,mapping.paymentMethods?.check?.value);fill('qbMapMethodBank',methods,mapping.paymentMethods?.bank?.value);fill('qbMapMethodOnline',methods,mapping.paymentMethods?.online?.value);document.getElementById('qbPaymentSyncMode').value=state.quickBooksStatus.connection.settings?.paymentSyncMode||'manual';await loadQuickBooksSyncLog();setQuickBooksProgress('setup','QuickBooks is connected. Review your mappings and select Save Mappings.','success');if(save)save.disabled=false;}catch(error){setQuickBooksProgress('setup',error.message+' Close and reopen settings to retry.','error');}}
+async function loadQuickBooksMappingsAndCatalog(){const panel=document.getElementById('quickBooksMappingsPanel');const save=document.getElementById('qbSaveMappingsBtn');if(save)save.disabled=true;setQuickBooksProgress('setup','Loading QuickBooks accounts, items, and mappings…');try{const response=await fetch(`/api/properties/${state.currentProperty._id}/quickbooks/catalog`),catalog=await response.json();if(!response.ok)throw new Error(catalog.message||'Unable to load catalog');const mapping=state.quickBooksStatus.connection.mappings||{},items=catalog.items||[],allAccounts=catalog.accounts||[],depositAccounts=allAccounts.filter(a=>['Bank','Other Current Asset'].includes(a.AccountType)||a.AccountSubType==='UndepositedFunds'),expenseAccounts=allAccounts.filter(a=>['Expense','Cost of Goods Sold','Other Expense'].includes(a.AccountType)),methods=catalog.paymentMethods||[];const fill=(id,list,selected)=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">Select…</option>'+list.map(item=>qbOption(item.Id,item.FullyQualifiedName||item.Name,selected)).join('');};fill('qbMapRentItem',items,mapping.incomeItems?.rent?.value);fill('qbMapLateItem',items,mapping.incomeItems?.late?.value);fill('qbMapOtherItem',items,mapping.incomeItems?.other?.value);fill('qbMapDepositItem',items,mapping.incomeItems?.deposit?.value);fill('qbMapDepositAccount',depositAccounts,mapping.depositAccounts?.default?.value);fill('qbMapExpenseAccount',expenseAccounts,mapping.expenseAccounts?.default?.value);fill('qbMapExpensePaymentAccount',depositAccounts,mapping.defaultExpensePaymentAccount?.value);fill('qbMapMethodCash',methods,mapping.paymentMethods?.cash?.value);fill('qbMapMethodCheck',methods,mapping.paymentMethods?.check?.value);fill('qbMapMethodBank',methods,mapping.paymentMethods?.bank?.value);fill('qbMapMethodOnline',methods,mapping.paymentMethods?.online?.value);await loadQuickBooksSyncLog();setQuickBooksProgress('setup','QuickBooks is connected. Review your mappings and select Save Mappings.','success');if(save)save.disabled=false;}catch(error){setQuickBooksProgress('setup',error.message+' Close and reopen settings to retry.','error');}}
 
 function qbSelectedRef(id){const el=document.getElementById(id);return el?.value?{value:el.value,name:el.options[el.selectedIndex]?.text||''}:{};}
 
@@ -30,7 +30,7 @@ async function saveQuickBooksMappings(){
  const label=button?.textContent;if(button){button.disabled=true;button.textContent='Saving…';}
  let saved=false;
  setQuickBooksProgress('setup','Saving QuickBooks mappings…');
- try{const mappings={incomeItems:{rent:qbSelectedRef('qbMapRentItem'),late:qbSelectedRef('qbMapLateItem'),other:qbSelectedRef('qbMapOtherItem'),deposit:qbSelectedRef('qbMapDepositItem')},depositAccounts:{default:qbSelectedRef('qbMapDepositAccount')},paymentMethods:{cash:qbSelectedRef('qbMapMethodCash'),check:qbSelectedRef('qbMapMethodCheck'),bank:qbSelectedRef('qbMapMethodBank'),online:qbSelectedRef('qbMapMethodOnline')},expenseAccounts:{default:qbSelectedRef('qbMapExpenseAccount')},defaultExpensePaymentAccount:qbSelectedRef('qbMapExpensePaymentAccount')};const settings={paymentSyncMode:document.getElementById('qbPaymentSyncMode').value,expenseSyncMode:'manual'};
+ try{const mappings={incomeItems:{rent:qbSelectedRef('qbMapRentItem'),late:qbSelectedRef('qbMapLateItem'),other:qbSelectedRef('qbMapOtherItem'),deposit:qbSelectedRef('qbMapDepositItem')},depositAccounts:{default:qbSelectedRef('qbMapDepositAccount')},paymentMethods:{cash:qbSelectedRef('qbMapMethodCash'),check:qbSelectedRef('qbMapMethodCheck'),bank:qbSelectedRef('qbMapMethodBank'),online:qbSelectedRef('qbMapMethodOnline')},expenseAccounts:{default:qbSelectedRef('qbMapExpenseAccount')},defaultExpensePaymentAccount:qbSelectedRef('qbMapExpensePaymentAccount')};const settings={...state.quickBooksStatus.connection.settings,expenseSyncMode:'manual'};
  const response=await fetch(`/api/properties/${propertyId}/quickbooks/mappings`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({mappings,settings})});
  const data=await response.json();if(!response.ok)throw new Error(data.message||'Unable to save mappings');saved=true;
  if(String(state.currentProperty?._id)!==String(propertyId))return;
@@ -50,7 +50,81 @@ async function disconnectQuickBooks(){if(!confirm('Disconnect QuickBooks from th
 
 async function loadQuickBooksSyncLog(){const root=document.getElementById('quickBooksSyncLog');if(!root)return;const response=await fetch(`/api/properties/${state.currentProperty._id}/quickbooks/sync-log`),data=await response.json();root.innerHTML=(data.logs||[]).length?`<div class="overview-table-wrap"><table class="overview-table"><thead><tr><th>Record</th><th>Status</th><th>QuickBooks ID</th><th>Updated</th></tr></thead><tbody>${data.logs.slice(0,20).map(log=>`<tr><td>${escapeHtml(log.localEntityType)} ${escapeHtml(String(log.localEntityId).slice(-6))}</td><td>${escapeHtml(log.status)}</td><td>${escapeHtml(log.quickBooksEntityId||'—')}</td><td>${formatDateDisplay(log.updatedAt)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty-compact">No synchronization activity yet.</div>';}
 
-async function syncPaymentQuickBooks(paymentId){const button=document.querySelector(`[data-qb-sync-payment="${paymentId}"]`);if(button)button.disabled=true;try{const response=await fetch(`/api/properties/${state.currentProperty._id}/payments/${paymentId}/sync-quickbooks`,{method:'POST'}),data=await response.json();if(!response.ok)throw new Error(data.message||'QuickBooks sync failed');await loadPayments(state.currentProperty._id,true);showNotification(data.matchedExisting?'Matched existing QuickBooks payment':data.duplicate?'Already synchronized':'Payment synchronized to QuickBooks','success');}catch(error){showNotification(error.message,'error');if(button)button.disabled=false;}}
+async function syncPaymentQuickBooks(paymentId){const button=document.querySelector(`[data-qb-sync-payment="${paymentId}"]`);if(button)button.disabled=true;try{const response=await fetch(`/api/properties/${state.currentProperty._id}/payments/${paymentId}/sync-quickbooks`,{method:'POST'}),data=await response.json();if(!response.ok)throw new Error(data.message||'QuickBooks matching failed');await loadPayments(state.currentProperty._id,true);showNotification(data.pending?data.message:data.duplicate?'Already linked to QuickBooks':'Matched existing QuickBooks payment',data.pending?'info':'success');}catch(error){showNotification(error.message,'error');if(button)button.disabled=false;}}
+
+let quickBooksMatchRequest = 0;
+function closeQuickBooksMatchModal() {
+  quickBooksMatchRequest++;
+  closeModal('quickBooksMatchModal');
+}
+
+async function openQuickBooksMatchModal(paymentId) {
+  const propertyId = state.currentProperty?._id;
+  if (!propertyId) return showNotification('Select a property first', 'error');
+  let modal = document.getElementById('quickBooksMatchModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'quickBooksMatchModal';
+    modal.className = 'modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'quickBooksMatchTitle');
+    document.body.appendChild(modal);
+  }
+  const request = ++quickBooksMatchRequest;
+  modal.innerHTML = '<div class="modal-content"><h2 id="quickBooksMatchTitle">Match QuickBooks payment</h2><p role="status">Loading possible matches…</p><button type="button" class="btn-secondary" onclick="closeQuickBooksMatchModal()">Cancel</button></div>';
+  openModal('quickBooksMatchModal');
+  try {
+    const response = await fetch(`${API_URL}/properties/${encodeURIComponent(propertyId)}/quickbooks/payments?paymentId=${encodeURIComponent(paymentId)}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Unable to load possible matches');
+    if (request !== quickBooksMatchRequest || String(state.currentProperty?._id) !== String(propertyId) || modal.style.display === 'none') return;
+    const payment = data.payment, candidates = data.candidates;
+    const money = value => `$${Number(value).toFixed(2)}`;
+    const rows = candidates.map((candidate, index) => {
+      const differences = [
+        !candidate.dateMatches ? 'Date differs' : '',
+        !candidate.periodMatches ? `Linking changes the rent period to ${candidate.periodMonth}` : ''
+      ].filter(Boolean);
+      return `<tr><td><label><input type="radio" name="quickBooksMatchCandidate" value="${index}"> ${candidate.dateMatches && candidate.periodMatches ? 'Suggested' : 'Review'}</label></td><td>${escapeHtml(candidate.customerName || '—')}</td><td>${escapeHtml(formatDateDisplay(candidate.txnDate))}</td><td>${escapeHtml(money(candidate.amount))}</td><td>${escapeHtml(candidate.periodMonth || '—')}</td><td>${escapeHtml(candidate.sourceType)} ${escapeHtml(candidate.docNumber || candidate.id)}${candidate.invoiceNumber ? `<br>Invoice ${escapeHtml(candidate.invoiceNumber)}` : ''}${differences.length ? `<br><span class="task-meta">${escapeHtml(differences.join(' · '))}</span>` : ''}</td></tr>`;
+    }).join('');
+    modal.innerHTML = `<div class="modal-content" style="max-width:1000px;max-height:90vh;overflow:auto"><h2 id="quickBooksMatchTitle">Match QuickBooks payment</h2>
+      <p>Local payment: <strong>${escapeHtml(payment.tenantName || 'Tenant')} · ${escapeHtml(money(payment.amount))}</strong> · ${escapeHtml(formatDateDisplay(payment.date))} · Period ${escapeHtml(payment.periodMonth || '—')}</p>
+      <p class="task-meta">Choose an existing transaction to link. No payment will be created in QuickBooks. Suggestions have the same tenant and amount; review any differences before linking.</p>
+      ${rows ? `<div class="table-responsive"><table class="payments-table"><thead><tr><th>Choose</th><th>Customer</th><th>Date</th><th>Amount</th><th>Invoice period</th><th>Transaction</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p role="status">No eligible matches found. Check the tenant’s QuickBooks customer mapping and try again after the payment appears in QuickBooks.</p>'}
+      <p id="quickBooksMatchError" role="alert"></p><div class="modal-buttons"><button type="button" class="btn-secondary" onclick="closeQuickBooksMatchModal()">Cancel</button>${rows ? '<button type="button" class="btn-primary" id="confirmQuickBooksMatch">Link selected</button>' : ''}</div></div>`;
+    const confirmButton = document.getElementById('confirmQuickBooksMatch');
+    if (confirmButton) confirmButton.addEventListener('click', async () => {
+      const choice = modal.querySelector('input[name="quickBooksMatchCandidate"]:checked');
+      const error = document.getElementById('quickBooksMatchError');
+      if (!choice) { error.textContent = 'Select a transaction to link.'; return; }
+      const candidate = candidates[Number(choice.value)];
+      if (!candidate) { error.textContent = 'Select a valid transaction.'; return; }
+      confirmButton.disabled = true;
+      error.textContent = '';
+      try {
+        const result = await fetch(`${API_URL}/properties/${encodeURIComponent(propertyId)}/quickbooks/payment-workspace/link`, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({paymentId,sourceType:candidate.sourceType,entityId:candidate.id,reviewedMatch:{
+            tenantId:payment.tenantId,amount:payment.amount,date:payment.date,periodMonth:payment.periodMonth,
+            txnDate:candidate.txnDate,invoicePeriod:candidate.periodMonth
+          }})
+        });
+        const body = await result.json();
+        if (!result.ok) throw new Error(body.message || 'Unable to link payment');
+        if (request !== quickBooksMatchRequest) return;
+        closeQuickBooksMatchModal();
+        showNotification('Payment linked to QuickBooks', 'success');
+        if (String(state.currentProperty?._id) === String(propertyId)) await loadPayments(propertyId, true);
+      } catch (failure) {
+        if (request === quickBooksMatchRequest) { error.textContent = failure.message; confirmButton.disabled = false; }
+      }
+    });
+  } catch (error) {
+    if (request !== quickBooksMatchRequest) return;
+    modal.innerHTML = `<div class="modal-content"><h2 id="quickBooksMatchTitle">Match QuickBooks payment</h2><p role="alert">${escapeHtml(error.message)}</p><button type="button" class="btn-secondary" onclick="closeQuickBooksMatchModal()">Close</button></div>`;
+  }
+}
 
 function getOverviewRange() {
   const now=new Date(), value=document.getElementById('overviewRange')?.value||'month'; let from,to;

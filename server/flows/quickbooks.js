@@ -109,6 +109,15 @@ function matchTenantForQuickBooksPaymentRecord(record, tenants = [], unitById = 
   return candidates.length === 1 ? candidates[0] : null;
 }
 
+function paymentMatchesQuickBooksRecord(payment, record, tenants, unitById, connectionId) {
+  if (!record?.id || record.periodError || payment?.postingStatus === 'voided') return false;
+  if ((0, serverContext.normalizeQbPaymentDate)(record.txnDate) !== (0, serverContext.normalizeQbPaymentDate)(payment.date)) return false;
+  if ((0, serverContext.normalizeQbPaymentAmount)(record.totalAmt) !== (0, serverContext.normalizeQbPaymentAmount)(payment.amount)) return false;
+  if (record.invoiceId && payment.periodMonth && record.periodMonth !== payment.periodMonth) return false;
+  const tenant = (0, serverContext.matchTenantForQuickBooksPaymentRecord)(record, tenants, unitById, connectionId);
+  return !!tenant && String(tenant._id) === String(payment.tenantId?._id || payment.tenantId);
+}
+
 function buildQuickBooksImportNote(record) {
   const parts = [];
   if(record.invoiceId) parts.push(`Invoice ${record.invoiceNumber} dated ${record.invoiceDate}${record.invoiceDueDate?`, due ${record.invoiceDueDate}`:''}`);
@@ -188,7 +197,9 @@ async function reconcileQuickBooksPaymentsForProperty(propertyId, connection = n
   for (const record of records) {
     const recordKey = `${record.sourceType}:${record.id}`;
     if (record.periodError) continue;
-    if (!record?.id || record.localPaymentId || matchedIds.has(recordKey)) continue;
+    if (!record?.id || matchedIds.has(recordKey)) continue;
+    // A display-only heuristic match is not a persisted link.
+    record.localPaymentId = '';
     const sibling = record.parentPaymentId && localPayments.find(p=>p.quickBooks?.entityType==='Payment' && (String(p.quickBooks?.entityId)===record.parentPaymentId || p.quickBooks?.parentPaymentId===record.parentPaymentId));
     const tenant = (sibling && tenants.find(t=>String(t._id)===String(sibling.tenantId))) || (0, serverContext.matchTenantForQuickBooksPaymentRecord)(record, tenants, unitById, key);
     if (!tenant) continue;
@@ -199,21 +210,24 @@ async function reconcileQuickBooksPaymentsForProperty(propertyId, connection = n
     const amount = (0, serverContext.normalizeQbPaymentAmount)(record.totalAmt);
     if (!(amount > 0)) continue;
 
-    const candidateLocalPayment = localPayments.find(payment => {
-      if(payment?.postingStatus==='voided')return false;
-      if (payment?.quickBooks?.entityId) return false;
-      if (String(payment.tenantId || '') !== String(tenant._id || '')) return false;
-      if ((0, serverContext.normalizeQbPaymentAmount)(payment.amount) !== amount) return false;
-      const paymentDate = (0, serverContext.normalizeQbPaymentDate)(payment.date);
-      const paymentPeriod = String(payment.periodMonth || '');
-      if (normalizedDate && paymentDate === normalizedDate) return true;
-      if (periodMonth && paymentPeriod === periodMonth) return true;
-      return false;
-    });
+    const candidates = localPayments.filter(payment => !payment.quickBooks?.entityId
+      && paymentMatchesQuickBooksRecord(payment, record, tenants, unitById, key));
+    if (candidates.length > 1) continue;
+    const candidateLocalPayment = candidates[0];
+    if (candidateLocalPayment && records.filter(other =>
+      !matchedIds.has(`${other.sourceType}:${other.id}`)
+      && paymentMatchesQuickBooksRecord(candidateLocalPayment, other, tenants, unitById, key)
+    ).length > 1) continue;
+    if (!candidateLocalPayment && periodMonth && localPayments.some(payment =>
+      !payment.quickBooks?.entityId && payment.periodMonth === periodMonth
+      && paymentMatchesQuickBooksRecord({...payment, date: record.txnDate}, record, tenants, unitById, key)
+    )) continue;
 
     if (candidateLocalPayment) {
-      await serverContext.Payment.updateOne(
-        { _id: candidateLocalPayment._id, $or: [{ 'quickBooks.entityId': { $exists: false } }, { 'quickBooks.entityId': '' }, { quickBooks: { $exists: false } }] },
+      let update;
+      try {
+        update = await serverContext.Payment.updateOne(
+        { _id: candidateLocalPayment._id, postingStatus: {$ne: 'voided'}, $or: [{ 'quickBooks.entityId': { $exists: false } }, { 'quickBooks.entityId': '' }, { 'quickBooks.entityId': null }] },
         {
           $set: {
             ...(record.invoiceId ? {periodMonth, ...Object.fromEntries(Object.entries(invoicePeriods.metadata(record)).map(([k,v])=>[`quickBooks.${k}`,v]))} : {}),
@@ -231,7 +245,13 @@ async function reconcileQuickBooksPaymentsForProperty(propertyId, connection = n
             'quickBooks.lastError': ''
           }
         }
-      );
+        );
+      } catch (error) {
+        if (error?.code !== 11000) throw error;
+        continue;
+      }
+      if (!update.matchedCount) continue;
+      candidateLocalPayment.quickBooks = {...candidateLocalPayment.quickBooks, entityType: record.sourceType, entityId: record.id};
       record.localPaymentId = String(candidateLocalPayment._id);
       matchedIds.add(recordKey);
       continue;
@@ -303,7 +323,7 @@ async function reconcileQuickBooksPaymentsForProperty(propertyId, connection = n
   return {
     connection: liveConnection,
     localPayments: refreshedLocalPayments,
-    qbPayments: (0, serverContext.attachQuickBooksPaymentMatches)(refreshedLocalPayments, qbPayments),
+    qbPayments: (0, serverContext.attachQuickBooksPaymentMatches)(refreshedLocalPayments.filter(p => p.quickBooks?.entityId), qbPayments),
     tenants,
     unitById
   };
@@ -351,9 +371,74 @@ function attachQuickBooksPaymentMatches(localPayments,qbRecords) { const usedRec
 
 async function ensureQbCustomer(connection,tenant) { const existingId=tenant.quickBooks?.[String(connection._id)]?.customerId;if(existingId)return existingId;const displayName=`${tenant.name} - ${tenant.unitId?.number?`Unit ${tenant.unitId.number}`:'Tenant'}`.slice(0,100);const query=await (0, serverContext.qbRequest)(connection,'get',`query?query=${encodeURIComponent(`select * from Customer where DisplayName = '${(0, serverContext.escapeQbQuery)(displayName)}' maxresults 2`)}`);let customer=query.QueryResponse?.Customer?.[0];if(!customer){const created=await (0, serverContext.qbRequest)(connection,'post','customer',{DisplayName:displayName,PrimaryEmailAddr:tenant.email?{Address:tenant.email}:undefined,PrimaryPhone:tenant.phone?{FreeFormNumber:tenant.phone}:undefined});customer=created.Customer;}tenant.quickBooks=tenant.quickBooks||{};tenant.quickBooks[String(connection._id)]={customerId:customer.Id,customerDisplayName:customer.DisplayName,syncedAt:new Date()};tenant.markModified('quickBooks');await tenant.save();return customer.Id; }
 
-function scheduleAutomaticQuickBooksPaymentSync(payment) { setImmediate(async()=>{try{const connection=await serverContext.QuickBooksConnection.findOne({projectId:payment.projectId,status:'connected'}).lean();if(connection?.settings?.paymentSyncMode==='automatic')await (0, serverContext.syncPaymentToQuickBooks)(payment._id);}catch(error){console.warn('Automatic QuickBooks payment sync deferred:',error.message);}}); }
+function scheduleAutomaticQuickBooksPaymentSync(payment) {
+  if (Number(payment.amount) <= 0) return;
+  setImmediate(async () => {
+    try {
+      const connection = await serverContext.QuickBooksConnection.findOne({projectId: payment.projectId, status: 'connected'}).lean();
+      if (connection) await (0, serverContext.syncPaymentToQuickBooks)(payment._id);
+    } catch (error) {
+      console.warn('Automatic QuickBooks payment matching failed:', error.message);
+    }
+  });
+}
 
-async function syncPaymentToQuickBooks(paymentId) { const payment=await serverContext.Payment.findById(paymentId).populate({path:'tenantId',populate:{path:'unitId'}});if(!payment)throw new Error('Payment not found');await paymentBalances.refreshTenant(payment.tenantId?._id || payment.tenantId);if(Number(payment.amount)<=0)throw new Error('Credits and refunds require a separate QuickBooks workflow');const connection=await (0, serverContext.getQbConnection)(payment.projectId);const externalKey=`BRP-${String(payment._id).slice(-16)}`;const hash=serverContext.crypto.createHash('sha256').update(JSON.stringify({amount:payment.amount,date:payment.date,applyTo:payment.applyTo,tenant:String(payment.tenantId?._id)})).digest('hex');let log=await serverContext.QuickBooksSyncLog.findOne({connectionId:connection._id,externalKey});if(log?.status==='synced'&&log.quickBooksEntityId)return {entityId:log.quickBooksEntityId,duplicate:true};log=await serverContext.QuickBooksSyncLog.findOneAndUpdate({connectionId:connection._id,externalKey},{$set:{projectId:payment.projectId,localEntityType:'Payment',localEntityId:payment._id,operation:'create',quickBooksEntityType:'SalesReceipt',requestHash:hash,status:'syncing',lastError:''},$inc:{attempts:1}},{upsert:true,new:true,setDefaultsOnInsert:true});try{const incomeMappings=connection.mappings?.incomeItems||{},applyTo=payment.applyTo||'rent';const item=incomeMappings[applyTo]||(applyTo==='rent'?incomeMappings.rent:applyTo==='deposit'?incomeMappings.deposit:applyTo==='late'?incomeMappings.late:incomeMappings.other);if(!item?.value)throw new Error(`QuickBooks item mapping is required for ${applyTo}`);const customerId=await (0, serverContext.ensureQbCustomer)(connection,payment.tenantId);const qbRecords=await (0, serverContext.fetchQuickBooksPaymentRecords)(connection);const matchedRecord=(0, serverContext.matchQuickBooksRecordForLocalPayment)(payment,qbRecords);let quickBooksRecord=matchedRecord?.raw||null,quickBooksEntityType=matchedRecord?.sourceType||'SalesReceipt',matchedExisting=!!matchedRecord;if(!quickBooksRecord){const method=connection.mappings?.paymentMethods?.[payment.method];const deposit=connection.mappings?.depositAccounts?.[applyTo]||connection.mappings?.depositAccounts?.default;const result=await (0, serverContext.qbRequest)(connection,'post','salesreceipt',{DocNumber:externalKey,CustomerRef:{value:customerId},TxnDate:new Date(payment.date).toISOString().slice(0,10),PaymentMethodRef:method?.value?method:undefined,DepositToAccountRef:deposit?.value?deposit:undefined,Line:[{Amount:Number(payment.amount),Description:`${applyTo} payment${payment.periodMonth?` - ${payment.periodMonth}`:''}`,DetailType:'SalesItemLineDetail',SalesItemLineDetail:{ItemRef:item}}],PrivateNote:String(payment.note||'')});quickBooksRecord=result.SalesReceipt;}log.status='synced';log.quickBooksEntityId=matchedRecord?.id||quickBooksRecord.Id;log.quickBooksEntityType=quickBooksEntityType;log.syncedAt=new Date();log.responseSummary={DocNumber:quickBooksRecord.DocNumber||quickBooksRecord.PaymentRefNum||externalKey,TotalAmt:quickBooksRecord.TotalAmt,Source:quickBooksEntityType};await log.save();if(matchedRecord?.invoiceId)payment.periodMonth=matchedRecord.periodMonth;payment.quickBooks={...invoicePeriods.metadata(matchedRecord||{}),connectionId:connection._id,realmId:connection.realmId,entityType:quickBooksEntityType,entityId:matchedRecord?.id||quickBooksRecord.Id,docNumber:quickBooksRecord.DocNumber||quickBooksRecord.PaymentRefNum||externalKey,syncStatus:'synced',syncedAt:new Date(),requestHash:hash,lastError:''};payment.markModified('quickBooks');await payment.save();await paymentBalances.refreshTenant(payment.tenantId?._id||payment.tenantId);await serverContext.QuickBooksConnection.findByIdAndUpdate(connection._id,{$set:{lastSuccessfulSyncAt:new Date(),lastError:''}});return {entityId:quickBooksRecord.Id,duplicate:matchedExisting,matchedExisting,entityType:quickBooksEntityType};}catch(error){log.status='failed';log.lastError=String(error.response?.data?.Fault?.Error?.[0]?.Message||error.message||'QuickBooks sync failed').slice(0,1000);await log.save();payment.quickBooks={...(payment.quickBooks||{}),connectionId:connection._id,syncStatus:'failed',lastAttemptAt:new Date(),lastError:log.lastError};payment.markModified('quickBooks');await payment.save();throw error;} }
+async function syncPaymentToQuickBooks(paymentId) {
+  const payment = await serverContext.Payment.findById(paymentId).populate({path: 'tenantId', populate: {path: 'unitId'}});
+  if (!payment) throw new Error('Payment not found');
+  if (payment.postingStatus === 'voided') throw new Error('Voided payments cannot be matched');
+  if (payment.quickBooks?.entityId) return {entityId: payment.quickBooks.entityId, duplicate: true};
+  if (Number(payment.amount) <= 0) throw new Error('Credits and refunds cannot be matched as payments');
+
+  const unlinked = {_id: payment._id, postingStatus: {$ne: 'voided'}, $or: [
+    {'quickBooks.entityId': {$exists: false}}, {'quickBooks.entityId': ''}, {'quickBooks.entityId': null}
+  ]};
+  try {
+    const connection = await (0, serverContext.getQbConnection)(payment.projectId);
+    const [records, tenants, localPayments] = await Promise.all([
+      (0, serverContext.fetchQuickBooksPaymentRecords)(connection),
+      serverContext.Tenant.find({projectId: payment.projectId}).populate('unitId', 'number').select('_id name firstName lastName unitId quickBooks').lean(),
+      serverContext.Payment.find({projectId: payment.projectId}).select('tenantId date amount periodMonth postingStatus quickBooks').lean()
+    ]);
+    const used = new Set(localPayments.filter(p => p.quickBooks?.entityId).map(p => `${p.quickBooks.entityType}:${p.quickBooks.entityId}`));
+    const units = new Map(tenants.filter(t => t.unitId?._id).map(t => [String(t.unitId._id), t.unitId]));
+    const candidates = records.filter(record => !used.has(`${record.sourceType}:${record.id}`)
+      && paymentMatchesQuickBooksRecord(payment, record, tenants, units, String(connection._id)));
+    const ambiguousLocal = candidates.length === 1 && localPayments.some(other =>
+      String(other._id) !== String(payment._id) && !other.quickBooks?.entityId
+      && paymentMatchesQuickBooksRecord(other, candidates[0], tenants, units, String(connection._id)));
+    if (candidates.length !== 1 || ambiguousLocal) {
+      const message = candidates.length || ambiguousLocal
+        ? 'Multiple payments could match this QuickBooks transaction. Review and link it manually.'
+        : 'No unlinked QuickBooks transaction matched this payment. Review existing payments or try again later.';
+      const update = await serverContext.Payment.updateOne(unlinked, {$set: {
+        'quickBooks.syncStatus': 'pending', 'quickBooks.lastError': message, 'quickBooks.lastAttemptAt': new Date()
+      }});
+      if (!update.matchedCount) throw new Error('Payment changed while matching. Refresh and try again.');
+      return {matchedExisting: false, pending: true, message};
+    }
+    const record = candidates[0];
+    const fields = {
+      ...(record.invoiceId ? {periodMonth: record.periodMonth} : {}),
+      ...Object.fromEntries(Object.entries(invoicePeriods.metadata(record)).map(([key, value]) => [`quickBooks.${key}`, value])),
+      'quickBooks.connectionId': connection._id, 'quickBooks.realmId': connection.realmId,
+      'quickBooks.entityType': record.sourceType, 'quickBooks.entityId': record.id,
+      'quickBooks.docNumber': record.docNumber || '', 'quickBooks.customerId': record.customerId || '',
+      'quickBooks.syncStatus': 'synced', 'quickBooks.syncedAt': new Date(),
+      'quickBooks.matchMethod': 'automatic-tenant-match', 'quickBooks.lastError': ''
+    };
+    const result = await serverContext.Payment.updateOne(unlinked, {$set: fields});
+    if (!result.matchedCount) throw new Error('Payment changed while matching. Refresh and try again.');
+    await paymentBalances.refreshTenant(payment.tenantId?._id || payment.tenantId);
+    return {entityId: record.id, entityType: record.sourceType, matchedExisting: true};
+  } catch (error) {
+    await serverContext.Payment.updateOne(unlinked, {$set: {
+      'quickBooks.syncStatus': 'failed', 'quickBooks.lastError': String(error.message || 'QuickBooks matching failed').slice(0, 1000),
+      'quickBooks.lastAttemptAt': new Date()
+    }});
+    throw error;
+  }
+}
 
 async function syncExpenseToQuickBooks(expenseId,projectId) { const expense=await serverContext.Expense.findOne({_id:expenseId,$or:[{projectId},{'lineItems.projectId':projectId}]});if(!expense)throw new Error('Expense not found for this property');if(!['approved','submitted'].includes(expense.status))throw new Error('Only submitted or approved expenses can sync');const connection=await (0, serverContext.getQbConnection)(projectId),externalKey=`BRE-${String(expense._id).slice(-16)}`;let log=await serverContext.QuickBooksSyncLog.findOne({connectionId:connection._id,externalKey});if(log?.status==='synced')return {entityId:log.quickBooksEntityId,duplicate:true};const matching=(expense.lineItems||[]).filter(line=>String(line.projectId||'')===String(projectId));const amount=matching.length?matching.reduce((sum,line)=>sum+(Number(line.amount)||0),0):(Number(expense.receiptTotal)||Number(expense.amount)||(expense.lineItems||[]).reduce((sum,line)=>sum+(Number(line.amount)||0),0));const account=connection.mappings?.expenseAccounts?.[expense.category]||connection.mappings?.expenseAccounts?.default,paymentAccount=connection.mappings?.defaultExpensePaymentAccount;if(!account?.value)throw new Error('Default QuickBooks expense account mapping is required');if(!paymentAccount?.value)throw new Error('QuickBooks expense payment account mapping is required');log=await serverContext.QuickBooksSyncLog.findOneAndUpdate({connectionId:connection._id,externalKey},{$set:{projectId,localEntityType:'Expense',localEntityId:expense._id,operation:'create',quickBooksEntityType:'Purchase',status:'syncing',lastError:''},$inc:{attempts:1}},{upsert:true,new:true,setDefaultsOnInsert:true});try{const result=await (0, serverContext.qbRequest)(connection,'post','purchase',{DocNumber:externalKey,TxnDate:new Date(expense.date||expense.createdAt).toISOString().slice(0,10),PaymentType:'Cash',AccountRef:paymentAccount,PrivateNote:`Bluerain Expense ${expense._id}; ${expense.description||''}`,Line:[{Amount:amount,Description:expense.description||expense.category||'Property expense',DetailType:'AccountBasedExpenseLineDetail',AccountBasedExpenseLineDetail:{AccountRef:account}}]});const purchase=result.Purchase;if(!purchase?.Id)throw new Error('QuickBooks did not return a Purchase ID');log.status='synced';log.quickBooksEntityId=purchase.Id;log.syncedAt=new Date();await log.save();expense.quickBooks={connectionId:connection._id,realmId:connection.realmId,entityType:'Purchase',entityId:purchase.Id,docNumber:externalKey,syncStatus:'synced',syncedAt:new Date(),lastError:''};expense.markModified('quickBooks');await expense.save();return {entityId:purchase.Id,duplicate:false};}catch(error){log.status='failed';log.lastError=String(error.response?.data?.Fault?.Error?.[0]?.Message||error.message).slice(0,1000);await log.save();throw error;} }
 
@@ -384,7 +469,7 @@ serverContext.app.put('/api/properties/:propertyId/quickbooks/mappings',async(re
 }
 
 function post_api_properties_propertyId_payments_paymentId_sync_quickbooks() {
-serverContext.app.post('/api/properties/:propertyId/payments/:paymentId/sync-quickbooks',async(req,res)=>{try{const payment=await serverContext.Payment.findOne({_id:req.params.paymentId,projectId:req.params.propertyId});if(!payment)return res.status(404).json({message:'Payment not found for this property'});if(payment.postingStatus==='voided')return res.status(409).json({message:'Voided payments cannot be synced to QuickBooks'});res.json({success:true,...await (0, serverContext.syncPaymentToQuickBooks)(payment._id)});}catch(error){res.status(400).json({message:error.message||'QuickBooks sync failed'});}});
+serverContext.app.post('/api/properties/:propertyId/payments/:paymentId/sync-quickbooks',async(req,res)=>{try{const payment=await serverContext.Payment.findOne({_id:req.params.paymentId,projectId:req.params.propertyId});if(!payment)return res.status(404).json({message:'Payment not found for this property'});if(payment.postingStatus==='voided')return res.status(409).json({message:'Voided payments cannot be matched to QuickBooks'});res.json({success:true,...await (0, serverContext.syncPaymentToQuickBooks)(payment._id)});}catch(error){res.status(400).json({message:error.message||'QuickBooks matching failed'});}});
 }
 
 function post_api_properties_propertyId_expenses_expenseId_sync_quickbooks() {
@@ -396,7 +481,37 @@ serverContext.app.get('/api/properties/:propertyId/quickbooks/sync-log',async(re
 }
 
 function get_api_properties_propertyId_quickbooks_payments() {
-serverContext.app.get('/api/properties/:propertyId/quickbooks/payments',async(req,res)=>{try{const resolved=await (0, serverContext.autoResolveQuickBooksPaymentsForProperty)(req.params.propertyId);if(!resolved.connection)return res.json({connected:false,payments:[]});res.json({connected:resolved.connection.status==='connected',payments:resolved.qbPayments});}catch(error){res.status(400).json({message:error.message||'Unable to load QuickBooks payments'});}});
+serverContext.app.get('/api/properties/:propertyId/quickbooks/payments',async(req,res)=>{try{
+  if (req.query?.paymentId) {
+    const payment = await serverContext.Payment.findOne({_id:req.query.paymentId,projectId:req.params.propertyId}).populate('tenantId', 'name');
+    if (!payment) return res.status(404).json({message:'Local payment not found'});
+    if (payment.postingStatus === 'voided' || Number(payment.amount) <= 0) return res.status(409).json({message:'Only positive, non-voided payments can be matched'});
+    if (payment.quickBooks?.entityId) return res.status(409).json({message:'This payment is already linked. Refresh the payments list.'});
+    const connection = await (0, serverContext.getQbConnection)(req.params.propertyId);
+    const [records, tenants, linked] = await Promise.all([
+      (0, serverContext.fetchQuickBooksPaymentRecords)(connection),
+      serverContext.Tenant.find({projectId:req.params.propertyId}).populate('unitId','number').select('_id name firstName lastName unitId quickBooks').lean(),
+      serverContext.Payment.find({projectId:req.params.propertyId,'quickBooks.entityId':{$exists:true,$nin:['',null]}}).select('quickBooks').lean()
+    ]);
+    const used = new Set(linked.map(p=>`${p.quickBooks.entityType || 'Payment'}:${p.quickBooks.entityId}`));
+    const units = new Map(tenants.filter(t=>t.unitId?._id).map(t=>[String(t.unitId._id),t.unitId]));
+    const localDate = (0, serverContext.normalizeQbPaymentDate)(payment.date);
+    const candidates = records.filter(record => {
+      if (!record.id || record.periodError || used.has(`${record.sourceType}:${record.id}`)) return false;
+      if ((0, serverContext.normalizeQbPaymentAmount)(record.totalAmt) !== (0, serverContext.normalizeQbPaymentAmount)(payment.amount)) return false;
+      const tenant = (0, serverContext.matchTenantForQuickBooksPaymentRecord)(record,tenants,units,String(connection._id));
+      return tenant && String(tenant._id) === String(payment.tenantId?._id || payment.tenantId);
+    }).map(record => ({
+      sourceType:record.sourceType,id:record.id,customerName:record.customerName,
+      txnDate:record.txnDate,amount:record.totalAmt,docNumber:record.docNumber,
+      invoiceNumber:record.invoiceNumber || '',periodMonth:record.periodMonth || '',
+      dateMatches:(0, serverContext.normalizeQbPaymentDate)(record.txnDate) === localDate,
+      periodMatches:!record.invoiceId || !payment.periodMonth || record.periodMonth === payment.periodMonth
+    })).sort((a,b)=>Number(b.dateMatches && b.periodMatches)-Number(a.dateMatches && a.periodMatches) || String(b.txnDate).localeCompare(String(a.txnDate)));
+    return res.json({payment:{id:payment._id,tenantId:payment.tenantId?._id || payment.tenantId,tenantName:payment.tenantId?.name || '',amount:payment.amount,date:payment.date,periodMonth:payment.periodMonth || ''},candidates});
+  }
+  const resolved=await (0, serverContext.autoResolveQuickBooksPaymentsForProperty)(req.params.propertyId);if(!resolved.connection)return res.json({connected:false,payments:[]});res.json({connected:resolved.connection.status==='connected',payments:resolved.qbPayments});
+}catch(error){res.status(400).json({message:error.message||'Unable to load QuickBooks payments'});}});
 }
 
 function get_api_properties_propertyId_quickbooks_payment_workspace() {
@@ -453,8 +568,28 @@ serverContext.app.put('/api/properties/:propertyId/quickbooks/customer-mapping/:
 function post_api_properties_propertyId_quickbooks_payment_workspace_link() {
 serverContext.app.post('/api/properties/:propertyId/quickbooks/payment-workspace/link',async(req,res)=>{try{
   const connection=await (0, serverContext.getQbConnection)(req.params.propertyId),payment=await serverContext.Payment.findOne({_id:req.body.paymentId,projectId:req.params.propertyId});if(!payment)return res.status(404).json({message:'Local payment not found'});if(payment.quickBooks?.entityId)return res.status(409).json({message:'This local payment is already linked'});
+  if(payment.postingStatus==='voided'||Number(payment.amount)<=0)return res.status(409).json({message:'Only positive, non-voided payments can be linked'});
   const sourceType=String(req.body.sourceType||''),entityId=String(req.body.entityId||''),duplicate=await serverContext.Payment.findOne({projectId:req.params.propertyId,'quickBooks.entityType':sourceType,'quickBooks.entityId':entityId});if(duplicate)return res.status(409).json({message:'That QuickBooks transaction is already linked'});const record=await (0, serverContext.resolveWorkspaceQbRecord)(connection,sourceType,entityId);if(Math.abs(Number(payment.amount||0)-Number(record.totalAmt||0))>.005)return res.status(409).json({message:'Amounts must match before linking'});
-  if(record.invoiceId)payment.periodMonth=record.periodMonth;payment.quickBooks={...invoicePeriods.metadata(record),connectionId:connection._id,realmId:connection.realmId,entityType:sourceType,entityId,docNumber:record.docNumber||'',syncStatus:'synced',syncedAt:new Date(),matchMethod:'manual-payments-workspace',lastError:''};payment.postingStatus='posted';payment.markModified('quickBooks');await payment.save();await paymentBalances.refreshTenant(payment.tenantId);await paymentBalances.recalculate(payment);res.json({success:true,payment});
+  if(req.body.reviewedMatch) {
+    const snapshot=req.body.reviewedMatch;
+    if(String(snapshot.tenantId)!==String(payment.tenantId) || Number(snapshot.amount)!==Number(payment.amount)
+      || (0, serverContext.normalizeQbPaymentDate)(snapshot.date)!==(0, serverContext.normalizeQbPaymentDate)(payment.date)
+      || String(snapshot.periodMonth||'')!==String(payment.periodMonth||'')
+      || String(snapshot.txnDate||'')!==String(record.txnDate||'') || String(snapshot.invoicePeriod||'')!==String(record.periodMonth||''))
+      return res.status(409).json({message:'Payment details changed. Close and reopen the match dialog to review them.'});
+    const tenants=await serverContext.Tenant.find({projectId:req.params.propertyId}).populate('unitId','number').select('_id name firstName lastName unitId quickBooks').lean();
+    const units=new Map(tenants.filter(t=>t.unitId?._id).map(t=>[String(t.unitId._id),t.unitId]));
+    const tenant=(0, serverContext.matchTenantForQuickBooksPaymentRecord)(record,tenants,units,String(connection._id));
+    if(!tenant||String(tenant._id)!==String(payment.tenantId))return res.status(409).json({message:'The QuickBooks customer no longer matches this tenant. Refresh and review the customer mapping.'});
+  }
+  const fields={...(record.invoiceId?{periodMonth:record.periodMonth}:{}),...Object.fromEntries(Object.entries(invoicePeriods.metadata(record)).map(([key,value])=>[`quickBooks.${key}`,value])),'quickBooks.connectionId':connection._id,'quickBooks.realmId':connection.realmId,'quickBooks.entityType':sourceType,'quickBooks.entityId':entityId,'quickBooks.docNumber':record.docNumber||'','quickBooks.customerId':record.customerId||'','quickBooks.syncStatus':'synced','quickBooks.syncedAt':new Date(),'quickBooks.matchMethod':'manual-payments-workspace','quickBooks.lastError':''};
+  const update=await serverContext.Payment.updateOne({_id:payment._id,projectId:req.params.propertyId,tenantId:payment.tenantId,amount:payment.amount,date:payment.date,periodMonth:payment.periodMonth,postingStatus:{$ne:'voided'},$or:[{'quickBooks.entityId':{$exists:false}},{'quickBooks.entityId':''},{'quickBooks.entityId':null}]},{$set:fields});
+  if(!update.matchedCount)return res.status(409).json({message:'Payment changed while linking. Refresh and try again.'});
+  try { await paymentBalances.refreshTenant(payment.tenantId); } catch(error) {
+    console.error('Payment linked but balance refresh failed:',error);
+    return res.status(500).json({message:'Payment was linked, but balances could not refresh. Refresh the payments list.'});
+  }
+  const linkedPayment=await serverContext.Payment.findOne({_id:payment._id,projectId:req.params.propertyId});res.json({success:true,payment:linkedPayment});
 }catch(error){res.status(error?.code===11000?409:400).json({message:error.message||'Unable to link payment'});}});
 }
 

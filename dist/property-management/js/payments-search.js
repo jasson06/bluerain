@@ -733,12 +733,14 @@ function renderPayments() {
                                 ${isVoided
                                     ? '<span class="badge badge-warning">Voided locally</span>'
                                     : payment.quickBooks?.syncStatus === 'failed'
-                                    ? `<button class="overview-row-action" data-qb-sync-payment="${payment._id}" title="${escapeHtml(payment.quickBooks.lastError||'Retry QuickBooks sync')}" onclick="syncPaymentQuickBooks('${payment._id}')">Retry</button>`
+                                    ? `<button class="overview-row-action" data-qb-sync-payment="${payment._id}" title="${escapeHtml(payment.quickBooks.lastError||'Review QuickBooks matches')}" onclick="openQuickBooksMatchModal('${payment._id}')">Review</button>`
                                     : (isPersistedMatch
                                                                     ? `<span class="badge ${payment.quickBooks?.allocationReviewRequired&&!payment.quickBooks?.manualAllocation?'badge-warning':'badge-success'}">${payment.quickBooks?.manualAllocation?'Allocated':payment.quickBooks?.allocationReviewRequired?'Review':'Synced'}</span><button class="overview-row-action" onclick="openPaymentAllocation('${payment._id}')">Allocate</button>`
+                                        : payment.quickBooks?.syncStatus === 'pending'
+                                            ? `<button class="overview-row-action" data-qb-sync-payment="${payment._id}" title="${escapeHtml(payment.quickBooks.lastError||'No QuickBooks match yet')}" onclick="openQuickBooksMatchModal('${payment._id}')">Unmatched · Match</button>`
                                         : qbPayment
-                                            ? `<button class="overview-row-action" data-qb-sync-payment="${payment._id}" title="Match existing QuickBooks ${escapeHtml(getQuickBooksSourceLabel(qbPayment.sourceType))}" onclick="syncPaymentQuickBooks('${payment._id}')">Match</button>`
-                                            : `<button class="overview-row-action" data-qb-sync-payment="${payment._id}" onclick="syncPaymentQuickBooks('${payment._id}')">Sync</button>`)}
+                                            ? `<button class="overview-row-action" data-qb-sync-payment="${payment._id}" title="Match existing QuickBooks ${escapeHtml(getQuickBooksSourceLabel(qbPayment.sourceType))}" onclick="openQuickBooksMatchModal('${payment._id}')">Match</button>`
+                                            : `<button class="overview-row-action" data-qb-sync-payment="${payment._id}" title="${escapeHtml(payment.quickBooks?.lastError||'Find an existing QuickBooks payment')}" onclick="openQuickBooksMatchModal('${payment._id}')">Match</button>`)}
                             </td>
                             <td>
                                 <button class="btn-icon payment-actions-trigger" type="button" aria-label="Payment actions" title="Payment actions" aria-haspopup="menu" aria-expanded="false" aria-controls="paymentActionsMenu" onclick="openPaymentActionsMenu(event, '${payment._id}')"><i class="fas fa-ellipsis-v" aria-hidden="true"></i></button>
