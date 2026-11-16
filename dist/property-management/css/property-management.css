@@ -1294,6 +1294,11 @@ body.dark-theme .unit-card-body {
 .rent-badge.due-soon { background:#fff3cd; color:#856404; }
 .rent-badge.overdue { background:#ffe1e1; color:#b91c1c; }
 .rent-badge.partial { background:#e0e7ff; color:#1e3a8a; }
+.tenant-payment-status { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; font-size:0.76rem; font-weight:600; }
+.tenant-payment-status.overdue { color:#b91c1c; }
+.tenant-payment-status.due-now { color:#a16207; }
+.tenant-payment-status.paid { color:#15803d; }
+.tenant-payment-status.coming-soon { color:#2563eb; }
 .unit-card-actions {
     display: flex;
     gap: 10px;
@@ -3064,6 +3069,8 @@ body.dark-theme .payments-table td {
 }
 
 /* Dark theme tuning for Tenant Balance Sheet modal */
+#tenantBalanceBackButton[hidden] { display:none !important; }
+#tenantBalancePaymentsBackButton[hidden] { display:none !important; }
 body.dark-theme #tenantBalanceModal .modal-content {
     background: linear-gradient(145deg, rgba(15,23,42,0.98), rgba(15,23,42,0.86));
     border-color: rgba(148,163,184,0.45);

@@ -1450,19 +1450,24 @@
 <div class="modal" id="tenantBalanceModal">
     <div class="modal-content" style="max-width:1000px;">
         <div class="tenant-balance-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <h2 style="margin:0;font-size:1.6rem;">Tenant Balance Sheet</h2>
+            <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                <button type="button" class="btn-secondary" id="tenantBalancePaymentsBackButton" onclick="closeTenantLedgerView()" title="Back to payments" aria-label="Back to payments" style="width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;" hidden><i class="fas fa-arrow-left" aria-hidden="true"></i></button>
+                <h2 style="margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:clamp(1.05rem,2.2vw,1.5rem);white-space:nowrap;">Tenant Balance Sheet<span id="tenantBalanceHeader" style="font-weight:500;color:#64748b;"></span></h2>
+            </div>
             <div style="display:flex;gap:8px;align-items:center;">
+                <button class="btn-secondary" id="tenantBalanceBackButton" onclick="backToTenantDetailsFromBalanceSheet()" style="padding:6px 12px;" hidden><i class="fas fa-arrow-left" aria-hidden="true"></i> Back to tenant details</button>
                 <button class="btn-secondary" onclick="exportTenantPaymentsReportFromModal()" style="padding:6px 12px;">Export Monthly Report</button>
                 <button class="btn-secondary" onclick="closeTenantLedgerView()" style="padding:6px 12px;">Close</button>
             </div>
         </div>
-        <div id="tenantBalanceHeader" style="margin-bottom:18px;font-size:0.95rem;color:#374151"></div>
         <div id="tenantBalanceSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px;"></div>
+        <h3 style="margin:0 0 8px;font-size:1rem;">Payment History</h3>
         <div class="table-responsive tenant-balance-table-wrapper" style="max-height:380px;overflow:auto;border:1px solid #e1e8ed;border-radius:8px;background:#fff;">
             <table class="payments-table" id="tenantPaymentsTable" style="margin:0;">
                 <thead>
                     <tr>
                         <th>Date</th>
+                        <th>Applied Month</th>
                         <th>Type</th>
                         <th>Applied To</th>
                         <th>Amount</th>

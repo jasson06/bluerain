@@ -9,13 +9,17 @@ function browserContext() {
     baseRent:1000,waterFee:30,monthlyOverrides:{'2026-02':{expectedRent:800,lateFee:20}}
   };
   const modal = {innerHTML:''};
+  const balanceModal = {dataset:{tenantId:'tenant-a',returnTo:'details'}};
+  const scheduleContainer = {innerHTML:''};
+  const rentBalance = {textContent:''};
   const drawer = {classList:{contains:()=>false}};
   const context = vm.createContext({
     state:{tenants:[tenant],allTenants:[tenant]},
-    document:{getElementById:id=>id==='tenantDetailsModal'?modal:drawer},
+    document:{getElementById:id=>id==='tenantDetailsModal'?modal:id==='tenantBalanceModal'?balanceModal:id==='tenantMonthlyBreakdown'?scheduleContainer:id==='tenantRentBalanceValue'?rentBalance:drawer},
     API_URL:'/api',
     getWorkspaceTenantRecord:()=>tenant,
     portfolioPropertyId:t=>t.projectId,
+    getUnifiedCurrentPropertyPayments:()=>[],
     escapeHtml:value=>String(value??'').replace(/</g,'&lt;'),
     formatDateDisplay:value=>String(value).slice(0,10),
     openModal:jest.fn(),closeModal:jest.fn(),closePortfolioRecordDrawer:jest.fn(),
@@ -29,7 +33,7 @@ function browserContext() {
   }
   context.showNotification=jest.fn();
   context.invalidateCache=jest.fn();
-  return {context,tenant,modal,drawer};
+  return {context,tenant,modal,drawer,balanceModal,scheduleContainer,rentBalance};
 }
 
 describe('lease ledger month schedule', () => {
@@ -65,6 +69,147 @@ describe('lease ledger month schedule', () => {
     const months = context.tenantLeaseLedgerMonths(tenant,[{tenantId:'tenant-a',date:'2099-01-01',periodMonth:'2099-01',amount:1030}]);
     expect(months).toHaveLength(2);
     expect(months[0].paid).toBe(0);
+  });
+  test('builds an editable balance sheet schedule for every lease month', () => {
+    const {context,tenant} = browserContext();
+    const schedule = context.tenantBalanceLeaseSchedule(tenant,[]);
+    expect(schedule.months.map(month=>month.period)).toEqual(['2026-01','2026-02','2026-03','2026-04']);
+    expect(schedule.html).toContain('Monthly rent schedule');
+    expect(schedule.html).toContain(`saveTenantLeaseLedgerExpected(event,'2026-02','balanceSheet')`);
+    expect(schedule.html).toContain('Expected rent for 2026-02');
+  });
+  test('tracks the one-time deposit separately from monthly rent', () => {
+    const {context,tenant} = browserContext();
+    tenant.deposit=800;
+    tenant.pets={depositIncrease:200};
+    delete tenant.depositPaid;
+    const rentMonths=context.tenantLeaseLedgerMonths(tenant,[]);
+    const schedule=context.tenantBalanceLeaseSchedule(tenant,[
+      {tenantId:'tenant-a',applyTo:'deposit',amount:250,date:'2026-01-10'},
+      {tenantId:'tenant-a',applyTo:'deposit',amount:100,postingStatus:'voided',date:'2026-01-10'},
+      {tenantId:'another',applyTo:'deposit',amount:500,date:'2026-01-10'}
+    ]);
+    expect(schedule.months[0]).toMatchObject({
+      depositExpected:1000,depositPaid:250,depositOutstanding:750,
+      expected:rentMonths[0].expected,paid:rentMonths[0].paid,outstanding:rentMonths[0].outstanding
+    });
+    expect(schedule.months.slice(1).every(month=>!month.depositExpected)).toBe(true);
+    expect(schedule.html).toContain('Security deposit (due / paid / remaining)');
+    expect(schedule.html).toContain('Rent outstanding');
+  });
+  test('labels monthly charges as overdue, due now, paid, or coming soon', () => {
+    const {context}=browserContext();
+    const month={period:'2026-11',expected:500,paid:0,outstanding:500};
+    expect(context.tenantBalancePaymentStatus(month,new Date(2026,10,1))).toMatchObject({key:'due-now',label:'Due now'});
+    expect(context.tenantBalancePaymentStatus(month,new Date(2026,10,2))).toMatchObject({key:'overdue',label:'Overdue'});
+    expect(context.tenantBalancePaymentStatus({...month,paid:500,outstanding:0},new Date(2026,10,2))).toMatchObject({key:'paid',label:'Paid'});
+    expect(context.tenantBalancePaymentStatus({...month,period:'2026-12'},new Date(2026,10,16))).toMatchObject({key:'coming-soon',label:'Coming soon'});
+    expect(context.tenantBalancePaymentStatus({...month,depositOutstanding:200},new Date(2026,10,1))).toMatchObject({key:'due-now',label:'Due now'});
+  });
+  test('renders the full rent schedule in the balance sheet', () => {
+    const {context,balanceModal,drawer} = browserContext();
+    const header={innerHTML:''};
+    const summary={innerHTML:'',appendChild:jest.fn(),nextSibling:{},parentNode:{insertBefore:jest.fn()}};
+    const paymentsBody={innerHTML:'',appendChild:jest.fn()};
+    const createdElements=[];
+    const elements={
+      tenantBalanceModal:balanceModal,portfolioRecordDrawer:drawer,
+      tenantDetailsModal:{getAttribute:()=>null},tenantBalanceBackButton:{hidden:false},
+      tenantBalancePaymentsBackButton:{hidden:false},
+      tenantBalanceHeader:header,tenantBalanceSummary:summary,
+      tenantPaymentsTbody:paymentsBody,
+      tenantPaymentsTable:{querySelector:()=>({children:{length:7}})}
+    };
+    context.document.getElementById=id=>id==='tenantMonthlyBreakdown'?undefined:elements[id]||drawer;
+    context.document.createElement=()=>{const element={style:{},innerHTML:''};createdElements.push(element);return element;};
+    context.getUnifiedCurrentPropertyPayments=()=>[{
+      tenantId:'tenant-a',date:'2026-11-15',periodMonth:'2026-10',type:'rent',
+      applyTo:'rent',amount:100,balance:930,note:'October rent'
+    }];
+    context.state.units=[{_id:'unit-a',number:'101'}];
+    context.state.tenants[0].unitId='unit-a';
+    context.openTenantBalanceModal('tenant-a');
+    const scheduleContainer=createdElements.find(element=>element.id==='tenantMonthlyBreakdown');
+    expect(scheduleContainer).toBeDefined();
+    expect(summary.parentNode.insertBefore).toHaveBeenCalledWith(scheduleContainer,summary.nextSibling);
+    expect(scheduleContainer.innerHTML).toContain('Monthly rent schedule');
+    expect(scheduleContainer.innerHTML).toContain('2026-04');
+    expect(scheduleContainer.innerHTML).toContain('name="expectedRent"');
+    expect(scheduleContainer.innerHTML).toContain('<th>Status</th>');
+    expect(scheduleContainer.innerHTML).toContain('tenant-payment-status');
+    expect(elements.tenantBalancePaymentsBackButton.hidden).toBe(true);
+    expect(header.textContent).toBe(' - Test Tenant · Unit 101');
+    const paymentRow=createdElements.find(element=>element.innerHTML?.includes('<td>2026-OCT</td>'));
+    expect(paymentRow).toBeDefined();
+    expect(context.openModal).toHaveBeenCalledWith('tenantBalanceModal');
+  });
+  test('shows the icon-only back-to-payments button in the header for inline use', () => {
+    const {context,tenant,balanceModal,drawer} = browserContext();
+    balanceModal.dataset.returnTo='payments';
+    const paymentsBackButton={hidden:true};
+    const summary={innerHTML:'',appendChild:jest.fn(),nextSibling:{},parentNode:{insertBefore:jest.fn()}};
+    const elements={
+      tenantBalanceModal:balanceModal,portfolioRecordDrawer:drawer,
+      tenantDetailsModal:{getAttribute:()=>null},tenantBalanceBackButton:{hidden:false},
+      tenantBalancePaymentsBackButton:paymentsBackButton,tenantBalanceHeader:{textContent:''},
+      tenantBalanceSummary:summary,tenantMonthlyBreakdown:{innerHTML:''},
+      tenantPaymentsTbody:{innerHTML:'',appendChild:jest.fn()},
+      tenantPaymentsTable:{querySelector:()=>({children:{length:6}})}
+    };
+    context.document.getElementById=id=>elements[id]||drawer;
+    context.document.createElement=()=>({style:{},innerHTML:''});
+    context.state.units=[];
+    context.state.currentTab='payments';
+    context.showTenantLedgerInline=jest.fn();
+    context.openTenantBalanceModal(tenant._id);
+    expect(paymentsBackButton.hidden).toBe(false);
+    expect(elements.tenantBalanceBackButton.hidden).toBe(true);
+    expect(context.showTenantLedgerInline).toHaveBeenCalled();
+  });
+  test('exports the schedule and handles an empty payment history', () => {
+    const {context}=browserContext();
+    const doc={
+      setFont:jest.fn(),setFontSize:jest.fn(),text:jest.fn(),setDrawColor:jest.fn(),
+      setFillColor:jest.fn(),rect:jest.fn(),line:jest.fn(),
+      splitTextToSize:text=>String(text).split('\n'),addPage:jest.fn(),save:jest.fn()
+    };
+    context.window={jspdf:{jsPDF:jest.fn(()=>doc)}};
+    context.state.units=[];
+    context.exportTenantPaymentsReport('tenant-a');
+    const output=doc.text.mock.calls.flatMap(([value])=>Array.isArray(value)?value:[value]).join('\n');
+    expect(output).toContain('Monthly rent schedule');
+    expect(output).toContain('Payment history');
+    expect(output).toContain('No payment history recorded.');
+    expect(output).toContain('Overdue');
+    expect(doc.save).toHaveBeenCalledWith('tenant_payments_report_Test_Tenant.pdf');
+    expect(context.showNotification).toHaveBeenCalledWith('Monthly report exported','success');
+  });
+  test('wraps payment history fields within the report table', () => {
+    const {context}=browserContext();
+    const doc={
+      setFont:jest.fn(),setFontSize:jest.fn(),text:jest.fn(),setDrawColor:jest.fn(),
+      setFillColor:jest.fn(),rect:jest.fn(),line:jest.fn(),
+      splitTextToSize:text=>String(text).split('\n'),addPage:jest.fn(),save:jest.fn()
+    };
+    context.window={jspdf:{jsPDF:jest.fn(()=>doc)}};
+    context.state.units=[];
+    context.getUnifiedCurrentPropertyPayments=()=>[
+      {tenantId:'tenant-a',date:'2026-04-05',periodMonth:'2026-03',type:'rent',applyTo:'rent',amount:500,balance:530,note:'March payment received'},
+      {tenantId:'tenant-a',date:'2026-11-15',periodMonth:'2026-11',type:'rent',applyTo:'rent',amount:25,balance:1005,note:'November payment received'}
+    ];
+    context.exportTenantPaymentsReport('tenant-a');
+    const output=doc.text.mock.calls.flatMap(([value])=>Array.isArray(value)?value:[value]).join('\n');
+    expect(output).toContain('Payment history');
+    expect(output).toContain('Applied month');
+    expect(output).toContain('2026-MAR');
+    expect(output).toContain('2026-NOV');
+    expect(output).toContain('Details');
+    expect(output).toContain('March payment received');
+    expect(output).toContain('$500.00');
+    expect(output).not.toContain('Rent base');
+    expect(output).not.toContain('Credits');
+    expect(Math.max(...doc.rect.mock.calls.map(([, , ,height])=>height))).toBeLessThan(20);
+    expect(doc.save).toHaveBeenCalled();
   });
   test.each([{leaseStart:null},{leaseEnd:null},{leaseStart:'invalid'},{leaseEnd:'2025-01-01'}])(
     'requires valid lease bounds %j', changes => {
@@ -110,6 +255,19 @@ describe('details to ledger navigation and editing', () => {
     expect(context.closeModal).toHaveBeenCalledWith('tenantDetailsModal');
     expect(context.openPortfolioRecordDrawer).toHaveBeenCalledWith('tenant','tenant-a');
   });
+  test('balance sheet returns to the tenant details view', () => {
+    const {context,balanceModal}=browserContext();
+    context.viewTenantDetails=jest.fn();
+    context.backToTenantDetailsFromBalanceSheet();
+    expect(context.viewTenantDetails).toHaveBeenCalledWith(balanceModal.dataset.tenantId);
+  });
+  test('balance sheet returns to the originating portfolio drawer', () => {
+    const {context,balanceModal}=browserContext();
+    balanceModal.dataset.returnTo='portfolio';
+    context.backToTenantDetailsFromBalanceSheet();
+    expect(context.closeModal).toHaveBeenCalledWith('tenantBalanceModal');
+    expect(context.openPortfolioRecordDrawer).toHaveBeenCalledWith('tenant',balanceModal.dataset.tenantId);
+  });
   test('rent-only saving preserves the returned late-fee override and updates totals', async () => {
     const {context,tenant,modal} = browserContext();
     modal.leaseLedger={tenantId:'tenant-a',propertyId:'property-a',origin:'details',tenant,payments:[]};
@@ -121,6 +279,19 @@ describe('details to ledger navigation and editing', () => {
     expect(tenant.monthlyOverrides['2026-02']).toMatchObject({expectedRent:650,lateFee:20});
     expect(modal.innerHTML).toContain('$670.00');
     expect(context.invalidateCache).toHaveBeenCalledWith('tenants','payments');
+    expect(button.disabled).toBe(false);
+  });
+  test('balance sheet rent edits refresh the inline schedule and balance', async () => {
+    const {context,tenant,balanceModal,scheduleContainer} = browserContext();
+    balanceModal.balanceSheet={tenantId:'tenant-a',tenant,payments:[]};
+    context.state.currentTab='payments';
+    context.fetch.mockResolvedValue({ok:true,json:async()=>({ok:true,override:{expectedRent:650,lateFee:20,lateFeeMode:'amount'}})});
+    const button={disabled:false};
+    const event={preventDefault:jest.fn(),target:{elements:{expectedRent:{value:'650'}},querySelector:()=>button}};
+    await context.saveTenantLeaseLedgerExpected(event,'2026-02','balanceSheet');
+    expect(tenant.monthlyOverrides['2026-02']).toMatchObject({expectedRent:650,lateFee:20});
+    expect(scheduleContainer.innerHTML).toContain('value="650.00"');
+    expect(scheduleContainer.innerHTML).toContain('$670.00');
     expect(button.disabled).toBe(false);
   });
   test('closing while loading prevents a stale response from rewriting the modal', async () => {

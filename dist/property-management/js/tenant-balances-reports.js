@@ -9,6 +9,13 @@ function tenantCurrency(value) {
     return `${sign}$${Math.abs(v).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
 }
 
+function tenantBalanceMonthLabel(period) {
+    const match = /^(\d{4})-(\d{2})$/.exec(String(period || ''));
+    if (!match) return String(period || 'Unknown');
+    const monthNames = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    return `${match[1]}-${monthNames[Number(match[2])-1] || match[2]}`;
+}
+
 function tenantLeaseLedgerMonths(tenant, payments) {
     const start = tenant.leaseStart ? new Date(tenant.leaseStart) : null;
     const end = tenantLeaseChargeEnd(tenant);
@@ -28,6 +35,56 @@ function tenantLeaseLedgerMonths(tenant, payments) {
         cursor.setMonth(cursor.getMonth() + 1);
     }
     return months;
+}
+
+function tenantBalancePaymentStatus(month, asOf = new Date()) {
+    const outstanding = month.outstanding + (month.depositOutstanding || 0);
+    if (outstanding <= 0.005) return {key:'paid',label:'Paid',icon:'fa-check-circle'};
+    const [year,monthNumber] = month.period.split('-').map(Number);
+    const dueDate = new Date(year,monthNumber-1,1);
+    const currentMonth = new Date(asOf.getFullYear(),asOf.getMonth(),1);
+    if (dueDate < currentMonth) return {key:'overdue',label:'Overdue',icon:'fa-exclamation-circle'};
+    if (dueDate > currentMonth) return {key:'coming-soon',label:'Coming soon',icon:'fa-calendar-alt'};
+    return asOf.getDate() === 1
+        ? {key:'due-now',label:'Due now',icon:'fa-clock'}
+        : {key:'overdue',label:'Overdue',icon:'fa-exclamation-circle'};
+}
+
+function tenantBalanceLeaseSchedule(tenant, payments) {
+    const months = tenantLeaseLedgerMonths(tenant, payments);
+    const depositExpected = Math.max(0,Number(tenant.deposit)||0)
+        + Math.max(0,Number(tenant.pets?.depositIncrease)||Number(tenant.depositIncrease)||0);
+    const depositPayments = payments.filter(payment => payment.postingStatus !== 'voided'
+        && String(payment.tenantId?._id || payment.tenantId) === String(tenant._id)
+        && payment.applyTo === 'deposit');
+    const savedDepositPaid = Number(tenant.depositPaid);
+    const depositPaid = Number.isFinite(savedDepositPaid)
+        ? savedDepositPaid
+        : depositPayments.reduce((sum,payment) => sum + paymentAppliedValue(payment),0);
+    if (months.length) {
+        months[0].depositExpected = depositExpected;
+        months[0].depositPaid = depositPaid;
+        months[0].depositOutstanding = Math.max(0,depositExpected-depositPaid);
+    }
+    const totals = months.reduce((sum, month) => ({
+        rent:sum.rent+month.rent,late:sum.late+month.late,
+        expected:sum.expected+month.expected,
+        paid:sum.paid+month.paid,
+        outstanding:sum.outstanding+month.outstanding,
+        depositExpected:sum.depositExpected+(month.depositExpected||0),
+        depositPaid:sum.depositPaid+(month.depositPaid||0),
+        depositOutstanding:sum.depositOutstanding+(month.depositOutstanding||0)
+    }),{rent:0,late:0,expected:0,paid:0,outstanding:0,depositExpected:0,depositPaid:0,depositOutstanding:0});
+    const rows = months.map(month => {
+        const depositCell = month.depositExpected || month.depositPaid || month.depositOutstanding
+            ? `${tenantCurrency(month.depositExpected)} due<div class="task-meta">Paid: ${tenantCurrency(month.depositPaid)} · Remaining: ${tenantCurrency(month.depositOutstanding)}</div>`
+            : '—';
+        const status = tenantBalancePaymentStatus(month);
+        const statusCell = `<span class="tenant-payment-status ${status.key}" title="${status.label}"><i class="fas ${status.icon}" aria-hidden="true"></i><span>${status.label}</span></span>`;
+        return `<tr><td>${escapeHtml(month.period)}${month.overridden?'<div class="task-meta">Override</div>':''}</td><td>${statusCell}</td><td><form class="tenant-ledger-charge-form" onsubmit="saveTenantLeaseLedgerExpected(event,'${escapeHtml(month.period)}','balanceSheet')"><input type="number" name="expectedRent" min="0" step="0.01" required value="${month.rent.toFixed(2)}" aria-label="Expected rent for ${escapeHtml(month.period)}"><button type="submit" class="overview-row-action">Save</button></form></td><td>${depositCell}</td><td>${tenantCurrency(month.late)}</td><td>${tenantCurrency(month.expected)}</td><td>${tenantCurrency(month.paid)}</td><td>${tenantCurrency(month.outstanding)}</td></tr>`;
+    }).join('');
+    const html = `<h3>Monthly rent schedule</h3><p class="task-meta">Every lease month is shown, including upcoming months. The security deposit is tracked separately and is due in the first lease month. Edit and save expected rent for an individual month. Future charges are scheduled, not overdue.</p><div class="overview-table-wrap" style="max-height:380px;overflow:auto"><table class="overview-table"><thead><tr><th>Rent month</th><th>Status</th><th>Expected rent / fees</th><th>Security deposit (due / paid / remaining)</th><th>Late fees</th><th>Total expected rent</th><th>Rent applied</th><th>Rent outstanding</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th>Rent totals</th><th></th><th>${tenantCurrency(totals.rent)}</th><th>${tenantCurrency(totals.depositExpected)} due<div class="task-meta">Paid: ${tenantCurrency(totals.depositPaid)} · Remaining: ${tenantCurrency(totals.depositOutstanding)}</div></th><th>${tenantCurrency(totals.late)}</th><th>${tenantCurrency(totals.expected)}</th><th>${tenantCurrency(totals.paid)}</th><th>${tenantCurrency(totals.outstanding)}</th></tr></tfoot></table></div>`;
+    return {months,html};
 }
 
 let tenantLeaseLedgerSequence = 0;
@@ -126,13 +183,13 @@ function renderTenantLeaseLedger(loading = false, error = '') {
     modal.innerHTML = `<div class="modal-content tenant-details-modal tenant-drawer"><div class="portfolio-record-drawer-header"><h3>${escapeHtml(tenant.name||'Tenant')} ledger</h3><button type="button" aria-label="Close tenant ledger" onclick="closeTenantLeaseLedger()"><i class="fas fa-times"></i></button></div><div class="portfolio-record-drawer-body"><button type="button" class="btn-secondary" onclick="backToTenantDetailsFromLedger()"><i class="fas fa-arrow-left"></i> Back to tenant details</button><section class="tenant-lease-ledger">${content}</section></div></div>`;
 }
 
-async function saveTenantLeaseLedgerExpected(event, period) {
+async function saveTenantLeaseLedgerExpected(event, period, target = 'ledger') {
     event.preventDefault();
     const form = event.target;
     const input = form.elements.expectedRent;
     const expectedRent = Number(input.value);
-    const modal = document.getElementById('tenantDetailsModal');
-    const context = modal?.leaseLedger;
+    const modal = document.getElementById(target === 'balanceSheet' ? 'tenantBalanceModal' : 'tenantDetailsModal');
+    const context = target === 'balanceSheet' ? modal?.balanceSheet : modal?.leaseLedger;
     if (!context || input.value === '' || !Number.isFinite(expectedRent) || expectedRent < 0) {
         showNotification('Enter a non-negative expected rent amount','error');
         return;
@@ -159,7 +216,17 @@ async function saveTenantLeaseLedgerExpected(event, period) {
         }
         state.propertyOverviewData = null;
         invalidateCache('tenants','payments');
-        if (sequence === tenantLeaseLedgerSequence && modal.leaseLedger === context) renderTenantLeaseLedger();
+        if (sequence === tenantLeaseLedgerSequence && (target === 'balanceSheet' ? modal.balanceSheet === context : modal.leaseLedger === context)) {
+            if (target === 'balanceSheet' && state.currentTab === 'payments') {
+                const schedule = tenantBalanceLeaseSchedule(context.tenant,context.payments);
+                const container = document.getElementById('tenantMonthlyBreakdown');
+                if (container) container.innerHTML = schedule.html;
+                const balance = document.getElementById('tenantRentBalanceValue');
+                const rentBalance = computeTenantRentBalance(context.tenantId);
+                if (balance) balance.textContent = rentBalance === null ? 'Needs end-date review' : tenantCurrency(rentBalance);
+            } else if (target === 'balanceSheet') openTenantBalanceModal(context.tenantId);
+            else renderTenantLeaseLedger();
+        }
         showNotification(`Expected rent for ${period} saved`,'success');
     } catch (error) {
         console.error('Tenant expected rent save error:',error);
@@ -216,13 +283,25 @@ function openTenantBalanceModal(tenantId) {
         if (!tenant) return;
         const modal = document.getElementById('tenantBalanceModal');
         if (!modal) return;
+        const drawer = document.getElementById('portfolioRecordDrawer');
+        const detailsModal = document.getElementById('tenantDetailsModal');
+        const previousOrigin = modal.dataset.tenantId === String(tenantId) ? modal.dataset.returnTo : null;
+        const origin = drawer?.classList.contains('open') ? 'portfolio'
+            : detailsModal?.getAttribute('aria-hidden') === 'false' && !detailsModal.leaseLedger ? 'details'
+            : previousOrigin || (state.currentTab === 'payments' ? 'payments' : 'close');
         // Store tenantId on modal for export usage
         modal.dataset.tenantId = tenantId;
+        modal.dataset.returnTo = origin;
+        const backButton = document.getElementById('tenantBalanceBackButton');
+        if (backButton) backButton.hidden = !['details','portfolio'].includes(origin);
+        const paymentsBackButton = document.getElementById('tenantBalancePaymentsBackButton');
+        if (paymentsBackButton) paymentsBackButton.hidden = origin !== 'payments';
+        if (origin === 'portfolio') closePortfolioRecordDrawer();
         const headerEl = document.getElementById('tenantBalanceHeader');
         // Show unit number instead of property address next to tenant name
         const unit = state.units.find(u => (u._id === (tenant.unitId?._id || tenant.unitId))) || tenant.unitId || null;
         const unitLabel = unit ? `Unit ${unit.number}` : '';
-        headerEl.innerHTML = `<strong>${tenant.name || tenant.tenantName || 'Tenant'}</strong>${unitLabel ? ` · <span style="color:#6b7280">${unitLabel}</span>` : ''}`;
+        headerEl.textContent = ` - ${tenant.name || tenant.tenantName || 'Tenant'}${unitLabel ? ` · ${unitLabel}` : ''}`;
 
         const rentBal = computeTenantRentBalance(tenantId);
         const dep = computeTenantDepositStatus(tenantId);
@@ -263,7 +342,7 @@ function openTenantBalanceModal(tenantId) {
                         </div>
                     </div>`;
             } else {
-                div.innerHTML = `<div style="font-size:0.75rem;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">${c.label}</div><div style="font-weight:600;color:${c.accent};font-size:1.05rem;margin-top:4px;">${c.value}</div>`;
+                div.innerHTML = `<div style="font-size:0.75rem;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">${c.label}</div><div ${c.key === 'rent' ? 'id="tenantRentBalanceValue"' : ''} style="font-weight:600;color:${c.accent};font-size:1.05rem;margin-top:4px;">${c.value}</div>`;
             }
             summary.appendChild(div);
         }
@@ -349,7 +428,6 @@ function openTenantBalanceModal(tenantId) {
             monthlyMap[k].rentBase = Number(computeExpectedBaseRentForMonth(tenant, periodDate)) || 0;
         });
 
-    // Insert / update monthly summary section with toggle (Rent Due vs Paid removed per request)
         let monthlyContainer = document.getElementById('tenantMonthlyBreakdown');
         if (!monthlyContainer) {
             monthlyContainer = document.createElement('div');
@@ -360,63 +438,14 @@ function openTenantBalanceModal(tenantId) {
             monthlyContainer.style.border = '1px solid #e2e8f0';
             monthlyContainer.style.borderRadius = '8px';
             const summaryParent = document.getElementById('tenantBalanceSummary');
-            summaryParent.parentNode.insertBefore(monthlyContainer, summaryParent.nextSibling);
+            summaryParent.parentNode.insertBefore(monthlyContainer,summaryParent.nextSibling);
         }
-    // Removed expectedMonthlyRent / variance calculations
-        const monthKeys = Object.keys(monthlyMap).sort().reverse();
-        if (!monthKeys.length) {
-            monthlyContainer.innerHTML = '<div style="color:#6b7280;font-size:0.9rem;">No payments recorded yet.</div>';
-        } else {
-            // Header with inline toggle button
-            const bodyId = 'monthlyBreakdownBody';
-            const collapsedAttr = monthlyContainer.getAttribute('data-collapsed') === 'true';
-            const toggleIcon = collapsedAttr ? 'fa-chevron-down' : 'fa-chevron-up';
-            const bodyDisplay = collapsedAttr ? 'none' : 'block';
-            let html = `<div style="font-weight:600;margin-bottom:6px;color:#1f2937;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                <span style="display:flex;align-items:center;gap:8px;"><i class=\"fas fa-calendar\"></i> Monthly Payment Breakdown</span>
-                <button id="monthlyToggleBtn" style="background:#ffffff;border:1px solid #d1d5db;color:#374151;padding:4px 8px;font-size:0.7rem;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:4px;">
-                    <i class="fas ${toggleIcon}"></i> ${collapsedAttr ? 'Show' : 'Hide'}
-                </button>
-            </div>`;
-            html += `<div id="${bodyId}" style="display:${bodyDisplay};">`;
-        html += monthKeys.map(mKey => {
-        const m = monthlyMap[mKey];
-        const depositDisplay = m.depositCash + m.depositCredit;
-        const feesDisplay = m.feesCash + m.feesCredit;
-        const otherDisplay = m.otherCash + m.otherCredit;
-        const totalCollected = m.rentCollected + m.depositCash + m.feesCash + m.otherCash; // exclude applied credits
-                const lateDisp = m.late && m.late > 0 ? `$${m.late.toFixed(2)}` : '$0.00';
-                const expectedDisp = `$${(Number(m.expected)||0).toFixed(2)}`;
-                // Variance removed per request; only display Collected amount
-                return `<div class="tenant-monthly-row" style="display:grid;grid-template-columns:90px repeat(7,1fr);gap:4px;font-size:0.75rem;align-items:center;padding:6px 8px;border-radius:6px;background:#fff;margin-bottom:4px;border:1px solid #e5e7eb;">
-                        <div style="font-weight:600;color:#374151;">${mKey}</div>
-                        <div><span style="color:#6b7280;">Expected:</span> ${expectedDisp}</div>
-                        <div><span style="color:#6b7280;">Rent:</span> $${m.rentBase.toFixed(2)}</div>
-            <div><span style="color:#6b7280;">Deposit:</span> $${depositDisplay.toFixed(2)}${m.depositCredit>0?` <span style='color:#065f46'>(incl credit $${m.depositCredit.toFixed(2)})</span>`:''}</div>
-            <div><span style="color:#6b7280;">Fees:</span> $${feesDisplay.toFixed(2)}${m.feesCredit>0?` <span style='color:#065f46'>(incl credit $${m.feesCredit.toFixed(2)})</span>`:''}</div>
-            <div><span style="color:#6b7280;">Other:</span> $${otherDisplay.toFixed(2)}${m.otherCredit>0?` <span style='color:#065f46'>(incl credit $${m.otherCredit.toFixed(2)})</span>`:''}</div>
-                        <div><span style="color:#6b7280;">Late Fee:</span> ${lateDisp}</div>
-                        <div><span style="color:#065f46;">Credits:</span> $${m.credits.toFixed(2)}</div>
-                <div style="grid-column:1 / -1; font-size:0.65rem; color:#475569; display:flex; justify-content:space-between; gap:10px;">
-               <span>${m.late > 0 ? 'Override late fee applied this month' : ''}</span>
-                                    <span>Collected: $${totalCollected.toFixed(2)}</span>
-                        </div>
-                    </div>`;
-            }).join('');
-            html += '</div>'; // close body
-            monthlyContainer.innerHTML = html;
-            // Attach toggle handler (re-attach safely each open)
-            const toggleBtn = document.getElementById('monthlyToggleBtn');
-            if (toggleBtn) {
-                toggleBtn.onclick = () => {
-                    const body = document.getElementById(bodyId);
-                    if (!body) return;
-                    const isHidden = body.style.display === 'none';
-                    body.style.display = isHidden ? 'block' : 'none';
-                    monthlyContainer.setAttribute('data-collapsed', isHidden ? 'false' : 'true');
-                    toggleBtn.innerHTML = `<i class=\"fas ${isHidden ? 'fa-chevron-up' : 'fa-chevron-down'}\"></i> ${isHidden ? 'Hide' : 'Show'}`;
-                };
-            }
+        modal.balanceSheet = {tenantId:String(tenantId),tenant,payments:allTenantPayments};
+        try {
+            monthlyContainer.innerHTML = tenantBalanceLeaseSchedule(tenant,allTenantPayments).html;
+        } catch (error) {
+            console.error('Failed to build tenant balance monthly rent schedule', error);
+            monthlyContainer.innerHTML = '<div class="overview-alert" role="alert">The monthly rent schedule is unavailable. Review the tenant lease dates.</div>';
         }
 
         // Populate detailed payment rows grouped by month (descending)
@@ -429,7 +458,8 @@ function openTenantBalanceModal(tenantId) {
             if (headerRow) colCount = headerRow.children.length || colCount;
         }
         for (const p of allTenantPayments) {
-            const monthKey = p.periodMonth || (p.date ? (()=>{ const base = String(p.date).substring(0,10); const parts = base.split('-'); if(parts.length===3){return `${parts[0]}-${parts[1]}`;} const d=new Date(p.date); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; })() : 'Unknown');
+            const monthKey = p.date || p.periodMonth ? tenantPaymentPeriod(p) : 'Unknown';
+            const appliedMonth = tenantBalanceMonthLabel(monthKey);
             if (monthKey !== lastMonthKey) {
                 const groupTr = document.createElement('tr');
                 groupTr.className = 'month-group-row';
@@ -447,6 +477,7 @@ function openTenantBalanceModal(tenantId) {
             const note = (p.note || '').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
                         tr.innerHTML = `
               <td>${p.date ? formatDateDisplay(p.date) : ''}</td>
+                          <td>${appliedMonth}</td>
               <td>${typeLabel}</td>
               <td>${p.applyTo || ''}${p.feeType ? ` • ${p.feeType}` : ''}${p.feeLabel ? ` (${p.feeLabel})` : ''}</td>
                                                         <td style="${(amount < 0 || (amount === 0 && appliedCred > 0)) ? 'color:#065f46;font-weight:600;' : ''} max-width:160px; white-space:normal; word-break:break-word;">`
@@ -463,6 +494,22 @@ function openTenantBalanceModal(tenantId) {
     } catch (e) {
         console.error('Failed to open tenant balance modal', e);
     }
+}
+
+function backToTenantDetailsFromBalanceSheet() {
+    const modal = document.getElementById('tenantBalanceModal');
+    const tenantId = modal?.dataset.tenantId;
+    const origin = modal?.dataset.returnTo;
+    if (!tenantId) {
+        closeModal('tenantBalanceModal');
+        return;
+    }
+    if (origin === 'portfolio') {
+        closeModal('tenantBalanceModal');
+        openPortfolioRecordDrawer('tenant', tenantId);
+    } else if (origin === 'details') {
+        viewTenantDetails(tenantId);
+    } else closeModal('tenantBalanceModal');
 }
 
 // Inline edit controls for Deposit Paid on Tenant Balance Sheet
@@ -526,12 +573,19 @@ function exportTenantPaymentsReportFromModal() {
     exportTenantPaymentsReport(tenantId);
 }
 
-// Generate a PDF summarizing all payments grouped by month with subtotals
+// Export the monthly balance schedule followed by detailed payment history.
 function exportTenantPaymentsReport(tenantId) {
-    const tenant = state.tenants.find(t => t._id === tenantId);
+    const tenant = state.tenants.find(t => String(t._id) === String(tenantId));
     if (!tenant) { showNotification('Tenant not found', 'error'); return; }
-    const payments = getUnifiedCurrentPropertyPayments().filter(p => String(p.tenantId) === String(tenantId)).sort((a,b)=> new Date(a.date) - new Date(b.date));
-    if (!payments.length) { showNotification('No payments to export.', 'info'); return; }
+    const payments = getUnifiedCurrentPropertyPayments().filter(p => String(p.tenantId?._id || p.tenantId) === String(tenantId)).sort((a,b)=> new Date(a.date) - new Date(b.date));
+    let schedule;
+    try {
+        schedule = tenantBalanceLeaseSchedule(tenant,payments);
+    } catch (error) {
+        console.error('Tenant balance report schedule error:',error);
+        showNotification(error.message,'error');
+        return;
+    }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p','mm','a4');
     const pageW = 210;
@@ -539,11 +593,14 @@ function exportTenantPaymentsReport(tenantId) {
     // Header
     doc.setFont('helvetica','bold');
     doc.setFontSize(16);
-    doc.text(`Payment History Report`, 14, y);
+    doc.text(`Tenant Balance Sheet Report`, 14, y);
     y += 6;
     doc.setFontSize(11);
     doc.setFont('helvetica','normal');
-    doc.text(`Tenant: ${tenant.name}  •  Generated: ${new Date().toLocaleDateString()}`, 14, y);
+    const reportUnit = (state.units||[]).find(unit => String(unit._id) === String(tenant.unitId?._id || tenant.unitId))
+        || (typeof tenant.unitId === 'object' ? tenant.unitId : null);
+    const unitLabel = reportUnit ? ` · Unit ${reportUnit.number}` : '';
+    doc.text(`Tenant: ${tenant.name || tenant.tenantName || 'Tenant'}${unitLabel}  •  Generated: ${new Date().toLocaleDateString()}`, 14, y);
     y += 8;
     doc.setDrawColor(200,200,200);
     doc.line(14,y,pageW-14,y); y += 6;
@@ -552,20 +609,17 @@ function exportTenantPaymentsReport(tenantId) {
     const groups = {};
     for (const p of payments) {
         if (!p.date) continue;
-        const d = new Date(p.date);
-        const key = p.periodMonth || `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const key = tenantPaymentPeriod(p);
         if (!groups[key]) groups[key] = [];
         groups[key].push(p);
     }
     const monthKeys = Object.keys(groups).sort();
-
     const colDefs = [
-        { h:'Date', w:26 },
-        { h:'Type', w:22 },
-        { h:'Applied', w:30 },
-        { h:'Amount', w:22 },
-        { h:'Balance', w:24 },
-        { h:'Note', w:70 }
+        { h:'Date', w:22 },
+        { h:'Applied month', w:24 },
+        { h:'Details', w:42 },
+        { h:'Amount', w:26 },
+        { h:'Note', w:68 }
     ];
     const lineHeight = 5;
 
@@ -573,132 +627,126 @@ function exportTenantPaymentsReport(tenantId) {
         if (y + extra > 280) { doc.addPage(); y = 16; }
     }
     function drawHeaderRow(bg=true) {
-        addPageIfNeeded(10);
         if (bg) { doc.setFillColor(240,244,248); doc.rect(14,y,pageW-28, lineHeight+2,'F'); }
         doc.setFont('helvetica','bold'); doc.setFontSize(9);
-        let x = 16; const baseY = y+lineHeight; 
+        let x = 15; const baseY = y+lineHeight;
         for (const c of colDefs) { doc.text(c.h, x, baseY); x += c.w; }
         y += lineHeight + 3;
     }
 
-    // Helper to compute monthly override late fee for a given month key
-    function computeMonthlyOverrideLateFeeForReport(tenantObj, periodKey) {
-        if (!tenantObj || !periodKey) return 0;
-        let overrideMap = tenantObj.monthlyOverrides || null;
-        if (overrideMap && typeof overrideMap.get === 'function') {
-            const obj = {}; overrideMap.forEach((v,k)=>obj[k]=v); overrideMap = obj;
-        }
-        const ov = overrideMap ? overrideMap[periodKey] : null;
-        if (!ov || (ov.lateFee == null && ov.lateFeeMode == null)) return 0;
-        const [yy, mm] = periodKey.split('-').map(Number);
-        const periodDate = (yy && mm) ? new Date(yy, mm-1, 1) : new Date();
-        if (!isTenantChargeableMonth(tenantObj, periodDate)) return 0;
-        const beforeLate = computeExpectedRentForMonth(tenantObj, periodDate, 'rent');
-        const lfVal = Number(ov.lateFee);
-        const mode = (ov.lateFeeMode === 'percent') ? 'percent' : 'amount';
-        if (!Number.isFinite(lfVal)) return 0;
-        const applied = mode === 'percent' ? (beforeLate * (lfVal/100)) : lfVal;
-        return Number(applied) || 0;
+    doc.setFont('helvetica','bold'); doc.setFontSize(12);
+    doc.text('Monthly rent schedule',14,y);
+    y += 6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    const scheduleNote=doc.splitTextToSize('All lease months are included. Security deposit due, paid, and remaining are tracked separately from rent. Future charges are scheduled, not overdue.',pageW-28);
+    doc.text(scheduleNote,14,y);
+    y += scheduleNote.length*4+3;
+    const scheduleColumns=[
+        {h:'Month',w:19},{h:'Status',w:18},{h:'Rent expected',w:22},
+        {h:'Deposit due / paid / remaining',w:35},{h:'Late fees',w:15},
+        {h:'Total expected rent',w:24},{h:'Rent applied',w:24},{h:'Rent outstanding',w:25}
+    ];
+    function drawScheduleHeader() {
+        const headerLines=scheduleColumns.map(column=>doc.splitTextToSize(column.h,column.w-2));
+        const headerHeight=Math.max(...headerLines.map(lines=>lines.length))*3.5+3;
+        if (y+headerHeight>280) { doc.addPage(); y=16; }
+        doc.setFillColor(240,244,248); doc.rect(14,y,pageW-28,headerHeight,'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(7);
+        let x=14;
+        scheduleColumns.forEach((column,index)=>{
+            doc.text(headerLines[index],x+1,y+4);
+            x+=column.w;
+        });
+        y+=headerHeight;
     }
-
-    // Compute monthly expected helper for report
-    function computeMonthlyExpectedForReport(tenantObj, periodKey) {
-        if (!tenantObj || !periodKey) return 0;
-        let overrideMap = tenantObj.monthlyOverrides || null;
-        if (overrideMap && typeof overrideMap.get === 'function') {
-            const obj = {}; overrideMap.forEach((v,k)=>obj[k]=v); overrideMap = obj;
-        }
-        const [yy, mm] = periodKey.split('-').map(Number);
-        const periodDate = (yy && mm) ? new Date(yy, mm-1, 1) : new Date();
-        return computeTenantMonthTotals(tenantObj, periodDate, payments).expected;
+    function drawScheduleRow(values,bold=false) {
+        const cellLines=values.map((value,index)=>doc.splitTextToSize(String(value),scheduleColumns[index].w-2));
+        const rowHeight=Math.max(6,Math.max(...cellLines.map(lines=>lines.length))*3.5+2);
+        if (y+rowHeight>280) { doc.addPage(); y=16; drawScheduleHeader(); }
+        doc.setFont('helvetica',bold?'bold':'normal'); doc.setFontSize(7);
+        let x=14;
+        cellLines.forEach((lines,index)=>{
+            doc.text(lines,x+1,y+4);
+            x+=scheduleColumns[index].w;
+        });
+        y+=rowHeight;
+        doc.setDrawColor(225,230,235); doc.line(14,y,pageW-14,y);
+    }
+    drawScheduleHeader();
+    for (const month of schedule.months) {
+        const depositCell=month.depositExpected || month.depositPaid || month.depositOutstanding
+            ? `Due ${tenantCurrency(month.depositExpected)}\nPaid ${tenantCurrency(month.depositPaid)}\nRemaining ${tenantCurrency(month.depositOutstanding)}`
+            : '—';
+        drawScheduleRow([
+            tenantBalanceMonthLabel(month.period),tenantBalancePaymentStatus(month).label,tenantCurrency(month.rent),
+            depositCell,tenantCurrency(month.late),tenantCurrency(month.expected),
+            tenantCurrency(month.paid),tenantCurrency(month.outstanding)
+        ]);
+    }
+    const scheduleTotals=schedule.months.reduce((sum,month)=>({
+        rent:sum.rent+month.rent,deposit:sum.deposit+(month.depositExpected||0),
+        depositPaid:sum.depositPaid+(month.depositPaid||0),
+        depositOutstanding:sum.depositOutstanding+(month.depositOutstanding||0),
+        late:sum.late+month.late,expected:sum.expected+month.expected,
+        paid:sum.paid+month.paid,outstanding:sum.outstanding+month.outstanding
+    }),{rent:0,deposit:0,depositPaid:0,depositOutstanding:0,late:0,expected:0,paid:0,outstanding:0});
+    drawScheduleRow([
+        'Rent totals','',tenantCurrency(scheduleTotals.rent),
+        `Due ${tenantCurrency(scheduleTotals.deposit)}\nPaid ${tenantCurrency(scheduleTotals.depositPaid)}\nRemaining ${tenantCurrency(scheduleTotals.depositOutstanding)}`,
+        tenantCurrency(scheduleTotals.late),tenantCurrency(scheduleTotals.expected),
+        tenantCurrency(scheduleTotals.paid),tenantCurrency(scheduleTotals.outstanding)
+    ],true);
+    y+=6;
+    addPageIfNeeded(12);
+    doc.setFont('helvetica','bold'); doc.setFontSize(12);
+    doc.text('Payment history',14,y);
+    y+=6;
+    if (!monthKeys.length) {
+        doc.setFont('helvetica','normal'); doc.setFontSize(9);
+        doc.text('No payment history recorded.',14,y);
+        y+=6;
     }
 
     for (const mKey of monthKeys) {
-        addPageIfNeeded(12);
+        addPageIfNeeded(18);
         doc.setFont('helvetica','bold'); doc.setFontSize(11);
-        doc.text(mKey, 14, y);
+        doc.text(tenantBalanceMonthLabel(mKey), 14, y);
         y += 6;
         drawHeaderRow();
-        let monthTotals = { rent:0, deposit:0, fees:0, other:0, credits:0, late:0 };
         for (const p of groups[mKey]) {
             const amt = Number(p.amount) || 0;
-            const late = Number(p.lateFee) || 0; // will be overridden by monthly override if present
             const apply = p.applyTo || 'rent';
             const appliedCred = Number(p.appliedCredit) || 0; // ensure defined for PDF row rendering
-            if (amt < 0) monthTotals.credits += Math.abs(amt); else if (apply === 'rent') monthTotals.rent += amt; else if (apply==='deposit') monthTotals.deposit += amt; else if (apply==='fee' || ['water','electric','trash','admin','late','other'].includes(apply)) monthTotals.fees += amt; else monthTotals.other += amt;
             const dateStr = p.date ? new Date(p.date).toLocaleDateString() : '';
+            const appliedMonth = tenantBalanceMonthLabel(tenantPaymentPeriod(p));
             const typeLabel = p.type === 'custom' && p.customType ? p.customType : (p.type || '');
-            const appliedLabel = apply + (p.feeType ? `/${p.feeType}` : '') + (p.feeLabel ? `(${p.feeLabel})` : '');
-            const bal = typeof p.balance === 'number' ? p.balance : null;
-            // Wrap note
-            const noteRaw = (p.note || '').replace(/\r\n|\r|\n/g,' ');
-            const noteLines = doc.splitTextToSize(noteRaw, colDefs[5].w - 2);
-            // Amount text and wrapping for narrow column
+            const details = [typeLabel || apply];
+            if (typeLabel && String(typeLabel).toLowerCase() !== String(apply).toLowerCase()) details.push(`Applied to ${apply}`);
+            if (p.feeType) details.push(p.feeType);
+            if (p.feeLabel) details.push(p.feeLabel);
+            const noteRaw = String(p.note || '').replace(/\r\n|\r|\n/g,' ');
             const amountText = (amt === 0 && appliedCred > 0)
                 ? `Applied credit $${appliedCred.toFixed(2)}`
                 : (amt<0?'-':'') + `$${Math.abs(amt).toFixed(2)}`;
-            const amountLines = doc.splitTextToSize(amountText, colDefs[3].w - 2);
-            const amountHeight = amountLines.length * 4;
-            const rowHeight = Math.max(lineHeight, noteLines.length * 4, amountHeight);
-            addPageIfNeeded(rowHeight + 2);
+            const rowValues = [dateStr,appliedMonth,details.join(' · '),amountText,noteRaw];
+            const rowLines = rowValues.map((value,index)=>doc.splitTextToSize(String(value),colDefs[index].w-2));
+            const rowHeight = Math.max(lineHeight,rowLines.reduce((height,lines)=>Math.max(height,lines.length*4),0))+2;
+            if (y+rowHeight>280) {
+                doc.addPage(); y=16;
+                doc.setFont('helvetica','bold'); doc.setFontSize(11);
+                doc.text(tenantBalanceMonthLabel(mKey),14,y); y+=6;
+                drawHeaderRow();
+            }
             doc.setFont('helvetica','normal'); doc.setFontSize(8);
-            let x = 16; const textY = y + lineHeight; // base text line
-            doc.text(dateStr, x, textY); x += colDefs[0].w;
-            doc.text(typeLabel, x, textY); x += colDefs[1].w;
-            doc.text(appliedLabel, x, textY); x += colDefs[2].w;
-            // Amount (wrapped)
-            if (amountLines.length > 0) {
-                doc.text(amountLines[0], x, textY);
-                for (let i = 1; i < amountLines.length; i++) {
-                    // Place subsequent lines below the base line to avoid overlap
-                    doc.text(amountLines[i], x, textY + (i * 4));
-                }
-            } else {
-                doc.text('', x, textY);
-            }
-            x += colDefs[3].w;
-            // Late column removed from PDF row output
-            doc.text(bal===null?'':(bal<0?'-':'') + `$${Math.abs(bal).toFixed(2)}` + (bal<0?' CR':''), x, textY); x += colDefs[4].w;
-            // Multi-line note
-            for (let i=0;i<noteLines.length;i++) {
-                doc.text(noteLines[i], x, y + 4 + (i*4));
-            }
-            y += rowHeight + 2;
+            let x=14;
+            rowLines.forEach((lines,index)=>{
+                doc.text(lines,x+1,y+lineHeight);
+                x+=colDefs[index].w;
+            });
+            y += rowHeight;
+            doc.setDrawColor(225,230,235); doc.line(14,y,pageW-14,y);
         }
-        // Replace per-payment late total with monthly override late when present
-        const overrideLate = computeMonthlyOverrideLateFeeForReport(tenant, mKey);
-        if (overrideLate > 0) monthTotals.late = overrideLate;
-        // Month subtotal block (Variance removed to match modal)
-        addPageIfNeeded(20);
-        doc.setFont('helvetica','bold'); doc.setFontSize(9);
-        const expectedThisMonth = computeMonthlyExpectedForReport(tenant, mKey);
-        const subtotalLines = [
-            `Expected: $${expectedThisMonth.toFixed(2)}`,
-            `Rent (base): $${(function(){
-                // Base/prorated rent for this month, excluding add-ons and late
-                const [yy, mm] = mKey.split('-').map(Number);
-                const periodDate = (yy && mm) ? new Date(yy, mm-1, 1) : new Date();
-                const baseOnly = Number(computeExpectedBaseRentForMonth(tenant, periodDate)) || 0;
-                return baseOnly.toFixed(2);
-            })()}`,
-            `Deposit: $${monthTotals.deposit.toFixed(2)}`,
-            `Fees: $${monthTotals.fees.toFixed(2)}`,
-            `Other: $${monthTotals.other.toFixed(2)}`,
-            `Credits: $${monthTotals.credits.toFixed(2)}`,
-            `Late Fees: $${monthTotals.late.toFixed(2)}`,
-            // Collected = sum of positive payment amounts (cash) excluding credits and credit applications
-            `Collected: $${(monthTotals.rent+monthTotals.deposit+monthTotals.fees+monthTotals.other).toFixed(2)}`
-        ];
-        if (overrideLate > 0) subtotalLines.push('Note: Monthly override late fee applied this month');
-        const boxH = subtotalLines.length * 5 + 6;
-        doc.setDrawColor(220,230,236); doc.setFillColor(245,249,252);
-        doc.rect(14,y,pageW-28,boxH,'FD');
-        let lineY = y + 6;
-        subtotalLines.forEach(l=>{
-            doc.text(l, 18, lineY);
-            lineY += 5;
-        });
-        y += boxH + 8;
+        y+=4;
     }
 
     // Save file
