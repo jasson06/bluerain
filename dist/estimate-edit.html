@@ -1702,7 +1702,7 @@ button:disabled {
 }
 
 
-    input[type="text"], input[type="number"], textarea {
+    input[type="text"], input[type="number"], input[type="date"], textarea {
       width: 100%;
       padding: 8px;
       border: 1px solid #ccc;
@@ -4420,12 +4420,57 @@ body.modal-open {
   .card-phase-field select,
   .card-phase-field input {
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
     padding: 8px 3px;
     border-radius: 8px;
     border: 1px solid #d1d5db;
     background: #fff;
     box-sizing: border-box;
     font: inherit;
+  }
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    font-family: inherit;
+    line-height: normal;
+    text-align: left;
+  }
+  input[type="date"]::-webkit-date-and-time-value {
+    min-width: 0;
+    text-align: left;
+  }
+  input[type="date"]::-webkit-datetime-edit,
+  input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+    min-width: 0;
+    padding: 0;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    flex: 0 0 auto;
+    margin: 0 0 0 4px;
+    padding: 0;
+  }
+
+  @supports (-webkit-touch-callout: none) {
+    @media (max-width: 768px) {
+      input[type="date"] {
+        min-height: 34px;
+        font-size: 16px;
+        line-height: 1.2;
+      }
+
+      .card-phase-field input[type="date"],
+      .batch-action-row input[type="date"] {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        font-size: 16px;
+      }
+    }
   }
   .phase-percent-input-wrap {
     display: flex;
