@@ -3108,6 +3108,21 @@ function createTemporaryLineItemId() {
   return `item-${Date.now()}-${__temporaryLineItemSequence}`;
 }
 
+function getLineItemCreatedAt(item = {}) {
+  if (item.createdAt) {
+    const createdAt = new Date(item.createdAt);
+    if (!Number.isNaN(createdAt.getTime())) return createdAt;
+  }
+
+  const itemId = String(item._id || "");
+  if (/^[a-f\d]{24}$/i.test(itemId)) {
+    const timestamp = Number.parseInt(itemId.slice(0, 8), 16) * 1000;
+    if (Number.isFinite(timestamp)) return new Date(timestamp);
+  }
+
+  return new Date();
+}
+
 
 // Add Line Item Card Function
 function addLineItemCard(item = {}, categoryHeader = null, insertAfter = null, options = {}) {
@@ -3135,6 +3150,9 @@ function addLineItemCard(item = {}, categoryHeader = null, insertAfter = null, o
   const statusClass = getStatusClass(status);
   const phase = normalizeProjectPhase(item.phase);
   const percentComplete = clampProjectPhaseProgress(item.percentComplete, status);
+  const createdAt = getLineItemCreatedAt(item);
+  const createdDateValue = createdAt.toISOString().substring(0, 10);
+  card.setAttribute("data-created-at", createdAt.toISOString());
 
   // Ensure photos object exists
   if (!item.photos) {
@@ -3162,23 +3180,21 @@ card.innerHTML = `
     ${item.assignedTo ? `<button class="btn unassign-item">Unassign</button>` : ""}
     <button class="btn split-line-item" type="button" style="display:none;">Split</button>
   </div>
-  <div class="card-details">
+
+
+      <div class="card-details">
     <div class="detail">
       <label>Cost Code</label>
       <input type="text" class="item-cost-code" value="${item.costCode || ''}" placeholder="Cost Code">
     </div>
     <div class="detail">
-      <label>Description</label>
-      <textarea class="item-description" placeholder="Description" style="min-width:350px; overflow:hidden;">${DescriptionEditor.escape(item.description || "")}</textarea>
-    </div>
-    <div class="detail">
-      <label>Project Phase</label>
+      <label>Phase</label>
       <select class="item-phase-dropdown">
         ${PROJECT_PHASES.map((option) => `<option value="${option.value}" ${phase === option.value ? "selected" : ""}>${option.label}</option>`).join("")}
       </select>
     </div>
     <div class="detail">
-      <label>Calculation Mode</label>
+      <label>Calc Mode</label>
       <select class="item-calc-mode">
         <option value="each" ${calcMode === "each" ? "selected" : ""}>Each</option>
         <option value="sqft" ${calcMode === "sqft" ? "selected" : ""}>Sq Ft</option>
@@ -3194,40 +3210,44 @@ card.innerHTML = `
       <input type="number" class="item-length" value="${length}" min="0" step="0.01">
     </div>
     <div class="detail quantity-detail" style="display:${calcMode === "each" ? "block" : "none"}">
-      <label>Quantity</label>
+      <label>Qty</label>
       <input type="number" class="item-quantity" value="${quantity}" min="1" step="1">
     </div>
     <div class="detail">
-      <label>Unit Price</label>
+      <label>Unit</label>
       <input type="number" class="item-price" value="${unitPrice}" min="0" step="0.01">
     </div>
     <div class="detail">
-      <label>Labor Cost</label>
+      <label>Labor</label>
       <input type="number" class="item-labor-cost" value="${item.laborCost !== undefined ? item.laborCost : 0}" min="0" step="0.01">
-      <div class="calc-hint" style="margin-top:6px; font-size:12px; color:#475569; display:flex; align-items:center; gap:8px;">
+      <div class="calc-hint" style="margin-top:6px; font-size:10px; color:#475569; display:flex; align-items:center; gap:0px;">
         <span style="background:#eef2ff; color:#4f46e5; border:1px solid #e0e7ff; padding:2px 8px; border-radius:999px; font-weight:600;">Rate</span>
         <span class="item-labor-rate" style="font-variant-numeric:tabular-nums; color:#111827;">$0.00</span>
       </div>
     </div>
     <div class="detail">
-      <label>Material Cost</label>
+      <label>Material</label>
       <input type="number" class="item-material-cost" value="${item.materialCost !== undefined ? item.materialCost : 0}" min="0" step="0.01">
-      <div class="calc-hint" style="margin-top:6px; font-size:12px; color:#475569; display:flex; align-items:center; gap:8px;">
+      <div class="calc-hint" style="margin-top:6px; font-size:10px; color:#475569; display:flex; align-items:center; gap:0px;">
         <span style="background:#ecfeff; color:#0e7490; border:1px solid #cffafe; padding:2px 8px; border-radius:999px; font-weight:600;">Rate</span>
         <span class="item-material-rate" style="font-variant-numeric:tabular-nums; color:#111827;">$0.00</span>
       </div>
     </div>
     <div class="detail">
-      <label>Actual Cost to Date</label>
+      <label>Actual Cost</label>
       <input type="text" class="item-actual-cost" value="$0.00" readonly style="background:#f1f5f9;">
     </div>
     <div class="detail">
-      <label>Material Cost to Date</label>
+      <label>Material CTD</label>
       <input type="text" class="item-material-cost-to-date" value="$0.00" readonly style="background:#f1f5f9;">
     </div>
     <div class="detail">
-      <label>Labor Cost to Date</label>
+      <label>Labor CTD</label>
       <input type="text" class="item-labor-cost-to-date" value="$0.00" readonly style="background:#f1f5f9;">
+    </div>
+        <div class="detail">
+      <label>Description</label>
+      <textarea class="item-description" placeholder="Description" style="min-width:350px; overflow:hidden;">${DescriptionEditor.escape(item.description || "")}</textarea>
     </div>
   </div>
   <!-- Collapsible Photo Section -->
@@ -3275,6 +3295,10 @@ card.innerHTML = `
     justify-content: space-between;
   ">
     <div class="card-phase-grid">
+      <div class="card-phase-field">
+        <label for="created-date-${card.getAttribute("data-item-id")}">Created</label>
+        <input type="date" class="item-created-date" id="created-date-${card.getAttribute("data-item-id")}" value="${createdDateValue}" readonly title="Line item creation date">
+      </div>
       <div class="card-phase-field">
         <label for="start-date-${card.getAttribute("data-item-id")}">Target Start</label>
         <input type="date" class="item-start-date" id="start-date-${card.getAttribute("data-item-id")}" value="${startDateValue}">
@@ -4668,6 +4692,7 @@ async function performSaveEstimate(options = {}) {
         percentComplete: clampProjectPhaseProgress(element.querySelector('.item-percent-complete')?.value, element.querySelector('.item-status-dropdown')?.value || 'new'),
         startDate: element.querySelector(".item-start-date")?.value || undefined,
         endDate: element.querySelector(".item-end-date")?.value || undefined,
+        createdAt: element.getAttribute("data-created-at") || undefined,
         assignedTo,
         costCode: element.querySelector(".item-cost-code")?.value.trim() || "Uncategorized",
         splitPercentage: element.dataset.splitPercentage ? parseFloat(element.dataset.splitPercentage) : undefined,
@@ -7456,6 +7481,7 @@ function ensureListViewContainer() {
         scroll-behavior: smooth;
         scrollbar-width: none;
         padding-bottom: 6px;
+        touch-action: pan-x;
       }
       #line-items-table-container .lv-photo-track::-webkit-scrollbar {
         display: none;
@@ -7546,6 +7572,7 @@ function ensureListViewContainer() {
         align-items: center;
         justify-content: center;
         z-index: 2;
+        touch-action: manipulation;
         transition: transform 0.12s ease, box-shadow 0.16s ease, background 0.16s ease;
       }
       #line-items-table-container .lv-photo-nav:hover {
@@ -7784,6 +7811,8 @@ function ensureListViewContainer() {
               <td data-footer-field="labor">$0.00</td>
               <td data-footer-field="material">$0.00</td>
               <td data-footer-field="amount">$0.00</td>
+              <td></td>
+              <td></td>
               <td></td>
               <td></td>
               <td></td>
@@ -9862,13 +9891,13 @@ function buildListViewFromCards() {
     row.appendChild(emptyCell());
     row.appendChild(emptyCell());
     row.appendChild(emptyCell());
-    row.appendChild(emptyCell());
 
     const totalCell = document.createElement('td');
     totalCell.className = 'lv-category-group-total';
     totalCell.textContent = formatter(totalAmount);
     row.appendChild(totalCell);
 
+    row.appendChild(emptyCell());
     row.appendChild(emptyCell());
     row.appendChild(emptyCell());
 
@@ -10889,6 +10918,7 @@ function buildListViewFromCards() {
           // Start/End date and Cost Code current values from card
           const startDateVal = getCardInput('.item-start-date')?.value || '';
           const endDateVal = getCardInput('.item-end-date')?.value || '';
+          const createdDateVal = getCardInput('.item-created-date')?.value || '';
           const costCodeVal = getCardInput('.item-cost-code')?.value || '';
           td.innerHTML = `
             <div class="lv-detail-content">
@@ -10896,14 +10926,22 @@ function buildListViewFromCards() {
                 <h5>Description</h5>
                 <textarea class="lv-detail-desc-textarea" placeholder="No description provided."></textarea>
               </div>
-              <div class="lv-detail-dates" style="flex:0 0 190px; background:#ffffff; border:1px solid #e5e7eb; border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:10px;">
-                <div style="display:flow; flex-direction:column; gap:6px;">
-                  <label style="font-size:12px; color:#374151;">Start Date</label>
-                  <input type="date" class="lv-detail-start-date" value="${startDateVal}" style="padding:6px 8px; border:1px solid #d1d5db; border-radius:6px;">
-                  <label style="font-size:12px; color:#374151;">End Date</label>
-                  <input type="date" class="lv-detail-end-date" value="${endDateVal}" style="padding:6px 8px; border:1px solid #d1d5db; border-radius:6px;">
-                  <label style="font-size:12px; color:#374151; margin-top:4px;">Cost Code</label>
-                  <input type="text" class="lv-detail-cost-code" value="${costCodeVal}" style="padding:6px 8px; border:1px solid #d1d5db; border-radius:6px;">
+              <div class="lv-detail-dates" style="flex:0 0 240px; background:#ffffff; border:1px solid #e5e7eb; border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:6px;">
+                <div style="display:grid; grid-template-columns:76px minmax(0,1fr); align-items:center; gap:8px;">
+                  <label style="font-size:12px; color:#374151; white-space:nowrap;">Created</label>
+                  <input type="date" class="lv-detail-created-date" value="${createdDateVal}" readonly style="width:100%; box-sizing: border-box; min-width:0; padding:4px 6px; border:1px solid #d1d5db; border-radius:6px; background:#f8fafc; color:#475569;">
+                </div>
+                <div style="display:grid; grid-template-columns:76px minmax(0,1fr); align-items:center; gap:8px;">
+                  <label style="font-size:12px; color:#374151; white-space:nowrap;">Start</label>
+                  <input type="date" class="lv-detail-start-date" value="${startDateVal}" style="width:100%; box-sizing: border-box; min-width:0; padding:4px 6px; border:1px solid #d1d5db; border-radius:6px;">
+                </div>
+                <div style="display:grid; grid-template-columns:76px minmax(0,1fr); align-items:center; gap:8px;">
+                  <label style="font-size:12px; color:#374151; white-space:nowrap;">End</label>
+                  <input type="date" class="lv-detail-end-date" value="${endDateVal}" style="width:100%; box-sizing: border-box; min-width:0; padding:4px 6px; border:1px solid #d1d5db; border-radius:6px;">
+                </div>
+                <div style="display:grid; grid-template-columns:76px minmax(0,1fr); align-items:center; gap:8px;">
+                  <label style="font-size:12px; color:#374151; white-space:nowrap;">Cost Code</label>
+                  <input type="text" class="lv-detail-cost-code" value="${costCodeVal}" style="width:100%; min-width:0; padding:4px 6px; border:1px solid #d1d5db; border-radius:6px;">
                 </div>
               </div>
               <div class="lv-detail-photos">
@@ -10941,43 +10979,88 @@ function buildListViewFromCards() {
             const track = root.querySelector('.lv-photo-track');
             const cards = Array.from(root.querySelectorAll('.lv-photo-card'));
             const dots = Array.from(root.querySelectorAll('.lv-photo-dot'));
-            const updateActiveDot = () => {
-              if (!track || !cards.length || !dots.length) return;
-              const trackLeft = track.scrollLeft;
-              let activeIndex = 0;
-              let bestDistance = Number.POSITIVE_INFINITY;
+            let pointerStartX = 0;
+            let pointerStartY = 0;
+            let didSwipe = false;
+            let ignoreCardClickUntil = 0;
+            let navigationLocked = false;
+            const getClosestPhotoIndex = () => {
+              if (!track || !cards.length) return 0;
+              let closestIndex = 0;
+              let closestDistance = Number.POSITIVE_INFINITY;
               cards.forEach((photoCard, index) => {
-                const distance = Math.abs(photoCard.offsetLeft - trackLeft);
-                if (distance < bestDistance) {
-                  bestDistance = distance;
-                  activeIndex = index;
+                const distance = Math.abs(photoCard.offsetLeft - track.scrollLeft);
+                if (distance < closestDistance) {
+                  closestDistance = distance;
+                  closestIndex = index;
                 }
               });
+              return closestIndex;
+            };
+            const updateActiveDot = () => {
+              if (!track || !cards.length || !dots.length) return;
+              const activeIndex = getClosestPhotoIndex();
               dots.forEach((dot, index) => dot.classList.toggle('is-active', index === activeIndex));
             };
-            const scrollToIndex = (index) => {
+            const scrollToIndex = (index, lockNavigation = false) => {
               const target = cards[index];
               if (!target || !track) return;
+              if (lockNavigation) navigationLocked = true;
               track.scrollTo({ left: target.offsetLeft, behavior: 'smooth' });
+              if (lockNavigation) {
+                window.setTimeout(() => {
+                  navigationLocked = false;
+                }, 360);
+              }
             };
             root.querySelector('.lv-photo-nav.prev')?.addEventListener('click', (event) => {
               event.preventDefault();
-              const currentIndex = dots.findIndex((dot) => dot.classList.contains('is-active'));
-              scrollToIndex(Math.max(0, currentIndex - 1));
+              event.stopPropagation();
+              if (navigationLocked) return;
+              const currentIndex = getClosestPhotoIndex();
+              scrollToIndex(Math.max(0, currentIndex - 1), true);
             });
             root.querySelector('.lv-photo-nav.next')?.addEventListener('click', (event) => {
               event.preventDefault();
-              const currentIndex = dots.findIndex((dot) => dot.classList.contains('is-active'));
-              scrollToIndex(Math.min(cards.length - 1, currentIndex + 1));
+              event.stopPropagation();
+              if (navigationLocked) return;
+              const currentIndex = getClosestPhotoIndex();
+              scrollToIndex(Math.min(cards.length - 1, currentIndex + 1), true);
             });
             dots.forEach((dot, index) => {
-              dot.addEventListener('click', () => scrollToIndex(index));
+              dot.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                scrollToIndex(index);
+              });
             });
             cards.forEach((photoCard, index) => {
-              photoCard.addEventListener('click', () => {
+              photoCard.addEventListener('click', (event) => {
+                if (didSwipe || Date.now() < ignoreCardClickUntil) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  didSwipe = false;
+                  return;
+                }
                 try { openPhotoViewer(imageList[index], imageList); } catch (_) {}
               });
             });
+            track?.addEventListener('pointerdown', (event) => {
+              pointerStartX = event.clientX;
+              pointerStartY = event.clientY;
+              didSwipe = false;
+            }, { passive: true });
+            track?.addEventListener('pointermove', (event) => {
+              const distanceX = Math.abs(event.clientX - pointerStartX);
+              const distanceY = Math.abs(event.clientY - pointerStartY);
+              if (distanceX > 10 || distanceY > 10) didSwipe = true;
+            }, { passive: true });
+            track?.addEventListener('pointerup', () => {
+              if (didSwipe) ignoreCardClickUntil = Date.now() + 500;
+            }, { passive: true });
+            track?.addEventListener('pointercancel', () => {
+              if (didSwipe) ignoreCardClickUntil = Date.now() + 500;
+            }, { passive: true });
             root.querySelectorAll('.lv-photo-delete-btn').forEach((button) => {
               button.addEventListener('click', (event) => {
                 event.preventDefault();

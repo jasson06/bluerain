@@ -918,6 +918,7 @@ qualityControl: {
             after: [{ type: String }]
           },
 
+          createdAt: { type: Date, default: Date.now, immutable: true },
           startDate: { type: Date, default: null },
           endDate: { type: Date, default: null }
         }

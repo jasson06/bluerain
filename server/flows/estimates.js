@@ -74,6 +74,7 @@ serverContext.app.post('/api/estimates', async (req, res) => {
             status: normalizeStatus(item.status),
             phase: normalizePhase(item.phase),
             percentComplete: normalizePercentComplete(item.percentComplete, item.status),
+            createdAt: new Date(),
             assignedTo: item.assignedTo || null,
             maintenanceRequestId: item.maintenanceRequestId,
             maintenanceScheduleId: item.maintenanceScheduleId,
@@ -288,6 +289,21 @@ serverContext.app.put("/api/estimates/:id", async (req, res) => {
       return normalizeStatus(status) === "completed" ? 100 : 0;
     }
 
+    function getItemCreatedAt(item, fallbackDate) {
+      if (item?.createdAt) {
+        const createdAt = new Date(item.createdAt);
+        if (!Number.isNaN(createdAt.getTime())) return createdAt;
+      }
+
+      const id = item?._id?.toString?.();
+      if (id && /^[a-f\d]{24}$/i.test(id)) {
+        const timestamp = Number.parseInt(id.slice(0, 8), 16) * 1000;
+        if (Number.isFinite(timestamp)) return new Date(timestamp);
+      }
+
+      return fallbackDate || new Date();
+    }
+
     // Fetch the existing document
     const existingEstimate = await serverContext.Estimate.findById(estimateId);
     if (!existingEstimate) {
@@ -329,6 +345,7 @@ serverContext.app.put("/api/estimates/:id", async (req, res) => {
             item.costCode = item.costCode || existingItem.costCode || "Uncategorized";
             item.maintenanceRequestId = item.maintenanceRequestId || existingItem.maintenanceRequestId || null;
             item.maintenanceScheduleId = item.maintenanceScheduleId || existingItem.maintenanceScheduleId || null;
+            item.createdAt = getItemCreatedAt(existingItem, existingEstimate.createdAt);
           } else {
             // For new items
             if (!item.status || item.status.trim() === "") {
@@ -339,6 +356,7 @@ serverContext.app.put("/api/estimates/:id", async (req, res) => {
             item.costCode = item.costCode || "Uncategorized";
             item.maintenanceRequestId = item.maintenanceRequestId || null;
             item.maintenanceScheduleId = item.maintenanceScheduleId || null;
+            item.createdAt = new Date();
           }
         });
       });
