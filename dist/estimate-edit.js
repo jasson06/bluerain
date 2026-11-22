@@ -2136,6 +2136,7 @@ function closeVendorStatsModal() {
   if (!modal) return;
   modal.hidden = true;
   modal.setAttribute('aria-hidden', 'true');
+  document.body?.classList.remove('modal-open');
 }
 
 function openVendorStatsModal(vendorId, vendorName) {
@@ -2212,6 +2213,7 @@ function openVendorStatsModal(vendorId, vendorName) {
 
   modal.hidden = false;
   modal.setAttribute('aria-hidden', 'false');
+  document.body?.classList.add('modal-open');
 }
 
 function initializeVendorStatsModal() {

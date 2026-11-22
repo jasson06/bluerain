@@ -3289,9 +3289,14 @@ body.modal-open {
   position: fixed;
   inset: 0;
   z-index: 12000;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
   padding: 20px;
+  box-sizing: border-box;
 }
 
 .vendor-stats-modal-backdrop {
@@ -3303,12 +3308,18 @@ body.modal-open {
 
 .vendor-stats-modal-dialog {
   position: relative;
-  width: min(1000px, calc(100vw - 32px));
+  width: min(1000px, 100%);
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  display: flex;
+  flex-direction: column;
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   border: 1px solid #dbe7f5;
   border-radius: 20px;
   box-shadow: 0 24px 80px rgba(15, 23, 42, 0.18);
   padding: 24px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
   .line-item-card select{
@@ -3556,17 +3567,18 @@ body.modal-open {
 
 @media (max-width: 640px) {
   .vendor-stats-modal {
-    padding: 10px;
-    align-items: end;
+    padding: max(10px, env(safe-area-inset-top))
+      max(10px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom))
+      max(10px, env(safe-area-inset-left));
   }
 
   .vendor-stats-modal-dialog {
-    width: min(92%, 100vw - 20px);
-    max-height: calc(100vh - 20px);
+    width: 100%;
+    max-height: calc(100vh - max(20px, env(safe-area-inset-top)) - max(20px, env(safe-area-inset-bottom)));
+    max-height: calc(100dvh - max(20px, env(safe-area-inset-top)) - max(20px, env(safe-area-inset-bottom)));
     padding: 18px;
-    border-radius: 20px 20px 14px 14px;
-    display: flex;
-    flex-direction: column;
+    border-radius: 20px;
   }
 
   .vendor-stats-modal-grid {
@@ -4962,12 +4974,9 @@ body.modal-open {
     <button type="button" class="vendor-stats-modal-close" data-vendor-modal-close aria-label="Close vendor stats">&times;</button>
     <div class="vendor-stats-modal-header">
       <h3 id="vendor-stats-title">Assigned Vendor</h3>
-      
     </div>
-    
-      <div id="vendor-stats-items" class="vendor-stats-modal-table-wrap">
-        <div class="vendor-stats-modal-empty">No assigned line items found for this vendor.</div>
-      </div>
+    <div id="vendor-stats-items" class="vendor-stats-modal-table-wrap">
+      <div class="vendor-stats-modal-empty">No assigned line items found for this vendor.</div>
     </div>
     <div id="vendor-stats-footnote" class="vendor-stats-modal-footnote">This reflects assigned line items in the current estimate.</div>
   </div>
